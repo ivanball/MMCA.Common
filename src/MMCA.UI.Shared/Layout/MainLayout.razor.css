@@ -1,0 +1,143 @@
+/* ── Skip Navigation (Accessibility) ── */
+.skip-nav {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    z-index: 9999;
+    padding: 0.75rem 1.5rem;
+    background: var(--adc-primary-dark, #0D47A1);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 6px 0;
+    transition: top 0.2s;
+}
+
+    .skip-nav:focus {
+        top: 0;
+    }
+
+/* ── Page Layout ── */
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+main {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.content {
+    flex: 1 0 auto;
+    margin-top: 48px;
+}
+
+/* Replaces MudSpacer — pushes appbar content to the right on desktop */
+.appbar-spacer {
+    flex-grow: 1;
+}
+
+/* Keep auth items (name + logout) on a single row */
+.appbar-auth-items {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.sidebar {
+    background-color: var(--adc-sidebar-bg, #1A2035);
+}
+
+/* ── Footer ── */
+.app-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--adc-divider, #E0E0E0);
+    margin-top: auto;
+}
+
+/* ── Mobile (< 768px) ── */
+@media (max-width: 767.98px) {
+    main, article {
+        font-size: 0.9rem;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    /* On mobile, show only the cart button as a compact transparent overlay
+       positioned in the NavMenu top-row area (next to the hamburger toggler) */
+    .appbar-container {
+        position: fixed;
+        top: 0;
+        right: 4.5rem;
+        left: auto;
+        width: auto;
+        z-index: 4;
+        pointer-events: none;
+    }
+
+    .appbar-container ::deep .mud-appbar {
+        background: transparent !important;
+        box-shadow: none !important;
+        min-height: auto !important;
+        padding: 0.25rem !important;
+        color: white;
+    }
+
+    .appbar-spacer {
+        display: none;
+    }
+
+    .appbar-auth-items {
+        display: none;
+    }
+
+    .content {
+        margin-top: 0;
+    }
+}
+
+/* ── Desktop (>= 768px) ── */
+@media (min-width: 768px) {
+    .page {
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: var(--adc-sidebar-width, 220px);
+        height: 100vh;
+        height: 100dvh;
+        position: sticky;
+        top: 0;
+    }
+
+    article {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+/* ── Error UI ── */
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }

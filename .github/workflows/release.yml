@@ -1,0 +1,35 @@
+name: Release NuGet Packages
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore MMCA.Common.slnx
+
+      - name: Build
+        run: dotnet build MMCA.Common.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test MMCA.Common.slnx -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push ./nupkgs/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate

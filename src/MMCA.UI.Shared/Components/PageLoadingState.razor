@@ -1,0 +1,7 @@
+<div aria-busy="true" aria-label="@Label">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" Class="my-4" />
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Loading";
+}

@@ -1,0 +1,25 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.vs/
+*.DotSettings.user
+
+## NuGet
+nupkgs/
+*.nupkg
+*.snupkg
+
+## IDE
+.idea/
+.vscode/
+*.swp
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Local development overrides
+local.props

@@ -1,0 +1,48 @@
+@typeparam TItem
+
+@if (IsLoading)
+{
+    <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-2" />
+}
+
+@if (!IsLoading && Items.Count == 0)
+{
+    <EmptyState Message="@EmptyMessage" Icon="@EmptyIcon" />
+}
+else
+{
+    <MudStack Spacing="2">
+        @foreach (var item in Items)
+        {
+            <MudCard Elevation="1" Class="mobile-list-card" @onclick="() => OnCardClick.InvokeAsync(item)">
+                <MudCardContent Class="pa-3">
+                    @CardTemplate(item)
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+}
+
+@if (TotalPages > 1)
+{
+    <div class="d-flex justify-center mt-3">
+        <MudPagination Count="TotalPages" Selected="CurrentPage"
+                       SelectedChanged="OnPageChanged"
+                       Size="Size.Small" Variant="Variant.Outlined" />
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<TItem> Items { get; set; } = [];
+    [Parameter] public int TotalItems { get; set; }
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter, EditorRequired] public RenderFragment<TItem> CardTemplate { get; set; } = default!;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+    [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
+    [Parameter] public string EmptyMessage { get; set; } = "No records found.";
+    [Parameter] public string EmptyIcon { get; set; } = Icons.Material.Outlined.SearchOff;
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)TotalItems / PageSize));
+}

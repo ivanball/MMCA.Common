@@ -1,0 +1,186 @@
+.navbar-toggler {
+    appearance: none;
+    cursor: pointer;
+    width: 3.5rem;
+    height: 2.75rem;
+    color: white;
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.55%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.75rem rgba(255, 255, 255, 0.1);
+    z-index: 3;
+}
+
+    .navbar-toggler:checked {
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+
+.top-row {
+    height: 3.5rem;
+    background-color: var(--adc-sidebar-bg-dark, #141B2D);
+    padding-right: 4.5rem;
+}
+
+.navbar-brand {
+    font-size: 1.1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100vw - 8rem);
+}
+
+.bi {
+    display: inline-block;
+    position: relative;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.75rem;
+    top: -1px;
+    background-size: cover;
+}
+
+.nav-item {
+    font-size: 0.9rem;
+    padding-bottom: 0.5rem;
+}
+
+    .nav-item:first-of-type {
+        padding-top: 1rem;
+    }
+
+    .nav-item:last-of-type {
+        padding-bottom: 1rem;
+    }
+
+    .nav-item ::deep .nav-link {
+        color: #d7d7d7;
+        background: none;
+        border: none;
+        border-radius: 4px;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        line-height: 3rem;
+        width: 100%;
+    }
+
+    .nav-item ::deep a.active {
+        background-color: rgba(255,255,255,0.37);
+        color: white;
+    }
+
+    .nav-item ::deep .nav-link:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+    }
+
+/* ── Mobile Nav: slide animation ── */
+.nav-scrollable {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
+    position: relative;
+    z-index: 2;
+    background-color: var(--adc-sidebar-bg, #1A2035);
+}
+
+.navbar-toggler:checked ~ .nav-scrollable {
+    max-height: calc(100vh - 3.5rem);
+    max-height: calc(100dvh - 3.5rem);
+    overflow-y: auto;
+    opacity: 1;
+}
+
+/* ── Mobile Nav Backdrop ── */
+.nav-backdrop {
+    display: none;
+    position: fixed;
+    top: 3.5rem;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    cursor: pointer;
+}
+
+.navbar-toggler:checked ~ .nav-backdrop {
+    display: block;
+}
+
+::deep .mud-nav-link {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+::deep .mud-nav-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+::deep .mud-nav-link.active {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+::deep .mud-nav-link .mud-nav-link-icon {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+::deep .mud-nav-link:hover .mud-nav-link-icon,
+::deep .mud-nav-link.active .mud-nav-link-icon {
+    color: #ffffff !important;
+}
+
+.nav-section-label {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 1rem 1rem 0.25rem 1rem;
+}
+
+    .nav-section-label:first-child {
+        padding-top: 0.75rem;
+    }
+
+.nav-auth-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 0.5rem;
+    margin-top: auto;
+}
+
+@media (min-width: 768px) {
+    .navbar-toggler {
+        display: none;
+    }
+
+    .nav-backdrop {
+        display: none !important;
+    }
+
+    .nav-scrollable {
+        /* Override mobile animation defaults */
+        max-height: none;
+        overflow-y: auto;
+        opacity: 1;
+        transition: none;
+        /* Never collapse the sidebar for wide screens */
+        height: calc(100vh - 3.5rem);
+        height: calc(100dvh - 3.5rem);
+    }
+
+    .top-row {
+        padding-right: 0;
+    }
+
+    .navbar-brand {
+        max-width: none;
+    }
+
+    .nav-auth-section {
+        display: none;
+    }
+}

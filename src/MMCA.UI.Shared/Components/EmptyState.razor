@@ -1,0 +1,9 @@
+<div class="d-flex flex-column align-center pa-6">
+    <MudIcon Icon="@Icon" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+    <MudText Typo="Typo.subtitle1" Color="Color.Secondary"><em>@Message</em></MudText>
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = Icons.Material.Outlined.SearchOff;
+    [Parameter] public string Message { get; set; } = "No records found.";
+}

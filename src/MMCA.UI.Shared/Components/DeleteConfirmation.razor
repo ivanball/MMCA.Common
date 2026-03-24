@@ -1,0 +1,25 @@
+<MudMessageBox @ref="_messageBox" CancelText="Cancel">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Delete @EntityType</MudText>
+    </TitleContent>
+    <MessageContent>
+        Are you sure you want to delete @(EntityType.ToLowerInvariant()) "@_entityName"?
+    </MessageContent>
+    <YesButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled">Delete</MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    [Parameter] public string EntityType { get; set; } = "Item";
+
+    private string? _entityName;
+    private MudMessageBox _messageBox = null!;
+
+    public Task<bool?> ShowAsync(string? entityName)
+    {
+        _entityName = entityName;
+        StateHasChanged();
+        return _messageBox.ShowAsync();
+    }
+}

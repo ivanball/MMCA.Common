@@ -1,0 +1,10 @@
+<div class="page-header">
+    <MudText Typo="Typo.h4">@Title</MudText>
+    <MudSpacer />
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

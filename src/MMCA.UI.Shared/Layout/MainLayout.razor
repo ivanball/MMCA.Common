@@ -1,0 +1,64 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using MMCA.UI.Shared.Services.Auth
+@using MMCA.UI.Shared.Theme
+@inject NavigationManager Navigation
+@inject IAuthUIService AuthService
+
+<MudThemeProvider Theme="ADCTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<a href="#main-content" class="skip-nav">Skip to main content</a>
+
+<div class="page">
+    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+        <NavMenu />
+    </aside>
+
+    <main role="main">
+        <div class="appbar-container">
+            <MudAppBar Elevation="1" Dense="true" aria-label="Top navigation bar">
+                <div class="appbar-spacer"></div>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="appbar-auth-items">
+                            <MudText Typo="Typo.body2" Class="mr-4 user-name">@context.User.Identity?.Name</MudText>
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync"
+                                       aria-label="Sign out of your account">Logout</MudButton>
+                        </span>
+                    </Authorized>
+                    <NotAuthorized>
+                        <span class="appbar-auth-items">
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/register">Register</MudButton>
+                        </span>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </MudAppBar>
+        </div>
+        <article id="main-content" class="content px-4">
+            @Body
+        </article>
+        <footer class="app-footer" role="contentinfo">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                Atlanta Cloud + AI Conference
+            </MudText>
+        </footer>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet role="alert">
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">X</span>
+</div>
+
+@code {
+    private async Task HandleLogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MMCA.Common.Shared/MMCA.Common.Shared.csproj" />
+    <Project Path="src/MMCA.Common.Domain/MMCA.Common.Domain.csproj" />
+    <Project Path="src/MMCA.Common.Application/MMCA.Common.Application.csproj" />
+    <Project Path="src/MMCA.Common.Infrastructure/MMCA.Common.Infrastructure.csproj" />
+    <Project Path="src/MMCA.Common.API/MMCA.Common.API.csproj" />
+    <Project Path="src/MMCA.UI.Shared/MMCA.UI.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MMCA.Common.Shared.Tests/MMCA.Common.Shared.Tests.csproj" />
+    <Project Path="tests/MMCA.Common.Domain.Tests/MMCA.Common.Domain.Tests.csproj" />
+    <Project Path="tests/MMCA.Common.Application.Tests/MMCA.Common.Application.Tests.csproj" />
+    <Project Path="tests/MMCA.Common.Infrastructure.Tests/MMCA.Common.Infrastructure.Tests.csproj" />
+    <Project Path="tests/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
+  </Folder>
+</Solution>

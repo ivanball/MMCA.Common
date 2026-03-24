@@ -1,0 +1,240 @@
+@page "/"
+
+<PageTitle>@EventName</PageTitle>
+
+<div class="home-page">
+
+    @* ── Call for Speakers Announcement Bar ── *@
+    <div class="announcement-bar">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <div class="announcement-inner">
+                <MudIcon Icon="@Icons.Material.Filled.Campaign" Class="announcement-icon" />
+                <MudText Typo="Typo.body1" Class="announcement-text">
+                    The Call for Speakers is now open!
+                    <MudLink Href="https://sessionize.com/atlanta-cloud-ai-conference-2026"
+                             Target="_blank" Class="announcement-link">
+                        Submit your talk!
+                    </MudLink>
+                </MudText>
+                <span class="announcement-pulse"></span>
+            </div>
+        </MudContainer>
+    </div>
+
+    @* ── Hero / Countdown ── *@
+    <section class="hero-section">
+        <div class="hero-overlay"></div>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="hero-container">
+            <div class="hero-content">
+                <MudText Typo="Typo.overline" Align="Align.Center" Class="hero-eyebrow">
+                    Alpharetta, GA
+                </MudText>
+                <MudText Typo="Typo.h3" Align="Align.Center" Class="hero-title">
+                    Atlanta <span class="text-cyan">Cloud + AI</span> Conference
+                </MudText>
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="hero-date">
+                    @FormatEventDate()
+                </MudText>
+
+                @if (_isLoading)
+                {
+                    <div class="d-flex justify-center mt-8">
+                        <MudProgressCircular Color="Color.Default" Indeterminate="true" Size="Size.Large" />
+                    </div>
+                }
+                else if (_timeRemaining > TimeSpan.Zero)
+                {
+                    <div class="countdown-container">
+                        <div class="countdown-item">
+                            <span class="countdown-value countdown-days">@_timeRemaining.Days.ToString("D2")</span>
+                            <span class="countdown-label">Days</span>
+                        </div>
+                        <span class="countdown-separator">:</span>
+                        <div class="countdown-item">
+                            <span class="countdown-value countdown-hours">@_timeRemaining.Hours.ToString("D2")</span>
+                            <span class="countdown-label">Hours</span>
+                        </div>
+                        <span class="countdown-separator">:</span>
+                        <div class="countdown-item">
+                            <span class="countdown-value countdown-minutes">@_timeRemaining.Minutes.ToString("D2")</span>
+                            <span class="countdown-label">Minutes</span>
+                        </div>
+                        <span class="countdown-separator">:</span>
+                        <div class="countdown-item">
+                            <span class="countdown-value countdown-seconds">@_timeRemaining.Seconds.ToString("D2")</span>
+                            <span class="countdown-label">Seconds</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex justify-center mt-6">
+                        <MudChip T="string" Color="Color.Success" Size="Size.Large"
+                                 Icon="@Icons.Material.Filled.Celebration">
+                            Event is Live!
+                        </MudChip>
+                    </div>
+                }
+            </div>
+        </MudContainer>
+    </section>
+
+    @* ── Keynote ── *@
+    <section class="keynote-section">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <div class="section-heading">
+                <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Class="section-back-icon" />
+                <MudText Typo="Typo.h4" Class="section-title">Keynote Speaker</MudText>
+                <div class="section-title-underline"></div>
+            </div>
+
+            <MudGrid Spacing="4" Class="mt-4">
+                <MudItem xs="12" md="4">
+                    <div class="keynote-photo-container">
+                        <div class="keynote-photo-frame">
+                            <MudImage Src="_content/MMCA.UI.Shared/images/speakers/miguel-wood.png"
+                                      Alt="@Keynote.Name"
+                                      Class="keynote-photo"
+                                      ObjectFit="ObjectFit.Cover"
+                                      Elevation="4" />
+                        </div>
+                        <MudText Typo="Typo.h5" Align="Align.Center" Class="keynote-name mt-4">@Keynote.Name</MudText>
+                        <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Primary" Class="keynote-title-text">
+                            @Keynote.Title
+                        </MudText>
+                    </div>
+                </MudItem>
+                <MudItem xs="12" md="8">
+                    <div class="keynote-bio">
+                        <MudIcon Icon="@Icons.Material.Filled.FormatQuote" Class="keynote-quote-icon" />
+                        @foreach (var paragraph in Keynote.BioParagraphs)
+                        {
+                            <MudText Typo="Typo.body1" Class="keynote-bio-paragraph">@paragraph</MudText>
+                        }
+                    </div>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </section>
+
+    @* ── Conference Tracks ── *@
+    <section class="tracks-section">
+        <div class="section-angle section-angle-top"></div>
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <div class="section-heading">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Class="section-back-icon" />
+                <MudText Typo="Typo.h4" Class="section-title">What is the @EventName?</MudText>
+                <div class="section-title-underline"></div>
+            </div>
+
+            <MudText Typo="Typo.h6" Align="Align.Center" Class="section-subtitle">
+                The Cloud + AI Conference is a community focused event by and for the cloud community.
+            </MudText>
+            <MudText Typo="Typo.body1" Align="Align.Center" Class="section-description mb-8">
+                @EventDescription
+            </MudText>
+
+            <MudGrid Spacing="3">
+                @foreach (var track in Tracks)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Elevation="0" Class="track-card">
+                            <MudCardContent>
+                                <div class="d-flex align-center mb-3">
+                                    <div class="track-icon-circle">
+                                        <MudIcon Icon="@track.Icon" Size="Size.Medium" Class="track-icon" />
+                                    </div>
+                                    <MudText Typo="Typo.h6" Class="track-name">@track.Name</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Class="track-topics">@track.Topics</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudContainer>
+    </section>
+
+    @* ── Sponsors ── *@
+    <section class="sponsors-section">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <div class="section-heading">
+                <MudIcon Icon="@Icons.Material.Filled.Favorite" Class="section-back-icon" />
+                <MudText Typo="Typo.h4" Class="section-title">Sponsors</MudText>
+                <div class="section-title-underline"></div>
+            </div>
+
+            <div class="sponsor-tiers-grid">
+                @foreach (var tier in SponsorTiers)
+                {
+                    <div class="sponsor-tier sponsor-tier-@tier.Name.ToLowerInvariant()">
+                        <div class="sponsor-tier-header" style="@($"border-bottom-color: {tier.Color}")">
+                            <MudIcon Icon="@GetTierIcon(tier.Name)" Size="Size.Small"
+                                     Style="@($"color: {tier.Color}")" Class="mr-2" />
+                            <MudText Typo="Typo.h6" Class="sponsor-tier-title">
+                                @tier.Name @(tier.Name == "Swag" ? "Partners" : "Sponsors")
+                            </MudText>
+                        </div>
+                        <div class="sponsor-tier-placeholder" style="@($"border-color: {tier.Color}33")">
+                            <MudIcon Icon="@Icons.Material.Outlined.AddBusiness" Size="Size.Large"
+                                     Style="@($"color: {tier.Color}55")" />
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                                Sponsor slots available
+                            </MudText>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="sponsor-cta-area">
+                <MudText Typo="Typo.h6" Align="Align.Center" Class="sponsor-cta-text">
+                    Interested in sponsoring?
+                </MudText>
+                <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-4">
+                    Join these great sponsors! Grab the sponsorship packet here:
+                </MudText>
+                <div class="d-flex justify-center">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.Download"
+                               Href="https://atlcloudconf.com/assets/pdfs/ATLCloud+AIConf2026-SponsorshipPacket.pdf"
+                               Target="_blank"
+                               Class="sponsor-cta-btn">
+                        Download Sponsorship Packet
+                    </MudButton>
+                </div>
+            </div>
+        </MudContainer>
+    </section>
+
+    @* ── Conference Location ── *@
+    <section class="location-section">
+        <div class="section-angle section-angle-top section-angle-dark"></div>
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <div class="section-heading section-heading-light">
+                <MudIcon Icon="@Icons.Material.Filled.Place" Class="section-back-icon" />
+                <MudText Typo="Typo.h4" Class="section-title">Conference Location</MudText>
+                <div class="section-title-underline section-title-underline-light"></div>
+            </div>
+
+            <div class="location-details">
+                <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Large" Class="location-pin-icon" />
+                <MudText Typo="Typo.h5" Align="Align.Center" Class="location-venue">
+                    @VenueAddress
+                </MudText>
+            </div>
+
+            <div class="map-container">
+                <iframe title="Conference venue map"
+                        src="@MapEmbedUrl"
+                        width="100%"
+                        height="450"
+                        style="border:0; border-radius: 12px;"
+                        allowfullscreen=""
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+        </MudContainer>
+    </section>
+
+</div>
