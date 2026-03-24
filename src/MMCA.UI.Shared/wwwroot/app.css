@@ -175,3 +175,14 @@ h1:focus {
         min-height: 44px;
     }
 }
+
+/* ── Infinite scroll sentinel & loading indicator ── */
+.infinite-scroll-sentinel {
+    min-height: 1px;
+}
+
+.infinite-scroll-loading {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+}
