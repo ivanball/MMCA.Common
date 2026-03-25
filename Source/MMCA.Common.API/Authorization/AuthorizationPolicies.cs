@@ -16,6 +16,9 @@ public static class AuthorizationPolicies
     /// <summary>Requires the "Attendee" role claim.</summary>
     public const string RequireAttendee = nameof(RequireAttendee);
 
+    /// <summary>Requires the "Admin" role claim.</summary>
+    public const string RequireAdmin = nameof(RequireAdmin);
+
     /// <summary>Requires any authenticated user, regardless of role.</summary>
     public const string RequireAuthenticated = nameof(RequireAuthenticated);
 }

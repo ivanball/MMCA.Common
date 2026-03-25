@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.JsonConverters;
 using MMCA.Common.Application.Settings;
@@ -34,8 +35,9 @@ public static class DependencyInjection
                     manager.FeatureProviders.Add(new ModuleControllerFeatureProvider(modulesSettings)));
             }
 
-            // Registered as scoped because they depend on scoped services (ICacheService)
+            // Registered as scoped because they depend on scoped services (ICacheService, ICurrentUserService)
             services.AddScoped<IdempotencyFilter>();
+            services.AddScoped<OwnerOrAdminFilter>();
 
             return services;
         }

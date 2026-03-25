@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(git mv:*)",
+      "Bash(mv src:*)",
+      "Bash(mv tests:*)",
+      "Bash(cmd //c \"ren src Source\")",
+      "Bash(dotnet package:*)",
+      "Bash(find /c/Projects/MMCA/MMCA.Common/tests -type f -name *.cs)",
+      "Bash(dotnet test:*)"
+    ]
+  }
+}

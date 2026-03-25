@@ -21,6 +21,8 @@ public static class AuthorizationExtensions
                     policy.RequireRole("Organizer"))
                 .AddPolicy(AuthorizationPolicies.RequireAttendee, policy =>
                     policy.RequireRole("Attendee"))
+                .AddPolicy(AuthorizationPolicies.RequireAdmin, policy =>
+                    policy.RequireRole("Admin"))
                 .AddPolicy(AuthorizationPolicies.RequireAuthenticated, policy =>
                     policy.RequireAuthenticatedUser());
 

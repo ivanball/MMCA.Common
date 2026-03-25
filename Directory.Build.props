@@ -13,8 +13,13 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <!-- NuGet package metadata (applied to all src projects) -->
-  <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('src'))">
+  <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata (applied to all Source projects) -->
+  <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
     <Authors>Ivan Ball</Authors>
     <Company>MMCA</Company>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -52,7 +57,7 @@
 
   <!-- Common projects link the UserIdentifierType alias from Common.Domain -->
   <ItemGroup Condition="$(MSBuildProjectName.StartsWith('MMCA.Common')) AND '$(MSBuildProjectName)' != 'MMCA.Common.Domain'">
-    <Compile Include="$(MSBuildThisFileDirectory)src\MMCA.Common.Domain\GlobalUsings.IdentifierType.cs"
+    <Compile Include="$(MSBuildThisFileDirectory)Source\MMCA.Common.Domain\GlobalUsings.IdentifierType.cs"
              Link="GlobalUsings\MMCA.Common.Domain.GlobalUsings.IdentifierType.cs" />
   </ItemGroup>
 </Project>
