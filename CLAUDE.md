@@ -27,6 +27,10 @@ dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
 
 Versioning uses MinVer (derived from git tags). CI requires `fetch-depth: 0` for full git history.
 
+Central package management is enabled — all package versions live in `Directory.Packages.props`. When adding or updating a NuGet package, update the version there (not in individual `.csproj` files).
+
+CI runs on **Ubuntu** — file paths are case-sensitive. Match casing exactly in file/folder references.
+
 ## Architecture
 
 Strict layered dependency flow — each layer only references layers below it:
@@ -46,9 +50,9 @@ Shared           (Result pattern, errors, DTOs, value objects)
 ### Key Patterns
 
 - **Result pattern** — `Result<T>` with `Error`/`ErrorType` instead of exceptions for flow control. `ApiControllerBase.HandleFailure()` maps `ErrorType` to HTTP status codes via `FrozenDictionary`.
-- **CQRS** — `ICommandHandler<TCmd, TResult>` and `IQueryHandler<TQuery, TResult>` with decorator pipeline (Logging → Caching → Transactional → Handler).
+- **CQRS** — `ICommandHandler<TCmd, TResult>` and `IQueryHandler<TQuery, TResult>` with decorator pipeline (Logging → Caching → Transactional → Handler). `AddApplicationDecorators()` must be called **after** all modules register their handlers, since Scrutor's `TryDecorate` requires existing registrations.
 - **DDD** — `BaseEntity<TId>`, `AuditableAggregateRootEntity`, domain events, invariants, specifications.
-- **Module system** — Feature-based isolation via Scrutor convention scanning and `ModulesSettings`.
+- **Module system** — Feature-based isolation via Scrutor convention scanning and `ModulesSettings`. Downstream modules register services via `ScanModuleApplicationServices<TAssemblyMarker>()` where `TAssemblyMarker` is typically a `ClassReference` type in the module's assembly.
 - **Repository + UoW** — `EFRepository<TEntity, TId>` with `UnitOfWork` pattern.
 - **Multi-DB** — Abstract DbContext strategy supporting Cosmos DB, SQLite, and SQL Server.
 - **Outbox pattern** — Reliable domain event publishing.

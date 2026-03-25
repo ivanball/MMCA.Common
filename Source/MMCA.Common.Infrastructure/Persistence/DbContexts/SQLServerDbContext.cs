@@ -26,7 +26,15 @@ public sealed class SQLServerDbContext(
         ArgumentNullException.ThrowIfNull(optionsBuilder);
 
         optionsBuilder
-            .UseSqlServer(connectionStringSettings.SQLServerConnectionString);
+            .UseSqlServer(
+                connectionStringSettings.SQLServerConnectionString,
+                sql =>
+                {
+                    if (!string.IsNullOrEmpty(connectionStringSettings.SQLServerMigrationsAssembly))
+                    {
+                        sql.MigrationsAssembly(connectionStringSettings.SQLServerMigrationsAssembly);
+                    }
+                });
 
         base.OnConfiguring(optionsBuilder);
     }

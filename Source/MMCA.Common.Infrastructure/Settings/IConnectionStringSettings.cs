@@ -13,4 +13,10 @@ public interface IConnectionStringSettings
 
     /// <summary>Gets the SQL Server connection string.</summary>
     string SQLServerConnectionString { get; init; }
+
+    /// <summary>
+    /// Gets the assembly name containing EF Core migrations for SQL Server.
+    /// When empty, EF defaults to the DbContext assembly.
+    /// </summary>
+    string SQLServerMigrationsAssembly { get; init; }
 }

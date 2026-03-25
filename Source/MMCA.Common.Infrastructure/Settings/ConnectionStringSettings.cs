@@ -20,4 +20,7 @@ public sealed class ConnectionStringSettings : IConnectionStringSettings
     /// <inheritdoc />
     [Required]
     public string SQLServerConnectionString { get; init; } = string.Empty;
+
+    /// <inheritdoc />
+    public string SQLServerMigrationsAssembly { get; init; } = string.Empty;
 }

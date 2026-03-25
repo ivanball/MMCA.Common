@@ -8,7 +8,7 @@ namespace MMCA.Common.API;
 /// <summary>
 /// Removes controllers belonging to disabled modules from MVC's controller discovery.
 /// Derives the module name from the controller's namespace using the convention:
-/// <c>{Prefix}.Modules.{ModuleName}.*</c> (e.g., <c>ADC.Modules.Catalog.API.Controllers</c>
+/// <c>{Prefix}.Modules.{ModuleName}.*</c> (e.g., <c>MMCA.Modules.Catalog.API.Controllers</c>
 /// maps to module name "Catalog").
 /// </summary>
 /// <remarks>

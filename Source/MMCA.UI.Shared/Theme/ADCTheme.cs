@@ -3,7 +3,7 @@ using MudBlazor;
 namespace MMCA.UI.Shared.Theme;
 
 /// <summary>
-/// Application-wide MudBlazor theme defining the ADC brand palette, typography, and layout properties.
+/// Application-wide MudBlazor theme defining the brand palette, typography, and layout properties.
 /// Applied via <c>MudThemeProvider</c> in the root layout.
 /// </summary>
 public static class ADCTheme

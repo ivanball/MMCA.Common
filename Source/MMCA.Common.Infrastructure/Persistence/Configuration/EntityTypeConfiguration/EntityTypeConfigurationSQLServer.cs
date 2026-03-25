@@ -9,7 +9,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigu
 
 /// <summary>
 /// SQL Server entity configuration base. Derives table name from the entity type name
-/// and schema from the module namespace (e.g., <c>ADC.Modules.Catalog.Domain</c> maps to schema <c>Catalog</c>).
+/// and schema from the module namespace (e.g., <c>MMCA.Modules.Catalog.Domain</c> maps to schema <c>Catalog</c>).
 /// Configures key generation based on whether the entity's ID type supports auto-generation.
 /// </summary>
 /// <typeparam name="TEntity">The entity type being configured.</typeparam>
@@ -28,7 +28,7 @@ public abstract class EntityTypeConfigurationSQLServer<TEntity, TIdentifierType>
         base.Configure(builder);
 
         // Derive the SQL schema from the module namespace segment following "Modules".
-        // E.g., "ADC.Modules.Sales.Domain.Order" -> schema "Sales", table "Order".
+        // E.g., "MMCA.Modules.Sales.Domain.Order" -> schema "Sales", table "Order".
         var segments = typeof(TEntity).Namespace?.Split('.') ?? [];
         var modulesIndex = Array.FindIndex(segments,
             s => s.Equals("Modules", StringComparison.OrdinalIgnoreCase));

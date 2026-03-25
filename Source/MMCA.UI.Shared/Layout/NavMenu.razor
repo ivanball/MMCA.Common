@@ -10,7 +10,7 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="ADC Store home">ADC</a>
+        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="MMCA home">MMCA</a>
     </div>
 </div>
 
@@ -24,19 +24,15 @@
     <MudNavMenu Color="Color.Default">
         <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Home</MudNavLink>
 
-        @if (_userItems.Count > 0)
+        @foreach (var item in _generalItems)
         {
-            <div class="nav-section-label" role="heading" aria-level="2">Conference</div>
-            @foreach (var item in _userItems)
-            {
-                <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
-            }
+            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
         }
 
-        @if (_speakerItems.Count > 0)
+        @if (_userItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
         {
-            <div class="nav-section-label" role="heading" aria-level="2">Speaker</div>
-            @foreach (var item in _speakerItems)
+            <div class="nav-section-label" role="heading" aria-level="2">My Account</div>
+            @foreach (var item in _userItems)
             {
                 <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
             }
@@ -71,8 +67,8 @@
 
 @code {
     private ClaimsPrincipal? _user;
+    private List<NavItem> _generalItems = [];
     private List<NavItem> _userItems = [];
-    private List<NavItem> _speakerItems = [];
     private List<NavItem> _adminItems = [];
 
     private async Task HandleLogoutAsync()
@@ -92,14 +88,8 @@
             .Where(item => item.RequiredClaim is null || _user?.HasClaim(c => c.Type == item.RequiredClaim) == true)
             .ToList();
 
-        var isOrganizer = _user?.IsInRole("Organizer") == true;
-        _speakerItems = allItems
-            .Where(i => i.RequiredClaim is not null && i.RequiredRole is null or "Attendee")
-            .ToList();
-        _userItems = allItems
-            .Where(i => i.RequiredClaim is null && (i.RequiredRole is null or "Attendee"))
-            .Where(i => !isOrganizer || i.RequiredRole is not null)
-            .ToList();
-        _adminItems = allItems.Where(i => i.RequiredRole is "Organizer").ToList();
+        _generalItems = allItems.Where(i => i.Section is NavSection.General).ToList();
+        _userItems = allItems.Where(i => i.Section is NavSection.User).ToList();
+        _adminItems = allItems.Where(i => i.Section is NavSection.Admin).ToList();
     }
 }
