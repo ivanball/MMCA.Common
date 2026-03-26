@@ -1,11 +1,15 @@
 using System.IO.Compression;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using MMCA.Common.API.Authorization;
+using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.API.Startup;
 
@@ -79,6 +83,43 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
+        /// Registers JWT Bearer authentication with symmetric HMAC-SHA256 key and authorization policies.
+        /// Binds <see cref="JwtSettings"/> from configuration and validates the signing key length.
+        /// </summary>
+        public IServiceCollection AddCommonAuthentication(IConfiguration configuration)
+        {
+            services.AddOptions<JwtSettings>()
+                .Bind(configuration.GetSection(JwtSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+                        ?? throw new InvalidOperationException("JwtSettings section is not configured.");
+
+                    options.TokenValidationParameters = new()
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = jwtSettings.Issuer,
+                        ValidAudience = jwtSettings.Audience,
+                        IssuerSigningKey = new SymmetricSecurityKey(
+                            GetValidatedSigningKey(
+                                jwtSettings.SecretForKey
+                                ?? throw new System.Collections.Generic.KeyNotFoundException("SecretForKey not found or invalid")))
+                    };
+                });
+
+            services.AddAuthorizationPolicies();
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers two CORS policies: a restrictive one for production (origins from
         /// <c>Cors:AllowedOrigins</c> configuration) and an open one for development.
         /// </summary>
@@ -102,5 +143,21 @@ public static class WebApplicationBuilderExtensions
 
             return services;
         }
+    }
+
+    /// <summary>
+    /// Decodes a Base64-encoded JWT signing key and validates that it meets the
+    /// minimum length requirement for HMAC-SHA256 (256 bits / 32 bytes).
+    /// </summary>
+    internal static byte[] GetValidatedSigningKey(string base64Key)
+    {
+        var keyBytes = Convert.FromBase64String(base64Key);
+        if (keyBytes.Length < 32)
+        {
+            throw new InvalidOperationException(
+                $"JWT SecretForKey must be at least 256 bits (32 bytes) for HMAC-SHA256. Current key is {keyBytes.Length * 8} bits.");
+        }
+
+        return keyBytes;
     }
 }

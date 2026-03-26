@@ -11,6 +11,8 @@
     <Project Path="Source/MMCA.Common.Infrastructure/MMCA.Common.Infrastructure.csproj" />
     <Project Path="Source/MMCA.Common.API/MMCA.Common.API.csproj" />
     <Project Path="Source/MMCA.UI.Shared/MMCA.UI.Shared.csproj" />
+    <Project Path="Source/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />
+    <Project Path="Source/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/MMCA.Common.Shared.Tests/MMCA.Common.Shared.Tests.csproj" />

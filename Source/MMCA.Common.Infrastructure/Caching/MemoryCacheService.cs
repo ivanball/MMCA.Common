@@ -65,11 +65,7 @@ internal sealed class MemoryCacheService(IMemoryCache cache) : ICacheService
     /// <inheritdoc />
     public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
     {
-        var keysToRemove = _keys.Keys
-            .Where(k => k.StartsWith(prefix, StringComparison.Ordinal))
-            .ToList();
-
-        foreach (var key in keysToRemove)
+        foreach (var key in _keys.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)))
         {
             cache.Remove(key);
             _keys.TryRemove(key, out _);
