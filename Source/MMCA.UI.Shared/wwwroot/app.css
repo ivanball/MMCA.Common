@@ -78,7 +78,7 @@ h1:focus {
 }
 
 /* ── Snackbar: ensure visibility on mobile ── */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
     .mud-snackbar {
         min-width: 0;
     }
@@ -88,14 +88,14 @@ h1:focus {
 /* MudDrawer (temporary) sits at z-index ~1300, its overlay at ~1299.
    On mobile the cart drawer goes full-width and obscures the snackbar
    container. Bump the snackbar z-index so it floats above the drawer. */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
     .mud-snackbar-location-top-center {
         z-index: 10000 !important;
     }
 }
 
 /* ── CartDrawer: full-width on mobile ── */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
     .cart-drawer {
         width: 100vw !important;
         max-width: 100vw !important;
@@ -113,7 +113,7 @@ h1:focus {
     margin-top: 2rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
     .auth-container {
         margin-top: 4rem;
     }
@@ -141,7 +141,7 @@ h1:focus {
 }
 
 /* ── Mobile: responsive data grids ── */
-@media (max-width: 767.98px) {
+@media (max-width: 1023.98px) {
     /* Hide non-essential data-grid columns on mobile */
     .hide-on-mobile {
         display: none !important;
