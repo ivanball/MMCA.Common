@@ -30,6 +30,14 @@ internal class EFReadRepositoryDecorator<TEntity, TIdentifierType>(IReadReposito
         ProfileAsync(nameof(GetAllAsync),
             () => _inner.GetAllAsync(includes, where, orderBy, select, asTracking, ignoreQueryFilters, cancellationToken));
 
+    public Task<IReadOnlyCollection<TResult>> GetProjectedAsync<TResult>(
+        Expression<Func<TEntity, TResult>> select,
+        Expression<Func<TEntity, bool>>? where = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default) =>
+        ProfileAsync(nameof(GetProjectedAsync),
+            () => _inner.GetProjectedAsync(select, where, asTracking, cancellationToken));
+
     public Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
         string nameProperty,
         Expression<Func<TEntity, bool>>? where = null,

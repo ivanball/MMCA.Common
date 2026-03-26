@@ -62,9 +62,9 @@ public abstract class ApplicationDbContext(
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         // When no authenticated user is available (e.g. background services, seeding, outbox processing),
-        // use a sentinel value for audit fields. Assumes UserIdentifierType is int-based.
-        const UserIdentifierType systemUserId = -1;
-        var resolvedUserId = userId ?? systemUserId;
+        // use the default value as a sentinel (0 for int, Guid.Empty for Guid). Real user IDs are
+        // always non-default, so this reliably distinguishes system-generated audit entries.
+        var resolvedUserId = userId ?? default;
 
         // Stamp audit fields automatically — prevents callers from needing to set them manually.
         // On Added: set both Created and LastModified; on Modified: only update LastModified

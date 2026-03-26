@@ -25,6 +25,23 @@ public static class CommonInvariants
             : Result.Success();
 
     /// <summary>
+    /// Validates that a string value does not exceed the specified maximum length.
+    /// Null and empty strings pass (use <see cref="EnsureStringIsNotEmpty"/> for non-empty enforcement).
+    /// </summary>
+    /// <param name="value">The string value to validate.</param>
+    /// <param name="maxLength">The maximum allowed length.</param>
+    /// <param name="code">The error code (e.g., "Product.Name.TooLong").</param>
+    /// <param name="message">The error message.</param>
+    /// <param name="source">The calling method name, used for error tracing.</param>
+    /// <param name="target">The property name, used for error targeting.</param>
+    /// <returns>A <see cref="Result"/> indicating success or an invariant error.</returns>
+    public static Result EnsureStringMaxLength(
+        string? value, int maxLength, string code, string message, string source, string target)
+        => value is not null && value.Length > maxLength
+            ? Result.Failure(Error.Invariant(code: code, message: message, source: source, target: target))
+            : Result.Success();
+
+    /// <summary>
     /// Validates that a comparable identifier is not equal to its default value.
     /// </summary>
     /// <typeparam name="TId">The identifier type.</typeparam>

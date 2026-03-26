@@ -32,6 +32,22 @@ public interface IReadRepository<TEntity, TIdentifierType>
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Retrieves entities matching a filter, projected to a different type via a selector expression.
+    /// The projection is translated to SQL, avoiding full entity materialization.
+    /// </summary>
+    /// <typeparam name="TResult">The projected result type.</typeparam>
+    /// <param name="select">Projection expression applied server-side.</param>
+    /// <param name="where">Optional filter expression.</param>
+    /// <param name="asTracking">Whether to track entities in the change tracker.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The projected results.</returns>
+    Task<IReadOnlyCollection<TResult>> GetProjectedAsync<TResult>(
+        Expression<Func<TEntity, TResult>> select,
+        Expression<Func<TEntity, bool>>? where = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Retrieves entities as lightweight id/name pairs for lookup scenarios.</summary>
     /// <param name="nameProperty">The entity property to project as the display name.</param>
     /// <param name="where">Optional filter expression.</param>

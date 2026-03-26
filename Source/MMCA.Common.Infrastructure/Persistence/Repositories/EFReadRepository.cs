@@ -54,6 +54,23 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    public virtual async Task<IReadOnlyCollection<TResult>> GetProjectedAsync<TResult>(
+        Expression<Func<TEntity, TResult>> select,
+        Expression<Func<TEntity, bool>>? where = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(select);
+
+        var query = asTracking ? Table : TableNoTracking;
+
+        if (where is not null)
+            query = query.Where(where);
+
+        return await query.Select(select).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public virtual async Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
         string nameProperty,
         Expression<Func<TEntity, bool>>? where = null,

@@ -33,10 +33,19 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
                 query = queryableExecutor.Include(query, include.PropertyName);
         }
 
+        // Apply specification criteria and dynamic filters BEFORE materializing —
+        // this ensures the data source handles as much filtering as possible server-side,
+        // avoiding loading the entire entity set for unsupported-include paths.
+        if (parameters.Criteria is not null)
+            query = query.Where(parameters.Criteria);
+
+        if (parameters.Filters is not null && parameters.Filters.Count != 0)
+            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap);
+
         // PATH 2 - Unsupported includes: When the data source does not support JOINs
         // (e.g. Cosmos DB where entities may live in different containers), we must
-        // materialize the query early, then manually load related data via the
-        // NavigationPopulator. All subsequent filtering/sorting runs in-memory on the
+        // materialize the (already filtered) query, then manually load related data via
+        // the NavigationPopulator. Sorting/pagination continues in-memory on the
         // materialized collection.
         if (navigationMetadata.UnsupportedIncludes.Count != 0)
         {
@@ -48,14 +57,6 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
 
             query = entities.AsQueryable();
         }
-
-        // Apply specification criteria (e.g. authorization-based filtering)
-        if (parameters.Criteria is not null)
-            query = query.Where(parameters.Criteria);
-
-        // Apply dynamic user-supplied filters
-        if (parameters.Filters is not null && parameters.Filters.Count != 0)
-            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap);
 
         query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
 
