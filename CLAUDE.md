@@ -85,4 +85,4 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 - **Framework:** xUnit v3 + FluentAssertions + Moq + coverlet
 - **Test runner:** Microsoft Testing Platform (configured in `global.json`)
 - Test projects mirror Source structure under `Tests/`
-- No UI.Shared test project exists
+- `MMCA.UI.Shared.Tests` covers UI helper logic (extensions, services) — every test project must contain at least one test or Microsoft Testing Platform will fail the build (exit code 8)
