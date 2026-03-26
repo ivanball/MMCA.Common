@@ -28,11 +28,11 @@ jobs:
         run: dotnet build MMCA.Common.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --logger "trx;LogFileName=results.trx"
+        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --report-trx
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v5
         with:
           name: test-results
-          path: '**/results.trx'
+          path: '**/TestResults/*.trx'
