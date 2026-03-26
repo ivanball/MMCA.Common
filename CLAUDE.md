@@ -12,14 +12,14 @@ MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith
 # Build
 dotnet build MMCA.Common.slnx -c Release
 
-# Test (all projects)
-dotnet test MMCA.Common.slnx -c Release
+# Test (all projects — uses Microsoft Testing Platform via global.json)
+dotnet test --solution MMCA.Common.slnx -c Release
 
 # Test a single project
-dotnet test Tests/MMCA.Common.API.Tests
+dotnet test --project Tests/MMCA.Common.API.Tests
 
-# Test a single test/class
-dotnet test Tests/MMCA.Common.API.Tests --filter "FullyQualifiedName~IdempotencyFilterTests"
+# Test a specific test class or method
+dotnet test --project Tests/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"
 
 # Pack NuGet packages
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
@@ -82,6 +82,7 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 
 ## Testing
 
-- **Framework:** xUnit + FluentAssertions + Moq + coverlet
+- **Framework:** xUnit v3 + FluentAssertions + Moq + coverlet
+- **Test runner:** Microsoft Testing Platform (configured in `global.json`)
 - Test projects mirror Source structure under `Tests/`
 - No UI.Shared test project exists
