@@ -11,7 +11,7 @@ A .NET 10.0 framework for building modular monolith applications using DDD, Clea
 | `MMCA.Common.Application` | CQRS handlers, decorator pipeline, module system, query service |
 | `MMCA.Common.Infrastructure` | EF Core multi-DB, repositories, UoW, caching, JWT, outbox |
 | `MMCA.Common.API` | Base controllers, middleware, idempotency, error-to-HTTP mapping |
-| `MMCA.UI.Shared` | Blazor shared components, auth state, MudBlazor theme |
+| `MMCA.Common.UI` | Blazor shared components, auth state, MudBlazor theme |
 
 ## Requirements
 

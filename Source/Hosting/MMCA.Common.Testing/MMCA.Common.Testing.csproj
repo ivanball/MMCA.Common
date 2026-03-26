@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Testing</PackageId>
+    <Description>MMCA framework — shared integration test infrastructure: base classes, JWT token generator, HTTP helpers</Description>
+    <!-- Relax analyzer rules for test infrastructure (same as Tests/**/*.cs in .editorconfig) -->
+    <NoWarn>$(NoWarn);CA1054;CA2234;S2743;S4457;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0004;MA0051;MA0076;RCS1046;S6966</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

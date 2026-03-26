@@ -57,7 +57,7 @@
 
   <!-- Common projects link the UserIdentifierType alias from Common.Domain -->
   <ItemGroup Condition="$(MSBuildProjectName.StartsWith('MMCA.Common')) AND '$(MSBuildProjectName)' != 'MMCA.Common.Domain'">
-    <Compile Include="$(MSBuildThisFileDirectory)Source\MMCA.Common.Domain\GlobalUsings.IdentifierType.cs"
+    <Compile Include="$(MSBuildThisFileDirectory)Source\Core\MMCA.Common.Domain\GlobalUsings.IdentifierType.cs"
              Link="GlobalUsings\MMCA.Common.Domain.GlobalUsings.IdentifierType.cs" />
   </ItemGroup>
 </Project>

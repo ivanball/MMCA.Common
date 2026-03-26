@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Application</PackageId>
+    <Description>MMCA framework — CQRS handlers, decorators, module system, query service</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+
+    <PackageReference Include="MiniProfiler.AspNetCore.Mvc" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Scrutor" />
+    <PackageReference Include="System.Linq.Dynamic.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MMCA.Common.Domain\MMCA.Common.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

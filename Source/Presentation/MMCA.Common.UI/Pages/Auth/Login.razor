@@ -1,0 +1,95 @@
+@page "/login"
+@using MMCA.Common.Shared.Auth
+@using MMCA.Common.UI.Services.Auth
+@attribute [StreamRendering(false)]
+@inject IAuthUIService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Login</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="auth-container">
+    <div class="d-flex flex-column align-center mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large"
+                 Color="Color.Primary" Class="mb-2" />
+        <MudText Typo="Typo.h4" Align="Align.Center">Welcome Back</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+            Sign in to your account to continue
+        </MudText>
+    </div>
+
+    <MudCard Elevation="1">
+        <form @onsubmit="HandleLoginAsync">
+            <MudCardContent Class="pa-6">
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_errorMessage</MudAlert>
+                }
+                <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email"
+                              Immediate="true" Required="true" RequiredError="Email is required"
+                              Variant="Variant.Outlined" Class="mb-4"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email"
+                              autocomplete="email" />
+                <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password"
+                              Immediate="true" Required="true" RequiredError="Password is required"
+                              Variant="Variant.Outlined" Class="mb-2"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Key"
+                              autocomplete="current-password" />
+            </MudCardContent>
+            <MudCardActions Class="d-flex flex-column pa-6 pt-0" Style="gap: 0.75rem;">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           Disabled="@_isLoading" ButtonType="ButtonType.Submit" Size="Size.Large"
+                           aria-label="Sign in to your account">
+                    @if (_isLoading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Sign In
+                </MudButton>
+                <MudDivider Class="my-1" />
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                    Don't have an account?
+                </MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true"
+                           Href="/register" Size="Size.Medium">
+                    Create Account
+                </MudButton>
+            </MudCardActions>
+        </form>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string? _errorMessage;
+    private bool _isLoading;
+
+    private async Task HandleLoginAsync()
+    {
+        _errorMessage = null;
+        _isLoading = true;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(new LoginRequest(_email, _password));
+            if (result is not null)
+            {
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = AuthService.LastError ?? "Invalid email or password.";
+            }
+        }
+        catch
+        {
+            _errorMessage = "An error occurred during login. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

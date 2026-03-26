@@ -16,10 +16,10 @@ dotnet build MMCA.Common.slnx -c Release
 dotnet test --solution MMCA.Common.slnx -c Release
 
 # Test a single project
-dotnet test --project Tests/MMCA.Common.API.Tests
+dotnet test --project Tests/Presentation/MMCA.Common.API.Tests
 
 # Test a specific test class or method
-dotnet test --project Tests/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"
+dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"
 
 # Pack NuGet packages
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
@@ -36,7 +36,7 @@ CI runs on **Ubuntu** — file paths are case-sensitive. Match casing exactly in
 Strict layered dependency flow — each layer only references layers below it:
 
 ```
-API / UI.Shared  (presentation)
+API / Common.UI  (presentation)
        ↓
 Infrastructure   (EF Core, caching, JWT, outbox)
        ↓
@@ -60,7 +60,7 @@ Shared           (Result pattern, errors, DTOs, value objects)
 
 ### Entity Identifier Convention
 
-A shared global using alias in `Source/MMCA.Common.Domain/GlobalUsings.IdentifierType.cs` (e.g., `global using UserIdentifierType = int;`) is linked into all MMCA.Common projects via `Directory.Build.props`. This provides a single place to change identifier types across the framework.
+A shared global using alias in `Source/Core/MMCA.Common.Domain/GlobalUsings.IdentifierType.cs` (e.g., `global using UserIdentifierType = int;`) is linked into all MMCA.Common projects via `Directory.Build.props`. This provides a single place to change identifier types across the framework.
 
 ### Extension Types (C# Preview)
 
@@ -85,4 +85,4 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 - **Framework:** xUnit v3 + FluentAssertions + Moq + coverlet
 - **Test runner:** Microsoft Testing Platform (configured in `global.json`)
 - Test projects mirror Source structure under `Tests/`
-- `MMCA.UI.Shared.Tests` covers UI helper logic (extensions, services) — every test project must contain at least one test or Microsoft Testing Platform will fail the build (exit code 8)
+- `MMCA.Common.UI.Tests` covers UI helper logic (extensions, services) — every test project must contain at least one test or Microsoft Testing Platform will fail the build (exit code 8)

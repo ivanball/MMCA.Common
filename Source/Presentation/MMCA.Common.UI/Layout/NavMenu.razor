@@ -1,0 +1,95 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using MMCA.Common.UI.Common
+@using MMCA.Common.UI.Common.Interfaces
+@using MMCA.Common.UI.Services.Auth
+@inject IEnumerable<IUIModule> UIModules
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IAuthUIService AuthService
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="MMCA home">MMCA</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Toggle navigation menu" class="navbar-toggler"
+       aria-label="Toggle navigation menu" aria-expanded="false"
+       aria-controls="nav-menu" />
+
+<div class="nav-backdrop" aria-hidden="true"></div>
+
+<nav id="nav-menu" class="nav-scrollable" aria-label="Site navigation">
+    <MudNavMenu Color="Color.Default">
+        <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Home</MudNavLink>
+
+        @foreach (var item in _generalItems)
+        {
+            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+        }
+
+        @if (_userItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
+        {
+            <div class="nav-section-label" role="heading" aria-level="2">My Account</div>
+            @foreach (var item in _userItems)
+            {
+                <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+            }
+        }
+
+        @if (_adminItems.Count > 0)
+        {
+            <div class="nav-section-label" role="heading" aria-level="2">Administration</div>
+            @foreach (var item in _adminItems)
+            {
+                <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+            }
+        }
+    </MudNavMenu>
+
+    <div class="nav-auth-section">
+        <AuthorizeView>
+            <Authorized>
+                <MudNavMenu Color="Color.Default">
+                    <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">Logout</MudNavLink>
+                </MudNavMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudNavMenu Color="Color.Default">
+                    <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">Login</MudNavLink>
+                    <MudNavLink Href="/register" Icon="@Icons.Material.Filled.PersonAdd">Register</MudNavLink>
+                </MudNavMenu>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</nav>
+
+@code {
+    private ClaimsPrincipal? _user;
+    private List<NavItem> _generalItems = [];
+    private List<NavItem> _userItems = [];
+    private List<NavItem> _adminItems = [];
+
+    private async Task HandleLogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _user = authState.User;
+
+        var allItems = UIModules
+            .SelectMany(m => m.NavItems)
+            .Where(item => item.RequiredRole is null || _user?.IsInRole(item.RequiredRole) == true)
+            .Where(item => item.RequiredClaim is null || _user?.HasClaim(c => c.Type == item.RequiredClaim) == true)
+            .ToList();
+
+        _generalItems = allItems.Where(i => i.Section is NavSection.General).ToList();
+        _userItems = allItems.Where(i => i.Section is NavSection.User).ToList();
+        _adminItems = allItems.Where(i => i.Section is NavSection.Admin).ToList();
+    }
+}

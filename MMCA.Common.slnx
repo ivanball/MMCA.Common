@@ -4,22 +4,30 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Folder Name="/Source/">
-    <Project Path="Source/MMCA.Common.Shared/MMCA.Common.Shared.csproj" />
-    <Project Path="Source/MMCA.Common.Domain/MMCA.Common.Domain.csproj" />
-    <Project Path="Source/MMCA.Common.Application/MMCA.Common.Application.csproj" />
-    <Project Path="Source/MMCA.Common.Infrastructure/MMCA.Common.Infrastructure.csproj" />
-    <Project Path="Source/MMCA.Common.API/MMCA.Common.API.csproj" />
-    <Project Path="Source/MMCA.UI.Shared/MMCA.UI.Shared.csproj" />
-    <Project Path="Source/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />
-    <Project Path="Source/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
+  <Folder Name="/Source/" />
+  <Folder Name="/Source/Core/">
+    <Project Path="Source/Core/MMCA.Common.Shared/MMCA.Common.Shared.csproj" />
+    <Project Path="Source/Core/MMCA.Common.Domain/MMCA.Common.Domain.csproj" />
+    <Project Path="Source/Core/MMCA.Common.Application/MMCA.Common.Application.csproj" />
+    <Project Path="Source/Core/MMCA.Common.Infrastructure/MMCA.Common.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Tests/">
-    <Project Path="Tests/MMCA.Common.Shared.Tests/MMCA.Common.Shared.Tests.csproj" />
-    <Project Path="Tests/MMCA.Common.Domain.Tests/MMCA.Common.Domain.Tests.csproj" />
-    <Project Path="Tests/MMCA.Common.Application.Tests/MMCA.Common.Application.Tests.csproj" />
-    <Project Path="Tests/MMCA.Common.Infrastructure.Tests/MMCA.Common.Infrastructure.Tests.csproj" />
-    <Project Path="Tests/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
-    <Project Path="Tests/MMCA.UI.Shared.Tests/MMCA.UI.Shared.Tests.csproj" />
+  <Folder Name="/Source/Presentation/">
+    <Project Path="Source/Presentation/MMCA.Common.API/MMCA.Common.API.csproj" />
+    <Project Path="Source/Presentation/MMCA.Common.UI/MMCA.Common.UI.csproj" />
+  </Folder>
+  <Folder Name="/Source/Hosting/">
+    <Project Path="Source/Hosting/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
+  </Folder>
+  <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Core/">
+    <Project Path="Tests/Core/MMCA.Common.Shared.Tests/MMCA.Common.Shared.Tests.csproj" />
+    <Project Path="Tests/Core/MMCA.Common.Domain.Tests/MMCA.Common.Domain.Tests.csproj" />
+    <Project Path="Tests/Core/MMCA.Common.Application.Tests/MMCA.Common.Application.Tests.csproj" />
+    <Project Path="Tests/Core/MMCA.Common.Infrastructure.Tests/MMCA.Common.Infrastructure.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Presentation/">
+    <Project Path="Tests/Presentation/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
+    <Project Path="Tests/Presentation/MMCA.Common.UI.Tests/MMCA.Common.UI.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,89 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using MMCA.Common.UI.Common.Interfaces
+@using MMCA.Common.UI.Services.Auth
+@using Microsoft.Extensions.Options
+@using MMCA.Common.UI.Common.Settings
+@using MMCA.Common.UI.Theme
+@inject NavigationManager Navigation
+@inject IAuthUIService AuthService
+@inject IEnumerable<IUIModule> UIModules
+@inject IOptions<LayoutSettings> LayoutSettingsOptions
+
+<MudThemeProvider Theme="ADCTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<a href="#main-content" class="skip-nav">Skip to main content</a>
+
+<div class="page">
+    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+        <NavMenu />
+    </aside>
+
+    <main role="main">
+        <div class="appbar-container">
+            <MudAppBar Elevation="1" Dense="true" aria-label="Top navigation bar">
+                <div class="appbar-spacer"></div>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="appbar-auth-items">
+                            @foreach (var componentType in _appBarComponents)
+                            {
+                                <DynamicComponent Type="componentType" />
+                            }
+                            <MudText Typo="Typo.body2" Class="mr-4 user-name">@context.User.Identity?.Name</MudText>
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync"
+                                       aria-label="Sign out of your account">Logout</MudButton>
+                        </span>
+                    </Authorized>
+                    <NotAuthorized>
+                        <span class="appbar-auth-items">
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/register">Register</MudButton>
+                        </span>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </MudAppBar>
+        </div>
+        <article id="main-content" class="content px-4">
+            @Body
+        </article>
+        @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
+        {
+            <footer class="app-footer" role="contentinfo">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                    @LayoutSettingsOptions.Value.FooterText
+                </MudText>
+            </footer>
+        }
+    </main>
+    @foreach (var componentType in _layoutComponents)
+    {
+        <DynamicComponent Type="componentType" />
+    }
+</div>
+
+<div id="blazor-error-ui" data-nosnippet role="alert">
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">X</span>
+</div>
+
+@code {
+    private List<Type> _appBarComponents = [];
+    private List<Type> _layoutComponents = [];
+
+    protected override void OnInitialized()
+    {
+        _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
+        _layoutComponents = UIModules.SelectMany(m => m.LayoutComponentTypes).ToList();
+    }
+
+    private async Task HandleLogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}
