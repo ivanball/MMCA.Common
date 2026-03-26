@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Idempotency;
@@ -23,8 +24,12 @@ public static class DependencyInjection
         /// When provided, registers <see cref="ModuleControllerFeatureProvider"/> to exclude controllers
         /// belonging to disabled modules. Pass <see langword="null"/> to include all discovered controllers.
         /// </param>
+        /// <param name="configuration">
+        /// When provided, binds <see cref="IdempotencySettings"/> from the configuration section.
+        /// Pass <see langword="null"/> to use default idempotency settings.
+        /// </param>
         /// <returns>The service collection for chaining.</returns>
-        public IServiceCollection AddAPI(ModulesSettings? modulesSettings = null)
+        public IServiceCollection AddAPI(ModulesSettings? modulesSettings = null, IConfiguration? configuration = null)
         {
             var mvcBuilder = services.AddControllers(options => options.ReturnHttpNotAcceptable = false)
                 .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new CurrencyJsonConverter()))
@@ -34,6 +39,14 @@ public static class DependencyInjection
             {
                 mvcBuilder.ConfigureApplicationPartManager(manager =>
                     manager.FeatureProviders.Add(new ModuleControllerFeatureProvider(modulesSettings)));
+            }
+
+            if (configuration is not null)
+            {
+                services.AddOptions<IdempotencySettings>()
+                    .Bind(configuration.GetSection(IdempotencySettings.SectionName))
+                    .ValidateDataAnnotations()
+                    .ValidateOnStart();
             }
 
             // Registered as scoped because they depend on scoped services (ICacheService, ICurrentUserService)

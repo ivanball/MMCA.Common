@@ -5,11 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Settings;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
 
@@ -59,7 +61,7 @@ public sealed class OutboxProcessorTests : IDisposable
         ServiceProvider rootProvider = services.BuildServiceProvider();
 
         var scopeFactory = rootProvider.GetRequiredService<IServiceScopeFactory>();
-        _sut = new OutboxProcessor(scopeFactory, NullLogger<OutboxProcessor>.Instance);
+        _sut = new OutboxProcessor(scopeFactory, NullLogger<OutboxProcessor>.Instance, Options.Create(new OutboxSettings()));
     }
 
     public void Dispose()

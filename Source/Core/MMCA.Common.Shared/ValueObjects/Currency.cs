@@ -43,7 +43,7 @@ public sealed record Currency
         if (string.IsNullOrEmpty(code))
             return Result.Failure<Currency>([EmptyCurrency]);
 
-        Currency? currency = All.FirstOrDefault(c => c.Code == code);
+        Currency? currency = All.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase));
         if (currency is null)
             return Result.Failure<Currency>([InvalidCurrency]);
 

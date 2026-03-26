@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.Application.Interfaces;
 
@@ -6,7 +7,8 @@ namespace MMCA.Common.API.Middleware;
 /// <summary>
 /// Middleware that extracts or generates a correlation ID for each HTTP request.
 /// The ID is read from the <c>X-Correlation-ID</c> request header if present;
-/// otherwise the ASP.NET Core <see cref="HttpContext.TraceIdentifier"/> is used.
+/// otherwise falls back to the current W3C trace ID (from OpenTelemetry/Activity)
+/// or the ASP.NET Core <see cref="HttpContext.TraceIdentifier"/>.
 /// The correlation ID is echoed back in the response header for client-side tracing.
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>
@@ -28,6 +30,7 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(correlationContext);
 
         var correlationId = context.Request.Headers[HeaderName].FirstOrDefault()
+            ?? Activity.Current?.TraceId.ToString()
             ?? context.TraceIdentifier;
 
         correlationContext.SetCorrelationId(correlationId);

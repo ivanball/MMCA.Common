@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 
@@ -17,14 +19,13 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// </summary>
 /// <param name="scopeFactory">Factory for creating DI scopes per processing cycle.</param>
 /// <param name="logger">Logger for processing diagnostics.</param>
+/// <param name="outboxOptions">Configurable outbox processing settings.</param>
 public sealed partial class OutboxProcessor(
     IServiceScopeFactory scopeFactory,
-    ILogger<OutboxProcessor> logger) : BackgroundService
+    ILogger<OutboxProcessor> logger,
+    IOptions<OutboxSettings> outboxOptions) : BackgroundService
 {
-    private const int BatchSize = 50;
-    private const int MaxRetries = 5;
-    private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan ProcessingDelay = TimeSpan.FromSeconds(30);
+    private readonly OutboxSettings _settings = outboxOptions.Value;
 
     private static readonly Meter OutboxMeter = new("MMCA.Common.Outbox");
     private static readonly Counter<long> DeadLetterCounter = OutboxMeter.CreateCounter<long>(
@@ -54,7 +55,7 @@ public sealed partial class OutboxProcessor(
                 LogProcessingError(logger, ex);
             }
 
-            await Task.Delay(PollingInterval, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds(_settings.PollingIntervalSeconds), stoppingToken).ConfigureAwait(false);
         }
     }
 
@@ -65,12 +66,12 @@ public sealed partial class OutboxProcessor(
         var context = dbContextFactory.GetDbContext(Application.Interfaces.Infrastructure.DataSource.SQLServer);
         var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
 
-        var cutoff = DateTime.UtcNow.Subtract(ProcessingDelay);
+        var cutoff = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
 
         var messages = await context.Set<OutboxMessage>()
-            .Where(m => m.ProcessedOn == null && m.OccurredOn < cutoff && m.RetryCount < MaxRetries)
+            .Where(m => m.ProcessedOn == null && m.OccurredOn < cutoff && m.RetryCount < _settings.MaxRetries)
             .OrderBy(m => m.OccurredOn)
-            .Take(BatchSize)
+            .Take(_settings.BatchSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

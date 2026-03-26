@@ -96,19 +96,19 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// avoid the overhead of building the projection expression each time.
     /// Keyed by property name; safe across concurrent requests via <see cref="ConcurrentDictionary{TKey,TValue}"/>.
     /// </summary>
-    private static readonly ConcurrentDictionary<string, LambdaExpression> LookupSelectorCache = new();
+    private static readonly ConcurrentDictionary<(Type EntityType, string PropertyName), LambdaExpression> LookupSelectorCache = new();
 
     /// <summary>
     /// Gets or builds a projection expression mapping the entity's Id and the named property to <see cref="BaseLookup{TIdentifierType}"/>.
     /// </summary>
     private static Expression<Func<TEntity, BaseLookup<TIdentifierType>>> GetOrBuildLookupSelector(string nameProperty) =>
         (Expression<Func<TEntity, BaseLookup<TIdentifierType>>>)LookupSelectorCache.GetOrAdd(
-            nameProperty,
-            static prop =>
+            (typeof(TEntity), nameProperty),
+            static key =>
             {
                 var param = Expression.Parameter(typeof(TEntity), "e");
                 var idAccess = Expression.Property(param, "Id");
-                var nameAccess = Expression.Property(param, prop);
+                var nameAccess = Expression.Property(param, key.PropertyName);
 
                 Expression nameExpr = nameAccess.Type == typeof(string)
                     ? Expression.Coalesce(nameAccess, Expression.Constant(string.Empty))

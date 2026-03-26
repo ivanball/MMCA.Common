@@ -13,6 +13,7 @@ public sealed class JwtSettings : IJwtSettings
 
     /// <inheritdoc />
     [Required]
+    [MinLength(32, ErrorMessage = "SecretForKey must be at least 32 characters for HMAC-SHA256. Replace the placeholder value with a real secret via user-secrets or environment variables.")]
     public string SecretForKey { get; init; } = string.Empty;
 
     /// <inheritdoc />

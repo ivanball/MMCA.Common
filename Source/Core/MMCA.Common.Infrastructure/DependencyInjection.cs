@@ -80,6 +80,11 @@ public static class DependencyInjection
 
             services.AddCaching();
 
+            services.AddOptions<OutboxSettings>()
+                .Bind(configuration.GetSection(OutboxSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
             services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
 
             services.AddServices();

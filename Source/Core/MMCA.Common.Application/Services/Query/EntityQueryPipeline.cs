@@ -44,18 +44,38 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
 
         // PATH 2 - Unsupported includes: When the data source does not support JOINs
         // (e.g. Cosmos DB where entities may live in different containers), we must
-        // materialize the (already filtered) query, then manually load related data via
-        // the NavigationPopulator. Sorting/pagination continues in-memory on the
-        // materialized collection.
+        // materialize the query, then manually load related data via the NavigationPopulator.
+        // Optimization: apply sorting and pagination BEFORE materialization (on the DB query)
+        // so only the required page is loaded into memory. Navigation population then runs
+        // only on the paged subset.
         if (navigationMetadata.UnsupportedIncludes.Count != 0)
         {
+            bool isPaginatedPath2 = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
+            int totalCountPath2 = 0;
+
+            // Sort at the DB level before materialization
+            query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
+
+            if (isPaginatedPath2)
+            {
+                totalCountPath2 = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
+                int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
+                query = query.Skip(skip).Take(parameters.PageSize.Value);
+            }
+
             var entities = await queryableExecutor.ToListAsync(query, cancellationToken).ConfigureAwait(false);
             if (entities.Count != 0)
             {
                 await navigationPopulator(entities, navigationMetadata, parameters.IncludeFKs, parameters.IncludeChildren, cancellationToken).ConfigureAwait(false);
             }
 
-            query = entities.AsQueryable();
+            if (!isPaginatedPath2)
+                totalCountPath2 = entities.Count;
+
+            // Field selection and return — skip the normal path below
+            var pagedQuery = entities.AsQueryable();
+            pagedQuery = QueryFieldService.ApplyFieldSelection(pagedQuery, parameters.Fields);
+            return (pagedQuery.ToList(), totalCountPath2);
         }
 
         query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);

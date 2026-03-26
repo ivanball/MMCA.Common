@@ -62,6 +62,7 @@ public static class DependencyInjection
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));
             // Registered third = outermost decorator (wraps caching, captures full pipeline)
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(CachingQueryDecorator<,>));
             services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingQueryDecorator<,>));
 
             return services;

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 
 namespace MMCA.Common.API.Idempotency;
@@ -40,7 +41,7 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
     private static string CacheKeyPrefix => "idempotency:";
 
     /// <summary>
-    /// Cached responses expire after 24 hours, balancing deduplication safety against memory usage.
+    /// Default cache expiration when <see cref="IdempotencySettings"/> is not registered.
     /// </summary>
     private static readonly TimeSpan DefaultExpiration = TimeSpan.FromHours(24);
 
@@ -107,7 +108,13 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
                     objectResult.StatusCode ?? StatusCodes.Status200OK,
                     JsonSerializer.Serialize(objectResult.Value, JsonSerializerOptions.Web));
 
-                await cache.SetAsync(cacheKey, record, DefaultExpiration);
+                var idempotencySettings = context.HttpContext.RequestServices
+                    .GetService<IOptions<IdempotencySettings>>();
+                var expiration = idempotencySettings is not null
+                    ? TimeSpan.FromHours(idempotencySettings.Value.CacheExpirationHours)
+                    : DefaultExpiration;
+
+                await cache.SetAsync(cacheKey, record, expiration);
             }
         }
         finally
