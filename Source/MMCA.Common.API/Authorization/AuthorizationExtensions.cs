@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.Authorization;
 
@@ -18,11 +19,11 @@ public static class AuthorizationExtensions
         {
             services.AddAuthorizationBuilder()
                 .AddPolicy(AuthorizationPolicies.RequireOrganizer, policy =>
-                    policy.RequireRole("Organizer"))
+                    policy.RequireRole(RoleNames.Organizer))
                 .AddPolicy(AuthorizationPolicies.RequireAttendee, policy =>
-                    policy.RequireRole("Attendee"))
+                    policy.RequireRole(RoleNames.Attendee))
                 .AddPolicy(AuthorizationPolicies.RequireAdmin, policy =>
-                    policy.RequireRole("Admin"))
+                    policy.RequireRole(RoleNames.Admin))
                 .AddPolicy(AuthorizationPolicies.RequireAuthenticated, policy =>
                     policy.RequireAuthenticatedUser());
 

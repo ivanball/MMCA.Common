@@ -26,4 +26,12 @@ public interface ICurrentUserService
     /// <returns>The parsed value, or <see langword="null"/> if the claim is missing or unparseable.</returns>
     T? GetClaimValue<T>(string claimType)
         where T : struct, IParsable<T>;
+
+    /// <summary>
+    /// Returns <see langword="true"/> if the current user's role matches <paramref name="roleName"/>
+    /// using case-insensitive comparison.
+    /// </summary>
+    /// <param name="roleName">The role name to check (use <see cref="Common.Shared.Auth.RoleNames"/> constants).</param>
+    /// <returns><see langword="true"/> if the user has the specified role; otherwise, <see langword="false"/>.</returns>
+    bool IsInRole(string roleName) => string.Equals(Role, roleName, StringComparison.OrdinalIgnoreCase);
 }

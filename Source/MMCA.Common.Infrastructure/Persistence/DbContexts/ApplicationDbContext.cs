@@ -61,7 +61,10 @@ public abstract class ApplicationDbContext(
     private async Task<int> SaveChangesAsyncInternal(UserIdentifierType? userId, CancellationToken cancellationToken = default)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var resolvedUserId = userId ?? -1;
+        // When no authenticated user is available (e.g. background services, seeding, outbox processing),
+        // use a sentinel value for audit fields. Assumes UserIdentifierType is int-based.
+        const UserIdentifierType systemUserId = -1;
+        var resolvedUserId = userId ?? systemUserId;
 
         // Stamp audit fields automatically — prevents callers from needing to set them manually.
         // On Added: set both Created and LastModified; on Modified: only update LastModified

@@ -54,8 +54,9 @@ public sealed class ModuleLoader
                 {
                     return a.GetTypes();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log?.Invoke("Warning", $"Failed to scan assembly '{a.FullName}' for modules: {ex.Message}");
                     return [];
                 }
             })
