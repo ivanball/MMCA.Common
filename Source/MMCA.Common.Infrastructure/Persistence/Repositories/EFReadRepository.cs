@@ -136,6 +136,22 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    public virtual async Task<TEntity?> GetByIdAsync(
+        TIdentifierType id,
+        IEnumerable<string> includes,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(includes);
+
+        var query = asTracking ? Table : TableNoTracking;
+        query = ApplyIncludes(query, includes);
+
+        return await query.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await Entities.CountAsync(cancellationToken).ConfigureAwait(false);
 

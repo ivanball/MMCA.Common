@@ -27,10 +27,14 @@ public class DeclarativeNavigationPopulator<TEntity>(
         if (entities.Count == 0 || navigationMetadata.UnsupportedIncludes.Count == 0)
             return;
 
+        var unsupportedPropertyNames = new HashSet<string>(
+            navigationMetadata.UnsupportedIncludes.Select(i => i.PropertyName),
+            StringComparer.Ordinal);
+
         foreach (var descriptor in descriptors)
         {
             var shouldLoad = descriptor.RequiresChildren ? includeChildren : includeFKs;
-            if (shouldLoad && navigationMetadata.UnsupportedIncludes.Any(i => i.PropertyName == descriptor.PropertyName))
+            if (shouldLoad && unsupportedPropertyNames.Contains(descriptor.PropertyName))
             {
                 await descriptor.LoadAsync(entities, unitOfWork, cancellationToken).ConfigureAwait(false);
             }

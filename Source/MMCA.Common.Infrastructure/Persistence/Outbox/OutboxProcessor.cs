@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,6 +25,12 @@ public sealed partial class OutboxProcessor(
     private const int MaxRetries = 5;
     private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan ProcessingDelay = TimeSpan.FromSeconds(30);
+
+    private static readonly Meter OutboxMeter = new("MMCA.Common.Outbox");
+    private static readonly Counter<long> DeadLetterCounter = OutboxMeter.CreateCounter<long>(
+        "outbox.dead_letter.count",
+        "messages",
+        "Number of outbox messages dead-lettered due to unresolvable event types");
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -81,6 +88,7 @@ public sealed partial class OutboxProcessor(
                 {
                     message.LastError = $"Cannot resolve type: {message.EventType}";
                     message.ProcessedOn = DateTime.UtcNow;
+                    DeadLetterCounter.Add(1, new KeyValuePair<string, object?>("event_type", message.EventType));
                     LogDeadLetter(logger, message.Id, message.EventType);
                     continue;
                 }
@@ -110,7 +118,7 @@ public sealed partial class OutboxProcessor(
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox message {MessageId} ({EventType}) dispatched successfully")]
     private static partial void LogMessageProcessed(ILogger logger, Guid messageId, string eventType);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} dead-lettered: type not resolvable — {EventType}")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} dead-lettered: type not resolvable — {EventType}")]
     private static partial void LogDeadLetter(ILogger logger, Guid messageId, string eventType);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} failed (attempt {RetryCount})")]

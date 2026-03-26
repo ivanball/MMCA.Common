@@ -16,7 +16,30 @@ namespace MMCA.Common.Application.Services;
 public sealed class QueryFieldService
 {
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertiesCache = new();
+    private static readonly ConcurrentDictionary<Type, PropertyAccessor[]> AccessorCache = new();
     private static readonly JsonNamingPolicy CamelCase = JsonNamingPolicy.CamelCase;
+
+    /// <summary>Pre-compiled property getter with camelCase name, replacing <c>PropertyInfo.GetValue()</c> in hot paths.</summary>
+    private readonly record struct PropertyAccessor(string PropertyName, string CamelCaseName, Func<object, object?> GetValue);
+
+    private static PropertyAccessor[] GetAccessors<TEntity>()
+        => AccessorCache.GetOrAdd(typeof(TEntity), static t =>
+        {
+            var properties = PropertiesCache.GetOrAdd(t, static tt => tt.GetProperties(BindingFlags.Public | BindingFlags.Instance));
+            var accessors = new PropertyAccessor[properties.Length];
+            for (var i = 0; i < properties.Length; i++)
+            {
+                var prop = properties[i];
+                var param = Expression.Parameter(typeof(object), "obj");
+                var castObj = Expression.Convert(param, t);
+                var access = Expression.Property(castObj, prop);
+                var boxed = Expression.Convert(access, typeof(object));
+                var getter = Expression.Lambda<Func<object, object?>>(boxed, param).Compile();
+                accessors[i] = new PropertyAccessor(prop.Name, CamelCase.ConvertName(prop.Name), getter);
+            }
+
+            return accessors;
+        });
 
     /// <summary>
     /// Shapes a single entity into an <see cref="ExpandoObject"/> containing only the requested fields.
@@ -29,16 +52,16 @@ public sealed class QueryFieldService
     public static ExpandoObject ShapeData<TEntity>(TEntity entity, string? fields)
     {
         var fieldsSet = ParseFields(fields);
-        var propertyInfos = GetProperties<TEntity>();
+        var accessors = GetAccessors<TEntity>();
 
         if (fieldsSet.Count != 0)
-            propertyInfos = FilterPropertiesByFields(propertyInfos, fieldsSet);
+            accessors = FilterAccessorsByFields(accessors, fieldsSet);
 
         IDictionary<string, object?> shapedObject = new ExpandoObject();
 
-        foreach (PropertyInfo propertyInfo in propertyInfos)
+        foreach (var accessor in accessors)
         {
-            shapedObject[CamelCase.ConvertName(propertyInfo.Name)] = propertyInfo.GetValue(entity);
+            shapedObject[accessor.CamelCaseName] = accessor.GetValue(entity!);
         }
 
         return (ExpandoObject)shapedObject;
@@ -56,10 +79,10 @@ public sealed class QueryFieldService
         string? fields)
     {
         var fieldsSet = ParseFields(fields);
-        var propertyInfos = GetProperties<TEntity>();
+        var accessors = GetAccessors<TEntity>();
 
         if (fieldsSet.Count != 0)
-            propertyInfos = FilterPropertiesByFields(propertyInfos, fieldsSet);
+            accessors = FilterAccessorsByFields(accessors, fieldsSet);
 
         List<ExpandoObject> shapedObjects = [];
 
@@ -67,9 +90,9 @@ public sealed class QueryFieldService
         {
             IDictionary<string, object?> shapedObject = new ExpandoObject();
 
-            foreach (PropertyInfo propertyInfo in propertyInfos)
+            foreach (var accessor in accessors)
             {
-                shapedObject[CamelCase.ConvertName(propertyInfo.Name)] = propertyInfo.GetValue(entity);
+                shapedObject[accessor.CamelCaseName] = accessor.GetValue(entity!);
             }
 
             shapedObjects.Add((ExpandoObject)shapedObject);
@@ -235,11 +258,11 @@ public sealed class QueryFieldService
             typeof(TEntity),
             t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance));
 
-    private static PropertyInfo[] FilterPropertiesByFields(
-        PropertyInfo[] propertyInfos,
+    private static PropertyAccessor[] FilterAccessorsByFields(
+        PropertyAccessor[] accessors,
         HashSet<string> fieldsSet)
         => [
-            .. propertyInfos
-                .Where(p => fieldsSet.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+            .. accessors
+                .Where(a => fieldsSet.Contains(a.PropertyName, StringComparer.OrdinalIgnoreCase))
         ];
 }

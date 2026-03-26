@@ -50,6 +50,10 @@ internal class EFReadRepositoryDecorator<TEntity, TIdentifierType>(IReadReposito
         ProfileAsync(nameof(GetByIdAsync),
             () => _inner.GetByIdAsync(id, cancellationToken));
 
+    public Task<TEntity?> GetByIdAsync(TIdentifierType id, IEnumerable<string> includes, bool asTracking = false, CancellationToken cancellationToken = default) =>
+        ProfileAsync(nameof(GetByIdAsync),
+            () => _inner.GetByIdAsync(id, includes, asTracking, cancellationToken));
+
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         ProfileAsync(nameof(CountAsync),
             () => _inner.CountAsync(cancellationToken));

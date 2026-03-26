@@ -99,7 +99,7 @@ public static class DependencyInjection
             services.TryAddSingleton<ICacheService>(sp =>
             {
                 var distributedCache = sp.GetService<IDistributedCache>();
-                if (distributedCache is not null && distributedCache.GetType().Name != "MemoryDistributedCache")
+                if (distributedCache is not null and not MemoryDistributedCache)
                 {
                     var multiplexer = sp.GetService<IConnectionMultiplexer>();
                     return new DistributedCacheService(distributedCache, multiplexer);

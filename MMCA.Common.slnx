@@ -18,5 +18,6 @@
     <Project Path="Tests/MMCA.Common.Application.Tests/MMCA.Common.Application.Tests.csproj" />
     <Project Path="Tests/MMCA.Common.Infrastructure.Tests/MMCA.Common.Infrastructure.Tests.csproj" />
     <Project Path="Tests/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
+    <Project Path="Tests/MMCA.UI.Shared.Tests/MMCA.UI.Shared.Tests.csproj" />
   </Folder>
 </Solution>

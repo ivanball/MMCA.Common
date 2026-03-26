@@ -68,6 +68,18 @@ public interface IReadRepository<TEntity, TIdentifierType>
         TIdentifierType id,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves a single entity by its primary key with navigation properties eagerly loaded.</summary>
+    /// <param name="id">The primary key value.</param>
+    /// <param name="includes">Navigation property names to include.</param>
+    /// <param name="asTracking">Whether to track the entity in the change tracker.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The entity with includes loaded, or <see langword="null"/> if not found.</returns>
+    Task<TEntity?> GetByIdAsync(
+        TIdentifierType id,
+        IEnumerable<string> includes,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Returns the total count of entities.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The entity count.</returns>
