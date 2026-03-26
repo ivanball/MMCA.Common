@@ -2,10 +2,13 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.UI.Shared.Common.Interfaces
 @using MMCA.UI.Shared.Services.Auth
+@using Microsoft.Extensions.Options
+@using MMCA.UI.Shared.Common.Settings
 @using MMCA.UI.Shared.Theme
 @inject NavigationManager Navigation
 @inject IAuthUIService AuthService
 @inject IEnumerable<IUIModule> UIModules
+@inject IOptions<LayoutSettings> LayoutSettingsOptions
 
 <MudThemeProvider Theme="ADCTheme.Instance" />
 <MudPopoverProvider />
@@ -47,11 +50,14 @@
         <article id="main-content" class="content px-4">
             @Body
         </article>
-        <footer class="app-footer" role="contentinfo">
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                Atlanta Cloud + AI Conference
-            </MudText>
-        </footer>
+        @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
+        {
+            <footer class="app-footer" role="contentinfo">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                    @LayoutSettingsOptions.Value.FooterText
+                </MudText>
+            </footer>
+        }
     </main>
     @foreach (var componentType in _layoutComponents)
     {

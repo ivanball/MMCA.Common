@@ -27,6 +27,10 @@ public static class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            // Bind layout settings (footer text, etc.) — optional, defaults to empty values
+            services.AddOptions<LayoutSettings>()
+                .Bind(configuration.GetSection(LayoutSettings.SectionName));
+
             // Auth handler injects Bearer token into every outgoing API request
             services.AddTransient<AuthDelegatingHandler>();
 
