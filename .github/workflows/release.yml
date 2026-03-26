@@ -33,7 +33,7 @@ jobs:
         run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
 
       - name: Test
-        run: dotnet test MMCA.Common.slnx -c Release --no-build
+        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build
 
       - name: Pack
         run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
