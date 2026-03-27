@@ -144,22 +144,6 @@ public static class DependencyInjection
 
             // Auto-register validators for commands that embed a request via ICommandWithRequest<T>.
             // Uses TryAdd — explicit IValidator<TCommand> from the line above takes precedence.
-            services.AddAutoCommandRequestValidators<TAssemblyMarker>();
-
-            return services;
-        }
-
-        /// <summary>
-        /// Scans <typeparamref name="TAssemblyMarker"/>'s assembly for command types implementing
-        /// <see cref="ICommandWithRequest{TRequest}"/> and registers a
-        /// <see cref="CommandRequestValidator{TCommand,TRequest}"/> as <c>IValidator&lt;TCommand&gt;</c>
-        /// for each — but only when no explicit validator was already registered.
-        /// </summary>
-        /// <typeparam name="TAssemblyMarker">A type in the module's Application assembly.</typeparam>
-        /// <returns>The service collection for chaining.</returns>
-        private IServiceCollection AddAutoCommandRequestValidators<TAssemblyMarker>()
-            where TAssemblyMarker : class
-        {
             var assembly = typeof(TAssemblyMarker).Assembly;
 
             foreach (var commandType in assembly.GetTypes())
