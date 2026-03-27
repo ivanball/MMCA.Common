@@ -51,10 +51,11 @@ public static class DependencyInjection
         /// <para>
         /// <b>Command pipeline (nesting from outermost to innermost):</b>
         /// <code>
-        ///   LoggingCommandDecorator          ← outermost: logs start/end, captures full pipeline duration
-        ///     → CachingCommandDecorator      ← middle: invalidates cache AFTER transaction commits
-        ///       → TransactionalCommandDecorator  ← innermost: wraps handler in DB transaction (if ITransactional)
-        ///         → ConcreteHandler          ← the actual business logic
+        ///   LoggingCommandDecorator              ← outermost: logs start/end, captures full pipeline duration
+        ///     → CachingCommandDecorator          ← invalidates cache AFTER transaction commits
+        ///       → ValidatingCommandDecorator     ← short-circuits with Result.Failure on validation errors
+        ///         → TransactionalCommandDecorator  ← wraps handler in DB transaction (if ITransactional)
+        ///           → ConcreteHandler            ← the actual business logic
         /// </code>
         /// </para>
         /// <para>
@@ -69,8 +70,10 @@ public static class DependencyInjection
         /// <b>Design rationale:</b>
         /// <list type="bullet">
         /// <item>Logging is outermost so it measures the full pipeline including transaction + cache.</item>
-        /// <item>Cache invalidation sits outside the transaction boundary so cache is only cleared
-        /// after the transaction commits successfully — a rollback leaves cache intact.</item>
+        /// <item>Validation sits outside the transaction boundary so invalid commands never start
+        /// a database transaction — saving resources on malformed requests.</item>
+        /// <item>Cache invalidation sits outside validation so cache is only cleared after a valid,
+        /// committed mutation — a rollback or validation failure leaves cache intact.</item>
         /// <item>On business failure (<see cref="Result"/>.<c>IsFailure</c>), the transaction still commits
         /// (no data was mutated) but cache invalidation is skipped.</item>
         /// <item>On exception, the transaction rolls back and the exception propagates through all decorators.</item>
@@ -84,7 +87,8 @@ public static class DependencyInjection
             // Registered first = innermost (wraps the concrete handler directly).
             // Registered last  = outermost (wraps all other decorators).
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(TransactionalCommandDecorator<,>));   // innermost
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));         // middle
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(ValidatingCommandDecorator<,>));      // validates before transaction
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));         // cache invalidation
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));         // outermost
 
             // ── Query decorators ────────────────────────────────────────
