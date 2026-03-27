@@ -23,9 +23,11 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// <typeparam name="TResult">The result type (typically <see cref="Result"/> or <see cref="Result{T}"/>).</typeparam>
 public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     ICommandHandler<TCommand, TResult> inner,
-    IValidator<TCommand>? validator,
+    IEnumerable<IValidator<TCommand>> validators,
     ILogger<ValidatingCommandDecorator<TCommand, TResult>> logger) : ICommandHandler<TCommand, TResult>
 {
+    private readonly IValidator<TCommand>? _validator = validators.FirstOrDefault();
+
     /// <summary>
     /// Cached delegate that creates a <typeparamref name="TResult"/> failure from a collection of
     /// <see cref="Error"/> instances. Built once per generic type instantiation via reflection
@@ -36,12 +38,12 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
-        if (validator is null)
+        if (_validator is null)
         {
             return await inner.HandleAsync(command, cancellationToken);
         }
 
-        var validationResult = await validator.ValidateAsync(command, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (validationResult.IsValid)
         {
             return await inner.HandleAsync(command, cancellationToken);

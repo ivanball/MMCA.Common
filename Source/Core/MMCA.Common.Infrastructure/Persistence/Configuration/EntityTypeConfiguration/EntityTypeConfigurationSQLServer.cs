@@ -27,13 +27,14 @@ public abstract class EntityTypeConfigurationSQLServer<TEntity, TIdentifierType>
     {
         base.Configure(builder);
 
-        // Derive the SQL schema from the module namespace segment following "Modules".
-        // E.g., "MMCA.Modules.Sales.Domain.Order" -> schema "Sales", table "Order".
+        // Derive the SQL schema from the module namespace segment preceding "Domain".
+        // E.g., "MMCA.Store.Sales.Domain.Orders" -> schema "Sales", table "Order".
+        // Also handles legacy "MMCA.Modules.Catalog.Domain" layout.
         var segments = typeof(TEntity).Namespace?.Split('.') ?? [];
-        var modulesIndex = Array.FindIndex(segments,
-            s => s.Equals("Modules", StringComparison.OrdinalIgnoreCase));
-        var schema = modulesIndex >= 0 && modulesIndex + 1 < segments.Length
-            ? segments[modulesIndex + 1]
+        var domainIndex = Array.FindIndex(segments,
+            s => s.Equals("Domain", StringComparison.OrdinalIgnoreCase));
+        var schema = domainIndex >= 1
+            ? segments[domainIndex - 1]
             : "dbo";
 
         builder.ToTable(typeof(TEntity).Name, schema);
