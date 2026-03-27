@@ -30,4 +30,7 @@
     <Project Path="Tests/Presentation/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
     <Project Path="Tests/Presentation/MMCA.Common.UI.Tests/MMCA.Common.UI.Tests.csproj" />
   </Folder>
+  <Folder Name="/Tests/Architecture/">
+    <Project Path="Tests/Architecture/MMCA.Common.Architecture.Tests/MMCA.Common.Architecture.Tests.csproj" />
+  </Folder>
 </Solution>

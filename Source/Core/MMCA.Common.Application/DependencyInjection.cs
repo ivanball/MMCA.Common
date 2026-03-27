@@ -42,28 +42,54 @@ public static class DependencyInjection
         }
 
         /// <summary>
-        /// Registers command handler decorators. Must be called AFTER all modules have
+        /// Registers command and query handler decorators. Must be called AFTER all modules have
         /// registered their concrete handlers so that Scrutor's TryDecorate can find them.
         /// <para>
-        /// Decorator ordering matters: decorators are applied in reverse registration order
-        /// (last registered = outermost wrapper). The resulting execution order is:
-        /// <c>LoggingDecorator -> CachingDecorator -> TransactionalDecorator -> ConcreteHandler</c>.
-        /// Logging is outermost so it captures the full pipeline duration including transaction
-        /// and cache invalidation. Cache invalidation sits outside the transaction boundary
-        /// so cache is only cleared after the transaction commits successfully.
+        /// <b>Registration vs Execution Order:</b> Scrutor's <c>TryDecorate</c> applies decorators
+        /// in reverse registration order — the last registered decorator becomes the outermost wrapper.
+        /// </para>
+        /// <para>
+        /// <b>Command pipeline (nesting from outermost to innermost):</b>
+        /// <code>
+        ///   LoggingCommandDecorator          ← outermost: logs start/end, captures full pipeline duration
+        ///     → CachingCommandDecorator      ← middle: invalidates cache AFTER transaction commits
+        ///       → TransactionalCommandDecorator  ← innermost: wraps handler in DB transaction (if ITransactional)
+        ///         → ConcreteHandler          ← the actual business logic
+        /// </code>
+        /// </para>
+        /// <para>
+        /// <b>Query pipeline (nesting from outermost to innermost):</b>
+        /// <code>
+        ///   LoggingQueryDecorator            ← outermost: logs start/end, captures full pipeline duration
+        ///     → CachingQueryDecorator        ← innermost: caches results (if IQueryCacheKeyProvider)
+        ///       → ConcreteHandler            ← the actual query logic
+        /// </code>
+        /// </para>
+        /// <para>
+        /// <b>Design rationale:</b>
+        /// <list type="bullet">
+        /// <item>Logging is outermost so it measures the full pipeline including transaction + cache.</item>
+        /// <item>Cache invalidation sits outside the transaction boundary so cache is only cleared
+        /// after the transaction commits successfully — a rollback leaves cache intact.</item>
+        /// <item>On business failure (<see cref="Result"/>.<c>IsFailure</c>), the transaction still commits
+        /// (no data was mutated) but cache invalidation is skipped.</item>
+        /// <item>On exception, the transaction rolls back and the exception propagates through all decorators.</item>
+        /// </list>
         /// </para>
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddApplicationDecorators()
         {
-            // Registered first = innermost decorator (wraps the concrete handler directly)
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(TransactionalCommandDecorator<,>));
-            // Registered second = middle decorator (wraps the transactional decorator)
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));
-            // Registered third = outermost decorator (wraps caching, captures full pipeline)
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));
-            services.TryDecorate(typeof(IQueryHandler<,>), typeof(CachingQueryDecorator<,>));
-            services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingQueryDecorator<,>));
+            // ── Command decorators ──────────────────────────────────────
+            // Registered first = innermost (wraps the concrete handler directly).
+            // Registered last  = outermost (wraps all other decorators).
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(TransactionalCommandDecorator<,>));   // innermost
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));         // middle
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));         // outermost
+
+            // ── Query decorators ────────────────────────────────────────
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(CachingQueryDecorator<,>));             // innermost
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingQueryDecorator<,>));             // outermost
 
             return services;
         }

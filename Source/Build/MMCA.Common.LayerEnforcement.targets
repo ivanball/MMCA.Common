@@ -1,0 +1,90 @@
+<!--
+  MMCA.Common Layer Enforcement
+  ═══════════════════════════════════════════════════════════════════
+  Validates that project references respect the Clean Architecture
+  dependency flow at compile time:
+
+    Shared → Domain → Application → Infrastructure → API
+                                                       UI → Shared only
+
+  Import this file from Directory.Build.props to enable enforcement.
+  Each layer declares which MMCA.Common namespaces it is FORBIDDEN
+  from referencing. If a ProjectReference violates the rule, the
+  build fails with a descriptive error.
+-->
+<Project>
+
+  <!-- ── Define forbidden references per layer ──────────────────── -->
+
+  <!-- Shared: foundation layer — no upward references -->
+  <Target Name="EnforceSharedLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Shared'">
+    <Error Condition="@(ProjectReference->AnyHaveMetadataValue('Identity', '%(Identity)')) != '' AND '%(ProjectReference.Filename)' == 'MMCA.Common.Domain'"
+           Text="Layer violation: MMCA.Common.Shared must not reference MMCA.Common.Domain" />
+    <ItemGroup>
+      <_ForbiddenSharedRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenSharedRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.Shared must not reference %(_ForbiddenSharedRefs.Filename). Shared is the foundation layer with no upward dependencies." />
+  </Target>
+
+  <!-- Domain: depends only on Shared -->
+  <Target Name="EnforceDomainLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Domain'">
+    <ItemGroup>
+      <_ForbiddenDomainRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenDomainRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.Domain must not reference %(_ForbiddenDomainRefs.Filename). Domain depends only on Shared." />
+  </Target>
+
+  <!-- Application: depends on Domain + Shared -->
+  <Target Name="EnforceApplicationLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Application'">
+    <ItemGroup>
+      <_ForbiddenAppRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenAppRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.Application must not reference %(_ForbiddenAppRefs.Filename). Application depends only on Domain and Shared." />
+  </Target>
+
+  <!-- Infrastructure: depends on Application + Domain + Shared -->
+  <Target Name="EnforceInfrastructureLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Infrastructure'">
+    <ItemGroup>
+      <_ForbiddenInfraRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenInfraRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.Infrastructure must not reference %(_ForbiddenInfraRefs.Filename). Infrastructure must not depend on API/Presentation." />
+  </Target>
+
+  <!-- UI: depends only on Shared -->
+  <Target Name="EnforceUILayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.UI'">
+    <ItemGroup>
+      <_ForbiddenUIRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenUIRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.UI must not reference %(_ForbiddenUIRefs.Filename). UI depends only on Shared for Blazor WASM compatibility." />
+  </Target>
+
+</Project>

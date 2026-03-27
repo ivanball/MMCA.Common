@@ -8,7 +8,9 @@
       "Bash(cmd //c \"ren src Source\")",
       "Bash(dotnet package:*)",
       "Bash(find /c/Projects/MMCA/MMCA.Common/tests -type f -name *.cs)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(xargs grep:*)",
+      "Bash(find C:/Projects/MMCA/MMCA.Common -path */.github/workflows/* -type f)"
     ]
   }
 }

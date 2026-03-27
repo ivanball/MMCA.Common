@@ -60,4 +60,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)Source\Core\MMCA.Common.Domain\GlobalUsings.IdentifierType.cs"
              Link="GlobalUsings\MMCA.Common.Domain.GlobalUsings.IdentifierType.cs" />
   </ItemGroup>
+
+  <!-- Compile-time layer enforcement: validates ProjectReferences respect Clean Architecture -->
+  <Import Project="$(MSBuildThisFileDirectory)Source\Build\MMCA.Common.LayerEnforcement.targets"
+          Condition="$(MSBuildProjectDirectory.Contains('Source')) AND $(MSBuildProjectName.StartsWith('MMCA.Common'))" />
 </Project>

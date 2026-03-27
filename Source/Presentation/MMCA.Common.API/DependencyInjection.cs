@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.JsonConverters;
 using MMCA.Common.API.Middleware;
+using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 
 namespace MMCA.Common.API;
@@ -31,7 +33,11 @@ public static class DependencyInjection
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddAPI(ModulesSettings? modulesSettings = null, IConfiguration? configuration = null)
         {
-            var mvcBuilder = services.AddControllers(options => options.ReturnHttpNotAcceptable = false)
+            var mvcBuilder = services.AddControllers(options =>
+                {
+                    options.ReturnHttpNotAcceptable = false;
+                    options.Filters.Add<UnhandledResultFailureFilter>();
+                })
                 .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new CurrencyJsonConverter()))
                 .AddXmlDataContractSerializerFormatters();
 
@@ -72,6 +78,42 @@ public static class DependencyInjection
             services.AddExceptionHandler<DbUpdateExceptionHandler>();
             services.AddExceptionHandler<ValidationExceptionHandler>();
             services.AddExceptionHandler<GlobalExceptionHandler>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers per-module health checks based on <see cref="ModuleLoader"/> discovery results.
+        /// Enabled modules report <see cref="HealthStatus.Healthy"/>;
+        /// disabled modules report <see cref="HealthStatus.Degraded"/>.
+        /// Health check names follow the pattern <c>module-{Name}</c> and are tagged with "module"
+        /// for easy filtering via <c>/health?tag=module</c>.
+        /// </summary>
+        /// <param name="moduleLoader">
+        /// The module loader containing discovered enabled and disabled modules.
+        /// Must be called after <see cref="ModuleLoader.DiscoverAndRegister"/>.
+        /// </param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddModuleHealthChecks(ModuleLoader moduleLoader)
+        {
+            var builder = services.AddHealthChecks();
+
+            foreach (var name in moduleLoader.EnabledModules.Select(m => m.Name))
+            {
+                builder.AddCheck(
+                    $"module-{name}",
+                    () => HealthCheckResult.Healthy($"Module '{name}' is enabled"),
+                    tags: ["module"]);
+            }
+
+            foreach (var name in moduleLoader.DisabledModuleNames)
+            {
+                var captured = name;
+                builder.AddCheck(
+                    $"module-{captured}",
+                    () => HealthCheckResult.Degraded($"Module '{captured}' is disabled"),
+                    tags: ["module"]);
+            }
 
             return services;
         }

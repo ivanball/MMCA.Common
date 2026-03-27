@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Domain\MMCA.Common.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+  </ItemGroup>
+</Project>
