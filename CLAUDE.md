@@ -162,7 +162,7 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 
 ## Testing
 
-- **Framework:** xUnit v3 + FluentAssertions + Moq + coverlet
+- **Framework:** xUnit v3 + AwesomeAssertions + Moq + coverlet
 - **Test runner:** Microsoft Testing Platform (configured in `global.json`)
 - Test projects mirror Source structure under `Tests/`
 - Test files relax naming rules (underscores in method names allowed) and complexity metrics via `.editorconfig` `[Tests/**/*.cs]` section

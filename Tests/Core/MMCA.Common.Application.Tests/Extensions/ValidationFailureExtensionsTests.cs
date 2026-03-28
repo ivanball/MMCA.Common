@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using FluentValidation.Results;
 using MMCA.Common.Application.Extensions;
 using MMCA.Common.Shared.Abstractions;

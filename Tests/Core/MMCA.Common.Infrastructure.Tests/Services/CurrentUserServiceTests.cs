@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.Infrastructure.Services;
 using Moq;

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Domain.Entities;
 
 namespace MMCA.Common.Domain.Tests.Entities;

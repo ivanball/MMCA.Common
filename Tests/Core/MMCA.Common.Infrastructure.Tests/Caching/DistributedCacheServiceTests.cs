@@ -1,5 +1,5 @@
 using System.Text.Json;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using MMCA.Common.Infrastructure.Caching;
 using Moq;

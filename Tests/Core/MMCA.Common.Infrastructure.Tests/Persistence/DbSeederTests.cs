@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;

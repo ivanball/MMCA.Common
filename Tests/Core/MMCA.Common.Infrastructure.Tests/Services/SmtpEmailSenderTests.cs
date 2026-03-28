@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;
 

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Application.Services.Filtering;
 
 namespace MMCA.Common.Application.Tests.Services.Filtering;

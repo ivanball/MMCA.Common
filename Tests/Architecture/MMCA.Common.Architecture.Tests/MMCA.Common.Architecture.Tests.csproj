@@ -2,13 +2,13 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+    <NoWarn>$(NoWarn);xUnit1051;CA2263</NoWarn>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
-    <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

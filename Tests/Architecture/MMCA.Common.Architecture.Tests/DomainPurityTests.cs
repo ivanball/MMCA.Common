@@ -42,7 +42,7 @@ public sealed class DomainPurityTests
     {
         var result = Types.InAssembly(PackageAssemblies.Application)
             .ShouldNot()
-            .HaveDependencyOn("Microsoft.EntityFrameworkCore")
+            .HaveDependencyOnAny("Microsoft.EntityFrameworkCore")
             .GetResult();
 
         ArchitectureTestHelper.AssertNoViolations(result,
@@ -54,7 +54,7 @@ public sealed class DomainPurityTests
     {
         var result = Types.InAssembly(PackageAssemblies.Application)
             .ShouldNot()
-            .HaveDependencyOn("Microsoft.AspNetCore")
+            .HaveDependencyOnAny("Microsoft.AspNetCore")
             .GetResult();
 
         ArchitectureTestHelper.AssertNoViolations(result,

@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;

@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Shared.Abstractions;

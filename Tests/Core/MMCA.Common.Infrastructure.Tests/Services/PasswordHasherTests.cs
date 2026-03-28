@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Services;
 
 namespace MMCA.Common.Infrastructure.Tests.Services;

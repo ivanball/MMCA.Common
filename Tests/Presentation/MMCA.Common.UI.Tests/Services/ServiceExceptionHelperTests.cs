@@ -3,7 +3,7 @@
 
 using System.Net;
 using System.Text;
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Shared.Exceptions;
 using MMCA.Common.UI.Services;
 

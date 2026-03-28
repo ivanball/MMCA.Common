@@ -9,8 +9,8 @@ internal static class ArchitectureTestHelper
             return;
         }
 
-        var failingTypes = result.FailingTypeNames ?? [];
-        var violationList = string.Join(Environment.NewLine, failingTypes.Select(t => $"  - {t}"));
+        var failingTypes = result.FailingTypes ?? [];
+        var violationList = string.Join(Environment.NewLine, failingTypes.Select(t => $"  - {t.FullName}"));
 
         result.IsSuccessful.Should().BeTrue(
             because: $"{reason}. Violations:{Environment.NewLine}{violationList}");

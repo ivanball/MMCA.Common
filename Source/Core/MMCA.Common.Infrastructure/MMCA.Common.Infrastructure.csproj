@@ -7,7 +7,6 @@
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="HotChocolate.Data.EntityFramework" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>

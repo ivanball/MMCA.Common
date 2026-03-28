@@ -61,7 +61,7 @@ public static class DependencyInjection
             services.AddDbContextFactory<SQLServerDbContext>();
 
             // Dual factory: our IDbContextFactory manages multi-DB routing, while this adapter satisfies
-            // libraries (e.g. HotChocolate) that require EF Core's IDbContextFactory<ApplicationDbContext>.
+            // consumers that require EF Core's standard IDbContextFactory<ApplicationDbContext>.
             services.TryAddScoped<Microsoft.EntityFrameworkCore.IDbContextFactory<ApplicationDbContext>, ApplicationDbContextEFFactory>();
 
             services.TryAddSingleton<IQueryableExecutor, EFQueryableExecutor>();

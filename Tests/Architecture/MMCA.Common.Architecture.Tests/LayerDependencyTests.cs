@@ -78,7 +78,7 @@ public sealed class LayerDependencyTests
     {
         var result = Types.InAssembly(assembly)
             .ShouldNot()
-            .HaveDependencyOn(forbiddenNamespace)
+            .HaveDependencyOnAny(forbiddenNamespace)
             .GetResult();
 
         ArchitectureTestHelper.AssertNoViolations(result, reason);

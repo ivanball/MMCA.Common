@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 

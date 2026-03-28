@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Shared.ValueObjects;
 using MMCA.Common.UI.Extensions;
 

@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.Entities;

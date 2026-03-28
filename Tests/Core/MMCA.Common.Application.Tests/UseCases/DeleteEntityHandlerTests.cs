@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Domain.Entities;

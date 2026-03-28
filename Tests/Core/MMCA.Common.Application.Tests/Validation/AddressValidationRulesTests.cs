@@ -1,4 +1,4 @@
-using FluentAssertions;
+using AwesomeAssertions;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Validation;
 using MMCA.Common.Shared.ValueObjects;
