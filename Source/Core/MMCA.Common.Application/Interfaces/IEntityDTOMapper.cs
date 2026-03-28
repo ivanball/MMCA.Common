@@ -24,7 +24,12 @@ public interface IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType>
     /// <summary>Maps a collection of entities to their DTO representations.</summary>
     /// <param name="entityCollection">The entities to map.</param>
     /// <returns>A read-only collection of mapped DTOs.</returns>
-    IReadOnlyCollection<TEntityDTO> MapToDTOs(IReadOnlyCollection<TEntity> entityCollection);
+    IReadOnlyCollection<TEntityDTO> MapToDTOs(IReadOnlyCollection<TEntity> entityCollection)
+    {
+        ArgumentNullException.ThrowIfNull(entityCollection);
+
+        return [.. entityCollection.Select(MapToDTO)];
+    }
 }
 
 /// <summary>
