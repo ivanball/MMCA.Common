@@ -122,6 +122,13 @@ public static class DependencyInjection
                 .AsImplementedInterfaces()
                 .WithSingletonLifetime());
 
+            // Integration event handlers (cross-module) follow the same lifetime strategy
+            services.Scan(scan => scan
+                .FromAssemblyOf<TAssemblyMarker>()
+                .AddClasses(classes => classes.AssignableTo(typeof(IIntegrationEventHandler<>)))
+                .AsImplementedInterfaces()
+                .WithSingletonLifetime());
+
             services.Scan(scan => scan
                 .FromAssemblyOf<TAssemblyMarker>()
                 .AddClasses(classes => classes.AssignableTo(typeof(IEntityDTOMapper<,,>)))

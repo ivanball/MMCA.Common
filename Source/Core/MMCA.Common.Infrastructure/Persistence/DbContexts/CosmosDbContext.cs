@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -15,12 +13,9 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 public sealed class CosmosDbContext(
     DbContextOptions<CosmosDbContext> options,
     IServiceProvider serviceProvider,
-    TimeProvider timeProvider,
     IConnectionStringSettings connectionStringSettings,
-    ILogger<ApplicationDbContext> logger,
-    IDomainEventDispatcher domainEventDispatcher,
     IEntityConfigurationAssemblyProvider assemblyProvider)
-    : ApplicationDbContext(options, serviceProvider, timeProvider, logger, domainEventDispatcher, assemblyProvider)
+    : ApplicationDbContext(options, serviceProvider, assemblyProvider)
 {
     /// <inheritdoc />
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -70,7 +65,7 @@ public sealed class CosmosDbContext(
     /// <summary>
     /// Cosmos DB does not support relational outbox tables; events are dispatched in-process only.
     /// </summary>
-    protected override bool SupportsOutbox => false;
+    internal override bool SupportsOutbox => false;
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)

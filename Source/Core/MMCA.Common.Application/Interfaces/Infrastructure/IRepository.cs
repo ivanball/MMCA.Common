@@ -5,24 +5,53 @@ using MMCA.Common.Shared.DTOs;
 namespace MMCA.Common.Application.Interfaces.Infrastructure;
 
 /// <summary>
-/// Read-only repository for querying entities. Available for all entity types
-/// (not restricted to aggregate roots).
+/// Focused interface for single-entity lookups by ID.
+/// Prefer this over <see cref="IReadRepository{TEntity,TIdentifierType}"/> when a handler
+/// only needs <c>GetByIdAsync</c> or <c>ExistsAsync</c> — this signals minimal data access.
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
-public interface IReadRepository<TEntity, TIdentifierType>
+public interface IEntityReader<TEntity, TIdentifierType>
+    where TEntity : AuditableBaseEntity<TIdentifierType>
+    where TIdentifierType : notnull
+{
+    /// <summary>Retrieves a single entity by its primary key.</summary>
+    Task<TEntity?> GetByIdAsync(
+        TIdentifierType id,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Retrieves a single entity by its primary key with navigation properties eagerly loaded.</summary>
+    Task<TEntity?> GetByIdAsync(
+        TIdentifierType id,
+        IEnumerable<string> includes,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Checks whether an entity with the given id exists.</summary>
+    Task<bool> ExistsAsync(
+        TIdentifierType id,
+        bool ignoreQueryFilters = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Checks whether any entity matches the predicate.</summary>
+    Task<bool> ExistsAsync(
+        Expression<Func<TEntity, bool>> where,
+        bool ignoreQueryFilters = false,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Focused interface for collection queries, projections, and counting.
+/// Prefer this over <see cref="IReadRepository{TEntity,TIdentifierType}"/> when a handler
+/// needs <c>GetAllAsync</c>, <c>GetProjectedAsync</c>, or <c>CountAsync</c>.
+/// </summary>
+/// <typeparam name="TEntity">The entity type.</typeparam>
+/// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
+public interface IEntityQuerier<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
     /// <summary>Retrieves all entities matching optional includes, filter, ordering, and projection.</summary>
-    /// <param name="includes">Navigation property names to include.</param>
-    /// <param name="where">Optional filter expression.</param>
-    /// <param name="orderBy">Optional ordering expression.</param>
-    /// <param name="select">Optional projection expression.</param>
-    /// <param name="asTracking">Whether to track entities in the change tracker.</param>
-    /// <param name="ignoreQueryFilters">Whether to bypass global query filters (e.g., soft-delete).</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The matching entities.</returns>
     Task<IReadOnlyCollection<TEntity>> GetAllAsync(
         IEnumerable<string> includes,
         Expression<Func<TEntity, bool>>? where = null,
@@ -32,16 +61,8 @@ public interface IReadRepository<TEntity, TIdentifierType>
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Retrieves entities matching a filter, projected to a different type via a selector expression.
-    /// The projection is translated to SQL, avoiding full entity materialization.
-    /// </summary>
+    /// <summary>Retrieves entities projected to a different type via a selector expression (translated to SQL).</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
-    /// <param name="select">Projection expression applied server-side.</param>
-    /// <param name="where">Optional filter expression.</param>
-    /// <param name="asTracking">Whether to track entities in the change tracker.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The projected results.</returns>
     Task<IReadOnlyCollection<TResult>> GetProjectedAsync<TResult>(
         Expression<Func<TEntity, TResult>> select,
         Expression<Func<TEntity, bool>>? where = null,
@@ -49,70 +70,34 @@ public interface IReadRepository<TEntity, TIdentifierType>
         CancellationToken cancellationToken = default);
 
     /// <summary>Retrieves entities as lightweight id/name pairs for lookup scenarios.</summary>
-    /// <param name="nameProperty">The entity property to project as the display name.</param>
-    /// <param name="where">Optional filter expression.</param>
-    /// <param name="asTracking">Whether to track entities in the change tracker.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A collection of id/name lookup pairs.</returns>
     Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
         string nameProperty,
         Expression<Func<TEntity, bool>>? where = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Retrieves a single entity by its primary key.</summary>
-    /// <param name="id">The primary key value.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The entity, or <see langword="null"/> if not found.</returns>
-    Task<TEntity?> GetByIdAsync(
-        TIdentifierType id,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>Retrieves a single entity by its primary key with navigation properties eagerly loaded.</summary>
-    /// <param name="id">The primary key value.</param>
-    /// <param name="includes">Navigation property names to include.</param>
-    /// <param name="asTracking">Whether to track the entity in the change tracker.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The entity with includes loaded, or <see langword="null"/> if not found.</returns>
-    Task<TEntity?> GetByIdAsync(
-        TIdentifierType id,
-        IEnumerable<string> includes,
-        bool asTracking = false,
-        CancellationToken cancellationToken = default);
-
     /// <summary>Returns the total count of entities.</summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The entity count.</returns>
     Task<int> CountAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Returns the count of entities matching the predicate.</summary>
-    /// <param name="where">The filter predicate.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The matching entity count.</returns>
     Task<int> CountAsync(
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default);
+}
 
-    /// <summary>Checks whether an entity with the given id exists.</summary>
-    /// <param name="id">The primary key value.</param>
-    /// <param name="ignoreQueryFilters">Whether to bypass global query filters.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns><see langword="true"/> if the entity exists.</returns>
-    Task<bool> ExistsAsync(
-        TIdentifierType id,
-        bool ignoreQueryFilters = false,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>Checks whether any entity matches the predicate.</summary>
-    /// <param name="where">The filter predicate.</param>
-    /// <param name="ignoreQueryFilters">Whether to bypass global query filters.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns><see langword="true"/> if a matching entity exists.</returns>
-    Task<bool> ExistsAsync(
-        Expression<Func<TEntity, bool>> where,
-        bool ignoreQueryFilters = false,
-        CancellationToken cancellationToken = default);
-
+/// <summary>
+/// Read-only repository combining <see cref="IEntityReader{TEntity,TIdentifierType}"/>,
+/// <see cref="IEntityQuerier{TEntity,TIdentifierType}"/>, and direct IQueryable access.
+/// Existing code should continue using this interface; new handlers can depend on the
+/// focused sub-interfaces for better ISP compliance.
+/// </summary>
+/// <typeparam name="TEntity">The entity type.</typeparam>
+/// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
+public interface IReadRepository<TEntity, TIdentifierType>
+    : IEntityReader<TEntity, TIdentifierType>, IEntityQuerier<TEntity, TIdentifierType>
+    where TEntity : AuditableBaseEntity<TIdentifierType>
+    where TIdentifierType : notnull
+{
     /// <summary>Base queryable with change tracking enabled.</summary>
     IQueryable<TEntity> Table { get; }
 
@@ -143,6 +128,14 @@ public interface IWriteRepository<TEntity, TIdentifierType>
         TEntity entity,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Adds multiple entities to the persistence store in a single batch.</summary>
+    /// <param name="entities">The entities to add.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task AddRangeAsync(
+        IEnumerable<TEntity> entities,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Marks an existing entity as modified for persistence.</summary>
     /// <param name="entity">The entity to update.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -150,6 +143,10 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     Task UpdateAsync(
         TEntity entity,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Marks multiple existing entities as modified for persistence in a single batch.</summary>
+    /// <param name="entities">The entities to update.</param>
+    void UpdateRange(IEnumerable<TEntity> entities);
 
     /// <summary>Synchronous save. Prefer <see cref="SaveChangesAsync"/> in async code paths.</summary>
     /// <returns>The number of state entries written.</returns>

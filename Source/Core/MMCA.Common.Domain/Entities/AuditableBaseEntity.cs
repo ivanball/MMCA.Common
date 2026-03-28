@@ -21,7 +21,7 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
 
     // Audit properties: private setters are populated by EF Core's SaveChangesAsync override
     // via entry.Property(...).CurrentValue reflection — not by domain code.
-#pragma warning disable S1144 // Private setters used by EF Core infrastructure
+#pragma warning disable S1144, CA1819 // Private setters used by EF Core; byte[] required for EF rowversion mapping
     public virtual DateTime CreatedOn { get; private set; }
 
     public virtual UserIdentifierType CreatedBy { get; private set; }
@@ -29,7 +29,15 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
     public virtual DateTime? LastModifiedOn { get; private set; }
 
     public virtual UserIdentifierType? LastModifiedBy { get; private set; }
-#pragma warning restore S1144
+
+    /// <summary>
+    /// Optimistic concurrency token managed by the database. EF Core automatically includes
+    /// this value in UPDATE/DELETE WHERE clauses and throws <c>DbUpdateConcurrencyException</c>
+    /// if the row was modified by another transaction since it was read.
+    /// Configured as <c>[Timestamp]</c> (SQL Server <c>rowversion</c>) in EF entity configurations.
+    /// </summary>
+    public byte[] RowVersion { get; private set; } = [];
+#pragma warning restore S1144, CA1819
 
     /// <summary>
     /// Marks this entity as soft-deleted. Idempotency is enforced — calling

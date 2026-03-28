@@ -12,6 +12,7 @@ using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
 using MMCA.Common.Infrastructure.Services;
@@ -38,6 +39,11 @@ public static class DependencyInjection
         {
             services.TryAddSingleton<IEntityConfigurationAssemblyProvider, DefaultEntityConfigurationAssemblyProvider>();
             services.TryAddSingleton<IDataSourceService, DataSourceService>();
+
+            // EF SaveChanges interceptors — registered as singletons because they are
+            // stateless (per-save state is stored in ConditionalWeakTable keyed by context).
+            services.TryAddSingleton<AuditSaveChangesInterceptor>();
+            services.TryAddSingleton<DomainEventSaveChangesInterceptor>();
 
             services.TryAddSingleton<IJwtSettings>(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
 
@@ -128,6 +134,7 @@ public static class DependencyInjection
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
             services.TryAddScoped<ITokenService, TokenService>();
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
+            services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
 
             services.TryAddSingleton(TimeProvider.System);
             services.TryAddTransient<IEmailSender, SmtpEmailSender>();

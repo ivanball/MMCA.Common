@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Settings;
@@ -13,12 +11,9 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 public sealed class SQLServerDbContext(
     DbContextOptions<SQLServerDbContext> options,
     IServiceProvider serviceProvider,
-    TimeProvider timeProvider,
     IConnectionStringSettings connectionStringSettings,
-    ILogger<ApplicationDbContext> logger,
-    IDomainEventDispatcher domainEventDispatcher,
     IEntityConfigurationAssemblyProvider assemblyProvider)
-    : ApplicationDbContext(options, serviceProvider, timeProvider, logger, domainEventDispatcher, assemblyProvider)
+    : ApplicationDbContext(options, serviceProvider, assemblyProvider)
 {
     /// <inheritdoc />
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -1,10 +1,11 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
+using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using StackExchange.Profiling;
 
@@ -12,28 +13,19 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 /// <summary>
 /// Base DbContext shared by all data-source-specific contexts (SQL Server, Cosmos, SQLite).
-/// Provides auditing stamp assignment, domain event capture/dispatch, and global soft-delete query filters.
+/// Cross-cutting concerns (audit stamping, domain event capture/dispatch) are handled by
+/// <see cref="AuditSaveChangesInterceptor"/> and <see cref="DomainEventSaveChangesInterceptor"/>.
+/// This class provides global soft-delete query filters and model configuration.
 /// </summary>
 /// <param name="options">EF Core options forwarded to <see cref="DbContext"/>.</param>
-/// <param name="serviceProvider">Service provider used when applying entity configurations.</param>
-/// <param name="timeProvider">Provides UTC timestamps for audit fields.</param>
-/// <param name="logger">Logger for persistence errors.</param>
-/// <param name="domainEventDispatcher">Dispatches domain events after successful persistence.</param>
+/// <param name="serviceProvider">Service provider used when applying entity configurations and resolving interceptors.</param>
 /// <param name="assemblyProvider">Provides module assemblies containing entity configurations.</param>
 public abstract class ApplicationDbContext(
     DbContextOptions options,
     IServiceProvider serviceProvider,
-    TimeProvider timeProvider,
-    ILogger<ApplicationDbContext> logger,
-    IDomainEventDispatcher domainEventDispatcher,
     IEntityConfigurationAssemblyProvider assemblyProvider)
     : DbContext(options)
 {
-    private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    private readonly IDomainEventDispatcher _domainEventDispatcher = domainEventDispatcher ?? throw new ArgumentNullException(nameof(domainEventDispatcher));
-
-    private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-
     /// <summary>
     /// Keyless entity used to map scalar SQL results (e.g. from raw queries) without a backing table.
     /// </summary>
@@ -47,142 +39,21 @@ public abstract class ApplicationDbContext(
     /// <summary>
     /// Indicates whether this context supports the transactional outbox pattern.
     /// Cosmos DB does not support relational tables, so outbox is only used with
-    /// SQL Server and SQLite contexts.
+    /// SQL Server and SQLite contexts. Read by <see cref="DomainEventSaveChangesInterceptor"/>.
     /// </summary>
-    protected virtual bool SupportsOutbox => true;
+    internal virtual bool SupportsOutbox => true;
 
     /// <summary>
-    /// Stamps audit fields, persists changes (including outbox entries), then dispatches domain events.
-    /// Domain events are persisted to the outbox table in the same transaction as the aggregate
-    /// changes (guaranteeing at-least-once delivery). Events are then dispatched in-process
-    /// immediately for low-latency handling. The <see cref="Outbox.OutboxProcessor"/> acts as
-    /// a safety net, retrying any entries that were not dispatched (e.g. due to a process crash).
+    /// The current user's ID for audit stamps, set before <c>base.SaveChangesAsync</c> and
+    /// read by <see cref="AuditSaveChangesInterceptor"/>. When <see langword="null"/>,
+    /// the interceptor uses the default value as a sentinel for system-generated entries.
     /// </summary>
-    private async Task<int> SaveChangesAsyncInternal(UserIdentifierType? userId, CancellationToken cancellationToken = default)
-    {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        // When no authenticated user is available (e.g. background services, seeding, outbox processing),
-        // use the default value as a sentinel (0 for int, Guid.Empty for Guid). Real user IDs are
-        // always non-default, so this reliably distinguishes system-generated audit entries.
-        var resolvedUserId = userId ?? default;
-
-        // Stamp audit fields automatically — prevents callers from needing to set them manually.
-        // On Added: set both Created and LastModified; on Modified: only update LastModified
-        // and explicitly mark Created fields as unmodified to prevent accidental overwrites.
-        foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
-        {
-            switch (entry.State)
-            {
-                case EntityState.Added:
-                    entry.Property(nameof(IAuditableEntity.CreatedBy)).CurrentValue = resolvedUserId;
-                    entry.Property(nameof(IAuditableEntity.CreatedOn)).CurrentValue = now;
-                    entry.Property(nameof(IAuditableEntity.LastModifiedBy)).CurrentValue = resolvedUserId;
-                    entry.Property(nameof(IAuditableEntity.LastModifiedOn)).CurrentValue = now;
-                    break;
-                case EntityState.Modified:
-                    entry.Property(nameof(IAuditableEntity.CreatedBy)).IsModified = false;
-                    entry.Property(nameof(IAuditableEntity.CreatedOn)).IsModified = false;
-                    entry.Property(nameof(IAuditableEntity.LastModifiedBy)).CurrentValue = resolvedUserId;
-                    entry.Property(nameof(IAuditableEntity.LastModifiedOn)).CurrentValue = now;
-                    break;
-                case EntityState.Detached:
-                case EntityState.Unchanged:
-                case EntityState.Deleted:
-                default:
-                    break;
-            }
-        }
-        try
-        {
-            // Capture domain events BEFORE save — entities in Deleted state are detached
-            // after SaveChanges, which would silently lose their events.
-            var aggregateRootEntities = ChangeTracker.Entries<IAggregateRoot>()
-                .Where(e => e.Entity.DomainEvents is { Count: > 0 })
-                .ToArray();
-
-            var domainEvents = aggregateRootEntities
-                .SelectMany(e => e.Entity.DomainEvents)
-                .ToArray();
-
-            // Persist events to the outbox table in the same transaction as aggregate changes.
-            // This guarantees at-least-once delivery even if the process crashes after save.
-            var outboxEntries = PersistToOutbox(domainEvents);
-
-            var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            // Dispatch in-process AFTER successful persistence (optimistic, low-latency path).
-            await _domainEventDispatcher.DispatchAsync(domainEvents, cancellationToken).ConfigureAwait(false);
-
-            // Mark outbox entries as processed so the background processor skips them.
-            MarkOutboxAsProcessed(outboxEntries, now);
-
-            foreach (var aggregateRootEntity in aggregateRootEntities)
-                aggregateRootEntity.Entity.ClearDomainEvents();
-
-            return result;
-        }
-        catch (DbUpdateException dbEx)
-        {
-            _logger.LogError(dbEx, "Database update error: {Message}", dbEx.Message);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error in SaveChangesAsync: {Message}", ex.Message);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Serializes domain events into <see cref="OutboxMessage"/> entries and adds them
-    /// to the change tracker so they are persisted in the same transaction.
-    /// </summary>
-    private List<OutboxMessage> PersistToOutbox(IDomainEvent[] domainEvents)
-    {
-        var entries = new List<OutboxMessage>(domainEvents.Length);
-
-        if (!SupportsOutbox || domainEvents.Length == 0)
-            return entries;
-
-        foreach (var domainEvent in domainEvents)
-        {
-            var entry = OutboxMessage.FromDomainEvent(domainEvent);
-            entries.Add(entry);
-            Set<OutboxMessage>().Add(entry);
-        }
-
-        return entries;
-    }
-
-    /// <summary>
-    /// Marks outbox entries as processed after successful in-process dispatch.
-    /// Uses a direct SQL update to avoid re-entering the SaveChanges pipeline.
-    /// </summary>
-    private void MarkOutboxAsProcessed(List<OutboxMessage> outboxEntries, DateTime processedOn)
-    {
-        if (outboxEntries.Count == 0)
-            return;
-
-        try
-        {
-            foreach (var entry in outboxEntries)
-                entry.ProcessedOn = processedOn;
-
-            // Use the base DbContext.SaveChanges (synchronous, not our custom override)
-            // to persist only the ProcessedOn updates without re-triggering audit stamps
-            // or event dispatch. OutboxMessage is not an IAuditableEntity so the audit
-            // loop is a no-op, and it has no domain events to capture.
-            base.SaveChanges();
-        }
-        catch (Exception ex)
-        {
-            // Non-fatal: the outbox processor will eventually retry these entries.
-            _logger.LogWarning(ex, "Failed to mark {Count} outbox entries as processed; the outbox processor will retry", outboxEntries.Count);
-        }
-    }
+    internal UserIdentifierType? CurrentSaveUserId { get; private set; }
 
     /// <summary>
     /// Saves all pending changes with auditing and domain event dispatch.
+    /// Sets <see cref="CurrentSaveUserId"/> so interceptors can stamp audit fields,
+    /// then delegates to <c>base.SaveChangesAsync</c> which triggers the interceptor pipeline.
     /// </summary>
     /// <param name="userId">The current user's ID for audit stamps, or <see langword="null"/> for system operations.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -190,7 +61,23 @@ public abstract class ApplicationDbContext(
     public async Task<int> SaveChangesAsync(UserIdentifierType? userId, CancellationToken cancellationToken = default)
     {
         using var step = MiniProfiler.Current?.Step("MMCA.Common.Infrastructure.ApplicationDbContext: SaveChangesAsync");
-        return await SaveChangesAsyncInternal(userId, cancellationToken).ConfigureAwait(false);
+        CurrentSaveUserId = userId;
+        return await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(optionsBuilder);
+
+        // Register interceptors resolved from DI so that audit stamping and
+        // domain event capture/dispatch happen via the EF interceptor pipeline
+        // rather than inline in SaveChangesAsync.
+        var auditInterceptor = serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>();
+        var domainEventInterceptor = serviceProvider.GetRequiredService<DomainEventSaveChangesInterceptor>();
+        optionsBuilder.AddInterceptors(auditInterceptor, domainEventInterceptor);
+
+        base.OnConfiguring(optionsBuilder);
     }
 
     public override DbSet<TEntity> Set<TEntity>()
@@ -201,6 +88,7 @@ public abstract class ApplicationDbContext(
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ApplySoftDeleteFilters(modelBuilder);
+        ConfigureConcurrencyTokens(modelBuilder);
 
         // Register keyless ValReturn<T> types mapped to no table/view — used for raw SQL scalar queries.
         modelBuilder.Entity<ValReturn<bool>>().HasNoKey().ToView(null);
@@ -232,6 +120,25 @@ public abstract class ApplicationDbContext(
                 parameter
             );
             modelBuilder.Entity(clrType).HasQueryFilter("SoftDelete", filter);
+        }
+    }
+
+    /// <summary>
+    /// Configures the <c>RowVersion</c> property as an optimistic concurrency token on every
+    /// non-owned entity type that inherits from <see cref="AuditableBaseEntity{TId}"/>.
+    /// SQL Server maps this to <c>rowversion</c> (auto-incremented by the database);
+    /// SQLite maps it to a <c>BLOB</c> column (application-managed).
+    /// EF Core automatically includes the token in UPDATE/DELETE WHERE clauses and throws
+    /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> on conflicts.
+    /// </summary>
+    protected static void ConfigureConcurrencyTokens(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+            .Where(et => typeof(IAuditableEntity).IsAssignableFrom(et.ClrType) && !et.IsOwned()))
+        {
+            modelBuilder.Entity(entityType.ClrType)
+                .Property(nameof(AuditableBaseEntity<>.RowVersion))
+                .IsRowVersion();
         }
     }
 

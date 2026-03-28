@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using MMCA.Common.Application.Interfaces.Infrastructure;
 
 namespace MMCA.Common.Infrastructure.Settings;
 
@@ -26,4 +27,11 @@ public sealed class OutboxSettings
     /// <summary>Gets the delay in seconds after message creation before it becomes eligible for processing.</summary>
     [Range(0, 600)]
     public int ProcessingDelaySeconds { get; init; } = 30;
+
+    /// <summary>
+    /// Gets the data source used by the outbox processor to poll for pending messages.
+    /// Must be a relational provider that supports the outbox table (SQL Server or SQLite).
+    /// Defaults to <see cref="DataSource.SQLServer"/>.
+    /// </summary>
+    public DataSource DataSource { get; init; } = DataSource.SQLServer;
 }

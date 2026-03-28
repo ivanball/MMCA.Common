@@ -23,9 +23,19 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
         ProfilingHelper.ProfileAsync(ClassName, nameof(AddAsync),
             () => _inner.AddAsync(entity, cancellationToken));
 
+    public Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(AddRangeAsync),
+            () => _inner.AddRangeAsync(entities, cancellationToken));
+
     public Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(UpdateAsync),
             () => _inner.UpdateAsync(entity, cancellationToken));
+
+    public void UpdateRange(IEnumerable<TEntity> entities)
+    {
+        using var step = ProfilingHelper.BeginStep(ClassName, nameof(UpdateRange));
+        _inner.UpdateRange(entities);
+    }
 
     public int Save() =>
         ProfilingHelper.Profile(ClassName, nameof(Save), _inner.Save);

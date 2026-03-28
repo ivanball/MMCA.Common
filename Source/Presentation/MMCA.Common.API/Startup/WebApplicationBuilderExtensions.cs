@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
@@ -51,17 +52,34 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
-        /// Registers a fixed-window rate limiter with the "FixedPolicy" name.
-        /// Default: 100 requests per minute, queue depth 2, oldest-first processing.
+        /// Registers rate limiters: a global fixed-window limiter ("FixedPolicy") and a
+        /// per-user fixed-window limiter ("UserPolicy") that partitions by authenticated user
+        /// or IP address. This prevents a single user from exhausting the global quota.
         /// </summary>
-        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2) =>
-            services.AddRateLimiter(options => options.AddFixedWindowLimiter("FixedPolicy", limiterOptions =>
+        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30) =>
+            services.AddRateLimiter(options =>
             {
-                limiterOptions.Window = TimeSpan.FromMinutes(1);
-                limiterOptions.PermitLimit = permitLimit;
-                limiterOptions.QueueLimit = queueLimit;
-                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-            }));
+                options.AddFixedWindowLimiter("FixedPolicy", limiterOptions =>
+                {
+                    limiterOptions.Window = TimeSpan.FromMinutes(1);
+                    limiterOptions.PermitLimit = permitLimit;
+                    limiterOptions.QueueLimit = queueLimit;
+                    limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                });
+
+                options.AddPolicy("UserPolicy", httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.User?.Identity?.Name
+                            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                            ?? "anonymous",
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            Window = TimeSpan.FromMinutes(1),
+                            PermitLimit = perUserPermitLimit,
+                            QueueLimit = queueLimit,
+                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                        }));
+            });
 
         /// <summary>
         /// Registers Brotli + Gzip response compression for HTTPS responses.

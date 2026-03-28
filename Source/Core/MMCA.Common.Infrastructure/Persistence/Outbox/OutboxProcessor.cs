@@ -36,6 +36,12 @@ public sealed partial class OutboxProcessor(
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (_settings.DataSource == Application.Interfaces.Infrastructure.DataSource.CosmosDB)
+        {
+            LogOutboxDisabled(logger, _settings.DataSource);
+            return;
+        }
+
         // Brief startup delay so the application finishes initializing before we start polling.
         await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken).ConfigureAwait(false);
 
@@ -63,7 +69,7 @@ public sealed partial class OutboxProcessor(
     {
         using var scope = scopeFactory.CreateScope();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<DbContexts.Factory.IDbContextFactory>();
-        var context = dbContextFactory.GetDbContext(Application.Interfaces.Infrastructure.DataSource.SQLServer);
+        var context = dbContextFactory.GetDbContext(_settings.DataSource);
         var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
 
         var cutoff = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
@@ -109,6 +115,9 @@ public sealed partial class OutboxProcessor(
         // Use the base DbContext.SaveChangesAsync to bypass audit stamping and event dispatch.
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Outbox processor disabled: {DataSource} does not support the outbox table")]
+    private static partial void LogOutboxDisabled(ILogger logger, Application.Interfaces.Infrastructure.DataSource dataSource);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox processor encountered an error")]
     private static partial void LogProcessingError(ILogger logger, Exception exception);

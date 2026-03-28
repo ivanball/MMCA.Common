@@ -10,6 +10,7 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Settings;
 using Moq;
@@ -33,18 +34,27 @@ public sealed class OutboxProcessorTests : IDisposable
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
+        _dispatcherMock = new Mock<IDomainEventDispatcher>();
+
+        // Build a service provider that includes interceptor dependencies so the
+        // test DbContext can resolve them via its base OnConfiguring.
+        var contextServices = new ServiceCollection();
+        contextServices.AddSingleton(TimeProvider.System);
+        contextServices.AddSingleton(_dispatcherMock.Object);
+        contextServices.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
+        contextServices.AddSingleton(new DomainEventSaveChangesInterceptor(
+            _dispatcherMock.Object, NullLogger<DomainEventSaveChangesInterceptor>.Instance));
+        contextServices.AddSingleton(Mock.Of<IEntityConfigurationAssemblyProvider>(
+            p => p.GetConfigurationAssemblies() == Array.Empty<Assembly>()));
+        ServiceProvider contextSp = contextServices.BuildServiceProvider();
+
         var options = new DbContextOptionsBuilder<OutboxTestDbContext>()
             .UseSqlite(_connection)
             .Options;
 
-        _dispatcherMock = new Mock<IDomainEventDispatcher>();
-
         _dbContext = new OutboxTestDbContext(
             options,
-            new ServiceCollection().BuildServiceProvider(),
-            TimeProvider.System,
-            NullLogger<ApplicationDbContext>.Instance,
-            _dispatcherMock.Object,
+            contextSp,
             Mock.Of<IEntityConfigurationAssemblyProvider>(
                 p => p.GetConfigurationAssemblies() == Array.Empty<Assembly>()));
 
@@ -282,13 +292,10 @@ public sealed class OutboxProcessorTests : IDisposable
     private sealed class OutboxTestDbContext(
         DbContextOptions options,
         IServiceProvider serviceProvider,
-        TimeProvider timeProvider,
-        ILogger<ApplicationDbContext> logger,
-        IDomainEventDispatcher domainEventDispatcher,
         IEntityConfigurationAssemblyProvider assemblyProvider)
-        : ApplicationDbContext(options, serviceProvider, timeProvider, logger, domainEventDispatcher, assemblyProvider)
+        : ApplicationDbContext(options, serviceProvider, assemblyProvider)
     {
-        protected override bool SupportsOutbox => true;
+        internal override bool SupportsOutbox => true;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) =>
             modelBuilder.Entity<OutboxMessage>(entity =>

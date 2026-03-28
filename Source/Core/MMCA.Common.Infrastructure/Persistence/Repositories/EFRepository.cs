@@ -24,6 +24,13 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    public async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        await Entities.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     /// <remarks>
     /// If the entity is already tracked by the context, its values are patched in place
     /// via <see cref="Microsoft.EntityFrameworkCore.ChangeTracking.PropertyValues.SetValues(object)"/>
@@ -48,6 +55,13 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
         {
             throw new DbUpdateException(GetFullErrorTextAndRollbackEntityChanges(ex), ex);
         }
+    }
+
+    /// <inheritdoc />
+    public void UpdateRange(IEnumerable<TEntity> entities)
+    {
+        ArgumentNullException.ThrowIfNull(entities);
+        Entities.UpdateRange(entities);
     }
 
     /// <inheritdoc />
