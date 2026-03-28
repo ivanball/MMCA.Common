@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.FeatureManagement;
+using Microsoft.FeatureManagement.Mvc;
 using MMCA.Common.API.Authorization;
+using MMCA.Common.API.FeatureManagement;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.JsonConverters;
 using MMCA.Common.API.Middleware;
@@ -58,6 +61,12 @@ public static class DependencyInjection
             // Registered as scoped because they depend on scoped services (ICacheService, ICurrentUserService)
             services.AddScoped<IdempotencyFilter>();
             services.AddScoped<OwnerOrAdminFilter>();
+
+            // Feature Management — registers IFeatureManager, IFeatureManagerSnapshot,
+            // and built-in filters (Percentage, TimeWindow, Targeting).
+            // Feature flags are read from the "FeatureManagement" configuration section.
+            services.AddFeatureManagement();
+            services.AddSingleton<IDisabledFeaturesHandler, DisabledFeatureHandler>();
 
             return services;
         }

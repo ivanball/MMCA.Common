@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.FeatureManagement" />
 
     <PackageReference Include="MiniProfiler.AspNetCore.Mvc" />
     <PackageReference Include="MinVer">

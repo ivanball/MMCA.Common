@@ -52,25 +52,29 @@ public static class DependencyInjection
         /// <para>
         /// <b>Command pipeline (nesting from outermost to innermost):</b>
         /// <code>
-        ///   LoggingCommandDecorator              ← outermost: logs start/end, captures full pipeline duration
-        ///     → CachingCommandDecorator          ← invalidates cache AFTER transaction commits
-        ///       → ValidatingCommandDecorator     ← short-circuits with Result.Failure on validation errors
-        ///         → TransactionalCommandDecorator  ← wraps handler in DB transaction (if ITransactional)
-        ///           → ConcreteHandler            ← the actual business logic
+        ///   FeatureGateCommandDecorator          ← outermost: short-circuits if feature flag disabled
+        ///     → LoggingCommandDecorator           ← logs start/end, captures full pipeline duration
+        ///       → CachingCommandDecorator         ← invalidates cache AFTER transaction commits
+        ///         → ValidatingCommandDecorator    ← short-circuits with Result.Failure on validation errors
+        ///           → TransactionalCommandDecorator ← wraps handler in DB transaction (if ITransactional)
+        ///             → ConcreteHandler            ← the actual business logic
         /// </code>
         /// </para>
         /// <para>
         /// <b>Query pipeline (nesting from outermost to innermost):</b>
         /// <code>
-        ///   LoggingQueryDecorator            ← outermost: logs start/end, captures full pipeline duration
-        ///     → CachingQueryDecorator        ← innermost: caches results (if IQueryCacheKeyProvider)
-        ///       → ConcreteHandler            ← the actual query logic
+        ///   FeatureGateQueryDecorator         ← outermost: short-circuits if feature flag disabled
+        ///     → LoggingQueryDecorator          ← logs start/end, captures full pipeline duration
+        ///       → CachingQueryDecorator        ← innermost: caches results (if IQueryCacheKeyProvider)
+        ///         → ConcreteHandler            ← the actual query logic
         /// </code>
         /// </para>
         /// <para>
         /// <b>Design rationale:</b>
         /// <list type="bullet">
-        /// <item>Logging is outermost so it measures the full pipeline including transaction + cache.</item>
+        /// <item>Feature gating is outermost so disabled features are rejected immediately with zero
+        /// overhead — no logging, caching, validation, or transaction work.</item>
+        /// <item>Logging sits inside feature gating so it only measures enabled feature executions.</item>
         /// <item>Validation sits outside the transaction boundary so invalid commands never start
         /// a database transaction — saving resources on malformed requests.</item>
         /// <item>Cache invalidation sits outside validation so cache is only cleared after a valid,
@@ -90,11 +94,13 @@ public static class DependencyInjection
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(TransactionalCommandDecorator<,>));   // innermost
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(ValidatingCommandDecorator<,>));      // validates before transaction
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));         // cache invalidation
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));         // outermost
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));         // logging
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(FeatureGateCommandDecorator<,>));     // outermost — feature flag check
 
             // ── Query decorators ────────────────────────────────────────
             services.TryDecorate(typeof(IQueryHandler<,>), typeof(CachingQueryDecorator<,>));             // innermost
-            services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingQueryDecorator<,>));             // outermost
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingQueryDecorator<,>));             // logging
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(FeatureGateQueryDecorator<,>));         // outermost — feature flag check
 
             return services;
         }
