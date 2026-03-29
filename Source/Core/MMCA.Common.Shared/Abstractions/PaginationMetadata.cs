@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 
 namespace MMCA.Common.Shared.Abstractions;
@@ -63,11 +64,13 @@ public sealed record PaginationMetadata
 public record CollectionResult<T>
 {
     /// <summary>Initializes an empty collection result.</summary>
+    [SetsRequiredMembers]
     public CollectionResult()
         : this(items: []) { }
 
     /// <summary>Initializes a collection result with the specified items.</summary>
     /// <param name="items">The items to include in the result.</param>
+    [SetsRequiredMembers]
     public CollectionResult(IReadOnlyCollection<T> items)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -88,12 +91,14 @@ public record CollectionResult<T>
 public sealed record PagedCollectionResult<T> : CollectionResult<T>
 {
     /// <summary>Initializes an empty paged collection result with default pagination metadata.</summary>
+    [SetsRequiredMembers]
     public PagedCollectionResult()
         : this(items: [], paginationMetadata: new PaginationMetadata()) { }
 
     /// <summary>Initializes a paged collection result with the specified items and pagination metadata.</summary>
     /// <param name="items">The items for the current page.</param>
     /// <param name="paginationMetadata">The pagination state.</param>
+    [SetsRequiredMembers]
     public PagedCollectionResult(IReadOnlyCollection<T> items, PaginationMetadata paginationMetadata)
         : base(items)
     {
