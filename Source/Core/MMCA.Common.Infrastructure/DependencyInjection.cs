@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -8,6 +9,7 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Infrastructure.Hubs;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -139,6 +141,38 @@ public static class DependencyInjection
 
             services.TryAddSingleton(TimeProvider.System);
             services.TryAddTransient<IEmailSender, SmtpEmailSender>();
+            services.TryAddTransient<IPushNotificationSender, NullPushNotificationSender>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers SignalR push notification services, replacing the default <see cref="NullPushNotificationSender"/>
+        /// with <see cref="SignalRPushNotificationSender"/>. Optionally configures a Redis backplane when a Redis
+        /// connection string is available.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding settings and detecting Redis.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddPushNotifications(IConfiguration configuration)
+        {
+            services.AddOptions<PushNotificationSettings>()
+                .Bind(configuration.GetSection(PushNotificationSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.TryAddSingleton<IPushNotificationSettings>(sp =>
+                sp.GetRequiredService<IOptions<PushNotificationSettings>>().Value);
+
+            var signalRBuilder = services.AddSignalR();
+
+            var redisConnectionString = configuration.GetConnectionString("redis");
+            if (!string.IsNullOrEmpty(redisConnectionString))
+            {
+                signalRBuilder.AddStackExchangeRedis(redisConnectionString);
+            }
+
+            // Replace the default NullPushNotificationSender with the SignalR implementation.
+            services.AddTransient<IPushNotificationSender, SignalRPushNotificationSender>();
+            services.TryAddSingleton<IUserIdProvider, ClaimBasedUserIdProvider>();
 
             return services;
         }
