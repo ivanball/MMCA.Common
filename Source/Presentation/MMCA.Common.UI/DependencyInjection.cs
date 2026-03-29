@@ -51,6 +51,10 @@ public static class DependencyInjection
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
 
+            // Default no-op OAuth settings — downstream apps override with TryAdd before this runs,
+            // or replace after by calling AddSingleton<IOAuthUISettings, ConcreteSettings>()
+            services.TryAddSingleton<IOAuthUISettings, DefaultOAuthUISettings>();
+
             return services;
         }
     }

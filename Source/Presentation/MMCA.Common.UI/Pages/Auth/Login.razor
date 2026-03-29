@@ -1,8 +1,12 @@
 @page "/login"
+@using Microsoft.Extensions.Options
 @using MMCA.Common.Shared.Auth
+@using MMCA.Common.UI.Common.Settings
 @using MMCA.Common.UI.Services.Auth
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
+@inject IOAuthUISettings OAuthSettings
+@inject IOptions<ApiSettings> ApiSettingsOptions
 @inject NavigationManager Navigation
 
 <PageTitle>Login</PageTitle>
@@ -55,6 +59,31 @@
                            Href="/register" Size="Size.Medium">
                     Create Account
                 </MudButton>
+                @if (_hasExternalProviders)
+                {
+                    <MudDivider Class="my-1" />
+                    <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                        Or continue with
+                    </MudText>
+                    @if (OAuthSettings.GoogleEnabled)
+                    {
+                        <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                   StartIcon="@Icons.Custom.Brands.Google"
+                                   Href="@(_apiBase + "/auth/oauth/google")"
+                                   aria-label="Sign in with Google">
+                            Sign in with Google
+                        </MudButton>
+                    }
+                    @if (OAuthSettings.GitHubEnabled)
+                    {
+                        <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                   StartIcon="@Icons.Custom.Brands.GitHub"
+                                   Href="@(_apiBase + "/auth/oauth/github")"
+                                   aria-label="Sign in with GitHub">
+                            Sign in with GitHub
+                        </MudButton>
+                    }
+                }
             </MudCardActions>
         </form>
     </MudCard>
@@ -65,6 +94,14 @@
     private string _password = string.Empty;
     private string? _errorMessage;
     private bool _isLoading;
+    private bool _hasExternalProviders;
+    private string _apiBase = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _hasExternalProviders = OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled;
+        _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
+    }
 
     private async Task HandleLoginAsync()
     {

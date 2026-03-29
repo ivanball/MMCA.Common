@@ -1,0 +1,79 @@
+@page "/auth/oauth-complete"
+@using Microsoft.AspNetCore.Components.Authorization
+@using MMCA.Common.UI.Services.Auth
+@attribute [StreamRendering(false)]
+@inject ITokenStorageService TokenStorage
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Completing sign in...</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="auth-container">
+    <div class="d-flex flex-column align-center">
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login">
+                Back to Login
+            </MudButton>
+        }
+        else
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.body1" Class="mt-4">Completing sign in...</MudText>
+        }
+    </div>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? AccessToken { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? RefreshToken { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    private string? _error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        if (!string.IsNullOrEmpty(Error))
+        {
+            _error = $"Authentication failed: {Error}";
+            StateHasChanged();
+            return;
+        }
+
+        if (string.IsNullOrEmpty(AccessToken) || string.IsNullOrEmpty(RefreshToken))
+        {
+            _error = "Authentication failed: missing tokens.";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await TokenStorage.SetTokensAsync(AccessToken, RefreshToken);
+
+            if (AuthStateProvider is JwtAuthenticationStateProvider jwtProvider)
+            {
+                jwtProvider.NotifyUserAuthentication(AccessToken);
+            }
+
+            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+        }
+        catch
+        {
+            _error = "Failed to complete sign in. Please try again.";
+            StateHasChanged();
+        }
+    }
+}
