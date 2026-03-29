@@ -24,26 +24,71 @@
     <MudNavMenu Color="Color.Default">
         <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Home</MudNavLink>
 
-        @foreach (var item in _generalItems)
+        @foreach (var group in _generalItems.GroupBy(i => i.Group))
         {
-            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+            if (group.Key is not null)
+            {
+                <MudNavGroup Title="@group.Key" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+                    @foreach (var item in group)
+                    {
+                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                    }
+                </MudNavGroup>
+            }
+            else
+            {
+                @foreach (var item in group)
+                {
+                    <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                }
+            }
         }
 
         @if (_userItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
         {
             <div class="nav-section-label" role="heading" aria-level="2">My Account</div>
-            @foreach (var item in _userItems)
+            @foreach (var group in _userItems.GroupBy(i => i.Group))
             {
-                <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                if (group.Key is not null)
+                {
+                    <MudNavGroup Title="@group.Key" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+                        @foreach (var item in group)
+                        {
+                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                        }
+                    </MudNavGroup>
+                }
+                else
+                {
+                    @foreach (var item in group)
+                    {
+                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                    }
+                }
             }
         }
 
         @if (_adminItems.Count > 0)
         {
             <div class="nav-section-label" role="heading" aria-level="2">Administration</div>
-            @foreach (var item in _adminItems)
+            @foreach (var group in _adminItems.GroupBy(i => i.Group))
             {
-                <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                if (group.Key is not null)
+                {
+                    <MudNavGroup Title="@group.Key" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+                        @foreach (var item in group)
+                        {
+                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                        }
+                    </MudNavGroup>
+                }
+                else
+                {
+                    @foreach (var item in group)
+                    {
+                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                    }
+                }
             }
         }
     </MudNavMenu>

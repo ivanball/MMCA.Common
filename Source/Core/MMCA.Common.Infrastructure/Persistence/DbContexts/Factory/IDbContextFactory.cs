@@ -31,6 +31,14 @@ public interface IDbContextFactory : IDisposable
     int SaveChanges();
 
     /// <summary>
+    /// Signals that the next <see cref="SaveChangesAsync"/> may include entities with
+    /// explicit values for database-generated identity columns. The save pipeline will
+    /// handle <c>SET IDENTITY_INSERT ON/OFF</c> per table as needed. The flag is
+    /// automatically cleared after the save completes.
+    /// </summary>
+    void RequestIdentityInsert();
+
+    /// <summary>
     /// Begins a database transaction on all active contexts that support transactions.
     /// </summary>
     void BeginTransaction();

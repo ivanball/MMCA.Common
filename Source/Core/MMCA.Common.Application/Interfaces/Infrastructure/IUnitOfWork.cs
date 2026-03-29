@@ -39,6 +39,15 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     /// <returns>The number of state entries written to the database.</returns>
     int Save();
 
+    /// <summary>
+    /// Signals that the next <see cref="SaveChangesAsync"/> may include entities with
+    /// explicit values for database-generated identity columns (e.g., imported from an
+    /// external system). The save pipeline will wrap such inserts with
+    /// <c>SET IDENTITY_INSERT ON/OFF</c> per table as needed. The flag is automatically
+    /// cleared after the save completes.
+    /// </summary>
+    void RequestIdentityInsert();
+
     /// <summary>Begins a database transaction.</summary>
     void BeginTransaction();
 

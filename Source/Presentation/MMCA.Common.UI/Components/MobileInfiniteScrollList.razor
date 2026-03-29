@@ -16,7 +16,7 @@ else
     <MudStack Spacing="2">
         @foreach (var item in _items)
         {
-            <MudCard Elevation="1" Class="mobile-list-card" @onclick="() => OnCardClick.InvokeAsync(item)">
+            <MudCard @key="item" Elevation="1" Class="mobile-list-card" @onclick="() => OnCardClick.InvokeAsync(item)">
                 <MudCardContent Class="pa-3">
                     @CardTemplate(item)
                 </MudCardContent>

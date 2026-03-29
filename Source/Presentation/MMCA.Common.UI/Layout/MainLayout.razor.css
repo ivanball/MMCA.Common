@@ -3,9 +3,9 @@
     position: absolute;
     top: -100%;
     left: 0;
-    z-index: 9999;
+    z-index: var(--mmca-z-skip-nav, 9999);
     padding: 0.75rem 1.5rem;
-    background: var(--adc-primary-dark, #0D47A1);
+    background: var(--mmca-primary-dark, #0D47A1);
     color: #fff;
     font-weight: 600;
     text-decoration: none;
@@ -50,13 +50,13 @@ main {
 }
 
 .sidebar {
-    background-color: var(--adc-sidebar-bg, #1A2035);
+    background-color: var(--mmca-sidebar-bg, #1A2035);
 }
 
 /* ── Footer ── */
 .app-footer {
     padding: 1rem 1.5rem;
-    border-top: 1px solid var(--adc-divider, #E0E0E0);
+    border-top: 1px solid var(--mmca-divider, #E0E0E0);
     margin-top: auto;
 }
 
@@ -76,7 +76,7 @@ main {
         right: 4.5rem;
         left: auto;
         width: auto;
-        z-index: 4;
+        z-index: var(--mmca-z-mobile-appbar, 400);
         pointer-events: none;
     }
 
@@ -105,14 +105,27 @@ main {
 @media (min-width: 1024px) {
     .page {
         flex-direction: row;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
     }
 
     .sidebar {
-        width: var(--adc-sidebar-width, 220px);
+        width: var(--mmca-sidebar-width, 220px);
         height: 100vh;
         height: 100dvh;
         position: sticky;
         top: 0;
+    }
+
+    main {
+        /* In mobile (column), main uses flex: 1 0 auto (grow vertically, don't shrink).
+           In desktop (row), main must fill remaining width after sidebar and shrink
+           if content is wider. flex-basis: 0 + grow: 1 = fill exactly remaining space.
+           min-width: 0 overrides the implicit auto minimum that prevents shrinking. */
+        flex: 1 1 0;
+        min-width: 0;
+        overflow-x: hidden;
     }
 
     article {
@@ -132,7 +145,7 @@ main {
     padding: 0.6rem 1.25rem 0.7rem 1.25rem;
     position: fixed;
     width: 100%;
-    z-index: 1000;
+    z-index: var(--mmca-z-error-ui, 1000);
 }
 
     #blazor-error-ui .dismiss {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using MMCA.Common.UI.Common;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -19,7 +20,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     protected bool IsLoading { get; private set; }
     protected abstract string Title { get; }
 
-    /// <summary>True when the viewport breakpoint is <see cref="Breakpoint.Xs"/> (phone-sized, ≤ 600 px).</summary>
+    /// <summary>True when the viewport is below the sidebar-collapse threshold (phone or tablet, &lt; 960 px).</summary>
     protected bool IsMobile { get; private set; }
 
     // ── Mobile card-view state ──
@@ -42,7 +43,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         await InvokeAsync(async () =>
         {
             var wasMobile = IsMobile;
-            IsMobile = browserViewportEventArgs.Breakpoint == Breakpoint.Xs;
+            IsMobile = BreakpointConstants.IsMobileBreakpoint(browserViewportEventArgs.Breakpoint);
 
             if (IsMobile && !wasMobile)
             {

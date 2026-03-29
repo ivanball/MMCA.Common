@@ -1,12 +1,40 @@
 /* ── Design Tokens ── */
 :root {
-    --adc-sidebar-bg: #1A2035;
-    --adc-sidebar-bg-dark: #141B2D;
-    --adc-sidebar-width: 220px;
-    --adc-primary: #1565C0;
-    --adc-primary-dark: #0D47A1;
-    --adc-divider: #E0E0E0;
-    --adc-content-max-width: 700px;
+    /* Layout */
+    --mmca-sidebar-bg: #1A2035;
+    --mmca-sidebar-bg-dark: #141B2D;
+    --mmca-sidebar-width: 220px;
+    --mmca-divider: #E0E0E0;
+    --mmca-content-max-width: 700px;
+    --mmca-content-max-width-wide: 1200px;
+
+    /* Brand colors */
+    --mmca-primary: #1565C0;
+    --mmca-primary-dark: #0D47A1;
+
+    /* Spacing scale */
+    --mmca-space-xs: 0.25rem;
+    --mmca-space-sm: 0.5rem;
+    --mmca-space-md: 1rem;
+    --mmca-space-lg: 1.5rem;
+    --mmca-space-xl: 2rem;
+    --mmca-space-2xl: 3rem;
+    --mmca-space-3xl: 5rem;
+
+    /* Responsive typography */
+    --mmca-text-hero: clamp(1.5rem, 4vw, 2.4rem);
+    --mmca-text-section-title: clamp(1.25rem, 3vw, 1.75rem);
+    --mmca-text-section-subtitle: clamp(0.875rem, 1.5vw, 1rem);
+
+    /* Z-index scale */
+    --mmca-z-nav-backdrop: 100;
+    --mmca-z-nav-menu: 200;
+    --mmca-z-hamburger: 300;
+    --mmca-z-mobile-appbar: 400;
+    --mmca-z-error-ui: 1000;
+    --mmca-z-drawer: 1300;
+    --mmca-z-skip-nav: 9999;
+    --mmca-z-snackbar-mobile: 10000;
 }
 
 html, body {
@@ -90,22 +118,45 @@ h1:focus {
    container. Bump the snackbar z-index so it floats above the drawer. */
 @media (max-width: 1023.98px) {
     .mud-snackbar-location-top-center {
-        z-index: 10000 !important;
+        z-index: var(--mmca-z-snackbar-mobile, 10000) !important;
     }
 }
 
-/* ── CartDrawer: full-width on mobile ── */
-@media (max-width: 1023.98px) {
+/* ── CartDrawer: responsive width tiers ──
+   Override the CSS variable so MudBlazor calculates both the open width
+   AND the closed-state offset (right: calc(-1 * var(--mud-drawer-width)))
+   from the same value. Overriding `width` directly would desync these. */
+@media (max-width: 599px) {
     .cart-drawer {
-        width: 100vw !important;
-        max-width: 100vw !important;
+        --mud-drawer-width: 100vw !important;
     }
+}
 
-    /* Larger touch targets for cart buttons (48px minimum per Material Design) */
+@media (min-width: 1920px) {
+    .cart-drawer {
+        --mud-drawer-width: 440px !important;
+    }
+}
+
+/* Larger touch targets for cart buttons on mobile (48px minimum per Material Design) */
+@media (max-width: 1023.98px) {
     .cart-drawer .mud-icon-button {
         min-width: 48px !important;
         min-height: 48px !important;
     }
+}
+
+/* ── Visually hidden (accessibility) ── */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* ── Auth pages: responsive top margin ── */
@@ -137,13 +188,13 @@ h1:focus {
 
 /* ── Detail card standard ── */
 .detail-card {
-    max-width: var(--adc-content-max-width, 700px);
+    max-width: var(--mmca-content-max-width, 700px);
 }
 
 /* ── Mobile: responsive data grids ── */
 @media (max-width: 1023.98px) {
     /* Hide non-essential data-grid columns on mobile */
-    .hide-on-mobile {
+    .hide-below-desktop {
         display: none !important;
     }
 
@@ -171,8 +222,8 @@ h1:focus {
     }
 
     .mobile-list-card .mud-card-content .mud-icon-button {
-        min-width: 44px;
-        min-height: 44px;
+        min-width: 48px;
+        min-height: 48px;
     }
 }
 
@@ -185,4 +236,92 @@ h1:focus {
     display: flex;
     justify-content: center;
     padding: 1rem 0;
+}
+
+/* ══════════════════════════════════════════
+   Shared Home Page Patterns
+   ══════════════════════════════════════════ */
+
+/* ── Entrance animation ── */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Full-bleed: break out of parent article padding ──
+   Mobile: article padding is 0.5rem each side (MainLayout).
+   Desktop: article padding is 2rem left / 1.5rem right.
+   Top: compensates for .content padding-top: 1.1rem. */
+.mmca-full-bleed {
+    overflow-x: hidden;
+    margin: -1.1rem -1rem 0;
+}
+
+@media (min-width: 1024px) {
+    .mmca-full-bleed {
+        margin: -1.1rem -1.5rem 0 -2rem;
+    }
+}
+
+/* ── Section heading ── */
+.mmca-section-heading {
+    text-align: center;
+    position: relative;
+    margin-bottom: var(--mmca-space-xl, 2.5rem);
+    padding-top: var(--mmca-space-md, 1rem);
+}
+
+.mmca-section-heading .mud-icon {
+    font-size: 8rem !important;
+    color: rgba(0, 0, 0, 0.04);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.mmca-section-heading-light .mud-icon {
+    color: rgba(255, 255, 255, 0.06);
+}
+
+.mmca-section-heading .mud-typography {
+    position: relative;
+    font-weight: 700;
+    z-index: 1;
+}
+
+.mmca-section-heading-light .mud-typography {
+    color: #fff;
+}
+
+.mmca-section-title-underline {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--mmca-primary, #1565C0), var(--mmca-accent, #42A5F5));
+    margin: 0.75rem auto 0;
+    border-radius: 2px;
+}
+
+.mmca-section-description {
+    max-width: 700px;
+    margin: 0 auto;
+    color: rgba(0, 0, 0, 0.62);
+    line-height: 1.8;
+}
+
+/* ── Angled section dividers ── */
+.mmca-section-angle {
+    position: relative;
+}
+
+.mmca-section-angle-top::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: inherit;
+    clip-path: polygon(0 100%, 100% 0, 100% 100%);
 }

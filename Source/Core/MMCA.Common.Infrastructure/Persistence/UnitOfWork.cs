@@ -73,6 +73,9 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
     public int Save() => _dbContextFactory.SaveChanges();
 
     /// <inheritdoc />
+    public void RequestIdentityInsert() => _dbContextFactory.RequestIdentityInsert();
+
+    /// <inheritdoc />
     public void BeginTransaction() => _dbContextFactory.BeginTransaction();
 
     /// <inheritdoc />
