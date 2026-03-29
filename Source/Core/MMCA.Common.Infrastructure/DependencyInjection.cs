@@ -134,6 +134,7 @@ public static class DependencyInjection
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
             services.TryAddScoped<ITokenService, TokenService>();
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
+            services.TryAddScoped<IEventBus, InProcessEventBus>();
             services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
 
             services.TryAddSingleton(TimeProvider.System);

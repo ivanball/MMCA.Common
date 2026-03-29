@@ -90,11 +90,14 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
         GC.SuppressFinalize(this);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        Dispose(disposing: true);
+        if (!_disposed)
+        {
+            await _dbContextFactory.DisposeAsync().ConfigureAwait(false);
+            _disposed = true;
+        }
         GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
     }
 
     private void Dispose(bool disposing)

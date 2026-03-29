@@ -101,7 +101,7 @@ public sealed class DbContextFactoryTests
     [Fact]
     public async Task SaveChangesAsync_WithNoContexts_ReturnsZero()
     {
-        using var sut = CreateSut();
+        await using var sut = CreateSut();
 
         var result = await sut.SaveChangesAsync();
 

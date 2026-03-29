@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Settings;
 
 namespace MMCA.Common.Application.Modules;
@@ -9,9 +12,10 @@ namespace MMCA.Common.Application.Modules;
 /// dependency order. Disabled modules receive stub service registrations so that
 /// cross-module interfaces (e.g. <c>IProductVariantService</c>) remain resolvable.
 /// </summary>
-public sealed class ModuleLoader
+public sealed partial class ModuleLoader
 {
     private readonly List<IModule> _enabledModules = [];
+    private readonly List<IModuleSeeder> _seeders = [];
     private readonly List<string> _disabledModuleNames = [];
 
     /// <summary>Gets the modules that were successfully registered.</summary>
@@ -21,9 +25,10 @@ public sealed class ModuleLoader
     public IReadOnlyList<string> DisabledModuleNames => _disabledModuleNames;
 
     /// <summary>
-    /// Log callback: (level, message). Level is "Information" or "Warning".
+    /// Optional logger for structured module loading diagnostics.
+    /// Defaults to <see cref="NullLogger{T}"/> when not set.
     /// </summary>
-    public Action<string, string>? Log { get; init; }
+    public ILogger<ModuleLoader> Logger { get; init; } = NullLogger<ModuleLoader>.Instance;
 
     /// <summary>
     /// Scans all loaded assemblies for <see cref="IModule"/> implementations, sorts them
@@ -47,7 +52,7 @@ public sealed class ModuleLoader
         // Scan all loaded assemblies for concrete IModule implementations.
         // The try-catch guards against assemblies that throw on GetTypes()
         // (e.g. ReflectionTypeLoadException from missing transitive references).
-        var moduleTypes = AppDomain.CurrentDomain.GetAssemblies()
+        var allTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a =>
             {
                 try
@@ -56,16 +61,21 @@ public sealed class ModuleLoader
                 }
                 catch (Exception ex)
                 {
-                    Log?.Invoke("Warning", $"Failed to scan assembly '{a.FullName}' for modules: {ex.Message}");
+                    LogAssemblyScanFailed(Logger, a.FullName ?? a.GetName().Name ?? "unknown", ex.Message);
                     return [];
                 }
             })
-            .Where(t => typeof(IModule).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false })
             .ToList();
 
-        var allModules = moduleTypes
+        var allModules = allTypes
+            .Where(t => typeof(IModule).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false })
             .Select(t => (IModule)Activator.CreateInstance(t)!)
             .ToList();
+
+        var allSeeders = allTypes
+            .Where(t => typeof(IModuleSeeder).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false })
+            .Select(t => (IModuleSeeder)Activator.CreateInstance(t)!)
+            .ToDictionary(s => s.ModuleName, s => s, StringComparer.OrdinalIgnoreCase);
 
         // Topological sort ensures each module's dependencies are registered before the module itself
         var sorted = TopologicalSort(allModules);
@@ -74,7 +84,7 @@ public sealed class ModuleLoader
         {
             if (!modulesSettings.IsModuleEnabled(module.Name))
             {
-                Log?.Invoke("Information", $"Module '{module.Name}' is disabled — skipping registration");
+                LogModuleDisabled(Logger, module.Name);
                 module.RegisterDisabledStubs(services);
                 _disabledModuleNames.Add(module.Name);
                 continue;
@@ -94,28 +104,35 @@ public sealed class ModuleLoader
 
             foreach (var dependency in disabledDeps)
             {
-                Log?.Invoke("Warning",
-                    $"Module '{module.Name}' depends on '{dependency}' which is disabled. " +
-                    "Stub services will be used for cross-module calls");
+                LogDependencyDisabledWarning(Logger, module.Name, dependency);
             }
 
-            Log?.Invoke("Information", $"Registering module '{module.Name}'");
+            LogModuleRegistering(Logger, module.Name, module.Dependencies.Count);
+            var sw = Stopwatch.StartNew();
             module.Register(services, configurationBuilder, applicationSettings);
+            sw.Stop();
+            LogModuleRegistered(Logger, module.Name, sw.ElapsedMilliseconds);
             _enabledModules.Add(module);
+
+            if (allSeeders.TryGetValue(module.Name, out var seeder))
+            {
+                _seeders.Add(seeder);
+            }
         }
     }
 
     /// <summary>
-    /// Invokes <see cref="IModule.SeedAsync"/> on each enabled module in registration order.
+    /// Invokes <see cref="IModuleSeeder.SeedAsync"/> on each discovered seeder
+    /// whose module is enabled, in registration order.
     /// </summary>
     /// <param name="serviceProvider">The root service provider for resolving seeder dependencies.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task that completes when all module seeders have finished.</returns>
     public async Task SeedAllAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        foreach (var module in _enabledModules)
+        foreach (var seeder in _seeders)
         {
-            await module.SeedAsync(serviceProvider, cancellationToken).ConfigureAwait(false);
+            await seeder.SeedAsync(serviceProvider, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -178,4 +195,19 @@ public sealed class ModuleLoader
 
         return sorted;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Module '{ModuleName}' is disabled — skipping registration")]
+    private static partial void LogModuleDisabled(ILogger logger, string moduleName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Registering module '{ModuleName}' (dependencies: {DependencyCount})")]
+    private static partial void LogModuleRegistering(ILogger logger, string moduleName, int dependencyCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Module '{ModuleName}' registered in {DurationMs}ms")]
+    private static partial void LogModuleRegistered(ILogger logger, string moduleName, long durationMs);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Module '{ModuleName}' depends on '{DependencyName}' which is disabled — stub services will be used")]
+    private static partial void LogDependencyDisabledWarning(ILogger logger, string moduleName, string dependencyName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to scan assembly '{AssemblyName}' for modules: {Error}")]
+    private static partial void LogAssemblyScanFailed(ILogger logger, string assemblyName, string error);
 }

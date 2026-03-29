@@ -32,9 +32,4 @@ public interface IModule
     /// Other modules that depend on this module's cross-module services will receive these stubs.
     /// </summary>
     void RegisterDisabledStubs(IServiceCollection services) { }
-
-    /// <summary>
-    /// Seeds module data at startup. Called only for enabled modules after all modules are registered.
-    /// </summary>
-    Task SeedAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }

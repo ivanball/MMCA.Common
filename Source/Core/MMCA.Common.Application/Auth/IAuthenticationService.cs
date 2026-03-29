@@ -62,4 +62,25 @@ public interface IAuthenticationService
         UserIdentifierType userId,
         ChangePasswordRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Authenticates a user via an external OAuth provider. Finds an existing account by
+    /// provider+key or creates a new one from the OAuth claims.
+    /// </summary>
+    /// <param name="loginProvider">The OAuth provider name (e.g., "Google", "GitHub").</param>
+    /// <param name="providerKey">The provider-specific unique identifier.</param>
+    /// <param name="email">Email from OAuth claims.</param>
+    /// <param name="firstName">First name from OAuth claims.</param>
+    /// <param name="lastName">Last name from OAuth claims.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A result containing the authentication tokens, or an error.</returns>
+    Task<Result<AuthenticationResponse>> ExternalLoginAsync(
+        string loginProvider,
+        string providerKey,
+        string email,
+        string firstName,
+        string lastName,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(Result.Failure<AuthenticationResponse>(
+            Error.Failure("Auth.ExternalLoginNotSupported", "External login is not supported.")));
 }

@@ -8,7 +8,7 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 /// across multiple data sources. Caches contexts per <see cref="DataSource"/> within a scope and
 /// coordinates saves, transactions, and disposal across all active contexts.
 /// </summary>
-public interface IDbContextFactory : IDisposable
+public interface IDbContextFactory : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// Returns the <see cref="ApplicationDbContext"/> for the specified data source, creating one if it doesn't exist in this scope.

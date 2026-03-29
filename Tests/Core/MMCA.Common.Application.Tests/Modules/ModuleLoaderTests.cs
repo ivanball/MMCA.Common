@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using Moq;
@@ -55,14 +56,14 @@ public sealed class ModuleLoaderTests
         loader.EnabledModules.Should().BeEmpty();
     }
 
-    // ── Log callback is invoked ──
+    // ── Logger is accepted ──
     [Fact]
-    public void DiscoverAndRegister_LogCallbackIsInvoked()
+    public void DiscoverAndRegister_WithLogger_DoesNotThrow()
     {
-        var logMessages = new List<(string Level, string Message)>();
+        var logger = new Mock<ILogger<ModuleLoader>>();
         var loader = new ModuleLoader
         {
-            Log = (level, message) => logMessages.Add((level, message))
+            Logger = logger.Object
         };
         var services = new ServiceCollection();
         var configBuilder = new Mock<IConfigurationBuilder>();
@@ -71,8 +72,7 @@ public sealed class ModuleLoaderTests
 
         loader.DiscoverAndRegister(services, configBuilder.Object, appSettings, modulesSettings);
 
-        // In test context with no real modules discovered, log may or may not have entries.
-        // We verify the log delegate was set and did not throw.
+        // In test context with no real modules discovered, verify logger was accepted without error.
         loader.EnabledModules.Should().BeEmpty();
     }
 

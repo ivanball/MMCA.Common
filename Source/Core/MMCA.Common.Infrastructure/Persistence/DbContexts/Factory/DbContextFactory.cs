@@ -294,6 +294,18 @@ public sealed class DbContextFactory(
         }
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (!_disposed)
+        {
+            foreach (var context in _dbContexts.Values)
+                await context.DisposeAsync().ConfigureAwait(false);
+            _dbContexts.Clear();
+            _disposed = true;
+        }
+        GC.SuppressFinalize(this);
+    }
+
     public void Dispose()
     {
         Dispose(disposing: true);
