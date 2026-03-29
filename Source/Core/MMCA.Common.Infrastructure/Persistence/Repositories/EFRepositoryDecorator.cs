@@ -37,6 +37,12 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
         _inner.UpdateRange(entities);
     }
 
+    public Task<int> ExecuteDeleteAsync(
+        System.Linq.Expressions.Expression<Func<TEntity, bool>> where,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(ExecuteDeleteAsync),
+            () => _inner.ExecuteDeleteAsync(where, cancellationToken));
+
     public int Save() =>
         ProfilingHelper.Profile(ClassName, nameof(Save), _inner.Save);
 

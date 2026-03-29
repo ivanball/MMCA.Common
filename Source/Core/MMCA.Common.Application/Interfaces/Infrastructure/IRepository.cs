@@ -27,6 +27,18 @@ public interface IEntityReader<TEntity, TIdentifierType>
         bool asTracking = false,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Retrieves multiple entities by their primary keys in a single query.</summary>
+    /// <param name="ids">The collection of primary keys to look up.</param>
+    /// <param name="includes">Navigation properties to eager-load.</param>
+    /// <param name="asTracking">Whether to track the returned entities for changes.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A read-only collection of matching entities (may be fewer than requested if some IDs don't exist).</returns>
+    Task<IReadOnlyCollection<TEntity>> GetByIdsAsync(
+        IEnumerable<TIdentifierType> ids,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Checks whether an entity with the given id exists.</summary>
     Task<bool> ExistsAsync(
         TIdentifierType id,
@@ -147,6 +159,18 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// <summary>Marks multiple existing entities as modified for persistence in a single batch.</summary>
     /// <param name="entities">The entities to update.</param>
     void UpdateRange(IEnumerable<TEntity> entities);
+
+    /// <summary>
+    /// Executes a bulk delete directly in the database, bypassing change tracking.
+    /// WARNING: Does NOT trigger domain events, audit stamps, or soft-delete behavior.
+    /// Use only for maintenance scenarios where domain events are not needed.
+    /// </summary>
+    /// <param name="where">A predicate identifying the entities to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of rows deleted.</returns>
+    Task<int> ExecuteDeleteAsync(
+        Expression<Func<TEntity, bool>> where,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Synchronous save. Prefer <see cref="SaveChangesAsync"/> in async code paths.</summary>
     /// <returns>The number of state entries written.</returns>

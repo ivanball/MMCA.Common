@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
@@ -62,6 +63,15 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(entities);
         Entities.UpdateRange(entities);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> ExecuteDeleteAsync(
+        Expression<Func<TEntity, bool>> where,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(where);
+        return await Entities.Where(where).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
