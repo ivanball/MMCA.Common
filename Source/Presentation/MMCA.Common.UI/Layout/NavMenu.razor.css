@@ -170,6 +170,14 @@
     margin-top: auto;
 }
 
+.nav-user-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
 @media (min-width: 1024px) {
     .navbar-toggler {
         display: none;

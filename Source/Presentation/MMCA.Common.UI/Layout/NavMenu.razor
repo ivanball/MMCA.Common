@@ -96,6 +96,10 @@
     <div class="nav-auth-section">
         <AuthorizeView>
             <Authorized>
+                <div class="nav-user-identity">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+                </div>
                 <MudNavMenu Color="Color.Default">
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">Logout</MudNavLink>
                 </MudNavMenu>

@@ -27,7 +27,18 @@
         }
 
         State.OnChange += HandleStateChanged;
+        NavigationManager.LocationChanged += OnLocationChanged;
 
+        await RefreshUnreadCountAsync();
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        await RefreshUnreadCountAsync();
+    }
+
+    private async Task RefreshUnreadCountAsync()
+    {
         try
         {
             int count = await InboxService.GetUnreadCountAsync(_cts.Token);
@@ -39,7 +50,7 @@
         }
         catch
         {
-            // Silently fail — badge stays at 0
+            // Silently fail — badge stays at current value
         }
     }
 
@@ -55,6 +66,7 @@
             return;
         _disposed = true;
         State.OnChange -= HandleStateChanged;
+        NavigationManager.LocationChanged -= OnLocationChanged;
         _cts.Cancel();
         _cts.Dispose();
     }

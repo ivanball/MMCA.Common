@@ -130,6 +130,24 @@ public static class WebApplicationBuilderExtensions
                                 jwtSettings.SecretForKey
                                 ?? throw new System.Collections.Generic.KeyNotFoundException("SecretForKey not found or invalid")))
                     };
+
+                    // SignalR WebSocket connections cannot send HTTP headers — the JWT is
+                    // passed as an "access_token" query-string parameter instead. Extract
+                    // it here so the standard JWT middleware can authenticate hub requests.
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            if (!string.IsNullOrEmpty(accessToken)
+                                && context.HttpContext.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))
+                            {
+                                context.Token = accessToken;
+                            }
+
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
 
             services.AddAuthorizationPolicies();
