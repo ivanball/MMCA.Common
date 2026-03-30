@@ -36,15 +36,17 @@
 
     private async Task StartListeningAsync()
     {
-        HubService.NotificationCallback = (title, body) =>
+        HubService.NotificationCallback = async (title, body) =>
         {
-            NotificationState.IncrementUnreadCount();
-            InvokeAsync(() => Snackbar.Add($"<b>{title}</b><br/>{body}", Severity.Info, options =>
+            await InvokeAsync(() =>
             {
-                options.RequireInteraction = true;
-                options.SnackbarVariant = Variant.Filled;
-            }));
-            return Task.CompletedTask;
+                NotificationState.IncrementUnreadCount();
+                Snackbar.Add($"<b>{title}</b><br/>{body}", Severity.Info, options =>
+                {
+                    options.RequireInteraction = true;
+                    options.SnackbarVariant = Variant.Filled;
+                });
+            });
         };
 
         await HubService.StartAsync();

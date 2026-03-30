@@ -58,6 +58,7 @@ public sealed class InboxController(
 
     /// <summary>Gets the count of unread notifications (GET /api/notifications/inbox/unread-count).</summary>
     [HttpGet("unread-count")]
+    [ResponseCache(NoStore = true)]
     [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
     public async Task<ActionResult<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default)
     {

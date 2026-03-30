@@ -64,7 +64,7 @@
         try
         {
             int count = await InboxService.GetUnreadCountAsync(_cts.Token);
-            State.SetUnreadCount(count);
+            await InvokeAsync(() => State.SetUnreadCount(count));
         }
         catch (OperationCanceledException)
         {
