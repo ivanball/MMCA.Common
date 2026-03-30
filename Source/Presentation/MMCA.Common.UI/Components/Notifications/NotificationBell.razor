@@ -64,7 +64,11 @@
         try
         {
             int count = await InboxService.GetUnreadCountAsync(_cts.Token);
-            await InvokeAsync(() => State.SetUnreadCount(count));
+            await InvokeAsync(() =>
+            {
+                State.SetUnreadCount(count);
+                StateHasChanged();
+            });
         }
         catch (OperationCanceledException)
         {
@@ -76,7 +80,17 @@
         }
     }
 
-    private void HandleStateChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+    private async void HandleStateChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component was disposed between event firing and render dispatch
+        }
+    }
 
     private void NavigateToInbox() => NavigationManager.NavigateTo(NotificationRoutePaths.NotificationInbox);
 

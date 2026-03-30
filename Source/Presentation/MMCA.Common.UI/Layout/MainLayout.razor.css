@@ -34,7 +34,6 @@ main {
 
 .content {
     flex: 1 0 auto;
-    margin-top: 48px;
 }
 
 /* Replaces MudSpacer — pushes appbar content to the right on desktop */
@@ -95,11 +94,6 @@ main {
         min-height: auto !important;
         padding: 0.25rem !important;
         color: white;
-        /* Override MudBlazor's position:fixed (Fixed=true default) so the appbar
-           stays inside the container's fixed positioning at right:4.5rem instead
-           of breaking out to span the full viewport width. */
-        position: static !important;
-        width: auto !important;
     }
 
     .appbar-spacer {
@@ -123,10 +117,6 @@ main {
     /* Hide text-only buttons on mobile (available in sidebar hamburger menu) */
     .appbar-text-actions {
         display: none;
-    }
-
-    .content {
-        margin-top: 0;
     }
 }
 
