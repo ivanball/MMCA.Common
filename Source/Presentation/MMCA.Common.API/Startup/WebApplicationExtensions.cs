@@ -23,10 +23,17 @@ public static class WebApplicationExtensions
         {
             app.UseExceptionHandler();
             app.UseMiddleware<CorrelationIdMiddleware>();
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            var forwardedHeadersOptions = new ForwardedHeadersOptions
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            });
+            };
+
+            // Cloud reverse proxies (Azure Container Apps, AWS ALB, etc.) use internal
+            // IPs that are not in the default KnownProxies/KnownNetworks allow-lists.
+            // Clear them so forwarded headers are trusted regardless of proxy IP.
+            forwardedHeadersOptions.KnownProxies.Clear();
+            forwardedHeadersOptions.KnownIPNetworks.Clear();
+            app.UseForwardedHeaders(forwardedHeadersOptions);
             app.UseHttpsRedirection();
             app.UseResponseCompression();
             app.UseRouting();
