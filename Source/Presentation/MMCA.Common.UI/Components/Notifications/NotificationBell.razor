@@ -17,7 +17,10 @@
 </MudBadge>
 
 @code {
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
+
     private readonly CancellationTokenSource _cts = new();
+    private PeriodicTimer? _pollTimer;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -30,6 +33,25 @@
         NavigationManager.LocationChanged += OnLocationChanged;
 
         await RefreshUnreadCountAsync();
+
+        // Start a periodic poll so the badge stays fresh even when SignalR is not connected
+        _pollTimer = new PeriodicTimer(PollInterval);
+        _ = PollLoopAsync();
+    }
+
+    private async Task PollLoopAsync()
+    {
+        try
+        {
+            while (await _pollTimer!.WaitForNextTickAsync(_cts.Token))
+            {
+                await RefreshUnreadCountAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on disposal
+        }
     }
 
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
@@ -67,6 +89,7 @@
         _disposed = true;
         State.OnChange -= HandleStateChanged;
         NavigationManager.LocationChanged -= OnLocationChanged;
+        _pollTimer?.Dispose();
         _cts.Cancel();
         _cts.Dispose();
     }

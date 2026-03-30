@@ -29,19 +29,25 @@
                 <AuthorizeView>
                     <Authorized>
                         <span class="appbar-auth-items">
-                            @foreach (var componentType in _appBarComponents)
-                            {
-                                <DynamicComponent Type="componentType" />
-                            }
+                            <span class="appbar-icon-actions">
+                                @foreach (var componentType in _appBarComponents)
+                                {
+                                    <DynamicComponent Type="componentType" />
+                                }
+                            </span>
                             <MudText Typo="Typo.body2" Class="mr-4 user-name">@context.User.Identity?.Name</MudText>
-                            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync"
-                                       aria-label="Sign out of your account">Logout</MudButton>
+                            <span class="appbar-text-actions">
+                                <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync"
+                                           aria-label="Sign out of your account">Logout</MudButton>
+                            </span>
                         </span>
                     </Authorized>
                     <NotAuthorized>
                         <span class="appbar-auth-items">
-                            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
-                            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/register">Register</MudButton>
+                            <span class="appbar-text-actions">
+                                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/register">Register</MudButton>
+                            </span>
                         </span>
                     </NotAuthorized>
                 </AuthorizeView>

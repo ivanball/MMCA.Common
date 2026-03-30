@@ -49,6 +49,16 @@ main {
     white-space: nowrap;
 }
 
+.appbar-icon-actions {
+    display: flex;
+    align-items: center;
+}
+
+.appbar-text-actions {
+    display: flex;
+    align-items: center;
+}
+
 .sidebar {
     background-color: var(--mmca-sidebar-bg, #1A2035);
 }
@@ -68,8 +78,7 @@ main {
         padding-right: 0.5rem !important;
     }
 
-    /* On mobile, show only the cart button as a compact transparent overlay
-       positioned in the NavMenu top-row area (next to the hamburger toggler) */
+    /* On mobile, overlay the appbar in the NavMenu top-row area (next to the hamburger toggler) */
     .appbar-container {
         position: fixed;
         top: 0;
@@ -92,7 +101,20 @@ main {
         display: none;
     }
 
-    .appbar-auth-items {
+    /* Show icon actions (notification bell, cart) and user name on mobile */
+    .appbar-icon-actions {
+        pointer-events: auto;
+    }
+
+    .user-name {
+        max-width: 8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: auto;
+    }
+
+    /* Hide text-only buttons on mobile (available in sidebar hamburger menu) */
+    .appbar-text-actions {
         display: none;
     }
 
