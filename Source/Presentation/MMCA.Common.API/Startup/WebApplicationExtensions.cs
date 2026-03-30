@@ -25,7 +25,7 @@ public static class WebApplicationExtensions
             app.UseMiddleware<CorrelationIdMiddleware>();
             var forwardedHeadersOptions = new ForwardedHeadersOptions
             {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
             };
 
             // Cloud reverse proxies (Azure Container Apps, AWS ALB, etc.) use internal
