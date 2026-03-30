@@ -1,0 +1,54 @@
+@using MMCA.Common.UI.Services.Notifications
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NotificationHubService HubService
+@inject NotificationState NotificationState
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @* Invisible component — triggers hub connection for authenticated users *@
+        </Authorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        if (AuthState is not null)
+        {
+            var state = await AuthState;
+            if (state.User.Identity?.IsAuthenticated == true)
+            {
+                await StartListeningAsync();
+            }
+        }
+    }
+
+    private async Task StartListeningAsync()
+    {
+        HubService.NotificationCallback = (title, body) =>
+        {
+            NotificationState.IncrementUnreadCount();
+            InvokeAsync(() => Snackbar.Add($"<b>{title}</b><br/>{body}", Severity.Info, options =>
+            {
+                options.RequireInteraction = true;
+                options.SnackbarVariant = Variant.Filled;
+            }));
+            return Task.CompletedTask;
+        };
+
+        await HubService.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync() => await HubService.StopAsync();
+}

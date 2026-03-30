@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -143,6 +144,37 @@ public static class DependencyInjection
             services.TryAddTransient<IEmailSender, SmtpEmailSender>();
             services.TryAddTransient<IPushNotificationSender, NullPushNotificationSender>();
 
+            return services;
+        }
+
+        /// <summary>
+        /// Registers an additional assembly containing EF Core entity type configurations for discovery
+        /// by <see cref="DefaultEntityConfigurationAssemblyProvider"/>. Use this when configurations reside in
+        /// assemblies not automatically discovered (e.g., Common.Infrastructure feature modules).
+        /// </summary>
+        /// <param name="assembly">The assembly containing entity type configurations.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddEntityConfigurationAssembly(Assembly assembly)
+        {
+            services.Configure<EntityConfigurationOptions>(o =>
+            {
+                if (!o.AdditionalAssemblies.Contains(assembly))
+                {
+                    o.AdditionalAssemblies.Add(assembly);
+                }
+            });
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the Notification module's EF Core entity configurations (PushNotification, UserNotification)
+        /// so they are discovered during model creation.
+        /// </summary>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddNotificationInfrastructure()
+        {
+            services.AddEntityConfigurationAssembly(
+                typeof(Persistence.Configuration.EntityTypeConfiguration.Notifications.PushNotificationConfiguration).Assembly);
             return services;
         }
 

@@ -10,7 +10,7 @@
     <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;RMG020</NoWarn>
   </PropertyGroup>
 
   <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
@@ -59,6 +59,12 @@
   <ItemGroup Condition="$(MSBuildProjectName.StartsWith('MMCA.Common')) AND '$(MSBuildProjectName)' != 'MMCA.Common.Domain'">
     <Compile Include="$(MSBuildThisFileDirectory)Source\Core\MMCA.Common.Domain\GlobalUsings.IdentifierType.cs"
              Link="GlobalUsings\MMCA.Common.Domain.GlobalUsings.IdentifierType.cs" />
+  </ItemGroup>
+
+  <!-- Common projects link the Notification identifier type aliases from Common.Shared -->
+  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('MMCA.Common')) AND '$(MSBuildProjectName)' != 'MMCA.Common.Shared'">
+    <Compile Include="$(MSBuildThisFileDirectory)Source\Core\MMCA.Common.Shared\GlobalUsings.NotificationIdentifierType.cs"
+             Link="GlobalUsings\MMCA.Common.Shared.GlobalUsings.NotificationIdentifierType.cs" />
   </ItemGroup>
 
   <!-- Compile-time layer enforcement: validates ProjectReferences respect Clean Architecture -->

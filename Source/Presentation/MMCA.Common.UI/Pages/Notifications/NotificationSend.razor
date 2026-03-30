@@ -1,0 +1,58 @@
+@page "/notifications/send"
+@using MMCA.Common.UI.Common
+
+<PageTitle>@Title</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
+<MudText Typo="Typo.h4" Class="mb-4">@Title</MudText>
+
+<MudCard Elevation="1" Class="mb-4 detail-card">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h5">Compose Notification</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                This notification will be sent to all recipients in real-time.
+            </MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="_title"
+                          Label="Title"
+                          Required="true"
+                          RequiredError="Title is required."
+                          MaxLength="200"
+                          Counter="200"
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Class="mb-4" />
+
+            <MudTextField @bind-Value="_body"
+                          Label="Message"
+                          Required="true"
+                          RequiredError="Message is required."
+                          Lines="5"
+                          MaxLength="2000"
+                          Counter="2000"
+                          Immediate="true"
+                          Variant="Variant.Outlined"
+                          Class="mb-4" />
+        </MudForm>
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   StartIcon="@Icons.Material.Filled.Send"
+                   OnClick="SendNotificationAsync"
+                   Disabled="IsSaving">
+            @(IsSaving ? "Sending..." : "Send to All Recipients")
+        </MudButton>
+        <MudButton Color="Color.Default"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="NavigateToList"
+                   Disabled="IsSaving">
+            Cancel
+        </MudButton>
+    </MudCardActions>
+</MudCard>

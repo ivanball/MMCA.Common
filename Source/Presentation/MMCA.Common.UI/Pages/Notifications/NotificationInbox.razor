@@ -1,0 +1,78 @@
+@page "/notifications/inbox"
+@using MMCA.Common.Shared.Notifications.UserNotifications
+
+<PageTitle>@Title</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
+<MudText Typo="Typo.h4" Class="mb-4">@Title</MudText>
+
+@if (_notifications.Count > 0)
+{
+    <MudButton Color="Color.Primary"
+               Variant="Variant.Outlined"
+               StartIcon="@Icons.Material.Filled.DoneAll"
+               OnClick="MarkAllReadAsync"
+               Disabled="IsSaving"
+               Class="mb-4">
+        Mark All as Read
+    </MudButton>
+}
+
+@if (IsLoading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_notifications.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">You have no notifications.</MudAlert>
+}
+else
+{
+    <MudStack Spacing="2">
+        @foreach (var notification in _notifications)
+        {
+            <MudCard Elevation="@(notification.IsRead ? 0 : 1)"
+                     Class="@($"notification-card {(notification.IsRead ? "read" : "unread")}")"
+                     Style="@(notification.IsRead ? "" : "border-left: 4px solid var(--mud-palette-primary);")">
+                <MudCardContent Class="py-2">
+                    <div class="d-flex align-center justify-space-between">
+                        <div class="flex-grow-1">
+                            <MudText Typo="@(notification.IsRead ? Typo.body1 : Typo.subtitle1)">
+                                @notification.Title
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Tertiary">
+                                @notification.Body
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                @notification.SentOn.ToString("g")
+                            </MudText>
+                        </div>
+                        @if (!notification.IsRead)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircleOutline"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           aria-label="Mark as read"
+                                           OnClick="() => MarkReadAsync(notification)"
+                                           Disabled="IsSaving" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                     Color="Color.Success"
+                                     Size="Size.Small"
+                                     Class="ml-2" />
+                        }
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
+    </MudStack>
+
+    <MudPagination Class="mt-4"
+                   Count="@_totalPages"
+                   Selected="@_currentPage"
+                   SelectedChanged="OnPageChangedAsync"
+                   ShowFirstButton="true"
+                   ShowLastButton="true" />
+}

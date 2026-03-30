@@ -1,0 +1,61 @@
+@using MMCA.Common.UI.Services.Notifications
+@using MMCA.Common.UI.Common
+@inject NotificationState State
+@inject INotificationInboxUIService InboxService
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<MudBadge Content="@State.UnreadCount"
+          Visible="@(State.UnreadCount > 0)"
+          Color="Color.Error"
+          Overlap="true"
+          Class="mr-2">
+    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                   Color="Color.Inherit"
+                   aria-label="Notification inbox"
+                   OnClick="NavigateToInbox" />
+</MudBadge>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        State.OnChange += HandleStateChanged;
+
+        try
+        {
+            int count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            State.SetUnreadCount(count);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during component disposal
+        }
+        catch
+        {
+            // Silently fail — badge stays at 0
+        }
+    }
+
+    private void HandleStateChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    private void NavigateToInbox() => NavigationManager.NavigateTo(NotificationRoutePaths.NotificationInbox);
+
+    private bool _disposed;
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+        State.OnChange -= HandleStateChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

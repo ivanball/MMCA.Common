@@ -1,0 +1,62 @@
+@page "/notifications"
+@using MMCA.Common.Shared.Notifications.PushNotifications
+@using MMCA.Common.UI.Common
+
+<PageTitle>@Title</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
+<MudText Typo="Typo.h4" Class="mb-4">@Title</MudText>
+
+<MudButton Color="Color.Primary"
+           Variant="Variant.Filled"
+           StartIcon="@Icons.Material.Filled.Send"
+           OnClick="NavigateToSend"
+           Class="mb-4">
+    Send New Notification
+</MudButton>
+
+@if (IsLoading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_notifications.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">No notifications have been sent yet.</MudAlert>
+}
+else
+{
+    <MudTable T="PushNotificationDTO"
+              Items="_notifications"
+              Dense="true"
+              Hover="true"
+              Elevation="1">
+        <HeaderContent>
+            <MudTh>Title</MudTh>
+            <MudTh>Recipients</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Sent</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+            <MudTd DataLabel="Recipients">@context.RecipientCount</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.Status == "Sent")
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                }
+                else if (context.Status == "Failed")
+                {
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Sent">@context.CreatedOn.ToString("g")</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
