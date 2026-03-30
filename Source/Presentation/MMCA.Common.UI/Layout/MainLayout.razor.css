@@ -93,7 +93,11 @@ main {
         box-shadow: none !important;
         min-height: auto !important;
         padding: 0.25rem !important;
-        color: white;
+        color: white !important;
+        /* MudBlazor base sets width:100% which creates a circular dependency
+           inside this width:auto fixed container — force auto so the appbar
+           shrinks to its content width instead of collapsing to zero. */
+        width: auto !important;
     }
 
     .appbar-spacer {
@@ -106,12 +110,16 @@ main {
     }
 
     /* ::deep required because MudText renders a <p> without the CSS isolation
-       scope attribute — without it, the scoped selector never matches. */
+       scope attribute — without it, the scoped selector never matches.
+       color:inherit overrides MudBlazor's .mud-typography-body2 which sets
+       color:var(--mud-palette-text-primary) (dark in light theme) — without
+       this, the user name is dark text on the dark top-row = invisible. */
     ::deep .user-name {
         max-width: 8rem;
         overflow: hidden;
         text-overflow: ellipsis;
         pointer-events: auto;
+        color: inherit !important;
     }
 
     /* Hide text-only buttons on mobile (available in sidebar hamburger menu) */

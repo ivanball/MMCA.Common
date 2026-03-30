@@ -13,6 +13,12 @@ public sealed class NotificationState
     /// <summary>Raised when <see cref="UnreadCount"/> changes.</summary>
     public event EventHandler? OnChange;
 
+    /// <summary>
+    /// Raised when a real-time notification arrives and the badge should refresh from the API.
+    /// Subscribers (e.g., <c>NotificationBell</c>) use this to fetch the authoritative count.
+    /// </summary>
+    public event EventHandler? OnRefreshRequested;
+
     /// <summary>Sets the unread count to an absolute value (e.g., after fetching from API).</summary>
     public void SetUnreadCount(int count)
     {
@@ -31,4 +37,7 @@ public sealed class NotificationState
         UnreadCount++;
         OnChange?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Signals that a real-time notification arrived and the count should be refreshed from the API.</summary>
+    public void RequestRefresh() => OnRefreshRequested?.Invoke(this, EventArgs.Empty);
 }

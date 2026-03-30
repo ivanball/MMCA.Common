@@ -21,6 +21,7 @@
 
     private readonly CancellationTokenSource _cts = new();
     private PeriodicTimer? _pollTimer;
+    private bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -30,6 +31,7 @@
         }
 
         State.OnChange += HandleStateChanged;
+        State.OnRefreshRequested += HandleRefreshRequested;
         NavigationManager.LocationChanged += OnLocationChanged;
 
         await RefreshUnreadCountAsync();
@@ -59,29 +61,56 @@
         await RefreshUnreadCountAsync();
     }
 
+    /// <summary>
+    /// Called when NotificationListener receives a SignalR push and requests an API refresh.
+    /// This provides a second chance to update the badge if the optimistic IncrementUnreadCount
+    /// didn't trigger a re-render (e.g., cross-component InvokeAsync dispatch was dropped).
+    /// </summary>
+    private async void HandleRefreshRequested(object? sender, EventArgs e)
+    {
+        await RefreshUnreadCountAsync();
+    }
+
     private async Task RefreshUnreadCountAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         try
         {
             int count = await InboxService.GetUnreadCountAsync(_cts.Token);
-            await InvokeAsync(() =>
+            if (!_disposed)
             {
-                State.SetUnreadCount(count);
-                StateHasChanged();
-            });
+                await InvokeAsync(() =>
+                {
+                    State.SetUnreadCount(count);
+                    StateHasChanged();
+                });
+            }
         }
         catch (OperationCanceledException)
         {
             // Expected during component disposal
         }
+        catch (ObjectDisposedException)
+        {
+            // Component was disposed during the async gap
+        }
         catch
         {
-            // Silently fail — badge stays at current value
+            // Network or deserialization error — badge stays at current value
         }
     }
 
     private async void HandleStateChanged(object? sender, EventArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         try
         {
             await InvokeAsync(StateHasChanged);
@@ -94,14 +123,16 @@
 
     private void NavigateToInbox() => NavigationManager.NavigateTo(NotificationRoutePaths.NotificationInbox);
 
-    private bool _disposed;
-
     public void Dispose()
     {
         if (_disposed)
+        {
             return;
+        }
+
         _disposed = true;
         State.OnChange -= HandleStateChanged;
+        State.OnRefreshRequested -= HandleRefreshRequested;
         NavigationManager.LocationChanged -= OnLocationChanged;
         _pollTimer?.Dispose();
         _cts.Cancel();

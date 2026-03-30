@@ -40,7 +40,10 @@
         {
             await InvokeAsync(() =>
             {
+                // Optimistic: increment immediately so the badge updates without waiting for an API round-trip
                 NotificationState.IncrementUnreadCount();
+                // Ask NotificationBell to also fetch the authoritative count from the API
+                NotificationState.RequestRefresh();
                 Snackbar.Add($"<b>{title}</b><br/>{body}", Severity.Info, options =>
                 {
                     options.RequireInteraction = true;
