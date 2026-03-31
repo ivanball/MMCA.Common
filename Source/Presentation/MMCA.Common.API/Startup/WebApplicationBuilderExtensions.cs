@@ -167,7 +167,7 @@ public static class WebApplicationBuilderExtensions
                 {
                     var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
                     policy.WithOrigins(allowedOrigins)
-                          .WithHeaders("Content-Type", "Authorization")
+                          .WithHeaders("Content-Type", "Authorization", "x-signalr-user-agent", "x-requested-with")
                           .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH")
                           .AllowCredentials();
                 });
