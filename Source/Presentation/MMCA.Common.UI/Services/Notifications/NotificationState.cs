@@ -7,6 +7,8 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// </summary>
 public sealed class NotificationState
 {
+    private int _pollerCount;
+
     /// <summary>Gets the current unread notification count.</summary>
     public int UnreadCount { get; private set; }
 
@@ -40,4 +42,14 @@ public sealed class NotificationState
 
     /// <summary>Signals that a real-time notification arrived and the count should be refreshed from the API.</summary>
     public void RequestRefresh() => OnRefreshRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// Registers a poller instance. Returns <see langword="true"/> if this is the first (active) poller,
+    /// meaning it should start polling. Subsequent callers receive <see langword="false"/> and should skip polling.
+    /// Used to prevent duplicate API polling when <c>NotificationBell</c> renders in multiple DOM locations.
+    /// </summary>
+    public bool TryRegisterPoller() => Interlocked.Increment(ref _pollerCount) == 1;
+
+    /// <summary>Unregisters a poller instance so the next <c>NotificationBell</c> to register can become the active poller.</summary>
+    public void UnregisterPoller() => Interlocked.Decrement(ref _pollerCount);
 }

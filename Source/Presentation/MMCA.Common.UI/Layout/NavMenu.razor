@@ -12,6 +12,17 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="@RoutePaths.Home" aria-label="MMCA home">MMCA</a>
     </div>
+    <AuthorizeView>
+        <Authorized>
+            <div class="toprow-actions" aria-label="Quick actions">
+                @foreach (var componentType in _appBarComponents)
+                {
+                    <DynamicComponent Type="componentType" />
+                }
+                <span class="toprow-user-name" title="@context.User.Identity?.Name">@context.User.Identity?.Name</span>
+            </div>
+        </Authorized>
+    </AuthorizeView>
 </div>
 
 <input type="checkbox" title="Toggle navigation menu" class="navbar-toggler"
@@ -116,6 +127,7 @@
 
 @code {
     private ClaimsPrincipal? _user;
+    private List<Type> _appBarComponents = [];
     private List<NavItem> _generalItems = [];
     private List<NavItem> _userItems = [];
     private List<NavItem> _adminItems = [];
@@ -130,6 +142,8 @@
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
+
+        _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
 
         var allItems = UIModules
             .SelectMany(m => m.NavItems)

@@ -21,6 +21,7 @@
 
     private readonly CancellationTokenSource _cts = new();
     private PeriodicTimer? _pollTimer;
+    private bool _isActivePoller;
     private bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -32,13 +33,18 @@
 
         State.OnChange += HandleStateChanged;
         State.OnRefreshRequested += HandleRefreshRequested;
-        NavigationManager.LocationChanged += OnLocationChanged;
 
-        await RefreshUnreadCountAsync();
+        // Only the first instance registers as the active poller to prevent
+        // duplicate API calls when NotificationBell renders in multiple DOM locations.
+        _isActivePoller = State.TryRegisterPoller();
+        if (_isActivePoller)
+        {
+            NavigationManager.LocationChanged += OnLocationChanged;
+            await RefreshUnreadCountAsync();
 
-        // Start a periodic poll so the badge stays fresh even when SignalR is not connected
-        _pollTimer = new PeriodicTimer(PollInterval);
-        _ = PollLoopAsync();
+            _pollTimer = new PeriodicTimer(PollInterval);
+            _ = PollLoopAsync();
+        }
     }
 
     private async Task PollLoopAsync()
@@ -133,7 +139,13 @@
         _disposed = true;
         State.OnChange -= HandleStateChanged;
         State.OnRefreshRequested -= HandleRefreshRequested;
-        NavigationManager.LocationChanged -= OnLocationChanged;
+
+        if (_isActivePoller)
+        {
+            NavigationManager.LocationChanged -= OnLocationChanged;
+            State.UnregisterPoller();
+        }
+
         _pollTimer?.Dispose();
         _cts.Cancel();
         _cts.Dispose();

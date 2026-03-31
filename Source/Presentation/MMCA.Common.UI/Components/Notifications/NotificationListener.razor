@@ -44,7 +44,15 @@
                 NotificationState.IncrementUnreadCount();
                 // Ask NotificationBell to also fetch the authoritative count from the API
                 NotificationState.RequestRefresh();
-                Snackbar.Add($"<b>{title}</b><br/>{body}", Severity.Info, options =>
+                Snackbar.Add(builder =>
+                {
+                    builder.OpenElement(0, "strong");
+                    builder.AddContent(1, title);
+                    builder.CloseElement();
+                    builder.OpenElement(2, "br");
+                    builder.CloseElement();
+                    builder.AddContent(3, body);
+                }, Severity.Info, options =>
                 {
                     options.RequireInteraction = true;
                     options.SnackbarVariant = Variant.Filled;

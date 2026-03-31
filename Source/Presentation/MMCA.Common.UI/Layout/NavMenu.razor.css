@@ -178,6 +178,40 @@
     color: rgba(255, 255, 255, 0.85);
 }
 
+/* ── Top-row quick actions (mobile only) ── */
+.toprow-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    margin-left: auto;
+    margin-right: 0.25rem;
+    color: white;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.toprow-user-name {
+    font-size: 0.8125rem;
+    max-width: 7rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 0 0.25rem;
+}
+
+/* Very small phones: hide user name, keep icons */
+@media (max-width: 359.98px) {
+    .toprow-user-name {
+        display: none;
+    }
+}
+
+.top-row .container-fluid {
+    min-width: 0;
+    flex-shrink: 1;
+}
+
 @media (min-width: 1024px) {
     .navbar-toggler {
         display: none;
@@ -207,6 +241,10 @@
     }
 
     .nav-auth-section {
+        display: none;
+    }
+
+    .toprow-actions {
         display: none;
     }
 }
