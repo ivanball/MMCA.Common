@@ -51,6 +51,12 @@ main {
 .appbar-icon-actions {
     display: flex;
     align-items: center;
+    overflow: visible;
+}
+
+/* Pull badge down slightly so it doesn't extend above the Dense toolbar */
+.appbar-icon-actions ::deep .mud-badge.mud-badge-overlap {
+    bottom: calc(100% - 16px) !important;
 }
 
 .appbar-text-actions {
@@ -104,10 +110,13 @@ main {
         /* In mobile (column), main uses flex: 1 0 auto (grow vertically, don't shrink).
            In desktop (row), main must fill remaining width after sidebar and shrink
            if content is wider. flex-basis: 0 + grow: 1 = fill exactly remaining space.
-           min-width: 0 overrides the implicit auto minimum that prevents shrinking. */
+           min-width: 0 overrides the implicit auto minimum that prevents shrinking.
+           overflow-x: clip (not hidden) prevents horizontal overflow without
+           creating a block formatting context — hidden would force overflow-y
+           to auto, clipping the notification badge above the appbar. */
         flex: 1 1 0;
         min-width: 0;
-        overflow-x: hidden;
+        overflow-x: clip;
     }
 
     article {
