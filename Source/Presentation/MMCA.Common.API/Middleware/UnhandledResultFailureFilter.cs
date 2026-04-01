@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -20,18 +19,6 @@ namespace MMCA.Common.API.Middleware;
 public sealed partial class UnhandledResultFailureFilter(
     ILogger<UnhandledResultFailureFilter> logger) : IAlwaysRunResultFilter
 {
-    private static readonly FrozenDictionary<ErrorType, int> ErrorTypeToStatusCode = new Dictionary<ErrorType, int>
-    {
-        [ErrorType.Validation] = StatusCodes.Status400BadRequest,
-        [ErrorType.Invariant] = StatusCodes.Status400BadRequest,
-        [ErrorType.NotFound] = StatusCodes.Status404NotFound,
-        [ErrorType.Conflict] = StatusCodes.Status409Conflict,
-        [ErrorType.Unauthorized] = StatusCodes.Status401Unauthorized,
-        [ErrorType.Forbidden] = StatusCodes.Status403Forbidden,
-        [ErrorType.UnprocessableEntity] = StatusCodes.Status422UnprocessableEntity,
-        [ErrorType.Failure] = StatusCodes.Status400BadRequest,
-    }.ToFrozenDictionary();
-
     /// <inheritdoc />
     public void OnResultExecuting(ResultExecutingContext context)
     {
@@ -44,7 +31,7 @@ public sealed partial class UnhandledResultFailureFilter(
 
         var firstError = result.Errors.Count > 0 ? result.Errors[0] : null;
         var statusCode = firstError is not null
-            ? ErrorTypeToStatusCode.GetValueOrDefault(firstError.Type, StatusCodes.Status400BadRequest)
+            ? ErrorHttpMapping.GetStatusCode(firstError.Type)
             : StatusCodes.Status500InternalServerError;
 
         var problemDetails = new ProblemDetails
@@ -54,16 +41,7 @@ public sealed partial class UnhandledResultFailureFilter(
             Detail = "The action returned a Result.Failure that was not mapped to an HTTP error response."
         };
 
-        problemDetails.Extensions["errors"] = result.Errors
-            .Select(e => new
-            {
-                e.Code,
-                e.Message,
-                Type = e.Type.ToString(),
-                e.Source,
-                e.Target
-            })
-            .ToArray();
+        problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(result.Errors);
 
         context.Result = new ObjectResult(problemDetails) { StatusCode = statusCode };
     }

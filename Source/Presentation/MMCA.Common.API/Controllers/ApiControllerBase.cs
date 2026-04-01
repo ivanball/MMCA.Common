@@ -1,6 +1,6 @@
-using System.Collections.Frozen;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MMCA.Common.API.Middleware;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.API.Controllers;
@@ -13,22 +13,6 @@ namespace MMCA.Common.API.Controllers;
 [ApiController]
 public abstract class ApiControllerBase : ControllerBase
 {
-    /// <summary>
-    /// Immutable mapping from domain error types to HTTP status codes. Uses <see cref="FrozenDictionary{TKey,TValue}"/>
-    /// for optimal read performance since the mapping is fixed at startup.
-    /// </summary>
-    private static readonly FrozenDictionary<ErrorType, int> ErrorTypeToStatusCode = new Dictionary<ErrorType, int>
-    {
-        [ErrorType.Validation] = StatusCodes.Status400BadRequest,
-        [ErrorType.Invariant] = StatusCodes.Status400BadRequest,
-        [ErrorType.NotFound] = StatusCodes.Status404NotFound,
-        [ErrorType.Conflict] = StatusCodes.Status409Conflict,
-        [ErrorType.Unauthorized] = StatusCodes.Status401Unauthorized,
-        [ErrorType.Forbidden] = StatusCodes.Status403Forbidden,
-        [ErrorType.UnprocessableEntity] = StatusCodes.Status422UnprocessableEntity,
-        [ErrorType.Failure] = StatusCodes.Status400BadRequest,
-    }.ToFrozenDictionary();
-
     /// <summary>
     /// Converts a collection of domain <see cref="Error"/> objects into an RFC 9457 Problem Details response.
     /// The HTTP status code is determined by the first error's type. All errors are included in
@@ -49,11 +33,7 @@ public abstract class ApiControllerBase : ControllerBase
         }
 
         // Status code is driven by the first error; callers should put the most significant error first
-        var firstError = errorList[0];
-
-        var statusCode = ErrorTypeToStatusCode.GetValueOrDefault(
-            firstError.Type,
-            StatusCodes.Status400BadRequest);
+        var statusCode = ErrorHttpMapping.GetStatusCode(errorList[0].Type);
 
         var problemDetails = new ProblemDetails
         {
@@ -62,16 +42,7 @@ public abstract class ApiControllerBase : ControllerBase
             Detail = "One or more errors occurred."
         };
 
-        problemDetails.Extensions["errors"] = errorList
-            .Select(e => new
-            {
-                e.Code,
-                e.Message,
-                Type = e.Type.ToString(),
-                e.Source,
-                e.Target
-            })
-            .ToArray();
+        problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(errorList);
 
         return StatusCode(statusCode, problemDetails);
     }
