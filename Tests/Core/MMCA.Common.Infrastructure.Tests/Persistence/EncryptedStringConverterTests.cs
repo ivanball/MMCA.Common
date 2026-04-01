@@ -90,6 +90,40 @@ public sealed class EncryptedStringConverterTests
         result.Should().BeEmpty();
     }
 
+    // ── Decrypt empty string passes through ──
+    [Fact]
+    public void Decrypt_EmptyString_ReturnsEmpty()
+    {
+        byte[] key = EncryptedStringConverter.GenerateKey();
+        var converter = new EncryptedStringConverter(key);
+        var decrypt = converter.ConvertFromProviderExpression.Compile();
+
+        string result = decrypt(string.Empty);
+
+        result.Should().BeEmpty();
+    }
+
+    // ── Short ciphertext throws ──
+    [Fact]
+    public void Decrypt_TooShortCiphertext_ThrowsCryptographicException()
+    {
+        byte[] key = EncryptedStringConverter.GenerateKey();
+        var converter = new EncryptedStringConverter(key);
+        var decrypt = converter.ConvertFromProviderExpression.Compile();
+
+        // 10 bytes total is too short for nonce (12) + tag (16)
+        string shortCipher = Convert.ToBase64String(new byte[10]);
+
+        FluentActions.Invoking(() => decrypt(shortCipher))
+            .Should().Throw<System.Security.Cryptography.CryptographicException>();
+    }
+
+    // ── Null key throws ──
+    [Fact]
+    public void Constructor_WithNullKey_ThrowsArgumentNullException() =>
+        FluentActions.Invoking(() => new EncryptedStringConverter(null!))
+            .Should().Throw<ArgumentNullException>();
+
     // ── Unicode roundtrip ──
     [Fact]
     public void EncryptThenDecrypt_UnicodeText_RoundTripsCorrectly()

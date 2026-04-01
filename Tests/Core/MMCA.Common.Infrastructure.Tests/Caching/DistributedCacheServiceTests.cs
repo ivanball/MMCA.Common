@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using MMCA.Common.Infrastructure.Caching;
 using Moq;
+using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure.Tests.Caching;
 
@@ -87,10 +88,83 @@ public class DistributedCacheServiceTests
 
     // ── RemoveByPrefixAsync ──
     [Fact]
-    public async Task RemoveByPrefixAsync_IsNoOp()
+    public async Task RemoveByPrefixAsync_WithoutRedis_IsNoOp()
     {
         await _sut.RemoveByPrefixAsync("prefix:");
 
         _cacheMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_DeletesMatchingKeys()
+    {
+        var cacheMock = new Mock<IDistributedCache>();
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var serverMock = new Mock<IServer>();
+        var dbMock = new Mock<IDatabase>();
+
+        connectionMock.Setup(c => c.GetServers()).Returns([serverMock.Object]);
+        connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+
+        RedisKey[] keys = [(RedisKey)"prefix:key1", (RedisKey)"prefix:key2"];
+        serverMock.Setup(s => s.KeysAsync(
+                It.IsAny<int>(),
+                It.Is<RedisValue>(v => v == "prefix:*"),
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(keys.ToAsyncEnumerable());
+
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
+
+        await sut.RemoveByPrefixAsync("prefix:");
+
+        dbMock.Verify(d => d.KeyDeleteAsync((RedisKey)"prefix:key1", It.IsAny<CommandFlags>()), Times.Once);
+        dbMock.Verify(d => d.KeyDeleteAsync((RedisKey)"prefix:key2", It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_NoServers_IsNoOp()
+    {
+        var cacheMock = new Mock<IDistributedCache>();
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        connectionMock.Setup(c => c.GetServers()).Returns([]);
+
+        var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
+
+        await sut.RemoveByPrefixAsync("prefix:");
+
+        connectionMock.Verify(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_NoMatchingKeys_DoesNotDeleteAnything()
+    {
+        var cacheMock = new Mock<IDistributedCache>();
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var serverMock = new Mock<IServer>();
+        var dbMock = new Mock<IDatabase>();
+
+        connectionMock.Setup(c => c.GetServers()).Returns([serverMock.Object]);
+        connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+
+        serverMock.Setup(s => s.KeysAsync(
+                It.IsAny<int>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(AsyncEnumerable.Empty<RedisKey>());
+
+        var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
+
+        await sut.RemoveByPrefixAsync("prefix:");
+
+        dbMock.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
 }

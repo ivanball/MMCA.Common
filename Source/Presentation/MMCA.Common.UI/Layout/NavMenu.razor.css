@@ -205,14 +205,18 @@
     fill: white !important;
 }
 
-/* Pull the badge down so it sits within the top-row bounds */
+/* Notification badge: position, size, and visual treatment for mobile top-row */
 .toprow-actions ::deep .mud-badge.mud-badge-overlap {
-    bottom: calc(100% - 18px) !important;
-    left: calc(100% - 10px) !important;
-    font-size: 0.625rem !important;
-    min-width: 16px !important;
-    height: 16px !important;
-    padding: 0 4px !important;
+    bottom: calc(100% - 20px) !important;
+    left: calc(100% - 12px) !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    font-size: 0.6875rem !important;
+    font-weight: 700 !important;
+    line-height: 18px !important;
+    padding: 0 5px !important;
+    border: 2px solid var(--mmca-sidebar-bg-dark, #141B2D) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
 }
 
 .toprow-user-name {

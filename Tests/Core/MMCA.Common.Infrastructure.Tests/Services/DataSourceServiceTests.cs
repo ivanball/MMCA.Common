@@ -89,6 +89,31 @@ public class DataSourceServiceTests
             typeof(FakeEntity2).FullName!).Should().BeTrue();
     }
 
+    [Fact]
+    public void HaveIncludeSupport_ByName_FirstNotCached_ReturnsFalse() =>
+        _sut.HaveIncludeSupport("NonExistent.Entity1", "NonExistent.Entity2").Should().BeFalse();
+
+    [Fact]
+    public void HaveIncludeSupport_ByName_DifferentDataSources_ReturnsFalse()
+    {
+        _sut.GetDataSource(typeof(FakeEntity), typeof(FakeSqlServerConfig));
+        _sut.GetDataSource(typeof(FakeEntity2), typeof(FakeSqliteConfig));
+
+        _sut.HaveIncludeSupport(
+            typeof(FakeEntity).FullName!,
+            typeof(FakeEntity2).FullName!).Should().BeFalse();
+    }
+
+    [Fact]
+    public void HaveIncludeSupport_ByName_SecondNotCached_ReturnsFalse()
+    {
+        _sut.GetDataSource(typeof(FakeEntity), typeof(FakeSqlServerConfig));
+
+        _sut.HaveIncludeSupport(
+            typeof(FakeEntity).FullName!,
+            "NonExistent.Entity").Should().BeFalse();
+    }
+
     // ── Test types ──
     private sealed class FakeEntity { }
 

@@ -98,6 +98,23 @@ public class SendPushNotificationHandlerTests
         result.Value!.Status.Should().Be(nameof(PushNotificationStatus.Failed));
     }
 
+    // -- HandleAsync: entity creation failure --
+    [Fact]
+    public async Task HandleAsync_WhenCreateFails_ReturnsFailure()
+    {
+        var (sut, _) = CreateSut();
+
+        // Empty title violates PushNotification invariants
+        var command = new SendPushNotificationCommand(
+            new SendPushNotificationRequest(string.Empty, "Test Body"),
+            SentByUserId: 1);
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "PushNotification.Title.Empty");
+    }
+
     // -- Helpers --
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,

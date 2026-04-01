@@ -54,9 +54,18 @@ main {
     overflow: visible;
 }
 
-/* Pull badge down slightly so it doesn't extend above the Dense toolbar */
+/* Notification badge: position, size, and visual treatment for desktop app-bar */
 .appbar-icon-actions ::deep .mud-badge.mud-badge-overlap {
-    bottom: calc(100% - 16px) !important;
+    bottom: calc(100% - 18px) !important;
+    left: calc(100% - 12px) !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    font-size: 0.6875rem !important;
+    font-weight: 700 !important;
+    line-height: 18px !important;
+    padding: 0 5px !important;
+    border: 2px solid var(--mmca-sidebar-bg-dark, #141B2D) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
 }
 
 .appbar-text-actions {

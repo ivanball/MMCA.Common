@@ -74,6 +74,21 @@ public sealed class LoggingCommandDecoratorTests
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("test error");
     }
+
+    // ── HandleAsync: inner returns failure Result ──
+    [Fact]
+    public async Task HandleAsync_WhenInnerReturnsFailure_ReturnsFailureResult()
+    {
+        var (sut, mocks) = CreateSut();
+        var failureResult = Result.Failure(Error.Validation("Test.Error", "something went wrong"));
+        mocks.Inner.Setup(x => x.HandleAsync(It.IsAny<TestLoggingCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(failureResult);
+
+        var result = await sut.HandleAsync(new TestLoggingCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("Test.Error");
+    }
 }
 
 // ── Test type (must be public for Moq DynamicProxy) ──
