@@ -42,6 +42,7 @@
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.21.0.135717" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <!-- Testing -->
+    <PackageVersion Include="Microsoft.Playwright" Version="1.58.0" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="8.0.1" />
     <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />

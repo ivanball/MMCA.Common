@@ -18,6 +18,7 @@
   <Folder Name="/Source/Hosting/">
     <Project Path="Source/Hosting/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.Testing.E2E/MMCA.Common.Testing.E2E.csproj" />
   </Folder>
   <Folder Name="/Tests/" />
   <Folder Name="/Tests/Core/">
