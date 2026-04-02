@@ -130,6 +130,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         IEnumerable<TIdentifierType> ids,
         IEnumerable<string>? includes = null,
         bool asTracking = false,
+        bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
@@ -139,6 +140,9 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
             return [];
 
         var query = asTracking ? Table : TableNoTracking;
+
+        if (ignoreQueryFilters)
+            query = query.IgnoreQueryFilters();
 
         if (includes is not null)
             query = ApplyIncludes(query, includes);

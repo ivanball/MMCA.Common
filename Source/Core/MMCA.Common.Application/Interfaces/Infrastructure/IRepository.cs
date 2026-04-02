@@ -31,12 +31,14 @@ public interface IEntityReader<TEntity, TIdentifierType>
     /// <param name="ids">The collection of primary keys to look up.</param>
     /// <param name="includes">Navigation properties to eager-load.</param>
     /// <param name="asTracking">Whether to track the returned entities for changes.</param>
+    /// <param name="ignoreQueryFilters">Whether to bypass EF global query filters (e.g., soft-delete).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A read-only collection of matching entities (may be fewer than requested if some IDs don't exist).</returns>
     Task<IReadOnlyCollection<TEntity>> GetByIdsAsync(
         IEnumerable<TIdentifierType> ids,
         IEnumerable<string>? includes = null,
         bool asTracking = false,
+        bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>Checks whether an entity with the given id exists.</summary>

@@ -51,9 +51,10 @@ internal class EFReadRepositoryDecorator<TEntity, TIdentifierType>(IReadReposito
         IEnumerable<TIdentifierType> ids,
         IEnumerable<string>? includes = null,
         bool asTracking = false,
+        bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(GetByIdsAsync),
-            () => _inner.GetByIdsAsync(ids, includes, asTracking, cancellationToken));
+            () => _inner.GetByIdsAsync(ids, includes, asTracking, ignoreQueryFilters, cancellationToken));
 
     public Task<TEntity?> GetByIdAsync(TIdentifierType id, CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(GetByIdAsync),

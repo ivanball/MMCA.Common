@@ -21,6 +21,7 @@ public sealed class EFReadRepositoryDecoratorAdditionalTests
                 It.IsAny<IEnumerable<int>>(),
                 It.IsAny<IEnumerable<string>>(),
                 false,
+                false,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(entities);
 
@@ -30,6 +31,7 @@ public sealed class EFReadRepositoryDecoratorAdditionalTests
         _inner.Verify(x => x.GetByIdsAsync(
             It.IsAny<IEnumerable<int>>(),
             It.IsAny<IEnumerable<string>>(),
+            false,
             false,
             It.IsAny<CancellationToken>()), Times.Once);
     }

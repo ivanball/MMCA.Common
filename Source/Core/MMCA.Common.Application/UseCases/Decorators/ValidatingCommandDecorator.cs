@@ -33,7 +33,7 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     /// <see cref="Error"/> instances. Built once per generic type instantiation via reflection
     /// to avoid per-call reflection overhead.
     /// </summary>
-    private static readonly Func<IEnumerable<Error>, TResult> CreateFailure = BuildFailureFactory();
+    private static readonly Func<IEnumerable<Error>, TResult> CreateFailure = ResultFailureFactory.Build<TResult>();
 
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
@@ -53,36 +53,6 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
         LogValidationFailure(errors);
 
         return CreateFailure(errors);
-    }
-
-    /// <summary>
-    /// Builds a delegate that creates a <typeparamref name="TResult"/> failure.
-    /// Handles both non-generic <see cref="Result"/> and generic <see cref="Result{T}"/>.
-    /// </summary>
-    private static Func<IEnumerable<Error>, TResult> BuildFailureFactory()
-    {
-        if (typeof(TResult) == typeof(Result))
-        {
-            return errors => (TResult)(object)Result.Failure(errors);
-        }
-
-        if (typeof(TResult).IsGenericType && typeof(TResult).GetGenericTypeDefinition() == typeof(Result<>))
-        {
-            var innerType = typeof(TResult).GetGenericArguments()[0];
-            var failureMethod = typeof(Result)
-                .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                .First(m => m.Name == nameof(Result.Failure)
-                         && m.IsGenericMethodDefinition
-                         && m.GetParameters().Length == 1
-                         && m.GetParameters()[0].ParameterType == typeof(IEnumerable<Error>))
-                .MakeGenericMethod(innerType);
-
-            return errors => (TResult)failureMethod.Invoke(null, [errors])!;
-        }
-
-        throw new InvalidOperationException(
-            $"ValidatingCommandDecorator does not support TResult type '{typeof(TResult).FullName}'. " +
-            $"Expected Result or Result<T>.");
     }
 
     [LoggerMessage(
