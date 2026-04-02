@@ -42,8 +42,9 @@ public sealed class OutboxProcessorTests : IDisposable
         contextServices.AddSingleton(TimeProvider.System);
         contextServices.AddSingleton(_dispatcherMock.Object);
         contextServices.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
+        var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
         contextServices.AddSingleton(new DomainEventSaveChangesInterceptor(
-            _dispatcherMock.Object, NullLogger<DomainEventSaveChangesInterceptor>.Instance));
+            _dispatcherMock.Object, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal.Object));
         contextServices.AddSingleton(Mock.Of<IEntityConfigurationAssemblyProvider>(
             p => p.GetConfigurationAssemblies() == Array.Empty<Assembly>()));
         ServiceProvider contextSp = contextServices.BuildServiceProvider();
@@ -71,7 +72,8 @@ public sealed class OutboxProcessorTests : IDisposable
         ServiceProvider rootProvider = services.BuildServiceProvider();
 
         var scopeFactory = rootProvider.GetRequiredService<IServiceScopeFactory>();
-        _sut = new OutboxProcessor(scopeFactory, NullLogger<OutboxProcessor>.Instance, Options.Create(new OutboxSettings()));
+        var processorOutboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+        _sut = new OutboxProcessor(scopeFactory, NullLogger<OutboxProcessor>.Instance, Options.Create(new OutboxSettings()), processorOutboxSignal.Object);
     }
 
     public void Dispose()

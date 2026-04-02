@@ -7,7 +7,7 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// Similar to <see cref="DateRange"/> but with <see cref="DateTime"/> precision.
 /// Enforces that <see cref="End"/> is never before <see cref="Start"/> at creation time.
 /// </summary>
-public sealed record class DateTimeRange
+public sealed record class DateTimeRange : ValueObject
 {
     /// <summary>Gets the inclusive start date and time of the range.</summary>
     public DateTime Start { get; }

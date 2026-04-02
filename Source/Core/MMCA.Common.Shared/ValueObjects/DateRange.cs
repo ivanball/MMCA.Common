@@ -6,7 +6,7 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// Immutable value object representing a date-only range (inclusive on both ends).
 /// Enforces that <see cref="End"/> is never before <see cref="Start"/> at creation time.
 /// </summary>
-public sealed record class DateRange
+public sealed record class DateRange : ValueObject
 {
     /// <summary>Gets the inclusive start date of the range.</summary>
     public DateOnly Start { get; }

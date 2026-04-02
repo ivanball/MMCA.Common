@@ -84,35 +84,19 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null,
         bool showCancelSnackbar = true)
     {
-        if (_cts is not null)
-        {
-            await _cts.CancelAsync();
-            _cts.Dispose();
-        }
-
-        _cts = new CancellationTokenSource();
+        await ResetCancellationTokenAsync();
 
         IsLoading = true;
         StateHasChanged();
 
-        var filters = state.FilterDefinitions?
-            .Where(f => !string.IsNullOrWhiteSpace(f.Column?.PropertyName))
-            .ToDictionary(
-                f => f.Column!.PropertyName!,
-                f => (f.Operator ?? string.Empty, f.Value?.ToString() ?? string.Empty)
-            ) ?? [];
-
+        var filters = ExtractGridFilters(state);
         additionalFilters?.Invoke(filters);
 
-        int pageNumber = state.Page + 1;
-        int pageSize = state.PageSize;
-        var sort = state.SortDefinitions?.FirstOrDefault();
-        string? sortColumn = sort?.SortBy;
-        string? sortDirection = sort?.Descending == true ? "desc" : "asc";
+        var (sortColumn, sortDirection) = ExtractSortParameters(state);
 
         try
         {
-            var (items, totalItems) = await fetchAsync(filters, pageNumber, pageSize, sortColumn, sortDirection, _cts.Token);
+            var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, _cts!.Token);
             return new GridData<TDto> { Items = items, TotalItems = totalItems };
         }
         catch (OperationCanceledException)
@@ -141,13 +125,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<(IReadOnlyList<TDto> Items, int TotalItems)>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null)
     {
-        if (_cts is not null)
-        {
-            await _cts.CancelAsync();
-            _cts.Dispose();
-        }
-
-        _cts = new CancellationTokenSource();
+        await ResetCancellationTokenAsync();
 
         IsLoading = true;
         StateHasChanged();
@@ -157,7 +135,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         try
         {
-            var (items, totalItems) = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts.Token);
+            var (items, totalItems) = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
             MobileItems = items;
             MobileTotalItems = totalItems;
         }
@@ -176,6 +154,31 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             IsLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ResetCancellationTokenAsync()
+    {
+        if (_cts is not null)
+        {
+            await _cts.CancelAsync();
+            _cts.Dispose();
+        }
+
+        _cts = new CancellationTokenSource();
+    }
+
+    private static Dictionary<string, (string Operator, string Value)> ExtractGridFilters(GridState<TDto> state) =>
+        state.FilterDefinitions?
+            .Where(f => !string.IsNullOrWhiteSpace(f.Column?.PropertyName))
+            .ToDictionary(
+                f => f.Column!.PropertyName!,
+                f => (f.Operator ?? string.Empty, f.Value?.ToString() ?? string.Empty)
+            ) ?? [];
+
+    private static (string? SortColumn, string? SortDirection) ExtractSortParameters(GridState<TDto> state)
+    {
+        var sort = state.SortDefinitions?.FirstOrDefault();
+        return (sort?.SortBy, sort?.Descending == true ? "desc" : "asc");
     }
 
     /// <summary>

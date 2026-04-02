@@ -123,7 +123,8 @@ public sealed class InProcessEventBusTests : IDisposable
             {
                 var dispatcher = new Mock<IDomainEventDispatcher>();
                 var logger = new Mock<Microsoft.Extensions.Logging.ILogger<DomainEventSaveChangesInterceptor>>();
-                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object);
+                var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
             });
             IServiceProvider sp = services.BuildServiceProvider();
 

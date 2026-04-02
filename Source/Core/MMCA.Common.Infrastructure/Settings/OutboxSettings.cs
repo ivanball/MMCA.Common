@@ -20,9 +20,12 @@ public sealed class OutboxSettings
     [Range(1, 20)]
     public int MaxRetries { get; init; } = 5;
 
-    /// <summary>Gets the interval in seconds between polling cycles for unprocessed messages.</summary>
+    /// <summary>
+    /// Gets the fallback polling interval in seconds. With signal-based wakeup, this acts as
+    /// a safety net — the outbox processor normally wakes immediately on new entries.
+    /// </summary>
     [Range(1, 300)]
-    public int PollingIntervalSeconds { get; init; } = 10;
+    public int PollingIntervalSeconds { get; init; } = 2;
 
     /// <summary>Gets the delay in seconds after message creation before it becomes eligible for processing.</summary>
     [Range(0, 600)]

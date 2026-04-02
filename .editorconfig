@@ -471,8 +471,8 @@ dotnet_diagnostic.S113.severity = none
 dotnet_diagnostic.S121.severity = none
 # S125: Commented-out code — should be cleaned but don't block
 dotnet_diagnostic.S125.severity = suggestion
-# S134: Too deeply nested control flow — maintainability indicator
-dotnet_diagnostic.S134.severity = suggestion
+# S134: Too deeply nested control flow — enforced to limit nesting depth
+dotnet_diagnostic.S134.severity = warning
 # S1118: Add protected constructor or static keyword — DI instantiation patterns
 dotnet_diagnostic.S1118.severity = none
 # S1200: Class has too many dependencies — flag for awareness
@@ -485,8 +485,8 @@ dotnet_diagnostic.S1309.severity = none
 dotnet_diagnostic.S1312.severity = none
 # S1451: File header — no file header policy
 dotnet_diagnostic.S1451.severity = none
-# S1541: Cyclomatic complexity — important metric, flag for awareness
-dotnet_diagnostic.S1541.severity = suggestion
+# S1541: Cyclomatic complexity — enforced to limit method complexity
+dotnet_diagnostic.S1541.severity = warning
 # S2094: Empty class — placeholder modules exist
 dotnet_diagnostic.S2094.severity = none
 # S2139: Log or rethrow exceptions — flag for awareness

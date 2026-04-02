@@ -17,9 +17,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// </summary>
 /// <param name="domainEventDispatcher">Dispatches domain events to in-process handlers.</param>
 /// <param name="logger">Logger for error diagnostics.</param>
+/// <param name="outboxSignal">Signal to wake the outbox processor when in-process dispatch fails.</param>
 public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
-    ILogger<DomainEventSaveChangesInterceptor> logger) : SaveChangesInterceptor
+    ILogger<DomainEventSaveChangesInterceptor> logger,
+    Outbox.IOutboxSignal outboxSignal) : SaveChangesInterceptor
 {
     /// <summary>
     /// Per-context state captured before save and consumed after save.
@@ -124,6 +126,11 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         catch (Exception ex)
         {
             LogDispatchError(logger, ex);
+
+            // In-process dispatch failed — signal the outbox processor to pick up
+            // the unprocessed entries once the processing delay has elapsed.
+            if (state.OutboxEntries.Count > 0)
+                outboxSignal.Signal();
         }
         finally
         {

@@ -13,7 +13,7 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// Configured as an EF owned type via <c>OwnsOne</c> in entity configurations.
 /// </remarks>
 [DataContract]
-public sealed record Address
+public sealed record Address : ValueObject
 {
     /// <summary>Gets the primary street address (required).</summary>
     [DataMember(Order = 1)]

@@ -11,7 +11,7 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// "no currency yet" — it is never exposed to API consumers.
 /// </summary>
 [JsonConverter(typeof(CurrencyJsonConverter))]
-public sealed record Currency
+public sealed record Currency : ValueObject
 {
     /// <summary>Validation error returned when a currency code is null or empty.</summary>
     public static readonly Error EmptyCurrency = Error.Validation("Currency.Empty", "Currency code cannot be empty.");

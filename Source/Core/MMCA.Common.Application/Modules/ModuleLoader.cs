@@ -39,6 +39,10 @@ public sealed partial class ModuleLoader
     /// <param name="configurationBuilder">Allows modules to add their own configuration sources.</param>
     /// <param name="applicationSettings">Global application settings shared across modules.</param>
     /// <param name="modulesSettings">Per-module enabled/disabled configuration.</param>
+    /// <param name="environmentName">
+    /// Optional hosting environment name (e.g. "Development"). When provided, the loader
+    /// also loads <c>modules.{name}.{environmentName}.json</c> for each module.
+    /// </param>
     /// <exception cref="InvalidOperationException">
     /// Thrown when a module with <see cref="IModule.RequiresDependencies"/> set to <see langword="true"/>
     /// has disabled dependencies.
@@ -47,7 +51,8 @@ public sealed partial class ModuleLoader
         IServiceCollection services,
         IConfigurationBuilder configurationBuilder,
         ApplicationSettings applicationSettings,
-        ModulesSettings modulesSettings)
+        ModulesSettings modulesSettings,
+        string? environmentName = null)
     {
         // Scan all loaded assemblies for concrete IModule implementations.
         // The try-catch guards against assemblies that throw on GetTypes()
@@ -90,35 +95,60 @@ public sealed partial class ModuleLoader
                 continue;
             }
 
-            // Validate dependencies
-            var disabledDeps = module.Dependencies
-                .Where(d => !modulesSettings.IsModuleEnabled(d))
-                .ToList();
-
-            if (disabledDeps.Count > 0 && module.RequiresDependencies)
-            {
-                throw new InvalidOperationException(
-                    $"Module '{module.Name}' requires [{string.Join(", ", disabledDeps)}] " +
-                    "which are disabled. Either enable the required modules or disable this module.");
-            }
-
-            foreach (var dependency in disabledDeps)
-            {
-                LogDependencyDisabledWarning(Logger, module.Name, dependency);
-            }
-
-            LogModuleRegistering(Logger, module.Name, module.Dependencies.Count);
-            var sw = Stopwatch.StartNew();
-            module.Register(services, configurationBuilder, applicationSettings);
-            sw.Stop();
-            LogModuleRegistered(Logger, module.Name, sw.ElapsedMilliseconds);
-            _enabledModules.Add(module);
+            ValidateModuleDependencies(module, modulesSettings);
+            RegisterEnabledModule(module, services, configurationBuilder, applicationSettings, environmentName);
 
             if (allSeeders.TryGetValue(module.Name, out var seeder))
             {
                 _seeders.Add(seeder);
             }
         }
+    }
+
+    private void ValidateModuleDependencies(IModule module, ModulesSettings modulesSettings)
+    {
+        var disabledDeps = module.Dependencies
+            .Where(d => !modulesSettings.IsModuleEnabled(d))
+            .ToList();
+
+        if (disabledDeps.Count > 0 && module.RequiresDependencies)
+        {
+            throw new InvalidOperationException(
+                $"Module '{module.Name}' requires [{string.Join(", ", disabledDeps)}] " +
+                "which are disabled. Either enable the required modules or disable this module.");
+        }
+
+        foreach (var dependency in disabledDeps)
+        {
+            LogDependencyDisabledWarning(Logger, module.Name, dependency);
+        }
+    }
+
+    private void RegisterEnabledModule(
+        IModule module,
+        IServiceCollection services,
+        IConfigurationBuilder configurationBuilder,
+        ApplicationSettings applicationSettings,
+        string? environmentName)
+    {
+        LogModuleRegistering(Logger, module.Name, module.Dependencies.Count);
+
+        // Centralized config: load module-specific JSON files by naming convention
+        // before calling Register(), so configuration is available during DI registration.
+#pragma warning disable CA1308 // Module config files use lowercase naming convention (e.g., modules.catalog.json)
+        var moduleConfigName = module.Name.ToLowerInvariant();
+#pragma warning restore CA1308
+        configurationBuilder.AddJsonFile($"modules.{moduleConfigName}.json", optional: true, reloadOnChange: true);
+        if (!string.IsNullOrEmpty(environmentName))
+        {
+            configurationBuilder.AddJsonFile($"modules.{moduleConfigName}.{environmentName}.json", optional: true, reloadOnChange: true);
+        }
+
+        var sw = Stopwatch.StartNew();
+        module.Register(services, configurationBuilder, applicationSettings);
+        sw.Stop();
+        LogModuleRegistered(Logger, module.Name, sw.ElapsedMilliseconds);
+        _enabledModules.Add(module);
     }
 
     /// <summary>

@@ -20,10 +20,12 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <param name="scopeFactory">Factory for creating DI scopes per processing cycle.</param>
 /// <param name="logger">Logger for processing diagnostics.</param>
 /// <param name="outboxOptions">Configurable outbox processing settings.</param>
+/// <param name="outboxSignal">Signal to wait on between polling cycles for immediate wakeup.</param>
 public sealed partial class OutboxProcessor(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxProcessor> logger,
-    IOptions<OutboxSettings> outboxOptions) : BackgroundService
+    IOptions<OutboxSettings> outboxOptions,
+    IOutboxSignal outboxSignal) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
 
@@ -61,7 +63,8 @@ public sealed partial class OutboxProcessor(
                 LogProcessingError(logger, ex);
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(_settings.PollingIntervalSeconds), stoppingToken).ConfigureAwait(false);
+            // Wait for a signal (new outbox entries written) or fall back to polling interval.
+            await outboxSignal.WaitAsync(TimeSpan.FromSeconds(_settings.PollingIntervalSeconds), stoppingToken).ConfigureAwait(false);
         }
     }
 

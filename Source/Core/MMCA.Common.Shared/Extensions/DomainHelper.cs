@@ -28,25 +28,35 @@ public static class DomainHelper
             if (string.IsNullOrWhiteSpace(id))
                 return default!;
 
-            if (type == typeof(Guid))
-                return Guid.TryParse(id, out var g) ? (TIdentifier)(object)g : (TIdentifier)(object)Guid.Empty;
-
-            if (type == typeof(int))
-                return int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i) ? (TIdentifier)(object)i : (TIdentifier)(object)0;
-
-            if (type == typeof(long))
-                return long.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? (TIdentifier)(object)l : (TIdentifier)(object)0L;
-
-            if (type == typeof(ulong))
-                return ulong.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ul) ? (TIdentifier)(object)ul : (TIdentifier)(object)0UL;
-
-            if (type == typeof(bool))
-                return bool.TryParse(id, out var b) ? (TIdentifier)(object)b : (TIdentifier)(object)false;
-
-            if (type.IsEnum)
-                return Enum.TryParse(type, id, ignoreCase: true, out var enumValue) ? (TIdentifier)enumValue! : default!;
-
-            throw new FormatException($"Unsupported identifier type: {type.FullName}");
+            return ParseNonEmpty<TIdentifier>(id, type);
         }
+    }
+
+    private static TIdentifier ParseNonEmpty<TIdentifier>(string id, Type type)
+    {
+        if (type == typeof(Guid))
+            return Guid.TryParse(id, out var g) ? (TIdentifier)(object)g : (TIdentifier)(object)Guid.Empty;
+
+        if (type == typeof(int))
+            return int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i) ? (TIdentifier)(object)i : (TIdentifier)(object)0;
+
+        if (type == typeof(long))
+            return long.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? (TIdentifier)(object)l : (TIdentifier)(object)0L;
+
+        return ParseOtherTypes<TIdentifier>(id, type);
+    }
+
+    private static TIdentifier ParseOtherTypes<TIdentifier>(string id, Type type)
+    {
+        if (type == typeof(ulong))
+            return ulong.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ul) ? (TIdentifier)(object)ul : (TIdentifier)(object)0UL;
+
+        if (type == typeof(bool))
+            return bool.TryParse(id, out var b) ? (TIdentifier)(object)b : (TIdentifier)(object)false;
+
+        if (type.IsEnum)
+            return Enum.TryParse(type, id, ignoreCase: true, out var enumValue) ? (TIdentifier)enumValue! : default!;
+
+        throw new FormatException($"Unsupported identifier type: {type.FullName}");
     }
 }

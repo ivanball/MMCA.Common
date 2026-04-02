@@ -26,10 +26,12 @@ public sealed class OutboxProcessorExecuteAsyncTests
         };
 
         var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
+        var outboxSignal1 = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
         using var sut = new OutboxProcessor(
             mockScopeFactory.Object,
             NullLogger<OutboxProcessor>.Instance,
-            Options.Create(settings));
+            Options.Create(settings),
+            outboxSignal1.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await sut.StartAsync(cts.Token);
@@ -52,10 +54,12 @@ public sealed class OutboxProcessorExecuteAsyncTests
         };
 
         var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
+        var outboxSignal2 = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
         using var sut = new OutboxProcessor(
             mockScopeFactory.Object,
             NullLogger<OutboxProcessor>.Instance,
-            Options.Create(settings));
+            Options.Create(settings),
+            outboxSignal2.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
         await sut.StartAsync(cts.Token);
@@ -77,7 +81,8 @@ public sealed class OutboxProcessorExecuteAsyncTests
         mockLogger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
         var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
-        using var sut = new OutboxProcessor(mockScopeFactory.Object, mockLogger.Object, Options.Create(settings));
+        var outboxSignal3 = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+        using var sut = new OutboxProcessor(mockScopeFactory.Object, mockLogger.Object, Options.Create(settings), outboxSignal3.Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         await sut.StartAsync(cts.Token);

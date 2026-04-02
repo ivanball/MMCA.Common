@@ -86,23 +86,30 @@ public static class ServiceExceptionHelper
     {
         var message = ExtractDetailMessage(root, "An error occurred.");
 
-        if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
-        {
-            var errorMessages = new List<string>();
-            foreach (var error in errors.EnumerateArray())
-            {
-                if (error.TryGetProperty("message", out var msgElement))
-                {
-                    var msg = msgElement.GetString();
-                    if (!string.IsNullOrWhiteSpace(msg))
-                        errorMessages.Add(msg);
-                }
-            }
+        if (!root.TryGetProperty("errors", out var errors) || errors.ValueKind != JsonValueKind.Array)
+            return message;
 
-            if (errorMessages.Count > 0)
-                message = string.Join(" ", errorMessages);
-        }
+        var errorMessages = CollectErrorMessages(errors);
+
+        if (errorMessages.Count > 0)
+            message = string.Join(" ", errorMessages);
 
         return message;
+    }
+
+    private static List<string> CollectErrorMessages(JsonElement errorsArray)
+    {
+        var errorMessages = new List<string>();
+        foreach (var error in errorsArray.EnumerateArray())
+        {
+            if (error.TryGetProperty("message", out var msgElement))
+            {
+                var msg = msgElement.GetString();
+                if (!string.IsNullOrWhiteSpace(msg))
+                    errorMessages.Add(msg);
+            }
+        }
+
+        return errorMessages;
     }
 }

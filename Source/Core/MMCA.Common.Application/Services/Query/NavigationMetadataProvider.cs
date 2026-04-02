@@ -61,44 +61,55 @@ public sealed class NavigationMetadataProvider(IDataSourceService dataSourceServ
 
         foreach (var property in entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            var navigationAttribute = property.GetCustomAttribute<NavigationAttribute>();
-            if (navigationAttribute is null)
-                continue;
-
-            var attributeNavigationType = navigationAttribute.IsCollection ? NavigationType.ChildCollection : NavigationType.ForeignKey;
-            if (attributeNavigationType != navigationType)
-                continue;
-
-            var declaringEntityType = property.DeclaringType;
-            if (declaringEntityType?.FullName is null)
-                continue;
-
-            // Unwrap generic collection types (ICollection<T>, IReadOnlyCollection<T>)
-            // to get the actual target entity type for data source compatibility checks
-            var targetEntityType = property.PropertyType;
-            if (targetEntityType.IsGenericType &&
-                (targetEntityType.GetGenericTypeDefinition() == typeof(ICollection<>) ||
-                 targetEntityType.GetGenericTypeDefinition() == typeof(IReadOnlyCollection<>)))
-            {
-                targetEntityType = targetEntityType.GenericTypeArguments[0];
-            }
-
-            if (targetEntityType?.FullName is null)
-                continue;
-
-            var navigationPropertyInfo = new NavigationPropertyInfo(
-                property.Name,
-                navigationAttribute.IsCollection ? NavigationType.ChildCollection : NavigationType.ForeignKey,
-                declaringEntityType,
-                targetEntityType);
-
-            // Split into supported (same data source, JOINable) vs unsupported (cross-source, manual load)
-            if (dataSourceService.HaveIncludeSupport(declaringEntityType.FullName, targetEntityType.FullName))
-                navigationMetadata.AddSupported(navigationPropertyInfo);
-            else
-                navigationMetadata.AddUnsupported(navigationPropertyInfo);
+            ClassifyNavigationProperty(property, navigationType, navigationMetadata);
         }
 
         return navigationMetadata;
+    }
+
+    private void ClassifyNavigationProperty(PropertyInfo property, NavigationType navigationType, NavigationMetadata metadata)
+    {
+        var navigationAttribute = property.GetCustomAttribute<NavigationAttribute>();
+        if (navigationAttribute is null)
+            return;
+
+        var attributeNavigationType = navigationAttribute.IsCollection ? NavigationType.ChildCollection : NavigationType.ForeignKey;
+        if (attributeNavigationType != navigationType)
+            return;
+
+        var declaringEntityType = property.DeclaringType;
+        if (declaringEntityType?.FullName is null)
+            return;
+
+        var targetEntityType = UnwrapCollectionType(property.PropertyType);
+        if (targetEntityType?.FullName is null)
+            return;
+
+        var navigationPropertyInfo = new NavigationPropertyInfo(
+            property.Name,
+            attributeNavigationType,
+            declaringEntityType,
+            targetEntityType);
+
+        if (dataSourceService.HaveIncludeSupport(declaringEntityType.FullName, targetEntityType.FullName))
+            metadata.AddSupported(navigationPropertyInfo);
+        else
+            metadata.AddUnsupported(navigationPropertyInfo);
+    }
+
+    /// <summary>
+    /// Unwraps generic collection types (<see cref="ICollection{T}"/>, <see cref="IReadOnlyCollection{T}"/>)
+    /// to get the actual target entity type for data source compatibility checks.
+    /// </summary>
+    private static Type UnwrapCollectionType(Type propertyType)
+    {
+        if (propertyType.IsGenericType &&
+            (propertyType.GetGenericTypeDefinition() == typeof(ICollection<>) ||
+             propertyType.GetGenericTypeDefinition() == typeof(IReadOnlyCollection<>)))
+        {
+            return propertyType.GenericTypeArguments[0];
+        }
+
+        return propertyType;
     }
 }

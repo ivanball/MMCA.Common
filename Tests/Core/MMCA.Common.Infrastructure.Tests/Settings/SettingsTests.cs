@@ -192,8 +192,8 @@ public class OutboxSettingsTests
         new OutboxSettings().MaxRetries.Should().Be(5);
 
     [Fact]
-    public void Default_PollingIntervalSeconds_Is10() =>
-        new OutboxSettings().PollingIntervalSeconds.Should().Be(10);
+    public void Default_PollingIntervalSeconds_Is2() =>
+        new OutboxSettings().PollingIntervalSeconds.Should().Be(2);
 
     [Fact]
     public void Default_ProcessingDelaySeconds_Is30() =>

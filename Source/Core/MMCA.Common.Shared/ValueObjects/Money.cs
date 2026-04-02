@@ -15,7 +15,7 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// Configured as an EF owned type via <c>OwnsOne</c> in entity configurations.
 /// </remarks>
 [DataContract]
-public sealed record Money
+public sealed record Money : ValueObject
 {
     /// <summary>Validation error returned when <see cref="Create"/> is called with <see cref="Currency.None"/>.</summary>
     public static readonly Error NoCurrency = Error.Validation("Money.NoCurrency", "Currency is required.");

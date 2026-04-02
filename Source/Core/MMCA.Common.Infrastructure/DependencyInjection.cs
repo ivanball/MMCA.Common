@@ -94,6 +94,7 @@ public static class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            services.TryAddSingleton<Persistence.Outbox.IOutboxSignal, Persistence.Outbox.OutboxSignal>();
             services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
 
             services.AddServices();

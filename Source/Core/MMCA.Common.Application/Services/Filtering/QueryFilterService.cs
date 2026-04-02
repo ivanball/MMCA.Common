@@ -148,16 +148,7 @@ public static class QueryFilterService
             ? mapped
             : property;
 
-        var propertyName = entityProperty.Contains('.', StringComparison.Ordinal)
-            ? entityProperty.Split('.')[0]
-            : entityProperty;
-
-        var propertyInfo = PropertyCache.GetOrAdd(
-            (typeof(TEntity), property),
-            static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance))
-            ?? PropertyCache.GetOrAdd(
-                (typeof(TEntity), propertyName),
-                static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance));
+        var propertyInfo = ResolvePropertyInfo<TEntity>(property, entityProperty);
 
         if (propertyInfo is null)
         {
@@ -174,21 +165,11 @@ public static class QueryFilterService
         // Nested properties use string filtering
         if (entityProperty.Contains('.', StringComparison.Ordinal))
         {
-            if (StringStrategy.SupportedOperators?.Contains(opUpper) == false)
-            {
-                errors.Add(Error.Validation(
-                    "Filter.Operator.NotSupported",
-                    $"Operator '{op}' is not supported for property '{property}' (type: string).",
-                    source: nameof(ValidateFilters),
-                    target: property));
-            }
-
+            ValidateOperatorSupported(StringStrategy, opUpper, op, property, "string", errors);
             return;
         }
 
-        IFilterStrategy? strategy = propertyInfo.PropertyType == typeof(string)
-            ? StringStrategy
-            : Strategies.GetValueOrDefault(propertyInfo.PropertyType);
+        var strategy = ResolveStrategy(propertyInfo.PropertyType);
 
         if (strategy is null)
         {
@@ -200,11 +181,41 @@ public static class QueryFilterService
             return;
         }
 
+        ValidateOperatorSupported(strategy, opUpper, op, property, propertyInfo.PropertyType.Name, errors);
+    }
+
+    private static PropertyInfo? ResolvePropertyInfo<TEntity>(string property, string entityProperty)
+    {
+        var propertyName = entityProperty.Contains('.', StringComparison.Ordinal)
+            ? entityProperty.Split('.')[0]
+            : entityProperty;
+
+        return PropertyCache.GetOrAdd(
+            (typeof(TEntity), property),
+            static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance))
+            ?? PropertyCache.GetOrAdd(
+                (typeof(TEntity), propertyName),
+                static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance));
+    }
+
+    private static IFilterStrategy? ResolveStrategy(Type propertyType) =>
+        propertyType == typeof(string)
+            ? StringStrategy
+            : Strategies.GetValueOrDefault(propertyType);
+
+    private static void ValidateOperatorSupported(
+        IFilterStrategy strategy,
+        string opUpper,
+        string originalOp,
+        string property,
+        string typeName,
+        List<Error> errors)
+    {
         if (strategy.SupportedOperators is not null && !strategy.SupportedOperators.Contains(opUpper))
         {
             errors.Add(Error.Validation(
                 "Filter.Operator.NotSupported",
-                $"Operator '{op}' is not supported for property '{property}' (type: {propertyInfo.PropertyType.Name}).",
+                $"Operator '{originalOp}' is not supported for property '{property}' (type: {typeName}).",
                 source: nameof(ValidateFilters),
                 target: property));
         }

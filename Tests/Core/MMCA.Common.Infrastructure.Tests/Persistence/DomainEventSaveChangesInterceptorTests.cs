@@ -22,7 +22,8 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
 
     public DomainEventSaveChangesInterceptorTests()
     {
-        _sut = new DomainEventSaveChangesInterceptor(_mockDispatcher.Object, _mockLogger.Object);
+        var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+        _sut = new DomainEventSaveChangesInterceptor(_mockDispatcher.Object, _mockLogger.Object, outboxSignal.Object);
         _dbContext = TestDomainEventDbContext.Create(_sut);
     }
 
