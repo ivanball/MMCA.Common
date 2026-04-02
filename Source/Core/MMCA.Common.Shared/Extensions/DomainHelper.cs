@@ -32,7 +32,10 @@ public static class DomainHelper
         }
     }
 
+    // Called from extension(string? id).Parse<T>() — IDE0051 false positive with preview extension types
+#pragma warning disable IDE0051
     private static TIdentifier ParseNonEmpty<TIdentifier>(string id, Type type)
+#pragma warning restore IDE0051
     {
         if (type == typeof(Guid))
             return Guid.TryParse(id, out var g) ? (TIdentifier)(object)g : (TIdentifier)(object)Guid.Empty;
