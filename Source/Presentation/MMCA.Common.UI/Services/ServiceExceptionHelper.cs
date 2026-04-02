@@ -47,59 +47,62 @@ public static class ServiceExceptionHelper
             var title = titleElement.GetString();
 
             if (title?.Equals("Domain Exception", StringComparison.Ordinal) == true)
-            {
-                var detail = root.TryGetProperty("detail", out var detailElement)
-                    ? detailElement.GetString() ?? "A domain error occurred."
-                    : "A domain error occurred.";
-
-                throw new DomainInvariantViolationException(detail);
-            }
+                throw new DomainInvariantViolationException(ExtractDetailMessage(root, "A domain error occurred."));
 
             if (title?.Equals("Validation Exception", StringComparison.Ordinal) == true)
-            {
-                var message = root.TryGetProperty("detail", out var detailElement)
-                    ? detailElement.GetString() ?? "One or more validation errors occurred."
-                    : "One or more validation errors occurred.";
-
-                if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Object)
-                {
-                    var errorMessages = new List<string>();
-                    foreach (var property in errors.EnumerateObject())
-                    {
-                        foreach (var error in property.Value.EnumerateArray())
-                            errorMessages.Add(error.GetString() ?? string.Empty);
-                    }
-                    if (errorMessages.Count > 0)
-                        message = string.Join(" ", errorMessages);
-                }
-
-                throw new DomainInvariantViolationException(message);
-            }
+                throw new DomainInvariantViolationException(ExtractValidationMessage(root));
 
             if (title?.Equals("Operation failed", StringComparison.Ordinal) == true)
-            {
-                var message = root.TryGetProperty("detail", out var detailElement)
-                    ? detailElement.GetString() ?? "An error occurred."
-                    : "An error occurred.";
-
-                if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
-                {
-                    var errorMessages = new List<string>();
-                    foreach (var error in errors.EnumerateArray())
-                    {
-                        if (error.TryGetProperty("message", out var msgElement))
-                        {
-                            var msg = msgElement.GetString();
-                            if (!string.IsNullOrWhiteSpace(msg))
-                                errorMessages.Add(msg);
-                        }
-                    }
-                    if (errorMessages.Count > 0)
-                        message = string.Join(" ", errorMessages);
-                }
-
-                throw new DomainInvariantViolationException(message);
-            }
+                throw new DomainInvariantViolationException(ExtractOperationFailedMessage(root));
         }
+    }
+
+    private static string ExtractDetailMessage(JsonElement root, string fallback) =>
+        root.TryGetProperty("detail", out var detailElement)
+            ? detailElement.GetString() ?? fallback
+            : fallback;
+
+    private static string ExtractValidationMessage(JsonElement root)
+    {
+        var message = ExtractDetailMessage(root, "One or more validation errors occurred.");
+
+        if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Object)
+        {
+            var errorMessages = new List<string>();
+            foreach (var property in errors.EnumerateObject())
+            {
+                foreach (var error in property.Value.EnumerateArray())
+                    errorMessages.Add(error.GetString() ?? string.Empty);
+            }
+
+            if (errorMessages.Count > 0)
+                message = string.Join(" ", errorMessages);
+        }
+
+        return message;
+    }
+
+    private static string ExtractOperationFailedMessage(JsonElement root)
+    {
+        var message = ExtractDetailMessage(root, "An error occurred.");
+
+        if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
+        {
+            var errorMessages = new List<string>();
+            foreach (var error in errors.EnumerateArray())
+            {
+                if (error.TryGetProperty("message", out var msgElement))
+                {
+                    var msg = msgElement.GetString();
+                    if (!string.IsNullOrWhiteSpace(msg))
+                        errorMessages.Add(msg);
+                }
+            }
+
+            if (errorMessages.Count > 0)
+                message = string.Join(" ", errorMessages);
+        }
+
+        return message;
     }
 }

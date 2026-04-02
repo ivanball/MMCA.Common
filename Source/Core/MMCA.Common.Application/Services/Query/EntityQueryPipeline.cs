@@ -45,39 +45,64 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         // PATH 2 - Unsupported includes: When the data source does not support JOINs
         // (e.g. Cosmos DB where entities may live in different containers), we must
         // materialize the query, then manually load related data via the NavigationPopulator.
-        // Optimization: apply sorting and pagination BEFORE materialization (on the DB query)
-        // so only the required page is loaded into memory. Navigation population then runs
-        // only on the paged subset.
         if (navigationMetadata.UnsupportedIncludes.Count != 0)
+            return await ExecuteWithManualNavigationAsync<TEntity, TIdentifierType>(query, navigationMetadata, parameters, navigationPopulator, cancellationToken).ConfigureAwait(false);
+
+        return await ExecuteWithServerSideIncludesAsync<TEntity, TIdentifierType>(query, parameters, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// PATH 2: Materializes the query, then manually loads related data via the NavigationPopulator.
+    /// Sorting and pagination are applied BEFORE materialization so only the required page
+    /// is loaded into memory. Navigation population then runs only on the paged subset.
+    /// </summary>
+    private async Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> ExecuteWithManualNavigationAsync<TEntity, TIdentifierType>(
+        IQueryable<TEntity> query,
+        NavigationMetadata navigationMetadata,
+        EntityQueryParameters<TEntity> parameters,
+        Func<IReadOnlyCollection<TEntity>, NavigationMetadata, bool, bool, CancellationToken, Task> navigationPopulator,
+        CancellationToken cancellationToken)
+        where TEntity : AuditableBaseEntity<TIdentifierType>
+        where TIdentifierType : notnull
+    {
+        bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
+        int totalCount = 0;
+
+        // Sort at the DB level before materialization
+        query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
+
+        if (isPaginated)
         {
-            bool isPaginatedPath2 = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
-            int totalCountPath2 = 0;
-
-            // Sort at the DB level before materialization
-            query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
-
-            if (isPaginatedPath2)
-            {
-                totalCountPath2 = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
-                int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
-                query = query.Skip(skip).Take(parameters.PageSize.Value);
-            }
-
-            var entities = await queryableExecutor.ToListAsync(query, cancellationToken).ConfigureAwait(false);
-            if (entities.Count != 0)
-            {
-                await navigationPopulator(entities, navigationMetadata, parameters.IncludeFKs, parameters.IncludeChildren, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (!isPaginatedPath2)
-                totalCountPath2 = entities.Count;
-
-            // Field selection and return — skip the normal path below
-            var pagedQuery = entities.AsQueryable();
-            pagedQuery = QueryFieldService.ApplyFieldSelection(pagedQuery, parameters.Fields);
-            return (pagedQuery.ToList(), totalCountPath2);
+            totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
+            int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
+            query = query.Skip(skip).Take(parameters.PageSize.Value);
         }
 
+        var entities = await queryableExecutor.ToListAsync(query, cancellationToken).ConfigureAwait(false);
+        if (entities.Count != 0)
+        {
+            await navigationPopulator(entities, navigationMetadata, parameters.IncludeFKs, parameters.IncludeChildren, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (!isPaginated)
+            totalCount = entities.Count;
+
+        var pagedQuery = entities.AsQueryable();
+        pagedQuery = QueryFieldService.ApplyFieldSelection(pagedQuery, parameters.Fields);
+        return (pagedQuery.ToList(), totalCount);
+    }
+
+    /// <summary>
+    /// PATH 1: All navigations are supported server-side via EF Core .Include().
+    /// Applies sorting, pagination, and field selection directly on the IQueryable.
+    /// </summary>
+    private async Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> ExecuteWithServerSideIncludesAsync<TEntity, TIdentifierType>(
+        IQueryable<TEntity> query,
+        EntityQueryParameters<TEntity> parameters,
+        CancellationToken cancellationToken)
+        where TEntity : AuditableBaseEntity<TIdentifierType>
+        where TIdentifierType : notnull
+    {
         query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
 
         bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;

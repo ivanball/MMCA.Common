@@ -131,75 +131,82 @@ public static class QueryFilterService
         List<Error> errors = [];
 
         foreach (var (property, (op, _)) in filters)
-        {
-            var entityProperty = dtoToEntityPropertyMap.TryGetValue(property, out var mapped)
-                ? mapped
-                : property;
-
-            var propertyName = entityProperty.Contains('.', StringComparison.Ordinal)
-                ? entityProperty.Split('.')[0]
-                : entityProperty;
-
-            var propertyInfo = PropertyCache.GetOrAdd(
-                (typeof(TEntity), property),
-                static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance))
-                ?? PropertyCache.GetOrAdd(
-                    (typeof(TEntity), propertyName),
-                    static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance));
-
-            if (propertyInfo is null)
-            {
-                errors.Add(Error.Validation(
-                    "Filter.Property.NotFound",
-                    $"Filter property '{property}' does not exist on type '{typeof(TEntity).Name}'.",
-                    source: nameof(ValidateFilters),
-                    target: typeof(TEntity).Name));
-                continue;
-            }
-
-            var opUpper = op.ToUpperInvariant();
-
-            // Nested properties use string filtering
-            if (entityProperty.Contains('.', StringComparison.Ordinal))
-            {
-                if (StringStrategy.SupportedOperators?.Contains(opUpper) == false)
-                {
-                    errors.Add(Error.Validation(
-                        "Filter.Operator.NotSupported",
-                        $"Operator '{op}' is not supported for property '{property}' (type: string).",
-                        source: nameof(ValidateFilters),
-                        target: property));
-                }
-
-                continue;
-            }
-
-            IFilterStrategy? strategy = propertyInfo.PropertyType == typeof(string)
-                ? StringStrategy
-                : Strategies.GetValueOrDefault(propertyInfo.PropertyType);
-
-            if (strategy is null)
-            {
-                errors.Add(Error.Validation(
-                    "Filter.Type.NotSupported",
-                    $"No filter strategy registered for type '{propertyInfo.PropertyType.Name}' (property '{property}').",
-                    source: nameof(ValidateFilters),
-                    target: property));
-                continue;
-            }
-
-            if (strategy.SupportedOperators is not null && !strategy.SupportedOperators.Contains(opUpper))
-            {
-                errors.Add(Error.Validation(
-                    "Filter.Operator.NotSupported",
-                    $"Operator '{op}' is not supported for property '{property}' (type: {propertyInfo.PropertyType.Name}).",
-                    source: nameof(ValidateFilters),
-                    target: property));
-            }
-        }
+            ValidateSingleFilter<TEntity>(property, op, dtoToEntityPropertyMap, errors);
 
         return errors.Count == 0
             ? Result.Success()
             : Result.Failure(errors);
+    }
+
+    private static void ValidateSingleFilter<TEntity>(
+        string property,
+        string op,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        List<Error> errors)
+    {
+        var entityProperty = dtoToEntityPropertyMap.TryGetValue(property, out var mapped)
+            ? mapped
+            : property;
+
+        var propertyName = entityProperty.Contains('.', StringComparison.Ordinal)
+            ? entityProperty.Split('.')[0]
+            : entityProperty;
+
+        var propertyInfo = PropertyCache.GetOrAdd(
+            (typeof(TEntity), property),
+            static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance))
+            ?? PropertyCache.GetOrAdd(
+                (typeof(TEntity), propertyName),
+                static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance));
+
+        if (propertyInfo is null)
+        {
+            errors.Add(Error.Validation(
+                "Filter.Property.NotFound",
+                $"Filter property '{property}' does not exist on type '{typeof(TEntity).Name}'.",
+                source: nameof(ValidateFilters),
+                target: typeof(TEntity).Name));
+            return;
+        }
+
+        var opUpper = op.ToUpperInvariant();
+
+        // Nested properties use string filtering
+        if (entityProperty.Contains('.', StringComparison.Ordinal))
+        {
+            if (StringStrategy.SupportedOperators?.Contains(opUpper) == false)
+            {
+                errors.Add(Error.Validation(
+                    "Filter.Operator.NotSupported",
+                    $"Operator '{op}' is not supported for property '{property}' (type: string).",
+                    source: nameof(ValidateFilters),
+                    target: property));
+            }
+
+            return;
+        }
+
+        IFilterStrategy? strategy = propertyInfo.PropertyType == typeof(string)
+            ? StringStrategy
+            : Strategies.GetValueOrDefault(propertyInfo.PropertyType);
+
+        if (strategy is null)
+        {
+            errors.Add(Error.Validation(
+                "Filter.Type.NotSupported",
+                $"No filter strategy registered for type '{propertyInfo.PropertyType.Name}' (property '{property}').",
+                source: nameof(ValidateFilters),
+                target: property));
+            return;
+        }
+
+        if (strategy.SupportedOperators is not null && !strategy.SupportedOperators.Contains(opUpper))
+        {
+            errors.Add(Error.Validation(
+                "Filter.Operator.NotSupported",
+                $"Operator '{op}' is not supported for property '{property}' (type: {propertyInfo.PropertyType.Name}).",
+                source: nameof(ValidateFilters),
+                target: property));
+        }
     }
 }
