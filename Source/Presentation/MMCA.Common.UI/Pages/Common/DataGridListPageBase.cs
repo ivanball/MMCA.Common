@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Services;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -16,6 +17,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 {
     [Inject] protected ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IBrowserViewportService BrowserViewportService { get; set; } = default!;
+    [Inject] private ListPageStateService ListPageStateService { get; set; } = default!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
     protected bool IsLoading { get; private set; }
     protected abstract string Title { get; }
@@ -29,6 +32,13 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     protected int MobileCurrentPage { get; set; } = 1;
     protected int MobilePageSize { get; set; } = 10;
 
+    /// <summary>
+    /// Current page for the MudDataGrid (0-indexed). Bind in Razor via
+    /// <c>@bind-CurrentPage="CurrentPageState"</c>. Restored from saved state on initialization,
+    /// so the grid's first <c>ServerData</c> call fetches the correct page directly.
+    /// </summary>
+    protected int CurrentPageState { get; set; }
+
     private CancellationTokenSource? _cts;
     private bool _disposed;
 
@@ -37,6 +47,26 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
     /// <inheritdoc />
     public ResizeOptions ResizeOptions { get; } = new() { ReportRate = 250 };
+
+    /// <summary>Override in derived pages to save page-specific filter/search values (e.g., search string, status dropdown).</summary>
+    protected virtual void SaveFilters(Dictionary<string, string> filters) { }
+
+    /// <summary>Override in derived pages to restore page-specific filter/search values from saved state.</summary>
+    protected virtual void RestoreFilters(IReadOnlyDictionary<string, string> filters) { }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        var state = ListPageStateService.GetState(GetRoutePath());
+        if (state is not null)
+        {
+            CurrentPageState = state.Page;
+            MobileCurrentPage = state.MobilePage;
+            RestoreFilters(state.Filters);
+        }
+
+        base.OnInitialized();
+    }
 
     /// <inheritdoc />
     public async Task NotifyBrowserViewportChangeAsync(BrowserViewportEventArgs browserViewportEventArgs) =>
@@ -97,6 +127,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         try
         {
             var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, _cts!.Token);
+            SaveCurrentState(state.Page, state.PageSize);
             return new GridData<TDto> { Items = items, TotalItems = totalItems };
         }
         catch (OperationCanceledException)
@@ -138,6 +169,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             var (items, totalItems) = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
             MobileItems = items;
             MobileTotalItems = totalItems;
+            SaveCurrentState(0, MobilePageSize);
         }
         catch (OperationCanceledException)
         {
@@ -180,6 +212,21 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         var sort = state.SortDefinitions?.FirstOrDefault();
         return (sort?.SortBy, sort?.Descending == true ? "desc" : "asc");
     }
+
+    private void SaveCurrentState(int page, int pageSize)
+    {
+        var filters = new Dictionary<string, string>();
+        SaveFilters(filters);
+        ListPageStateService.SaveState(GetRoutePath(), new ListPageState
+        {
+            Page = page,
+            PageSize = pageSize,
+            MobilePage = MobileCurrentPage,
+            Filters = filters,
+        });
+    }
+
+    private string GetRoutePath() => new Uri(NavigationManager.Uri).AbsolutePath;
 
     /// <summary>
     /// Called when the viewport switches to mobile or on first render in mobile mode.
