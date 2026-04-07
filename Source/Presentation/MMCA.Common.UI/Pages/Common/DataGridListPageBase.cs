@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Services;
 using MudBlazor;
@@ -19,6 +20,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     [Inject] private IBrowserViewportService BrowserViewportService { get; set; } = default!;
     [Inject] private ListPageStateService ListPageStateService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     protected bool IsLoading { get; private set; }
     protected abstract string Title { get; }
@@ -39,8 +41,24 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     protected int CurrentPageState { get; set; }
 
+    /// <summary>
+    /// Rows per page to pass to the MudDataGrid. Bind in Razor via
+    /// <c>RowsPerPage="@RowsPerPageState"</c> (one-way; the grid's pager owns updates after
+    /// first render). Restored from saved state on initialization so the pager's
+    /// <c>OnInitializedAsync</c> sees a non-null <c>_rowsPerPage</c> and skips its
+    /// <c>PageSizeOptions.FirstOrDefault()</c> fallback. Defaults to 10 to match MudDataGrid v9's
+    /// own default.
+    /// </summary>
+    protected int RowsPerPageState { get; set; } = 10;
+
     private CancellationTokenSource? _cts;
     private bool _disposed;
+    private IJSObjectReference? _scrollModule;
+    private DotNetObjectReference<DataGridListPageBase<TDto>>? _dotNetRef;
+    private double? _pendingScrollRestore;
+    private int _savedPage;
+    private int _savedPageSize;
+    private readonly string _scrollTrackerId = Guid.NewGuid().ToString();
 
     /// <inheritdoc />
     public Guid Id { get; } = Guid.NewGuid();
@@ -54,6 +72,16 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <summary>Override in derived pages to restore page-specific filter/search values from saved state.</summary>
     protected virtual void RestoreFilters(IReadOnlyDictionary<string, string> filters) { }
 
+    /// <summary>
+    /// Override in derived pages to expose the <see cref="MudDataGrid{T}"/> component reference
+    /// (typically a <c>private MudDataGrid&lt;TDto&gt;? _dataGrid;</c> field captured via
+    /// <c>@ref="_dataGrid"</c> in the Razor markup). The base class needs this to programmatically
+    /// restore <c>RowsPerPage</c> after first render — see <see cref="OnAfterRenderAsync"/>.
+    /// Returns <see langword="null"/> by default for pages that don't need rows-per-page restoration
+    /// (e.g., mobile-only pages).
+    /// </summary>
+    protected virtual MudDataGrid<TDto>? GridRef => null;
+
     /// <inheritdoc />
     protected override void OnInitialized()
     {
@@ -61,8 +89,20 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         if (state is not null)
         {
             CurrentPageState = state.Page;
+            _savedPage = state.Page;
+            _savedPageSize = state.PageSize;
+            if (state.PageSize > 0)
+            {
+                RowsPerPageState = state.PageSize;
+            }
+
             MobileCurrentPage = state.MobilePage;
             RestoreFilters(state.Filters);
+
+            if (state.ScrollPosition > 0)
+            {
+                _pendingScrollRestore = state.ScrollPosition;
+            }
         }
 
         base.OnInitialized();
@@ -84,15 +124,80 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             StateHasChanged();
         });
 
-    /// <summary>Subscribes to viewport changes after the first render (JS interop requires a rendered DOM).</summary>
+    /// <summary>
+    /// Subscribes to viewport changes after the first render (JS interop requires a rendered DOM),
+    /// imports the scroll-tracking JS module, restores rows-per-page (which MudDataGrid v9
+    /// cannot accept via parameter without resetting <c>CurrentPage</c>), and restores any
+    /// pending scroll position once the grid has rendered its rows.
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
+
+            _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                "./_content/MMCA.Common.UI/list-page-scroll.js");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await _scrollModule.InvokeVoidAsync(
+                "enableScrollTracking",
+                _dotNetRef,
+                _scrollTrackerId,
+                150);
+
+            // SAFETY NET: even though we pass RowsPerPage as a parameter (so the pager init sees
+            // the saved size), MudDataGrid v9's parameter setter is one-shot and queues an
+            // InvokeAsync that may not propagate the value to _rowsPerPage in time for the first
+            // fetch on every render path. If the grid's actual RowsPerPage doesn't match what we
+            // restored, force it now via the public method with resetPage: false (to preserve
+            // CurrentPage). The early-return guard inside SetRowsPerPageAsync makes this a no-op
+            // when the parameter approach already worked.
+            if (_savedPageSize > 0 && GridRef is { } sizeGrid && sizeGrid.RowsPerPage != _savedPageSize)
+            {
+                await sizeGrid.SetRowsPerPageAsync(_savedPageSize, resetPage: false);
+            }
+
+            // The buggy RowsPerPage parameter setter in MudDataGrid v9 (it always uses
+            // resetPage: true) clobbers CurrentPage to 0 as a side effect when CurrentPage was
+            // non-zero. We re-restore CurrentPage here using the cached _savedPage so
+            // page-number restoration still works alongside rows-per-page restoration.
+            RestoreCurrentPageAfterRowsPerPageReset();
+        }
+
+        // Restore scroll only after the grid has finished its first data load and rendered rows.
+        if (_pendingScrollRestore is { } pending && !IsLoading && _scrollModule is not null)
+        {
+            _pendingScrollRestore = null;
+            await _scrollModule.InvokeVoidAsync("setScrollPosition", pending);
         }
 
         await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Invoked from JS by the debounced scroll listener whenever the user scrolls.
+    /// Updates only the scroll position in the state service, preserving page/pageSize/filters.
+    /// </summary>
+    [JSInvokable]
+    public void OnScrollPositionChanged(double scrollTop) =>
+        ListPageStateService.UpdateScrollPosition(GetRoutePath(), scrollTop);
+
+    /// <summary>
+    /// Re-restores the grid's <c>CurrentPage</c> from <see cref="_savedPage"/> after the
+    /// <c>RowsPerPage</c> parameter setter has fired and clobbered it to 0 as a side effect.
+    /// Setting <c>CurrentPage</c> from outside the component is normally flagged by the Blazor
+    /// analyzer (BL0005), but the setter is well-behaved (updates the field, fires the change
+    /// callback, and triggers a re-fetch) and this is the only mechanism MudDataGrid v9 exposes
+    /// for programmatically navigating to an arbitrary page.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism and is well-behaved.")]
+    private void RestoreCurrentPageAfterRowsPerPageReset()
+    {
+        if (_savedPage > 0 && GridRef is { } grid && grid.CurrentPage != _savedPage)
+        {
+            grid.CurrentPage = _savedPage;
+        }
     }
 
     /// <summary>
@@ -215,14 +320,17 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
     private void SaveCurrentState(int page, int pageSize)
     {
+        var routePath = GetRoutePath();
+        var existing = ListPageStateService.GetState(routePath);
         var filters = new Dictionary<string, string>();
         SaveFilters(filters);
-        ListPageStateService.SaveState(GetRoutePath(), new ListPageState
+        ListPageStateService.SaveState(routePath, new ListPageState
         {
             Page = page,
             PageSize = pageSize,
             MobilePage = MobileCurrentPage,
             Filters = filters,
+            ScrollPosition = existing?.ScrollPosition ?? 0,
         });
     }
 
@@ -243,6 +351,27 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return;
 
         _disposed = true;
+
+        try
+        {
+            if (_scrollModule is not null)
+            {
+                await _scrollModule.InvokeVoidAsync("disableScrollTracking", _scrollTrackerId);
+                await _scrollModule.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit already torn down — nothing to clean up.
+        }
+        catch (JSException)
+        {
+            // Best-effort: ignore shutdown-time JS interop races.
+        }
+        finally
+        {
+            _dotNetRef?.Dispose();
+        }
 
         try
         {
