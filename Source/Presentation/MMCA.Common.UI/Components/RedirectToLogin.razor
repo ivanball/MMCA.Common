@@ -1,8 +1,14 @@
+@using MMCA.Common.UI.Services.Navigation
 @inject NavigationManager Navigation
 
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/login", forceLoad: true);
+        var current = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+        var safeReturnUrl = ReturnUrlProtector.Sanitize(current, "/");
+        var target = string.Equals(safeReturnUrl, "/", StringComparison.Ordinal)
+            ? "/login"
+            : $"/login?returnUrl={Uri.EscapeDataString(safeReturnUrl)}";
+        Navigation.NavigateTo(target, forceLoad: true);
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI;
 
@@ -52,6 +53,8 @@ public static class DependencyInjection
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
             services.TryAddScoped<ListPageStateService>();
+            services.TryAddScoped<ListPageQueryStateService>();
+            services.TryAddScoped<NavigationHistoryService>();
 
             // Default no-op OAuth settings — downstream apps override with TryAdd before this runs,
             // or replace after by calling AddSingleton<IOAuthUISettings, ConcreteSettings>()

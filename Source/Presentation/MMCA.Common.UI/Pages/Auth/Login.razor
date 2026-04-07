@@ -3,6 +3,7 @@
 @using MMCA.Common.Shared.Auth
 @using MMCA.Common.UI.Common.Settings
 @using MMCA.Common.UI.Services.Auth
+@using MMCA.Common.UI.Services.Navigation
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
 @inject IOAuthUISettings OAuthSettings
@@ -69,7 +70,7 @@
                     {
                         <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                    StartIcon="@Icons.Custom.Brands.Google"
-                                   Href="@(_apiBase + "/auth/oauth/google")"
+                                   Href="@BuildOAuthUrl("google")"
                                    aria-label="Sign in with Google">
                             Sign in with Google
                         </MudButton>
@@ -78,7 +79,7 @@
                     {
                         <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
                                    StartIcon="@Icons.Custom.Brands.GitHub"
-                                   Href="@(_apiBase + "/auth/oauth/github")"
+                                   Href="@BuildOAuthUrl("github")"
                                    aria-label="Sign in with GitHub">
                             Sign in with GitHub
                         </MudButton>
@@ -90,6 +91,9 @@
 </MudContainer>
 
 @code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
     private string _email = string.Empty;
     private string _password = string.Empty;
     private string? _errorMessage;
@@ -103,6 +107,17 @@
         _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
     }
 
+    private string BuildOAuthUrl(string provider)
+    {
+        var url = $"{_apiBase}/auth/oauth/{provider}";
+        var safeReturnUrl = ReturnUrlProtector.Sanitize(ReturnUrl, "/");
+        if (!string.Equals(safeReturnUrl, "/", StringComparison.Ordinal))
+        {
+            url += $"?returnUrl={Uri.EscapeDataString(safeReturnUrl)}";
+        }
+        return url;
+    }
+
     private async Task HandleLoginAsync()
     {
         _errorMessage = null;
@@ -113,7 +128,7 @@
             var result = await AuthService.LoginAsync(new LoginRequest(_email, _password));
             if (result is not null)
             {
-                Navigation.NavigateTo("/", forceLoad: true);
+                Navigation.NavigateTo(ReturnUrlProtector.Sanitize(ReturnUrl, "/"), forceLoad: true);
             }
             else
             {

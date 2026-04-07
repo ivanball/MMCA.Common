@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.JSInterop;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Services;
@@ -19,6 +20,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     [Inject] protected ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IBrowserViewportService BrowserViewportService { get; set; } = default!;
     [Inject] private ListPageStateService ListPageStateService { get; set; } = default!;
+    [Inject] private ListPageQueryStateService QueryStateService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
@@ -58,6 +60,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private double? _pendingScrollRestore;
     private int _savedPage;
     private int _savedPageSize;
+    private string? _savedSortColumn;
+    private bool _savedSortDescending;
+    private bool _suppressNextLocationChanged;
+    private bool _locationHandlerRegistered;
     private readonly string _scrollTrackerId = Guid.NewGuid().ToString();
 
     /// <inheritdoc />
@@ -82,30 +88,89 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     protected virtual MudDataGrid<TDto>? GridRef => null;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Reads URL query string as the source of truth for paging, sort, and filter state,
+    /// then merges in the in-memory <see cref="ListPageStateService"/> entry for scroll
+    /// position (which is too noisy to keep in the URL). Subscribes to
+    /// <see cref="NavigationManager.LocationChanged"/> so browser back/forward navigation
+    /// re-applies state and reloads the grid.
+    /// </summary>
     protected override void OnInitialized()
     {
-        var state = ListPageStateService.GetState(GetRoutePath());
-        if (state is not null)
+        var urlState = QueryStateService.ReadCurrent();
+
+        CurrentPageState = urlState.Page;
+        _savedPage = urlState.Page;
+        _savedPageSize = urlState.PageSize;
+        if (urlState.PageSize > 0)
         {
-            CurrentPageState = state.Page;
-            _savedPage = state.Page;
-            _savedPageSize = state.PageSize;
-            if (state.PageSize > 0)
-            {
-                RowsPerPageState = state.PageSize;
-            }
-
-            MobileCurrentPage = state.MobilePage;
-            RestoreFilters(state.Filters);
-
-            if (state.ScrollPosition > 0)
-            {
-                _pendingScrollRestore = state.ScrollPosition;
-            }
+            RowsPerPageState = urlState.PageSize;
         }
 
+        MobileCurrentPage = urlState.MobilePage;
+        _savedSortColumn = urlState.SortColumn;
+        _savedSortDescending = urlState.SortDescending;
+        RestoreFilters(urlState.Filters);
+
+        // Scroll position is not in the URL — fall back to the in-memory snapshot.
+        var savedState = ListPageStateService.GetState(GetRoutePath());
+        if (savedState is { ScrollPosition: > 0 })
+        {
+            _pendingScrollRestore = savedState.ScrollPosition;
+        }
+
+        NavigationManager.LocationChanged += OnLocationChanged;
+        _locationHandlerRegistered = true;
+
         base.OnInitialized();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (_suppressNextLocationChanged)
+        {
+            _suppressNextLocationChanged = false;
+            return;
+        }
+
+        // Only react when the user navigates within the same list page (back/forward
+        // between filtered states). Different paths are handled by component disposal.
+        var newPath = new Uri(e.Location, UriKind.Absolute).AbsolutePath;
+        if (!string.Equals(newPath, GetRoutePath(), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var urlState = QueryStateService.ReadCurrent();
+        _savedPage = urlState.Page;
+        _savedPageSize = urlState.PageSize;
+        if (urlState.PageSize > 0)
+        {
+            RowsPerPageState = urlState.PageSize;
+        }
+        _savedSortColumn = urlState.SortColumn;
+        _savedSortDescending = urlState.SortDescending;
+        MobileCurrentPage = urlState.MobilePage;
+        RestoreFilters(urlState.Filters);
+
+        _ = InvokeAsync(async () =>
+        {
+            if (GridRef is { } grid)
+            {
+                ApplyCurrentPageFromUrl(grid, urlState.Page);
+                await grid.ReloadServerData();
+            }
+            StateHasChanged();
+        });
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "BL0005:Component parameter should not be set outside of its component", Justification = "MudDataGrid v9 exposes no public method to set CurrentPage to an arbitrary index; the property setter is the documented mechanism and is well-behaved.")]
+    private static void ApplyCurrentPageFromUrl(MudDataGrid<TDto> grid, int targetPage)
+    {
+        if (grid.CurrentPage != targetPage)
+        {
+            grid.CurrentPage = targetPage;
+        }
     }
 
     /// <inheritdoc />
@@ -134,6 +199,20 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     {
         if (firstRender)
         {
+            // Hydrate scroll/state from sessionStorage now that JS interop is available
+            // (the SSR-time OnInitialized only saw the in-memory dictionary, which is
+            // empty after a circuit teardown or forceLoad navigation).
+            var routePath = GetRoutePath();
+            await ListPageStateService.HydrateFromSessionAsync(routePath);
+            if (_pendingScrollRestore is null)
+            {
+                var hydrated = ListPageStateService.GetState(routePath);
+                if (hydrated is { ScrollPosition: > 0 })
+                {
+                    _pendingScrollRestore = hydrated.ScrollPosition;
+                }
+            }
+
             await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
 
             _scrollModule = await JS.InvokeAsync<IJSObjectReference>(
@@ -229,10 +308,19 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         var (sortColumn, sortDirection) = ExtractSortParameters(state);
 
+        // First-fetch fallback: when MudDataGrid hasn't yet picked up a SortDefinition
+        // (typical on initial load with a URL-driven sort), use the sort restored from
+        // the query string so the data lands sorted from the very first request.
+        if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
+        {
+            sortColumn = _savedSortColumn;
+            sortDirection = _savedSortDescending ? "desc" : "asc";
+        }
+
         try
         {
             var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, _cts!.Token);
-            SaveCurrentState(state.Page, state.PageSize);
+            SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
             return new GridData<TDto> { Items = items, TotalItems = totalItems };
         }
         catch (OperationCanceledException)
@@ -274,7 +362,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             var (items, totalItems) = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
             MobileItems = items;
             MobileTotalItems = totalItems;
-            SaveCurrentState(0, MobilePageSize);
+            SaveCurrentState(0, MobilePageSize, _savedSortColumn, _savedSortDescending);
         }
         catch (OperationCanceledException)
         {
@@ -318,20 +406,30 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         return (sort?.SortBy, sort?.Descending == true ? "desc" : "asc");
     }
 
-    private void SaveCurrentState(int page, int pageSize)
+    private void SaveCurrentState(int page, int pageSize, string? sortColumn, bool sortDescending)
     {
         var routePath = GetRoutePath();
         var existing = ListPageStateService.GetState(routePath);
         var filters = new Dictionary<string, string>();
         SaveFilters(filters);
-        ListPageStateService.SaveState(routePath, new ListPageState
+        var state = new ListPageState
         {
             Page = page,
             PageSize = pageSize,
             MobilePage = MobileCurrentPage,
+            SortColumn = sortColumn,
+            SortDescending = sortDescending,
             Filters = filters,
             ScrollPosition = existing?.ScrollPosition ?? 0,
-        });
+        };
+        ListPageStateService.SaveState(routePath, state);
+
+        // Mirror to URL (replace current entry — filter changes must not pollute the back stack)
+        // and to sessionStorage so the state survives circuit teardown / forceLoad navigations.
+        _suppressNextLocationChanged = true;
+        QueryStateService.ReplaceState(state);
+        // Fire-and-forget the sessionStorage write — it tolerates SSR/JSDisconnected internally.
+        _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
     }
 
     private string GetRoutePath() => new Uri(NavigationManager.Uri).AbsolutePath;
@@ -351,6 +449,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return;
 
         _disposed = true;
+
+        UnsubscribeLocationChanged();
 
         try
         {
@@ -394,11 +494,21 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         if (disposing)
         {
+            UnsubscribeLocationChanged();
             _cts?.Cancel();
             _cts?.Dispose();
         }
 
         _disposed = true;
+    }
+
+    private void UnsubscribeLocationChanged()
+    {
+        if (_locationHandlerRegistered)
+        {
+            NavigationManager.LocationChanged -= OnLocationChanged;
+            _locationHandlerRegistered = false;
+        }
     }
 
     public void Dispose()

@@ -1,0 +1,56 @@
+@*
+    Wraps Blazor's <NavigationLock> to provide a unified guard against losing
+    unsaved form/page state across every navigation surface:
+
+      - browser back / forward / tab close → ConfirmExternalNavigation triggers
+        the native beforeunload dialog (uncustomisable, but uniformly supported)
+      - in-app NavigateTo / nav links → OnBeforeInternalNavigation shows a
+        MudDialog with a custom message that the user can confirm or cancel
+
+    Set IsDirty to true when the form is modified, false on save/discard.
+*@
+@using Microsoft.AspNetCore.Components.Routing
+@inject IDialogService DialogService
+
+<NavigationLock ConfirmExternalNavigation="@IsDirty"
+                OnBeforeInternalNavigation="HandleBeforeInternalNavigationAsync" />
+
+@code {
+    /// <summary>
+    /// When <see langword="true"/>, in-app navigation away from this component is
+    /// intercepted with a confirmation dialog and external navigation triggers the
+    /// browser's <c>beforeunload</c> prompt.
+    /// </summary>
+    [Parameter, EditorRequired] public bool IsDirty { get; set; }
+
+    /// <summary>Title of the in-app confirmation dialog.</summary>
+    [Parameter] public string Title { get; set; } = "Unsaved changes";
+
+    /// <summary>Body text of the in-app confirmation dialog.</summary>
+    [Parameter] public string Message { get; set; } = "You have unsaved changes. Leave this page anyway?";
+
+    /// <summary>Label of the primary (leave) button.</summary>
+    [Parameter] public string LeaveButtonText { get; set; } = "Leave";
+
+    /// <summary>Label of the secondary (stay) button.</summary>
+    [Parameter] public string StayButtonText { get; set; } = "Stay";
+
+    private async Task HandleBeforeInternalNavigationAsync(LocationChangingContext context)
+    {
+        if (!IsDirty)
+        {
+            return;
+        }
+
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            Title,
+            Message,
+            yesText: LeaveButtonText,
+            cancelText: StayButtonText);
+
+        if (confirmed is not true)
+        {
+            context.PreventNavigation();
+        }
+    }
+}

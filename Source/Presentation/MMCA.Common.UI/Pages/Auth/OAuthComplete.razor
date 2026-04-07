@@ -1,6 +1,7 @@
 @page "/auth/oauth-complete"
 @using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.Common.UI.Services.Auth
+@using MMCA.Common.UI.Services.Navigation
 @attribute [StreamRendering(false)]
 @inject ITokenStorageService TokenStorage
 @inject AuthenticationStateProvider AuthStateProvider
@@ -68,7 +69,7 @@
                 jwtProvider.NotifyUserAuthentication(AccessToken);
             }
 
-            Navigation.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+            Navigation.NavigateTo(ReturnUrlProtector.Sanitize(ReturnUrl, "/"), forceLoad: true);
         }
         catch
         {

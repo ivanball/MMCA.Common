@@ -1,5 +1,7 @@
 using AwesomeAssertions;
+using Microsoft.JSInterop;
 using MMCA.Common.UI.Services;
+using Moq;
 
 namespace MMCA.Common.UI.Tests.Services;
 
@@ -8,7 +10,7 @@ public class ListPageStateServiceTests
     [Fact]
     public void SaveState_ThenGetState_RoundTripsAllFields()
     {
-        var sut = new ListPageStateService();
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
         var state = new ListPageState
         {
             Page = 3,
@@ -37,7 +39,7 @@ public class ListPageStateServiceTests
     [Fact]
     public void GetState_ForUnknownRoute_ReturnsNull()
     {
-        var sut = new ListPageStateService();
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
 
         var result = sut.GetState("/unknown");
 
@@ -47,7 +49,7 @@ public class ListPageStateServiceTests
     [Fact]
     public void UpdateScrollPosition_OnExistingEntry_PreservesOtherFields()
     {
-        var sut = new ListPageStateService();
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
         sut.SaveState("/orders", new ListPageState
         {
             Page = 5,
@@ -71,7 +73,7 @@ public class ListPageStateServiceTests
     [Fact]
     public void UpdateScrollPosition_OnMissingEntry_CreatesMinimalEntry()
     {
-        var sut = new ListPageStateService();
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
 
         sut.UpdateScrollPosition("/events", 42.0);
         var retrieved = sut.GetState("/events");
@@ -87,7 +89,7 @@ public class ListPageStateServiceTests
     [Fact]
     public void SaveState_DifferentRoutes_AreIsolated()
     {
-        var sut = new ListPageStateService();
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
         sut.SaveState("/products", new ListPageState { Page = 1, PageSize = 10 });
         sut.SaveState("/categories", new ListPageState { Page = 4, PageSize = 50 });
 
@@ -103,7 +105,7 @@ public class ListPageStateServiceTests
     [Fact]
     public void SaveState_OverwritesPreviousEntryForSameRoute()
     {
-        var sut = new ListPageStateService();
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
         sut.SaveState("/products", new ListPageState { Page = 1, PageSize = 10 });
         sut.SaveState("/products", new ListPageState { Page = 7, PageSize = 100 });
 

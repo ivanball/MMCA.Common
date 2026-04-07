@@ -1,0 +1,79 @@
+@*
+    Detects browser back-forward cache (bfcache) restores and invokes OnRestore so
+    the host page can refetch its data. Drop into any page where stale state from
+    bfcache would mislead the user — e.g. order details, profile pages, dashboards.
+    No-op during SSR prerender (registers in OnAfterRenderAsync once JS is available).
+*@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@code {
+    private const string ModulePath = "./_content/MMCA.Common.UI/nav-interop.js";
+
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<PageStateScope>? _selfRef;
+    private bool _registered;
+
+    /// <summary>
+    /// Fired when the page is restored from the browser back-forward cache or via
+    /// a back/forward navigation entry. Use this to refetch data that may have
+    /// changed while the user was on another page.
+    /// </summary>
+    [Parameter, EditorRequired] public EventCallback OnRestore { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _registered)
+        {
+            return;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", ModulePath);
+            _selfRef = DotNetObjectReference.Create(this);
+            await _module.InvokeVoidAsync("registerBfcacheHandler", _selfRef);
+            _registered = true;
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit torn down before registration completed.
+        }
+        catch (JSException)
+        {
+            // Defensive: never let JS interop failures break the host page.
+        }
+    }
+
+    /// <summary>
+    /// Invoked from JS when <c>pageshow</c> fires with <c>event.persisted === true</c>
+    /// or when the navigation type is <c>back_forward</c>.
+    /// </summary>
+    [JSInvokable]
+    public Task OnPageRestoredAsync() => OnRestore.InvokeAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                if (_registered)
+                {
+                    await _module.InvokeVoidAsync("unregisterBfcacheHandler");
+                }
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit already torn down — nothing to clean up.
+            }
+            catch (JSException)
+            {
+                // Best-effort: ignore shutdown-time JS interop races.
+            }
+        }
+
+        _selfRef?.Dispose();
+    }
+}
