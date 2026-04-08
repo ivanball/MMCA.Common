@@ -67,17 +67,65 @@ public sealed class ModuleControllerFeatureProviderTests
     [Fact]
     public void PopulateFeature_HandlesControllerWithNullNamespace()
     {
-        // Types in the global namespace have null Namespace — they should never be filtered.
-        // We cannot easily create a type with null Namespace in a file-scoped namespace project,
-        // but we can verify that non-module types are retained. The built-in object type lives in
-        // "System" namespace (no ".Modules." segment), so it exercises the same safe path.
+        // typeof(object) lives in namespace "System" / assembly "System.Private.CoreLib".
+        // Neither contains the token ".System." (no leading dot), so the filter does not
+        // match and the type is retained. This guards against false positives on built-in
+        // BCL types when an operator names a module after a common token.
         ModulesSettings settings = CreateSettings(("System", false));
         var sut = new ModuleControllerFeatureProvider(settings);
         var feature = new ControllerFeature();
 
-        // typeof(object) has namespace "System" — no ".Modules." segment, so it's kept.
         TypeInfo systemType = typeof(object).GetTypeInfo();
         feature.Controllers.Add(systemType);
+
+        sut.PopulateFeature([], feature);
+
+        feature.Controllers.Should().ContainSingle();
+    }
+
+    // ── Real-world convention: MMCA.{Repo}.{Module}.API.Controllers.* ──
+    [Fact]
+    public void PopulateFeature_RemovesControllerForDisabledModule_ByNamespaceToken()
+    {
+        // Stand-in for a controller whose namespace contains ".Catalog." — the actual
+        // MMCA.Store.Catalog.API.Controllers convention. Catalog is disabled in settings,
+        // so the controller must be removed even though its namespace doesn't contain
+        // the legacy ".Modules." segment.
+        ModulesSettings settings = CreateSettings(("Catalog", false));
+        var sut = new ModuleControllerFeatureProvider(settings);
+        var feature = new ControllerFeature();
+        TypeInfo catalogControllerType = typeof(Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
+        feature.Controllers.Add(catalogControllerType);
+
+        sut.PopulateFeature([], feature);
+
+        feature.Controllers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PopulateFeature_KeepsControllerForEnabledModule_ByNamespaceToken()
+    {
+        ModulesSettings settings = CreateSettings(("Catalog", true));
+        var sut = new ModuleControllerFeatureProvider(settings);
+        var feature = new ControllerFeature();
+        TypeInfo catalogControllerType = typeof(Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
+        feature.Controllers.Add(catalogControllerType);
+
+        sut.PopulateFeature([], feature);
+
+        feature.Controllers.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void PopulateFeature_DoesNotMatchOnSubstring()
+    {
+        // Disabled module "Cat" must NOT remove a controller in ".Catalog." namespace,
+        // because the matcher uses dot-bounded tokens (".Cat." vs ".Catalog.").
+        ModulesSettings settings = CreateSettings(("Cat", false));
+        var sut = new ModuleControllerFeatureProvider(settings);
+        var feature = new ControllerFeature();
+        TypeInfo catalogControllerType = typeof(Fakes.MMCA.Store.Catalog.API.Controllers.FakeCategoriesController).GetTypeInfo();
+        feature.Controllers.Add(catalogControllerType);
 
         sut.PopulateFeature([], feature);
 

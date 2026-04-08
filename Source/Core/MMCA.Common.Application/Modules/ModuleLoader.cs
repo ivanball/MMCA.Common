@@ -107,20 +107,36 @@ public sealed partial class ModuleLoader
 
     private void ValidateModuleDependencies(IModule module, ModulesSettings modulesSettings)
     {
+        // A dependency is considered satisfied if the dependency module is enabled in-process
+        // OR the consumer's ModuleSettings.RemoteDependencies declares it as remote (extracted
+        // service). The host is responsible for actually wiring the cross-process replacement
+        // (e.g., a typed gRPC client) after ModuleLoader.DiscoverAndRegister returns.
         var disabledDeps = module.Dependencies
             .Where(d => !modulesSettings.IsModuleEnabled(d))
             .ToList();
 
-        if (disabledDeps.Count > 0 && module.RequiresDependencies)
+        var unsatisfiedDeps = disabledDeps
+            .Where(d => !modulesSettings.IsDependencyRemote(module.Name, d))
+            .ToList();
+
+        if (unsatisfiedDeps.Count > 0 && module.RequiresDependencies)
         {
             throw new InvalidOperationException(
-                $"Module '{module.Name}' requires [{string.Join(", ", disabledDeps)}] " +
-                "which are disabled. Either enable the required modules or disable this module.");
+                $"Module '{module.Name}' requires [{string.Join(", ", unsatisfiedDeps)}] " +
+                "which are disabled and not declared as remote dependencies. Either enable the " +
+                "required modules, disable this module, or add the dependency name to " +
+                $"Modules:{module.Name}:RemoteDependencies in configuration if it is satisfied " +
+                "by an extracted microservice.");
         }
 
-        foreach (var dependency in disabledDeps)
+        foreach (var dependency in unsatisfiedDeps)
         {
             LogDependencyDisabledWarning(Logger, module.Name, dependency);
+        }
+
+        foreach (var dependency in disabledDeps.Except(unsatisfiedDeps, StringComparer.OrdinalIgnoreCase))
+        {
+            LogDependencyRemote(Logger, module.Name, dependency);
         }
     }
 
@@ -237,6 +253,9 @@ public sealed partial class ModuleLoader
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Module '{ModuleName}' depends on '{DependencyName}' which is disabled — stub services will be used")]
     private static partial void LogDependencyDisabledWarning(ILogger logger, string moduleName, string dependencyName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Module '{ModuleName}' depends on '{DependencyName}' which is satisfied by a remote service (declared in RemoteDependencies)")]
+    private static partial void LogDependencyRemote(ILogger logger, string moduleName, string dependencyName);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to scan assembly '{AssemblyName}' for modules: {Error}")]
     private static partial void LogAssemblyScanFailed(ILogger logger, string assemblyName, string error);

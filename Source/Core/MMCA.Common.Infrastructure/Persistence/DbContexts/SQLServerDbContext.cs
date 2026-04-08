@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Settings;
@@ -29,7 +30,19 @@ public sealed class SQLServerDbContext(
                     {
                         sql.MigrationsAssembly(connectionStringSettings.SQLServerMigrationsAssembly);
                     }
-                });
+                })
+            // Suppress PendingModelChangesWarning. Required by the microservices-extraction
+            // architecture (the user's "shared SQLServerDbContext" decision): each extracted
+            // service host registers only the entity configurations for its enabled modules,
+            // so its runtime EF model is always a strict subset of the migration snapshot
+            // (which captures the union of all modules' tables). EF Core 9+ promotes this
+            // warning to an error inside Migrator.ValidateMigrations during MigrateAsync —
+            // suppressing it lets each service start cleanly.
+            //
+            // The trade-off: monolith hosts no longer get the "you forgot to add a migration"
+            // safety net. CI should run `dotnet ef migrations has-pending-model-changes`
+            // against the migrations assembly with the FULL model loaded as a separate gate.
+            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 
         base.OnConfiguring(optionsBuilder);
     }

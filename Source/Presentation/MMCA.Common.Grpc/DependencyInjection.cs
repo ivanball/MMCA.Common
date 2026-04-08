@@ -2,6 +2,7 @@ using Grpc.Net.ClientFactory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
+using MMCA.Common.Grpc.Diagnostics;
 using MMCA.Common.Grpc.Interceptors;
 
 namespace MMCA.Common.Grpc;
@@ -41,7 +42,15 @@ public static class DependencyInjection
         /// Registers a typed gRPC client (<typeparamref name="TClient"/>) targeted at the named
         /// service via Aspire service discovery. The client is wired with:
         /// <list type="bullet">
-        ///   <item>Service discovery: address resolved as <c>http://{serviceName}</c>.</item>
+        ///   <item>Service discovery: address resolved as <c>http://{serviceName}</c> — HTTP/2
+        ///   cleartext (h2c) with prior knowledge. We use h2c rather than HTTPS because Aspire's
+        ///   project-resource endpoint discovery from <c>launchSettings.json</c> doesn't reliably
+        ///   create a <c>services__&lt;name&gt;__https__0</c> discovery key for project resources;
+        ///   the resolver silently falls back to <c>http</c> regardless of the requested scheme.
+        ///   The target service must serve HTTP/2 on its cleartext endpoint via
+        ///   <c>"Kestrel": { "EndpointDefaults": { "Protocols": "Http2" } }</c> in its
+        ///   <c>appsettings.json</c> — otherwise Kestrel rejects HTTP/2 frames with
+        ///   <c>HTTP_1_1_REQUIRED</c>.</item>
         ///   <item><see cref="JwtForwardingClientInterceptor"/>: forwards inbound bearer tokens.</item>
         ///   <item>Standard Polly resilience handler: matches the HTTP defaults from <c>MMCA.Common.Aspire</c>.</item>
         /// </list>
@@ -62,10 +71,30 @@ public static class DependencyInjection
 
             services.AddHttpContextAccessor();
             services.TryAddTransient<JwtForwardingClientInterceptor>();
+            services.TryAddTransient<GrpcRequestLoggingHandler>();
 
             var builder = services.AddGrpcClient<TClient>(options =>
                     options.Address = new Uri($"http://{serviceName}"))
                 .AddInterceptor<JwtForwardingClientInterceptor>(InterceptorScope.Client);
+
+            // Diagnostic delegating handler — logs the resolved URL + HTTP version of every
+            // outgoing gRPC call. Helpful for verifying Aspire service discovery is picking
+            // the expected scheme/port. Safe to leave enabled in dev; remove or wrap with
+            // an environment check if log volume becomes a concern in production.
+            builder.AddHttpMessageHandler<GrpcRequestLoggingHandler>();
+
+            // Force the primary handler to a SocketsHttpHandler that explicitly opts into
+            // HTTP/2. The global ConfigureHttpClientDefaults from MMCA.Common.Aspire applies
+            // to ALL HttpClients including the gRPC client, and its standard resilience
+            // pipeline can wrap the primary handler in a way that defeats HTTP/2 negotiation
+            // (the default HttpClientHandler doesn't always honor HTTP/2 preference even when
+            // the request specifies Version=2.0). Setting SocketsHttpHandler explicitly
+            // bypasses that wrapper for the gRPC client only.
+            builder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                EnableMultipleHttp2Connections = true,
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+            });
 
             // AddStandardResilienceHandler returns IHttpStandardResiliencePipelineBuilder; the
             // pipeline is wired onto the same IHttpClientBuilder, so return the original builder

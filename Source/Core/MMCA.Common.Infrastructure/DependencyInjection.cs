@@ -268,6 +268,18 @@ public static class DependencyInjection
                 return services;
             }
 
+            var connectionString = ResolveBrokerConnectionString(configuration, settings);
+
+            // Diagnostic: log the resolved provider + connection string source so misconfiguration
+            // is loud at startup. Sources we check, in order: MessageBus:ConnectionString,
+            // ConnectionStrings:rabbitmq (Aspire WithReference convention), ConnectionStrings:messaging.
+            Console.Out.WriteLine(
+                $"[MMCA.Common AddBrokerMessaging] Provider={settings.Provider} " +
+                $"MessageBus:ConnectionString={(string.IsNullOrWhiteSpace(settings.ConnectionString) ? "<empty>" : "<set>")} " +
+                $"ConnectionStrings:rabbitmq={(string.IsNullOrWhiteSpace(configuration.GetConnectionString("rabbitmq")) ? "<empty>" : "<set>")} " +
+                $"ConnectionStrings:messaging={(string.IsNullOrWhiteSpace(configuration.GetConnectionString("messaging")) ? "<empty>" : "<set>")} " +
+                $"Resolved={(string.IsNullOrWhiteSpace(connectionString) ? "<NULL — MassTransit will use defaults>" : connectionString)}");
+
             services.AddMassTransit(x =>
             {
                 if (!string.IsNullOrWhiteSpace(settings.EndpointPrefix))
@@ -276,43 +288,18 @@ public static class DependencyInjection
                 }
 
                 configureConsumers?.Invoke(x);
-
-                switch (settings.Provider)
-                {
-                    case MessageBusProvider.RabbitMq:
-                        x.UsingRabbitMq((context, cfg) =>
-                        {
-                            if (!string.IsNullOrWhiteSpace(settings.ConnectionString))
-                            {
-                                cfg.Host(settings.ConnectionString);
-                            }
-
-                            cfg.ConfigureEndpoints(context);
-                        });
-                        break;
-
-                    case MessageBusProvider.AzureServiceBus:
-                        x.UsingAzureServiceBus((context, cfg) =>
-                        {
-                            if (!string.IsNullOrWhiteSpace(settings.ConnectionString))
-                            {
-                                cfg.Host(settings.ConnectionString);
-                            }
-
-                            cfg.ConfigureEndpoints(context);
-                        });
-                        break;
-
-                    case MessageBusProvider.InProcess:
-                    default:
-                        // Already short-circuited above; no-op fallback for completeness.
-                        break;
-                }
+                ConfigureBrokerTransport(x, settings.Provider, connectionString);
             });
 
             // Swap the default in-process bus for the broker-backed one. Use Replace so we
             // overwrite the AddServices() registration rather than appending a second one.
             services.Replace(ServiceDescriptor.Scoped<IMessageBus, BrokerMessageBus>());
+
+            // Also replace IEventBus so application code that publishes integration events
+            // (via IIntegrationEventPublisher → IEventBus.PublishAsync) writes to the outbox
+            // and signals the OutboxProcessor — but does NOT dispatch in-process. The
+            // OutboxProcessor's broker-publish path becomes the only delivery channel.
+            services.Replace(ServiceDescriptor.Scoped<IEventBus, BrokerEventBus>());
 
             return services;
         }
@@ -350,6 +337,70 @@ public static class DependencyInjection
 
             builder.AddStandardResilienceHandler();
             return builder;
+        }
+    }
+
+    /// <summary>
+    /// Resolves the broker connection string. Order of precedence:
+    /// <list type="number">
+    ///   <item><c>MessageBus:ConnectionString</c> — explicit override in appsettings/secrets.</item>
+    ///   <item><c>ConnectionStrings:rabbitmq</c> — Aspire injects this via <c>WithReference(broker)</c>.</item>
+    ///   <item><c>ConnectionStrings:messaging</c> — alternative Aspire convention.</item>
+    /// </list>
+    /// Without this fallback, MassTransit defaults to <c>localhost:5672</c> and fails to reach
+    /// the Aspire-allocated broker container port.
+    /// </summary>
+    private static string? ResolveBrokerConnectionString(IConfiguration configuration, MessageBusSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.ConnectionString))
+        {
+            return settings.ConnectionString;
+        }
+
+        return configuration.GetConnectionString("rabbitmq")
+            ?? configuration.GetConnectionString("messaging");
+    }
+
+    /// <summary>
+    /// Wires MassTransit to the configured broker transport using the resolved connection string.
+    /// Extracted out of <c>AddBrokerMessaging</c> to keep that method's cyclomatic complexity
+    /// below the analyzer threshold.
+    /// </summary>
+    private static void ConfigureBrokerTransport(
+        IBusRegistrationConfigurator x,
+        MessageBusProvider provider,
+        string? connectionString)
+    {
+        switch (provider)
+        {
+            case MessageBusProvider.RabbitMq:
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(connectionString))
+                    {
+                        cfg.Host(new Uri(connectionString));
+                    }
+
+                    cfg.ConfigureEndpoints(context);
+                });
+                break;
+
+            case MessageBusProvider.AzureServiceBus:
+                x.UsingAzureServiceBus((context, cfg) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(connectionString))
+                    {
+                        cfg.Host(connectionString);
+                    }
+
+                    cfg.ConfigureEndpoints(context);
+                });
+                break;
+
+            case MessageBusProvider.InProcess:
+            default:
+                // Caller short-circuits InProcess before reaching this method.
+                break;
         }
     }
 }

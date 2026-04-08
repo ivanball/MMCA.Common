@@ -34,7 +34,17 @@ public static class WebApplicationExtensions
             forwardedHeadersOptions.KnownProxies.Clear();
             forwardedHeadersOptions.KnownIPNetworks.Clear();
             app.UseForwardedHeaders(forwardedHeadersOptions);
-            app.UseHttpsRedirection();
+
+            // HTTPS redirect runs for browser/REST traffic only. gRPC clients use HTTP/2
+            // cleartext (h2c) on the HTTP endpoint of extracted services — Aspire's project-
+            // resource service discovery doesn't reliably expose an https key, so the resolver
+            // hands out the http URL. Issuing a 307 redirect on those requests breaks the gRPC
+            // call (the client retries against HTTPS, which then has its own issues). Skip
+            // HTTPS redirect for any request whose Content-Type starts with "application/grpc".
+            app.UseWhen(
+                ctx => !(ctx.Request.ContentType?.StartsWith("application/grpc", StringComparison.OrdinalIgnoreCase) ?? false),
+                builder => builder.UseHttpsRedirection());
+
             app.UseResponseCompression();
             app.UseRouting();
             app.UseCors(app.Environment.IsDevelopment()

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 
@@ -20,20 +21,40 @@ public sealed class SoftDeletedUserMiddleware(RequestDelegate next)
     /// <param name="context">The HTTP context for the current request.</param>
     /// <param name="currentUserService">Service to access the current user's identity.</param>
     /// <param name="cacheService">Cache service for caching deleted user lookups.</param>
-    /// <param name="softDeletedUserValidator">Validator to check if a user is soft-deleted.</param>
     /// <returns>A task representing the middleware execution.</returns>
+    /// <remarks>
+    /// <see cref="ISoftDeletedUserValidator"/> is resolved lazily via
+    /// <see cref="IServiceProvider.GetService(Type)"/> instead of being declared as an
+    /// InvokeAsync parameter. The validator is implemented by the Identity module; in
+    /// extracted services that do not host Identity (e.g., the Catalog microservice),
+    /// no implementation is registered. Resolving lazily means the middleware no-ops
+    /// in those services for unauthenticated requests, and only fails for authenticated
+    /// requests with a clear error — instead of 500-ing every request before any
+    /// downstream gRPC/REST endpoint runs.
+    /// </remarks>
     public async Task InvokeAsync(
         HttpContext context,
         ICurrentUserService currentUserService,
-        ICacheService cacheService,
-        ISoftDeletedUserValidator softDeletedUserValidator)
+        ICacheService cacheService)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var userId = currentUserService.UserId;
         if (userId is null)
         {
-            // Unauthenticated request — pass through
+            // Unauthenticated request — pass through. This is the common path in extracted
+            // services that don't host Identity: they receive only internal gRPC/HTTP traffic
+            // without an authenticated user, so the middleware never needs the validator.
+            await next(context).ConfigureAwait(false);
+            return;
+        }
+
+        var softDeletedUserValidator = context.RequestServices.GetService<ISoftDeletedUserValidator>();
+        if (softDeletedUserValidator is null)
+        {
+            // No validator registered — this service does not host Identity. Treat the
+            // user as not soft-deleted (Identity is the source of truth and presumably
+            // already validated the token before the request reached us). Continue.
             await next(context).ConfigureAwait(false);
             return;
         }
