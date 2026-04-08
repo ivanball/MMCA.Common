@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
@@ -350,6 +351,10 @@ public static class DependencyInjection
     /// Without this fallback, MassTransit defaults to <c>localhost:5672</c> and fails to reach
     /// the Aspire-allocated broker container port.
     /// </summary>
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static string? ResolveBrokerConnectionString(IConfiguration configuration, MessageBusSettings settings)
     {
         if (!string.IsNullOrWhiteSpace(settings.ConnectionString))
@@ -366,6 +371,10 @@ public static class DependencyInjection
     /// Extracted out of <c>AddBrokerMessaging</c> to keep that method's cyclomatic complexity
     /// below the analyzer threshold.
     /// </summary>
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static void ConfigureBrokerTransport(
         IBusRegistrationConfigurator x,
         MessageBusProvider provider,
