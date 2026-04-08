@@ -13,10 +13,12 @@
   </Folder>
   <Folder Name="/Source/Presentation/">
     <Project Path="Source/Presentation/MMCA.Common.API/MMCA.Common.API.csproj" />
+    <Project Path="Source/Presentation/MMCA.Common.Grpc/MMCA.Common.Grpc.csproj" />
     <Project Path="Source/Presentation/MMCA.Common.UI/MMCA.Common.UI.csproj" />
   </Folder>
   <Folder Name="/Source/Hosting/">
     <Project Path="Source/Hosting/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.Aspire.Hosting/MMCA.Common.Aspire.Hosting.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing.E2E/MMCA.Common.Testing.E2E.csproj" />
   </Folder>
@@ -29,6 +31,7 @@
   </Folder>
   <Folder Name="/Tests/Presentation/">
     <Project Path="Tests/Presentation/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
+    <Project Path="Tests/Presentation/MMCA.Common.Grpc.Tests/MMCA.Common.Grpc.Tests.csproj" />
     <Project Path="Tests/Presentation/MMCA.Common.UI.Tests/MMCA.Common.UI.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Architecture/">

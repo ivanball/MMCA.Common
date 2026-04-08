@@ -5,6 +5,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Messaging;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Settings;
@@ -74,6 +76,7 @@ public sealed partial class OutboxProcessor(
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<DbContexts.Factory.IDbContextFactory>();
         var context = dbContextFactory.GetDbContext(_settings.DataSource);
         var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
+        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var cutoff = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
 
@@ -85,7 +88,9 @@ public sealed partial class OutboxProcessor(
             .ConfigureAwait(false);
 
         if (messages.Count == 0)
+        {
             return;
+        }
 
         LogProcessingBatch(logger, messages.Count);
 
@@ -103,7 +108,18 @@ public sealed partial class OutboxProcessor(
                     continue;
                 }
 
-                await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
+                // Integration events route through IMessageBus so the registered transport
+                // (in-process for the monolith, MassTransit broker for extracted services)
+                // determines delivery. Pure domain events keep the legacy in-process dispatch.
+                if (domainEvent is IIntegrationEvent integrationEvent)
+                {
+                    await messageBus.PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
+                }
+
                 message.ProcessedOn = DateTime.UtcNow;
                 LogMessageProcessed(logger, message.Id, message.EventType);
             }

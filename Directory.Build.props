@@ -70,4 +70,20 @@
   <!-- Compile-time layer enforcement: validates ProjectReferences respect Clean Architecture -->
   <Import Project="$(MSBuildThisFileDirectory)Source\Build\MMCA.Common.LayerEnforcement.targets"
           Condition="$(MSBuildProjectDirectory.Contains('Source')) AND $(MSBuildProjectName.StartsWith('MMCA.Common'))" />
+
+  <!--
+    Contracts convention: any project ending in `.Contracts` automatically pulls in Grpc.Tools
+    and compiles every .proto file under `Protos\` with both server stubs and client stubs.
+    Used by extracted-service contract NuGet packages (e.g. `MMCA.Store.Catalog.Contracts`)
+    so the same set of generated types is available to both producer and consumer projects.
+  -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Contracts'))">
+    <PackageReference Include="Grpc.Tools">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Net.ClientFactory" />
+    <Protobuf Include="Protos\**\*.proto" GrpcServices="Both" />
+  </ItemGroup>
 </Project>

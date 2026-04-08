@@ -101,6 +101,70 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
+        /// Registers JWT Bearer authentication that trusts an external Identity service's JWKS
+        /// endpoint via OIDC-style authority discovery. Use this in extracted microservices
+        /// (everything except the Identity service itself) so they validate tokens issued by
+        /// the central Identity service without sharing a symmetric secret.
+        /// <para>
+        /// The <paramref name="authority"/> argument is the base URL of the Identity service
+        /// (e.g. <c>http://identity</c>, resolved via Aspire service discovery). The JWT
+        /// middleware fetches <c>{authority}/.well-known/openid-configuration</c> on startup,
+        /// which in turn points at <c>/.well-known/jwks.json</c> served by <c>MapJwksEndpoint</c>.
+        /// </para>
+        /// </summary>
+        /// <param name="authority">The Identity service base URL (no trailing slash).</param>
+        /// <param name="audience">The expected JWT audience claim.</param>
+        /// <param name="requireHttpsMetadata">
+        /// Whether the metadata fetch must use HTTPS. Defaults to <see langword="false"/> so
+        /// service-discovery URLs (which are <c>http://</c>) work in dev. Production deployments
+        /// should set this to <see langword="true"/>.
+        /// </param>
+        public IServiceCollection AddForwardedJwtBearer(
+            string authority,
+            string audience,
+            bool requireHttpsMetadata = false)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(authority);
+            ArgumentException.ThrowIfNullOrWhiteSpace(audience);
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.Authority = authority;
+                    options.Audience = audience;
+                    options.RequireHttpsMetadata = requireHttpsMetadata;
+                    options.TokenValidationParameters = new()
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = authority,
+                        ValidAudience = audience,
+                    };
+
+                    // Same SignalR access_token query-string fallback as AddCommonAuthentication.
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            if (!string.IsNullOrEmpty(accessToken)
+                                && context.HttpContext.Request.Path.StartsWithSegments("/hubs", StringComparison.OrdinalIgnoreCase))
+                            {
+                                context.Token = accessToken;
+                            }
+
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+
+            services.AddAuthorizationPolicies();
+            return services;
+        }
+
+        /// <summary>
         /// Registers JWT Bearer authentication with symmetric HMAC-SHA256 key and authorization policies.
         /// Binds <see cref="JwtSettings"/> from configuration and validates the signing key length.
         /// </summary>

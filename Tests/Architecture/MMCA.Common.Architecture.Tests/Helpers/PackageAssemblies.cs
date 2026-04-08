@@ -23,6 +23,9 @@ internal static class PackageAssemblies
     internal static Assembly Api =>
         typeof(Common.API.Controllers.ApiControllerBase).Assembly;
 
+    internal static Assembly Grpc =>
+        typeof(Common.Grpc.ResultGrpcExtensions).Assembly;
+
     internal static Assembly UI =>
         typeof(Common.UI.UISharedAssemblyReference).Assembly;
 }

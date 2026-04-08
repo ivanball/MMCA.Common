@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -27,6 +28,7 @@ public sealed class OutboxProcessorTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly OutboxTestDbContext _dbContext;
     private readonly Mock<IDomainEventDispatcher> _dispatcherMock;
+    private readonly Mock<IMessageBus> _messageBusMock;
     private readonly OutboxProcessor _sut;
 
     public OutboxProcessorTests()
@@ -35,6 +37,7 @@ public sealed class OutboxProcessorTests : IDisposable
         _connection.Open();
 
         _dispatcherMock = new Mock<IDomainEventDispatcher>();
+        _messageBusMock = new Mock<IMessageBus>();
 
         // Build a service provider that includes interceptor dependencies so the
         // test DbContext can resolve them via its base OnConfiguring.
@@ -69,6 +72,7 @@ public sealed class OutboxProcessorTests : IDisposable
         var services = new ServiceCollection();
         services.AddSingleton(mockDbContextFactory.Object);
         services.AddSingleton(_dispatcherMock.Object);
+        services.AddSingleton(_messageBusMock.Object);
         ServiceProvider rootProvider = services.BuildServiceProvider();
 
         var scopeFactory = rootProvider.GetRequiredService<IServiceScopeFactory>();
@@ -276,12 +280,48 @@ public sealed class OutboxProcessorTests : IDisposable
         succeeded.LastError.Should().BeNull();
     }
 
+    [Fact]
+    public async Task IntegrationEvent_RoutedThroughMessageBus_NotDispatcher()
+    {
+        // Arrange: an outbox entry whose CLR type implements IIntegrationEvent.
+        OutboxMessage message = CreateEligibleMessage(
+            eventType: typeof(TestIntegrationEvent).AssemblyQualifiedName);
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        await InvokeProcessPendingMessagesAsync();
+
+        // Assert: published via IMessageBus, NOT IDomainEventDispatcher.
+        OutboxMessage processed = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        processed.ProcessedOn.Should().NotBeNull();
+        processed.LastError.Should().BeNull();
+        processed.RetryCount.Should().Be(0);
+
+        _messageBusMock.Verify(
+            b => b.PublishAsync(It.IsAny<IIntegrationEvent>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ── Test doubles ──
 
     /// <summary>
     /// A minimal domain event used by tests to provide a resolvable type for deserialization.
     /// </summary>
     public sealed class TestDomainEvent : IDomainEvent
+    {
+        public DateTime DateOccurred { get; init; }
+    }
+
+    /// <summary>
+    /// A minimal integration event used to verify the OutboxProcessor routes
+    /// <see cref="IIntegrationEvent"/> messages through <see cref="IMessageBus"/>
+    /// rather than the in-process domain event dispatcher.
+    /// </summary>
+    public sealed class TestIntegrationEvent : IIntegrationEvent
     {
         public DateTime DateOccurred { get; init; }
     }

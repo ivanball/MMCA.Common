@@ -1,15 +1,20 @@
 using System.Reflection;
+using MassTransit;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure;
+using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Infrastructure.Http;
 using MMCA.Common.Infrastructure.Hubs;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
@@ -94,6 +99,17 @@ public static class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            services.AddOptions<MessageBusSettings>()
+                .Bind(configuration.GetSection(MessageBusSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddOptions<JwksSettings>()
+                .Bind(configuration.GetSection(JwksSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.TryAddSingleton<IJwksProvider, RsaJwksProvider>();
+
             services.TryAddSingleton<Persistence.Outbox.IOutboxSignal, Persistence.Outbox.OutboxSignal>();
             services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
 
@@ -140,6 +156,12 @@ public static class DependencyInjection
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
             services.TryAddScoped<IEventBus, InProcessEventBus>();
             services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
+
+            // IMessageBus is the new abstraction used by OutboxProcessor (and, going forward, by
+            // application code that publishes integration events). The default registration is
+            // InProcessMessageBus — call AddBrokerMessaging(...) from a service host's Program.cs
+            // to swap in MassTransit-backed BrokerMessageBus for microservice deployments.
+            services.TryAddScoped<IMessageBus, InProcessMessageBus>();
 
             services.TryAddSingleton(TimeProvider.System);
             services.TryAddTransient<IEmailSender, SmtpEmailSender>();
@@ -208,6 +230,126 @@ public static class DependencyInjection
             services.TryAddSingleton<IUserIdProvider, ClaimBasedUserIdProvider>();
 
             return services;
+        }
+
+        /// <summary>
+        /// Replaces the default in-process <see cref="IMessageBus"/> registration with a
+        /// MassTransit-backed <see cref="BrokerMessageBus"/>. Call this from a microservice
+        /// host's <c>Program.cs</c> AFTER <c>AddInfrastructure(configuration)</c>.
+        /// <para>
+        /// The transport is selected by <see cref="MessageBusSettings.Provider"/>:
+        /// <list type="bullet">
+        ///   <item><see cref="MessageBusProvider.RabbitMq"/> — local dev (Aspire RabbitMQ container).</item>
+        ///   <item><see cref="MessageBusProvider.AzureServiceBus"/> — production deployments.</item>
+        ///   <item><see cref="MessageBusProvider.InProcess"/> — no-op; this method returns without
+        ///   modifying the container, leaving the default <see cref="InProcessMessageBus"/> in place.</item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// Consumer registration is the responsibility of each service: pass an action that
+        /// calls <c>x.AddConsumer&lt;TConsumer&gt;()</c> for every <c>IIntegrationEventHandler&lt;T&gt;</c>
+        /// or <c>IConsumer&lt;T&gt;</c> implementation in the service.
+        /// </para>
+        /// </summary>
+        /// <param name="configuration">Application configuration providing the <c>MessageBus</c> section.</param>
+        /// <param name="configureConsumers">Optional callback for registering MassTransit consumers.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddBrokerMessaging(
+            IConfiguration configuration,
+            Action<IBusRegistrationConfigurator>? configureConsumers = null)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var settings = configuration.GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()
+                ?? new MessageBusSettings();
+
+            if (settings.Provider == MessageBusProvider.InProcess)
+            {
+                return services;
+            }
+
+            services.AddMassTransit(x =>
+            {
+                if (!string.IsNullOrWhiteSpace(settings.EndpointPrefix))
+                {
+                    x.SetKebabCaseEndpointNameFormatter();
+                }
+
+                configureConsumers?.Invoke(x);
+
+                switch (settings.Provider)
+                {
+                    case MessageBusProvider.RabbitMq:
+                        x.UsingRabbitMq((context, cfg) =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(settings.ConnectionString))
+                            {
+                                cfg.Host(settings.ConnectionString);
+                            }
+
+                            cfg.ConfigureEndpoints(context);
+                        });
+                        break;
+
+                    case MessageBusProvider.AzureServiceBus:
+                        x.UsingAzureServiceBus((context, cfg) =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(settings.ConnectionString))
+                            {
+                                cfg.Host(settings.ConnectionString);
+                            }
+
+                            cfg.ConfigureEndpoints(context);
+                        });
+                        break;
+
+                    case MessageBusProvider.InProcess:
+                    default:
+                        // Already short-circuited above; no-op fallback for completeness.
+                        break;
+                }
+            });
+
+            // Swap the default in-process bus for the broker-backed one. Use Replace so we
+            // overwrite the AddServices() registration rather than appending a second one.
+            services.Replace(ServiceDescriptor.Scoped<IMessageBus, BrokerMessageBus>());
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers a typed service client (<typeparamref name="TInterface"/> →
+        /// <typeparamref name="TImplementation"/>) backed by an <see cref="HttpClient"/> wired
+        /// to Aspire service discovery (<c>http://{serviceName}</c>), Polly resilience (matching
+        /// the standard handler from <c>AddServiceDefaults</c>), and the
+        /// <see cref="JwtForwardingDelegatingHandler"/> for forwarding the inbound JWT bearer
+        /// token to the downstream service.
+        /// <para>
+        /// Use this for HTTP-based cross-service contracts that don't warrant a gRPC binding —
+        /// e.g., webhook receivers, public REST endpoints, or third-party API wrappers.
+        /// gRPC is preferred for service-to-service contracts; see
+        /// <c>MMCA.Common.Grpc.AddTypedGrpcClient&lt;T&gt;</c>.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TInterface">The contract interface that consumer code depends on.</typeparam>
+        /// <typeparam name="TImplementation">The class implementing the interface, taking <see cref="HttpClient"/> in its constructor.</typeparam>
+        /// <param name="serviceName">The Aspire service-discovery name (e.g. <c>"identity"</c>).</param>
+        /// <returns>The <see cref="IHttpClientBuilder"/> for further customization.</returns>
+        public IHttpClientBuilder AddTypedServiceClient<TInterface, TImplementation>(string serviceName)
+            where TInterface : class
+            where TImplementation : class, TInterface
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
+
+            services.AddHttpContextAccessor();
+            services.TryAddTransient<JwtForwardingDelegatingHandler>();
+
+            var builder = services.AddHttpClient<TInterface, TImplementation>(client =>
+                    client.BaseAddress = new Uri($"http://{serviceName}"))
+                .AddHttpMessageHandler<JwtForwardingDelegatingHandler>();
+
+            builder.AddStandardResilienceHandler();
+            return builder;
         }
     }
 }
