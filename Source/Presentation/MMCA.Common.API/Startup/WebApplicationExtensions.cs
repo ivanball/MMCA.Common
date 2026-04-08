@@ -45,6 +45,13 @@ public static class WebApplicationExtensions
             app.UseMiddleware<SoftDeletedUserMiddleware>();
             app.UseAuthorization();
             app.UseOutputCache();
+
+            // Always-mapped JWKS endpoint. Returns an empty key set when JwksSettings.Enabled
+            // is false (the default), so monolith deployments incur no behavior change.
+            // Identity services flip JwksSettings.Enabled = true and provide RsaPublicKeyPem
+            // to publish their signing key for downstream services to fetch via AddForwardedJwtBearer.
+            app.MapJwksEndpoint();
+
             app.MapControllers();
 
             return app;

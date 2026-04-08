@@ -8,7 +8,7 @@ using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Tests.Services;
 
-public sealed class TokenServiceTests
+public sealed class TokenServiceTests : IDisposable
 {
     private static readonly string Base64Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
@@ -22,6 +22,8 @@ public sealed class TokenServiceTests
     };
 
     private readonly TokenService _sut = new(Settings);
+
+    public void Dispose() => _sut.Dispose();
 
     // ── GenerateAccessToken ──
     [Fact]
@@ -125,7 +127,7 @@ public sealed class TokenServiceTests
             Audience = Settings.Audience,
             AccessTokenExpirationMinutes = 30
         };
-        var wrongService = new TokenService(wrongSettings);
+        using var wrongService = new TokenService(wrongSettings);
         var token = wrongService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
@@ -144,11 +146,127 @@ public sealed class TokenServiceTests
             Audience = Settings.Audience,
             AccessTokenExpirationMinutes = 30
         };
-        var wrongService = new TokenService(wrongSettings);
+        using var wrongService = new TokenService(wrongSettings);
         var token = wrongService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
 
         result.Should().BeNull();
+    }
+
+    // ── RS256 path ──
+    private static (string PrivatePem, string PublicPem) GenerateRsaKeyPair()
+    {
+        using var rsa = RSA.Create(2048);
+        return (rsa.ExportRSAPrivateKeyPem(), rsa.ExportSubjectPublicKeyInfoPem());
+    }
+
+    private static JwtSettings CreateRsaSettings(string privatePem, string? publicPem = null) => new()
+    {
+        SigningAlgorithm = JwtSigningAlgorithm.RS256,
+        RsaPrivateKeyPem = privatePem,
+        RsaPublicKeyPem = publicPem,
+        Issuer = "https://test-issuer",
+        Audience = "test-audience",
+        AccessTokenExpirationMinutes = 30,
+        RefreshTokenExpirationDays = 7,
+    };
+
+    [Fact]
+    public void Constructor_Rs256_WithoutPrivateKey_Throws()
+    {
+        var settings = new JwtSettings
+        {
+            SigningAlgorithm = JwtSigningAlgorithm.RS256,
+            Issuer = "https://test-issuer",
+            Audience = "test-audience",
+            AccessTokenExpirationMinutes = 30,
+        };
+
+        var act = () => new TokenService(settings);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*RsaPrivateKeyPem is required*");
+    }
+
+    [Fact]
+    public void Constructor_Hs256_WithoutSecretForKey_Throws()
+    {
+        var settings = new JwtSettings
+        {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
+            SecretForKey = string.Empty,
+            Issuer = "https://test-issuer",
+            Audience = "test-audience",
+            AccessTokenExpirationMinutes = 30,
+        };
+
+        var act = () => new TokenService(settings);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*SecretForKey is required*");
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Rs256_ProducesRs256Header()
+    {
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem));
+
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        jwt.Header.Alg.Should().Be(SecurityAlgorithms.RsaSha256);
+        jwt.Issuer.Should().Be("https://test-issuer");
+        jwt.Claims.Should().Contain(c => c.Type == "user_id" && c.Value == "1");
+    }
+
+    [Fact]
+    public void GetPrincipalFromExpiredToken_Rs256_RoundTripsValidToken()
+    {
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem));
+
+        var token = sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+        var principal = sut.GetPrincipalFromExpiredToken(token);
+
+        principal.Should().NotBeNull();
+        principal!.Claims.Should().Contain(c => c.Type == "user_id" && c.Value == "42");
+    }
+
+    [Fact]
+    public void GetPrincipalFromExpiredToken_Rs256_RejectsHs256Token()
+    {
+        // An attacker who learns the public key must not be able to forge a token by signing
+        // it with HS256 using the public key as the symmetric secret. The validator pins
+        // ValidAlgorithms = [RsaSha256] so HS256 tokens are rejected even if the bytes match.
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        using var rsaService = new TokenService(CreateRsaSettings(privatePem, publicPem));
+
+        var hmacSettings = new JwtSettings
+        {
+            SecretForKey = Base64Secret,
+            Issuer = "https://test-issuer",
+            Audience = "test-audience",
+            AccessTokenExpirationMinutes = 30,
+        };
+        using var hmacService = new TokenService(hmacSettings);
+        var hmacToken = hmacService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+
+        var principal = rsaService.GetPrincipalFromExpiredToken(hmacToken);
+
+        principal.Should().BeNull();
+    }
+
+    [Fact]
+    public void Rs256_WithoutExplicitPublicKey_DerivesFromPrivateKey()
+    {
+        // When RsaPublicKeyPem is omitted, the service derives the public parameters from the
+        // private key so the issuer can still self-validate (refresh-token flow).
+        var (privatePem, _) = GenerateRsaKeyPair();
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem: null));
+
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var principal = sut.GetPrincipalFromExpiredToken(token);
+
+        principal.Should().NotBeNull();
     }
 }

@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -165,8 +166,16 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
-        /// Registers JWT Bearer authentication with symmetric HMAC-SHA256 key and authorization policies.
-        /// Binds <see cref="JwtSettings"/> from configuration and validates the signing key length.
+        /// Registers JWT Bearer authentication and authorization policies, supporting both
+        /// symmetric (HMAC-SHA256) and asymmetric (RSA-SHA256) signing modes selected via
+        /// <see cref="JwtSettings.SigningAlgorithm"/>.
+        /// <para>
+        /// In monolith mode (the default <see cref="JwtSigningAlgorithm.HS256"/>), the
+        /// validator uses the same Base64 HMAC secret as the issuer. In RS256 mode, the
+        /// validator loads the RSA public key from <see cref="JwtSettings.RsaPublicKeyPem"/>.
+        /// For extracted services that should fetch the public key from the Identity
+        /// service's JWKS endpoint at runtime, use <c>AddForwardedJwtBearer</c> instead.
+        /// </para>
         /// </summary>
         public IServiceCollection AddCommonAuthentication(IConfiguration configuration)
         {
@@ -181,19 +190,7 @@ public static class WebApplicationBuilderExtensions
                     var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
                         ?? throw new InvalidOperationException("JwtSettings section is not configured.");
 
-                    options.TokenValidationParameters = new()
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = jwtSettings.Issuer,
-                        ValidAudience = jwtSettings.Audience,
-                        IssuerSigningKey = new SymmetricSecurityKey(
-                            GetValidatedSigningKey(
-                                jwtSettings.SecretForKey
-                                ?? throw new System.Collections.Generic.KeyNotFoundException("SecretForKey not found or invalid")))
-                    };
+                    options.TokenValidationParameters = BuildValidationParameters(jwtSettings);
 
                     // SignalR WebSocket connections cannot send HTTP headers — the JWT is
                     // passed as an "access_token" query-string parameter instead. Extract
@@ -259,5 +256,55 @@ public static class WebApplicationBuilderExtensions
         }
 
         return keyBytes;
+    }
+
+    /// <summary>
+    /// Builds the <see cref="TokenValidationParameters"/> for the configured signing
+    /// algorithm. RS256 deployments load the public key from <see cref="JwtSettings.RsaPublicKeyPem"/>;
+    /// HS256 (default) uses the Base64 HMAC secret. The validator pins
+    /// <see cref="TokenValidationParameters.ValidAlgorithms"/> so an attacker cannot swap
+    /// algorithms (e.g., signing an HS256 token with the RSA public key as the HMAC secret).
+    /// </summary>
+    internal static TokenValidationParameters BuildValidationParameters(JwtSettings jwtSettings)
+    {
+        if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
+        {
+            if (string.IsNullOrWhiteSpace(jwtSettings.RsaPublicKeyPem))
+            {
+                throw new InvalidOperationException(
+                    "JwtSettings.RsaPublicKeyPem is required when SigningAlgorithm is RS256 and AddCommonAuthentication is used (in-process validation). For services that should fetch the public key via JWKS at runtime, use AddForwardedJwtBearer instead.");
+            }
+
+#pragma warning disable CA2000 // The RSA instance is captured by RsaSecurityKey which is held by JwtBearerOptions for the app lifetime.
+            var validationRsa = RSA.Create();
+#pragma warning restore CA2000
+            validationRsa.ImportFromPem(jwtSettings.RsaPublicKeyPem);
+            return new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new RsaSecurityKey(validationRsa),
+                ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
+            };
+        }
+
+        return new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                GetValidatedSigningKey(
+                    jwtSettings.SecretForKey
+                    ?? throw new System.Collections.Generic.KeyNotFoundException("SecretForKey not found or invalid"))),
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+        };
     }
 }
