@@ -1,0 +1,32 @@
+# ──────────────────────────────────────────────────────────────────
+# Line ending normalization
+#
+# This repo's .editorconfig declares end_of_line = crlf for all files
+# (the [*] section sets it, and no extension-specific section overrides
+# it). Without an explicit .gitattributes, git's behaviour depends on
+# each developer's local core.autocrlf setting — Windows defaults to
+# "true" (CRLF on checkout) while Linux/macOS default to "input" or
+# "false" (LF on checkout). When a file is committed from a non-Windows
+# machine it gets stored as LF in the git index, and the next CI run on
+# Ubuntu sees LF on disk while the .editorconfig demands CRLF, which
+# IDE0055 flags as a formatting error and fails the build.
+#
+# Pinning `text=auto eol=crlf` here makes the working tree always use
+# CRLF on checkout regardless of OS or local git config, matching the
+# .editorconfig convention. Existing files that were stored as LF need
+# a one-time `git add --renormalize .` to be re-stored with CRLF.
+# ──────────────────────────────────────────────────────────────────
+* text=auto eol=crlf
+
+# Explicit binary types — defense-in-depth alongside text=auto's
+# content sniffing so git never tries to normalize line endings on
+# them even if a heuristic misfires.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.dll  binary
+*.exe  binary
+*.pdb  binary
+*.snk  binary
