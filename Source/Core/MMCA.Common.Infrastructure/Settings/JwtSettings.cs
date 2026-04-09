@@ -7,14 +7,13 @@ namespace MMCA.Common.Infrastructure.Settings;
 /// Issuer and audience are always required. The signing key requirement depends on
 /// <see cref="SigningAlgorithm"/>:
 /// <list type="bullet">
-///   <item><see cref="JwtSigningAlgorithm.HS256"/> (default): <see cref="SecretForKey"/> is required (Base64 HMAC key).</item>
-///   <item><see cref="JwtSigningAlgorithm.RS256"/>: <see cref="RsaPrivateKeyPem"/> is required for issuers; <see cref="RsaPublicKeyPem"/> is required for issuers and validators sharing the in-process key.</item>
+///   <item><see cref="JwtSigningAlgorithm.HS256"/> (default): <see cref="SecretForKey"/> is required (Base64 HMAC key, min 32 chars).</item>
+///   <item><see cref="JwtSigningAlgorithm.RS256"/>: <see cref="RsaPrivateKeyPem"/> is required for issuers; <see cref="RsaPublicKeyPem"/> is required for in-process validators.</item>
 /// </list>
-/// The DataAnnotations validators only enforce the HS256 baseline. RS256 deployments
-/// must validate their own RSA key material at startup (e.g., by trying to load the PEM
-/// in <c>TokenService</c>'s constructor or via a custom <c>IValidateOptions</c>).
+/// Implements <see cref="IValidatableObject"/> so key-material validation is
+/// conditional on the selected <see cref="SigningAlgorithm"/>.
 /// </summary>
-public sealed class JwtSettings : IJwtSettings
+public sealed class JwtSettings : IJwtSettings, IValidatableObject
 {
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "Jwt";
@@ -23,7 +22,6 @@ public sealed class JwtSettings : IJwtSettings
     public JwtSigningAlgorithm SigningAlgorithm { get; init; } = JwtSigningAlgorithm.HS256;
 
     /// <inheritdoc />
-    [MinLength(32, ErrorMessage = "SecretForKey must be at least 32 characters when SigningAlgorithm is HS256. Replace the placeholder value with a real secret via user-secrets or environment variables.")]
     public string SecretForKey { get; init; } = string.Empty;
 
     /// <inheritdoc />
@@ -45,4 +43,25 @@ public sealed class JwtSettings : IJwtSettings
 
     /// <inheritdoc />
     public int RefreshTokenExpirationDays { get; init; } = 7;
+
+    /// <summary>
+    /// Algorithm-aware validation: HS256 requires <see cref="SecretForKey"/> (min 32 chars),
+    /// RS256 requires <see cref="RsaPrivateKeyPem"/>.
+    /// </summary>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (SigningAlgorithm == JwtSigningAlgorithm.HS256 && SecretForKey.Length < 32)
+        {
+            yield return new ValidationResult(
+                "SecretForKey must be at least 32 characters when SigningAlgorithm is HS256. Replace the placeholder value with a real secret via user-secrets or environment variables.",
+                [nameof(SecretForKey)]);
+        }
+
+        if (SigningAlgorithm == JwtSigningAlgorithm.RS256 && string.IsNullOrWhiteSpace(RsaPrivateKeyPem))
+        {
+            yield return new ValidationResult(
+                "RsaPrivateKeyPem is required when SigningAlgorithm is RS256.",
+                [nameof(RsaPrivateKeyPem)]);
+        }
+    }
 }

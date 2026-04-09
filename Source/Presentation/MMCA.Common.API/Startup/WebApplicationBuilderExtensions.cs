@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
@@ -134,13 +135,27 @@ public static class WebApplicationBuilderExtensions
                     options.Authority = authority;
                     options.Audience = audience;
                     options.RequireHttpsMetadata = requireHttpsMetadata;
+
+                    // Extracted services' Kestrel endpoints are Http2-only on cleartext
+                    // (required for gRPC h2c). The default backchannel HttpClient sends
+                    // HTTP/1.1, which the h2c endpoint rejects. This handler forces
+                    // HTTP/2 prior knowledge on cleartext requests so the OIDC metadata
+                    // and JWKS fetches succeed. HTTPS requests are left at defaults —
+                    // TLS/ALPN negotiates the protocol automatically.
+                    options.BackchannelHttpHandler = new Http2CleartextHandler();
+
                     options.TokenValidationParameters = new()
                     {
                         ValidateIssuer = true,
                         ValidateAudience = true,
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
-                        ValidIssuer = authority,
+                        // ValidIssuer is intentionally NOT set here. The JWT bearer
+                        // middleware derives it from the OIDC discovery document's
+                        // "issuer" field (served by MapOidcDiscoveryEndpoint). This
+                        // avoids a mismatch: authority is the Aspire service-discovery
+                        // URL (e.g. "http://identity") while the token's iss claim is
+                        // the public gateway URL (e.g. "https://localhost:6001").
                         ValidAudience = audience,
                     };
 
@@ -306,5 +321,38 @@ public static class WebApplicationBuilderExtensions
                     ?? throw new System.Collections.Generic.KeyNotFoundException("SecretForKey not found or invalid"))),
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
         };
+    }
+
+    /// <summary>
+    /// DelegatingHandler that ensures HTTP/2 on all backchannel requests to the
+    /// Identity service. Required because extracted services' Kestrel endpoints are
+    /// <see cref="Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2"/>-only
+    /// (for gRPC), and the JWT bearer middleware's default <see cref="HttpClient"/>
+    /// uses HTTP/1.1 which is rejected on both cleartext (h2c) and TLS (ALPN) endpoints.
+    /// <list type="bullet">
+    ///   <item>Cleartext (<c>http://</c>): <see cref="HttpVersionPolicy.RequestVersionExact"/>
+    ///     forces h2c prior knowledge — no negotiation, pure HTTP/2.</item>
+    ///   <item>TLS (<c>https://</c>): <see cref="HttpVersionPolicy.RequestVersionOrLower"/>
+    ///     includes <c>h2</c> in the ALPN offer list so Kestrel's Http2-only endpoint
+    ///     accepts the connection, while still falling back to <c>http/1.1</c> in
+    ///     production behind a reverse proxy that only speaks HTTP/1.1.</item>
+    /// </list>
+    /// </summary>
+#pragma warning disable CA2000 // The SocketsHttpHandler is owned by the DelegatingHandler base class which disposes it.
+    private sealed class Http2CleartextHandler() : DelegatingHandler(new SocketsHttpHandler())
+#pragma warning restore CA2000
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.Version = HttpVersion.Version20;
+
+            // h2c prior knowledge on cleartext; ALPN h2 with http/1.1 fallback on TLS.
+            request.VersionPolicy = request.RequestUri?.Scheme == Uri.UriSchemeHttp
+                ? HttpVersionPolicy.RequestVersionExact
+                : HttpVersionPolicy.RequestVersionOrLower;
+
+            return base.SendAsync(request, cancellationToken);
+        }
     }
 }
