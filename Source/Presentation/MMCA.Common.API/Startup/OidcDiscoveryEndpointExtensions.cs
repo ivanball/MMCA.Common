@@ -27,22 +27,6 @@ public static class OidcDiscoveryEndpointExtensions
     /// </summary>
     public const string DefaultOidcDiscoveryPath = "/.well-known/openid-configuration";
 
-    private static readonly string[] ResponseTypesSupported = ["token"];
-    private static readonly string[] SubjectTypesSupported = ["public"];
-    private static readonly string[] SigningAlgsSupported = ["RS256"];
-
-    /// <summary>
-    /// OIDC discovery field names are snake_case per RFC 8414. The default ASP.NET Core
-    /// <c>Results.Json</c> serializer uses camelCase (<c>JsonNamingPolicy.CamelCase</c>),
-    /// which would transform <c>jwks_uri</c> to <c>"jwksUri"</c> — unrecognised by
-    /// <c>OpenIdConnectConfigurationRetriever</c>. Disabling the naming policy preserves
-    /// the exact C# property names (which are already in OIDC snake_case).
-    /// </summary>
-    private static readonly JsonSerializerOptions OidcJsonOptions = new()
-    {
-        PropertyNamingPolicy = null,
-    };
-
     extension(IEndpointRouteBuilder endpoints)
     {
         /// <summary>
@@ -54,6 +38,12 @@ public static class OidcDiscoveryEndpointExtensions
         /// <returns>The endpoint route builder for chaining.</returns>
         public IEndpointRouteBuilder MapOidcDiscoveryEndpoint()
         {
+            // OIDC discovery field names are snake_case per RFC 8414. Disabling the naming
+            // policy preserves the exact C# property names (already OIDC snake_case) —
+            // without this, Results.Json would camelCase "jwks_uri" to "jwksUri", which
+            // OpenIdConnectConfigurationRetriever wouldn't recognise.
+            var oidcJsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null };
+
             endpoints.MapGet(DefaultOidcDiscoveryPath, (HttpContext context, IConfiguration configuration) =>
             {
                 var issuer = configuration["Jwt:Issuer"];
@@ -68,10 +58,10 @@ public static class OidcDiscoveryEndpointExtensions
                 {
                     issuer,
                     jwks_uri = jwksUri,
-                    response_types_supported = ResponseTypesSupported,
-                    subject_types_supported = SubjectTypesSupported,
-                    id_token_signing_alg_values_supported = SigningAlgsSupported,
-                }, OidcJsonOptions);
+                    response_types_supported = new[] { "token" },
+                    subject_types_supported = new[] { "public" },
+                    id_token_signing_alg_values_supported = new[] { "RS256" },
+                }, oidcJsonOptions);
             }).AllowAnonymous();
 
             return endpoints;
