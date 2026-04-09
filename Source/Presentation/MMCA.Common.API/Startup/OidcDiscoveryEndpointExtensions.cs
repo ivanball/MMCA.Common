@@ -27,6 +27,26 @@ public static class OidcDiscoveryEndpointExtensions
     /// </summary>
     public const string DefaultOidcDiscoveryPath = "/.well-known/openid-configuration";
 
+    // IDE0052 false positive: these fields ARE read inside the extension block below,
+    // but the analyzer does not look into C# 14 extension blocks for field usage.
+#pragma warning disable IDE0052
+    private static readonly string[] ResponseTypesSupported = ["token"];
+    private static readonly string[] SubjectTypesSupported = ["public"];
+    private static readonly string[] SigningAlgsSupported = ["RS256"];
+
+    /// <summary>
+    /// OIDC discovery field names are snake_case per RFC 8414. Disabling the naming
+    /// policy preserves the exact C# property names (already OIDC snake_case) —
+    /// without this, <c>Results.Json</c> would camelCase <c>jwks_uri</c> to
+    /// <c>"jwksUri"</c>, which <c>OpenIdConnectConfigurationRetriever</c> would not
+    /// recognise.
+    /// </summary>
+    private static readonly JsonSerializerOptions OidcJsonOptions = new()
+    {
+        PropertyNamingPolicy = null,
+    };
+#pragma warning restore IDE0052
+
     extension(IEndpointRouteBuilder endpoints)
     {
         /// <summary>
@@ -38,12 +58,6 @@ public static class OidcDiscoveryEndpointExtensions
         /// <returns>The endpoint route builder for chaining.</returns>
         public IEndpointRouteBuilder MapOidcDiscoveryEndpoint()
         {
-            // OIDC discovery field names are snake_case per RFC 8414. Disabling the naming
-            // policy preserves the exact C# property names (already OIDC snake_case) —
-            // without this, Results.Json would camelCase "jwks_uri" to "jwksUri", which
-            // OpenIdConnectConfigurationRetriever wouldn't recognise.
-            var oidcJsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = null };
-
             endpoints.MapGet(DefaultOidcDiscoveryPath, (HttpContext context, IConfiguration configuration) =>
             {
                 var issuer = configuration["Jwt:Issuer"];
@@ -58,10 +72,10 @@ public static class OidcDiscoveryEndpointExtensions
                 {
                     issuer,
                     jwks_uri = jwksUri,
-                    response_types_supported = new[] { "token" },
-                    subject_types_supported = new[] { "public" },
-                    id_token_signing_alg_values_supported = new[] { "RS256" },
-                }, oidcJsonOptions);
+                    response_types_supported = ResponseTypesSupported,
+                    subject_types_supported = SubjectTypesSupported,
+                    id_token_signing_alg_values_supported = SigningAlgsSupported,
+                }, OidcJsonOptions);
             }).AllowAnonymous();
 
             return endpoints;
