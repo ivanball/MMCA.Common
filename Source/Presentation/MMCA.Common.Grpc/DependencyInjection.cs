@@ -2,7 +2,6 @@ using Grpc.Net.ClientFactory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
-using MMCA.Common.Grpc.Diagnostics;
 using MMCA.Common.Grpc.Interceptors;
 
 namespace MMCA.Common.Grpc;
@@ -71,17 +70,10 @@ public static class DependencyInjection
 
             services.AddHttpContextAccessor();
             services.TryAddTransient<JwtForwardingClientInterceptor>();
-            services.TryAddTransient<GrpcRequestLoggingHandler>();
 
             var builder = services.AddGrpcClient<TClient>(options =>
                     options.Address = new Uri($"http://{serviceName}"))
                 .AddInterceptor<JwtForwardingClientInterceptor>(InterceptorScope.Client);
-
-            // Diagnostic delegating handler — logs the resolved URL + HTTP version of every
-            // outgoing gRPC call. Helpful for verifying Aspire service discovery is picking
-            // the expected scheme/port. Safe to leave enabled in dev; remove or wrap with
-            // an environment check if log volume becomes a concern in production.
-            builder.AddHttpMessageHandler<GrpcRequestLoggingHandler>();
 
             // Force the primary handler to a SocketsHttpHandler that explicitly opts into
             // HTTP/2. The global ConfigureHttpClientDefaults from MMCA.Common.Aspire applies

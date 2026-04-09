@@ -271,16 +271,6 @@ public static class DependencyInjection
 
             var connectionString = ResolveBrokerConnectionString(configuration, settings);
 
-            // Diagnostic: log the resolved provider + connection string source so misconfiguration
-            // is loud at startup. Sources we check, in order: MessageBus:ConnectionString,
-            // ConnectionStrings:rabbitmq (Aspire WithReference convention), ConnectionStrings:messaging.
-            Console.Out.WriteLine(
-                $"[MMCA.Common AddBrokerMessaging] Provider={settings.Provider} " +
-                $"MessageBus:ConnectionString={(string.IsNullOrWhiteSpace(settings.ConnectionString) ? "<empty>" : "<set>")} " +
-                $"ConnectionStrings:rabbitmq={(string.IsNullOrWhiteSpace(configuration.GetConnectionString("rabbitmq")) ? "<empty>" : "<set>")} " +
-                $"ConnectionStrings:messaging={(string.IsNullOrWhiteSpace(configuration.GetConnectionString("messaging")) ? "<empty>" : "<set>")} " +
-                $"Resolved={(string.IsNullOrWhiteSpace(connectionString) ? "<NULL — MassTransit will use defaults>" : connectionString)}");
-
             services.AddMassTransit(x =>
             {
                 if (!string.IsNullOrWhiteSpace(settings.EndpointPrefix))
