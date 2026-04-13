@@ -23,6 +23,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     [Inject] private ListPageQueryStateService QueryStateService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private PersistentComponentState ApplicationState { get; set; } = default!;
 
     protected bool IsLoading { get; private set; }
     protected abstract string Title { get; }
@@ -56,6 +57,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private CancellationTokenSource? _cts;
     private bool _disposed;
     private IJSObjectReference? _scrollModule;
+    private PersistingComponentStateSubscription? _persistenceSubscription;
+    private GridData<TDto>? _persistedGridData;
+    private GridData<TDto>? _lastSuccessfulGridData;
     private DotNetObjectReference<DataGridListPageBase<TDto>>? _dotNetRef;
     private double? _pendingScrollRestore;
     private int _savedPage;
@@ -97,6 +101,26 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     protected override void OnInitialized()
     {
+        // Restore grid data persisted during SSR pre-render so the first interactive
+        // ServerData call returns immediately without a redundant API round-trip.
+        // This eliminates the visible cancel-retry cycle caused by the InteractiveAuto
+        // render mode transition (SSR → Server → WASM) and MudDataGrid re-initialization.
+        var persistKey = $"grid:{GetType().FullName}";
+        if (ApplicationState.TryTakeFromJson<PersistedGridState>(persistKey, out var restored) && restored is not null)
+        {
+            _persistedGridData = new GridData<TDto> { Items = restored.Items, TotalItems = restored.TotalItems };
+        }
+
+        _persistenceSubscription = ApplicationState.RegisterOnPersisting(() =>
+        {
+            if (_lastSuccessfulGridData is not null)
+            {
+                ApplicationState.PersistAsJson(persistKey, new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems));
+            }
+
+            return Task.CompletedTask;
+        });
+
         var urlState = QueryStateService.ReadCurrent();
 
         CurrentPageState = urlState.Page;
@@ -300,6 +324,25 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     {
         await ResetCancellationTokenAsync();
 
+        // Return SSR-persisted data on the first interactive call, avoiding a redundant
+        // API round-trip that would be immediately canceled by the MudDataGrid pager init.
+        if (_persistedGridData is not null)
+        {
+            var cached = _persistedGridData;
+            _persistedGridData = null;
+            _lastSuccessfulGridData = cached;
+
+            var (sc, sd) = ExtractSortParameters(state);
+            if (string.IsNullOrEmpty(sc) && !string.IsNullOrEmpty(_savedSortColumn))
+            {
+                sc = _savedSortColumn;
+                sd = _savedSortDescending ? "desc" : "asc";
+            }
+
+            SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase));
+            return cached;
+        }
+
         IsLoading = true;
         StateHasChanged();
 
@@ -320,8 +363,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         try
         {
             var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, _cts!.Token);
+            var gridData = new GridData<TDto> { Items = items, TotalItems = totalItems };
+            _lastSuccessfulGridData = gridData;
             SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
-            return new GridData<TDto> { Items = items, TotalItems = totalItems };
+            return gridData;
         }
         catch (OperationCanceledException)
         {
@@ -450,6 +495,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         _disposed = true;
 
+        _persistenceSubscription?.Dispose();
         UnsubscribeLocationChanged();
 
         try
@@ -494,6 +540,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         if (disposing)
         {
+            _persistenceSubscription?.Dispose();
             UnsubscribeLocationChanged();
             _cts?.Cancel();
             _cts?.Dispose();
@@ -516,4 +563,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Serializable snapshot of grid data for <see cref="PersistentComponentState"/>
+    /// transfer from server pre-render to interactive mode.
+    /// </summary>
+    private sealed record PersistedGridState(List<TDto> Items, int TotalItems);
 }
