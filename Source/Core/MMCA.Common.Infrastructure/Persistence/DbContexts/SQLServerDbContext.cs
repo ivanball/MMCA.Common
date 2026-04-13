@@ -30,6 +30,8 @@ public sealed class SQLServerDbContext(
                     {
                         sql.MigrationsAssembly(connectionStringSettings.SQLServerMigrationsAssembly);
                     }
+
+                    sql.EnableRetryOnFailure();
                 })
             // Suppress PendingModelChangesWarning. Required by the microservices-extraction
             // architecture (the user's "shared SQLServerDbContext" decision): each extracted

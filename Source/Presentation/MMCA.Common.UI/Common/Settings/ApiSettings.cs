@@ -14,4 +14,7 @@ public sealed class ApiSettings : IApiSettings
     /// <summary>Base URL of the WebAPI (e.g., <c>https://localhost:6001</c>).</summary>
     [Required]
     public string? ApiEndpoint { get; init; }
+
+    /// <inheritdoc />
+    public string? WasmApiEndpoint { get; init; }
 }
