@@ -84,6 +84,12 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
     /// <inheritdoc />
     public void RollbackTransaction() => _dbContextFactory.RollbackTransaction();
 
+    /// <inheritdoc />
+    public Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default) =>
+        _dbContextFactory.ExecuteInTransactionAsync(operation, cancellationToken);
+
     public void Dispose()
     {
         Dispose(disposing: true);

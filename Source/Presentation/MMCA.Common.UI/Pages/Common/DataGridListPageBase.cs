@@ -68,6 +68,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private bool _savedSortDescending;
     private bool _suppressNextLocationChanged;
     private bool _locationHandlerRegistered;
+    private bool _deferSessionPersist;
     private readonly string _scrollTrackerId = Guid.NewGuid().ToString();
 
     /// <inheritdoc />
@@ -122,22 +123,38 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         });
 
         var urlState = QueryStateService.ReadCurrent();
+        var routePath = GetRoutePath();
+        var savedState = ListPageStateService.GetState(routePath);
 
-        CurrentPageState = urlState.Page;
-        _savedPage = urlState.Page;
-        _savedPageSize = urlState.PageSize;
-        if (urlState.PageSize > 0)
+        var urlHasState = HasListPageState(urlState);
+
+        // When the URL carries state (browser back/forward, shareable link), use it.
+        // Otherwise, fall back to in-memory state from the current circuit — this
+        // restores page, pageSize, sort, and filters when the user navigates back
+        // to the list via sidebar, breadcrumbs, or "Back to List" buttons instead
+        // of the browser back button.
+        var effectiveState = urlHasState || savedState is null ? urlState : savedState;
+
+        CurrentPageState = effectiveState.Page;
+        _savedPage = effectiveState.Page;
+        _savedPageSize = effectiveState.PageSize;
+        if (effectiveState.PageSize > 0)
         {
-            RowsPerPageState = urlState.PageSize;
+            RowsPerPageState = effectiveState.PageSize;
         }
 
-        MobileCurrentPage = urlState.MobilePage;
-        _savedSortColumn = urlState.SortColumn;
-        _savedSortDescending = urlState.SortDescending;
-        RestoreFilters(urlState.Filters);
+        MobileCurrentPage = effectiveState.MobilePage;
+        _savedSortColumn = effectiveState.SortColumn;
+        _savedSortDescending = effectiveState.SortDescending;
+        RestoreFilters(effectiveState.Filters);
+
+        // When neither URL nor in-memory state is available (new circuit after
+        // forceLoad or session teardown), defer the sessionStorage write so that
+        // OnAfterRenderAsync can hydrate the original values before they are
+        // overwritten by the first LoadServerDataAsync call.
+        _deferSessionPersist = !urlHasState && savedState is null;
 
         // Scroll position is not in the URL — fall back to the in-memory snapshot.
-        var savedState = ListPageStateService.GetState(GetRoutePath());
         if (savedState is { ScrollPosition: > 0 })
         {
             _pendingScrollRestore = savedState.ScrollPosition;
@@ -228,14 +245,24 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             // empty after a circuit teardown or forceLoad navigation).
             var routePath = GetRoutePath();
             await ListPageStateService.HydrateFromSessionAsync(routePath);
-            if (_pendingScrollRestore is null)
+
+            // Cross-circuit fallback: when neither URL nor in-memory state was available
+            // during OnInitialized (new circuit after forceLoad or session teardown),
+            // check if sessionStorage hydration recovered any list-page state.
+            var hydrated = ListPageStateService.GetState(routePath);
+            var needsSessionRestore = _deferSessionPersist && hydrated is not null && HasListPageState(hydrated);
+
+            if (needsSessionRestore)
             {
-                var hydrated = ListPageStateService.GetState(routePath);
-                if (hydrated is { ScrollPosition: > 0 })
-                {
-                    _pendingScrollRestore = hydrated.ScrollPosition;
-                }
+                ApplyRestoredState(hydrated!);
             }
+
+            if (_pendingScrollRestore is null && hydrated is { ScrollPosition: > 0 })
+            {
+                _pendingScrollRestore = hydrated.ScrollPosition;
+            }
+
+            _deferSessionPersist = false;
 
             await BrowserViewportService.SubscribeAsync(this, fireImmediately: true);
 
@@ -249,23 +276,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 _scrollTrackerId,
                 150);
 
-            // SAFETY NET: even though we pass RowsPerPage as a parameter (so the pager init sees
-            // the saved size), MudDataGrid v9's parameter setter is one-shot and queues an
-            // InvokeAsync that may not propagate the value to _rowsPerPage in time for the first
-            // fetch on every render path. If the grid's actual RowsPerPage doesn't match what we
-            // restored, force it now via the public method with resetPage: false (to preserve
-            // CurrentPage). The early-return guard inside SetRowsPerPageAsync makes this a no-op
-            // when the parameter approach already worked.
-            if (_savedPageSize > 0 && GridRef is { } sizeGrid && sizeGrid.RowsPerPage != _savedPageSize)
-            {
-                await sizeGrid.SetRowsPerPageAsync(_savedPageSize, resetPage: false);
-            }
+            await RestoreGridStateAsync(needsSessionRestore);
 
-            // The buggy RowsPerPage parameter setter in MudDataGrid v9 (it always uses
-            // resetPage: true) clobbers CurrentPage to 0 as a side effect when CurrentPage was
-            // non-zero. We re-restore CurrentPage here using the cached _savedPage so
-            // page-number restoration still works alongside rows-per-page restoration.
-            RestoreCurrentPageAfterRowsPerPageReset();
+            // Ensure the current state is persisted to sessionStorage. This covers the
+            // deferred case (first load skipped persist) and keeps sessionStorage in sync
+            // after hydration/restoration.
+            _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
         }
 
         // Restore scroll only after the grid has finished its first data load and rendered rows.
@@ -300,6 +316,59 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         if (_savedPage > 0 && GridRef is { } grid && grid.CurrentPage != _savedPage)
         {
             grid.CurrentPage = _savedPage;
+        }
+    }
+
+    private static bool HasListPageState(ListPageState state) =>
+        state.Page > 0 || state.PageSize > 0 || state.MobilePage > 1
+        || !string.IsNullOrEmpty(state.SortColumn) || state.Filters.Count > 0;
+
+    private void ApplyRestoredState(ListPageState state)
+    {
+        _savedPage = state.Page;
+        _savedPageSize = state.PageSize;
+        CurrentPageState = state.Page;
+        if (state.PageSize > 0)
+        {
+            RowsPerPageState = state.PageSize;
+        }
+
+        MobileCurrentPage = state.MobilePage;
+        _savedSortColumn = state.SortColumn;
+        _savedSortDescending = state.SortDescending;
+        RestoreFilters(state.Filters);
+    }
+
+    /// <summary>
+    /// Restores the grid's <c>RowsPerPage</c> and <c>CurrentPage</c> from saved state,
+    /// then optionally triggers a reload when sessionStorage provided state that was not
+    /// available during <c>OnInitialized</c>.
+    /// </summary>
+    private async Task RestoreGridStateAsync(bool needsReload)
+    {
+        // SAFETY NET: even though we pass RowsPerPage as a parameter (so the pager init sees
+        // the saved size), MudDataGrid v9's parameter setter is one-shot and queues an
+        // InvokeAsync that may not propagate the value to _rowsPerPage in time for the first
+        // fetch on every render path. If the grid's actual RowsPerPage doesn't match what we
+        // restored, force it now via the public method with resetPage: false (to preserve
+        // CurrentPage). The early-return guard inside SetRowsPerPageAsync makes this a no-op
+        // when the parameter approach already worked.
+        if (_savedPageSize > 0 && GridRef is { } sizeGrid && sizeGrid.RowsPerPage != _savedPageSize)
+        {
+            await sizeGrid.SetRowsPerPageAsync(_savedPageSize, resetPage: false);
+        }
+
+        // The buggy RowsPerPage parameter setter in MudDataGrid v9 (it always uses
+        // resetPage: true) clobbers CurrentPage to 0 as a side effect when CurrentPage was
+        // non-zero. We re-restore CurrentPage here using the cached _savedPage so
+        // page-number restoration still works alongside rows-per-page restoration.
+        RestoreCurrentPageAfterRowsPerPageReset();
+
+        // Session restore changed pagination state after the grid's initial ServerData
+        // call already returned defaults — reload with the correct parameters.
+        if (needsReload && GridRef is { } reloadGrid)
+        {
+            await reloadGrid.ReloadServerData();
         }
     }
 
@@ -474,7 +543,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         _suppressNextLocationChanged = true;
         QueryStateService.ReplaceState(state);
         // Fire-and-forget the sessionStorage write — it tolerates SSR/JSDisconnected internally.
-        _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
+        // Skip during the deferred window so OnAfterRenderAsync can still hydrate the original
+        // sessionStorage values before they are overwritten.
+        if (!_deferSessionPersist)
+        {
+            _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
+        }
     }
 
     private string GetRoutePath() => new Uri(NavigationManager.Uri).AbsolutePath;

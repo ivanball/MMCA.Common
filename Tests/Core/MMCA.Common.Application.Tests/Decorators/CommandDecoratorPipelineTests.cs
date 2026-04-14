@@ -88,6 +88,7 @@ public sealed class CommandDecoratorPipelineTests
 
         inner.Setup(x => x.HandleAsync(It.IsAny<TransactionalPipelineTestCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure(Error.Failure("BIZ001", "Invariant violated")));
+        SetupExecuteInTransaction<Result>(unitOfWork);
 
         var sut = new TransactionalCommandDecorator<TransactionalPipelineTestCommand, Result>(
             inner.Object, unitOfWork.Object);
@@ -97,9 +98,9 @@ public sealed class CommandDecoratorPipelineTests
         // Transaction commits because the handler returned normally (no exception).
         // Business failures should be handled by callers; only exceptions trigger rollback.
         result.IsFailure.Should().BeTrue();
-        unitOfWork.Verify(x => x.BeginTransaction(), Times.Once);
-        unitOfWork.Verify(x => x.CommitTransaction(), Times.Once);
-        unitOfWork.Verify(x => x.RollbackTransaction(), Times.Never);
+        unitOfWork.Verify(
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task<Result>>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ── Full pipeline: Logging -> Caching -> Transactional -> Handler ──
@@ -120,10 +121,9 @@ public sealed class CommandDecoratorPipelineTests
                 return Result.Success();
             });
 
-        // UnitOfWork tracks begin/commit
+        // UnitOfWork — ExecuteInTransactionAsync simulates begin/commit/rollback
         var unitOfWork = new Mock<IUnitOfWork>();
-        unitOfWork.Setup(x => x.BeginTransaction()).Callback(() => callOrder.Add("BeginTransaction"));
-        unitOfWork.Setup(x => x.CommitTransaction()).Callback(() => callOrder.Add("CommitTransaction"));
+        SetupExecuteInTransactionWithCallOrder<Result>(unitOfWork, callOrder);
 
         // CacheService tracks invalidation
         var cacheService = new Mock<ICacheService>();
@@ -184,9 +184,7 @@ public sealed class CommandDecoratorPipelineTests
             });
 
         var unitOfWork = new Mock<IUnitOfWork>();
-        unitOfWork.Setup(x => x.BeginTransaction()).Callback(() => callOrder.Add("BeginTransaction"));
-        unitOfWork.Setup(x => x.CommitTransaction()).Callback(() => callOrder.Add("CommitTransaction"));
-        unitOfWork.Setup(x => x.RollbackTransaction()).Callback(() => callOrder.Add("RollbackTransaction"));
+        SetupExecuteInTransactionWithCallOrder<Result>(unitOfWork, callOrder);
 
         var cacheService = new Mock<ICacheService>();
         cacheService
@@ -233,8 +231,7 @@ public sealed class CommandDecoratorPipelineTests
             });
 
         var unitOfWork = new Mock<IUnitOfWork>();
-        unitOfWork.Setup(x => x.BeginTransaction()).Callback(() => callOrder.Add("BeginTransaction"));
-        unitOfWork.Setup(x => x.CommitTransaction()).Callback(() => callOrder.Add("CommitTransaction"));
+        SetupExecuteInTransactionWithCallOrder<Result>(unitOfWork, callOrder);
 
         var cacheService = new Mock<ICacheService>();
         cacheService
@@ -281,7 +278,6 @@ public sealed class CommandDecoratorPipelineTests
             });
 
         var unitOfWork = new Mock<IUnitOfWork>();
-        unitOfWork.Setup(x => x.BeginTransaction()).Callback(() => callOrder.Add("BeginTransaction"));
 
         var cacheService = new Mock<ICacheService>();
         cacheService
@@ -307,11 +303,51 @@ public sealed class CommandDecoratorPipelineTests
 
         // No transaction, no cache invalidation — only the handler runs
         callOrder.Should().Equal("Handler");
-        unitOfWork.Verify(x => x.BeginTransaction(), Times.Never);
+        unitOfWork.Verify(
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task<Result>>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         cacheService.Verify(
             x => x.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+    /// <summary>
+    /// Sets up <see cref="IUnitOfWork.ExecuteInTransactionAsync{TResult}"/> to invoke the
+    /// callback directly — no actual transaction management (unit test isolation).
+    /// </summary>
+    private static void SetupExecuteInTransaction<TResult>(Mock<IUnitOfWork> unitOfWork) =>
+        unitOfWork.Setup(x => x.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<TResult>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task<TResult>>, CancellationToken>(
+                (operation, ct) => operation(ct));
+
+    /// <summary>
+    /// Sets up <see cref="IUnitOfWork.ExecuteInTransactionAsync{TResult}"/> to simulate
+    /// begin/commit/rollback by recording to <paramref name="callOrder"/>, preserving the
+    /// pipeline-order assertions.
+    /// </summary>
+    private static void SetupExecuteInTransactionWithCallOrder<TResult>(
+        Mock<IUnitOfWork> unitOfWork,
+        List<string> callOrder) =>
+        unitOfWork.Setup(x => x.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<TResult>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task<TResult>>, CancellationToken>(
+                async (operation, ct) =>
+                {
+                    callOrder.Add("BeginTransaction");
+                    try
+                    {
+                        var result = await operation(ct);
+                        callOrder.Add("CommitTransaction");
+                        return result;
+                    }
+                    catch
+                    {
+                        callOrder.Add("RollbackTransaction");
+                        throw;
+                    }
+                });
 }
 
 // ── Test types (must be public for Moq DynamicProxy) ──

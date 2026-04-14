@@ -56,4 +56,18 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
 
     /// <summary>Rolls back the current transaction.</summary>
     void RollbackTransaction();
+
+    /// <summary>
+    /// Executes <paramref name="operation"/> inside a database transaction, wrapped by the
+    /// active execution strategy so that retrying strategies (e.g.
+    /// <c>SqlServerRetryingExecutionStrategy</c>) can retry the entire transaction as a
+    /// single retriable unit. On success the transaction is committed; on exception it is
+    /// rolled back before the exception propagates.
+    /// </summary>
+    /// <typeparam name="TResult">The type returned by the operation.</typeparam>
+    /// <param name="operation">The work to execute inside the transaction.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default);
 }

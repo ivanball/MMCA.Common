@@ -245,6 +245,50 @@ public sealed class DbContextFactory(
     }
 
     /// <inheritdoc />
+    public async Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        // Use the execution strategy from the first active transactional context
+        // (typically SQL Server). If none exists yet, create the default context so
+        // the strategy is available before the handler's first repository call.
+        var context = _dbContexts.Values.FirstOrDefault(SupportsTransactions)
+            ?? GetDbContext(DataSource.SQLServer);
+
+        var strategy = context.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async ct =>
+        {
+            BeginTransaction();
+            try
+            {
+                var result = await operation(ct).ConfigureAwait(false);
+                CommitTransaction();
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                // The connection may already be closed; best-effort rollback.
+                // Disposal will clean up if this fails.
+                try
+                {
+                    RollbackTransaction();
+                }
+                catch
+                {
+                    _transactionActive = false;
+                }
+
+                throw;
+            }
+            catch
+            {
+                RollbackTransaction();
+                throw;
+            }
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task MigrateAsync(CancellationToken cancellationToken = default)
     {
         foreach (var context in _dbContexts.Values.Where(SupportsRelationalMigrations))

@@ -26,17 +26,8 @@ public sealed class TransactionalCommandDecorator<TCommand, TResult>(
         if (command is not ITransactional)
             return await inner.HandleAsync(command, cancellationToken);
 
-        unitOfWork.BeginTransaction();
-        try
-        {
-            var result = await inner.HandleAsync(command, cancellationToken);
-            unitOfWork.CommitTransaction();
-            return result;
-        }
-        catch
-        {
-            unitOfWork.RollbackTransaction();
-            throw;
-        }
+        return await unitOfWork.ExecuteInTransactionAsync(
+            ct => inner.HandleAsync(command, ct),
+            cancellationToken);
     }
 }

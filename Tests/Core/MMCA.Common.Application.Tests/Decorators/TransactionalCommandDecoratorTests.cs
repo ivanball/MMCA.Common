@@ -23,11 +23,12 @@ public sealed class TransactionalCommandDecoratorTests
         var result = await sut.HandleAsync(new NonTransactionalCommand());
 
         result.IsSuccess.Should().BeTrue();
-        unitOfWork.Verify(x => x.BeginTransaction(), Times.Never);
-        unitOfWork.Verify(x => x.CommitTransaction(), Times.Never);
+        unitOfWork.Verify(
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task<Result>>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
-    // ── Transactional command begins and commits transaction ──
+    // ── Transactional command delegates to ExecuteInTransactionAsync ──
     [Fact]
     public async Task HandleAsync_TransactionalCommand_BeginsAndCommitsTransaction()
     {
@@ -35,18 +36,19 @@ public sealed class TransactionalCommandDecoratorTests
         var unitOfWork = new Mock<IUnitOfWork>();
         inner.Setup(x => x.HandleAsync(It.IsAny<TransactionalCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
+        SetupExecuteInTransaction(unitOfWork);
 
         var sut = new TransactionalCommandDecorator<TransactionalCommand, Result>(inner.Object, unitOfWork.Object);
 
         var result = await sut.HandleAsync(new TransactionalCommand());
 
         result.IsSuccess.Should().BeTrue();
-        unitOfWork.Verify(x => x.BeginTransaction(), Times.Once);
-        unitOfWork.Verify(x => x.CommitTransaction(), Times.Once);
-        unitOfWork.Verify(x => x.RollbackTransaction(), Times.Never);
+        unitOfWork.Verify(
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task<Result>>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
-    // ── Transactional command rolls back on exception ──
+    // ── Transactional command propagates exceptions through ExecuteInTransactionAsync ──
     [Fact]
     public async Task HandleAsync_TransactionalCommand_WhenHandlerThrows_RollsBack()
     {
@@ -54,16 +56,29 @@ public sealed class TransactionalCommandDecoratorTests
         var unitOfWork = new Mock<IUnitOfWork>();
         inner.Setup(x => x.HandleAsync(It.IsAny<TransactionalCommand>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("test error"));
+        SetupExecuteInTransaction(unitOfWork);
 
         var sut = new TransactionalCommandDecorator<TransactionalCommand, Result>(inner.Object, unitOfWork.Object);
 
         var act = () => sut.HandleAsync(new TransactionalCommand());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
-        unitOfWork.Verify(x => x.BeginTransaction(), Times.Once);
-        unitOfWork.Verify(x => x.RollbackTransaction(), Times.Once);
-        unitOfWork.Verify(x => x.CommitTransaction(), Times.Never);
+        unitOfWork.Verify(
+            x => x.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task<Result>>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
+
+    /// <summary>
+    /// Sets up the <see cref="IUnitOfWork.ExecuteInTransactionAsync{TResult}"/> mock to
+    /// simply invoke the callback — the real begin/commit/rollback is an implementation
+    /// detail of <c>DbContextFactory</c>.
+    /// </summary>
+    private static void SetupExecuteInTransaction(Mock<IUnitOfWork> unitOfWork) =>
+        unitOfWork.Setup(x => x.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<Result>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, Task<Result>>, CancellationToken>(
+                (operation, ct) => operation(ct));
 }
 
 // ── Test types (must be public for Moq DynamicProxy) ──

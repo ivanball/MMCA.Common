@@ -54,6 +54,17 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
     void RollbackTransaction();
 
     /// <summary>
+    /// Executes <paramref name="operation"/> inside a database transaction, wrapped by the
+    /// active execution strategy so that retrying strategies can retry the entire unit.
+    /// </summary>
+    /// <typeparam name="TResult">The type returned by the operation.</typeparam>
+    /// <param name="operation">The work to execute inside the transaction.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Applies pending EF Core migrations for all active relational contexts.
     /// Cosmos contexts are skipped (document DB — no schema migrations).
     /// </summary>
