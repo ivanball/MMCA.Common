@@ -66,7 +66,14 @@ public static class OidcDiscoveryEndpointExtensions
                     return Results.NotFound();
                 }
 
-                var jwksUri = $"{context.Request.Scheme}://{context.Request.Host}{JwksEndpointExtensions.DefaultJwksPath}";
+                // Use the pre-forwarding scheme when available. UseForwardedHeaders may
+                // have rewritten Request.Scheme to "https" from X-Forwarded-Proto, but
+                // this endpoint is consumed by internal services that reach Identity via
+                // cleartext HTTP. The pre-forwarded scheme reflects the actual transport.
+                var scheme = context.Items.TryGetValue(WebApplicationExtensions.PreForwardedSchemeKey, out var saved) && saved is string s
+                    ? s
+                    : context.Request.Scheme;
+                var jwksUri = $"{scheme}://{context.Request.Host}{JwksEndpointExtensions.DefaultJwksPath}";
 
                 return Results.Json(new
                 {

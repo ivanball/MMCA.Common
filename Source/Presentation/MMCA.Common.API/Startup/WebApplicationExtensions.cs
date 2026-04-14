@@ -11,6 +11,14 @@ namespace MMCA.Common.API.Startup;
 /// </summary>
 public static class WebApplicationExtensions
 {
+    /// <summary>
+    /// Key stored in <see cref="Microsoft.AspNetCore.Http.HttpContext.Items"/> before
+    /// <see cref="ForwardedHeadersExtensions.UseForwardedHeaders(IApplicationBuilder, ForwardedHeadersOptions)"/>
+    /// runs. Consumed by <see cref="OidcDiscoveryEndpointExtensions"/> to construct
+    /// <c>jwks_uri</c> using the actual transport scheme, not the forwarded one.
+    /// </summary>
+    internal const string PreForwardedSchemeKey = "PreForwardedScheme";
+
     extension(WebApplication app)
     {
         /// <summary>
@@ -33,6 +41,17 @@ public static class WebApplicationExtensions
             // Clear them so forwarded headers are trusted regardless of proxy IP.
             forwardedHeadersOptions.KnownProxies.Clear();
             forwardedHeadersOptions.KnownIPNetworks.Clear();
+
+            // Capture the actual transport scheme before UseForwardedHeaders overwrites it
+            // with X-Forwarded-Proto. The OIDC discovery endpoint needs the original scheme
+            // for jwks_uri — internal services fetch JWKS over cleartext HTTP, but envoy may
+            // forward X-Forwarded-Proto: https, making jwks_uri unreachable via HTTPS.
+            app.Use(static (context, next) =>
+            {
+                context.Items[PreForwardedSchemeKey] = context.Request.Scheme;
+                return next(context);
+            });
+
             app.UseForwardedHeaders(forwardedHeadersOptions);
 
             // HTTPS redirect runs for browser/REST traffic only. gRPC clients use HTTP/2
