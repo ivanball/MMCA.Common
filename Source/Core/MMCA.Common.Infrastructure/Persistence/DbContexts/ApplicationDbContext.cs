@@ -155,6 +155,8 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.EventType).IsRequired().HasMaxLength(500).IsUnicode(false);
             entity.Property(e => e.Payload).IsRequired();
             entity.Property(e => e.LastError).HasMaxLength(4000);
+            entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
             entity.HasIndex(e => new { e.ProcessedOn, e.OccurredOn })
                   .HasFilter("[ProcessedOn] IS NULL")
                   .HasDatabaseName("IX_OutboxMessages_Pending");

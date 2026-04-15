@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MMCA.Common.Domain.Interfaces;
@@ -37,6 +38,12 @@ public sealed class OutboxMessage
     /// <summary>Gets or sets the last error message from a failed dispatch attempt.</summary>
     public string? LastError { get; set; }
 
+    /// <summary>Gets the W3C trace ID captured when the domain event was raised, for distributed tracing correlation.</summary>
+    public string? TraceId { get; init; }
+
+    /// <summary>Gets the W3C span ID captured when the domain event was raised, for distributed tracing correlation.</summary>
+    public string? SpanId { get; init; }
+
     /// <summary>
     /// Creates an <see cref="OutboxMessage"/> from a domain event, serializing it as JSON.
     /// </summary>
@@ -47,11 +54,14 @@ public sealed class OutboxMessage
         ArgumentNullException.ThrowIfNull(domainEvent);
 
         var type = domainEvent.GetType();
+        var activity = Activity.Current;
         return new OutboxMessage
         {
             EventType = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
             Payload = JsonSerializer.Serialize(domainEvent, type, SerializerOptions),
             OccurredOn = domainEvent.DateOccurred,
+            TraceId = activity?.TraceId.ToString(),
+            SpanId = activity?.SpanId.ToString(),
         };
     }
 

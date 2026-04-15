@@ -100,6 +100,12 @@ public static class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
+            services.AddOptions<Auth.LoginProtectionSettings>()
+                .Bind(configuration.GetSection(Auth.LoginProtectionSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.TryAddScoped<Application.Auth.ILoginProtectionService, Auth.LoginProtectionService>();
+
             services.AddOptions<MessageBusSettings>()
                 .Bind(configuration.GetSection(MessageBusSettings.SectionName))
                 .ValidateDataAnnotations()

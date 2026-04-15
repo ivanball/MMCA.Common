@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public sealed partial class OutboxProcessor(
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
 
+    private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
     private static readonly Meter OutboxMeter = new("MMCA.Common.Outbox");
     private static readonly Counter<long> DeadLetterCounter = OutboxMeter.CreateCounter<long>(
         "outbox.dead_letter.count",
@@ -96,6 +98,7 @@ public sealed partial class OutboxProcessor(
 
         foreach (var message in messages)
         {
+            using var activity = StartOutboxActivity(message);
             try
             {
                 var domainEvent = message.DeserializeEvent();
@@ -127,12 +130,41 @@ public sealed partial class OutboxProcessor(
             {
                 message.RetryCount++;
                 message.LastError = ex.Message;
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
                 LogMessageRetry(logger, message.Id, message.RetryCount, ex);
             }
         }
 
         // Use the base DbContext.SaveChangesAsync to bypass audit stamping and event dispatch.
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Starts a new <see cref="Activity"/> linked to the original request's trace context
+    /// stored in the outbox message. Returns <see langword="null"/> when no trace context
+    /// was captured (e.g., messages written before this feature was added).
+    /// </summary>
+    private static Activity? StartOutboxActivity(OutboxMessage message)
+    {
+        if (string.IsNullOrEmpty(message.TraceId) || string.IsNullOrEmpty(message.SpanId))
+        {
+            return null;
+        }
+
+        var parentContext = new ActivityContext(
+            ActivityTraceId.CreateFromString(message.TraceId),
+            ActivitySpanId.CreateFromString(message.SpanId),
+            ActivityTraceFlags.Recorded);
+
+        var activity = OutboxActivitySource.StartActivity(
+            "OutboxProcess",
+            ActivityKind.Consumer,
+            parentContext);
+
+        activity?.SetTag("messaging.outbox.message_id", message.Id.ToString());
+        activity?.SetTag("messaging.outbox.event_type", message.EventType);
+
+        return activity;
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox processor disabled: {DataSource} does not support the outbox table")]

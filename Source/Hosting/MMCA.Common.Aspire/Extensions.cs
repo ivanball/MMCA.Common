@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -75,6 +76,7 @@ public static class Extensions
                     .AddRuntimeInstrumentation())
             .WithTracing(tracing =>
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddSource("MMCA.Common.Outbox")
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation());
 
@@ -96,6 +98,41 @@ public static class Extensions
     {
         builder.Services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Conditionally registers health checks for infrastructure dependencies (Redis, RabbitMQ)
+    /// when their connection strings are configured. These are tagged as readiness checks only —
+    /// they appear in <c>/health</c> but not <c>/alive</c>, so a transient infrastructure outage
+    /// does not kill the process.
+    /// </summary>
+    /// <typeparam name="TBuilder">The host application builder type.</typeparam>
+    /// <param name="builder">The host application builder to configure.</param>
+    /// <returns>The same builder instance for chaining.</returns>
+    public static TBuilder AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
+    {
+        var healthChecks = builder.Services.AddHealthChecks();
+
+        var redisConnectionString = builder.Configuration.GetConnectionString("redis");
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            healthChecks.AddRedis(redisConnectionString, name: "redis");
+        }
+
+        var rabbitConnectionString = builder.Configuration.GetConnectionString("rabbitmq")
+            ?? builder.Configuration.GetConnectionString("messaging");
+        if (!string.IsNullOrWhiteSpace(rabbitConnectionString)
+            && Uri.TryCreate(rabbitConnectionString, UriKind.Absolute, out var rabbitUri))
+        {
+            healthChecks.AddRabbitMQ(async _ =>
+            {
+                var factory = new RabbitMQ.Client.ConnectionFactory { Uri = rabbitUri };
+                return await factory.CreateConnectionAsync().ConfigureAwait(false);
+            }, name: "rabbitmq");
+        }
 
         return builder;
     }
