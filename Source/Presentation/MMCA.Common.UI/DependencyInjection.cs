@@ -62,6 +62,17 @@ public static class DependencyInjection
 
             return services;
         }
+
+        /// <summary>
+        /// Registers the session-cookie sync used to mirror localStorage tokens into the
+        /// HttpOnly cookie read by server-side SSR prerender. Called from both the Blazor
+        /// Server (UI.Web) host and the WebAssembly client.
+        /// </summary>
+        public IServiceCollection AddClientAuthSessionCookieSync()
+        {
+            services.TryAddScoped<ISessionCookieSync, JsFetchSessionCookieSync>();
+            return services;
+        }
     }
 }
 

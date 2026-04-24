@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.FeatureManagement;
 using Microsoft.FeatureManagement.Mvc;
@@ -8,6 +9,7 @@ using MMCA.Common.API.FeatureManagement;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.JsonConverters;
 using MMCA.Common.API.Middleware;
+using MMCA.Common.API.SessionCookies;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 
@@ -88,6 +90,19 @@ public static class DependencyInjection
             services.AddExceptionHandler<ValidationExceptionHandler>();
             services.AddExceptionHandler<GlobalExceptionHandler>();
 
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the server-side session-cookie reader used during SSR prerender so
+        /// [Authorize] pages can resolve auth state before JS interop is available.
+        /// Call on the Blazor Server (UI.Web) host.
+        /// </summary>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddServerAuthSessionCookie()
+        {
+            services.AddHttpContextAccessor();
+            services.TryAddScoped<CookieTokenReader>();
             return services;
         }
 
