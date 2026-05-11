@@ -71,10 +71,17 @@ public static class Extensions
     /// <typeparam name="TResource">The project resource type.</typeparam>
     /// <param name="service">The project resource builder.</param>
     /// <param name="identity">The Identity service project resource builder.</param>
+    /// <param name="gateway">
+    /// Optional gateway resource. When provided, the JwtBearer authority is set to the gateway's
+    /// HTTPS endpoint (which supports HTTP/1.1 + HTTP/2 via ALPN and forwards /.well-known/* to
+    /// Identity). When omitted, falls back to Identity's HTTPS endpoint (which is Http2-only
+    /// and may reject default HttpClient HTTP/1.1 requests).
+    /// </param>
     /// <returns>The project resource builder for chaining.</returns>
     public static IResourceBuilder<TResource> WithJwksDiscovery<TResource>(
         this IResourceBuilder<TResource> service,
-        IResourceBuilder<ProjectResource> identity)
+        IResourceBuilder<ProjectResource> identity,
+        IResourceBuilder<ProjectResource>? gateway = null)
         where TResource : IResourceWithEnvironment, IResourceWithWaitSupport
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -85,9 +92,20 @@ public static class Extensions
             .WaitFor(identity)
             .WithEnvironment(context =>
             {
-                // Use the HTTP endpoint of the identity service for JWKS discovery; this is the
-                // same URL clients use to fetch /.well-known/openid-configuration.
-                var endpoint = identity.GetEndpoint("http");
+                // Identity (and the other extracted services) listen Http2-only on cleartext so
+                // cross-service gRPC clients can negotiate h2c prior knowledge. The downside is
+                // that the default JwtBearer backchannel HttpClient sends HTTP/1.1, which Kestrel
+                // rejects on Http2-only endpoints. Route the JwtBearer's metadata fetch through
+                // the gateway instead: the gateway terminates TLS, supports both HTTP/1.1 and
+                // HTTP/2 via ALPN, and (per the Gateway forwarder) routes /.well-known/* to
+                // Identity over HTTP/2. So the default HTTP/1.1 backchannel works end-to-end.
+                //
+                // Fallback when no gateway is passed: use Identity's HTTPS endpoint. ALPN will
+                // negotiate HTTP/2 with a default HttpClient — same caveat about HTTP/1.1
+                // clients on Http2-only endpoints applies, so callers should prefer the gateway.
+                var endpoint = gateway is not null
+                    ? gateway.GetEndpoint("https")
+                    : identity.GetEndpoint("https");
                 context.EnvironmentVariables["Authentication__JwtBearer__Authority"] = endpoint;
             });
     }

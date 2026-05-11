@@ -66,14 +66,15 @@ public static class OidcDiscoveryEndpointExtensions
                     return Results.NotFound();
                 }
 
-                // Use the pre-forwarding scheme when available. UseForwardedHeaders may
-                // have rewritten Request.Scheme to "https" from X-Forwarded-Proto, but
-                // this endpoint is consumed by internal services that reach Identity via
-                // cleartext HTTP. The pre-forwarded scheme reflects the actual transport.
-                var scheme = context.Items.TryGetValue(WebApplicationExtensions.PreForwardedSchemeKey, out var saved) && saved is string s
-                    ? s
-                    : context.Request.Scheme;
-                var jwksUri = $"{scheme}://{context.Request.Host}{JwksEndpointExtensions.DefaultJwksPath}";
+                // Derive jwks_uri from the configured issuer (the canonical public URL of the
+                // platform — typically the gateway, e.g. https://localhost:6001). Computing it
+                // from the inbound request is unreliable: Aspire/DCP fronts the Identity service
+                // on per-launchSettings ports and rewrites Host via X-Forwarded-Host to those
+                // canonical ports (e.g. localhost:56003), which downstream callers can't always
+                // reach. Reusing the issuer keeps issuer + jwks_uri origin-aligned (a common
+                // requirement for OIDC clients) and routes JWKS fetches through the same gateway
+                // that fronts /Auth — so a single forwarder rule for /.well-known/* covers it.
+                var jwksUri = $"{issuer.TrimEnd('/')}{JwksEndpointExtensions.DefaultJwksPath}";
 
                 return Results.Json(new
                 {

@@ -19,6 +19,17 @@ public static class WebApplicationExtensions
     /// </summary>
     internal const string PreForwardedSchemeKey = "PreForwardedScheme";
 
+    /// <summary>
+    /// Companion to <see cref="PreForwardedSchemeKey"/>. Stores the request Host header as
+    /// the connection actually saw it, before <c>UseForwardedHeaders</c> rewrites Request.Host
+    /// from <c>X-Forwarded-Host</c>. Aspire/DCP injects an <c>X-Forwarded-Host</c> pointing at
+    /// the canonical launchSettings URL (e.g. <c>localhost:56003</c>) which is unreachable to
+    /// internal callers — they reached the service via the Aspire-allocated DNS name. The OIDC
+    /// discovery endpoint needs the original host so <c>jwks_uri</c> is reachable from the
+    /// same caller that just fetched the discovery document.
+    /// </summary>
+    internal const string PreForwardedHostKey = "PreForwardedHost";
+
     extension(WebApplication app)
     {
         /// <summary>
@@ -42,13 +53,16 @@ public static class WebApplicationExtensions
             forwardedHeadersOptions.KnownProxies.Clear();
             forwardedHeadersOptions.KnownIPNetworks.Clear();
 
-            // Capture the actual transport scheme before UseForwardedHeaders overwrites it
-            // with X-Forwarded-Proto. The OIDC discovery endpoint needs the original scheme
-            // for jwks_uri — internal services fetch JWKS over cleartext HTTP, but envoy may
-            // forward X-Forwarded-Proto: https, making jwks_uri unreachable via HTTPS.
+            // Capture the actual transport scheme + host before UseForwardedHeaders rewrites
+            // Request.Scheme and Request.Host from the X-Forwarded-* headers. The OIDC discovery
+            // endpoint needs the original values for jwks_uri — internal services fetch JWKS
+            // over cleartext HTTP using the Aspire-resolved DNS name, but envoy/DCP forwards
+            // X-Forwarded-Proto: https and X-Forwarded-Host pointing at the canonical
+            // launchSettings URL (e.g. localhost:56003) which the caller cannot reach.
             app.Use(static (context, next) =>
             {
                 context.Items[PreForwardedSchemeKey] = context.Request.Scheme;
+                context.Items[PreForwardedHostKey] = context.Request.Host.Value;
                 return next(context);
             });
 

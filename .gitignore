@@ -411,5 +411,8 @@ Notes.txt
 # NuGet pack output
 nupkgs/
 
+# PEM keys (JWT signing keys, etc.) — never commit
+*.pem
+
 # Local MMCA development override
 local.props
