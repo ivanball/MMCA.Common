@@ -31,7 +31,16 @@ public sealed class SQLServerDbContext(
                         sql.MigrationsAssembly(connectionStringSettings.SQLServerMigrationsAssembly);
                     }
 
-                    sql.EnableRetryOnFailure();
+                    // Retry transient SQL Server failures (timeouts, transient network drops,
+                    // throttling, deadlocks). Required so cold-replica startup connection attempts
+                    // and ACA-side platform replica replacements don't surface as user-facing 5xx.
+                    // NOTE: with retry-on-failure enabled, manual BeginTransactionAsync calls
+                    // MUST be wrapped in Database.CreateExecutionStrategy().ExecuteAsync — the
+                    // TransactionalCommandDecorator already does this.
+                    sql.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null);
                 })
             // Suppress PendingModelChangesWarning. Required by the microservices-extraction
             // architecture (the user's "shared SQLServerDbContext" decision): each extracted
