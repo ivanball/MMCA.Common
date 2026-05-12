@@ -48,7 +48,7 @@ public sealed class SignalRPushNotificationSender(IHubContext<NotificationHub> h
             if (batch.Count >= BatchSize)
             {
                 yield return batch;
-                batch = new List<string>(BatchSize);
+                batch = [];
             }
         }
 
