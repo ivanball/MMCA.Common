@@ -159,7 +159,13 @@ public static class DependencyInjection
 
             services.TryAddScoped<ICorrelationContext, CorrelationContext>();
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
-            services.TryAddScoped<ITokenService, TokenService>();
+            // Singleton: TokenService owns RSA handles (RS256) disposed in IDisposable.Dispose.
+            // Scoped lifetime caused the underlying RSA to be disposed at end-of-request while
+            // Microsoft.IdentityModel.Tokens' static CryptoProviderCache still held the cached
+            // AsymmetricSignatureProvider that wrapped it, throwing ObjectDisposedException on
+            // the next RS256 sign. Constructor only depends on IJwtSettings (singleton) and the
+            // service is stateless after construction, so singleton is correct.
+            services.TryAddSingleton<ITokenService, TokenService>();
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
             services.TryAddScoped<IEventBus, InProcessEventBus>();
             services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();

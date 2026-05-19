@@ -134,7 +134,7 @@ public sealed class DependencyInjectionTests
             d => d.ServiceType == typeof(ITokenService));
 
         descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
         descriptor.ImplementationType.Should().Be<TokenService>();
     }
 

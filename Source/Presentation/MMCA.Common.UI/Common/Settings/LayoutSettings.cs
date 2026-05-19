@@ -2,12 +2,15 @@ namespace MMCA.Common.UI.Common.Settings;
 
 /// <summary>
 /// Strongly-typed options bound to the <c>"Layout"</c> configuration section.
-/// Provides application-specific layout customization such as footer text.
+/// Provides application-specific layout customization such as the navbar brand and footer text.
 /// </summary>
 public sealed class LayoutSettings
 {
     /// <summary>Configuration section name used for binding.</summary>
     public static readonly string SectionName = "Layout";
+
+    /// <summary>Brand text shown in the top-left navbar link. Defaults to <c>"MMCA"</c> when not configured.</summary>
+    public string BrandName { get; init; } = "MMCA";
 
     /// <summary>Text displayed in the application footer. Defaults to empty when not configured.</summary>
     public string FooterText { get; init; } = string.Empty;
