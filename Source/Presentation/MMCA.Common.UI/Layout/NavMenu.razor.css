@@ -20,6 +20,12 @@
     height: 3.5rem;
     background-color: var(--mmca-sidebar-bg-dark, #141B2D);
     padding-right: 4.5rem;
+    /* Bootstrap's .navbar defaults to flex-wrap: wrap, which pushes
+       .toprow-actions onto a second row below the brand on mobile.
+       Force a single row; .container-fluid is allowed to shrink
+       (see .top-row .container-fluid below) so the brand truncates
+       via ellipsis instead of wrapping the actions. */
+    flex-wrap: nowrap;
 }
 
 .navbar-brand {
