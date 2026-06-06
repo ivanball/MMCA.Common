@@ -242,7 +242,7 @@ public static class Extensions
     /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> environment variable is present. The Aspire
     /// dashboard sets this automatically; standalone deployments must supply it explicitly.
     /// </summary>
-    private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder)
+    private static void AddOpenTelemetryExporters<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
         var useOtlpExporter = !string.IsNullOrWhiteSpace(
@@ -252,7 +252,5 @@ public static class Extensions
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
-
-        return builder;
     }
 }

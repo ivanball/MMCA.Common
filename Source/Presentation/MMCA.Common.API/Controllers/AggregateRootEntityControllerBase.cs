@@ -32,7 +32,9 @@ public abstract class AggregateRootEntityControllerBase<
     IEntityQueryService<TEntity, TEntityDTO, TIdentifierType> queryService,
     ICommandHandler<TCreateRequest, Result<TEntityDTO>> createHandler,
     ICommandHandler<DeleteEntityCommand<TEntity, TIdentifierType>, Result> deleteHandler,
+#pragma warning disable S6672 // Logger category intentionally matches the base controller; ILogger<T> is not covariant, so the base ctor requires this exact type
     ILogger<EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>> logger)
+#pragma warning restore S6672
     : EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>(queryService, logger)
     , IAggregateRootEntityControllerBase<TEntityDTO, TIdentifierType, TCreateRequest>
     where TEntity : AuditableAggregateRootEntity<TIdentifierType>
