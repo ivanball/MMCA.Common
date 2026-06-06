@@ -32,9 +32,19 @@ public sealed class OutboxSettings
     public int ProcessingDelaySeconds { get; init; } = 30;
 
     /// <summary>
-    /// Gets the data source used by the outbox processor to poll for pending messages.
-    /// Must be a relational provider that supports the outbox table (SQL Server or SQLite).
+    /// Gets the engine of the data source where integration events published via
+    /// <c>IEventBus</c> are written to the outbox. Must be a relational provider that
+    /// supports the outbox table (SQL Server or SQLite).
     /// Defaults to <see cref="DataSource.SQLServer"/>.
     /// </summary>
     public DataSource DataSource { get; init; } = DataSource.SQLServer;
+
+    /// <summary>
+    /// Gets the <b>logical</b> data source name (paired with <see cref="DataSource"/>) where
+    /// integration events published via <c>IEventBus</c> are written to the outbox.
+    /// Defaults to <see cref="DataSourceKey.DefaultName"/> (the top-level connection strings),
+    /// preserving single-database behavior. The outbox <em>processor</em> is not limited to this
+    /// source — it drains the outbox table of every relational physical source in use.
+    /// </summary>
+    public string DatabaseName { get; init; } = DataSourceKey.DefaultName;
 }

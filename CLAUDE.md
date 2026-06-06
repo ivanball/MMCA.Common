@@ -146,15 +146,22 @@ BaseEntity<TId> → AuditableBaseEntity<TId> → AuditableAggregateRootEntity<TI
 
 A shared `global using UserIdentifierType = int;` in `Source/Core/MMCA.Common.Domain/GlobalUsings.IdentifierType.cs` is linked into all MMCA.Common projects via `Directory.Build.props`. A second alias file, `GlobalUsings.NotificationIdentifierType.cs` (in `MMCA.Common.Shared`), is linked the same way. To add a solution-wide identifier alias, create the `GlobalUsings.*.cs` file and add a matching `<Compile Include ... Link=... />` block in `Directory.Build.props`.
 
-### Multi-Database Strategy
+### Multi-Database Strategy (database per microservice)
 
-`DbContextFactory` (scoped) routes repositories to the correct `ApplicationDbContext` subclass based on `DataSource` enum (`CosmosDB`, `SQLite`, `SQLServer`). Per-scope caching ensures repositories in the same request share the same change tracker. Transactions coordinate across SQL Server + SQLite (Cosmos has no multi-document transactions).
+Every entity resolves to a **physical data source** — a `DataSourceKey(Engine, Name)` pair, where the engine comes from the configuration base class (`EntityTypeConfigurationSQLServer/Cosmos/Sqlite`, via `[UseDataSource]`) and the database name resolves as: `[UseDatabase("X")]` attribute on the concrete configuration → module name derived from the entity namespace (segment before `Domain`, same rule as SQL schema derivation) → `"Default"`.
+
+- **Logical → physical collapse** (`DataSourceResolver`, singleton): the `DataSources` appsettings section maps logical names to connection strings (`DataSources:Conference:SQLServerConnectionString`, optional per-source `SQLServerMigrationsAssembly`, `CosmosDatabaseName`). Logical names without an entry, or whose connection string equals the top-level `ConnectionStrings` value, collapse onto the `Default` source — so a host with no `DataSources` config behaves exactly like a single-database monolith (one context, one change tracker, FK constraints intact). Names sharing a connection string collapse to one physical source. Conflicting `SQLServerMigrationsAssembly` declarations on a collapsed source fail at startup.
+- **Eager entity registry** (`EntityDataSourceRegistry`, singleton): scans configuration assemblies up front and maps every entity to its physical source — routing no longer depends on a model having been built. `DataSourceService` is a facade over it.
+- **One context class per engine, one instance per database**: `PhysicalDbContextFactory` (singleton, NEVER pooled — per-instance `PhysicalDataSource` state) creates raw contexts; `DbContextFactory` (scoped) caches one per `DataSourceKey` and coordinates saves/transactions/disposal. `DataSourceModelCacheKeyFactory` keys EF's model cache by (context type, source name) so each database gets its own model containing only its own entities.
+- **Cross-source relationships auto-degrade** (`CrossDataSourceDegradeConvention`, model-finalizing): when a relationship's ends live in different physical sources, the FK constraint and navigations are removed from the model (scalar FK columns + a compensating index survive, foreign entity types are dropped). Runtime navigation flows through `INavigationPopulator` batch loading; consistency across sources is the outbox's job.
+- **Transactions are per-source, best-effort sequential** — there is no two-phase commit. The outbox pattern is the cross-source consistency mechanism.
+- **Design time**: `DesignTimeDbContextHelper.CreateSqlServer(args, options => ...)` builds a per-source context for `dotnet ef ... -- --datasource <Name>`, enabling one migrations project per database.
 
 **SaveChanges flow**: stamp audit fields → capture domain events from aggregates → serialize to `OutboxMessage` entries → `base.SaveChangesAsync()` (data + outbox in same transaction) → dispatch events in-process → mark outbox processed.
 
 ### Outbox Pattern
 
-`OutboxMessage` entries are persisted atomically with aggregate changes. `OutboxProcessor` (background service) polls every 10 seconds for unprocessed messages, processes in batches of 50, retries up to 5 times. Provides at-least-once delivery guarantee with OpenTelemetry metrics for dead-letter tracking.
+`OutboxMessage` entries are persisted atomically with aggregate changes, in the **same database as the aggregate** (every relational physical source has its own `OutboxMessages` table). `OutboxProcessor` (background service) drains the outbox of every relational source the host uses — a host never races for another service's outbox rows. Polls on signal or interval, processes in batches of 50, retries up to 5 times. Integration events published via `IEventBus` target the source named by `Outbox:DataSource` + `Outbox:DatabaseName` (default: SQL Server / Default). Provides at-least-once delivery guarantee with OpenTelemetry metrics for dead-letter tracking.
 
 ### Microservices Extraction Seams
 

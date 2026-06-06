@@ -26,13 +26,14 @@
     <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
     <!-- Messaging (MassTransit) -->
-    <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the health-check
-         pipeline materializes IBusControl during MapDefaultEndpoints which fails the license
-         check at startup. Revisit with SetLicense/SetCommunityLicense or MT_LICENSE env var
-         before bumping back. -->
-    <PackageVersion Include="MassTransit" Version="9.1.2" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="9.1.2" />
-    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="9.1.2" />
+    <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
+         license check at startup ("License must be specified with SetLicense/SetLicenseLocation
+         or by setting the MT_LICENSE/MT_LICENSE_PATH environment variables") and every broker-
+         enabled service host crashes. A blanket package-update bumped this to 9.1.2 once before
+         and reintroduced the crash — do NOT bump past v8 without configuring a license. -->
+    <PackageVersion Include="MassTransit" Version="8.5.5" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.5" />
+    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.5" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.31.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />

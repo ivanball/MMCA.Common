@@ -8,6 +8,9 @@ public interface IConnectionStringSettings
     /// <summary>Gets the Azure Cosmos DB connection string.</summary>
     string CosmosConnectionString { get; init; }
 
+    /// <summary>Gets the Cosmos DB database name for the default source.</summary>
+    string CosmosDatabaseName { get; init; }
+
     /// <summary>Gets the SQLite connection string (typically a file path).</summary>
     string SqliteConnectionString { get; init; }
 

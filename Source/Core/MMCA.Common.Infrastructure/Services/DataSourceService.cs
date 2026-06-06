@@ -1,53 +1,39 @@
-using System.Collections.Concurrent;
-using System.Reflection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Domain.Entities;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 
 namespace MMCA.Common.Infrastructure.Services;
 
 /// <summary>
-/// Maintains a singleton cache mapping entity type names to their <see cref="DataSource"/>.
-/// Populated lazily during EF model configuration via <see cref="UseDataSourceAttribute"/> on configuration classes.
+/// Application-facing facade over <see cref="IEntityDataSourceRegistry"/>. Resolves each entity's
+/// physical data source (engine + database) and answers include-support questions for navigation
+/// classification. The registry is built eagerly from configuration assemblies, so resolution no
+/// longer depends on an EF model having been built first.
 /// </summary>
-public sealed class DataSourceService : IDataSourceService
+public sealed class DataSourceService(IEntityDataSourceRegistry registry) : IDataSourceService
 {
-    private readonly ConcurrentDictionary<string, DataSource> _dataSourceCache = new();
+    /// <inheritdoc />
+    public DataSourceKey GetDataSourceKey(Type entityType) => registry.GetDataSourceKey(entityType);
 
     /// <inheritdoc />
-    public DataSource GetDataSource(Type entityType, Type configurationType)
-        => _dataSourceCache.GetOrAdd(
-                entityType.FullName!,
-                _ => configurationType.GetCustomAttribute<UseDataSourceAttribute>()?.DataSource
-                    ?? throw new InvalidOperationException($"DataSource not defined for {entityType.FullName}"));
+    public DataSourceKey GetDataSourceKey(string entityFullName) => registry.GetDataSourceKey(entityFullName);
 
     /// <inheritdoc />
-    public DataSource GetDataSource<TEntity, TIdentifierType, TEntityTypeConfiguration>()
-        where TEntity : AuditableBaseEntity<TIdentifierType>
-        where TEntityTypeConfiguration : class
-        where TIdentifierType : notnull
-        => GetDataSource(typeof(TEntity), typeof(TEntityTypeConfiguration));
+    public DataSource GetDataSource(string entityFullName) => registry.GetDataSourceKey(entityFullName).Engine;
 
     /// <inheritdoc />
-    public DataSource GetDataSource(string entityFullName)
-        => _dataSourceCache.TryGetValue(entityFullName, out DataSource dataSource)
-            ? dataSource
-            : throw new InvalidOperationException($"DataSource not defined for {entityFullName}");
-
-    /// <inheritdoc />
-    public DataSource GetDataSource(Type entityType)
-        => GetDataSource(entityType.FullName!);
+    public DataSource GetDataSource(Type entityType) => registry.GetDataSourceKey(entityType).Engine;
 
     /// <inheritdoc />
     /// <remarks>
-    /// EF Include (eager loading) only works when both entities share the same relational data source.
-    /// Cosmos DB does not support cross-document includes — it models relationships differently.
+    /// EF Include (eager loading) only works when both entities live in the same physical database
+    /// on a relational engine. Cosmos DB does not support cross-document includes.
     /// </remarks>
-    public bool HaveIncludeSupport(DataSource first, DataSource second)
-        => first == second && first != DataSource.CosmosDB;
+    public bool HaveIncludeSupport(DataSourceKey first, DataSourceKey second)
+        => first == second && first.Engine != DataSource.CosmosDB;
 
     /// <inheritdoc />
     public bool HaveIncludeSupport(string firstEntityFullName, string secondEntityFullName)
-        => _dataSourceCache.TryGetValue(firstEntityFullName, out var first)
-            && _dataSourceCache.TryGetValue(secondEntityFullName, out var second)
+        => registry.TryGetDataSourceKey(firstEntityFullName, out var first)
+            && registry.TryGetDataSourceKey(secondEntityFullName, out var second)
             && HaveIncludeSupport(first, second);
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Settings;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
@@ -22,6 +23,7 @@ namespace MMCA.Common.Infrastructure.Services;
 public sealed class InProcessEventBus(
     IDbContextFactory dbContextFactory,
     IDomainEventDispatcher domainEventDispatcher,
+    IDataSourceResolver dataSourceResolver,
     IOptions<OutboxSettings> outboxOptions) : IEventBus
 {
     /// <inheritdoc />
@@ -29,7 +31,8 @@ public sealed class InProcessEventBus(
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
-        var context = dbContextFactory.GetDbContext(outboxOptions.Value.DataSource);
+        var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
+        var context = dbContextFactory.GetDbContext(target);
 
         if (context.SupportsOutbox)
         {

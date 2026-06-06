@@ -2,19 +2,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 /// <summary>
-/// DbContext targeting SQL Server. Configured via connection string from <see cref="IConnectionStringSettings"/>.
+/// DbContext targeting SQL Server. One instance exists per physical SQL Server data source
+/// (database); the connection string and migrations assembly come from the resolved
+/// <see cref="PhysicalDataSource"/>.
 /// </summary>
 public sealed class SQLServerDbContext(
     DbContextOptions<SQLServerDbContext> options,
     IServiceProvider serviceProvider,
-    IConnectionStringSettings connectionStringSettings,
-    IEntityConfigurationAssemblyProvider assemblyProvider)
-    : ApplicationDbContext(options, serviceProvider, assemblyProvider)
+    IEntityConfigurationAssemblyProvider assemblyProvider,
+    PhysicalDataSource physicalDataSource)
+    : ApplicationDbContext(options, serviceProvider, assemblyProvider, physicalDataSource)
 {
     /// <inheritdoc />
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -23,12 +25,12 @@ public sealed class SQLServerDbContext(
 
         optionsBuilder
             .UseSqlServer(
-                connectionStringSettings.SQLServerConnectionString,
+                PhysicalSource.ConnectionString,
                 sql =>
                 {
-                    if (!string.IsNullOrEmpty(connectionStringSettings.SQLServerMigrationsAssembly))
+                    if (!string.IsNullOrEmpty(PhysicalSource.SqlServerMigrationsAssembly))
                     {
-                        sql.MigrationsAssembly(connectionStringSettings.SQLServerMigrationsAssembly);
+                        sql.MigrationsAssembly(PhysicalSource.SqlServerMigrationsAssembly);
                     }
 
                     // Retry transient SQL Server failures (timeouts, transient network drops,

@@ -6,10 +6,12 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
 
@@ -19,6 +21,7 @@ public sealed class InProcessEventBusTests : IDisposable
 {
     private readonly Mock<IDbContextFactory> _mockDbContextFactory = new();
     private readonly Mock<IDomainEventDispatcher> _mockDispatcher = new();
+    private readonly Mock<IDataSourceResolver> _mockResolver = new();
     private readonly OutboxSettings _outboxSettings = new() { DataSource = DataSource.SQLServer };
     private readonly TestNonOutboxContext _testContext;
     private readonly InProcessEventBus _sut;
@@ -27,11 +30,14 @@ public sealed class InProcessEventBusTests : IDisposable
     {
         _testContext = TestNonOutboxContext.Create();
         _mockDbContextFactory
-            .Setup(x => x.GetDbContext(It.IsAny<DataSource>()))
+            .Setup(x => x.GetDbContext(It.IsAny<DataSourceKey>()))
             .Returns(_testContext);
+        _mockResolver
+            .Setup(x => x.ResolveLogical(It.IsAny<DataSource>(), It.IsAny<string>()))
+            .Returns((DataSource engine, string _) => DataSourceKey.Default(engine));
 
         IOptions<OutboxSettings> options = Options.Create(_outboxSettings);
-        _sut = new InProcessEventBus(_mockDbContextFactory.Object, _mockDispatcher.Object, options);
+        _sut = new InProcessEventBus(_mockDbContextFactory.Object, _mockDispatcher.Object, _mockResolver.Object, options);
     }
 
     public void Dispose() => _testContext.Dispose();
@@ -110,7 +116,7 @@ public sealed class InProcessEventBusTests : IDisposable
         internal override bool SupportsOutbox => false;
 
         private TestNonOutboxContext(DbContextOptions<TestNonOutboxContext> options, IServiceProvider serviceProvider)
-            : base(options, serviceProvider, new NullAssemblyProvider())
+            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {
         }
 
@@ -126,6 +132,7 @@ public sealed class InProcessEventBusTests : IDisposable
                 var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
                 return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
             });
+            services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 
             var options = new DbContextOptionsBuilder<TestNonOutboxContext>()

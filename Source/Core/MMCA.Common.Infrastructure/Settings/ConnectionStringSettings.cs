@@ -15,6 +15,9 @@ public sealed class ConnectionStringSettings : IConnectionStringSettings
     public string CosmosConnectionString { get; init; } = string.Empty;
 
     /// <inheritdoc />
+    public string CosmosDatabaseName { get; init; } = "AtlDevCon";
+
+    /// <inheritdoc />
     public string SqliteConnectionString { get; init; } = string.Empty;
 
     /// <inheritdoc />

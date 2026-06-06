@@ -26,7 +26,7 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
 
     /// <inheritdoc />
     /// <remarks>
-    /// Resolves the correct <see cref="DataSource"/> for the entity via <see cref="IDataSourceService"/>,
+    /// Resolves the entity's physical data source (engine + database) via <see cref="IDataSourceService"/>,
     /// obtains the matching DbContext, and creates a repository bound to it.
     /// The repository is cached so subsequent calls for the same entity type reuse the same instance.
     /// </remarks>
@@ -37,8 +37,8 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
         var key = typeof(IRepository<TEntity, TIdentifierType>);
         if (!_repositories.TryGetValue(key, out var repository))
         {
-            var dataSource = dataSourceService.GetDataSource(typeof(TEntity));
-            var dbContext = _dbContextFactory.GetDbContext(dataSource);
+            var dataSourceKey = dataSourceService.GetDataSourceKey(typeof(TEntity));
+            var dbContext = _dbContextFactory.GetDbContext(dataSourceKey);
             repository = _repositoryFactory.Create<TEntity, TIdentifierType>(dbContext);
             _repositories[key] = repository;
         }
@@ -57,8 +57,8 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
         var key = typeof(IReadRepository<TEntity, TIdentifierType>);
         if (!_repositories.TryGetValue(key, out var repository))
         {
-            var dataSource = dataSourceService.GetDataSource(typeof(TEntity));
-            var dbContext = _dbContextFactory.GetDbContext(dataSource);
+            var dataSourceKey = dataSourceService.GetDataSourceKey(typeof(TEntity));
+            var dbContext = _dbContextFactory.GetDbContext(dataSourceKey);
             repository = _repositoryFactory.CreateReadOnly<TEntity, TIdentifierType>(dbContext);
             _repositories[key] = repository;
         }

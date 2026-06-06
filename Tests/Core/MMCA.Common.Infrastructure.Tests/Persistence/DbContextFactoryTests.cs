@@ -1,8 +1,8 @@
 #pragma warning disable CA2000 // Dispose objects before losing scope — test doubles do not hold real resources
 
 using AwesomeAssertions;
-using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using Moq;
@@ -11,68 +11,104 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 
 public sealed class DbContextFactoryTests
 {
-    // -- Constructor null guard --
+    // -- Constructor null guards (one per parameter) --
+    [Fact]
+    public void Constructor_NullPhysicalDbContextFactory_Throws()
+    {
+        var act = () => new DbContextFactory(
+            null!,
+            Mock.Of<IEntityDataSourceRegistry>(),
+            Mock.Of<IDataSourceResolver>(),
+            Mock.Of<ICurrentUserService>());
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("physicalDbContextFactory");
+    }
+
+    [Fact]
+    public void Constructor_NullEntityDataSourceRegistry_Throws()
+    {
+        var act = () => new DbContextFactory(
+            Mock.Of<IPhysicalDbContextFactory>(),
+            null!,
+            Mock.Of<IDataSourceResolver>(),
+            Mock.Of<ICurrentUserService>());
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("entityDataSourceRegistry");
+    }
+
+    [Fact]
+    public void Constructor_NullDataSourceResolver_Throws()
+    {
+        var act = () => new DbContextFactory(
+            Mock.Of<IPhysicalDbContextFactory>(),
+            Mock.Of<IEntityDataSourceRegistry>(),
+            null!,
+            Mock.Of<ICurrentUserService>());
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("dataSourceResolver");
+    }
+
     [Fact]
     public void Constructor_NullCurrentUserService_Throws()
     {
         var act = () => new DbContextFactory(
-            Mock.Of<IDbContextFactory<CosmosDbContext>>(),
-            Mock.Of<IDbContextFactory<SqliteDbContext>>(),
-            Mock.Of<IDbContextFactory<SQLServerDbContext>>(),
+            Mock.Of<IPhysicalDbContextFactory>(),
+            Mock.Of<IEntityDataSourceRegistry>(),
+            Mock.Of<IDataSourceResolver>(),
             null!);
 
-        act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>().WithParameterName("currentUserService");
     }
 
-    // -- GetDbContext calls correct factory --
+    // -- GetDbContext(DataSource) forwards to the engine's default physical source --
     [Fact]
-    public void GetDbContext_SQLServer_CallsSQLServerFactory()
+    public void GetDbContext_SQLServer_CreatesDefaultSQLServerSource()
     {
-        var sqlServerFactory = new Mock<IDbContextFactory<SQLServerDbContext>>();
-        sqlServerFactory.Setup(f => f.CreateDbContext()).Returns((SQLServerDbContext)null!);
-        var sut = CreateSut(sqlServerFactory: sqlServerFactory);
+        var physicalFactory = new Mock<IPhysicalDbContextFactory>();
+        physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
+        var sut = CreateSut(physicalFactory);
 
         sut.GetDbContext(DataSource.SQLServer);
 
-        sqlServerFactory.Verify(f => f.CreateDbContext(), Times.Once);
+        physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.SQLServer)), Times.Once);
     }
 
     [Fact]
-    public void GetDbContext_Sqlite_CallsSqliteFactory()
+    public void GetDbContext_Sqlite_CreatesDefaultSqliteSource()
     {
-        var sqliteFactory = new Mock<IDbContextFactory<SqliteDbContext>>();
-        sqliteFactory.Setup(f => f.CreateDbContext()).Returns((SqliteDbContext)null!);
-        var sut = CreateSut(sqliteFactory: sqliteFactory);
+        var physicalFactory = new Mock<IPhysicalDbContextFactory>();
+        physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
+        var sut = CreateSut(physicalFactory);
 
         sut.GetDbContext(DataSource.Sqlite);
 
-        sqliteFactory.Verify(f => f.CreateDbContext(), Times.Once);
+        physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.Sqlite)), Times.Once);
     }
 
     [Fact]
-    public void GetDbContext_CosmosDB_CallsCosmosFactory()
+    public void GetDbContext_CosmosDB_CreatesDefaultCosmosSource()
     {
-        var cosmosFactory = new Mock<IDbContextFactory<CosmosDbContext>>();
-        cosmosFactory.Setup(f => f.CreateDbContext()).Returns((CosmosDbContext)null!);
-        var sut = CreateSut(cosmosFactory: cosmosFactory);
+        var physicalFactory = new Mock<IPhysicalDbContextFactory>();
+        physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
+        var sut = CreateSut(physicalFactory);
 
         sut.GetDbContext(DataSource.CosmosDB);
 
-        cosmosFactory.Verify(f => f.CreateDbContext(), Times.Once);
+        physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.CosmosDB)), Times.Once);
     }
 
     [Fact]
     public void GetDbContext_RecreatesContext_WhenCachedValueIsNull()
     {
-        var sqlServerFactory = new Mock<IDbContextFactory<SQLServerDbContext>>();
-        sqlServerFactory.Setup(f => f.CreateDbContext()).Returns((SQLServerDbContext)null!);
-        var sut = CreateSut(sqlServerFactory: sqlServerFactory);
+        var physicalFactory = new Mock<IPhysicalDbContextFactory>();
+        physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
+        var sut = CreateSut(physicalFactory);
 
         _ = sut.GetDbContext(DataSource.SQLServer);
         _ = sut.GetDbContext(DataSource.SQLServer);
 
         // Source code re-creates when cached value is null
-        sqlServerFactory.Verify(f => f.CreateDbContext(), Times.Exactly(2));
+        physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.SQLServer)), Times.Exactly(2));
     }
 
     [Fact]
@@ -120,56 +156,15 @@ public sealed class DbContextFactoryTests
         act.Should().NotThrow();
     }
 
-    // -- Null factory in registry throws on demand --
-    [Fact]
-    public void GetDbContext_NullCosmosFactory_ThrowsArgumentNullException()
+    private static DbContextFactory CreateSut(Mock<IPhysicalDbContextFactory>? physicalFactory = null)
     {
-        using var sut = new DbContextFactory(
-            null!,
-            Mock.Of<IDbContextFactory<SqliteDbContext>>(),
-            Mock.Of<IDbContextFactory<SQLServerDbContext>>(),
+        var registry = new Mock<IEntityDataSourceRegistry>();
+        registry.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+
+        return new DbContextFactory(
+            (physicalFactory ?? new Mock<IPhysicalDbContextFactory>()).Object,
+            registry.Object,
+            Mock.Of<IDataSourceResolver>(),
             Mock.Of<ICurrentUserService>());
-
-        var act = () => sut.GetDbContext(DataSource.CosmosDB);
-
-        act.Should().Throw<ArgumentNullException>();
     }
-
-    [Fact]
-    public void GetDbContext_NullSqliteFactory_ThrowsArgumentNullException()
-    {
-        using var sut = new DbContextFactory(
-            Mock.Of<IDbContextFactory<CosmosDbContext>>(),
-            null!,
-            Mock.Of<IDbContextFactory<SQLServerDbContext>>(),
-            Mock.Of<ICurrentUserService>());
-
-        var act = () => sut.GetDbContext(DataSource.Sqlite);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void GetDbContext_NullSQLServerFactory_ThrowsArgumentNullException()
-    {
-        using var sut = new DbContextFactory(
-            Mock.Of<IDbContextFactory<CosmosDbContext>>(),
-            Mock.Of<IDbContextFactory<SqliteDbContext>>(),
-            null!,
-            Mock.Of<ICurrentUserService>());
-
-        var act = () => sut.GetDbContext(DataSource.SQLServer);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    private static DbContextFactory CreateSut(
-        Mock<IDbContextFactory<CosmosDbContext>>? cosmosFactory = null,
-        Mock<IDbContextFactory<SqliteDbContext>>? sqliteFactory = null,
-        Mock<IDbContextFactory<SQLServerDbContext>>? sqlServerFactory = null) =>
-        new(
-            (cosmosFactory ?? new Mock<IDbContextFactory<CosmosDbContext>>()).Object,
-            (sqliteFactory ?? new Mock<IDbContextFactory<SqliteDbContext>>()).Object,
-            (sqlServerFactory ?? new Mock<IDbContextFactory<SQLServerDbContext>>()).Object,
-            Mock.Of<ICurrentUserService>());
 }

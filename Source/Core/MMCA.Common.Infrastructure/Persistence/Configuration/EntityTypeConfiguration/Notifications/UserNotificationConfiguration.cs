@@ -1,17 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 
 namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.Notifications;
 
 /// <summary>
 /// EF Core configuration for the <see cref="UserNotification"/> entity.
-/// Explicitly sets the "Notification" schema because the base class derives schema from the
-/// namespace segment before "Domain", which would resolve to "Common" for Common.Domain entities.
+/// Explicitly sets the "Notification" schema (and logical database name via
+/// <see cref="UseDatabaseAttribute"/>) because the base class derives both from the namespace
+/// segment before "Domain", which would resolve to "Common" for Common.Domain entities.
+/// Hosts without a <c>DataSources:Notification</c> entry keep these tables in the default database.
 /// </summary>
-internal sealed class UserNotificationConfiguration(IDataSourceService dataSourceService)
-    : EntityTypeConfigurationSQLServer<UserNotification, UserNotificationIdentifierType>(dataSourceService)
+[UseDatabase("Notification")]
+internal sealed class UserNotificationConfiguration
+    : EntityTypeConfigurationSQLServer<UserNotification, UserNotificationIdentifierType>
 {
     /// <inheritdoc />
     public override void Configure(EntityTypeBuilder<UserNotification> builder)

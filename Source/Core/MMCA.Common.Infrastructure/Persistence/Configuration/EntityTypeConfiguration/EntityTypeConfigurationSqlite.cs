@@ -13,10 +13,9 @@ namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigu
 /// </summary>
 /// <typeparam name="TEntity">The entity type being configured.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
-/// <param name="dataSourceService">Used to register which data source backs this entity.</param>
 [UseDataSource(DataSource.Sqlite)]
-public abstract class EntityTypeConfigurationSqlite<TEntity, TIdentifierType>(IDataSourceService dataSourceService)
-    : EntityTypeConfigurationBase<TEntity, TIdentifierType>(dataSourceService),
+public abstract class EntityTypeConfigurationSqlite<TEntity, TIdentifierType>
+    : EntityTypeConfigurationBase<TEntity, TIdentifierType>,
       IEntityTypeConfigurationSqlite<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull

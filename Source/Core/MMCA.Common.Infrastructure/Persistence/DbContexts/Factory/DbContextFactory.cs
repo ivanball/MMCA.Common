@@ -5,35 +5,33 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 
 /// <summary>
-/// Creates and caches <see cref="ApplicationDbContext"/> instances per <see cref="DataSource"/>.
-/// Each data source yields at most one context per scope; subsequent calls return the cached instance.
+/// Creates and caches <see cref="ApplicationDbContext"/> instances per physical
+/// <see cref="DataSourceKey"/> (engine + database). Each physical source yields at most one
+/// context per scope; subsequent calls return the cached instance.
 /// Coordinates save, transaction, and disposal across all active contexts.
 /// </summary>
 public sealed class DbContextFactory(
-    IDbContextFactory<CosmosDbContext> dbContextFactoryCosmos,
-    IDbContextFactory<SqliteDbContext> dbContextFactorySqlite,
-    IDbContextFactory<SQLServerDbContext> dbContextFactorySQLServer,
+    IPhysicalDbContextFactory physicalDbContextFactory,
+    IEntityDataSourceRegistry entityDataSourceRegistry,
+    IDataSourceResolver dataSourceResolver,
     ICurrentUserService currentUserService
 ) : IDbContextFactory
 {
+    private readonly IPhysicalDbContextFactory _physicalDbContextFactory = physicalDbContextFactory ?? throw new ArgumentNullException(nameof(physicalDbContextFactory));
+    private readonly IEntityDataSourceRegistry _entityDataSourceRegistry = entityDataSourceRegistry ?? throw new ArgumentNullException(nameof(entityDataSourceRegistry));
+    private readonly IDataSourceResolver _dataSourceResolver = dataSourceResolver ?? throw new ArgumentNullException(nameof(dataSourceResolver));
     private readonly ICurrentUserService _currentUserService = currentUserService ?? throw new ArgumentNullException(nameof(currentUserService));
 
     /// <summary>
-    /// Caches one context per DataSource so all repositories within a scope share the same change tracker.
+    /// Caches one context per physical data source so all repositories within a scope share the same change tracker.
     /// </summary>
-    private readonly Dictionary<DataSource, ApplicationDbContext> _dbContexts = [];
-
-    private readonly Dictionary<DataSource, Func<ApplicationDbContext>> _contextFactoryRegistry = new()
-    {
-        [DataSource.CosmosDB] = () => (dbContextFactoryCosmos ?? throw new ArgumentNullException(nameof(dbContextFactoryCosmos))).CreateDbContext(),
-        [DataSource.Sqlite] = () => (dbContextFactorySqlite ?? throw new ArgumentNullException(nameof(dbContextFactorySqlite))).CreateDbContext(),
-        [DataSource.SQLServer] = () => (dbContextFactorySQLServer ?? throw new ArgumentNullException(nameof(dbContextFactorySQLServer))).CreateDbContext(),
-    };
+    private readonly Dictionary<DataSourceKey, ApplicationDbContext> _dbContexts = [];
 
     /// <summary>
     /// Tracks whether a transaction is active so that contexts created lazily (after
@@ -51,14 +49,14 @@ public sealed class DbContextFactory(
     private volatile bool _disposed;
 
     /// <inheritdoc />
-    public ApplicationDbContext GetDbContext(DataSource dataSource)
+    public ApplicationDbContext GetDbContext(DataSourceKey dataSourceKey)
     {
         ObjectDisposedException.ThrowIf(_disposed, nameof(DbContextFactory));
 
-        if (!_dbContexts.TryGetValue(dataSource, out var context) || context is null)
+        if (!_dbContexts.TryGetValue(dataSourceKey, out var context) || context is null)
         {
-            context = CreateDbContext(dataSource);
-            _dbContexts[dataSource] = context;
+            context = _physicalDbContextFactory.Create(dataSourceKey);
+            _dbContexts[dataSourceKey] = context;
 
             // Enlist late-created contexts in the active transaction so that all
             // persistence within a transactional command shares the same boundary.
@@ -68,17 +66,30 @@ public sealed class DbContextFactory(
         return context;
     }
 
-    private ApplicationDbContext CreateDbContext(DataSource dataSource) =>
-        _contextFactoryRegistry.TryGetValue(dataSource, out var factory)
-            ? factory()
-            : throw new InvalidOperationException($"Invalid DataSource \"{dataSource}\"");
+    /// <inheritdoc />
+    public ApplicationDbContext GetDbContext(DataSource dataSource) =>
+        GetDbContext(DataSourceKey.Default(dataSource));
 
     /// <inheritdoc />
     public async Task EnsureCreatedAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var context in _dbContexts.Values)
-            await context.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var key in GetSourcesInUse())
+        {
+            // Sources without a configured connection string are skipped (e.g. Cosmos is
+            // optional in integration tests that omit its connection string).
+            if (string.IsNullOrEmpty(_dataSourceResolver.GetPhysical(key).ConnectionString))
+                continue;
+
+            await GetDbContext(key).Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
+
+    /// <summary>
+    /// The physical sources this host actually uses: every source backing a registered entity,
+    /// plus any already-materialized contexts (e.g. the outbox publish target).
+    /// </summary>
+    private List<DataSourceKey> GetSourcesInUse() =>
+        [.. _entityDataSourceRegistry.GetPhysicalSourcesInUse().Union(_dbContexts.Keys)];
 
     /// <inheritdoc />
     /// <remarks>
@@ -245,6 +256,10 @@ public sealed class DbContextFactory(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// With multiple physical sources, each gets its own transaction; commits are sequential and
+    /// best-effort (no two-phase commit). The outbox is the cross-source consistency mechanism.
+    /// </remarks>
     public async Task<TResult> ExecuteInTransactionAsync<TResult>(
         Func<CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken = default)
@@ -291,16 +306,16 @@ public sealed class DbContextFactory(
     /// <inheritdoc />
     public async Task MigrateAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var context in _dbContexts.Values.Where(SupportsRelationalMigrations))
-            await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var key in GetSourcesInUse().Where(k => k.Engine == DataSource.SQLServer))
+            await GetDbContext(key).Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<bool> HasPendingMigrationsAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var context in _dbContexts.Values.Where(SupportsRelationalMigrations))
+        foreach (var key in GetSourcesInUse().Where(k => k.Engine == DataSource.SQLServer))
         {
-            var pending = await context.Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
+            var pending = await GetDbContext(key).Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
             if (pending.Any())
                 return true;
         }
@@ -316,13 +331,6 @@ public sealed class DbContextFactory(
 
     private static bool HasActiveTransaction(ApplicationDbContext context) =>
         context.Database.CurrentTransaction is not null;
-
-    /// <summary>
-    /// Only relational contexts that have a migrations assembly configured support EF Core migrations.
-    /// Cosmos and SQLite contexts are excluded.
-    /// </summary>
-    private static bool SupportsRelationalMigrations(ApplicationDbContext context) =>
-        context is SQLServerDbContext;
 
     private void Dispose(bool disposing)
     {

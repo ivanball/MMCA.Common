@@ -3,15 +3,16 @@ using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
-using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.API.Startup;
 
 /// <summary>
 /// Database initialization pipeline shared by all downstream MMCA applications.
 /// Creates DbContexts, applies schema changes, and seeds data for enabled modules.
+/// Operates per <b>physical data source</b>: every database in use by the host's registered
+/// entities is initialized (migrated/created) independently.
 /// </summary>
 public static class DatabaseInitializationExtensions
 {
@@ -35,24 +36,32 @@ public static class DatabaseInitializationExtensions
 
         using var scope = services.CreateScope();
 
-        // Eagerly resolve each DbContext to populate the DataSourceService cache;
-        // subsequent repository calls can then retrieve the correct context by DataSource key.
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
-        _ = (SQLServerDbContext)dbContextFactory.GetDbContext(DataSource.SQLServer);
+        // Warm the entity data-source registry: this scans configuration assemblies once and makes
+        // entity-to-database routing deterministic before the first repository call (replacing the
+        // legacy model-building side effect that populated the lazy DataSourceService cache).
+        var registry = scope.ServiceProvider.GetRequiredService<IEntityDataSourceRegistry>();
+        var resolver = scope.ServiceProvider.GetRequiredService<IDataSourceResolver>();
+        var sourcesInUse = registry.GetPhysicalSourcesInUse();
 
-        // Cosmos is optional — integration tests may omit its connection string.
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
+
+        // Cosmos sources are optional — integration tests may omit their connection strings.
         // Cosmos is a document DB with no schema migrations; always use EnsureCreated.
-        var connectionStrings = scope.ServiceProvider.GetRequiredService<IConnectionStringSettings>();
-        if (!string.IsNullOrEmpty(connectionStrings.CosmosConnectionString))
+        foreach (var cosmosKey in sourcesInUse.Where(k => k.Engine == DataSource.CosmosDB))
         {
-            var cosmosContext = (CosmosDbContext)dbContextFactory.GetDbContext(DataSource.CosmosDB);
-            await cosmosContext.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(resolver.GetPhysical(cosmosKey).ConnectionString))
+            {
+                continue;
+            }
+
+            await dbContextFactory.GetDbContext(cosmosKey).Database
+                .EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
         }
 
         // Apply schema initialisation based on the configured strategy:
-        //   "Migrate"       — auto-apply pending EF Core migrations (development/testing).
-        //   "EnsureCreated" — legacy EnsureCreated behavior.
-        //   "None"          — production: validate no pending migrations, throw if behind.
+        //   "Migrate"       — auto-apply pending EF Core migrations per SQL Server source (development/testing).
+        //   "EnsureCreated" — legacy EnsureCreated behavior for every source in use.
+        //   "None"          — production: validate no pending migrations on any source, throw if behind.
         switch (applicationSettings.DatabaseInitStrategy)
         {
             case "Migrate":
@@ -62,15 +71,7 @@ public static class DatabaseInitializationExtensions
                 await dbContextFactory.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
                 break;
             case "None":
-                if (await dbContextFactory.HasPendingMigrationsAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var pending = await dbContextFactory.GetDbContext(DataSource.SQLServer)
-                        .Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
-                    throw new InvalidOperationException(
-                        $"Database has pending migrations that must be applied before starting: {string.Join(", ", pending)}. " +
-                        "Run 'dotnet ef database update' or apply the migration SQL script.");
-                }
-
+                await ThrowIfPendingMigrationsAsync(dbContextFactory, sourcesInUse, cancellationToken).ConfigureAwait(false);
                 break;
             default:
                 throw new InvalidOperationException(
@@ -79,5 +80,35 @@ public static class DatabaseInitializationExtensions
         }
 
         await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Production guard for the <c>"None"</c> strategy: throws with a per-source breakdown when
+    /// any SQL Server data source in use has migrations that have not been applied.
+    /// </summary>
+    private static async Task ThrowIfPendingMigrationsAsync(
+        IDbContextFactory dbContextFactory,
+        IReadOnlyCollection<DataSourceKey> sourcesInUse,
+        CancellationToken cancellationToken)
+    {
+        if (!await dbContextFactory.HasPendingMigrationsAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var pendingPerSource = new List<string>();
+        foreach (var sqlKey in sourcesInUse.Where(k => k.Engine == DataSource.SQLServer))
+        {
+            var pending = await dbContextFactory.GetDbContext(sqlKey).Database
+                .GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
+            if (pending.Any())
+            {
+                pendingPerSource.Add($"{sqlKey}: {string.Join(", ", pending)}");
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Database has pending migrations that must be applied before starting: {string.Join("; ", pendingPerSource)}. " +
+            "Run 'dotnet ef database update' or apply the migration SQL script.");
     }
 }

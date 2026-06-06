@@ -19,6 +19,7 @@ using MMCA.Common.Infrastructure.Http;
 using MMCA.Common.Infrastructure.Hubs;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -62,18 +63,33 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.TryAddSingleton<IConnectionStringSettings>(sp => sp.GetRequiredService<IOptions<ConnectionStringSettings>>().Value);
 
+            // Named data sources for database-per-microservice routing. A root-level dictionary
+            // section does not bind through the options pipeline — build the settings directly.
+            services.TryAddSingleton(new DataSourcesSettings(
+                configuration.GetSection(DataSourcesSettings.SectionName)
+                    .Get<Dictionary<string, DataSourceEntrySettings>>()));
+            services.TryAddSingleton<IDataSourceResolver, DataSourceResolver>();
+            services.TryAddSingleton<IEntityDataSourceRegistry, EntityDataSourceRegistry>();
+
             services.AddOptions<SmtpSettings>()
                 .Bind(configuration.GetSection(SmtpSettings.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
             services.TryAddSingleton<ISmtpSettings>(sp => sp.GetRequiredService<IOptions<SmtpSettings>>().Value);
 
-            // Register our custom IDbContextFactory (scoped — one per request) and EF Core's
-            // IDbContextFactory<T> for each provider (these are the pooled factories that create raw contexts).
+            // Register our custom IDbContextFactory (scoped — one per request) and the singleton
+            // physical factory that creates raw contexts per physical data source.
+            // NEVER convert the physical factory to EF context pooling (AddPooledDbContextFactory):
+            // each context instance carries per-source constructor state (PhysicalDataSource) that
+            // pooling would silently reuse across databases.
             services.TryAddScoped<IDbContextFactory, DbContextFactory>();
-            services.AddDbContextFactory<CosmosDbContext>();
-            services.AddDbContextFactory<SqliteDbContext>();
-            services.AddDbContextFactory<SQLServerDbContext>();
+            services.TryAddSingleton<IPhysicalDbContextFactory, PhysicalDbContextFactory>();
+
+            // EF-style IDbContextFactory<T> adapters bound to each engine's Default physical
+            // source — preserves the DI surface for ApplicationDbContextEFFactory and tests.
+            services.TryAddSingleton<Microsoft.EntityFrameworkCore.IDbContextFactory<CosmosDbContext>, DefaultCosmosDbContextFactory>();
+            services.TryAddSingleton<Microsoft.EntityFrameworkCore.IDbContextFactory<SqliteDbContext>, DefaultSqliteDbContextFactory>();
+            services.TryAddSingleton<Microsoft.EntityFrameworkCore.IDbContextFactory<SQLServerDbContext>, DefaultSqlServerDbContextFactory>();
 
             // Dual factory: our IDbContextFactory manages multi-DB routing, while this adapter satisfies
             // consumers that require EF Core's standard IDbContextFactory<ApplicationDbContext>.

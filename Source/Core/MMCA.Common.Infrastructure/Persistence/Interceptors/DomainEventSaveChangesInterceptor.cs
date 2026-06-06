@@ -121,6 +121,11 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         {
             await domainEventDispatcher.DispatchAsync(state.DomainEvents, cancellationToken).ConfigureAwait(false);
 
+            // Clear BEFORE the nested SaveChanges in MarkOutboxAsProcessed: that save re-enters
+            // this interceptor synchronously, and any events still on the aggregates would be
+            // captured a second time, writing duplicate outbox rows.
+            ClearDomainEvents(state);
+
             MarkOutboxAsProcessed(context, state.OutboxEntries);
         }
         catch (Exception ex)
@@ -134,9 +139,15 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         }
         finally
         {
-            foreach (var aggregateRootEntity in state.AggregateRootEntities)
-                aggregateRootEntity.Entity.ClearDomainEvents();
+            // Idempotent — covers the dispatch-failure path.
+            ClearDomainEvents(state);
         }
+    }
+
+    private static void ClearDomainEvents(CapturedState state)
+    {
+        foreach (var aggregateRootEntity in state.AggregateRootEntities)
+            aggregateRootEntity.Entity.ClearDomainEvents();
     }
 
     /// <summary>
