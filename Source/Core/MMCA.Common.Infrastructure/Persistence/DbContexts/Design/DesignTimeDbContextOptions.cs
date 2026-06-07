@@ -24,7 +24,7 @@ public sealed class DesignTimeDbContextOptions
     public ConnectionStringSettings ConnectionStrings { get; set; } = new();
 
     /// <summary>Gets the named data source entries (mirrors the <c>DataSources</c> configuration section).</summary>
-    public Dictionary<string, DataSourceEntrySettings> DataSources { get; } = new(StringComparer.Ordinal);
+    public Dictionary<string, DataSourceEntrySettings> DataSources { get; } = [];
 
     /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.

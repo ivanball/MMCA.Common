@@ -19,5 +19,5 @@ public sealed class DataSourceModelCacheKeyFactory : IModelCacheKeyFactory
     public object Create(DbContext context, bool designTime) =>
         context is ApplicationDbContext applicationDbContext
             ? (context.GetType(), applicationDbContext.DataSourceKey.Name, designTime)
-            : (object)(context.GetType(), designTime);
+            : (context.GetType(), designTime);
 }
