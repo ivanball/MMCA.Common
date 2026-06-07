@@ -71,6 +71,7 @@
     <!-- Aspire / ServiceDefaults -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.6.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.6.0" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
     <PackageVersion Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />

@@ -1,3 +1,4 @@
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
@@ -238,9 +239,17 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Conditionally enables the OTLP exporter when the standard
-    /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> environment variable is present. The Aspire
-    /// dashboard sets this automatically; standalone deployments must supply it explicitly.
+    /// Conditionally enables telemetry exporters based on the environment:
+    /// <list type="bullet">
+    ///   <item>OTLP when <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> is present (the Aspire
+    ///     dashboard sets this automatically; standalone deployments must supply it
+    ///     explicitly).</item>
+    ///   <item>Azure Monitor (Application Insights) when
+    ///     <c>APPLICATIONINSIGHTS_CONNECTION_STRING</c> is present — set by the cloud
+    ///     deployment (e.g., Container Apps Bicep) so logs, metrics, and traces flow to
+    ///     the workspace-based Application Insights resource.</item>
+    /// </list>
+    /// Both can be active simultaneously; each exporter only ships its own copy.
     /// </summary>
     private static void AddOpenTelemetryExporters<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
@@ -251,6 +260,14 @@ public static class Extensions
         if (useOtlpExporter)
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
+        }
+
+        var useAzureMonitor = !string.IsNullOrWhiteSpace(
+            builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]);
+
+        if (useAzureMonitor)
+        {
+            builder.Services.AddOpenTelemetry().UseAzureMonitor();
         }
     }
 }
