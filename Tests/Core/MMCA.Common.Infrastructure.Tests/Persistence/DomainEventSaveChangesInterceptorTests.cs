@@ -6,9 +6,11 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
@@ -182,7 +184,7 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
         internal override bool SupportsOutbox => false;
 
         private TestDomainEventDbContext(DbContextOptions<TestDomainEventDbContext> options, IServiceProvider serviceProvider)
-            : base(options, serviceProvider, new NullAssemblyProvider())
+            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {
         }
 
@@ -192,6 +194,7 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
             var auditInterceptor = new AuditSaveChangesInterceptor(TimeProvider.System);
             services.AddSingleton(auditInterceptor);
             services.AddSingleton(domainEventInterceptor);
+            services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 
             var options = new DbContextOptionsBuilder<TestDomainEventDbContext>()

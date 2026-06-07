@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Settings;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
@@ -29,6 +30,7 @@ namespace MMCA.Common.Infrastructure.Services;
 public sealed class BrokerEventBus(
     IDbContextFactory dbContextFactory,
     IOutboxSignal outboxSignal,
+    IDataSourceResolver dataSourceResolver,
     IOptions<OutboxSettings> outboxOptions) : IEventBus
 {
     /// <inheritdoc />
@@ -36,7 +38,8 @@ public sealed class BrokerEventBus(
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
-        var context = dbContextFactory.GetDbContext(outboxOptions.Value.DataSource);
+        var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
+        var context = dbContextFactory.GetDbContext(target);
 
         if (!context.SupportsOutbox)
         {
@@ -44,7 +47,7 @@ public sealed class BrokerEventBus(
             // datasource. Throwing here surfaces the misconfiguration loudly rather than
             // silently dropping events.
             throw new InvalidOperationException(
-                $"BrokerEventBus requires an outbox-enabled DataSource. Current DataSource '{outboxOptions.Value.DataSource}' does not support OutboxMessage. Configure SQL Server or SQLite, or fall back to InProcessEventBus.");
+                $"BrokerEventBus requires an outbox-enabled data source. The configured outbox target '{target}' (Outbox:DataSource='{outboxOptions.Value.DataSource}', Outbox:DatabaseName='{outboxOptions.Value.DatabaseName}') does not support OutboxMessage. Configure SQL Server or SQLite, or fall back to InProcessEventBus.");
         }
 
         var outboxEntry = OutboxMessage.FromDomainEvent(integrationEvent);

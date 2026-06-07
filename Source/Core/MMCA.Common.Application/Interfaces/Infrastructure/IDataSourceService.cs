@@ -1,5 +1,3 @@
-using MMCA.Common.Domain.Entities;
-
 namespace MMCA.Common.Application.Interfaces.Infrastructure;
 
 /// <summary>
@@ -18,51 +16,46 @@ public enum DataSource
 }
 
 /// <summary>
-/// Resolves which <see cref="DataSource"/> backs a given entity type and determines
-/// whether two entity types share a data source that supports EF Core <c>.Include()</c>.
-/// Used by <see cref="Services.Query.NavigationMetadataProvider"/> to classify navigation
-/// properties as supported or unsupported includes.
+/// Resolves which physical data source (<see cref="DataSourceKey"/>: engine + database) backs a
+/// given entity type and determines whether two entity types share a data source that supports
+/// EF Core <c>.Include()</c>. Used by <see cref="Services.Query.NavigationMetadataProvider"/> to
+/// classify navigation properties as supported or unsupported includes.
 /// </summary>
 public interface IDataSourceService
 {
-    /// <summary>Gets the data source for an entity based on its type and EF configuration type.</summary>
+    /// <summary>Gets the physical data source key for an entity by its CLR type.</summary>
     /// <param name="entityType">The entity CLR type.</param>
-    /// <param name="configurationType">The EF entity type configuration CLR type.</param>
-    /// <returns>The data source backing this entity.</returns>
-    DataSource GetDataSource(Type entityType, Type configurationType);
+    /// <returns>The physical data source backing this entity.</returns>
+    DataSourceKey GetDataSourceKey(Type entityType);
 
-    /// <summary>Gets the data source for an entity using generic type parameters.</summary>
-    /// <typeparam name="TEntity">The entity type.</typeparam>
-    /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
-    /// <typeparam name="TEntityTypeConfiguration">The EF entity type configuration.</typeparam>
-    /// <returns>The data source backing this entity.</returns>
-    DataSource GetDataSource<TEntity, TIdentifierType, TEntityTypeConfiguration>()
-        where TEntity : AuditableBaseEntity<TIdentifierType>
-        where TEntityTypeConfiguration : class
-        where TIdentifierType : notnull;
-
-    /// <summary>Gets the data source for an entity by its full type name.</summary>
+    /// <summary>Gets the physical data source key for an entity by its full type name.</summary>
     /// <param name="entityFullName">The entity's full CLR type name.</param>
-    /// <returns>The data source backing this entity.</returns>
+    /// <returns>The physical data source backing this entity.</returns>
+    DataSourceKey GetDataSourceKey(string entityFullName);
+
+    /// <summary>Gets the database engine for an entity by its full type name.</summary>
+    /// <param name="entityFullName">The entity's full CLR type name.</param>
+    /// <returns>The engine backing this entity.</returns>
     DataSource GetDataSource(string entityFullName);
 
-    /// <summary>Gets the data source for an entity by its CLR type.</summary>
+    /// <summary>Gets the database engine for an entity by its CLR type.</summary>
     /// <param name="entityType">The entity CLR type.</param>
-    /// <returns>The data source backing this entity.</returns>
+    /// <returns>The engine backing this entity.</returns>
     DataSource GetDataSource(Type entityType);
 
     /// <summary>
-    /// Determines whether two data sources support EF Core <c>.Include()</c> between them.
-    /// Returns <see langword="true"/> when both use the same relational provider (e.g. both SQL Server).
+    /// Determines whether two physical data sources support EF Core <c>.Include()</c> between them.
+    /// Returns <see langword="true"/> only when both keys identify the same physical database
+    /// and the engine is relational (Cosmos DB does not support cross-document JOINs).
     /// </summary>
-    /// <param name="first">The first data source.</param>
-    /// <param name="second">The second data source.</param>
+    /// <param name="first">The first physical data source.</param>
+    /// <param name="second">The second physical data source.</param>
     /// <returns><see langword="true"/> if JOINs/includes are supported between the two sources.</returns>
-    bool HaveIncludeSupport(DataSource first, DataSource second);
+    bool HaveIncludeSupport(DataSourceKey first, DataSourceKey second);
 
     /// <summary>
     /// Determines whether two entity types support EF Core <c>.Include()</c> between them
-    /// by resolving their data sources.
+    /// by resolving their physical data sources.
     /// </summary>
     /// <param name="firstEntityFullName">Full type name of the first entity.</param>
     /// <param name="secondEntityFullName">Full type name of the second entity.</param>

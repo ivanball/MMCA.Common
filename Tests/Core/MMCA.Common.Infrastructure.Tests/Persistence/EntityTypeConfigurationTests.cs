@@ -1,10 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
-using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
 
@@ -57,8 +55,8 @@ public sealed class EntityTypeConfigurationTests : IDisposable
     }
 
     // -- Concrete Sqlite configuration --
-    public sealed class SqliteTestEntityConfig(IDataSourceService dataSourceService)
-        : EntityTypeConfigurationSqlite<SqliteTestEntity, int>(dataSourceService);
+    public sealed class SqliteTestEntityConfig
+        : EntityTypeConfigurationSqlite<SqliteTestEntity, int>;
 
     // -- Test DbContext using the Sqlite configuration --
     public sealed class SqliteTestDbContext(DbContextOptions options)
@@ -68,12 +66,7 @@ public sealed class EntityTypeConfigurationTests : IDisposable
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            var dataSourceService = new Mock<IDataSourceService>();
-            dataSourceService
-                .Setup(d => d.GetDataSource(It.IsAny<Type>(), It.IsAny<Type>()))
-                .Returns(DataSource.Sqlite);
-
-            var config = new SqliteTestEntityConfig(dataSourceService.Object);
+            var config = new SqliteTestEntityConfig();
             modelBuilder.Entity<SqliteTestEntity>(builder =>
             {
                 config.Configure(builder);

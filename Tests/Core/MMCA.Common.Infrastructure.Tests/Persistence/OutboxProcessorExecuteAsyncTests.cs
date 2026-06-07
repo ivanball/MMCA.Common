@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Settings;
 using Moq;
@@ -14,11 +15,30 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 /// <summary>
 /// Tests for <see cref="OutboxProcessor.ExecuteAsync"/> edge cases that are not covered
 /// by the ProcessPendingMessagesAsync reflection-based tests in OutboxProcessorTests.
+/// The 5-second startup delay now happens BEFORE the disabled check, so tests asserting
+/// the disabled path wait for <see cref="Microsoft.Extensions.Hosting.BackgroundService.ExecuteTask"/>
+/// to complete instead of using short fixed delays.
 /// </summary>
 public sealed class OutboxProcessorExecuteAsyncTests
 {
+    private static Mock<IEntityDataSourceRegistry> CreateEmptyRegistryMock()
+    {
+        var registryMock = new Mock<IEntityDataSourceRegistry>();
+        registryMock.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+        return registryMock;
+    }
+
+    private static Mock<IDataSourceResolver> CreateResolverMock()
+    {
+        var resolverMock = new Mock<IDataSourceResolver>();
+        resolverMock
+            .Setup(r => r.ResolveLogical(It.IsAny<DataSource>(), It.IsAny<string>()))
+            .Returns((DataSource engine, string _) => DataSourceKey.Default(engine));
+        return resolverMock;
+    }
+
     [Fact]
-    public async Task ExecuteAsync_CosmosDBDataSource_ExitsImmediatelyWithoutProcessing()
+    public async Task ExecuteAsync_CosmosDBDataSource_ExitsWithoutProcessing()
     {
         var settings = new OutboxSettings
         {
@@ -31,18 +51,21 @@ public sealed class OutboxProcessorExecuteAsyncTests
             mockScopeFactory.Object,
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
-            outboxSignal1.Object);
+            outboxSignal1.Object,
+            CreateEmptyRegistryMock().Object,
+            CreateResolverMock().Object);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await sut.StartAsync(cts.Token);
+        await sut.StartAsync(CancellationToken.None);
 
-        await Task.Delay(200, CancellationToken.None);
+        // Cosmos target + empty registry → no outbox sources; the processor exits on its own
+        // after the 5-second startup delay. Wait for that completion rather than a fixed delay.
+        await sut.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
         await sut.StopAsync(CancellationToken.None);
 
         mockScopeFactory.Verify(
             f => f.CreateScope(),
             Times.Never,
-            "Outbox processor should not create a DI scope when data source is CosmosDB");
+            "Outbox processor should not create a DI scope when no outbox-capable data sources exist");
     }
 
     [Fact]
@@ -59,7 +82,9 @@ public sealed class OutboxProcessorExecuteAsyncTests
             mockScopeFactory.Object,
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
-            outboxSignal2.Object);
+            outboxSignal2.Object,
+            CreateEmptyRegistryMock().Object,
+            CreateResolverMock().Object);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
         await sut.StartAsync(cts.Token);
@@ -82,11 +107,18 @@ public sealed class OutboxProcessorExecuteAsyncTests
 
         var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
         var outboxSignal3 = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
-        using var sut = new OutboxProcessor(mockScopeFactory.Object, mockLogger.Object, Options.Create(settings), outboxSignal3.Object);
+        using var sut = new OutboxProcessor(
+            mockScopeFactory.Object,
+            mockLogger.Object,
+            Options.Create(settings),
+            outboxSignal3.Object,
+            CreateEmptyRegistryMock().Object,
+            CreateResolverMock().Object);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        await sut.StartAsync(cts.Token);
-        await Task.Delay(200, CancellationToken.None);
+        await sut.StartAsync(CancellationToken.None);
+
+        // The disabled log is only written after the 5-second startup delay elapses.
+        await sut.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
         await sut.StopAsync(CancellationToken.None);
 
         mockLogger.Verify(l => l.IsEnabled(LogLevel.Information), Times.AtLeastOnce);

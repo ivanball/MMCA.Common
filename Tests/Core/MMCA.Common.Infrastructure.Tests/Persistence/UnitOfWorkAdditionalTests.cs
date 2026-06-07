@@ -62,15 +62,15 @@ public sealed class UnitOfWorkAdditionalTests
         var (sut, mocks) = CreateSut();
         var mockRepo = new Mock<IRepository<FakeAggregate, int>>();
 
-        mocks.DataSourceService.Setup(x => x.GetDataSource(typeof(FakeAggregate))).Returns(DataSource.Sqlite);
-        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSource.Sqlite)).Returns((MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext)null!);
+        mocks.DataSourceService.Setup(x => x.GetDataSourceKey(typeof(FakeAggregate))).Returns(DataSourceKey.Default(DataSource.Sqlite));
+        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSourceKey.Default(DataSource.Sqlite))).Returns((MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext)null!);
         mocks.RepositoryFactory.Setup(x => x.Create<FakeAggregate, int>(It.IsAny<Microsoft.EntityFrameworkCore.DbContext>())).Returns(mockRepo.Object);
 
         var repo = sut.GetRepository<FakeAggregate, int>();
 
         repo.Should().BeSameAs(mockRepo.Object);
-        mocks.DataSourceService.Verify(x => x.GetDataSource(typeof(FakeAggregate)), Times.Once);
-        mocks.DbContextFactory.Verify(x => x.GetDbContext(DataSource.Sqlite), Times.Once);
+        mocks.DataSourceService.Verify(x => x.GetDataSourceKey(typeof(FakeAggregate)), Times.Once);
+        mocks.DbContextFactory.Verify(x => x.GetDbContext(DataSourceKey.Default(DataSource.Sqlite)), Times.Once);
     }
 
     [Fact]
@@ -79,15 +79,15 @@ public sealed class UnitOfWorkAdditionalTests
         var (sut, mocks) = CreateSut();
         var mockRepo = new Mock<IReadRepository<FakeEntity, int>>();
 
-        mocks.DataSourceService.Setup(x => x.GetDataSource(typeof(FakeEntity))).Returns(DataSource.CosmosDB);
-        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSource.CosmosDB)).Returns((MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext)null!);
+        mocks.DataSourceService.Setup(x => x.GetDataSourceKey(typeof(FakeEntity))).Returns(DataSourceKey.Default(DataSource.CosmosDB));
+        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSourceKey.Default(DataSource.CosmosDB))).Returns((MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext)null!);
         mocks.RepositoryFactory.Setup(x => x.CreateReadOnly<FakeEntity, int>(It.IsAny<Microsoft.EntityFrameworkCore.DbContext>())).Returns(mockRepo.Object);
 
         var repo = sut.GetReadRepository<FakeEntity, int>();
 
         repo.Should().BeSameAs(mockRepo.Object);
-        mocks.DataSourceService.Verify(x => x.GetDataSource(typeof(FakeEntity)), Times.Once);
-        mocks.DbContextFactory.Verify(x => x.GetDbContext(DataSource.CosmosDB), Times.Once);
+        mocks.DataSourceService.Verify(x => x.GetDataSourceKey(typeof(FakeEntity)), Times.Once);
+        mocks.DbContextFactory.Verify(x => x.GetDbContext(DataSourceKey.Default(DataSource.CosmosDB)), Times.Once);
     }
 
     public sealed class FakeAggregate : AuditableAggregateRootEntity<int>

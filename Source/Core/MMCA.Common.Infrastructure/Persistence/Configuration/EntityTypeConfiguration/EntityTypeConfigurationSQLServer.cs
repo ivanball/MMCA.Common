@@ -14,10 +14,9 @@ namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigu
 /// </summary>
 /// <typeparam name="TEntity">The entity type being configured.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
-/// <param name="dataSourceService">Used to register which data source backs this entity.</param>
 [UseDataSource(DataSource.SQLServer)]
-public abstract class EntityTypeConfigurationSQLServer<TEntity, TIdentifierType>(IDataSourceService dataSourceService)
-    : EntityTypeConfigurationBase<TEntity, TIdentifierType>(dataSourceService),
+public abstract class EntityTypeConfigurationSQLServer<TEntity, TIdentifierType>
+    : EntityTypeConfigurationBase<TEntity, TIdentifierType>,
       IEntityTypeConfigurationSQLServer<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
@@ -29,13 +28,9 @@ public abstract class EntityTypeConfigurationSQLServer<TEntity, TIdentifierType>
 
         // Derive the SQL schema from the module namespace segment preceding "Domain".
         // E.g., "MMCA.Store.Sales.Domain.Orders" -> schema "Sales", table "Order".
-        // Also handles legacy "MMCA.Modules.Catalog.Domain" layout.
-        var segments = typeof(TEntity).Namespace?.Split('.') ?? [];
-        var domainIndex = Array.FindIndex(segments,
-            s => s.Equals("Domain", StringComparison.OrdinalIgnoreCase));
-        var schema = domainIndex >= 1
-            ? segments[domainIndex - 1]
-            : "dbo";
+        // Also handles legacy "MMCA.Modules.Catalog.Domain" layout. The same derivation
+        // feeds the default logical database name, so schema and database can never drift.
+        var schema = NamespaceConventions.GetModuleName(typeof(TEntity)) ?? "dbo";
 
         builder.ToTable(typeof(TEntity).Name, schema);
 

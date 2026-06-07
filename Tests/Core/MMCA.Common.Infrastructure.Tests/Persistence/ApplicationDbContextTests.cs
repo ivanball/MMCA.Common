@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
@@ -96,7 +98,7 @@ public sealed class ApplicationDbContextTests : IDisposable
             DbContextOptions<TestApplicationDbContext> options,
             IServiceProvider serviceProvider,
             IEntityConfigurationAssemblyProvider assemblyProvider)
-            : base(options, serviceProvider, assemblyProvider)
+            : base(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
         {
         }
 
@@ -112,6 +114,7 @@ public sealed class ApplicationDbContextTests : IDisposable
                 var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
                 return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
             });
+            services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 
             var assemblyProvider = Mock.Of<IEntityConfigurationAssemblyProvider>(

@@ -5,18 +5,27 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 
 /// <summary>
 /// Abstracts the creation and lifecycle management of <see cref="ApplicationDbContext"/> instances
-/// across multiple data sources. Caches contexts per <see cref="DataSource"/> within a scope and
-/// coordinates saves, transactions, and disposal across all active contexts.
+/// across multiple data sources. Caches contexts per physical <see cref="DataSourceKey"/> within a
+/// scope and coordinates saves, transactions, and disposal across all active contexts.
 /// </summary>
 public interface IDbContextFactory : IDisposable, IAsyncDisposable
 {
     /// <summary>
-    /// Returns the <see cref="ApplicationDbContext"/> for the specified data source, creating one if it doesn't exist in this scope.
+    /// Returns the <see cref="ApplicationDbContext"/> for the specified physical data source,
+    /// creating one if it doesn't exist in this scope.
+    /// </summary>
+    ApplicationDbContext GetDbContext(DataSourceKey dataSourceKey);
+
+    /// <summary>
+    /// Returns the <see cref="ApplicationDbContext"/> for the engine's <b>Default</b> physical
+    /// source (the top-level connection strings). Convenience overload preserving the
+    /// single-database call sites.
     /// </summary>
     ApplicationDbContext GetDbContext(DataSource dataSource);
 
     /// <summary>
-    /// Ensures the underlying databases for all active contexts have been created.
+    /// Ensures the databases of every physical data source in use by this host have been created
+    /// (sources without a configured connection string are skipped).
     /// </summary>
     Task EnsureCreatedAsync(CancellationToken cancellationToken = default);
 
@@ -56,6 +65,12 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
     /// <summary>
     /// Executes <paramref name="operation"/> inside a database transaction, wrapped by the
     /// active execution strategy so that retrying strategies can retry the entire unit.
+    /// <para>
+    /// When the operation touches multiple physical data sources, each source gets its own
+    /// transaction and the commits are sequential and best-effort — there is <b>no</b> distributed
+    /// (two-phase) commit. A failure mid-commit leaves earlier sources committed. The outbox
+    /// pattern is the cross-source consistency mechanism; design multi-source work accordingly.
+    /// </para>
     /// </summary>
     /// <typeparam name="TResult">The type returned by the operation.</typeparam>
     /// <param name="operation">The work to execute inside the transaction.</param>
@@ -65,13 +80,14 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Applies pending EF Core migrations for all active relational contexts.
-    /// Cosmos contexts are skipped (document DB — no schema migrations).
+    /// Applies pending EF Core migrations for every SQL Server physical data source in use by this
+    /// host (each with its own migrations assembly). Cosmos and SQLite sources are skipped.
     /// </summary>
     Task MigrateAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns <see langword="true"/> if any active relational context has pending migrations that have not been applied.
+    /// Returns <see langword="true"/> if any SQL Server physical data source in use has pending
+    /// migrations that have not been applied.
     /// </summary>
     Task<bool> HasPendingMigrationsAsync(CancellationToken cancellationToken = default);
 }

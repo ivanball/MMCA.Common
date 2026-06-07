@@ -10,6 +10,11 @@ public interface IIntegrationTestFixture
     /// <summary>Creates a new <see cref="HttpClient"/> configured for the test server.</summary>
     HttpClient CreateClient();
 
-    /// <summary>Resets the database to a clean state between tests (e.g., via Respawn).</summary>
+    /// <summary>
+    /// Resets the database to a clean state between tests (e.g., via Respawn).
+    /// Hosts using multiple physical data sources ("database per microservice") must reset
+    /// <b>every</b> relational source — fixtures can resolve <c>IEntityDataSourceRegistry</c> and
+    /// <c>IDataSourceResolver</c> from the host's services to enumerate the connection strings.
+    /// </summary>
     Task ResetDatabaseAsync();
 }

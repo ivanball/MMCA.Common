@@ -2,8 +2,10 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
@@ -140,7 +142,7 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
         internal override bool SupportsOutbox => false;
 
         private TestAuditDbContext(DbContextOptions<TestAuditDbContext> options, IServiceProvider serviceProvider)
-            : base(options, serviceProvider, new NullAssemblyProvider())
+            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {
         }
 
@@ -160,6 +162,7 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
                 var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
                 return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
             });
+            services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 
             var options = new DbContextOptionsBuilder<TestAuditDbContext>()

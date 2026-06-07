@@ -1,28 +1,30 @@
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 /// <summary>
-/// DbContext targeting Azure Cosmos DB. Automatically detects the local emulator
+/// DbContext targeting Azure Cosmos DB. One instance exists per physical Cosmos data source
+/// (account + database); connection string and database name come from the resolved
+/// <see cref="PhysicalDataSource"/>. Automatically detects the local emulator
 /// and adjusts connection mode and SSL settings accordingly.
 /// </summary>
 public sealed class CosmosDbContext(
     DbContextOptions<CosmosDbContext> options,
     IServiceProvider serviceProvider,
-    IConnectionStringSettings connectionStringSettings,
-    IEntityConfigurationAssemblyProvider assemblyProvider)
-    : ApplicationDbContext(options, serviceProvider, assemblyProvider)
+    IEntityConfigurationAssemblyProvider assemblyProvider,
+    PhysicalDataSource physicalDataSource)
+    : ApplicationDbContext(options, serviceProvider, assemblyProvider, physicalDataSource)
 {
     /// <inheritdoc />
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         ArgumentNullException.ThrowIfNull(optionsBuilder);
 
-        var connectionString = connectionStringSettings.CosmosConnectionString;
+        var connectionString = PhysicalSource.ConnectionString;
 
         // "C2y6yDjf5" is the well-known prefix of the Cosmos DB Emulator's default account key.
         var isEmulator = connectionString.Contains("C2y6yDjf5", StringComparison.Ordinal);
@@ -30,7 +32,7 @@ public sealed class CosmosDbContext(
         optionsBuilder
             .UseCosmos(
                 connectionString: connectionString,
-                databaseName: "AtlDevCon",
+                databaseName: PhysicalSource.CosmosDatabaseName,
                 cosmosOptionsAction: options =>
                 {
                     if (isEmulator)

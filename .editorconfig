@@ -733,6 +733,18 @@ dotnet_diagnostic.MA0025.severity = none
 dotnet_diagnostic.MA0001.severity = none
 dotnet_diagnostic.MA0006.severity = none
 
+# Collection-expression style suggestions are noise in test setup (explicit
+# constructors read more clearly in arrange blocks) and the analyzer flags them
+# inconsistently across SDK/analyzer versions — e.g. it reports IDE0028 on one
+# `new Dictionary<,>(StringComparer.Ordinal)` but not an identical sibling line.
+dotnet_diagnostic.IDE0028.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0301.severity = none
+dotnet_diagnostic.IDE0302.severity = none
+dotnet_diagnostic.IDE0303.severity = none
+dotnet_diagnostic.IDE0304.severity = none
+dotnet_diagnostic.IDE0305.severity = none
+
 ###############################################################################
 # Razor/Blazor files
 ###############################################################################

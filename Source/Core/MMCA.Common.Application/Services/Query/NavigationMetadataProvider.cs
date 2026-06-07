@@ -21,9 +21,11 @@ public sealed class NavigationMetadataProvider(IDataSourceService dataSourceServ
 {
     /// <summary>
     /// Caches navigation metadata per entity type and navigation kind (FK vs child collection).
-    /// Since entity type metadata is immutable, this cache never needs invalidation.
+    /// Instance-level (not static): classification depends on the host's data-source configuration
+    /// via <see cref="IDataSourceService"/>, so a process hosting multiple service configurations
+    /// (e.g. integration tests) must not share classification results across hosts.
     /// </summary>
-    private static readonly ConcurrentDictionary<(Type EntityType, NavigationType NavType), NavigationMetadata> Cache = new();
+    private readonly ConcurrentDictionary<(Type EntityType, NavigationType NavType), NavigationMetadata> _cache = new();
 
     /// <inheritdoc />
     public NavigationMetadata BuildIncludes<TEntity>(bool includeFKs, bool includeChildren)
@@ -48,7 +50,7 @@ public sealed class NavigationMetadataProvider(IDataSourceService dataSourceServ
     }
 
     private NavigationMetadata GetNavigationProperties(Type entityType, NavigationType navigationType) =>
-        Cache.GetOrAdd((entityType, navigationType), key => BuildNavigationMetadata(key.EntityType, key.NavType));
+        _cache.GetOrAdd((entityType, navigationType), key => BuildNavigationMetadata(key.EntityType, key.NavType));
 
     /// <summary>
     /// Reflects over the entity's public properties looking for <see cref="NavigationAttribute"/>,

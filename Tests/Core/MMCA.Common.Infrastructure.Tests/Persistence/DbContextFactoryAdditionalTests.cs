@@ -1,9 +1,8 @@
 #pragma warning disable CA2000 // Dispose objects before losing scope — test doubles do not hold real resources
 
 using AwesomeAssertions;
-using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using Moq;
 
@@ -79,7 +78,7 @@ public sealed class DbContextFactoryAdditionalTests
 
     // -- EnsureCreatedAsync --
     [Fact]
-    public async Task EnsureCreatedAsync_WithNoContexts_CompletesSuccessfully()
+    public async Task EnsureCreatedAsync_WithNoSourcesInUse_CompletesSuccessfully()
     {
         await using var sut = CreateSut();
 
@@ -90,7 +89,7 @@ public sealed class DbContextFactoryAdditionalTests
 
     // -- MigrateAsync --
     [Fact]
-    public async Task MigrateAsync_WithNoContexts_CompletesSuccessfully()
+    public async Task MigrateAsync_WithNoSourcesInUse_CompletesSuccessfully()
     {
         await using var sut = CreateSut();
 
@@ -101,7 +100,7 @@ public sealed class DbContextFactoryAdditionalTests
 
     // -- HasPendingMigrationsAsync --
     [Fact]
-    public async Task HasPendingMigrationsAsync_WithNoContexts_ReturnsFalse()
+    public async Task HasPendingMigrationsAsync_WithNoSourcesInUse_ReturnsFalse()
     {
         await using var sut = CreateSut();
 
@@ -110,13 +109,15 @@ public sealed class DbContextFactoryAdditionalTests
         result.Should().BeFalse();
     }
 
-    private static DbContextFactory CreateSut(
-        Mock<IDbContextFactory<CosmosDbContext>>? cosmosFactory = null,
-        Mock<IDbContextFactory<SqliteDbContext>>? sqliteFactory = null,
-        Mock<IDbContextFactory<SQLServerDbContext>>? sqlServerFactory = null) =>
-        new(
-            (cosmosFactory ?? new Mock<IDbContextFactory<CosmosDbContext>>()).Object,
-            (sqliteFactory ?? new Mock<IDbContextFactory<SqliteDbContext>>()).Object,
-            (sqlServerFactory ?? new Mock<IDbContextFactory<SQLServerDbContext>>()).Object,
+    private static DbContextFactory CreateSut(Mock<IPhysicalDbContextFactory>? physicalFactory = null)
+    {
+        var registry = new Mock<IEntityDataSourceRegistry>();
+        registry.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+
+        return new DbContextFactory(
+            (physicalFactory ?? new Mock<IPhysicalDbContextFactory>()).Object,
+            registry.Object,
+            Mock.Of<IDataSourceResolver>(),
             Mock.Of<ICurrentUserService>());
+    }
 }

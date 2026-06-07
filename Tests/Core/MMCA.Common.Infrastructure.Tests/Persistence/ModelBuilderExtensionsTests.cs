@@ -117,19 +117,15 @@ public sealed class ModelBuilderExtensionsTests
 
     private sealed class TestDataSourceService : IDataSourceService
     {
-        public DataSource GetDataSource(Type entityType, Type configurationType) => DataSource.Sqlite;
+        public DataSourceKey GetDataSourceKey(Type entityType) => DataSourceKey.Default(DataSource.Sqlite);
 
-        public DataSource GetDataSource<TEntity, TIdentifierType, TEntityTypeConfiguration>()
-            where TEntity : AuditableBaseEntity<TIdentifierType>
-            where TEntityTypeConfiguration : class
-            where TIdentifierType : notnull
-            => DataSource.Sqlite;
+        public DataSourceKey GetDataSourceKey(string entityFullName) => DataSourceKey.Default(DataSource.Sqlite);
 
         public DataSource GetDataSource(string entityFullName) => DataSource.Sqlite;
 
         public DataSource GetDataSource(Type entityType) => DataSource.Sqlite;
 
-        public bool HaveIncludeSupport(DataSource first, DataSource second) => first == second;
+        public bool HaveIncludeSupport(DataSourceKey first, DataSourceKey second) => first == second;
 
         public bool HaveIncludeSupport(string firstEntityFullName, string secondEntityFullName) => true;
     }

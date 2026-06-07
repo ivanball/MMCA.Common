@@ -1,10 +1,13 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
+using MMCA.Common.Infrastructure.Persistence.Conventions;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using StackExchange.Profiling;
@@ -16,16 +19,30 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 /// Cross-cutting concerns (audit stamping, domain event capture/dispatch) are handled by
 /// <see cref="AuditSaveChangesInterceptor"/> and <see cref="DomainEventSaveChangesInterceptor"/>.
 /// This class provides global soft-delete query filters and model configuration.
+/// <para>
+/// One instance exists per <b>physical data source</b> (database): the same context class is
+/// instantiated multiple times with different <see cref="PhysicalDataSource"/> values, each
+/// building a model containing only its own database's entities
+/// (see <see cref="DataSourceModelCacheKeyFactory"/>).
+/// </para>
 /// </summary>
 /// <param name="options">EF Core options forwarded to <see cref="DbContext"/>.</param>
 /// <param name="serviceProvider">Service provider used when applying entity configurations and resolving interceptors.</param>
 /// <param name="assemblyProvider">Provides module assemblies containing entity configurations.</param>
+/// <param name="physicalDataSource">The physical data source (database) this context instance targets.</param>
 public abstract class ApplicationDbContext(
     DbContextOptions options,
     IServiceProvider serviceProvider,
-    IEntityConfigurationAssemblyProvider assemblyProvider)
+    IEntityConfigurationAssemblyProvider assemblyProvider,
+    PhysicalDataSource physicalDataSource)
     : DbContext(options)
 {
+    /// <summary>Gets the physical data source key (engine + database name) this context targets.</summary>
+    public DataSourceKey DataSourceKey => physicalDataSource.Key;
+
+    /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
+    internal PhysicalDataSource PhysicalSource => physicalDataSource;
+
     /// <summary>
     /// Keyless entity used to map scalar SQL results (e.g. from raw queries) without a backing table.
     /// </summary>
@@ -77,7 +94,25 @@ public abstract class ApplicationDbContext(
         var domainEventInterceptor = serviceProvider.GetRequiredService<DomainEventSaveChangesInterceptor>();
         optionsBuilder.AddInterceptors(auditInterceptor, domainEventInterceptor);
 
+        // Key EF's model cache by (context type, physical source name): the same context class is
+        // instantiated once per database, each with a different model. Without this, the first
+        // built model would silently be reused for every database.
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, DataSourceModelCacheKeyFactory>();
+
         base.OnConfiguring(optionsBuilder);
+    }
+
+    /// <inheritdoc />
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(configurationBuilder);
+        base.ConfigureConventions(configurationBuilder);
+
+        // Degrade relationships that cross physical data sources (runs at model finalization,
+        // after EF's relationship-discovery conventions). A structural no-op when every entity
+        // collapses onto one database (the monolith case).
+        var registry = serviceProvider.GetRequiredService<IEntityDataSourceRegistry>();
+        configurationBuilder.Conventions.Add(_ => new CrossDataSourceDegradeConvention(DataSourceKey, registry));
     }
 
     public override DbSet<TEntity> Set<TEntity>()
@@ -126,19 +161,33 @@ public abstract class ApplicationDbContext(
     /// <summary>
     /// Configures the <c>RowVersion</c> property as an optimistic concurrency token on every
     /// non-owned entity type that inherits from <see cref="AuditableBaseEntity{TId}"/>.
-    /// SQL Server maps this to <c>rowversion</c> (auto-incremented by the database);
-    /// SQLite maps it to a <c>BLOB</c> column (application-managed).
+    /// SQL Server maps this to <c>rowversion</c> (auto-incremented by the database, so the
+    /// property is database-generated); other relational providers (SQLite) have no equivalent
+    /// server-generated type — the property is mapped as a plain application-managed concurrency
+    /// token there, so EF includes the entity's value in INSERTs instead of expecting the
+    /// database to generate one.
     /// EF Core automatically includes the token in UPDATE/DELETE WHERE clauses and throws
     /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> on conflicts.
     /// </summary>
-    protected static void ConfigureConcurrencyTokens(ModelBuilder modelBuilder)
+    protected void ConfigureConcurrencyTokens(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+        var isSqlServer = Database.ProviderName?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) == true;
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes()
             .Where(et => typeof(IAuditableEntity).IsAssignableFrom(et.ClrType) && !et.IsOwned()))
         {
-            modelBuilder.Entity(entityType.ClrType)
-                .Property(nameof(AuditableBaseEntity<>.RowVersion))
-                .IsRowVersion();
+            var property = modelBuilder.Entity(entityType.ClrType)
+                .Property(nameof(AuditableBaseEntity<>.RowVersion));
+
+            if (isSqlServer)
+            {
+                property.IsRowVersion();
+            }
+            else
+            {
+                property.IsConcurrencyToken();
+            }
         }
     }
 
@@ -163,9 +212,11 @@ public abstract class ApplicationDbContext(
         });
 
     /// <summary>
-    /// Discovers and applies all EF entity configurations for the given data source from module Infrastructure assemblies.
+    /// Discovers and applies the EF entity configurations for the given engine from module
+    /// Infrastructure assemblies, filtered to entities whose physical data source matches this
+    /// context instance (so each database's model contains only its own entities).
     /// </summary>
-    /// <param name="dataSource">The target data source whose configuration interface to match.</param>
+    /// <param name="dataSource">The target engine whose configuration interface to match.</param>
     /// <param name="modelBuilder">The model builder to apply configurations to.</param>
     protected void ApplyConfigurationsForEntitiesInContext(DataSource dataSource, ModelBuilder modelBuilder)
     {
@@ -177,9 +228,22 @@ public abstract class ApplicationDbContext(
             _ => throw new InvalidOperationException($"DataSource \"{dataSource}\" not implemented."),
         };
 
+        // The registry derives keys from the same attributes/namespaces as the configurations
+        // themselves, so model contents and runtime routing agree by construction. Entities whose
+        // configuration is not registered (e.g. one implementing the provider interface directly
+        // without the attributed base classes) fall back to the engine's Default source — they are
+        // included in the Default model but are not routable via the unit of work (legacy behavior).
+        var registry = serviceProvider.GetRequiredService<IEntityDataSourceRegistry>();
+
         foreach (var assembly in assemblyProvider.GetConfigurationAssemblies())
         {
-            modelBuilder.ApplyAllConfigurations(serviceProvider, assembly, configType);
+            modelBuilder.ApplyAllConfigurations(
+                serviceProvider,
+                assembly,
+                configType,
+                entityType => registry.TryGetDataSourceKey(entityType.FullName!, out var key)
+                    ? key == DataSourceKey
+                    : DataSourceKey.Name == DataSourceKey.DefaultName);
         }
     }
 }

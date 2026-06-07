@@ -10,10 +10,12 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
 
@@ -50,6 +52,7 @@ public sealed class OutboxProcessorTests : IDisposable
             _dispatcherMock.Object, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal.Object));
         contextServices.AddSingleton(Mock.Of<IEntityConfigurationAssemblyProvider>(
             p => p.GetConfigurationAssemblies() == Array.Empty<Assembly>()));
+        contextServices.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
         ServiceProvider contextSp = contextServices.BuildServiceProvider();
 
         var options = new DbContextOptionsBuilder<OutboxTestDbContext>()
@@ -66,7 +69,7 @@ public sealed class OutboxProcessorTests : IDisposable
 
         var mockDbContextFactory = new Mock<IDbContextFactory>();
         mockDbContextFactory
-            .Setup(f => f.GetDbContext(DataSource.SQLServer))
+            .Setup(f => f.GetDbContext(DataSourceKey.Default(DataSource.SQLServer)))
             .Returns(_dbContext);
 
         var services = new ServiceCollection();
@@ -77,7 +80,21 @@ public sealed class OutboxProcessorTests : IDisposable
 
         var scopeFactory = rootProvider.GetRequiredService<IServiceScopeFactory>();
         var processorOutboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
-        _sut = new OutboxProcessor(scopeFactory, NullLogger<OutboxProcessor>.Instance, Options.Create(new OutboxSettings()), processorOutboxSignal.Object);
+
+        var registryMock = new Mock<IEntityDataSourceRegistry>();
+        registryMock.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+        var resolverMock = new Mock<IDataSourceResolver>();
+        resolverMock
+            .Setup(r => r.ResolveLogical(It.IsAny<DataSource>(), It.IsAny<string>()))
+            .Returns((DataSource engine, string _) => DataSourceKey.Default(engine));
+
+        _sut = new OutboxProcessor(
+            scopeFactory,
+            NullLogger<OutboxProcessor>.Instance,
+            Options.Create(new OutboxSettings()),
+            processorOutboxSignal.Object,
+            registryMock.Object,
+            resolverMock.Object);
     }
 
     public void Dispose()
@@ -335,7 +352,7 @@ public sealed class OutboxProcessorTests : IDisposable
         DbContextOptions options,
         IServiceProvider serviceProvider,
         IEntityConfigurationAssemblyProvider assemblyProvider)
-        : ApplicationDbContext(options, serviceProvider, assemblyProvider)
+        : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
         internal override bool SupportsOutbox => true;
 

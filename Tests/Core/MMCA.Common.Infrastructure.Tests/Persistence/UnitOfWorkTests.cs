@@ -106,8 +106,8 @@ public sealed class UnitOfWorkTests
         var (sut, mocks) = CreateSut();
         var mockRepo = new Mock<IRepository<FakeAggregate, int>>();
 
-        mocks.DataSourceService.Setup(x => x.GetDataSource(typeof(FakeAggregate))).Returns(DataSource.SQLServer);
-        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSource.SQLServer)).Returns((ApplicationDbContext)null!);
+        mocks.DataSourceService.Setup(x => x.GetDataSourceKey(typeof(FakeAggregate))).Returns(DataSourceKey.Default(DataSource.SQLServer));
+        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSourceKey.Default(DataSource.SQLServer))).Returns((ApplicationDbContext)null!);
         mocks.RepositoryFactory.Setup(x => x.Create<FakeAggregate, int>(It.IsAny<DbContext>())).Returns(mockRepo.Object);
 
         var repo1 = sut.GetRepository<FakeAggregate, int>();
@@ -123,8 +123,8 @@ public sealed class UnitOfWorkTests
         var (sut, mocks) = CreateSut();
         var mockRepo = new Mock<IReadRepository<FakeEntity, int>>();
 
-        mocks.DataSourceService.Setup(x => x.GetDataSource(typeof(FakeEntity))).Returns(DataSource.SQLServer);
-        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSource.SQLServer)).Returns((ApplicationDbContext)null!);
+        mocks.DataSourceService.Setup(x => x.GetDataSourceKey(typeof(FakeEntity))).Returns(DataSourceKey.Default(DataSource.SQLServer));
+        mocks.DbContextFactory.Setup(x => x.GetDbContext(DataSourceKey.Default(DataSource.SQLServer))).Returns((ApplicationDbContext)null!);
         mocks.RepositoryFactory.Setup(x => x.CreateReadOnly<FakeEntity, int>(It.IsAny<DbContext>())).Returns(mockRepo.Object);
 
         var repo1 = sut.GetReadRepository<FakeEntity, int>();
