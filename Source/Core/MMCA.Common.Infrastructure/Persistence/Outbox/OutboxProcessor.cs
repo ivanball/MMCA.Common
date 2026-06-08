@@ -44,6 +44,17 @@ public sealed partial class OutboxProcessor(
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
 
+    /// <summary>
+    /// Name of the per-cycle poll activity wrapping the outbox fetch query. Must stay in sync
+    /// with <c>OutboxPollFilterProcessor</c> in MMCA.Common.Aspire, which suppresses these spans
+    /// and their SqlClient children from telemetry export (Aspire has no project references, so
+    /// the string is deliberately duplicated there).
+    /// </summary>
+    internal const string PollActivityName = "OutboxPoll";
+
+    /// <summary>Floor for the computed wait so an overdue pending message cannot hot-loop the processor.</summary>
+    private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
+
     private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
     private static readonly Meter OutboxMeter = new("MMCA.Common.Outbox");
     private static readonly Counter<long> DeadLetterCounter = OutboxMeter.CreateCounter<long>(
@@ -65,9 +76,10 @@ public sealed partial class OutboxProcessor(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            OutboxCycleResult cycle = default;
             try
             {
-                await ProcessPendingMessagesAsync(stoppingToken).ConfigureAwait(false);
+                cycle = await ProcessPendingMessagesAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -79,9 +91,49 @@ public sealed partial class OutboxProcessor(
                 LogProcessingError(logger, ex);
             }
 
-            // Wait for a signal (new outbox entries written) or fall back to polling interval.
-            await outboxSignal.WaitAsync(TimeSpan.FromSeconds(_settings.PollingIntervalSeconds), stoppingToken).ConfigureAwait(false);
+            if (cycle.HasMoreEligibleWork)
+            {
+                // A full batch was drained with progress — more eligible rows may be waiting.
+                continue;
+            }
+
+            // Wait for a signal (new outbox entries written), the moment the earliest pending
+            // message becomes eligible (smart wait), or the fallback polling interval —
+            // whichever comes first.
+            var wait = ComputeWaitTime(
+                cycle.EarliestPendingOccurredOn,
+                DateTime.UtcNow,
+                TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds),
+                TimeSpan.FromSeconds(_settings.PollingIntervalSeconds));
+            await outboxSignal.WaitAsync(wait, stoppingToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Computes how long to wait before the next polling cycle: until the earliest pending
+    /// message becomes eligible (<paramref name="earliestPendingOccurredOn"/> plus the
+    /// processing delay), capped at the polling interval and floored at one second to avoid
+    /// hot-looping. Failed-but-already-eligible messages never shorten the wait — they retry
+    /// on the next signal or interval, which throttles permanently failing messages.
+    /// </summary>
+    internal static TimeSpan ComputeWaitTime(
+        DateTime? earliestPendingOccurredOn,
+        DateTime utcNow,
+        TimeSpan processingDelay,
+        TimeSpan pollingInterval)
+    {
+        if (earliestPendingOccurredOn is null)
+        {
+            return pollingInterval;
+        }
+
+        var untilEligible = earliestPendingOccurredOn.Value + processingDelay - utcNow;
+        if (untilEligible < MinimumWait)
+        {
+            untilEligible = MinimumWait;
+        }
+
+        return untilEligible < pollingInterval ? untilEligible : pollingInterval;
     }
 
     /// <summary>
@@ -102,13 +154,27 @@ public sealed partial class OutboxProcessor(
         return [.. sources.Distinct()];
     }
 
-    private async Task ProcessPendingMessagesAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Drains every outbox source once and aggregates the per-source results: any source with
+    /// more eligible work triggers an immediate re-poll, and the earliest pending timestamp
+    /// across all sources drives the smart wait.
+    /// </summary>
+    internal async Task<OutboxCycleResult> ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
+        var hasMoreEligibleWork = false;
+        DateTime? earliestPendingOccurredOn = null;
+
         foreach (var source in GetOutboxSources())
         {
             try
             {
-                await ProcessSourceAsync(source, cancellationToken).ConfigureAwait(false);
+                var result = await ProcessSourceAsync(source, cancellationToken).ConfigureAwait(false);
+                hasMoreEligibleWork |= result.HasMoreEligibleWork;
+                if (result.EarliestPendingOccurredOn is { } pending
+                    && (earliestPendingOccurredOn is null || pending < earliestPendingOccurredOn))
+                {
+                    earliestPendingOccurredOn = pending;
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -117,12 +183,16 @@ public sealed partial class OutboxProcessor(
             catch (Exception ex)
             {
                 // One unreachable database must not starve the other sources' outboxes.
+                // A failing source contributes nothing to the wait — its rows are retried
+                // on the next signal or polling interval.
                 LogSourceProcessingError(logger, source.ToString(), ex);
             }
         }
+
+        return new OutboxCycleResult(hasMoreEligibleWork, earliestPendingOccurredOn);
     }
 
-    private async Task ProcessSourceAsync(DataSourceKey source, CancellationToken cancellationToken)
+    private async Task<OutboxCycleResult> ProcessSourceAsync(DataSourceKey source, CancellationToken cancellationToken)
     {
         var sourceName = source.ToString();
         using var scope = scopeFactory.CreateScope();
@@ -133,20 +203,71 @@ public sealed partial class OutboxProcessor(
 
         var cutoff = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
 
-        var messages = await context.Set<OutboxMessage>()
-            .Where(m => m.ProcessedOn == null && m.OccurredOn < cutoff && m.RetryCount < _settings.MaxRetries)
-            .OrderBy(m => m.OccurredOn)
-            .Take(_settings.BatchSize)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (messages.Count == 0)
+        // The fetch query runs inside its own activity (explicit using block, not using var)
+        // so OutboxPollFilterProcessor in MMCA.Common.Aspire can suppress it and its SqlClient
+        // child span from export — an idle fleet polling around the clock would otherwise
+        // dominate telemetry ingestion. Everything after the block (per-message dispatch,
+        // the final SaveChangesAsync) stays outside the wrapper and is exported normally.
+        List<OutboxMessage> messages;
+        using (var pollActivity = OutboxActivitySource.StartActivity(PollActivityName))
         {
-            return;
+            pollActivity?.SetTag("messaging.outbox.data_source", sourceName);
+
+            // No OccurredOn cutoff in SQL: rows younger than the processing delay are fetched
+            // too, so the caller can smart-wait until the earliest becomes eligible. Ordering
+            // by OccurredOn guarantees eligible rows sort before pending ones, so a full batch
+            // can never starve eligible work behind pending rows.
+            messages = await context.Set<OutboxMessage>()
+                .Where(m => m.ProcessedOn == null && m.RetryCount < _settings.MaxRetries)
+                .OrderBy(m => m.OccurredOn)
+                .Take(_settings.BatchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        LogProcessingBatch(logger, messages.Count, sourceName);
+        // Split the ordered batch: the eligible prefix is processed now; the pending remainder
+        // only informs how long to wait before the next cycle.
+        var eligibleCount = 0;
+        while (eligibleCount < messages.Count && messages[eligibleCount].OccurredOn < cutoff)
+        {
+            eligibleCount++;
+        }
 
+        DateTime? earliestPending = eligibleCount < messages.Count ? messages[eligibleCount].OccurredOn : null;
+
+        if (eligibleCount == 0)
+        {
+            return new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending);
+        }
+
+        LogProcessingBatch(logger, eligibleCount, sourceName);
+
+        var processedAny = await DispatchMessagesAsync(
+            messages.Take(eligibleCount), source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
+
+        // Use the base DbContext.SaveChangesAsync to bypass audit stamping and event dispatch.
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // A full eligible batch with progress means more eligible rows may be waiting; the
+        // progress requirement stops a fully-failing batch from hot-spinning the processor.
+        return new OutboxCycleResult(
+            HasMoreEligibleWork: eligibleCount == _settings.BatchSize && processedAny,
+            earliestPending);
+    }
+
+    /// <summary>
+    /// Dispatches each eligible message, marking successes and dead-letters as processed and
+    /// incrementing retry counts on failure. Returns whether any message made progress
+    /// (dispatched or dead-lettered) this cycle.
+    /// </summary>
+    private async Task<bool> DispatchMessagesAsync(
+        IEnumerable<OutboxMessage> messages,
+        DataSourceKey source,
+        IDomainEventDispatcher dispatcher,
+        IMessageBus messageBus,
+        CancellationToken cancellationToken)
+    {
+        var processedAny = false;
         foreach (var message in messages)
         {
             using var activity = StartOutboxActivity(message, source);
@@ -157,6 +278,7 @@ public sealed partial class OutboxProcessor(
                 {
                     message.LastError = $"Cannot resolve type: {message.EventType}";
                     message.ProcessedOn = DateTime.UtcNow;
+                    processedAny = true;
                     DeadLetterCounter.Add(1, new KeyValuePair<string, object?>("event_type", message.EventType));
                     LogDeadLetter(logger, message.Id, message.EventType);
                     continue;
@@ -175,6 +297,7 @@ public sealed partial class OutboxProcessor(
                 }
 
                 message.ProcessedOn = DateTime.UtcNow;
+                processedAny = true;
                 LogMessageProcessed(logger, message.Id, message.EventType);
             }
             catch (Exception ex)
@@ -186,8 +309,7 @@ public sealed partial class OutboxProcessor(
             }
         }
 
-        // Use the base DbContext.SaveChangesAsync to bypass audit stamping and event dispatch.
-        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return processedAny;
     }
 
     /// <summary>

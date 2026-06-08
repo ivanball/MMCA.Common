@@ -144,7 +144,14 @@ public static class Extensions
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddSource("MMCA.Common.Outbox")
                     .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation());
+                    .AddHttpClientInstrumentation()
+
+                    // Drops recurring outbox poll spans (and their SqlClient children from the
+                    // Azure Monitor distro) from export — idle polling would otherwise dominate
+                    // telemetry ingestion cost. Must be registered here, before
+                    // AddOpenTelemetryExporters() below, so its OnEnd clears the Recorded flag
+                    // before the exporters' batch processors check it.
+                    .AddProcessor(new Telemetry.OutboxPollFilterProcessor()));
 
         builder.AddOpenTelemetryExporters();
 
