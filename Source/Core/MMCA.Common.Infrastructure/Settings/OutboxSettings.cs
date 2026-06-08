@@ -22,14 +22,22 @@ public sealed class OutboxSettings
 
     /// <summary>
     /// Gets the fallback polling interval in seconds. With signal-based wakeup, this acts as
-    /// a safety net — the outbox processor normally wakes immediately on new entries.
+    /// a safety net — the outbox processor normally wakes immediately on new entries, and when
+    /// it sees pending-but-not-yet-eligible messages it smart-waits only until the earliest one
+    /// becomes eligible. Deployed environments can therefore set this high (e.g. 300) to cut
+    /// idle polling without adding latency for real messages.
     /// </summary>
-    [Range(1, 300)]
+    [Range(1, 3600)]
     public int PollingIntervalSeconds { get; init; } = 2;
 
-    /// <summary>Gets the delay in seconds after message creation before it becomes eligible for processing.</summary>
+    /// <summary>
+    /// Gets the delay in seconds after message creation before it becomes eligible for processing.
+    /// This bounds the duplicate-dispatch window: the in-process pipeline (save → dispatch → mark
+    /// processed) must complete within this delay or the processor may re-dispatch the event.
+    /// Handlers are required to be idempotent regardless (at-least-once delivery).
+    /// </summary>
     [Range(0, 600)]
-    public int ProcessingDelaySeconds { get; init; } = 30;
+    public int ProcessingDelaySeconds { get; init; } = 5;
 
     /// <summary>
     /// Gets the engine of the data source where integration events published via

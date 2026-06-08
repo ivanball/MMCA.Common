@@ -196,8 +196,8 @@ public class OutboxSettingsTests
         new OutboxSettings().PollingIntervalSeconds.Should().Be(2);
 
     [Fact]
-    public void Default_ProcessingDelaySeconds_Is30() =>
-        new OutboxSettings().ProcessingDelaySeconds.Should().Be(30);
+    public void Default_ProcessingDelaySeconds_Is5() =>
+        new OutboxSettings().ProcessingDelaySeconds.Should().Be(5);
 
     [Fact]
     public void Default_DataSource_IsSQLServer() =>

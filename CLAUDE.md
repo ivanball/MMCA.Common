@@ -62,6 +62,7 @@ Source/
 Tests/                               # Mirrors Source/ structure
 ├── Core/           (Shared.Tests, Domain.Tests, Application.Tests, Infrastructure.Tests)
 ├── Presentation/   (API.Tests, Grpc.Tests, UI.Tests)
+├── Hosting/        (Aspire.Tests)
 └── Architecture/   (Architecture.Tests — NetArchTest layer/purity/extraction rules)
 ```
 
@@ -161,7 +162,7 @@ Every entity resolves to a **physical data source** — a `DataSourceKey(Engine,
 
 ### Outbox Pattern
 
-`OutboxMessage` entries are persisted atomically with aggregate changes, in the **same database as the aggregate** (every relational physical source has its own `OutboxMessages` table). `OutboxProcessor` (background service) drains the outbox of every relational source the host uses — a host never races for another service's outbox rows. Polls on signal or interval, processes in batches of 50, retries up to 5 times. Integration events published via `IEventBus` target the source named by `Outbox:DataSource` + `Outbox:DatabaseName` (default: SQL Server / Default). Provides at-least-once delivery guarantee with OpenTelemetry metrics for dead-letter tracking.
+`OutboxMessage` entries are persisted atomically with aggregate changes, in the **same database as the aggregate** (every relational physical source has its own `OutboxMessages` table). `OutboxProcessor` (background service) drains the outbox of every relational source the host uses — a host never races for another service's outbox rows. Wakes on signal (new entries written) or a **smart wait**: when a cycle sees pending-but-not-yet-eligible rows it sleeps only until the earliest becomes eligible (messages are eligible `Outbox:ProcessingDelaySeconds` after creation, default 5s), otherwise it sleeps the full fallback interval (`Outbox:PollingIntervalSeconds`, default 2s — deployed environments set it high, e.g. 300s, to cut idle polling without adding latency). Processes in batches of 50, retries up to 5 times; a full batch that made progress re-polls immediately. Failed-message retries pace at the polling interval. Integration events published via `IEventBus` target the source named by `Outbox:DataSource` + `Outbox:DatabaseName` (default: SQL Server / Default). Provides at-least-once delivery guarantee with OpenTelemetry metrics for dead-letter tracking. The poll query runs inside an `OutboxPoll` activity that `OutboxPollFilterProcessor` (Aspire package) suppresses from telemetry export.
 
 ### Microservices Extraction Seams
 
@@ -183,7 +184,7 @@ The framework is designed so a module can be lifted out of the monolith into its
 
 ### Aspire Package
 
-`AddServiceDefaults()` configures OpenTelemetry (logging, metrics, tracing), service discovery, and Polly resilience handlers (30s attempt timeout, 60s circuit breaker window, 90s total timeout). `MapDefaultEndpoints()` adds `/health` (readiness) and `/alive` (liveness) endpoints.
+`AddServiceDefaults()` configures OpenTelemetry (logging, metrics, tracing), service discovery, and Polly resilience handlers (30s attempt timeout, 60s circuit breaker window, 90s total timeout). `MapDefaultEndpoints()` adds `/health` (readiness) and `/alive` (liveness) endpoints. The tracing pipeline registers `OutboxPollFilterProcessor`, which drops recurring outbox poll spans (and their SqlClient children from the Azure Monitor distro) from export so idle polling does not dominate telemetry ingestion cost.
 
 ### Testing Package
 

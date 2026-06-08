@@ -31,6 +31,9 @@ public sealed class OutboxProcessorTests : IDisposable
     private readonly OutboxTestDbContext _dbContext;
     private readonly Mock<IDomainEventDispatcher> _dispatcherMock;
     private readonly Mock<IMessageBus> _messageBusMock;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IEntityDataSourceRegistry _registry;
+    private readonly IDataSourceResolver _resolver;
     private readonly OutboxProcessor _sut;
 
     public OutboxProcessorTests()
@@ -78,24 +81,33 @@ public sealed class OutboxProcessorTests : IDisposable
         services.AddSingleton(_messageBusMock.Object);
         ServiceProvider rootProvider = services.BuildServiceProvider();
 
-        var scopeFactory = rootProvider.GetRequiredService<IServiceScopeFactory>();
-        var processorOutboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+        _scopeFactory = rootProvider.GetRequiredService<IServiceScopeFactory>();
 
         var registryMock = new Mock<IEntityDataSourceRegistry>();
         registryMock.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+        _registry = registryMock.Object;
+
         var resolverMock = new Mock<IDataSourceResolver>();
         resolverMock
             .Setup(r => r.ResolveLogical(It.IsAny<DataSource>(), It.IsAny<string>()))
             .Returns((DataSource engine, string _) => DataSourceKey.Default(engine));
+        _resolver = resolverMock.Object;
 
-        _sut = new OutboxProcessor(
-            scopeFactory,
-            NullLogger<OutboxProcessor>.Instance,
-            Options.Create(new OutboxSettings()),
-            processorOutboxSignal.Object,
-            registryMock.Object,
-            resolverMock.Object);
+        _sut = CreateProcessor(new OutboxSettings());
     }
+
+    /// <summary>
+    /// Builds a processor over the shared SQLite fixture with the given settings — lets
+    /// individual tests vary <see cref="OutboxSettings.BatchSize"/> etc.
+    /// </summary>
+    private OutboxProcessor CreateProcessor(OutboxSettings settings) =>
+        new(
+            _scopeFactory,
+            NullLogger<OutboxProcessor>.Instance,
+            Options.Create(settings),
+            Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>(),
+            _registry,
+            _resolver);
 
     public void Dispose()
     {
@@ -107,19 +119,12 @@ public sealed class OutboxProcessorTests : IDisposable
     // ── Helpers ──
 
     /// <summary>
-    /// Invokes the private <c>ProcessPendingMessagesAsync</c> method via reflection to avoid
-    /// the 5-second startup delay and infinite loop of <c>ExecuteAsync</c>.
+    /// Invokes the internal <c>ProcessPendingMessagesAsync</c> method directly to avoid the
+    /// 5-second startup delay and infinite loop of <c>ExecuteAsync</c>, returning the cycle
+    /// result so tests can assert on the smart-wait inputs.
     /// </summary>
-    private async Task InvokeProcessPendingMessagesAsync()
-    {
-        MethodInfo? method = typeof(OutboxProcessor)
-            .GetMethod("ProcessPendingMessagesAsync", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        method.Should().NotBeNull("OutboxProcessor must have a private ProcessPendingMessagesAsync method");
-
-        var task = (Task)method!.Invoke(_sut, [CancellationToken.None])!;
-        await task.ConfigureAwait(false);
-    }
+    private Task<OutboxCycleResult> InvokeProcessPendingMessagesAsync() =>
+        _sut.ProcessPendingMessagesAsync(CancellationToken.None);
 
     /// <summary>
     /// Creates an outbox message eligible for processing (old enough, unprocessed, zero retries).
@@ -163,7 +168,7 @@ public sealed class OutboxProcessorTests : IDisposable
     [Fact]
     public async Task SkipsRecentMessages_DoesNotProcessMessagesWithinDelay()
     {
-        // Arrange: OccurredOn is now, within the 30-second processing delay window
+        // Arrange: OccurredOn is now, within the 5-second processing delay window
         OutboxMessage message = CreateEligibleMessage(occurredOn: DateTime.UtcNow);
         _dbContext.Set<OutboxMessage>().Add(message);
         await _dbContext.SaveChangesAsync();
@@ -295,6 +300,93 @@ public sealed class OutboxProcessorTests : IDisposable
         succeeded.ProcessedOn.Should().NotBeNull();
         succeeded.RetryCount.Should().Be(0);
         succeeded.LastError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PendingOnlyMessages_ReturnsEarliestPending_AndProcessesNothing()
+    {
+        // Arrange: both messages are younger than the 5s processing delay — not yet eligible.
+        OutboxMessage older = CreateEligibleMessage(occurredOn: DateTime.UtcNow.AddSeconds(-2));
+        OutboxMessage newer = CreateEligibleMessage(occurredOn: DateTime.UtcNow.AddSeconds(-1));
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(older, newer);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        OutboxCycleResult result = await InvokeProcessPendingMessagesAsync();
+
+        // Assert: nothing processed, the oldest pending timestamp drives the smart wait.
+        result.HasMoreEligibleWork.Should().BeFalse();
+        result.EarliestPendingOccurredOn.Should().NotBeNull();
+        result.EarliestPendingOccurredOn!.Value.Should().BeCloseTo(older.OccurredOn, TimeSpan.FromMilliseconds(1));
+
+        List<OutboxMessage> all = await _dbContext.Set<OutboxMessage>().ToListAsync();
+        all.Should().AllSatisfy(m => m.ProcessedOn.Should().BeNull());
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task MixedEligibleAndPending_ProcessesOnlyEligible_ReturnsPendingTimestamp()
+    {
+        // Arrange: one eligible message (5 min old) and one pending (just written).
+        OutboxMessage eligible = CreateEligibleMessage();
+        OutboxMessage pending = CreateEligibleMessage(occurredOn: DateTime.UtcNow);
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(eligible, pending);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        OutboxCycleResult result = await InvokeProcessPendingMessagesAsync();
+
+        // Assert
+        result.HasMoreEligibleWork.Should().BeFalse("the eligible batch was not full");
+        result.EarliestPendingOccurredOn.Should().NotBeNull();
+        result.EarliestPendingOccurredOn!.Value.Should().BeCloseTo(pending.OccurredOn, TimeSpan.FromMilliseconds(1));
+
+        OutboxMessage processed = await _dbContext.Set<OutboxMessage>().SingleAsync(m => m.Id == eligible.Id);
+        processed.ProcessedOn.Should().NotBeNull();
+        OutboxMessage untouched = await _dbContext.Set<OutboxMessage>().SingleAsync(m => m.Id == pending.Id);
+        untouched.ProcessedOn.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FullEligibleBatch_WithProgress_ReportsMoreEligibleWork()
+    {
+        // Arrange: three eligible messages but a batch size of two — the first cycle drains a
+        // full batch successfully, so the processor should re-poll immediately.
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings { BatchSize = 2 });
+        var messages = Enumerable.Range(0, 3).Select(_ => CreateEligibleMessage()).ToArray();
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(messages);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        OutboxCycleResult result = await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        // Assert
+        result.HasMoreEligibleWork.Should().BeTrue("a full batch made progress, more rows may be waiting");
+    }
+
+    [Fact]
+    public async Task FullEligibleBatch_AllFailing_DoesNotReportMoreEligibleWork()
+    {
+        // Arrange: a full batch where every dispatch fails — without the progress guard the
+        // processor would hot-spin retrying the same rows back-to-back.
+        _dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Dispatch failed"));
+
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings { BatchSize = 2 });
+        var messages = Enumerable.Range(0, 2).Select(_ => CreateEligibleMessage()).ToArray();
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(messages);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        OutboxCycleResult result = await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        // Assert: no progress → no immediate re-poll, and failed-but-eligible rows must not
+        // shorten the smart wait (they retry on the next signal or polling interval).
+        result.HasMoreEligibleWork.Should().BeFalse("a fully-failing batch must not hot-spin the processor");
+        result.EarliestPendingOccurredOn.Should().BeNull("failed eligible rows are not pending rows");
     }
 
     [Fact]
