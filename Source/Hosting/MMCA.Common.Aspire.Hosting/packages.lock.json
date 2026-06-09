@@ -4,9 +4,9 @@
     "net10.0": {
       "Aspire.Hosting": {
         "type": "Direct",
-        "requested": "[13.4.2, )",
-        "resolved": "13.4.2",
-        "contentHash": "vRrpSSRO5xqBPg25ACLrn39gQ0VmdbY6niQV47/KZhdTyEvQ6jIuSs8SmRXqdO6gEEAIvGMTm5C7UHc+ms4KDw==",
+        "requested": "[13.4.3, )",
+        "resolved": "13.4.3",
+        "contentHash": "X6UgBZNWU/zOp65qkNElsa5BMPbxv0P59E+6D0NcRFi1n5iMY2UN2xnEnghfKBDBKUSwqnEGvUg/cLL9N797zw==",
         "dependencies": {
           "AspNetCore.HealthChecks.Uris": "9.0.0",
           "Google.Protobuf": "3.34.1",
@@ -39,13 +39,13 @@
       },
       "Aspire.Hosting.RabbitMQ": {
         "type": "Direct",
-        "requested": "[13.4.2, )",
-        "resolved": "13.4.2",
-        "contentHash": "ahboo9GclMEwUu+cLHvBtqg2CcZBEBGhF03aDv2wh2cCm1uhVmya6eyXsVOXAhzfx7IyhEUfiYNNSI9Ns4sajA==",
+        "requested": "[13.4.3, )",
+        "resolved": "13.4.3",
+        "contentHash": "9/F7mHYFepQI6uyn5f0kLYSGloE+TyLlHS/EjP/ycxYWOEJvREDVYdrqLpnUgrh2bB8tgNy1pH7NpscN7FpVhQ==",
         "dependencies": {
           "AspNetCore.HealthChecks.Rabbitmq": "9.0.0",
           "AspNetCore.HealthChecks.Uris": "9.0.0",
-          "Aspire.Hosting": "13.4.2",
+          "Aspire.Hosting": "13.4.3",
           "Google.Protobuf": "3.34.1",
           "Grpc.AspNetCore": "2.80.0",
           "Grpc.Net.ClientFactory": "2.80.0",
