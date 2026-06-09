@@ -4,11 +4,11 @@
     "net10.0": {
       "MassTransit": {
         "type": "Direct",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "bSg8k5q+rP1s+dIGXLLbctqDGdIkfDjdxwNWtCUH7xNCN9ZuM7mqSPQPIFgaYIi34e81m4FqAqo4CAHuWPkhRA==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "TGi34UA8RftBIpYCHEdoIP5uSu2/pLWZRen4RUcg4CV1nr8MmCZMuFYjzvXXUyFcj0ZuRQxZZNhG7fB5/raSOg==",
         "dependencies": {
-          "MassTransit.Abstractions": "8.5.5"
+          "MassTransit.Abstractions": "8.5.10"
         }
       },
       "MassTransit.Azure.ServiceBus.Core": {
@@ -221,8 +221,8 @@
       },
       "MassTransit.Abstractions": {
         "type": "Transitive",
-        "resolved": "8.5.5",
-        "contentHash": "0mn2Ay17dD6z5tgSLjbVRlldSbL9iowzFEfVgVfBXVG5ttz9dSWeR4TrdD6pqH93GWXp4CvSmF8i1HqxLX7DZw=="
+        "resolved": "8.5.10",
+        "contentHash": "nZnm2YNH+NcVwY6yC114sJy8J9LtKdFjfKUm/A5HfmzOlZ8ksjgHaPBg5XCG1VAqKDRDFnaudIcesVultKJD7g=="
       },
       "MessagePack": {
         "type": "Transitive",
