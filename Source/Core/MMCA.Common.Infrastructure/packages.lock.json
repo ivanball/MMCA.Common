@@ -4,11 +4,11 @@
     "net10.0": {
       "MassTransit": {
         "type": "Direct",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "bSg8k5q+rP1s+dIGXLLbctqDGdIkfDjdxwNWtCUH7xNCN9ZuM7mqSPQPIFgaYIi34e81m4FqAqo4CAHuWPkhRA==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "TGi34UA8RftBIpYCHEdoIP5uSu2/pLWZRen4RUcg4CV1nr8MmCZMuFYjzvXXUyFcj0ZuRQxZZNhG7fB5/raSOg==",
         "dependencies": {
-          "MassTransit.Abstractions": "8.5.5"
+          "MassTransit.Abstractions": "8.5.10"
         }
       },
       "MassTransit.Azure.ServiceBus.Core": {
@@ -24,12 +24,12 @@
       },
       "MassTransit.RabbitMQ": {
         "type": "Direct",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "UxWn4o90YVMF9PBkJeoskOFPneh6YtnI1fLJHtvZiSAG0eoiRrWPGa+6FQCvjkQ/ljCKfjzok2eGZc/vmNZ01A==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "5aQGpJpeqRhRv+htkXfi6MfWu0dj/4Lcf1c6h2J3tYZClupGklqB1ixlP3IRdZExrH9BI/60uYoxR+7pg3s1oQ==",
         "dependencies": {
-          "MassTransit": "8.5.5",
-          "RabbitMQ.Client": "7.1.2"
+          "MassTransit": "8.5.10",
+          "RabbitMQ.Client": "7.2.1"
         }
       },
       "Meziantou.Analyzer": {
@@ -221,8 +221,8 @@
       },
       "MassTransit.Abstractions": {
         "type": "Transitive",
-        "resolved": "8.5.5",
-        "contentHash": "0mn2Ay17dD6z5tgSLjbVRlldSbL9iowzFEfVgVfBXVG5ttz9dSWeR4TrdD6pqH93GWXp4CvSmF8i1HqxLX7DZw=="
+        "resolved": "8.5.10",
+        "contentHash": "nZnm2YNH+NcVwY6yC114sJy8J9LtKdFjfKUm/A5HfmzOlZ8ksjgHaPBg5XCG1VAqKDRDFnaudIcesVultKJD7g=="
       },
       "MessagePack": {
         "type": "Transitive",
@@ -600,8 +600,8 @@
       },
       "RabbitMQ.Client": {
         "type": "Transitive",
-        "resolved": "7.1.2",
-        "contentHash": "y3c6ulgULScWthHw5PLM1ShHRLhxg0vCtzX/hh61gRgNecL3ZC3WoBW2HYHoXOVRqTl99Br9E7CZEytGZEsCyQ=="
+        "resolved": "7.2.1",
+        "contentHash": "YKXEfg9fVQiTKgZlvIhAfPSFaamEgi8DsQmisCH0IAsU4FYLrtoguDrDj6JtJVGUt40QPnBLRH6fTQcAC4qsOg=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Transitive",
