@@ -55,4 +55,20 @@ public sealed class OutboxSettings
     /// source — it drains the outbox table of every relational physical source in use.
     /// </summary>
     public string DatabaseName { get; init; } = DataSourceKey.DefaultName;
+
+    /// <summary>
+    /// Gets the number of days a <b>processed</b> outbox message is retained before
+    /// <c>OutboxCleanupService</c> purges it. Set to <c>0</c> to disable purging (rows are kept
+    /// indefinitely — the pre-1.x behavior). Defaults to <c>7</c>.
+    /// </summary>
+    [Range(0, 3650)]
+    public int RetentionDays { get; init; } = 7;
+
+    /// <summary>
+    /// Gets how often, in hours, <c>OutboxCleanupService</c> runs its purge sweep across every
+    /// relational data source in use. Ignored when <see cref="RetentionDays"/> is <c>0</c>.
+    /// Defaults to <c>6</c>.
+    /// </summary>
+    [Range(1, 168)]
+    public int CleanupIntervalHours { get; init; } = 6;
 }

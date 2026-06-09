@@ -44,8 +44,10 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Let MassTransit retry per its configured retry policy. Logging here gives
-                // operators visibility into which handler failed without losing the exception.
+                // Rethrow so MassTransit applies the UseMessageRetry policy configured in
+                // ConfigureBrokerTransport (exponential backoff, MessageBusSettings.RetryLimit
+                // attempts) before the message is dead-lettered. Logging here gives operators
+                // visibility into which handler failed without losing the exception.
                 LogHandlerFailure(logger, ex, typeof(TEvent).Name, handler.GetType().FullName ?? "<unknown>");
                 throw;
             }
@@ -63,6 +65,6 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
     [LoggerMessage(Level = LogLevel.Information, Message = "No IIntegrationEventHandler<{EventType}> registered in this process — broker message acked without action")]
     private static partial void LogNoHandlers(ILogger logger, string eventType);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Integration event handler {HandlerType} failed for {EventType}; MassTransit will retry per its configured policy")]
+    [LoggerMessage(Level = LogLevel.Error, Message = "Integration event handler {HandlerType} failed for {EventType}; MassTransit will apply the configured retry policy before dead-lettering")]
     private static partial void LogHandlerFailure(ILogger logger, Exception ex, string eventType, string handlerType);
 }

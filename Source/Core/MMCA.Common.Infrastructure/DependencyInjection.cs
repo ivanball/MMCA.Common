@@ -135,6 +135,7 @@ public static class DependencyInjection
 
             services.TryAddSingleton<Persistence.Outbox.IOutboxSignal, Persistence.Outbox.OutboxSignal>();
             services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
+            services.AddHostedService<Persistence.Outbox.OutboxCleanupService>();
 
             services.AddServices();
 
@@ -307,7 +308,7 @@ public static class DependencyInjection
                 }
 
                 configureConsumers?.Invoke(x);
-                ConfigureBrokerTransport(x, settings.Provider, connectionString);
+                ConfigureBrokerTransport(x, settings, connectionString);
             });
 
             // Swap the default in-process bus for the broker-backed one. Use Replace so we
@@ -386,19 +387,28 @@ public static class DependencyInjection
 
     /// <summary>
     /// Wires MassTransit to the configured broker transport using the resolved connection string.
+    /// Every receive endpoint gets an exponential-backoff <c>UseMessageRetry</c> policy (configured
+    /// by <see cref="MessageBusSettings.RetryLimit"/> and friends) so a transient handler failure is
+    /// retried in-process instead of dead-lettering on the first exception.
     /// Extracted out of <c>AddBrokerMessaging</c> to keep that method's cyclomatic complexity
     /// below the analyzer threshold.
     /// </summary>
+    /// <remarks>
+    /// Only in-process retry (<c>UseMessageRetry</c>) is configured — not <c>UseDelayedRedelivery</c>,
+    /// which on RabbitMQ requires the delayed-message-exchange plugin that the Aspire RabbitMQ
+    /// container does not ship. A consumer that needs broker-level delayed redelivery can layer it
+    /// on per-endpoint after installing the plugin (or on Azure Service Bus, which supports it natively).
+    /// </remarks>
     [SuppressMessage(
         "Style",
         "IDE0051:Remove unused private members",
         Justification = "Called from AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
     private static void ConfigureBrokerTransport(
         IBusRegistrationConfigurator x,
-        MessageBusProvider provider,
+        MessageBusSettings settings,
         string? connectionString)
     {
-        switch (provider)
+        switch (settings.Provider)
         {
             case MessageBusProvider.RabbitMq:
                 x.UsingRabbitMq((context, cfg) =>
@@ -408,6 +418,11 @@ public static class DependencyInjection
                         cfg.Host(new Uri(connectionString));
                     }
 
+                    cfg.UseMessageRetry(r => r.Exponential(
+                        settings.RetryLimit,
+                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
+                        TimeSpan.FromSeconds(settings.RetryMaxIntervalSeconds),
+                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds)));
                     cfg.ConfigureEndpoints(context);
                 });
                 break;
@@ -420,6 +435,11 @@ public static class DependencyInjection
                         cfg.Host(connectionString);
                     }
 
+                    cfg.UseMessageRetry(r => r.Exponential(
+                        settings.RetryLimit,
+                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
+                        TimeSpan.FromSeconds(settings.RetryMaxIntervalSeconds),
+                        TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds)));
                     cfg.ConfigureEndpoints(context);
                 });
                 break;

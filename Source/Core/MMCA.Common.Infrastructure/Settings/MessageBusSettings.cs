@@ -32,6 +32,28 @@ public sealed class MessageBusSettings
     /// </summary>
     [StringLength(64)]
     public string? EndpointPrefix { get; init; }
+
+    /// <summary>
+    /// Gets the maximum number of in-process redelivery attempts MassTransit makes (via
+    /// <c>UseMessageRetry</c>) before a faulted message is moved to the <c>_error</c> queue.
+    /// Applies to every broker receive endpoint. Set to <c>0</c> to disable retries.
+    /// Defaults to <c>5</c>.
+    /// </summary>
+    [Range(0, 20)]
+    public int RetryLimit { get; init; } = 5;
+
+    /// <summary>
+    /// Gets the first retry interval, in seconds. Subsequent intervals grow exponentially up to
+    /// <see cref="RetryMaxIntervalSeconds"/>. Defaults to <c>1</c>.
+    /// </summary>
+    [Range(0, 300)]
+    public int RetryMinIntervalSeconds { get; init; } = 1;
+
+    /// <summary>
+    /// Gets the cap on the exponential retry interval, in seconds. Defaults to <c>30</c>.
+    /// </summary>
+    [Range(0, 3600)]
+    public int RetryMaxIntervalSeconds { get; init; } = 30;
 }
 
 /// <summary>Available message bus transports.</summary>
