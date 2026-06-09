@@ -38,5 +38,20 @@ jobs:
       - name: Pack
         run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
+      # Software Bill of Materials for the released packages (CycloneDX).
+      # continue-on-error so SBOM tooling never blocks a publish; harden once validated in CI.
+      - name: Generate SBOM (CycloneDX)
+        continue-on-error: true
+        run: |
+          dotnet tool install --global CycloneDX
+          dotnet CycloneDX MMCA.Common.slnx --output ./sbom --json
+
+      - name: Upload SBOM
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: ./sbom
+
       - name: Push to GitHub Packages
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate

@@ -2,9 +2,11 @@ namespace MMCA.Common.Shared.Abstractions;
 
 /// <summary>
 /// Marks an interface or DTO as part of a service contract published in a <c>*.Contracts</c>
-/// NuGet package. Used by architecture tests to enforce that contract types do not depend on
-/// the producing service's <c>Domain</c>, <c>Application</c>, or <c>Infrastructure</c> projects,
-/// and by tooling to identify the wire surface of an extracted microservice.
+/// NuGet package, identifying the wire surface of an extracted microservice (see ADR-007).
+/// The intended invariant — contract types must not depend on the producing service's
+/// <c>Domain</c>, <c>Application</c>, or <c>Infrastructure</c> — is enforced by an architecture
+/// test in each <em>consumer</em> solution, where the concrete contract types live; MMCA.Common
+/// itself ships no <c>[ServiceContract]</c> types.
 /// <para>
 /// Apply to the C# interface that consumers depend on (e.g. <c>IProductVariantService</c>),
 /// the integration event records that flow over the message bus (e.g. <c>ProductVariantChanged</c>),

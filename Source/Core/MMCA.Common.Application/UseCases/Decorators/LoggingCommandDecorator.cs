@@ -31,6 +31,7 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
             LogCommandStarted(logger, commandName, correlationId);
 
             var stopwatch = Stopwatch.StartNew();
+            var outcome = "completed";
             try
             {
                 var result = await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
@@ -38,6 +39,7 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
 
                 if (result is Shared.Abstractions.Result { IsFailure: true } failureResult)
                 {
+                    outcome = "failed";
                     var errorSummary = string.Join("; ", failureResult.Errors.Select(e => $"{e.Code}: {e.Message}"));
                     LogCommandFailed(logger, commandName, stopwatch.ElapsedMilliseconds, correlationId, errorSummary);
                 }
@@ -51,8 +53,16 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
             catch (Exception ex)
             {
                 stopwatch.Stop();
+                outcome = "exception";
                 LogCommandException(logger, commandName, stopwatch.ElapsedMilliseconds, correlationId, ex);
                 throw;
+            }
+            finally
+            {
+                CqrsMetrics.CommandDuration.Record(
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    new KeyValuePair<string, object?>("command", commandName),
+                    new KeyValuePair<string, object?>("outcome", outcome));
             }
         }
     }

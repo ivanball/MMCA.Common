@@ -28,6 +28,7 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
         }))
         {
             var stopwatch = Stopwatch.StartNew();
+            var outcome = "completed";
             try
             {
                 var result = await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
@@ -38,8 +39,16 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
             catch (Exception ex)
             {
                 stopwatch.Stop();
+                outcome = "exception";
                 LogQueryException(logger, queryName, stopwatch.ElapsedMilliseconds, correlationId, ex);
                 throw;
+            }
+            finally
+            {
+                CqrsMetrics.QueryDuration.Record(
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    new KeyValuePair<string, object?>("query", queryName),
+                    new KeyValuePair<string, object?>("outcome", outcome));
             }
         }
     }

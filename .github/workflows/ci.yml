@@ -27,5 +27,13 @@ jobs:
       - name: Build
         run: dotnet build MMCA.Common.slnx -c Release --no-restore
 
+      - name: Audit dependencies (fail on known vulnerabilities)
+        run: |
+          dotnet list MMCA.Common.slnx package --vulnerable --include-transitive > audit.log 2>&1 || true
+          cat audit.log
+          if grep -q "has the following vulnerable packages" audit.log; then
+            echo "::error::Vulnerable NuGet packages detected — see log above"; exit 1
+          fi
+
       - name: Test
         run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 1

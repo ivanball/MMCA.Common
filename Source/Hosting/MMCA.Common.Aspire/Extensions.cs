@@ -139,7 +139,12 @@ public static class Extensions
             .WithMetrics(metrics =>
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation())
+                    .AddRuntimeInstrumentation()
+
+                    // MMCA.Common meters (literal names — Aspire has no reference to the defining
+                    // assemblies): outbox dead-letter counter and CQRS RED histograms.
+                    .AddMeter("MMCA.Common.Outbox")
+                    .AddMeter("MMCA.Common.Cqrs"))
             .WithTracing(tracing =>
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddSource("MMCA.Common.Outbox")

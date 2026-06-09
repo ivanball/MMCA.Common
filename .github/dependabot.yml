@@ -1,0 +1,30 @@
+version: 2
+updates:
+  # NuGet versions live in Directory.Packages.props (Central Package Management).
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      analyzers:
+        patterns:
+          - "*.Analyzer*"
+          - "StyleCop.*"
+          - "SonarAnalyzer.*"
+          - "Roslynator.*"
+          - "Meziantou.*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry.*"
+          - "Azure.Monitor.OpenTelemetry.*"
+    ignore:
+      # MassTransit is pinned to v8 by policy (v9 requires a commercial license); enforced by a
+      # fitness test. Don't let Dependabot propose the major bump. See Directory.Packages.props.
+      - dependency-name: "MassTransit*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
