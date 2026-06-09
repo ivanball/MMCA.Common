@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Deque.AxeCore.Playwright" />
     <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>

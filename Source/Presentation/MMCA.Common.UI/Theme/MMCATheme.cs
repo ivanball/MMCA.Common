@@ -12,6 +12,9 @@ public static class MMCATheme
     {
         PaletteLight = new PaletteLight
         {
+            // Brand palette. C# cannot read CSS custom properties, so keep Primary / PrimaryDarken
+            // in sync with --mmca-primary / --mmca-primary-dark in wwwroot/app.css (the single CSS
+            // source of the same hex, referenced everywhere else via var()).
             Primary = "#1565C0",
             PrimaryDarken = "#0D47A1",
             PrimaryLighten = "#42A5F5",

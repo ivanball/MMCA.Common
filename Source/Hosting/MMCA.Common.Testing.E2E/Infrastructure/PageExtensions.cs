@@ -1,3 +1,5 @@
+using Deque.AxeCore.Commons;
+using Deque.AxeCore.Playwright;
 using Microsoft.Playwright;
 
 namespace MMCA.Common.Testing.E2E.Infrastructure;
@@ -100,5 +102,32 @@ public static class PageExtensions
                 return;
             await Task.Delay(500);
         }
+    }
+
+    /// <summary>
+    /// Runs an axe-core accessibility scan against the current page and throws an
+    /// <see cref="AccessibilityViolationException"/> if any violation is found. Call from a
+    /// consumer E2E test once the page is interactive (e.g. after
+    /// <see cref="GotoAndWaitForBlazorAsync"/>).
+    /// </summary>
+    public static async Task AssertNoAccessibilityViolationsAsync(this IPage page, AxeRunOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+
+        var result = options is null
+            ? await page.RunAxe().ConfigureAwait(false)
+            : await page.RunAxe(options).ConfigureAwait(false);
+
+        if (result.Violations.Length == 0)
+        {
+            return;
+        }
+
+        var summary = string.Join(
+            Environment.NewLine,
+            result.Violations.Select(v => $"  [{v.Impact}] {v.Id}: {v.Help} ({v.Nodes.Length} node(s))"));
+
+        throw new AccessibilityViolationException(
+            $"{result.Violations.Length} accessibility violation(s) found:{Environment.NewLine}{summary}");
     }
 }

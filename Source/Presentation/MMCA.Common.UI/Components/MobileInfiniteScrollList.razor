@@ -53,6 +53,13 @@ else
     [Parameter] public string EmptyMessage { get; set; } = "No records found.";
     [Parameter] public string EmptyIcon { get; set; } = Icons.Material.Outlined.SearchOff;
 
+    /// <summary>
+    /// Upper bound on how many items are loaded into the DOM. Infinite scroll stops fetching once
+    /// the list reaches this many items, bounding DOM growth (and memory) for very large result
+    /// sets. Raise it for consumers that genuinely need a longer list. Defaults to <c>500</c>.
+    /// </summary>
+    [Parameter] public int MaxRenderedItems { get; set; } = 500;
+
     private readonly List<TItem> _items = [];
     private int _totalCount;
     private int _currentPage;
@@ -154,7 +161,10 @@ else
             var (items, totalCount) = await FetchPage(_currentPage, PageSize, _cts.Token);
             _items.AddRange(items);
             _totalCount = totalCount;
-            _hasMore = _items.Count < _totalCount;
+
+            // Stop fetching once the rendered-item cap is reached so the DOM (and memory) stay
+            // bounded even for very large result sets.
+            _hasMore = _items.Count < _totalCount && _items.Count < MaxRenderedItems;
         }
         catch (OperationCanceledException)
         {

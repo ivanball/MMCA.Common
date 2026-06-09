@@ -44,13 +44,13 @@ html, body {
 }
 
 a, .btn-link {
-    color: #1565C0;
+    color: var(--mmca-primary);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1565C0;
-    border-color: #0D47A1;
+    background-color: var(--mmca-primary);
+    border-color: var(--mmca-primary-dark);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {

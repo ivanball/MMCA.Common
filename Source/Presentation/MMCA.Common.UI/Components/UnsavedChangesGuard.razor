@@ -12,7 +12,7 @@
 @using Microsoft.AspNetCore.Components.Routing
 @inject IDialogService DialogService
 
-<NavigationLock ConfirmExternalNavigation="@IsDirty"
+<NavigationLock ConfirmExternalNavigation="@CurrentIsDirty"
                 OnBeforeInternalNavigation="HandleBeforeInternalNavigationAsync" />
 
 @code {
@@ -22,6 +22,16 @@
     /// browser's <c>beforeunload</c> prompt.
     /// </summary>
     [Parameter, EditorRequired] public bool IsDirty { get; set; }
+
+    /// <summary>
+    /// Optional live accessor for the current dirty state. When provided, it is consulted at
+    /// navigation time instead of <see cref="IsDirty"/>, avoiding the one-render parameter lag
+    /// where clearing dirty state and calling <c>NavigateTo</c> without an intervening
+    /// <c>StateHasChanged()</c> would still show the prompt. Pass <c>() =&gt; _isDirty</c> from the parent.
+    /// </summary>
+    [Parameter] public Func<bool>? IsDirtyAccessor { get; set; }
+
+    private bool CurrentIsDirty => IsDirtyAccessor?.Invoke() ?? IsDirty;
 
     /// <summary>Title of the in-app confirmation dialog.</summary>
     [Parameter] public string Title { get; set; } = "Unsaved changes";
@@ -37,7 +47,7 @@
 
     private async Task HandleBeforeInternalNavigationAsync(LocationChangingContext context)
     {
-        if (!IsDirty)
+        if (!CurrentIsDirty)
         {
             return;
         }
