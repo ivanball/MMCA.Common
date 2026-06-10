@@ -94,15 +94,29 @@ public static class DependencyInjection
         }
 
         /// <summary>
-        /// Registers the server-side session-cookie reader used during SSR prerender so
-        /// [Authorize] pages can resolve auth state before JS interop is available.
-        /// Call on the Blazor Server (UI.Web) host.
+        /// Registers the server-side session-cookie reader (used during SSR prerender so [Authorize] pages
+        /// can resolve auth state before JS interop is available) plus the cookie session refresher that
+        /// backs <c>/auth/session/token</c> and <c>UseCookieSessionRefresh()</c>. Call on the Blazor Server
+        /// (UI.Web) host.
         /// </summary>
+        /// <param name="apiBaseAddress">
+        /// Absolute base address of the API/Gateway the host's server-side refresher calls (typically
+        /// <c>ApiSettings.ApiEndpoint</c> — the internal endpoint, not the browser-facing one).
+        /// </param>
         /// <returns>The service collection for chaining.</returns>
-        public IServiceCollection AddServerAuthSessionCookie()
+        public IServiceCollection AddServerAuthSessionCookie(string apiBaseAddress)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(apiBaseAddress);
+
             services.AddHttpContextAccessor();
+            services.AddMemoryCache();
             services.TryAddScoped<CookieTokenReader>();
+
+            services.AddHttpClient(CookieSessionRefresher.RefreshClientName, client =>
+                client.BaseAddress = new Uri(apiBaseAddress, UriKind.Absolute));
+
+            // Singleton: the refresher's in-flight map must be shared across requests for single-flight to work.
+            services.TryAddSingleton<ICookieSessionRefresher, CookieSessionRefresher>();
             return services;
         }
 

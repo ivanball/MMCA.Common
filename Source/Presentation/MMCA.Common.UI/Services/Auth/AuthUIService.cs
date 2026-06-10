@@ -14,6 +14,7 @@ namespace MMCA.Common.UI.Services.Auth;
 public sealed class AuthUIService(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService,
+    ITokenRefresher tokenRefresher,
     AuthenticationStateProvider authStateProvider) : IAuthUIService
 {
     private const string ApiClientName = "APIClient";
@@ -204,19 +205,12 @@ public sealed class AuthUIService(
 
     public async Task<bool> TryRefreshTokenAsync(CancellationToken cancellationToken = default)
     {
-        var accessToken = await tokenStorageService.GetAccessTokenAsync();
-        var refreshToken = await tokenStorageService.GetRefreshTokenAsync();
+        // Delegates to the host-specific refresher: browser hosts refresh via the same-origin cookie proxy
+        // (refresh token stays server-side); MAUI refreshes directly from SecureStorage. A null result means
+        // the session can no longer be refreshed (missing/expired/revoked credential) → treat as logout.
+        var accessToken = await tokenRefresher.AcquireAccessTokenAsync(cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(refreshToken))
-        {
-            return false;
-        }
-
-        using var httpClient = httpClientFactory.CreateClient(ApiClientName);
-        var request = new RefreshTokenRequest(accessToken, refreshToken);
-        var response = await httpClient.PostAsJsonAsync(new Uri("auth/refresh", UriKind.Relative), request, cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        if (string.IsNullOrWhiteSpace(accessToken))
         {
             try
             {
@@ -224,7 +218,7 @@ public sealed class AuthUIService(
             }
             catch (InvalidOperationException)
             {
-                // JS interop not available
+                // JS interop not available (SSR prerender / disconnected circuit)
             }
 
             if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
@@ -235,24 +229,9 @@ public sealed class AuthUIService(
             return false;
         }
 
-        var result = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(cancellationToken);
-        if (string.IsNullOrWhiteSpace(result.AccessToken))
-        {
-            return false;
-        }
-
-        try
-        {
-            await tokenStorageService.SetTokensAsync(result.AccessToken, result.RefreshToken);
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-
         if (authStateProvider is JwtAuthenticationStateProvider jwtProvider2)
         {
-            jwtProvider2.NotifyUserAuthentication(result.AccessToken);
+            jwtProvider2.NotifyUserAuthentication(accessToken);
         }
 
         return true;

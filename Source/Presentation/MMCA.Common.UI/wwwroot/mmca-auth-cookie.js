@@ -25,3 +25,25 @@ window.mmcaAuthCookie = {
         }
     }
 };
+
+// Same-origin "validate-or-refresh": returns a currently-valid access token, refreshed server-side from
+// the HttpOnly refresh cookie when the access cookie has expired. The refresh token never reaches JS.
+// Returns the access token string, or null when there is no valid session.
+window.mmcaAuthSession = {
+    getToken: async function () {
+        try {
+            const response = await fetch('/auth/session/token', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) {
+                return null;
+            }
+            const data = await response.json();
+            return data && data.accessToken ? data.accessToken : null;
+        } catch (e) {
+            return null;
+        }
+    }
+};
