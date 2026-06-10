@@ -111,6 +111,61 @@ public sealed class AuthUIService(
         return result;
     }
 
+    public async Task<AuthenticationResponse?> ExchangeOAuthCodeAsync(string code, CancellationToken cancellationToken = default)
+    {
+        LastError = null;
+
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            LastError = "Authentication failed: missing exchange code.";
+            return null;
+        }
+
+        using var httpClient = httpClientFactory.CreateClient(ApiClientName);
+        var response = await httpClient.PostAsJsonAsync(
+            new Uri("auth/oauth/exchange", UriKind.Relative), new OAuthCodeExchangeRequest(code), cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            try
+            {
+                var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+                LastError = problem?.Detail;
+            }
+            catch
+            {
+                // Response body may not be valid ProblemDetails
+            }
+
+            LastError ??= "Sign in could not be completed. Please try again.";
+            return null;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(cancellationToken);
+        if (string.IsNullOrWhiteSpace(result.AccessToken))
+        {
+            LastError = "Sign in could not be completed. Please try again.";
+            return null;
+        }
+
+        try
+        {
+            await tokenStorageService.SetTokensAsync(result.AccessToken, result.RefreshToken);
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop not available (e.g., during render mode transition)
+            return null;
+        }
+
+        if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
+        {
+            jwtProvider.NotifyUserAuthentication(result.AccessToken);
+        }
+
+        return result;
+    }
+
     public async Task LogoutAsync()
     {
         using var httpClient = httpClientFactory.CreateClient(ApiClientName);

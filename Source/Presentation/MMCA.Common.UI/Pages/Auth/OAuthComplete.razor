@@ -1,10 +1,8 @@
 @page "/auth/oauth-complete"
-@using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.Common.UI.Services.Auth
 @using MMCA.Common.UI.Services.Navigation
 @attribute [StreamRendering(false)]
-@inject ITokenStorageService TokenStorage
-@inject AuthenticationStateProvider AuthStateProvider
+@inject IAuthUIService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>Completing sign in...</PageTitle>
@@ -27,11 +25,11 @@
 </MudContainer>
 
 @code {
+    // The OAuth complete endpoint mints a single-use code and carries it here in the URL —
+    // the access/refresh tokens are exchanged out-of-band (POST auth/oauth/exchange) so they
+    // never appear in the address bar, browser history, Referer header, or server logs.
     [SupplyParameterFromQuery]
-    public string? AccessToken { get; set; }
-
-    [SupplyParameterFromQuery]
-    public string? RefreshToken { get; set; }
+    public string? Code { get; set; }
 
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
@@ -53,20 +51,21 @@
             return;
         }
 
-        if (string.IsNullOrEmpty(AccessToken) || string.IsNullOrEmpty(RefreshToken))
+        if (string.IsNullOrEmpty(Code))
         {
-            _error = "Authentication failed: missing tokens.";
+            _error = "Authentication failed: missing exchange code.";
             StateHasChanged();
             return;
         }
 
         try
         {
-            await TokenStorage.SetTokensAsync(AccessToken, RefreshToken);
-
-            if (AuthStateProvider is JwtAuthenticationStateProvider jwtProvider)
+            var result = await AuthService.ExchangeOAuthCodeAsync(Code);
+            if (result is null)
             {
-                jwtProvider.NotifyUserAuthentication(AccessToken);
+                _error = AuthService.LastError ?? "Failed to complete sign in. Please try again.";
+                StateHasChanged();
+                return;
             }
 
             Navigation.NavigateTo(ReturnUrlProtector.Sanitize(ReturnUrl, "/"), forceLoad: true);

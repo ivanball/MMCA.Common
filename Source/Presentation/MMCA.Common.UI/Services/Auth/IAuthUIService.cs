@@ -17,6 +17,13 @@ public interface IAuthUIService
     /// <summary>Registers a new user account, stores tokens, and returns the response.</summary>
     Task<AuthenticationResponse?> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Exchanges a single-use OAuth completion code (carried in the redirect URL) for the
+    /// authentication token pair via <c>auth/oauth/exchange</c>, stores the tokens, and notifies
+    /// auth state. Returns <see langword="null"/> on failure. Keeps tokens out of the address bar.
+    /// </summary>
+    Task<AuthenticationResponse?> ExchangeOAuthCodeAsync(string code, CancellationToken cancellationToken = default);
+
     /// <summary>Revokes the server-side refresh token and clears local token storage.</summary>
     Task LogoutAsync();
 
