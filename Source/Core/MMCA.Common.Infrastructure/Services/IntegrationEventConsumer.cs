@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.Inbox;
 
 namespace MMCA.Common.Infrastructure.Services;
 
@@ -24,6 +25,7 @@ namespace MMCA.Common.Infrastructure.Services;
 /// <typeparam name="TEvent">The integration event type. Must implement <see cref="IIntegrationEvent"/>.</typeparam>
 public sealed partial class IntegrationEventConsumer<TEvent>(
     IEnumerable<IIntegrationEventHandler<TEvent>> handlers,
+    IInboxStore inbox,
     ILogger<IntegrationEventConsumer<TEvent>> logger) : IConsumer<TEvent>
     where TEvent : class, IIntegrationEvent
 {
@@ -33,6 +35,16 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
         ArgumentNullException.ThrowIfNull(context);
 
         var integrationEvent = context.Message;
+
+        // Consumer-side idempotency: at-least-once broker delivery can redeliver the same message.
+        // If the inbox already recorded it, skip the handlers and ack. (No-op when the inbox is
+        // disabled.)
+        if (await inbox.AlreadyProcessedAsync(integrationEvent.MessageId, context.CancellationToken).ConfigureAwait(false))
+        {
+            LogDuplicateSkipped(logger, typeof(TEvent).Name, integrationEvent.MessageId);
+            return;
+        }
+
         var handlerCount = 0;
 
         foreach (var handler in handlers)
@@ -60,7 +72,14 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
             // ack the message; the broker won't retry.
             LogNoHandlers(logger, typeof(TEvent).Name);
         }
+
+        // Record processing AFTER handlers succeed so a handler failure (which rethrows above)
+        // leaves the message un-recorded and eligible for MassTransit redelivery.
+        await inbox.MarkProcessedAsync(integrationEvent.MessageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Integration event {EventType} (message {MessageId}) already processed — skipping (idempotent inbox)")]
+    private static partial void LogDuplicateSkipped(ILogger logger, string eventType, Guid messageId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "No IIntegrationEventHandler<{EventType}> registered in this process — broker message acked without action")]
     private static partial void LogNoHandlers(ILogger logger, string eventType);

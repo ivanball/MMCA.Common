@@ -8,7 +8,7 @@ public class UserNotificationTests
     [Fact]
     public void Create_ReturnsUnreadNotification()
     {
-        var notification = UserNotification.Create(userId: 1, pushNotificationId: 42);
+        var notification = UserNotification.Create(userId: 1, pushNotificationId: 42).Value!;
 
         notification.UserId.Should().Be(1);
         notification.PushNotificationId.Should().Be(42);
@@ -19,7 +19,7 @@ public class UserNotificationTests
     [Fact]
     public void MarkAsRead_SetsIsReadAndReadOn()
     {
-        var notification = UserNotification.Create(userId: 1, pushNotificationId: 42);
+        var notification = UserNotification.Create(userId: 1, pushNotificationId: 42).Value!;
 
         notification.MarkAsRead();
 
@@ -30,7 +30,7 @@ public class UserNotificationTests
     [Fact]
     public void MarkAsRead_IsIdempotent()
     {
-        var notification = UserNotification.Create(userId: 1, pushNotificationId: 42);
+        var notification = UserNotification.Create(userId: 1, pushNotificationId: 42).Value!;
 
         notification.MarkAsRead();
         DateTime? firstReadOn = notification.ReadOn;

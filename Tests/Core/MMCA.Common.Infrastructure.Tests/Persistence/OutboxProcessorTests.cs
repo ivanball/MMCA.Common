@@ -423,6 +423,8 @@ public sealed class OutboxProcessorTests : IDisposable
     public sealed class TestDomainEvent : IDomainEvent
     {
         public DateTime DateOccurred { get; init; }
+
+        public Guid MessageId { get; init; } = Guid.NewGuid();
     }
 
     /// <summary>
@@ -433,6 +435,8 @@ public sealed class OutboxProcessorTests : IDisposable
     public sealed class TestIntegrationEvent : IIntegrationEvent
     {
         public DateTime DateOccurred { get; init; }
+
+        public Guid MessageId { get; init; } = Guid.NewGuid();
     }
 
     /// <summary>

@@ -10,4 +10,11 @@ namespace MMCA.Common.Domain.DomainEvents;
 public abstract record class BaseDomainEvent : IDomainEvent
 {
     public DateTime DateOccurred { get; init; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Unique identifier for this event instance. Used for consumer-side idempotency: the inbox
+    /// dedups already-processed messages by this id. Defaults to a new GUID at construction and is
+    /// serialized with the event, so it survives the outbox → broker → consumer round-trip.
+    /// </summary>
+    public Guid MessageId { get; init; } = Guid.NewGuid();
 }

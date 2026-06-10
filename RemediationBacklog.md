@@ -45,6 +45,17 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 
 *Deferred (no host / larger / low value): browser-journey-in-Common-CI (Common is a library — no app to run E2E against), the Bootstrap NavMenu migration, and the EditorRequired convention check.*
 
+## Progress — fourth wave (breaking changes + consumer sweep, 2026-06-09)
+
+✅ **Verified across all three repos** (built/tested via `local.props` against Common *source* — no token): Common **1,523**, ADC **1,241**, Store **1,088** tests, **0 failures**; all CI solutions build 0/0.
+
+- ✅ **#16 — `UserNotification.Create` → `Result<UserNotification>`** (Common-internal; 4 call sites updated — no consumer code calls it).
+- ✅ **#4 / #15 — aggregate-factory fitness test.** `AggregateConventionTests` reflects over the Domain assembly asserting each aggregate root has a static `Create` returning `Result<T>`. Cross-aggregate-nav rule deliberately omitted (navigation-populator pattern, ADR-002). Consumers' 15 aggregates already comply.
+- ✅ **#6 / #19 — consumer-side idempotency (inbox).** `MessageId` on `BaseDomainEvent`/`IDomainEvent`; `InboxMessage` entity + EF config; `IInboxStore` (`EfInboxStore`/`NoOpInboxStore`) with dedup in `IntegrationEventConsumer`; **opt-in** `MessageBus:EnableInbox` (default off); `OutboxCleanupService` also purges processed inbox rows. Unit-tested.
+- ✅ **5 EF migrations** (`AddInboxMessages`): ADC Identity/Conference/Engagement/Notification (per-service DBs) + Store (shared) — each creates `InboxMessages` + the unique `MessageId` index, generated against Common source.
+
+*Remaining (manual/opt-in): set `MessageBus:EnableInbox=true` per service once its migration is applied; optionally mirror the `Result`-return fitness assertion into ADC/Store `EntityConventionTests` (multi-assembly; they already comply). Publishing Common + bumping consumers off `local.props` is a release step (needs the feed/token).*
+
 ---
 
 ## 🔴 Priority 6 — highest leverage

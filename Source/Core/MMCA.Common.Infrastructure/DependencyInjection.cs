@@ -321,6 +321,17 @@ public static class DependencyInjection
             // OutboxProcessor's broker-publish path becomes the only delivery channel.
             services.Replace(ServiceDescriptor.Scoped<IEventBus, BrokerEventBus>());
 
+            // Consumer-side idempotency. EfInboxStore is opt-in (requires the InboxMessages table);
+            // when disabled the no-op store keeps consumer behavior unchanged.
+            if (settings.EnableInbox)
+            {
+                services.TryAddScoped<Persistence.Inbox.IInboxStore, Persistence.Inbox.EfInboxStore>();
+            }
+            else
+            {
+                services.TryAddSingleton<Persistence.Inbox.IInboxStore, Persistence.Inbox.NoOpInboxStore>();
+            }
+
             return services;
         }
 

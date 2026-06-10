@@ -8,4 +8,7 @@ public interface IDomainEvent
 {
     /// <summary>Gets the UTC timestamp of when the domain action occurred (not when it was dispatched).</summary>
     DateTime DateOccurred { get; }
+
+    /// <summary>Gets a unique identifier for this event instance, used for consumer-side idempotency (inbox dedup).</summary>
+    Guid MessageId { get; }
 }

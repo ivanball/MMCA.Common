@@ -48,8 +48,9 @@ public sealed class PushNotificationCreatedTests
     public void TwoInstancesWithSameValues_AreEqual()
     {
         var date = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var evt1 = new PushNotificationCreated(1, "Title", 5) { DateOccurred = date };
-        var evt2 = new PushNotificationCreated(1, "Title", 5) { DateOccurred = date };
+        var messageId = Guid.NewGuid();
+        var evt1 = new PushNotificationCreated(1, "Title", 5) { DateOccurred = date, MessageId = messageId };
+        var evt2 = new PushNotificationCreated(1, "Title", 5) { DateOccurred = date, MessageId = messageId };
 
         evt1.Should().Be(evt2);
     }

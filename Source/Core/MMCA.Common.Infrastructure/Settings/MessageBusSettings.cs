@@ -54,6 +54,14 @@ public sealed class MessageBusSettings
     /// </summary>
     [Range(0, 3600)]
     public int RetryMaxIntervalSeconds { get; init; } = 30;
+
+    /// <summary>
+    /// Gets a value indicating whether the consumer-side idempotency inbox is enabled. When
+    /// <see langword="true"/>, <c>IntegrationEventConsumer</c> dedups already-processed messages via
+    /// an <c>InboxMessages</c> table in the consumer's database — which requires that table to exist
+    /// (apply the <c>AddInboxMessages</c> migration). Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool EnableInbox { get; init; }
 }
 
 /// <summary>Available message bus transports.</summary>

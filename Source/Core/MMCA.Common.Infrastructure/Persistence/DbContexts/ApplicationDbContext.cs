@@ -8,6 +8,7 @@ using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.Conventions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using StackExchange.Profiling;
@@ -133,6 +134,9 @@ public abstract class ApplicationDbContext(
 
         // Configure the outbox table for transactional domain event persistence.
         ConfigureOutbox(modelBuilder);
+
+        // Configure the inbox table for consumer-side idempotency (used when MessageBus:EnableInbox).
+        ConfigureInbox(modelBuilder);
     }
 
     /// <summary>
@@ -209,6 +213,22 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => new { e.ProcessedOn, e.OccurredOn })
                   .HasFilter("[ProcessedOn] IS NULL")
                   .HasDatabaseName("IX_OutboxMessages_Pending");
+        });
+
+    /// <summary>
+    /// Configures the <see cref="InboxMessage"/> entity (consumer-side idempotency). Called from
+    /// <see cref="OnModelCreating"/> so all relational providers include the inbox table; Cosmos
+    /// overrides <see cref="OnModelCreating"/> and skips this configuration.
+    /// </summary>
+    private static void ConfigureInbox(ModelBuilder modelBuilder) =>
+        modelBuilder.Entity<InboxMessage>(entity =>
+        {
+            entity.ToTable("InboxMessages", "dbo");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EventType).IsRequired().HasMaxLength(500).IsUnicode(false);
+            entity.HasIndex(e => e.MessageId)
+                  .IsUnique()
+                  .HasDatabaseName("IX_InboxMessages_MessageId");
         });
 
     /// <summary>

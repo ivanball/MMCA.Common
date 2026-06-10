@@ -69,7 +69,7 @@ public sealed class MarkAllNotificationsReadHandlerTests
         var unread = new List<UserNotification>();
         for (int i = 0; i < unreadCount; i++)
         {
-            var notification = UserNotification.Create(userId: 42, pushNotificationId: i + 1);
+            var notification = UserNotification.Create(userId: 42, pushNotificationId: i + 1).Value!;
             unread.Add(notification);
         }
 

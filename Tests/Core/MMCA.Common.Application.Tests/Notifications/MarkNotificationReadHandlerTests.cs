@@ -71,7 +71,7 @@ public sealed class MarkNotificationReadHandlerTests
         var matches = new List<UserNotification>();
         if (notificationExists)
         {
-            var notification = UserNotification.Create(userId: 42, pushNotificationId: 100);
+            var notification = UserNotification.Create(userId: 42, pushNotificationId: 100).Value!;
             matches.Add(notification);
         }
 

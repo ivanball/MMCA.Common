@@ -94,6 +94,8 @@ public sealed class InProcessEventBusOutboxTests : IDisposable
     public sealed class TestIntegrationEvent : IIntegrationEvent
     {
         public DateTime DateOccurred { get; init; }
+
+        public Guid MessageId { get; init; } = Guid.NewGuid();
     }
 
     /// <summary>

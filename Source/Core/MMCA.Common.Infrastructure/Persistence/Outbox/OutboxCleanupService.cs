@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -23,16 +24,19 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <param name="scopeFactory">Factory for creating a DI scope per sweep.</param>
 /// <param name="logger">Logger for cleanup diagnostics.</param>
 /// <param name="outboxOptions">Configurable outbox settings (retention + sweep interval).</param>
+/// <param name="messageBusOptions">Message-bus settings; used to gate inbox purging on <c>EnableInbox</c>.</param>
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
 public sealed partial class OutboxCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxCleanupService> logger,
     IOptions<OutboxSettings> outboxOptions,
+    IOptions<MessageBusSettings> messageBusOptions,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
+    private readonly bool _inboxEnabled = messageBusOptions.Value.EnableInbox;
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -87,6 +91,11 @@ public sealed partial class OutboxCleanupService(
                 {
                     LogPurged(logger, deleted, sourceName);
                 }
+
+                if (_inboxEnabled)
+                {
+                    await PurgeInboxAsync(context, cutoff, sourceName, cancellationToken).ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -97,6 +106,23 @@ public sealed partial class OutboxCleanupService(
                 // One unreachable database must not stop the others from being purged.
                 LogSourcePurgeError(logger, sourceName, ex);
             }
+        }
+    }
+
+    private async Task PurgeInboxAsync(
+        DbContext context,
+        DateTime cutoff,
+        string sourceName,
+        CancellationToken cancellationToken)
+    {
+        var inboxDeleted = await context.Set<InboxMessage>()
+            .Where(m => m.ProcessedOn < cutoff)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (inboxDeleted > 0)
+        {
+            LogInboxPurged(logger, inboxDeleted, sourceName);
         }
     }
 
@@ -123,6 +149,9 @@ public sealed partial class OutboxCleanupService(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Purged {Count} processed outbox messages older than retention from {DataSourceName}")]
     private static partial void LogPurged(ILogger logger, int count, string dataSourceName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Purged {Count} processed inbox messages older than retention from {DataSourceName}")]
+    private static partial void LogInboxPurged(ILogger logger, int count, string dataSourceName);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox cleanup encountered an error")]
     private static partial void LogCleanupError(ILogger logger, Exception exception);

@@ -230,6 +230,8 @@ public sealed class MultiSourceSqliteIntegrationTests : IDisposable
     public sealed record MultiSourceTestEvent : MMCA.Common.Domain.Interfaces.IDomainEvent
     {
         public DateTime DateOccurred { get; init; } = DateTime.UtcNow;
+
+        public Guid MessageId { get; init; } = Guid.NewGuid();
     }
 
     [UseDatabase("SourceA")]

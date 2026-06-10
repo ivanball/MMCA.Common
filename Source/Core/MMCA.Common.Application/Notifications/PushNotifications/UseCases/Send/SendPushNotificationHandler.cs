@@ -58,7 +58,7 @@ public sealed partial class SendPushNotificationHandler(
         var userNotificationRepo = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
         foreach (var recipientId in recipientIds)
         {
-            var userNotification = UserNotification.Create(recipientId, notification.Id);
+            var userNotification = UserNotification.Create(recipientId, notification.Id).Value!;
             await userNotificationRepo.AddAsync(userNotification, cancellationToken).ConfigureAwait(false);
         }
 

@@ -1,5 +1,6 @@
 using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Domain.Notifications.UserNotifications;
 
@@ -39,11 +40,11 @@ public sealed class UserNotification : AuditableAggregateRootEntity<UserNotifica
     /// </summary>
     /// <param name="userId">The recipient user identifier.</param>
     /// <param name="pushNotificationId">The push notification identifier.</param>
-    /// <returns>A new <see cref="UserNotification"/> instance.</returns>
-    public static UserNotification Create(
+    /// <returns>A <see cref="Result{T}"/> containing the created notification.</returns>
+    public static Result<UserNotification> Create(
         UserIdentifierType userId,
         PushNotificationIdentifierType pushNotificationId) =>
-        new(userId, pushNotificationId) { Id = default };
+        Result.Success(new UserNotification(userId, pushNotificationId) { Id = default });
 
     /// <summary>
     /// Marks the notification as read. Idempotent — subsequent calls are no-ops.
