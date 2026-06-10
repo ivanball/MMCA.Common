@@ -122,6 +122,10 @@ ipch/
 
 # Visual Studio Trace Files
 *.e2e
+# The *.e2e rule above case-insensitively matches the MMCA.Common.Testing.E2E source
+# directory on Windows, silently dropping new files added there (this broke a release once).
+# Keep that source directory tracked.
+!Source/Hosting/MMCA.Common.Testing.E2E/
 
 # TFS 2012 Local Workspace
 $tf/
