@@ -1,5 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +56,20 @@ public sealed class WebApplicationBuilderExtensionsTests
         services.Any(s => s.ServiceType.FullName != null
                        && s.ServiceType.FullName.Contains("RateLimit", StringComparison.Ordinal))
             .Should().BeTrue();
+    }
+
+    [Fact]
+    public void AddCommonRateLimiting_ActivatesGlobalLimiterWith429()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCommonRateLimiting();
+
+        var options = services.BuildServiceProvider().GetRequiredService<IOptions<RateLimiterOptions>>().Value;
+        // The #11 fix: a global limiter must be attached (not merely named policies), so the limiter
+        // is actually enforced on every request, and over-limit requests get 429.
+        options.GlobalLimiter.Should().NotBeNull();
+        options.RejectionStatusCode.Should().Be(StatusCodes.Status429TooManyRequests);
     }
 
     [Fact]

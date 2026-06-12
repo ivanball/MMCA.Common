@@ -27,6 +27,42 @@ public static class WebApplicationBuilderExtensions
     /// <summary>Default CORS policy name for development (any origin).</summary>
     public const string CorsPolicyAllowAll = "_allowAll";
 
+    /// <summary>True for traffic that must bypass rate limiting: health/liveness probes, JWKS
+    /// discovery, and gRPC inter-service calls — all legitimately high-frequency.</summary>
+    private static bool IsRateLimitBypassed(HttpContext httpContext) =>
+        httpContext.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase)
+        || httpContext.Request.Path.StartsWithSegments("/alive", StringComparison.OrdinalIgnoreCase)
+        || httpContext.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase)
+        || (httpContext.Request.ContentType?.StartsWith("application/grpc", StringComparison.OrdinalIgnoreCase) ?? false);
+
+    /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests,
+    /// and limits authenticated callers per user (name → user_id → IP).</summary>
+    private static RateLimitPartition<string> GlobalRateLimitPartition(HttpContext httpContext, int globalPermitLimit)
+    {
+        if (IsRateLimitBypassed(httpContext))
+        {
+            return RateLimitPartition.GetNoLimiter("__infra");
+        }
+
+        if (httpContext.User?.Identity?.IsAuthenticated != true)
+        {
+            return RateLimitPartition.GetNoLimiter("__anonymous");
+        }
+
+        var partitionKey = httpContext.User.Identity!.Name
+            ?? httpContext.User.FindFirst("user_id")?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "authenticated";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = globalPermitLimit,
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        });
+    }
+
     extension(IServiceCollection services)
     {
         /// <summary>
@@ -53,13 +89,25 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
-        /// Registers rate limiters: a global fixed-window limiter ("FixedPolicy") and a
-        /// per-user fixed-window limiter ("UserPolicy") that partitions by authenticated user
-        /// or IP address. This prevents a single user from exhausting the global quota.
+        /// Registers rate limiting. A <b>global</b> limiter (active on every request through
+        /// <c>UseRateLimiter</c>) rejects with <c>429</c> over <paramref name="globalPermitLimit"/>
+        /// requests/minute <b>per authenticated user</b>. It deliberately does <b>not</b> limit
+        /// anonymous traffic — public endpoints are output-cached, login brute-force is handled by
+        /// the login-protection service, and anonymous server-rendered (Blazor Server) traffic shares
+        /// the UI host's IP, so an IP partition would throttle legitimate public browsing at scale.
+        /// Health/liveness (<c>/health</c>, <c>/alive</c>), JWKS discovery (<c>/.well-known/*</c>) and
+        /// gRPC inter-service traffic (<c>application/grpc</c>) are bypassed — they legitimately run
+        /// at high frequency. The named "FixedPolicy"/"UserPolicy" limiters remain for opt-in
+        /// <c>[EnableRateLimiting]</c> use.
         /// </summary>
-        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30) =>
+        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300) =>
             services.AddRateLimiter(options =>
             {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+                    httpContext => GlobalRateLimitPartition(httpContext, globalPermitLimit));
+
                 options.AddFixedWindowLimiter("FixedPolicy", limiterOptions =>
                 {
                     limiterOptions.Window = TimeSpan.FromMinutes(1);
