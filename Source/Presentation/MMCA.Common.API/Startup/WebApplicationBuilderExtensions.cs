@@ -49,7 +49,7 @@ public static class WebApplicationBuilderExtensions
             return RateLimitPartition.GetNoLimiter("__anonymous");
         }
 
-        var partitionKey = httpContext.User.Identity!.Name
+        var partitionKey = httpContext.User.Identity.Name
             ?? httpContext.User.FindFirst("user_id")?.Value
             ?? httpContext.Connection.RemoteIpAddress?.ToString()
             ?? "authenticated";
