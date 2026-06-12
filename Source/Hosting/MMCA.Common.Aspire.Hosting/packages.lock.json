@@ -76,6 +76,16 @@
           "System.IO.Hashing": "10.0.8"
         }
       },
+      "MessagePack": {
+        "type": "Direct",
+        "requested": "[2.5.301, )",
+        "resolved": "2.5.301",
+        "contentHash": "WUnJgmYc06ngIxZxLe9sa0P6rOTyOZIQn8SuDvJSjyMn7e8/AdlNAdt81WPUhWKeQ7hDkgxKU1vTrJqX/4L79A==",
+        "dependencies": {
+          "MessagePack.Annotations": "2.5.301",
+          "Microsoft.NET.StringTools": "17.6.3"
+        }
+      },
       "Meziantou.Analyzer": {
         "type": "Direct",
         "requested": "[3.0.101, )",
@@ -204,19 +214,10 @@
           "YamlDotNet": "16.3.0"
         }
       },
-      "MessagePack": {
-        "type": "Transitive",
-        "resolved": "2.5.192",
-        "contentHash": "Jtle5MaFeIFkdXtxQeL9Tu2Y3HsAQGoSntOzrn6Br/jrl6c8QmG22GEioT5HBtZJR0zw0s46OnKU8ei2M3QifA==",
-        "dependencies": {
-          "MessagePack.Annotations": "2.5.192",
-          "Microsoft.NET.StringTools": "17.6.3"
-        }
-      },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "2.5.192",
-        "contentHash": "jaJuwcgovWIZ8Zysdyf3b7b34/BrADw4v82GaEZymUhDd3ScMPrYd/cttekeDteJJPXseJxp04yTIcxiVUjTWg=="
+        "resolved": "2.5.301",
+        "contentHash": "3PyBiSeKTfvtyzUv3+9eXGIw7vBBZ0GAc4k3+RVT0tz2vKv3l0pviiA2b6DrmHyDvj1Au8lSVDDw/wKPMxUQ4A=="
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "Transitive",
