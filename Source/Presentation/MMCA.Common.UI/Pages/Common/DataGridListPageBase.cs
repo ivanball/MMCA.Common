@@ -112,15 +112,24 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             _persistedGridData = new GridData<TDto> { Items = restored.Items, TotalItems = restored.TotalItems };
         }
 
-        _persistenceSubscription = ApplicationState.RegisterOnPersisting(() =>
-        {
-            if (_lastSuccessfulGridData is not null)
+        // An explicit render mode is required: this page inherits its render mode from
+        // <Routes @rendermode="InteractiveAuto"> rather than declaring one itself, so the
+        // framework cannot infer a render mode for the persistence callback during the static
+        // prerender pass (InferRenderModes) and throws
+        // "The registered callback <OnInitialized> must be associated with a component or
+        // define an explicit render mode". Passing InteractiveAuto resolves the association
+        // while keeping the SSR-prerender persist/restore optimization intact.
+        _persistenceSubscription = ApplicationState.RegisterOnPersisting(
+            () =>
             {
-                ApplicationState.PersistAsJson(persistKey, new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems));
-            }
+                if (_lastSuccessfulGridData is not null)
+                {
+                    ApplicationState.PersistAsJson(persistKey, new PersistedGridState([.. _lastSuccessfulGridData.Items], _lastSuccessfulGridData.TotalItems));
+                }
 
-            return Task.CompletedTask;
-        });
+                return Task.CompletedTask;
+            },
+            Microsoft.AspNetCore.Components.Web.RenderMode.InteractiveAuto);
 
         var urlState = QueryStateService.ReadCurrent();
         var routePath = GetRoutePath();
