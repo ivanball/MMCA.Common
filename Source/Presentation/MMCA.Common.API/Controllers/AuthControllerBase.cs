@@ -8,9 +8,10 @@ using MMCA.Common.Shared.Auth;
 namespace MMCA.Common.API.Controllers;
 
 /// <summary>
-/// Base controller for authentication endpoints (login, register, refresh, revoke, password change).
+/// Base controller for authentication endpoints (login, register, refresh, revoke).
 /// Downstream modules inherit and apply route/version attributes. Override <see cref="RegisterAsync"/>
-/// to inject additional context (e.g., client IP for rate limiting).
+/// to inject additional context (e.g., client IP for rate limiting). Password change is owned by the
+/// derived controller, which dispatches the ChangePassword command handler directly.
 /// </summary>
 public abstract class AuthControllerBase(
     IAuthenticationService authenticationService,
@@ -92,29 +93,6 @@ public abstract class AuthControllerBase(
             return Unauthorized();
 
         var result = await AuthenticationService.RevokeTokenAsync(userId.Value, cancellationToken).ConfigureAwait(false);
-
-        return result.IsFailure
-            ? HandleFailure(result.Errors)
-            : NoContent();
-    }
-
-    /// <summary>
-    /// Changes the current user's password after verifying the existing password.
-    /// </summary>
-    [HttpPut("password")]
-    [Authorize]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
-    public virtual async Task<ActionResult> ChangePasswordAsync(
-        [FromBody] ChangePasswordRequest request,
-        CancellationToken cancellationToken)
-    {
-        var userId = CurrentUserService.UserId;
-        if (userId is null)
-            return Unauthorized();
-
-        var result = await AuthenticationService.ChangePasswordAsync(userId.Value, request, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)

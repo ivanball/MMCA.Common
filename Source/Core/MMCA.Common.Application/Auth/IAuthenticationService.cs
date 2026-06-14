@@ -5,7 +5,8 @@ namespace MMCA.Common.Application.Auth;
 
 /// <summary>
 /// Defines the authentication workflows for the Identity module: login, registration,
-/// token refresh, token revocation, and password change.
+/// token refresh, and token revocation. Password change is dispatched directly through its
+/// command handler at the controller layer, not brokered by this service.
 /// </summary>
 public interface IAuthenticationService
 {
@@ -49,18 +50,6 @@ public interface IAuthenticationService
     /// <returns>A result indicating success or a not-found error.</returns>
     Task<Result> RevokeTokenAsync(
         UserIdentifierType userId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Changes the password for the specified user.
-    /// </summary>
-    /// <param name="userId">The user changing their password.</param>
-    /// <param name="request">Current and new password values.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result indicating success or an error.</returns>
-    Task<Result> ChangePasswordAsync(
-        UserIdentifierType userId,
-        ChangePasswordRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>
