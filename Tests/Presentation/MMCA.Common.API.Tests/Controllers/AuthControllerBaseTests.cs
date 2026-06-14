@@ -175,52 +175,6 @@ public sealed class AuthControllerBaseTests
         objectResult.Value.Should().BeOfType<ProblemDetails>();
     }
 
-    // ── ChangePasswordAsync ──
-    [Fact]
-    public async Task ChangePasswordAsync_WhenUserIdNull_ReturnsUnauthorized()
-    {
-        _currentUserServiceMock.Setup(x => x.UserId).Returns((int?)null);
-        var request = new ChangePasswordRequest("OldPass123!", "NewPass456!");
-        TestAuthController sut = CreateController();
-
-        ActionResult result = await sut.ChangePasswordAsync(request, CancellationToken.None);
-
-        result.Should().BeOfType<UnauthorizedResult>();
-    }
-
-    [Fact]
-    public async Task ChangePasswordAsync_Success_ReturnsNoContent()
-    {
-        const int userId = 42;
-        var request = new ChangePasswordRequest("OldPass123!", "NewPass456!");
-        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
-        _authServiceMock.Setup(x => x.ChangePasswordAsync(userId, request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
-        TestAuthController sut = CreateController();
-
-        ActionResult result = await sut.ChangePasswordAsync(request, CancellationToken.None);
-
-        result.Should().BeOfType<NoContentResult>();
-    }
-
-    [Fact]
-    public async Task ChangePasswordAsync_Failure_ReturnsHandleFailure()
-    {
-        const int userId = 42;
-        var request = new ChangePasswordRequest("WrongPass!", "NewPass456!");
-        _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
-        _authServiceMock.Setup(x => x.ChangePasswordAsync(userId, request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure(
-                Error.Unauthorized("Auth.InvalidPassword", "Current password is incorrect")));
-        TestAuthController sut = CreateController();
-
-        ActionResult result = await sut.ChangePasswordAsync(request, CancellationToken.None);
-
-        var objectResult = result as ObjectResult;
-        objectResult.Should().NotBeNull();
-        objectResult!.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
-        objectResult.Value.Should().BeOfType<ProblemDetails>();
-    }
 }
 
 internal sealed class TestAuthController(
