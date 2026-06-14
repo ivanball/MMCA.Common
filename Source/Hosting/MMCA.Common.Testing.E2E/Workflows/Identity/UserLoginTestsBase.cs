@@ -66,4 +66,15 @@ public abstract class UserLoginTestsBase : E2ETestBase
         // Assert
         await Expect(Page).ToHaveURLAsync(new Regex("/register$"));
     }
+
+    [Fact]
+    public async Task LoginPage_ShouldHaveNoAccessibilityViolations()
+    {
+        // Arrange
+        var loginPage = new LoginPage(Page);
+        await loginPage.GotoAsync();
+
+        // Assert — axe-core finds zero WCAG 2.1 AA violations on the login page
+        await Page.AssertNoAccessibilityViolationsAsync();
+    }
 }

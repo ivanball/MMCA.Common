@@ -213,6 +213,6 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 - **Framework:** xUnit v3 + AwesomeAssertions + Moq + coverlet
 - **Test runner:** Microsoft Testing Platform (configured in `global.json`)
 - **Architecture tests:** NetArchTest.eNhancedEdition (`Tests/Architecture`) — verifies layer/purity/extraction rules at the assembly level
-- **E2E:** `MMCA.Common.Testing.E2E` is a *shipped* Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects), consumed by downstream apps — not a test project in this solution
+- **E2E:** `MMCA.Common.Testing.E2E` is a *shipped* Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects), consumed by downstream apps — not a test project in this solution. The Login/Register/Profile workflow bases assert **WCAG 2.1 AA** via axe-core (`Page.AssertNoAccessibilityViolationsAsync()`), and `PlaywrightFixture` selects the engine from `E2E_BROWSER` (`chromium`/`firefox`/`webkit`, default `chromium`) so consumers can run a cross-browser matrix.
 - Test projects mirror Source structure under `Tests/`
 - Test files relax naming rules (underscores in method names allowed) and complexity metrics via `.editorconfig` `[Tests/**/*.cs]` section

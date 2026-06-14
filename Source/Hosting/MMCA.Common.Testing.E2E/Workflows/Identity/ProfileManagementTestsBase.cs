@@ -152,4 +152,17 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         loadedFirstName.Should().Be(firstName);
         loadedLastName.Should().Be(lastName);
     }
+
+    [Fact]
+    public async Task ProfilePage_ShouldHaveNoAccessibilityViolations()
+    {
+        // Arrange — register (auto-logs in) so the authenticated profile page is reachable
+        await RegisterNewUserAsync();
+        var profilePage = new ProfilePage(Page);
+        await profilePage.GotoAsync();
+        await Page.WaitForLoadStateAsync(LoadState.Load);
+
+        // Assert — axe-core finds zero WCAG 2.1 AA violations on the profile page
+        await Page.AssertNoAccessibilityViolationsAsync();
+    }
 }

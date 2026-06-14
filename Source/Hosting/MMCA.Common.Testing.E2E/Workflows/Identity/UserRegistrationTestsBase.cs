@@ -69,4 +69,15 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         await Page.WaitForLoadStateAsync(LoadState.Load);
         await Expect(registerPage.ErrorAlert).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
+
+    [Fact]
+    public async Task RegisterPage_ShouldHaveNoAccessibilityViolations()
+    {
+        // Arrange
+        var registerPage = new RegisterPage(Page);
+        await registerPage.GotoAsync();
+
+        // Assert — axe-core finds zero WCAG 2.1 AA violations on the registration page
+        await Page.AssertNoAccessibilityViolationsAsync();
+    }
 }

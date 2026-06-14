@@ -66,6 +66,18 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    public void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        if (rowVersion is not { Length: > 0 })
+            return;
+
+        _context.Entry(entity)
+            .Property(nameof(AuditableBaseEntity<TIdentifierType>.RowVersion))
+            .OriginalValue = rowVersion;
+    }
+
+    /// <inheritdoc />
     public async Task<int> ExecuteDeleteAsync(
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default)

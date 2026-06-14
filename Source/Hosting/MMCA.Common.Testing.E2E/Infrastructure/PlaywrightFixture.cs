@@ -11,7 +11,17 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
-        Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+
+        // Cross-browser matrix (rubric §22): the engine is env-selected so CI can run the same
+        // suite against Chromium, Firefox, and WebKit. Unknown values fall back to Chromium.
+        var browserType = E2ETestConfiguration.Browser.ToUpperInvariant() switch
+        {
+            "FIREFOX" => Playwright.Firefox,
+            "WEBKIT" => Playwright.Webkit,
+            _ => Playwright.Chromium,
+        };
+
+        Browser = await browserType.LaunchAsync(new BrowserTypeLaunchOptions
         {
             Headless = E2ETestConfiguration.Headless,
             SlowMo = E2ETestConfiguration.SlowMo,

@@ -163,6 +163,16 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     void UpdateRange(IEnumerable<TEntity> entities);
 
     /// <summary>
+    /// Applies a client-supplied optimistic-concurrency token as the tracked entity's original
+    /// <c>RowVersion</c>, so the next save raises <c>DbUpdateConcurrencyException</c> (mapped to
+    /// <c>409 Conflict</c>) when the row was modified by someone else since the client read it.
+    /// No-op when <paramref name="rowVersion"/> is null or empty (legacy clients / first write).
+    /// </summary>
+    /// <param name="entity">The tracked entity whose original concurrency token should be set.</param>
+    /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>, or null to skip the check.</param>
+    void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion);
+
+    /// <summary>
     /// Executes a bulk delete directly in the database, bypassing change tracking.
     /// WARNING: Does NOT trigger domain events, audit stamps, or soft-delete behavior.
     /// Use only for maintenance scenarios where domain events are not needed.

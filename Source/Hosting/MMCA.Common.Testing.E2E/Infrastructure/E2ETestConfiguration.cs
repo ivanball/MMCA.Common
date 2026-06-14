@@ -25,6 +25,14 @@ public static class E2ETestConfiguration
     public static float SlowMo =>
         float.TryParse(Environment.GetEnvironmentVariable("E2E_SLOWMO"), out var s) ? s : 0;
 
+    /// <summary>
+    /// Which Playwright browser engine to launch: <c>chromium</c> (default), <c>firefox</c>, or
+    /// <c>webkit</c>. Set <c>E2E_BROWSER=firefox</c> to exercise the cross-browser support matrix;
+    /// CI runs the suite once per engine. Unknown values fall back to Chromium.
+    /// </summary>
+    public static string Browser =>
+        Environment.GetEnvironmentVariable("E2E_BROWSER") ?? "chromium";
+
     public static class AdminCredentials
     {
         public static string DefaultEmail { get; set; } = "admin@localhost";
