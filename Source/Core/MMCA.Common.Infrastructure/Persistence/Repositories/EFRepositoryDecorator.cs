@@ -37,6 +37,9 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
         _inner.UpdateRange(entities);
     }
 
+    public void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion) =>
+        _inner.SetOriginalRowVersion(entity, rowVersion);
+
     public Task<int> ExecuteDeleteAsync(
         System.Linq.Expressions.Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default) =>

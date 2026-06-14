@@ -73,7 +73,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
             return;
 
         _context.Entry(entity)
-            .Property(nameof(AuditableBaseEntity<TIdentifierType>.RowVersion))
+            .Property(nameof(AuditableBaseEntity<>.RowVersion))
             .OriginalValue = rowVersion;
     }
 

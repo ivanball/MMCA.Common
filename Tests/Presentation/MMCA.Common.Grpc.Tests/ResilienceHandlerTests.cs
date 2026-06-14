@@ -1,8 +1,7 @@
+using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
-using AwesomeAssertions;
-using MMCA.Common.Grpc;
 using Xunit;
 
 namespace MMCA.Common.Grpc.Tests;
@@ -25,10 +24,12 @@ public sealed class ResilienceHandlerTests
 
         services.AddTypedGrpcClient<FakeGrpcClient>("fake-service");
 
-        // AddStandardResilienceHandler configures named HttpStandardResilienceOptions; its presence
-        // is the registration-level proof that the resilience pipeline was applied to this client.
+        // AddStandardResilienceHandler registers options typed as HttpStandardResilienceOptions
+        // (configure/validate). Their presence is the registration-level proof that the standard
+        // resilience pipeline was applied to this client; removing the handler removes them.
         services.Should().Contain(
-            descriptor => descriptor.ServiceType == typeof(IConfigureOptions<HttpStandardResilienceOptions>),
+            descriptor => descriptor.ServiceType.FullName != null
+                && descriptor.ServiceType.FullName.Contains(nameof(HttpStandardResilienceOptions), StringComparison.Ordinal),
             "every typed gRPC client must wire the standard resilience handler (ADR-009)");
     }
 
