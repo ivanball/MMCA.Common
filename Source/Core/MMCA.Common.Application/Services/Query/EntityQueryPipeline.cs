@@ -12,6 +12,15 @@ namespace MMCA.Common.Application.Services.Query;
 /// </summary>
 public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : IEntityQueryPipeline
 {
+    /// <summary>
+    /// Framework safety ceiling (rubric §12): the maximum number of rows the pipeline will
+    /// materialize for a query that omits pagination. The per-request page size is separately
+    /// clamped to <c>ApplicationSettings.MaxPageSize</c> at the API boundary; this is the
+    /// last-resort guard so a direct service caller that forgets pagination can never trigger
+    /// an unbounded full-table load.
+    /// </summary>
+    public const int MaxUnboundedResultLimit = 1000;
+
     /// <inheritdoc />
     public async Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> ExecuteAsync<TEntity, TIdentifierType>(
         IQueryable<TEntity> baseQuery,
@@ -77,6 +86,12 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
             query = query.Skip(skip).Take(parameters.PageSize.Value);
         }
+        else
+        {
+            // Safety net (rubric §12): an unpaginated query must never materialize an unbounded
+            // result set. Cap at the framework ceiling so a caller that omits pagination is bounded.
+            query = query.Take(MaxUnboundedResultLimit);
+        }
 
         var entities = await queryableExecutor.ToListAsync(query, cancellationToken).ConfigureAwait(false);
         if (entities.Count != 0)
@@ -114,6 +129,12 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
             int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
             query = query.Skip(skip).Take(parameters.PageSize.Value);
+        }
+        else
+        {
+            // Safety net (rubric §12): an unpaginated query must never materialize an unbounded
+            // result set. Cap at the framework ceiling so a caller that omits pagination is bounded.
+            query = query.Take(MaxUnboundedResultLimit);
         }
 
         // Field selection projects only the requested columns (builds a MemberInit expression)

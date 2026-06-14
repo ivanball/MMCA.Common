@@ -219,6 +219,31 @@ public sealed class EntityQueryPipelineTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NoPagination_CapsResultsAtUnboundedLimit()
+    {
+        // A caller that omits pagination must not trigger an unbounded materialization (rubric §12).
+        var entities = Enumerable.Range(1, EntityQueryPipeline.MaxUnboundedResultLimit + 50)
+            .Select(i => new TestEntity { Id = i, Name = $"E{i}" })
+            .ToList();
+        var query = entities.AsQueryable();
+
+        // Materialize the ACTUAL query so the pipeline's Take() is honored.
+        _executorMock
+            .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .Returns<IQueryable<TestEntity>, CancellationToken>((q, _) => Task.FromResult(q.ToList()));
+
+        var (items, totalCount) = await _sut.ExecuteAsync<TestEntity, int>(
+            query,
+            EmptyNavigation(),
+            DefaultParams(),
+            (_, _, _, _, _) => Task.CompletedTask,
+            CancellationToken.None);
+
+        items.Should().HaveCount(EntityQueryPipeline.MaxUnboundedResultLimit);
+        totalCount.Should().Be(EntityQueryPipeline.MaxUnboundedResultLimit);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithCriteria_FiltersResults()
     {
         var entities = new List<TestEntity>

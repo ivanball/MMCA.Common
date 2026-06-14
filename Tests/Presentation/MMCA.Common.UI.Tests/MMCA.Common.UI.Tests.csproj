@@ -17,4 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.UI\MMCA.Common.UI.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Embed the shipped CSS tokens so BrandColorTokenTests can assert app.css mirrors BrandColors.cs. -->
+    <EmbeddedResource Include="..\..\..\Source\Presentation\MMCA.Common.UI\wwwroot\app.css" LogicalName="app.css" />
+  </ItemGroup>
 </Project>

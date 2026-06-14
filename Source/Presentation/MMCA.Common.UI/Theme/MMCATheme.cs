@@ -12,12 +12,12 @@ public static class MMCATheme
     {
         PaletteLight = new PaletteLight
         {
-            // Brand palette. C# cannot read CSS custom properties, so keep Primary / PrimaryDarken
-            // in sync with --mmca-primary / --mmca-primary-dark in wwwroot/app.css (the single CSS
-            // source of the same hex, referenced everywhere else via var()).
-            Primary = "#1565C0",
-            PrimaryDarken = "#0D47A1",
-            PrimaryLighten = "#42A5F5",
+            // Brand palette sourced from BrandColors (the single C# source of truth). The CSS
+            // tokens --mmca-primary / --mmca-primary-dark in wwwroot/app.css must mirror these;
+            // BrandColorTokenTests asserts the two stay in sync.
+            Primary = BrandColors.Primary,
+            PrimaryDarken = BrandColors.PrimaryDark,
+            PrimaryLighten = BrandColors.PrimaryLight,
             Secondary = "#00897B",
             SecondaryDarken = "#00695C",
             SecondaryLighten = "#4DB6AC",
@@ -38,6 +38,34 @@ public static class MMCATheme
             ActionDefault = "#757575",
             Divider = "#E0E0E0",
             DividerLight = "#F5F5F5",
+        },
+        PaletteDark = new PaletteDark
+        {
+            // Brand palette tuned for dark surfaces — primary lightened for contrast on dark
+            // backgrounds. Enables dark mode via MudThemeProvider's IsDarkMode (rubric §20).
+            Primary = BrandColors.PrimaryLight,
+            PrimaryDarken = BrandColors.Primary,
+            PrimaryLighten = "#90CAF9",
+            Secondary = "#4DB6AC",
+            SecondaryDarken = "#00897B",
+            SecondaryLighten = "#80CBC4",
+            Tertiary = "#CE93D8",
+            Info = "#42A5F5",
+            Success = "#66BB6A",
+            Warning = "#FFA726",
+            Error = "#EF5350",
+            AppbarBackground = "#1A2035",
+            AppbarText = "#FFFFFF",
+            Background = "#1A2027",
+            Surface = "#27303A",
+            DrawerBackground = "#1A2035",
+            DrawerText = "#FFFFFFB3",
+            DrawerIcon = "#FFFFFFB3",
+            TextPrimary = "#ECEFF1",
+            TextSecondary = "#B0BEC5",
+            ActionDefault = "#B0BEC5",
+            Divider = "#37474F",
+            DividerLight = "#2A3640",
         },
         Typography = new Typography
         {

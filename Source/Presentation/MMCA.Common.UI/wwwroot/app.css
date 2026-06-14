@@ -8,7 +8,8 @@
     --mmca-content-max-width: 700px;
     --mmca-content-max-width-wide: 1200px;
 
-    /* Brand colors */
+    /* Brand colors — must mirror Theme/BrandColors.cs (the C# source of truth);
+       BrandColorTokenTests enforces that these stay in sync. */
     --mmca-primary: #1565C0;
     --mmca-primary-dark: #0D47A1;
 
