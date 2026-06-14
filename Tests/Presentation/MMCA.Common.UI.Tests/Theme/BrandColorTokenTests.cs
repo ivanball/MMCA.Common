@@ -19,9 +19,9 @@ public sealed class BrandColorTokenTests
 
     private static string ReadAppCss()
     {
-        using var stream = typeof(BrandColorTokenTests).Assembly.GetManifestResourceStream("app.css");
-        stream.Should().NotBeNull("app.css must be embedded as a resource for the drift guard to run");
-        using var reader = new StreamReader(stream!);
+        using var stream = typeof(BrandColorTokenTests).Assembly.GetManifestResourceStream("app.css")
+            ?? throw new InvalidOperationException("app.css must be embedded as a resource for the drift guard to run");
+        using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
 
