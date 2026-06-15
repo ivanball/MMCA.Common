@@ -79,28 +79,33 @@ public static class PageExtensions
     }
 
     /// <summary>
-    /// Fills a form field and verifies the value persisted. Blazor InteractiveAuto can
-    /// re-hydrate the page after the runtime loads, replacing pre-rendered inputs and
-    /// wiping any values filled before hydration completed. This method retries the fill.
+    /// Fills a form field and waits for the value to persist. Blazor InteractiveAuto re-hydrates the
+    /// page after the runtime loads, replacing pre-rendered inputs and wiping any value filled before
+    /// hydration completed. Rather than sleeping a fixed interval and hoping hydration has finished,
+    /// this fills the field then uses Playwright's auto-waiting <c>ToHaveValueAsync</c> assertion,
+    /// which polls until the value sticks (or <paramref name="timeout"/> elapses). If the pre-render
+    /// value was wiped before it stuck, the field is re-typed character-by-character and re-asserted.
+    /// This is the single fill helper shared by <c>E2ETestBase</c>, <c>LoginPage</c>, and
+    /// <c>RegisterPage</c>; it replaces the duplicated fixed-delay retry loops.
     /// </summary>
-    public static async Task FillAndVerifyAsync(this ILocator field, string value, int maxRetries = 5)
+    public static async Task FillAndVerifyAsync(this ILocator field, string value, float timeout = 10_000)
     {
-        for (int attempt = 0; attempt < maxRetries; attempt++)
-        {
-            // First try FillAsync (fast, dispatches input+change events)
-            await field.FillAsync(value);
-            await Task.Delay(300);
-            if (await field.InputValueAsync() == value)
-                return;
+        ArgumentNullException.ThrowIfNull(field);
 
-            // Fallback: clear and type character-by-character (fires individual key events
-            // that Blazor's event system is more likely to handle after enhanced navigation)
+        // FillAsync is fast and dispatches input+change events in one shot.
+        await field.FillAsync(value);
+        try
+        {
+            await Assertions.Expect(field).ToHaveValueAsync(value, new() { Timeout = timeout });
+        }
+        catch (PlaywrightException)
+        {
+            // The pre-render value was wiped by Blazor re-hydration before it stuck. Re-type
+            // character-by-character (individual key events the Blazor event system reliably
+            // handles after enhanced navigation), then assert it persists.
             await field.ClearAsync();
             await field.PressSequentiallyAsync(value, new() { Delay = 20 });
-            await Task.Delay(300);
-            if (await field.InputValueAsync() == value)
-                return;
-            await Task.Delay(500);
+            await Assertions.Expect(field).ToHaveValueAsync(value, new() { Timeout = timeout });
         }
     }
 

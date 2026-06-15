@@ -1,0 +1,62 @@
+@page "/components"
+
+<PageTitle>Components</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-4">
+    <PageHeader Title="Components Gallery">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="ShowDeleteConfirmationAsync">
+            Delete sample
+        </MudButton>
+    </PageHeader>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Empty state</MudText>
+    <MudPaper Outlined="true" Class="pa-2">
+        <EmptyState Message="No records found." />
+    </MudPaper>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile card list</MudText>
+    <MobileCardList TItem="SampleItem" Items="_items" TotalItems="_items.Count" PageSize="10">
+        <CardTemplate>
+            <MudText Typo="Typo.subtitle2">@context.Name</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@context.Description</MudText>
+        </CardTemplate>
+    </MobileCardList>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile card list (empty)</MudText>
+    <MobileCardList TItem="SampleItem" Items="_empty" TotalItems="0" PageSize="10"
+                    EmptyMessage="Nothing to show yet.">
+        <CardTemplate>
+            <MudText>@context.Name</MudText>
+        </CardTemplate>
+    </MobileCardList>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Unsaved-changes guard</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+        Dirty state: @(_isDirty ? "unsaved changes" : "clean")
+    </MudText>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => _isDirty = !_isDirty)">
+        Toggle unsaved changes
+    </MudButton>
+    <UnsavedChangesGuard IsDirty="_isDirty" />
+</MudContainer>
+
+<DeleteConfirmation @ref="_deleteConfirmation" EntityType="Item" />
+
+@code {
+    private sealed record SampleItem(string Name, string Description);
+
+    private readonly IReadOnlyList<SampleItem> _items =
+    [
+        new("First item", "A sample card rendered by MobileCardList."),
+        new("Second item", "Another sample card with secondary text."),
+        new("Third item", "Cards stack vertically on narrow viewports."),
+    ];
+
+    private readonly IReadOnlyList<SampleItem> _empty = [];
+
+    private bool _isDirty;
+    private DeleteConfirmation _deleteConfirmation = null!;
+
+    private Task ShowDeleteConfirmationAsync() => _deleteConfirmation.ShowAsync("First item");
+}

@@ -103,7 +103,9 @@
             </MudButton>
             <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
                 Already have an account?
-                <MudLink Href="/login" Typo="Typo.body2">Sign In</MudLink>
+                @* Underline.Always: an in-text link must be distinguishable without relying on colour
+                   alone (WCAG 2.1 AA / axe link-in-text-block). *@
+                <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">Sign In</MudLink>
             </MudText>
         </MudCardActions>
     </MudCard>

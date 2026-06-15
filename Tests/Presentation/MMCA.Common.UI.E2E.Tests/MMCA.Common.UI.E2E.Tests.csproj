@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Self-hosts the gallery in-process and runs the axe a11y + render-smoke gate. NOT shipped and
+         deliberately NOT in MMCA.Common.slnx: it installs a browser and runs in its own CI job, kept
+         out of the fast solution-wide unit feedback loop. -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- Base URLs flow as strings end-to-end (Playwright BaseURL, the shipped string-typed
+         E2ETestConfiguration.BaseUrl); CA1054/CA1056 (prefer System.Uri) are noise for E2E
+         test infra — the shipped MMCA.Common.Testing.E2E package suppresses them for the same reason. -->
+    <NoWarn>$(NoWarn);CA1054;CA1056</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Gallery (the backend-less host self-hosted in-process by the collection fixture) and the
+         shipped Testing.E2E fixtures/page-objects/axe helper exercised against it. -->
+    <ProjectReference Include="..\MMCA.Common.UI.Gallery\MMCA.Common.UI.Gallery.csproj" />
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.E2E\MMCA.Common.Testing.E2E.csproj" />
+  </ItemGroup>
+</Project>

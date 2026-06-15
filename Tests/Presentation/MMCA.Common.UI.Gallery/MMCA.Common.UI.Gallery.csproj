@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <!-- Backend-less Blazor gallery host. NOT shipped (IsPackable=false), NOT a test project, and
+         deliberately NOT in MMCA.Common.slnx — it exists only so MMCA.Common.UI.E2E.Tests can
+         self-host the real shared UI pages in-process for the axe a11y + render-smoke gate. -->
+    <IsPackable>false</IsPackable>
+    <!-- The shared layout/pages have unannotated members; the repo-wide CS1591 NoWarn covers docs,
+         but this host has no public API surface worth documenting. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+  </ItemGroup>
+</Project>

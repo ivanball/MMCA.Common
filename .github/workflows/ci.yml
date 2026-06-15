@@ -37,3 +37,45 @@ jobs:
 
       - name: Test
         run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 1
+
+  # Real-browser axe (WCAG 2.1 AA) + render-smoke gate for the shared MMCA.Common.UI. A backend-less
+  # gallery host (Tests/Presentation/MMCA.Common.UI.Gallery) renders the real Login/Register pages and a
+  # primitives showcase; MMCA.Common.UI.E2E.Tests self-hosts it in-process and scans it with Playwright.
+  # Kept in its own job (browser install + headed-ish run) and OUT of MMCA.Common.slnx so the unit
+  # `dotnet test --solution` above stays fast.
+  ui-e2e:
+    name: UI a11y + render smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build UI E2E project
+        # The gallery + E2E projects are intentionally outside the .slnx, so build this graph directly
+        # (restore included). They reference MMCA.Common source projects — no GitHub Packages token needed.
+        run: dotnet build Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj -c Release
+
+      - name: Install Playwright (chromium)
+        run: |
+          script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
+          pwsh "$script" install --with-deps chromium
+
+      - name: Run UI E2E (axe + render smoke)
+        env:
+          E2E_HEADLESS: "true"
+          E2E_BROWSER: chromium
+        run: dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj -c Release --no-build -- --minimum-expected-tests 1
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-e2e-traces
+          path: Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release/net10.0/playwright-traces/**
+          if-no-files-found: ignore

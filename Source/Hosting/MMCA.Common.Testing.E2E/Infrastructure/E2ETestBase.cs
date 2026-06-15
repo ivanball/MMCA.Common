@@ -129,27 +129,12 @@ public abstract class E2ETestBase : IAsyncLifetime
         await Page.GotoAndWaitForBlazorAsync(path);
 
     /// <summary>
-    /// Fills a form field and verifies the value persisted. Blazor InteractiveAuto can
-    /// re-hydrate the page after the runtime loads, replacing pre-rendered inputs and
-    /// wiping any values filled before hydration completed. This method retries the fill
-    /// if the value doesn't stick.
+    /// Fills a form field and waits for the value to persist, guarding against the Blazor
+    /// InteractiveAuto re-hydration race. Delegates to the single shared
+    /// <see cref="PageExtensions.FillAndVerifyAsync"/> helper.
     /// </summary>
-    protected static async Task FillFieldAsync(ILocator field, string value, int maxRetries = 5)
-    {
-        for (int attempt = 0; attempt < maxRetries; attempt++)
-        {
-            await field.FillAsync(value);
-            await Task.Delay(300);
-            if (await field.InputValueAsync() == value)
-                return;
-            await field.ClearAsync();
-            await field.PressSequentiallyAsync(value, new() { Delay = 20 });
-            await Task.Delay(300);
-            if (await field.InputValueAsync() == value)
-                return;
-            await Task.Delay(500);
-        }
-    }
+    protected static Task FillFieldAsync(ILocator field, string value) =>
+        field.FillAndVerifyAsync(value);
 
     protected static string UniqueId() => Guid.NewGuid().ToString("N")[..8];
 }

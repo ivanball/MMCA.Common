@@ -18,7 +18,10 @@ public static class MMCATheme
             Primary = BrandColors.Primary,
             PrimaryDarken = BrandColors.PrimaryDark,
             PrimaryLighten = BrandColors.PrimaryLight,
-            Secondary = "#00897B",
+            // Teal 700 (was Teal 600 #00897B). Color.Secondary is used for muted helper text
+            // (mud-secondary-text); on light surfaces #00897B is ~4.0:1, just under the WCAG 2.1 AA
+            // 4.5:1 floor for normal text. #00796B is ~5.3:1 and keeps the brand teal aesthetic.
+            Secondary = "#00796B",
             SecondaryDarken = "#00695C",
             SecondaryLighten = "#4DB6AC",
             Tertiary = "#7B1FA2",

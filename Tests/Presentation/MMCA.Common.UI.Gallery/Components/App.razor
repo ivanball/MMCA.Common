@@ -1,0 +1,32 @@
+@*
+    Root host document for the gallery. Mirrors a consumer's App.razor (e.g. ADC's) but is
+    InteractiveServer-only (no WASM client) and HTTP-only (no dev-cert). It serves the real
+    MMCA.Common.UI RCL static assets (app.css + JS) and MudBlazor's so axe sees faithful,
+    fully-styled markup — without CSS, contrast checks would be meaningless.
+*@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="_content/MMCA.Common.UI/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css" />
+    <link rel="stylesheet" href="_content/MMCA.Common.UI/app.css" />
+    <!-- Blazor scoped-CSS bundle: carries the RCL's component-scoped styles (NavMenu/MainLayout —
+         the dark sidebar, nav text colors). Without it axe would scan unstyled scoped markup and the
+         contrast results would not reflect how consumers actually render. -->
+    <link rel="stylesheet" href="MMCA.Common.UI.Gallery.styles.css" />
+    <link rel="icon" type="image/png" href="_content/MMCA.Common.UI/favicon.png" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_content/MMCA.Common.UI/navmenu.js"></script>
+</body>
+
+</html>

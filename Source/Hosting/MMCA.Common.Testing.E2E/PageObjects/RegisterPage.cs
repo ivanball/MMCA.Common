@@ -42,17 +42,9 @@ public sealed class RegisterPage
     }
 
     /// <summary>
-    /// Fills a field and verifies the value stuck (guards against Blazor re-hydration).
+    /// Fills a field and waits for the value to stick (guards against the Blazor re-hydration race).
+    /// Delegates to the single shared <see cref="Infrastructure.PageExtensions.FillAndVerifyAsync"/> helper.
     /// </summary>
-    private static async Task FillFieldAsync(ILocator field, string value)
-    {
-        for (int attempt = 0; attempt < 5; attempt++)
-        {
-            await field.FillAsync(value);
-            await Task.Delay(300);
-            if (await field.InputValueAsync() == value)
-                return;
-            await Task.Delay(500);
-        }
-    }
+    private static Task FillFieldAsync(ILocator field, string value) =>
+        field.FillAndVerifyAsync(value);
 }
