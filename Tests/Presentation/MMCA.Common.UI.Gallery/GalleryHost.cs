@@ -24,7 +24,10 @@ public static class GalleryHost
     /// </summary>
     public static WebApplication BuildApp(string[] args)
     {
-        var galleryAssemblyName = typeof(GalleryHost).Assembly.GetName().Name!;
+        // No null-forgiving operator here: CI's nullable analysis treats AssemblyName.Name as non-null
+        // and flags `!` as an unnecessary suppression (IDE0370). The value is only ever interpolated
+        // into a manifest filename below, which is null-safe regardless.
+        var galleryAssemblyName = typeof(GalleryHost).Assembly.GetName().Name;
         var baseDir = AppContext.BaseDirectory;
 
         var builder = WebApplication.CreateBuilder(args);
