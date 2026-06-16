@@ -21,6 +21,7 @@
     <Project Path="Source/Hosting/MMCA.Common.Aspire.Hosting/MMCA.Common.Aspire.Hosting.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing.E2E/MMCA.Common.Testing.E2E.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.Testing.UI/MMCA.Common.Testing.UI.csproj" />
   </Folder>
   <Folder Name="/Tests/" />
   <Folder Name="/Tests/Core/">

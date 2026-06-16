@@ -1,30 +1,11 @@
-using Bunit;
-using Microsoft.AspNetCore.Components;
-using MudBlazor.Services;
+using MMCA.Common.Testing.UI;
 
-namespace MMCA.Common.UI.Tests.Components;
+namespace MMCA.Common.UI.Tests;
 
 /// <summary>
-/// Base for bUnit component tests of the shared UI primitives. Registers MudBlazor services and
-/// puts JSInterop in loose mode so MudBlazor components that probe JS during render don't throw.
+/// Repo-local base for MMCA.Common UI component tests. Inherits the shared
+/// <see cref="BunitComponentTestBase"/> (MudBlazor services, loose JSInterop, auth test doubles,
+/// and the MudBlazor provider + interaction helpers) from the <c>MMCA.Common.Testing.UI</c> package.
+/// Kept as a thin repo-local seam so Common-only service registrations can be added in one place.
 /// </summary>
-/// <remarks>
-/// Written against bUnit v2 (the line compatible with xUnit v3 / Microsoft Testing Platform):
-/// the context base is <c>BunitContext</c> and the render entry point is <c>Render&lt;T&gt;</c>.
-/// If a restore resolves bUnit v1.x instead, the ONLY changes needed are here: base class
-/// <c>TestContext</c> and <c>Render</c> → <c>RenderComponent</c>. Individual test classes call
-/// <see cref="RenderUnderTest{TComponent}"/> and never reference the version-specific symbols.
-/// </remarks>
-public abstract class BunitTestBase : BunitContext
-{
-    protected BunitTestBase()
-    {
-        Services.AddMudServices();
-        JSInterop.Mode = JSRuntimeMode.Loose;
-    }
-
-    protected IRenderedComponent<TComponent> RenderUnderTest<TComponent>(
-        Action<ComponentParameterCollectionBuilder<TComponent>> parameters)
-        where TComponent : IComponent
-        => Render(parameters);
-}
+public abstract class BunitTestBase : BunitComponentTestBase;

@@ -16,6 +16,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+    <!-- Reference the shared bUnit harness as source (parallels how the UI.E2E tests reference Source). -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.UI\MMCA.Common.Testing.UI.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Embed the shipped CSS tokens so BrandColorTokenTests can assert app.css mirrors BrandColors.cs. -->

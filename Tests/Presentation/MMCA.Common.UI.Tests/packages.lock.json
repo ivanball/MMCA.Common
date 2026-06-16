@@ -745,6 +745,13 @@
       "mmca.common.shared": {
         "type": "Project"
       },
+      "mmca.common.testing.ui": {
+        "type": "Project",
+        "dependencies": {
+          "MudBlazor": "[9.5.0, )",
+          "bunit": "[2.0.66, )"
+        }
+      },
       "mmca.common.ui": {
         "type": "Project",
         "dependencies": {

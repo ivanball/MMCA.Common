@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-MMCA.Common is released as a single set of eleven packages on one version line (see
+MMCA.Common is released as a single set of twelve packages on one version line (see
 [VERSIONING.md](VERSIONING.md)). Security fixes are applied to the latest released version; there
 is no long-term support branch — upgrade to the latest patch.
 

@@ -15,6 +15,10 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 - **`OutboxCleanupService`** background service that purges processed outbox rows. New settings
   `Outbox:RetentionDays` (default 7) and `Outbox:CleanupIntervalHours` (default 6).
 - **bUnit** component-test harness for the shared Blazor UI primitives.
+- **`MMCA.Common.Testing.UI`** package — shared bUnit component-test infrastructure: a unified
+  MudBlazor/auth-aware test base (`BunitComponentTestBase`), a dialog/popover/snackbar provider
+  harness, and interaction helpers. Consumed by downstream apps so component tests stop duplicating
+  the bUnit/auth setup. This brings the published set to **twelve** packages.
 - **Outbox dead-letter metric** is now exported (`AddMeter("MMCA.Common.Outbox")`).
 - Supply-chain hardening: NuGet lock files, package source mapping, dependency vulnerability
   auditing, an SBOM at release, and Dependabot.

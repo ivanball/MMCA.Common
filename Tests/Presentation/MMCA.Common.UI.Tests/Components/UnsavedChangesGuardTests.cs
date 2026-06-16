@@ -27,4 +27,25 @@ public sealed class UnsavedChangesGuardTests : BunitTestBase
 
         cut.FindComponent<NavigationLock>().Instance.ConfirmExternalNavigation.Should().BeTrue();
     }
+
+    [Fact]
+    public void Accessor_OverridesStaleTrueParameter_AfterSaveClearsDirty()
+    {
+        // The exact param-lag bug: the form just saved (live state clean) and navigates before the
+        // IsDirty parameter re-renders. The accessor must win so NO false prompt is shown.
+        var cut = RenderUnderTest<UnsavedChangesGuard>(p => p
+            .Add(c => c.IsDirty, true)
+            .Add(c => c.IsDirtyAccessor, () => false));
+
+        cut.FindComponent<NavigationLock>().Instance.ConfirmExternalNavigation.Should().BeFalse();
+    }
+
+    [Fact]
+    public void WhenClean_DoesNotConfirmNavigation()
+    {
+        var cut = RenderUnderTest<UnsavedChangesGuard>(p => p
+            .Add(c => c.IsDirty, false));
+
+        cut.FindComponent<NavigationLock>().Instance.ConfirmExternalNavigation.Should().BeFalse();
+    }
 }

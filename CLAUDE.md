@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes eleven NuGet packages to GitHub Packages — it is not a runnable app itself.
+MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes twelve NuGet packages to GitHub Packages — it is not a runnable app itself.
 
 The framework also provides the seams for **extracting modules into standalone microservices** (gRPC transport, a transport-agnostic message bus, cross-service JWKS auth, and Aspire hosting extensions). See "Microservices Extraction Seams" below — much of the recent work targets this path.
 
@@ -26,15 +26,20 @@ dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -method "*Idem
 # Architecture tests only (NetArchTest layer/purity rules — fast, no DB)
 dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests
 
+# UI accessibility + render smoke (Playwright/axe — NOT in the .slnx; needs `playwright install chromium` once)
+dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj
+
 # Pack NuGet packages
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
 ```
 
-CI (`.github/workflows/ci.yml`) runs `restore → build -c Release → test --minimum-expected-tests 1` on every push/PR to `main`. The `--minimum-expected-tests 1` guard fails the run if any test project discovers zero tests (Microsoft Testing Platform otherwise exits 8).
+CI (`.github/workflows/ci.yml`) runs two jobs on every push/PR to `main`:
+- **`build-and-test`** — `restore → build -c Release → vuln-audit → test --minimum-expected-tests 1`. The `--minimum-expected-tests 1` guard fails the run if any test project discovers zero tests (Microsoft Testing Platform otherwise exits 8). The **vuln-audit** step runs `dotnet list package --vulnerable --include-transitive` and fails the build if any vulnerable package is reported.
+- **`ui-e2e`** (*UI a11y + render smoke*) — builds `Tests/Presentation/MMCA.Common.UI.E2E.Tests` directly (it and `MMCA.Common.UI.Gallery` are **deliberately outside `MMCA.Common.slnx`** so the unit-test job stays fast), installs Playwright chromium, then runs the suite. It self-hosts the backend-less gallery and scans the real Login/Register pages + primitives showcase with **axe-core (WCAG 2.1 AA)** plus a render smoke. To reproduce locally, build/test those csproj paths directly — `dotnet test --solution` will not touch them.
 
 Versioning uses MinVer (derived from git tags). CI requires `fetch-depth: 0` for full git history. Release workflow triggers on `v*` tags, extracts version, packs, and pushes to GitHub Packages.
 
-Central package management is enabled — all package versions live in `Directory.Packages.props`. When adding or updating a NuGet package, update the version there (not in individual `.csproj` files).
+Central package management is enabled — all package versions live in `Directory.Packages.props`. When adding or updating a NuGet package, update the version there (not in individual `.csproj` files). NuGet **lock files** are committed (`RestorePackagesWithLockFile`) for reproducible restores, and `nuget.config` pins `packageSourceMapping` to nuget.org — MMCA.Common restores entirely from nuget.org (no `GITHUB_TOKEN` needed to build/test). **`MassTransit` is pinned to v8 by policy** (v9 requires a commercial license); `DependencyVersionTests` parses `Directory.Packages.props` and fails the build if the MassTransit major reaches 9 — bumping it is not a "just update the version" change.
 
 CI runs on **Ubuntu** — file paths are case-sensitive. Match casing exactly in file/folder references. Every test project must contain at least one test or Microsoft Testing Platform will fail the build (exit code 8).
 
@@ -57,16 +62,20 @@ Source/
     ├── MMCA.Common.Aspire           # Service defaults, OpenTelemetry, health checks
     ├── MMCA.Common.Aspire.Hosting   # AppHost extensions: RabbitMQ, JWKS discovery, gRPC project wiring
     ├── MMCA.Common.Testing          # Integration test base, JWT generator, fixtures
-    └── MMCA.Common.Testing.E2E      # Playwright E2E fixtures, Blazor nav helpers, page objects
+    ├── MMCA.Common.Testing.E2E      # Playwright E2E fixtures, Blazor nav helpers, page objects
+    └── MMCA.Common.Testing.UI       # bUnit component-test base, MudBlazor provider harness, interaction helpers
 
 Tests/                               # Mirrors Source/ structure
 ├── Core/           (Shared.Tests, Domain.Tests, Application.Tests, Infrastructure.Tests)
-├── Presentation/   (API.Tests, Grpc.Tests, UI.Tests)
+├── Presentation/   (API.Tests, Grpc.Tests, UI.Tests — all in the .slnx)
+│                   (UI.Gallery + UI.E2E.Tests — NOT in the .slnx; see below)
 ├── Hosting/        (Aspire.Tests)
 └── Architecture/   (Architecture.Tests — NetArchTest layer/purity/extraction rules)
 ```
 
-All eleven `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project).
+`Tests/Presentation/MMCA.Common.UI.Gallery` (a backend-less Blazor host rendering the real Login/Register pages + a primitives showcase) and `MMCA.Common.UI.E2E.Tests` (Playwright axe/render-smoke) are **intentionally excluded from `MMCA.Common.slnx`** so `dotnet build`/`dotnet test --solution` stay fast. They reference MMCA.Common source projects directly (no GitHub Packages token needed) and only run in CI's `ui-e2e` job. Build/test them by csproj path.
+
+All twelve `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project).
 
 ## Architecture
 
@@ -216,3 +225,14 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 - **E2E:** `MMCA.Common.Testing.E2E` is a *shipped* Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects), consumed by downstream apps — not a test project in this solution. The Login/Register/Profile workflow bases assert **WCAG 2.1 AA** via axe-core (`Page.AssertNoAccessibilityViolationsAsync()`), and `PlaywrightFixture` selects the engine from `E2E_BROWSER` (`chromium`/`firefox`/`webkit`, default `chromium`) so consumers can run a cross-browser matrix.
 - Test projects mirror Source structure under `Tests/`
 - Test files relax naming rules (underscores in method names allowed) and complexity metrics via `.editorconfig` `[Tests/**/*.cs]` section
+
+## Repository Governance Docs & Commit Convention
+
+These docs live **in this repo** (committable, unlike the workspace-level `ADRs/`, `ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
+
+- `ArchitectureScorecard.md` — the filled 34-category architecture evaluation (health index, per-category score + evidence). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
+- `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
+- `VERSIONING.md` — SemVer + breaking-change policy; the twelve packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
+- `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
+
+**Commit-message convention:** much of the recent history is remediation work tagged `R<n> §<m>: <summary>` (e.g. `R16 §30: ...`). `R<n>` is the remediation item in the workspace `ArchitectureRemediation.md`; `§<m>` is the scorecard category above. When continuing remediation work, match this format and update `RemediationBacklog.md`.
