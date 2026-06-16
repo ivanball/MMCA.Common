@@ -54,6 +54,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     protected int RowsPerPageState { get; set; } = 10;
 
+    // Upper bound (ms) on the SSR pre-render data fetch. In prod the backend is warm and the fetch
+    // completes well under this, so the persist/restore optimization below still works; under a cold
+    // or unreachable backend (e.g. CI cold-start) it caps how long prerender can block before falling
+    // back to an empty grid that the first interactive ServerData call refills.
+    private const int PrerenderFetchTimeoutMs = 5000;
+
     private CancellationTokenSource? _cts;
     private bool _disposed;
     private IJSObjectReference? _scrollModule;
@@ -438,9 +444,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             sortDirection = _savedSortDescending ? "desc" : "asc";
         }
 
+        // Bound the fetch token: during SSR pre-render (CreateFetchCts) it times out so a cold/unreachable
+        // backend can't block prerendering — and therefore the page load / navigation — indefinitely (the
+        // dominant cause of E2E navigation timeouts). On timeout the fetch throws OperationCanceledException
+        // and we return an empty grid; the first INTERACTIVE ServerData call then loads the real data.
+        using var fetchCts = CreateFetchCts();
+
         try
         {
-            var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, _cts!.Token);
+            var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
             var gridData = new GridData<TDto> { Items = items, TotalItems = totalItems };
             _lastSuccessfulGridData = gridData;
             SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
@@ -448,6 +460,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         catch (OperationCanceledException)
         {
+            // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
+            // snackbar is a no-op (separate render — no JS toast host), so no special-casing is needed.
             if (showCancelSnackbar)
                 Snackbar.Add("Loading cancelled.", Severity.Info);
             return new GridData<TDto> { Items = [], TotalItems = 0 };
@@ -462,6 +476,23 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             IsLoading = false;
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Builds the cancellation token source for a <c>ServerData</c> fetch. Always linked to the active
+    /// request token; during SSR pre-render (non-interactive) it additionally times out after
+    /// <see cref="PrerenderFetchTimeoutMs"/> so a cold or unreachable backend cannot block prerendering
+    /// (and therefore the page load) indefinitely. The caller owns disposal via a <see langword="using"/> statement.
+    /// </summary>
+    private CancellationTokenSource CreateFetchCts()
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
+        if (!RendererInfo.IsInteractive)
+        {
+            cts.CancelAfter(PrerenderFetchTimeoutMs);
+        }
+
+        return cts;
     }
 
     /// <summary>
