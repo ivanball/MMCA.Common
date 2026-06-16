@@ -18,10 +18,13 @@
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <div class="page">
-    <div class="sidebar">
-        @* The inner NavMenu renders the <nav> landmark; an <aside> cannot take role="navigation" (axe aria-allowed-role). *@
+    <aside class="sidebar" aria-label="Main navigation">
+        @* Complementary landmark wraps the whole sidebar so ALL of it — including NavMenu's brand top-row
+           that sits above the inner <nav> — is contained by a landmark (axe region, best-practice). No
+           role="navigation" on the <aside>: the inner NavMenu already renders the <nav>, and an <aside>
+           may not carry that role (axe aria-allowed-role). *@
         <NavMenu />
-    </div>
+    </aside>
 
     <main role="main">
         <div class="appbar-container">

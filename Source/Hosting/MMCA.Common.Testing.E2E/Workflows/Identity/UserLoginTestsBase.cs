@@ -74,7 +74,9 @@ public abstract class UserLoginTestsBase : E2ETestBase
         var loginPage = new LoginPage(Page);
         await loginPage.GotoAsync();
 
-        // Assert — axe-core finds zero WCAG 2.1 AA violations on the login page
-        await Page.AssertNoAccessibilityViolationsAsync();
+        // Assert — axe-core finds zero WCAG 2.1 AA violations on the login page. Scoped to the documented
+        // WCAG 2.1 AA target (AxeOptions.Wcag21Aa); axe "best-practice" advisories are intentionally out of
+        // scope so this gate fails only on real conformance violations — matching the gallery + consumer scans.
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
     }
 }

@@ -77,7 +77,9 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         var registerPage = new RegisterPage(Page);
         await registerPage.GotoAsync();
 
-        // Assert — axe-core finds zero WCAG 2.1 AA violations on the registration page
-        await Page.AssertNoAccessibilityViolationsAsync();
+        // Assert — axe-core finds zero WCAG 2.1 AA violations on the registration page. Scoped to the
+        // documented WCAG 2.1 AA target (AxeOptions.Wcag21Aa); axe "best-practice" advisories are intentionally
+        // out of scope so this gate fails only on real conformance violations — matching the gallery + consumer scans.
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
     }
 }
