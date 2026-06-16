@@ -1,5 +1,6 @@
 <div class="page-header">
-    <MudText Typo="Typo.h4">@Title</MudText>
+    @* HtmlTag="h1" gives the page its required level-one heading (axe page-has-heading-one) while keeping h4 styling. *@
+    <MudText Typo="Typo.h4" HtmlTag="h1">@Title</MudText>
     <MudSpacer />
     @ChildContent
 </div>

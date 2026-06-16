@@ -18,9 +18,10 @@
 <a href="#main-content" class="skip-nav">Skip to main content</a>
 
 <div class="page">
-    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar">
+        @* The inner NavMenu renders the <nav> landmark; an <aside> cannot take role="navigation" (axe aria-allowed-role). *@
         <NavMenu />
-    </aside>
+    </div>
 
     <main role="main">
         <div class="appbar-container">
@@ -56,15 +57,16 @@
         <article id="main-content" class="content px-4">
             @Body
         </article>
-        @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
-        {
-            <footer class="app-footer" role="contentinfo">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                    @LayoutSettingsOptions.Value.FooterText
-                </MudText>
-            </footer>
-        }
     </main>
+    @* The contentinfo (footer) landmark must be top-level, not nested inside <main> (axe landmark-contentinfo-is-top-level). *@
+    @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
+    {
+        <footer class="app-footer" role="contentinfo">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                @LayoutSettingsOptions.Value.FooterText
+            </MudText>
+        </footer>
+    }
     @foreach (var componentType in _layoutComponents)
     {
         <DynamicComponent Type="componentType" />
