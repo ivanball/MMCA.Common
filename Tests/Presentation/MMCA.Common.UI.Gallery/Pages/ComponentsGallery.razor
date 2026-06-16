@@ -1,9 +1,11 @@
 @page "/components"
+@using MMCA.Common.UI.Components.Notifications
 
 <PageTitle>Components</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="py-4">
     <PageHeader Title="Components Gallery">
+        <NotificationBell />
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    OnClick="ShowDeleteConfirmationAsync">
             Delete sample
@@ -39,6 +41,15 @@
         Toggle unsaved changes
     </MudButton>
     <UnsavedChangesGuard IsDirty="_isDirty" />
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile infinite-scroll list</MudText>
+    <MobileInfiniteScrollList TItem="SampleItem" FetchPage="FetchSamplePageAsync" PageSize="3"
+                              EmptyMessage="No items to show.">
+        <CardTemplate>
+            <MudText Typo="Typo.subtitle2">@context.Name</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@context.Description</MudText>
+        </CardTemplate>
+    </MobileInfiniteScrollList>
 </MudContainer>
 
 <DeleteConfirmation @ref="_deleteConfirmation" EntityType="Item" />
@@ -59,4 +70,8 @@
     private DeleteConfirmation _deleteConfirmation = null!;
 
     private Task ShowDeleteConfirmationAsync() => _deleteConfirmation.ShowAsync("First item");
+
+    private Task<(IReadOnlyList<SampleItem> Items, int TotalItems)> FetchSamplePageAsync(
+        int page, int pageSize, CancellationToken cancellationToken)
+        => Task.FromResult<(IReadOnlyList<SampleItem>, int)>((_items, _items.Count));
 }

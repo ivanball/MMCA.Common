@@ -326,3 +326,12 @@ h1:focus {
     background: inherit;
     clip-path: polygon(0 100%, 100% 0, 100% 100%);
 }
+
+/* WCAG 2.1 AA: MudBreadcrumbs renders the current (disabled) item with text-disabled (~2:1),
+   which fails the 4.5:1 contrast floor. The current page is informational text, not an inactive
+   control, so recolor it to the AA-passing secondary text color. */
+.mud-breadcrumbs .mud-breadcrumb-item.mud-disabled,
+.mud-breadcrumbs .mud-breadcrumb-item.mud-disabled a,
+.mud-breadcrumbs .mud-breadcrumb-item.mud-disabled .mud-typography {
+    color: var(--mud-palette-text-secondary);
+}

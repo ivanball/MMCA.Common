@@ -20,8 +20,32 @@ public sealed class ComponentsPageE2ETests : GalleryAxeTestBase
 
         await Expect(Page.GetByRole(AriaRole.Heading, new() { Name = "Components Gallery" })).ToBeVisibleAsync();
         await Expect(Page.GetByText("No records found.")).ToBeVisibleAsync();
-        await Expect(Page.GetByText("First item")).ToBeVisibleAsync();
+        await Expect(Page.GetByText("First item").First).ToBeVisibleAsync();
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Toggle unsaved changes" })).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task ComponentsPage_Renders_NotificationBell_AndInfiniteScroll()
+    {
+        await Page.GotoAndWaitForBlazorAsync("/components");
+
+        // NotificationBell polls its (stubbed) unread count once on first render and shows the icon button.
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Notification inbox" })).ToBeVisibleAsync();
+        await Expect(Page.GetByText("Mobile infinite-scroll list")).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task ComponentsPage_DeleteConfirmation_ShowsDialog_AndConfirms()
+    {
+        await Page.GotoAndWaitForBlazorAsync("/components");
+
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Delete sample" }).ClickAsync();
+
+        // Stable hook on the shared DeleteConfirmation YesButton — survives MudBlazor markup churn.
+        var confirm = Page.GetByTestId("confirm-delete");
+        await Expect(confirm).ToBeVisibleAsync();
+        await confirm.ClickAsync();
+        await Expect(confirm).Not.ToBeVisibleAsync();
     }
 
     [Fact]

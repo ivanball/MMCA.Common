@@ -5,6 +5,7 @@ using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Gallery.Components;
 using MMCA.Common.UI.Gallery.Stubs;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Notifications;
 using MudBlazor.Services;
 
 namespace MMCA.Common.UI.Gallery;
@@ -57,6 +58,13 @@ public static class GalleryHost
         builder.Services.AddScoped<ITokenRefresher, NullTokenRefresher>();
         builder.Services.AddScoped<AuthenticationStateProvider, AnonymousAuthenticationStateProvider>();
         builder.Services.AddAuthorizationCore();
+
+        // Canned notification seams so NotificationBell and the notification pages
+        // (/notifications, /notifications/inbox, /notifications/send — discovered from the
+        // MMCA.Common.UI assembly) render populated markup for the render/axe E2E scan.
+        builder.Services.AddScoped<NotificationState>();
+        builder.Services.AddScoped<INotificationInboxUIService, StubNotificationInboxUIService>();
+        builder.Services.AddScoped<IPushNotificationUIService, StubPushNotificationUIService>();
 
         // One empty UI module whose Assembly is the gallery, so the shared Router (Routes.razor)
         // discovers the gallery's own /components page alongside the real Login/Register pages, and

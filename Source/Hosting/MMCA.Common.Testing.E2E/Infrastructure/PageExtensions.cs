@@ -130,9 +130,28 @@ public static class PageExtensions
 
         var summary = string.Join(
             Environment.NewLine,
-            result.Violations.Select(v => $"  [{v.Impact}] {v.Id}: {v.Help} ({v.Nodes.Length} node(s))"));
+            result.Violations.Select(v =>
+            {
+                var nodes = string.Join(
+                    Environment.NewLine,
+                    v.Nodes.Select(n => $"      → {CompactHtml(n.Html)}"));
+                return $"  [{v.Impact}] {v.Id}: {v.Help} ({v.Nodes.Length} node(s)){Environment.NewLine}{nodes}";
+            }));
 
         throw new AccessibilityViolationException(
             $"{result.Violations.Length} accessibility violation(s) found:{Environment.NewLine}{summary}");
+    }
+
+    // Collapses a violating node's markup to a single trimmed line so the failure message points at the
+    // exact offending element (e.g. which low-contrast text node) without dumping multi-line HTML.
+    private static string CompactHtml(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return "(no markup)";
+        }
+
+        var collapsed = string.Join(' ', html.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        return collapsed.Length > 220 ? collapsed[..220] + "…" : collapsed;
     }
 }
