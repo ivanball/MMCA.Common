@@ -43,7 +43,9 @@ public abstract class LogoutTestsBase : E2ETestBase
         await Page.WaitForLoadStateAsync(LoadState.Load);
         await Page.WaitForBlazorAsync();
 
-        // Assert — should redirect to login or show unauthorized
-        await Expect(Page).ToHaveURLAsync(new Regex("/login"));
+        // Assert — should redirect to login or show unauthorized. The RedirectToLogin component
+        // runs after the protected page hydrates and reads the cleared token, so on a cold circuit
+        // the client-side redirect can take longer than the 5s default — allow up to 15s.
+        await Expect(Page).ToHaveURLAsync(new Regex("/login"), new() { Timeout = 15_000 });
     }
 }

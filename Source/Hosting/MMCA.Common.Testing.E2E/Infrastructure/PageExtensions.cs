@@ -54,14 +54,18 @@ public static class PageExtensions
     public static async Task BlazorNavigateAsync(this IPage page, string path)
     {
         await page.EvaluateAsync($"() => Blazor.navigateTo('{path}')");
-        // Client-side navigation does NOT trigger a new page load event — do NOT wait
-        // for LoadState.Load as it will hang. Wait for the URL to change, then let the
-        // render pipeline flush so event handlers are attached and components have rendered.
-        await page.WaitForFunctionAsync(
-            $"() => window.location.pathname === '{path}'",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
-        await page.EvaluateAsync(
-            "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))");
+        // Wait for the client-side route to settle. WaitForURLAsync tracks frame navigations
+        // (including Blazor's History-API SPA pushState) and re-resolves the execution context
+        // across them. This avoids two races the previous raw pathname-polling hit: a hang when
+        // Blazor.navigateTo performs a forceLoad reload (the manual WaitForFunction never saw it),
+        // and "execution context was destroyed, most likely because of a navigation" when the
+        // follow-up EvaluateAsync ran while that reload tore the JS context down.
+        await page.WaitForURLAsync(
+            url => string.Equals(new Uri(url).AbsolutePath, path, StringComparison.Ordinal),
+            new PageWaitForURLOptions { Timeout = 15_000 });
+        // Re-assert Blazor interactivity on the settled page (fast no-op after a pure SPA nav,
+        // waits for re-init after a full reload) and flush the render pipeline.
+        await page.WaitForBlazorAsync();
     }
 
     /// <summary>
