@@ -24,12 +24,25 @@ public abstract class E2ETestBase : IAsyncLifetime
         });
 
         _context.SetDefaultTimeout(E2ETestConfiguration.DefaultTimeout);
+
+        // Optional full-speed trace capture (E2E_TRACE=<path>) — records network/DOM/console for offline
+        // inspection of timing-sensitive failures that DevTools/slow-mo would mask.
+        if (E2ETestConfiguration.TracePath is not null)
+        {
+            await _context.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true, Sources = true });
+        }
+
         Page = await _context.NewPageAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
+        if (E2ETestConfiguration.TracePath is not null)
+        {
+            await _context.Tracing.StopAsync(new() { Path = E2ETestConfiguration.TracePath });
+        }
+
         await Page.CloseAsync();
         await _context.DisposeAsync();
     }
@@ -42,13 +55,18 @@ public abstract class E2ETestBase : IAsyncLifetime
 
     protected async Task LoginAsync(string email, string password)
     {
-        // If already authenticated, clear the existing session so the login page
-        // renders without a pre-existing logout button that would cause the
-        // post-login wait to return before the new credentials take effect.
+        // If already authenticated, clear the existing session so the login page renders without a
+        // pre-existing logout button that would cause the post-login wait to return before the new
+        // credentials take effect. Cover BOTH token stores: localStorage (WASM/MAUI hosts) AND the
+        // HttpOnly session cookie (the Blazor Server host is cookie-only, so a localStorage clear alone
+        // is a no-op and the prior session would persist — leaving the next login authenticated as the
+        // WRONG user). The DELETE hits the same /auth/session-cookie endpoint the app's logout uses.
         var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
         if (await logoutVisible.IsVisibleAsync())
         {
-            await Page.EvaluateAsync("() => { localStorage.removeItem('auth_access_token'); localStorage.removeItem('auth_refresh_token'); }");
+            await Page.EvaluateAsync(
+                "async () => { localStorage.removeItem('auth_access_token'); localStorage.removeItem('auth_refresh_token');" +
+                " try { await fetch('/auth/session-cookie', { method: 'DELETE', credentials: 'same-origin' }); } catch (e) { } }");
         }
 
         await Page.GotoAndWaitForBlazorAsync("/login");

@@ -33,6 +33,16 @@ public static class E2ETestConfiguration
     public static string Browser =>
         Environment.GetEnvironmentVariable("E2E_BROWSER") ?? "chromium";
 
+    /// <summary>
+    /// When set to a file path, captures a Playwright trace (full network log, DOM snapshots, console)
+    /// for each test and writes it there on teardown. View it with
+    /// <c>playwright show-trace &lt;path&gt;</c>. Unlike DevTools or slow-mo, the trace records at full
+    /// speed, so it can inspect timing-sensitive failures that slowing down would mask. Set
+    /// E2E_TRACE=C:\temp\trace.zip (run a single test so it isn't overwritten).
+    /// </summary>
+    public static string? TracePath =>
+        Environment.GetEnvironmentVariable("E2E_TRACE") is { Length: > 0 } path ? path : null;
+
     public static class AdminCredentials
     {
         public static string DefaultEmail { get; set; } = "admin@localhost";
