@@ -19,6 +19,15 @@ public static class E2ETestConfiguration
         float.TryParse(Environment.GetEnvironmentVariable("E2E_TIMEOUT"), out var t) ? t : 30_000;
 
     /// <summary>
+    /// Timeout (ms) for the post-auth wait in <c>LoginAsync</c>/<c>RegisterNewUserAsync</c> — the slowest
+    /// E2E step (full auth round-trip + forceLoad reload + re-render). On a contended CI runner the login
+    /// can spike past the general <see cref="DefaultTimeout"/>, so it's tunable independently via
+    /// <c>E2E_AUTH_TIMEOUT</c>; otherwise it inherits <see cref="DefaultTimeout"/>.
+    /// </summary>
+    public static float AuthTimeout =>
+        float.TryParse(Environment.GetEnvironmentVariable("E2E_AUTH_TIMEOUT"), out var t) ? t : DefaultTimeout;
+
+    /// <summary>
     /// Slows down each Playwright action by this many milliseconds. Useful for watching tests visually.
     /// Set E2E_SLOWMO=1000 for a 1-second delay between actions.
     /// </summary>

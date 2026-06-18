@@ -88,8 +88,8 @@ public abstract class E2ETestBase : IAsyncLifetime
         var errorAlert = Page.Locator(".mud-alert-text-error");
 
         var visibleFirst = await Task.WhenAny(
-            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 }),
-            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 }));
+            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
+            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }));
 
         await visibleFirst;
 
@@ -129,8 +129,8 @@ public abstract class E2ETestBase : IAsyncLifetime
         var regErrorAlert = Page.Locator(".mud-alert-text-error");
 
         var visibleFirst = await Task.WhenAny(
-            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 }),
-            regErrorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 30_000 }));
+            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
+            regErrorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }));
 
         await visibleFirst;
 
