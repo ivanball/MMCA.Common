@@ -53,19 +53,37 @@ public static class PageExtensions
     /// </summary>
     public static async Task BlazorNavigateAsync(this IPage page, string path)
     {
-        await page.EvaluateAsync($"() => Blazor.navigateTo('{path}')");
-        // Wait for the client-side route to settle. WaitForURLAsync tracks frame navigations
-        // (including Blazor's History-API SPA pushState) and re-resolves the execution context
-        // across them. This avoids two races the previous raw pathname-polling hit: a hang when
-        // Blazor.navigateTo performs a forceLoad reload (the manual WaitForFunction never saw it),
-        // and "execution context was destroyed, most likely because of a navigation" when the
-        // follow-up EvaluateAsync ran while that reload tore the JS context down.
-        await page.WaitForURLAsync(
-            url => string.Equals(new Uri(url).AbsolutePath, path, StringComparison.Ordinal),
-            new PageWaitForURLOptions { Timeout = 15_000 });
-        // Re-assert Blazor interactivity on the settled page (fast no-op after a pure SPA nav,
-        // waits for re-init after a full reload) and flush the render pipeline.
-        await page.WaitForBlazorAsync();
+        // Trigger client-side navigation. A forceLoad navigateTo can tear the JS context down
+        // synchronously, so tolerate the evaluate racing with that reload.
+        try
+        {
+            await page.EvaluateAsync($"() => Blazor.navigateTo('{path}')");
+        }
+        catch (PlaywrightException)
+        {
+            // navigateTo did an immediate full reload that destroyed the context mid-call — fine,
+            // the navigation is already underway.
+        }
+
+        // Client-side navigation fires NO load event, so do NOT use WaitForURLAsync (its default
+        // WaitUntil=Load hangs on same-document nav and leaves the page perpetually "navigating",
+        // blocking later actions). Poll window.location instead — Playwright re-injects this across
+        // a full reload too, so it settles on the target pathname either way.
+        await page.WaitForFunctionAsync(
+            $"() => window.location.pathname === '{path}'",
+            new PageWaitForFunctionOptions { Timeout = 15_000 });
+
+        // Re-assert Blazor interactivity (fast no-op after a pure SPA nav; waits for re-init after a
+        // full reload) and flush the render pipeline. Guard against a context-destroyed race from an
+        // in-flight reload, then re-assert on the fresh context.
+        try
+        {
+            await page.WaitForBlazorAsync();
+        }
+        catch (PlaywrightException)
+        {
+            await page.WaitForBlazorAsync();
+        }
     }
 
     /// <summary>
