@@ -23,7 +23,7 @@
          CVE-2026-48109 (high, CVSS 8.2 — LZ4 decompression OOB read); fixed in 2.5.301. Forced via a
          direct PackageReference in MMCA.Common.Infrastructure + .Aspire.Hosting (same pattern as
          OpenTelemetry.Api below) so the fix flows to consumers through the published package graph. -->
-    <PackageVersion Include="MessagePack" Version="2.5.301" />
+    <PackageVersion Include="MessagePack" Version="3.1.7" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Cosmos" Version="10.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
