@@ -124,8 +124,9 @@ jobs:
           path: Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release/net10.0/playwright-traces/**
           if-no-files-found: ignore
 
-  # Report-only (non-gating): merge the unit/architecture/bUnit + E2E coverage tiers into one report
-  # and publish it to the run summary. Runs after both test jobs regardless of their outcome.
+  # Merge the unit/architecture/bUnit + E2E coverage tiers into one report, publish it to the run
+  # summary, and enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor").
+  # Runs after both test jobs regardless of their outcome.
   coverage:
     needs: [build-and-test, ui-e2e]
     if: always()
@@ -161,3 +162,17 @@ jobs:
           name: coverage-report-html
           path: coverage-report
           if-no-files-found: warn
+
+      # Coverage floor (§14): a regression backstop, NOT a stretch target. 55% sits deliberately
+      # BELOW the observed merged baseline — the unit/arch/bUnit tier alone measured 58.8% line
+      # coverage on 2026-06-19, and the merged report (incl. the chromium ui-e2e tier) is higher —
+      # so the gate stays green whether or not the optional E2E coverage artifact is present, while
+      # still catching a real regression. Ratchet this floor upward toward the observed CI number
+      # once it's confirmed stable across a few runs. Parsing uses sed (locale-robust; grep -P is not).
+      - name: Enforce coverage floor
+        run: |
+          summary="coverage-report/Summary.txt"
+          test -f "$summary" || { echo "::error::coverage summary not found ($summary)"; exit 1; }
+          line=$(sed -n 's/.*Line coverage:[[:space:]]*\([0-9.]*\)%.*/\1/p' "$summary" | head -1)
+          test -n "$line" || { echo "::error::could not parse line coverage from $summary"; exit 1; }
+          awk -v l="$line" -v m="55.0" 'BEGIN{ if (l+0 < m+0) { printf("::error::Line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
