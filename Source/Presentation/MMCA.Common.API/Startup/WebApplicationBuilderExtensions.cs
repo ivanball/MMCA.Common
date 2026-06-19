@@ -150,6 +150,14 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
+        /// Registers OpenAPI document generation (ASP.NET Core's built-in generator). Pair with
+        /// <c>MapCommonOpenApi()</c> so each service serves <c>/openapi/v1.json</c> the same way;
+        /// versioned controllers populate the <c>v1</c> document via the API explorer registered by
+        /// <c>AddCommonApiVersioning</c>.
+        /// </summary>
+        public IServiceCollection AddCommonOpenApi() => services.AddOpenApi();
+
+        /// <summary>
         /// Registers JWT Bearer authentication that trusts an external Identity service's JWKS
         /// endpoint via OIDC-style authority discovery. Use this in extracted microservices
         /// (everything except the Identity service itself) so they validate tokens issued by
