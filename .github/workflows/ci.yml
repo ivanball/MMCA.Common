@@ -13,7 +13,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # MinVer needs full history
 
@@ -82,7 +82,7 @@ jobs:
     # matrix is proven reliably green, then drop the override to make them blocking too.
     continue-on-error: ${{ matrix.browser != 'chromium' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # MinVer needs full history
 
