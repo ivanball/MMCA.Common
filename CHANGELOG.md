@@ -36,6 +36,15 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 - Dependency vulnerability audit is enforced in CI (`dotnet list package --vulnerable`), and
   `nuget.config` restricts each package to its expected source via `packageSourceMapping`.
 
+## [1.70.0] - 2026-06-19
+
+### Fixed
+- **R24 §8** — paginated list reads with a collection include returned empty child collections (e.g.
+  `GET /Sessions?includeChildren` came back with empty `sessionSpeakers` while by-id reads populated
+  them). `EntityQueryPipeline` now forces `AsSplitQuery` when a child-collection navigation is included,
+  so `Skip`/`Take` pagination no longer truncates child rows. Adds `IQueryableExecutor.AsSplitQuery`
+  (EF bridge guarded by `IsEfQuery` for in-memory queries) + unit tests.
+
 ## [1.69.0] - 2026-06-19
 
 ### Added
