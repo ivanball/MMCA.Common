@@ -1,8 +1,9 @@
 namespace MMCA.Common.UI.Services.Auth;
 
 /// <summary>
-/// Platform-agnostic JWT token persistence. Each host provides an implementation that uses the
-/// appropriate storage mechanism: browser localStorage (Server/WASM) or MAUI SecureStorage.
+/// Platform-agnostic JWT token persistence. Each host provides an implementation using the safe
+/// mechanism for its platform: browser hosts (Blazor Server/WASM) hold the access token in memory and
+/// mirror the refresh token to an HttpOnly cookie (never localStorage); MAUI uses OS SecureStorage.
 /// </summary>
 public interface ITokenStorageService
 {

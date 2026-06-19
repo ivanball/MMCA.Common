@@ -91,6 +91,14 @@ public sealed class SecurityHeadersMiddlewareTests
         headers.ContentSecurityPolicyReportOnly.ToString().Should().BeEmpty();
     }
 
+    // The framework default (used when a host registers no custom ICspPolicyProvider) must be a
+    // conservative hardened baseline — safe for API/Gateway JSON responses, and deliberately omitting
+    // script-src/style-src so an HTML host that forgot a provider isn't broken (§26, R18).
+    [Fact]
+    public void DefaultSettings_ContentSecurityPolicy_IsHardenedBaseline() =>
+        new SecurityHeadersSettings().ContentSecurityPolicy.Should().Be(
+            "default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+
     private sealed class StubCspProvider(CspPolicy? policy) : ICspPolicyProvider
     {
         public CspPolicy? GetPolicy(HttpContext context) => policy;

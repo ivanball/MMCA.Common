@@ -31,7 +31,7 @@ public abstract class AuthenticatedServiceBase(
     /// Creates an HttpClient with the JWT Bearer token applied from the circuit-scoped
     /// <see cref="ITokenStorageService"/>. This bypasses the <see cref="Auth.AuthDelegatingHandler"/>
     /// scope issue where <c>IHttpClientFactory</c> creates handlers in a separate DI scope
-    /// that cannot access the Blazor circuit's <c>IJSRuntime</c> for localStorage reads.
+    /// that cannot access the Blazor circuit's <c>IJSRuntime</c> to read the in-memory access token.
     /// </summary>
     protected async Task<HttpClient> CreateAuthenticatedClientAsync()
     {

@@ -36,11 +36,15 @@ public sealed class SecurityHeadersSettings
 
     /// <summary>
     /// Static Content-Security-Policy used by the default <see cref="ICspPolicyProvider"/>. Set to
-    /// <see langword="null"/>/empty to emit no CSP. Default is the minimal clickjacking defense
-    /// <c>frame-ancestors 'none'</c> (safe for JSON / WebSocket / static responses); HTML hosts register
-    /// their own <see cref="ICspPolicyProvider"/> for a full resource policy.
+    /// <see langword="null"/>/empty to emit no CSP. The default is a conservative hardened baseline —
+    /// <c>default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'</c>
+    /// — safe for the JSON / WebSocket / static responses of API and Gateway hosts. It deliberately omits
+    /// <c>script-src</c>/<c>style-src</c> so it does not break an HTML/Blazor host that forgot to register a
+    /// provider (Blazor needs <c>script-src 'wasm-unsafe-eval'</c> and MudBlazor needs <c>style-src 'unsafe-inline'</c>);
+    /// HTML hosts register their own <see cref="ICspPolicyProvider"/> for a full resource policy.
     /// </summary>
-    public string? ContentSecurityPolicy { get; set; } = "frame-ancestors 'none'";
+    public string? ContentSecurityPolicy { get; set; } =
+        "default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
     /// <summary>When <see langword="true"/> the static CSP is enforced; otherwise it is emitted Report-Only.</summary>
     public bool EnforceContentSecurityPolicy { get; set; } = true;

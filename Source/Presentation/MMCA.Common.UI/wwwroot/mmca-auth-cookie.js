@@ -1,6 +1,6 @@
-// Mirrors the JWT stored in localStorage into an HttpOnly cookie on the UI host's origin
-// so SSR prerender of [Authorize] pages works after right-click → "Open in new tab" or F5.
-// Invoked by ISessionCookieSync via JS interop in both Blazor Server and WebAssembly.
+// Mirrors the in-memory JWT (supplied as an argument by ISessionCookieSync — never read from
+// localStorage) into an HttpOnly cookie on the UI host's origin so SSR prerender of [Authorize] pages
+// works after right-click → "Open in new tab" or F5. Invoked via JS interop in Blazor Server and WebAssembly.
 window.mmcaAuthCookie = {
     set: async function (accessToken, refreshToken) {
         try {
