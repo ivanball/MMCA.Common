@@ -537,13 +537,26 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
     private async Task ResetCancellationTokenAsync()
     {
-        if (_cts is not null)
-        {
-            await _cts.CancelAsync();
-            _cts.Dispose();
-        }
-
+        // Swap in a fresh source FIRST so the caller always has a valid (non-disposed) token, then
+        // tear down the previous one. A debounced grid reload (e.g. a search-box blur) can fire
+        // AFTER the component disposed its CTS; cancelling an already-disposed source throws
+        // ObjectDisposedException, which would surface as an unhandled render exception and trip the
+        // blazor-error-ui banner. Tolerate that race instead.
+        var previous = _cts;
         _cts = new CancellationTokenSource();
+
+        if (previous is not null)
+        {
+            try
+            {
+                await previous.CancelAsync();
+                previous.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Component was disposed mid-flight; the previous source is already gone.
+            }
+        }
     }
 
     private static Dictionary<string, (string Operator, string Value)> ExtractGridFilters(GridState<TDto> state) =>
