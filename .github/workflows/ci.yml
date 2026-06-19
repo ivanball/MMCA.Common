@@ -161,7 +161,8 @@ jobs:
             -reports:'coverage/**/*.cobertura.xml' \
             -targetdir:coverage-report \
             -reporttypes:'Html;TextSummary;MarkdownSummaryGithub' \
-            -assemblyfilters:'+MMCA.*;-*.Tests'
+            -assemblyfilters:'+MMCA.*;-*.Tests' \
+            -filefilters:'-**/*.generated.cs;-**/*.g.cs'
           echo "## Test coverage (unit + bUnit + E2E)" >> "$GITHUB_STEP_SUMMARY"
           cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
           cat coverage-report/Summary.txt
@@ -173,13 +174,12 @@ jobs:
           path: coverage-report
           if-no-files-found: warn
 
-      # Coverage floor (§14): a regression backstop gating the UNIT/arch/bUnit tier — the meaningful
-      # "is the framework tested" signal (~58.8% line on 2026-06-19). NOTE the *merged* report above is
-      # LOWER (~45%) because the gallery E2E tier loads the whole MMCA.Common.UI assembly without
-      # exercising most of it, inflating the coverable denominator — a poor floor signal — so we gate on
-      # the unit tier specifically. 53% sits a few points below the baseline; ratchet up as it grows.
-      # Parsing uses sed (locale-robust; grep -P is not).
-      - name: Enforce coverage floor (unit/arch/bUnit tier)
+      # Coverage floor (§14): a regression backstop gating the UNIT/arch/bUnit tier, with GENERATED code
+      # excluded (*.generated.cs / *.g.cs) — source generators (e.g. Microsoft.AspNetCore.OpenApi) emit
+      # large uncovered files that otherwise tank the number (raw 45.3% vs hand-written 61.9% on
+      # 2026-06-19). We gate the unit tier, not the merged report (the gallery E2E tier dilutes it). 53%
+      # sits a few points below the ~62% baseline; ratchet up as it grows. Parsing uses sed (locale-robust).
+      - name: Enforce coverage floor (unit/arch/bUnit tier, generated code excluded)
         # Only enforce when build-and-test succeeded (so the unit coverage artifact exists); an upstream
         # failure shouldn't add a confusing secondary coverage failure.
         if: success() && needs.build-and-test.result == 'success'
@@ -187,7 +187,7 @@ jobs:
           unit="coverage/coverage.unit.cobertura.xml"
           test -f "$unit" || { echo "::error::unit coverage report not found ($unit)"; exit 1; }
           export PATH="$PATH:$HOME/.dotnet/tools"
-          reportgenerator -reports:"$unit" -targetdir:coverage-unit-report -reporttypes:TextSummary -assemblyfilters:'+MMCA.*;-*.Tests'
+          reportgenerator -reports:"$unit" -targetdir:coverage-unit-report -reporttypes:TextSummary -assemblyfilters:'+MMCA.*;-*.Tests' -filefilters:'-**/*.generated.cs;-**/*.g.cs'
           line=$(sed -n 's/.*Line coverage:[[:space:]]*\([0-9.]*\)%.*/\1/p' coverage-unit-report/Summary.txt | head -1)
           test -n "$line" || { echo "::error::could not parse unit line coverage"; exit 1; }
           awk -v l="$line" -v m="53.0" 'BEGIN{ if (l+0 < m+0) { printf("::error::Unit line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Unit line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
