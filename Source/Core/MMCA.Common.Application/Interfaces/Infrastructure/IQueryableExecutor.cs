@@ -14,6 +14,18 @@ public interface IQueryableExecutor
     IQueryable<T> Include<T>(IQueryable<T> query, string navigationPropertyPath)
         where T : class;
 
+    /// <summary>
+    /// Requests EF Core split-query behavior so collection includes load in separate SQL statements.
+    /// Required when paginating (Skip/Take) a query that has collection includes — single-query mode
+    /// otherwise truncates/mis-correlates child rows (list reads come back with empty collections).
+    /// No-op for non-EF (in-memory) queryables.
+    /// </summary>
+    /// <typeparam name="T">The entity type.</typeparam>
+    /// <param name="query">The queryable to switch to split-query mode.</param>
+    /// <returns>The queryable in split-query mode (EF), or unchanged (in-memory).</returns>
+    IQueryable<T> AsSplitQuery<T>(IQueryable<T> query)
+        where T : class;
+
     /// <summary>Materializes a queryable into a list asynchronously.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="query">The queryable to materialize.</param>

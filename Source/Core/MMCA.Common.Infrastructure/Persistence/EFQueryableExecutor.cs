@@ -18,6 +18,13 @@ internal sealed class EFQueryableExecutor : IQueryableExecutor
             : query;
 
     /// <inheritdoc />
+    public IQueryable<T> AsSplitQuery<T>(IQueryable<T> query)
+        where T : class
+        => IsEfQuery(query)
+            ? query.AsSplitQuery()
+            : query;
+
+    /// <inheritdoc />
     public async Task<List<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
         => IsEfQuery(query)
             ? await EntityFrameworkQueryableExtensions.ToListAsync(query, cancellationToken).ConfigureAwait(false)

@@ -26,6 +26,18 @@ public sealed class EFQueryableExecutorTests
         result.Should().BeSameAs(query);
     }
 
+    // ── AsSplitQuery ──
+    [Fact]
+    public void AsSplitQuery_WithInMemoryQueryable_ReturnsQueryUnchanged()
+    {
+        var items = new List<TestItem> { new(1, "A"), new(2, "B") };
+        var query = items.AsQueryable();
+
+        var result = _sut.AsSplitQuery(query);
+
+        result.Should().BeSameAs(query);
+    }
+
     // ── ToListAsync ──
     [Fact]
     public async Task ToListAsync_WithInMemoryQueryable_ReturnsAllItems()

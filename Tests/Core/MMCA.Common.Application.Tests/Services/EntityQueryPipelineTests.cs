@@ -30,6 +30,11 @@ public sealed class EntityQueryPipelineTests
             DTOToEntityPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         };
 
+    private static void AddSupported(NavigationMetadata navigation, NavigationPropertyInfo info) =>
+        typeof(NavigationMetadata)
+            .GetMethod("AddSupported", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(navigation, [info]);
+
     // ── Basic execution ──
     [Fact]
     public async Task ExecuteAsync_NoFiltersNoPagination_ReturnsAllItems()
@@ -272,5 +277,48 @@ public sealed class EntityQueryPipelineTests
 
         items.Should().HaveCount(1);
         items.First().Name.Should().Be("Alpha");
+    }
+
+    // ── Split-query for collection includes (R24/§8) ──
+    [Fact]
+    public async Task ExecuteAsync_WithChildCollectionInclude_CallsAsSplitQuery()
+    {
+        // A collection-Include must use split-query so Skip/Take pagination doesn't truncate child rows.
+        var entities = new List<TestEntity> { new() { Id = 1, Name = "A" } };
+        var query = entities.AsQueryable();
+
+        _executorMock.Setup(e => e.Include(It.IsAny<IQueryable<TestEntity>>(), "Children")).Returns(query);
+        _executorMock.Setup(e => e.AsSplitQuery(It.IsAny<IQueryable<TestEntity>>())).Returns(query);
+        _executorMock
+            .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entities);
+
+        var navigation = new NavigationMetadata();
+        AddSupported(navigation, new NavigationPropertyInfo("Children", NavigationType.ChildCollection, typeof(TestEntity), typeof(string)));
+
+        await _sut.ExecuteAsync<TestEntity, int>(
+            query, navigation, DefaultParams(), (_, _, _, _, _) => Task.CompletedTask, CancellationToken.None);
+
+        _executorMock.Verify(e => e.AsSplitQuery(It.IsAny<IQueryable<TestEntity>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithOnlyForeignKeyIncludes_DoesNotCallAsSplitQuery()
+    {
+        var entities = new List<TestEntity> { new() { Id = 1, Name = "A" } };
+        var query = entities.AsQueryable();
+
+        _executorMock.Setup(e => e.Include(It.IsAny<IQueryable<TestEntity>>(), "Parent")).Returns(query);
+        _executorMock
+            .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entities);
+
+        var navigation = new NavigationMetadata();
+        AddSupported(navigation, new NavigationPropertyInfo("Parent", NavigationType.ForeignKey, typeof(TestEntity), typeof(string)));
+
+        await _sut.ExecuteAsync<TestEntity, int>(
+            query, navigation, DefaultParams(), (_, _, _, _, _) => Task.CompletedTask, CancellationToken.None);
+
+        _executorMock.Verify(e => e.AsSplitQuery(It.IsAny<IQueryable<TestEntity>>()), Times.Never);
     }
 }

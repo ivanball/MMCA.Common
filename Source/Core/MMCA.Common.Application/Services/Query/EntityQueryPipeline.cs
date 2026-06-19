@@ -40,6 +40,13 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         {
             foreach (var include in navigationMetadata.SupportedIncludes)
                 query = queryableExecutor.Include(query, include.PropertyName);
+
+            // R24/§8: paginating a single-query collection-Include truncates child rows — EF applies
+            // Skip/Take to the JOIN-expanded set, so list (GetAll) reads return empty collections while
+            // by-id reads (no Skip) work. Force split-query when a child collection is included so each
+            // collection loads in its own statement — the documented EF remedy for this shape.
+            if (navigationMetadata.SupportedIncludes.Any(nav => nav.Type == NavigationType.ChildCollection))
+                query = queryableExecutor.AsSplitQuery(query);
         }
 
         // Apply specification criteria and dynamic filters BEFORE materializing —
