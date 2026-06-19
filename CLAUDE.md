@@ -228,8 +228,9 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 
 ## Repository Governance Docs & Commit Convention
 
-These docs live **in this repo** (committable, unlike the workspace-level `ADRs/`, `ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
+These docs live **in this repo** (committable, unlike the workspace-level `ArchitecturalAnalysis.md`, `ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
 
+- `ADRs/` — the accepted architecture decision records (001–011) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `ADRs/` is now a convenience mirror — add new ADRs here.
 - `ArchitectureScorecard.md` — the filled 34-category architecture evaluation (health index, per-category score + evidence). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
 - `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
 - `VERSIONING.md` — SemVer + breaking-change policy; the twelve packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
