@@ -31,9 +31,19 @@ jobs:
         run: |
           dotnet list MMCA.Common.slnx package --vulnerable --include-transitive > audit.log 2>&1 || true
           cat audit.log
-          if grep -q "has the following vulnerable packages" audit.log; then
-            echo "::error::Vulnerable NuGet packages detected — see log above"; exit 1
+          # `dotnet list --vulnerable` ignores NuGetAuditSuppress, so honor the same accepted-advisory
+          # list here (single source of truth: Directory.Build.props). Fail only on a vulnerable-package
+          # row (">") whose advisory is NOT suppressed — e.g. the unpatched SQLite advisory is accepted.
+          suppressed=$(grep -oE 'GHSA-[a-z0-9-]+' Directory.Build.props | sort -u | paste -sd'|' -)
+          echo "Accepted (suppressed) advisories: ${suppressed:-<none>}"
+          vulns=$(grep -E '^[[:space:]]*>[[:space:]]' audit.log || true)
+          if [ -n "$suppressed" ]; then
+            vulns=$(printf '%s\n' "$vulns" | grep -vE "$suppressed" || true)
           fi
+          if printf '%s' "$vulns" | grep -q .; then
+            echo "::error::Non-suppressed vulnerable NuGet packages detected — see log above"; exit 1
+          fi
+          echo "No non-suppressed vulnerable packages."
 
       - name: Install coverage tool
         run: dotnet tool install --global dotnet-coverage
@@ -170,6 +180,9 @@ jobs:
       # still catching a real regression. Ratchet this floor upward toward the observed CI number
       # once it's confirmed stable across a few runs. Parsing uses sed (locale-robust; grep -P is not).
       - name: Enforce coverage floor
+        # Only enforce when the unit-coverage tier actually ran; if build-and-test failed (e.g. the
+        # audit gate) the merged report is partial — don't add a confusing secondary failure.
+        if: success() && needs.build-and-test.result == 'success'
         run: |
           summary="coverage-report/Summary.txt"
           test -f "$summary" || { echo "::error::coverage summary not found ($summary)"; exit 1; }
