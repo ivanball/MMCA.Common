@@ -87,9 +87,10 @@ Soft-delete is the only deletion model — no lawful erasure path.
 
 ### [ ] #29 · Resilience, Reliability & Business Continuity — 3 → 4
 - **(medium)** `IntegrationEventConsumer` rethrows with a comment claiming "MassTransit will retry per its configured policy," but `ConfigureBrokerTransport` (`DependencyInjection.cs:403-431`) calls only `cfg.ConfigureEndpoints(context)` — **no** `UseMessageRetry`/`UseDelayedRedelivery`. Faulted messages dead-letter with zero retries on the extracted-microservice path the framework markets.
-- *Gap:* no backup/restore, RTO/RPO, failover, SLOs, or chaos; resilience config is not test-enforced.
+- *Gap:* no backup/restore, RTO/RPO, failover, SLOs; resilience config not fully test-enforced. *(chaos/fault-injection now covered — see below.)*
 
 **Fix**
+- [x] **Fault-injection / chaos test landed (C-8, 2026-06-19).** `ResilienceCircuitBreakerFaultInjectionTests` (Grpc.Tests) drives an always-failing dependency through the standard resilience handler and asserts the circuit breaker trips and short-circuits further calls; `OutboxProcessorTests.IntegrationEventPublishFailure_DegradesGracefully_BuffersForRedelivery` asserts the outbox buffers the event (retry++, left unprocessed) when the broker is unreachable instead of crashing the processor.
 - [ ] Add a default **`UseMessageRetry` (backoff + jitter)** and **`UseDelayedRedelivery`** in `ConfigureBrokerTransport`; expose a hook for consumers to tune it.
 - [ ] **Correct or remove** the misleading comment + log message.
 

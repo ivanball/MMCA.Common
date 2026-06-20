@@ -415,6 +415,32 @@ public sealed class OutboxProcessorTests : IDisposable
             Times.Never);
     }
 
+    [Fact]
+    public async Task IntegrationEventPublishFailure_DegradesGracefully_BuffersForRedelivery()
+    {
+        // Chaos / fault injection (C-8): the broker (IMessageBus) is unreachable. The outbox must
+        // degrade gracefully — increment the retry count, record the error, and LEAVE the message
+        // unprocessed so a later poll redelivers it (ADR-009 graceful degradation) — never crash.
+        _messageBusMock
+            .Setup(b => b.PublishAsync(It.IsAny<IIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Broker unreachable"));
+
+        OutboxMessage message = CreateEligibleMessage(
+            eventType: typeof(TestIntegrationEvent).AssemblyQualifiedName);
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        // Act — must not throw even though the dependency is down.
+        var act = async () => await InvokeProcessPendingMessagesAsync();
+        await act.Should().NotThrowAsync();
+
+        // Assert — buffered for retry, not dead-lettered and not marked delivered.
+        OutboxMessage retried = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        retried.ProcessedOn.Should().BeNull("a broker failure must not mark the event delivered");
+        retried.RetryCount.Should().Be(1);
+        retried.LastError.Should().Be("Broker unreachable");
+    }
+
     // ── Test doubles ──
 
     /// <summary>
