@@ -6,6 +6,18 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed
+- **E2E auth helpers force WebAssembly interactivity before submitting.** `MMCA.Common.Testing.E2E`'s
+  `LoginAsync`/`RegisterNewUserAsync` now wait for the Blazor WASM runtime to boot (then reload) before
+  filling/submitting the auth form, via the new `PageExtensions.EnsureWasmInteractiveAsync` and the
+  `E2E_WASM_READY_TIMEOUT` knob. Under InteractiveAuto a cold load runs the page on the **Server
+  circuit**, so the auth POST is a contended UI-circuit→gateway→Identity **double hop** — the cause of
+  the recurring CI "Registration failed: One or more errors occurred." reds on the 2-core runner.
+  Forcing WASM makes it a single browser→gateway→Identity hop. Best-effort: falls back to Server-mode
+  submit if WASM doesn't boot within the budget (behaviour unchanged from before).
+
+## [1.71.0] - 2026-06-19
+
 ### Added
 - **Broker retry policy.** `AddBrokerMessaging` now configures `UseMessageRetry` (exponential backoff)
   on both the RabbitMQ and Azure Service Bus transports. Tunable via new `MessageBus:RetryLimit`,

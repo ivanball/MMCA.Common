@@ -71,6 +71,12 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         await Page.GotoAndWaitForBlazorAsync("/login");
 
+        // Force the page onto the WebAssembly runtime before submitting so the auth POST is a single
+        // browser→gateway→Identity hop, not the contended UI-circuit→gateway→Identity double hop that
+        // Server-mode (cold InteractiveAuto load) produces on the 2-core CI runner. Best-effort: falls
+        // back to Server-mode submit if WASM doesn't boot in time. See EnsureWasmInteractiveAsync.
+        await Page.EnsureWasmInteractiveAsync();
+
         // MudBlazor renders proper <label> elements — GetByLabel works.
         // Use FillFieldAsync to guard against Blazor re-hydration clearing values.
         await FillFieldAsync(Page.GetByLabel("Email"), email);
@@ -112,6 +118,12 @@ public abstract class E2ETestBase : IAsyncLifetime
         lastName ??= $"User{uniqueId[4..]}";
 
         await Page.GotoAndWaitForBlazorAsync("/register");
+
+        // Force WebAssembly interactivity before submitting (single browser→gateway→Identity hop) — the
+        // register POST is the dominant CI red ("Registration failed: One or more errors occurred."),
+        // which is the Server-mode double hop exhausting Polly retries against a contended gateway.
+        // Best-effort; falls back to Server mode if WASM doesn't boot. See EnsureWasmInteractiveAsync.
+        await Page.EnsureWasmInteractiveAsync();
 
         await FillFieldAsync(Page.GetByLabel("First Name"), firstName);
         await FillFieldAsync(Page.GetByLabel("Last Name"), lastName);
