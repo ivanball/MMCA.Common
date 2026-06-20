@@ -46,59 +46,6 @@ public static class PageExtensions
     }
 
     /// <summary>
-    /// Ensures the current page is interactive under the <b>WebAssembly</b> runtime, not the Blazor
-    /// <b>Server</b> circuit. The app uses InteractiveAuto + prerender: on a cold load the page activates
-    /// the Server circuit while WASM downloads in the background, so the component's event handlers — and
-    /// the auth POST they issue (<c>auth/login</c> / <c>auth/register</c>) — run server-side, i.e.
-    /// UI-host-circuit → gateway → Identity. That contended <i>double hop</i> is what times out / 500s
-    /// ("Registration failed: One or more errors occurred.") on the 2-core CI runner. Once WASM has
-    /// downloaded, a full reload re-activates the page under WASM so the POST is a single
-    /// browser → gateway → Identity hop.
-    /// <para>
-    /// Best-effort and fail-safe: if WASM is already active it returns immediately (no reload); if WASM
-    /// doesn't boot within <paramref name="wasmReadyTimeout"/> (or any probe/reload error occurs) it
-    /// returns without reloading and the caller proceeds in Server mode — never worse than not calling
-    /// it. Pass <c>0</c> (or set <c>E2E_WASM_READY_TIMEOUT=0</c>) to skip the wait entirely.
-    /// </para>
-    /// </summary>
-    public static async Task EnsureWasmInteractiveAsync(this IPage page, float? wasmReadyTimeout = null)
-    {
-        ArgumentNullException.ThrowIfNull(page);
-
-        var timeout = wasmReadyTimeout ?? E2ETestConfiguration.WasmReadyTimeout;
-        if (timeout <= 0)
-        {
-            return;
-        }
-
-        // `getDotnetRuntime` is the global the WASM loader (dotnet.js) defines once the runtime module is
-        // imported; `getDotnetRuntime(0)` returns the booted runtime instance. It is undefined under a
-        // pure Server-circuit render (WASM not downloaded), so it is a reliable "WASM has booted" probe.
-        const string wasmReadyProbe =
-            "() => { try { return typeof window.getDotnetRuntime === 'function' && !!window.getDotnetRuntime(0); } catch { return false; } }";
-
-        try
-        {
-            // Fast path: already WASM-interactive (e.g. a warm browser context) — nothing to do.
-            if (await page.EvaluateAsync<bool>(wasmReadyProbe))
-            {
-                return;
-            }
-
-            // Wait for WASM to finish downloading + booting in the background, then reload so the page
-            // (activated Server-first) re-renders under the now-cached WASM runtime.
-            await page.WaitForFunctionAsync(wasmReadyProbe, new PageWaitForFunctionOptions { Timeout = timeout });
-            await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.Load });
-            await page.WaitForBlazorAsync();
-        }
-        catch (PlaywrightException)
-        {
-            // Timeout on a contended runner, or a reload/eval raced with a navigation — fall back to the
-            // Server-mode submit (unchanged behaviour). PlaywrightException covers TimeoutException too.
-        }
-    }
-
-    /// <summary>
     /// Navigates using Blazor's client-side router instead of a full page load.
     /// Use this for auth-protected pages when already logged in — avoids the server-side
     /// prerender which lacks the JWT token stored in browser storage.

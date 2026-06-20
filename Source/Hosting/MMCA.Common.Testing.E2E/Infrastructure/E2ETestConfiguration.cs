@@ -28,19 +28,6 @@ public static class E2ETestConfiguration
         float.TryParse(Environment.GetEnvironmentVariable("E2E_AUTH_TIMEOUT"), out var t) ? t : DefaultTimeout;
 
     /// <summary>
-    /// Best-effort budget (ms) for waiting for the Blazor <b>WebAssembly</b> runtime to finish
-    /// downloading + booting before an auth form is submitted (see
-    /// <c>PageExtensions.EnsureWasmInteractiveAsync</c>). The app is InteractiveAuto + prerender, so a
-    /// cold first load runs the page on the <b>Server circuit</b> while WASM downloads — making the auth
-    /// POST a contended UI-circuit→gateway→Identity <i>double hop</i> that times out / 500s on a 2-core
-    /// CI runner. Waiting for WASM turns it into a single browser→gateway→Identity hop. If WASM doesn't
-    /// ready within this budget the helper proceeds in Server mode (behaviour unchanged from before).
-    /// Tunable via <c>E2E_WASM_READY_TIMEOUT</c>; set <c>0</c> to skip the WASM wait entirely.
-    /// </summary>
-    public static float WasmReadyTimeout =>
-        float.TryParse(Environment.GetEnvironmentVariable("E2E_WASM_READY_TIMEOUT"), out var t) ? t : 30_000;
-
-    /// <summary>
     /// Slows down each Playwright action by this many milliseconds. Useful for watching tests visually.
     /// Set E2E_SLOWMO=1000 for a 1-second delay between actions.
     /// </summary>
