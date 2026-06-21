@@ -1,0 +1,88 @@
+# ADR-012: gRPC-Host Transport Convention (Http2-only h2c vs. Http1AndHttp2 + ALPN)
+
+## Status
+Accepted.
+
+## Context
+Once modules were extracted into separate service hosts (ADR-008) that call each other synchronously
+over gRPC (ADR-007), each service's Kestrel had to serve **both** REST traffic (HTTP/1.1 from the
+gateway and clients) and gRPC traffic (HTTP/2 from peer services). On a **cleartext** endpoint there
+is no TLS, so there is no ALPN to negotiate the protocol — Kestrel must be told up front which
+protocol(s) the cleartext port speaks. Two valid configurations exist, and the two downstream apps
+deliberately pick different ones because their cross-service topologies differ:
+
+- **MMCA.ADC** has a **bidirectional** gRPC pair (Conference ↔ Engagement, plus Notification →
+  Identity). A gRPC client over h2c must reach a server that speaks HTTP/2 on cleartext.
+- **MMCA.Store** has only **one-directional, consumer-only** gRPC edges (Sales → Catalog, Sales →
+  Identity); no service both serves gRPC and needs to forward REST as HTTP/2 internally.
+
+The subtlety: a gRPC client using h2c **prior knowledge** sends an HTTP/2 preface with no upgrade
+handshake. If the server's cleartext endpoint is `Http1AndHttp2`, Kestrel — lacking ALPN on
+cleartext — answers HTTP/1.1 and the client fails with `HTTP_1_1_REQUIRED`. Forcing `Http2`-only on
+cleartext fixes gRPC but then a default `HttpClient` (HTTP/1.1) — e.g. the JwtBearer JWKS backchannel
+or the YARP forwarder — can no longer hit that endpoint directly. So the Kestrel choice forces
+matching choices for **gateway forwarding** and **JWKS discovery routing**.
+
+## Decision
+Pick one of two coherent transport profiles per app, and wire the gateway forwarder and JWKS
+discovery to match.
+
+### Profile A — ADC: `Http2`-only h2c + gateway-routed JWKS
+Use when services must **serve** gRPC on cleartext (any bidirectional / inbound gRPC edge).
+
+- **Kestrel:** `ConfigureEndpointDefaults(o => o.Protocols = HttpProtocols.Http2)` (also
+  `"Kestrel:EndpointDefaults:Protocols": "Http2"` in appsettings). The cleartext endpoint is
+  HTTP/2-only (h2c prior knowledge), so peer gRPC clients negotiate without TLS/ALPN.
+- **Gateway:** `ForwardHttp2 = true` → YARP forwards REST as HTTP/2 (`HttpVersion.Version20`,
+  `RequestVersionOrLower`). In Azure Container Apps, ingress must be `transport: http2`.
+- **JWKS discovery:** `WithJwksDiscovery(identity, gateway)`. The default JwtBearer metadata
+  backchannel is HTTP/1.1 and **cannot** reach the Http2-only Identity endpoint directly, so the
+  authority is set to the **gateway** HTTPS origin; the gateway terminates TLS, speaks HTTP/1.1 + 2
+  via ALPN, and routes `/.well-known/*` on to Identity over HTTP/2 (ADR-004).
+- **Exception:** the Notification service runs `Http1AndHttp2` (Profile B Kestrel) because SignalR's
+  WebSocket transport needs the HTTP/1.1 Upgrade handshake; it serves no inbound gRPC.
+
+### Profile B — Store: `Http1AndHttp2` + HTTPS/ALPN + `ForwardHttp2=false` + direct JWKS
+Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-directional gRPC).
+
+- **Kestrel:** `ConfigureEndpointDefaults(o => o.Protocols = HttpProtocols.Http1AndHttp2)` (also
+  `"Protocols": "Http1AndHttp2"`). The cleartext endpoint defaults to HTTP/1.1 (no ALPN); the
+  **HTTPS** endpoint negotiates HTTP/1.1 **or** HTTP/2 via ALPN. gRPC clients use the HTTPS endpoint
+  (the AppHost selects the `https` launch profile) so they get HTTP/2 through ALPN.
+- **Gateway:** `ForwardHttp2 = false` (default) → YARP forwards REST as HTTP/1.1, which the
+  `Http1AndHttp2` backends accept on cleartext. In ACA, envoy ingress is plain HTTP/1.1.
+- **JWKS discovery:** `WithJwksDiscovery(identity)` with **no gateway argument**. The default
+  JwtBearer backchannel reaches Identity's HTTPS endpoint and ALPN negotiates HTTP/2, so no gateway
+  hop is needed for discovery (the gateway still routes `/.well-known/*` so the canonical issuer
+  origin serves the discovery doc for clients).
+
+### When to use which
+- **Any service that hosts an inbound gRPC server reachable over cleartext h2c (especially a
+  bidirectional pair) → Profile A.** Cleartext h2c prior knowledge requires an `Http2`-only endpoint;
+  that in turn forces `ForwardHttp2=true` and gateway-routed JWKS.
+- **Only consumer-only / one-directional gRPC, with gRPC riding the HTTPS/ALPN endpoint → Profile B.**
+  Keep `Http1AndHttp2`, `ForwardHttp2=false`, and direct `WithJwksDiscovery(identity)`.
+- A service needing the **HTTP/1.1 Upgrade** handshake (SignalR WebSockets) must use `Http1AndHttp2`
+  regardless (ADC's Notification service), so it cannot be a cleartext gRPC server.
+
+## Rationale
+- **The Kestrel protocol choice is the root constraint**; the gateway-forward mode and the JWKS
+  authority are downstream consequences, not independent knobs. Documenting them as a pair prevents
+  the half-configured failure modes (`HTTP_1_1_REQUIRED` on gRPC, or a JwtBearer backchannel that
+  can't fetch JWKS from an Http2-only endpoint).
+- **Each app picks the minimum that its topology needs.** Store has no inbound cleartext gRPC server,
+  so it keeps the simpler `Http1AndHttp2` + HTTP/1.1 forwarding profile; ADC's bidirectional gRPC
+  forces the `Http2`-only profile and the gateway-routed JWKS that comes with it.
+
+## Trade-offs
+- **Two profiles to keep straight.** A service that gains an inbound gRPC edge must migrate from
+  Profile B to Profile A *and* flip `ForwardHttp2` and the JWKS wiring together, or it breaks.
+- **ACA ingress coupling.** Profile A requires `transport: http2` on the container app ingress;
+  Profile B uses default HTTP/1.1 ingress. The Bicep must match the chosen profile.
+- **Mixed profiles within one app are possible but sharp-edged** (ADC's Notification runs Profile B
+  Kestrel inside an otherwise-Profile-A app); only do this for a service with no inbound cleartext
+  gRPC, and document why.
+
+## Related
+- ADR-004 (authentication dual-fetch / JWKS discovery), ADR-007 (gRPC cross-service calls),
+  ADR-008 (monolith → services + gateway topology).

@@ -16,6 +16,7 @@ pattern they describe — they capture context and trade-offs that aren't obviou
 | [009](009-resilience-and-recovery-objectives.md) | Resilience & recovery objectives | Standard resilience handler on every outbound client (fitness-enforced); consumers must declare RTO/RPO + drilled restore + single-region acceptance. |
 | [010](010-integration-event-schema-versioning.md) | Integration-event schema versioning | Every integration event carries a `SchemaVersion` (default 1, fitness-enforced); breaking changes use a new event type + upcaster, never a silent reshape. |
 | [011](011-single-locale-i18n.md) | Single-locale by design (no i18n) | en-US only is a deliberate, revisitable non-goal (rubric §27); multi-locale would be greenfield work. |
+| [012](012-grpc-host-transport.md) | gRPC-host transport convention | `Http2`-only h2c + gateway-routed JWKS (ADC, bidirectional gRPC) vs. `Http1AndHttp2` + ALPN + `ForwardHttp2=false` + direct JWKS (Store, consumer-only). Kestrel choice forces the gateway-forward mode + JWKS routing. |
 
 ## Writing a new ADR
 

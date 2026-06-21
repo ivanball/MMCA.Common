@@ -109,4 +109,37 @@ public static class Extensions
                 context.EnvironmentVariables["Authentication__JwtBearer__Authority"] = endpoint;
             });
     }
+
+    /// <summary>
+    /// Wires a service project to its own database ("database per microservice", ADR-006).
+    /// References the given database and injects its connection string twice:
+    /// <list type="bullet">
+    ///   <item><c>DataSources__{logicalName}__SQLServerConnectionString</c> — feeds the
+    ///   MMCA.Common multi-database routing (entities whose logical source matches
+    ///   <paramref name="logicalName"/> resolve to this database).</item>
+    ///   <item><c>ConnectionStrings__SQLServerConnectionString</c> — keeps the framework's
+    ///   <c>[Required]</c> validation and the <c>AddSqlServer</c> health checks working, and makes
+    ///   the service's <c>Default</c> source point at its own database. Because both values are
+    ///   identical, the resolver collapses the logical name onto Default — one context, one
+    ///   change tracker, one migration set per service.</item>
+    /// </list>
+    /// </summary>
+    /// <param name="service">The service project resource.</param>
+    /// <param name="database">The service's own database resource.</param>
+    /// <param name="logicalName">The module's logical data source name (e.g. <c>"Catalog"</c>).</param>
+    /// <returns>The service resource builder for chaining.</returns>
+    public static IResourceBuilder<ProjectResource> WithDataSource(
+        this IResourceBuilder<ProjectResource> service,
+        IResourceBuilder<SqlServerDatabaseResource> database,
+        string logicalName)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(database);
+
+        return service
+            .WithReference(database)
+            .WaitFor(database)
+            .WithEnvironment($"DataSources__{logicalName}__SQLServerConnectionString", database.Resource.ConnectionStringExpression)
+            .WithEnvironment("ConnectionStrings__SQLServerConnectionString", database.Resource.ConnectionStringExpression);
+    }
 }
