@@ -1213,6 +1213,14 @@
       "mmca.common.shared": {
         "type": "Project"
       },
+      "mmca.common.testing.architecture": {
+        "type": "Project",
+        "dependencies": {
+          "AwesomeAssertions": "[9.4.0, )",
+          "NetArchTest.eNhancedEdition": "[1.4.5, )",
+          "xunit.v3.extensibility.core": "[3.2.2, )"
+        }
+      },
       "mmca.common.ui": {
         "type": "Project",
         "dependencies": {

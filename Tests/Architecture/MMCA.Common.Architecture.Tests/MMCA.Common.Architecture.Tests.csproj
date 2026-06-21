@@ -22,5 +22,6 @@
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.Grpc\MMCA.Common.Grpc.csproj" />
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Architecture\MMCA.Common.Testing.Architecture.csproj" />
   </ItemGroup>
 </Project>

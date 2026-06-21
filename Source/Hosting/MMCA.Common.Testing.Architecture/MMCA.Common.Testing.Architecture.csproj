@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Testing.Architecture</PackageId>
+    <Description>MMCA framework — shared architecture fitness-function infrastructure: IArchitectureMap abstraction, reusable NetArchTest rule library, and abstract xUnit test bases consumed by each repo's *.Architecture.Tests project</Description>
+    <!--
+      This package ships abstract xUnit [Fact] bases, so it carries test-style member names
+      (underscores) and broad reflection. Relax the naming/doc/reflection analyzers exactly as the
+      sibling MMCA.Common.Testing package does for test infrastructure, plus CA1707 (underscores in
+      the inherited [Fact] method names) and CA2263 (NetArchTest generic-overload guidance).
+    -->
+    <NoWarn>$(NoWarn);CA1707;CA2263;CA1054;CA2234;S2743;S4457;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0004;MA0051;MA0076;MA0127;RCS1046;RCS1112;S6966</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <!--
+    Intentionally NO framework/ASP.NET references. The rule library detects framework base types and
+    interfaces (Result<>, AuditableAggregateRootEntity<>, IIntegrationEvent, IConcurrencyAware,
+    ValueObject, ICommandHandler<,>, ControllerBase, …) by full-name string matching over the
+    assemblies each repo supplies through IArchitectureMap. This keeps the package free of the
+    framework's heavy transitive graph (EF Core, MassTransit, SQLite, …) so a consumer's
+    *.Architecture.Tests project only pulls the test tooling.
+  -->
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

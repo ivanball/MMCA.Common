@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes twelve NuGet packages to GitHub Packages — it is not a runnable app itself.
+MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes thirteen NuGet packages to GitHub Packages — it is not a runnable app itself.
 
 The framework also provides the seams for **extracting modules into standalone microservices** (gRPC transport, a transport-agnostic message bus, cross-service JWKS auth, and Aspire hosting extensions). See "Microservices Extraction Seams" below — much of the recent work targets this path.
 
@@ -63,7 +63,8 @@ Source/
     ├── MMCA.Common.Aspire.Hosting   # AppHost extensions: RabbitMQ, JWKS discovery, gRPC project wiring
     ├── MMCA.Common.Testing          # Integration test base, JWT generator, fixtures
     ├── MMCA.Common.Testing.E2E      # Playwright E2E fixtures, Blazor nav helpers, page objects
-    └── MMCA.Common.Testing.UI       # bUnit component-test base, MudBlazor provider harness, interaction helpers
+    ├── MMCA.Common.Testing.UI       # bUnit component-test base, MudBlazor provider harness, interaction helpers
+    └── MMCA.Common.Testing.Architecture  # IArchitectureMap + reusable NetArchTest rule library + abstract test bases (consumed by each repo's *.Architecture.Tests)
 
 Tests/                               # Mirrors Source/ structure
 ├── Core/           (Shared.Tests, Domain.Tests, Application.Tests, Infrastructure.Tests)
@@ -75,7 +76,7 @@ Tests/                               # Mirrors Source/ structure
 
 `Tests/Presentation/MMCA.Common.UI.Gallery` (a backend-less Blazor host rendering the real Login/Register pages + a primitives showcase) and `MMCA.Common.UI.E2E.Tests` (Playwright axe/render-smoke) are **intentionally excluded from `MMCA.Common.slnx`** so `dotnet build`/`dotnet test --solution` stay fast. They reference MMCA.Common source projects directly (no GitHub Packages token needed) and only run in CI's `ui-e2e` job. Build/test them by csproj path.
 
-All twelve `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project).
+All thirteen `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project).
 
 ## Architecture
 
@@ -100,7 +101,7 @@ Shared           (Result pattern, errors, DTOs, value objects)
 The dependency rules above are not just convention — they are enforced twice:
 
 1. **Compile-time** — `Source/Build/MMCA.Common.LayerEnforcement.targets` (imported from `Directory.Build.props` for every `MMCA.Common.*` project under `Source/`). It inspects `ProjectReference`s in a `BeforeTargets="ResolveProjectReferences"` step and **fails the build** with a descriptive error if a layer references a forbidden upstream layer.
-2. **Runtime** — `Tests/Architecture/MMCA.Common.Architecture.Tests` (NetArchTest.eNhancedEdition) asserts the same rules against compiled assembly dependencies: `LayerDependencyTests` (layer flow), `DomainPurityTests`, and `MicroserviceExtractionTests` (transport-coupling rules — see below). `Helpers/PackageAssemblies.cs` pins one anchor type per package.
+2. **Runtime** — `Tests/Architecture/MMCA.Common.Architecture.Tests` (NetArchTest.eNhancedEdition) asserts the same rules against compiled assembly dependencies. The rule bodies live **once** in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` classes parameterized by `IArchitectureMap`); each test class is a sealed subclass supplying `CommonArchitectureMap` (one anchor type per package). MMCA.Store and MMCA.ADC consume the same package and supply their own maps, so the rules stay identical across all three repos. (`FrameworkSanityTests` holds the few Common-only checks — the `MMCA.Common.Grpc` boundary and `IMessageBus`/`IJwksProvider` placement.)
 
 When changing project references or moving a type between packages, expect both gates to react. Add new layer rules in **both** places.
 
@@ -233,7 +234,7 @@ These docs live **in this repo** (committable, unlike the workspace-level `Archi
 - `ADRs/` — the accepted architecture decision records (001–011) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `ADRs/` is now a convenience mirror — add new ADRs here.
 - `ArchitectureScorecard.md` — the filled 34-category architecture evaluation (health index, per-category score + evidence). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
 - `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
-- `VERSIONING.md` — SemVer + breaking-change policy; the twelve packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
+- `VERSIONING.md` — SemVer + breaking-change policy; the thirteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
 - `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
 
 **Commit-message convention:** much of the recent history is remediation work tagged `R<n> §<m>: <summary>` (e.g. `R16 §30: ...`). `R<n>` is the remediation item in the workspace `ArchitectureRemediation.md`; `§<m>` is the scorecard category above. When continuing remediation work, match this format and update `RemediationBacklog.md`.
