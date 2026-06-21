@@ -32,10 +32,12 @@ public static partial class ArchitectureRules
     /// <summary>The pinned major version of a package in Directory.Packages.props is below a ceiling.</summary>
     public static void PinnedPackageMajorBelow(string packageId, int exclusiveMajorCeiling, string reason)
     {
-        var version = ReadPinnedPackageVersion(packageId);
+        // Assert on the nullable major directly (no null-forgiving access after NotBeNull — that trips
+        // IDE0370 only in CI; see the same pattern in EventVersioningConventionTests).
+        var major = ReadPinnedPackageVersion(packageId)?.Major;
 
-        version.Should().NotBeNull(because: $"{packageId} must remain pinned in Directory.Packages.props");
-        version!.Major.Should().BeLessThan(exclusiveMajorCeiling, because: reason);
+        major.Should().NotBeNull(because: $"{packageId} must remain pinned in Directory.Packages.props");
+        major.Should().BeLessThan(exclusiveMajorCeiling, because: reason);
     }
 
     private static bool HasPiiProperty(Type type) =>

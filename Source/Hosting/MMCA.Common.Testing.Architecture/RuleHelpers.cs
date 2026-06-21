@@ -16,7 +16,8 @@ internal static class RuleHelpers
         }
         catch (ReflectionTypeLoadException ex)
         {
-            return ex.Types.Where(t => t is not null).Select(t => t!);
+            // OfType<Type>() both filters nulls and narrows the element type — no null-forgiving needed.
+            return ex.Types.OfType<Type>();
         }
     }
 
