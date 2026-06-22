@@ -20,8 +20,9 @@ dotnet test --solution MMCA.Common.slnx -c Release
 # Test a single project
 dotnet test --project Tests/Presentation/MMCA.Common.API.Tests
 
-# Test a specific test class or method
+# Test a specific test class or method (Microsoft Testing Platform filters, after `--`)
 dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"
+dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -class  "*IdempotencyFilterTests*"
 
 # Architecture tests only (NetArchTest layer/purity rules — fast, no DB)
 dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests
@@ -230,12 +231,12 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 
 ## Repository Governance Docs & Commit Convention
 
-These docs live **in this repo** (committable, unlike the workspace-level `ArchitecturalAnalysis.md`, `ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
+These docs live **in this repo** (committable, unlike the workspace-level `Docs/Architecture/ArchitecturalAnalysis.md`, `Docs/Architecture/ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
 
-- `ADRs/` — the accepted architecture decision records (001–012) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `ADRs/` is now a convenience mirror — add new ADRs here.
+- `ADRs/` — the accepted architecture decision records (001–012) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `Docs/ADRs/` is now a convenience mirror — add new ADRs here.
 - `ArchitectureScorecard.md` — the filled 34-category architecture evaluation (health index, per-category score + evidence). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
 - `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
 - `VERSIONING.md` — SemVer + breaking-change policy; the thirteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
 - `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
 
-**Commit-message convention:** much of the recent history is remediation work tagged `R<n> §<m>: <summary>` (e.g. `R16 §30: ...`). `R<n>` is the remediation item in the workspace `ArchitectureRemediation.md`; `§<m>` is the scorecard category above. When continuing remediation work, match this format and update `RemediationBacklog.md`.
+**Commit-message convention:** much of the recent history is remediation work tagged `R<n> §<m>: <summary>` (e.g. `R16 §30: ...`). `R<n>` is the remediation item in the workspace `Docs/Architecture/ArchitectureRemediation.md`; `§<m>` is the scorecard category above. When continuing remediation work, match this format and update `RemediationBacklog.md`.

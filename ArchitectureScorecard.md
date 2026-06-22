@@ -1,6 +1,6 @@
 # MMCA.Common — Architecture Evaluation Scorecard
 
-**Weighted architecture-health index: 80%** (218 of 272 weighted points across 28 applicable categories; 6 N/A categories excluded). Scored against the 34-category rubric at `C:/Projects/MMCA/ArchitectureEvaluationCriteria.md`.
+**Weighted architecture-health index: 80%** (218 of 272 weighted points across 28 applicable categories; 6 N/A categories excluded). Scored against the 34-category rubric at `C:/Projects/MMCA/Docs/Architecture/ArchitectureEvaluationCriteria.md`.
 
 ## Executive summary
 
@@ -43,7 +43,7 @@ MMCA.Common is a mature, deliberately-engineered shared framework (eleven NuGet 
 | 31 | Cost Efficiency / FinOps | C | 2 | 3 | 6 | Idle outbox poll spans suppressed from export (test-enforced), configurable poll interval, idle-vCPU-aware HTTP keepalive. No sampler exposed; per-message Info logging uncapped; classic FinOps levers N/A (provisions nothing). |
 | 32 | Dependency & Supply-Chain Management | C | 3 | 3 | 9 | CPM pins all versions, MinVer SemVer, NuGet audit + TWAE effectively gates vulns (OTel pin proves it acted). **Confirmed:** MassTransit pin guarded only by comment; no lock files/SBOM; no breaking-change policy. |
 | 33 | Developer Experience & Inner Loop | C | 2 | 3 | 6 | One-command build/test/pack, fast no-DB suite, gitignored cross-repo local.props override, identical local/CI enforcement. **Confirmed:** hand-maintained 11-package swap list can silently drift; manual GITHUB_TOKEN onboarding. |
-| 34 | Architecture Governance & Documentation | C | 2 | 3 | 6 | Fitness functions + compile-time guard + thorough current CLAUDE.md + structured ADRs. **Confirmed:** ArchitecturalAnalysis.md contradicts code on DB-per-service; two biggest recent decisions lack ADRs; no staleness automation. |
+| 34 | Architecture Governance & Documentation | C | 2 | 3 | 6 | Fitness functions + compile-time guard + thorough current CLAUDE.md + structured ADRs. **Confirmed:** Docs/Architecture/ArchitecturalAnalysis.md contradicts code on DB-per-service; two biggest recent decisions lack ADRs; no staleness automation. |
 
 **Weighted architecture-health index = 218 / 272 = 80%** (28 applicable categories; categories 21, 22, 24, 25, 26, 27 are N/A and excluded).
 
@@ -118,7 +118,7 @@ These ten categories each carry priority **2**. Grouped by theme:
 - **#20 Design System & UI Consistency** — *Confirmed (low):* Bootstrap chrome (NavMenu top bar/hamburger) coexists with MudBlazor in the shared package. **Fix:** migrate the remaining Bootstrap chrome to MudBlazor and drop the bundled Bootstrap CSS; source the brand hex from one token.
 - **#23 Front-End Performance** — *Confirmed (low):* `MobileInfiniteScrollList` appends every page into one `MudStack` with no virtualization/cap (mobile-only, PageSize 10). **Fix:** add `Virtualize` windowing or a rendered-item cap.
 - **#33 Developer Experience & Inner Loop** — *Confirmed (low):* the 11-package local-dev swap list is hand-maintained three times in each consumer's `Directory.Build.targets` and can silently drift. **Fix:** generate the list from a glob, or add a smoke test that the `UseLocalMMCA` swap resolves all packages.
-- **#34 Architecture Governance & Documentation** — *Confirmed (low ×2):* `ArchitecturalAnalysis.md` contradicts the code on DB-per-service ("deliberately not database-per-service," race "only mitigated"), and the two biggest recent decisions (DB-per-service, gRPC extraction) lack ADRs. **Fix:** refresh the analysis doc, write the two missing ADRs, and add an ADR index/template.
+- **#34 Architecture Governance & Documentation** — *Confirmed (low ×2):* `Docs/Architecture/ArchitecturalAnalysis.md` contradicts the code on DB-per-service ("deliberately not database-per-service," race "only mitigated"), and the two biggest recent decisions (DB-per-service, gRPC extraction) lack ADRs. **Fix:** refresh the analysis doc, write the two missing ADRs, and add an ADR index/template.
 - **#5 Vertical Slice Architecture** & **#12 Performance & Scalability** & **#31 Cost Efficiency** — no confirmed red flags; gaps are the absence of fitness functions for slice cohesion, the absence of in-repo load/benchmark tests + a max-page-size guard, and the absence of a configurable sampler / log-volume cap respectively. **Fix:** add a slice-cohesion NetArchTest; add a `BenchmarkDotNet` smoke project and a framework-level page-size cap; expose an OTel sampler knob.
 
 ## Cross-cutting themes

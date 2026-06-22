@@ -24,4 +24,4 @@ Copy the structure of an existing record: **Status** (Proposed / Accepted / Supe
 link when superseding), **Context** (the forces and the problem), **Decision** (what we chose, in
 enough detail to implement), **Rationale** (why this over the alternatives), **Trade-offs** (what it
 costs). Number sequentially (`NNN-kebab-title.md`) and add a row above. Keep ADRs short and
-decision-focused; deep mechanics belong in `ArchitecturalAnalysis.md` or the per-project CLAUDE.md.
+decision-focused; deep mechanics belong in `Docs/Architecture/ArchitecturalAnalysis.md` or the per-project CLAUDE.md.

@@ -30,7 +30,7 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 - ✅ **#11 — security.** CI **vuln-audit gate** (`dotnet list package --vulnerable` + `NuGetAudit=all`) and **SECURITY.md** (security model, OWASP note, consumer responsibilities). *Item 13 (NetArchTest security invariants) deferred to consumer suites — infeasible as NetArchTest, and the framework's CORS / anonymous-endpoints are already correct.*
 - ✅ **#13 — observability.** `AddMeter("MMCA.Common.Outbox")` (dead-letter counter now exported) + **CQRS RED histograms** (`cqrs.command/query.duration`, tagged by name + outcome) via `CqrsMetrics`, registered in Aspire `WithMetrics`.
 - ✅ **#17 — DevOps.** `.github/dependabot.yml` (nuget + actions, MassTransit-major ignored); symbols switched to **embedded** (orphan `snupkg` removed — verified via `dotnet pack`).
-- ✅ **#34 — governance.** Refreshed the stale DB-per-service passages in `ArchitecturalAnalysis.md`; added **ADR-006** (database-per-service) + **ADR-007** (gRPC extraction) + **ADRs/README.md** index.
+- ✅ **#34 — governance.** Refreshed the stale DB-per-service passages in `Docs/Architecture/ArchitecturalAnalysis.md`; added **ADR-006** (database-per-service) + **ADR-007** (gRPC extraction) + **ADRs/README.md** index.
 - ✅ **#9 — contracts (partial).** Corrected the `ServiceContractAttribute` doc (no longer claims a framework test that doesn't exist; enforcement is the consumer's). *OpenAPI generation deferred.*
 
 ## Progress — third wave (front-end, 2026-06-09)
@@ -170,7 +170,7 @@ Soft-delete is the only deletion model — no lawful erasure path.
 - [ ] **Generate the list from a glob**, or add a smoke test that the `UseLocalMMCA` swap resolves all packages.
 
 ### [ ] #34 · Architecture Governance & Documentation
-- **(low ×2)** `ArchitecturalAnalysis.md` contradicts the code on DB-per-service ("deliberately not database-per-service," race "only mitigated"); the two biggest recent decisions (DB-per-service, gRPC extraction) lack ADRs.
+- **(low ×2)** `Docs/Architecture/ArchitecturalAnalysis.md` contradicts the code on DB-per-service ("deliberately not database-per-service," race "only mitigated"); the two biggest recent decisions (DB-per-service, gRPC extraction) lack ADRs.
 - [ ] Refresh the analysis doc; write the **two missing ADRs**; add an ADR index/template.
 
 ### [ ] #5 · Vertical Slice Architecture *(no confirmed red flags)*
