@@ -126,16 +126,19 @@ services.AddApplication()                                    // Core services, e
 
 ### CQRS Decorator Pipeline
 
-`ICommandHandler<TCmd, TResult>` and `IQueryHandler<TQuery, TResult>` with decorator pipeline. Decorators wrap handlers in this execution order:
+`ICommandHandler<TCmd, TResult>` and `IQueryHandler<TQuery, TResult>` with decorator pipeline. Decorators are registered in `AddApplicationDecorators()` and applied by Scrutor `TryDecorate` in reverse registration order (last registered = outermost), giving this execution order (outermost → innermost):
 
 ```
-Logging → Caching → Transactional → Concrete Handler
+Commands: FeatureGate → Logging → Caching → Validating → Transactional → Concrete Handler
+Queries:  FeatureGate → Logging → Caching → Concrete Handler
 ```
 
 Key behaviors:
-- **Transactional**: Commands implementing `ITransactional` get a DB transaction. Exceptions trigger rollback.
-- **Caching**: Commands implementing `ICacheInvalidating` invalidate cache on success (outside transaction boundary). Queries use `IQueryCacheKeyProvider`.
+- **FeatureGate**: outermost; short-circuits the call when the feature flag for that command/query is disabled.
 - **Logging**: Logs full pipeline duration via `ICorrelationContext`.
+- **Caching**: Commands implementing `ICacheInvalidating` invalidate cache on success (outside transaction boundary). Queries implementing `IQueryCacheable` (exposing `CacheKey` + `CacheDuration`) cache their results.
+- **Validating**: Commands are validated (FluentValidation) before the transaction opens; queries have no validating or transactional decorator.
+- **Transactional**: Commands implementing `ITransactional` get a DB transaction. Exceptions trigger rollback.
 - Business failures (`Result.Failure`) commit the transaction but skip cache invalidation.
 
 ### Module System
@@ -233,7 +236,7 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 
 These docs live **in this repo** (committable, unlike the workspace-level `Docs/Architecture/ArchitecturalAnalysis.md`, `Docs/Architecture/ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
 
-- `ADRs/` — the accepted architecture decision records (001–012) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `Docs/ADRs/` is now a convenience mirror — add new ADRs here.
+- `ADRs/` — the accepted architecture decision records (001–016) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `Docs/ADRs/` is now a convenience mirror — add new ADRs here.
 - `ArchitectureScorecard.md` — the filled 34-category architecture evaluation (health index, per-category score + evidence). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
 - `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
 - `VERSIONING.md` — SemVer + breaking-change policy; the thirteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).

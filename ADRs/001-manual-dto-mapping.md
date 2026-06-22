@@ -9,7 +9,7 @@ Domain entities must be mapped to DTOs for API responses. The two common approac
 2. Convention-based reflection mapping (AutoMapper, Mapster)
 
 ## Decision
-Use explicit, hand-written DTO mappers registered via Scrutor assembly scanning. A shared `EntityDTOMapperBase<TEntity, TDTO, TId>` abstract class in MMCA.Common provides the invariant `MapToDTOs` batch method; concrete mappers override `MapToDTO` only.
+Use explicit, hand-written DTO mappers registered via Scrutor assembly scanning. The `IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType>` interface in MMCA.Common supplies the invariant `MapToDTOs` batch method as a **default interface method** (it just projects each item through `MapToDTO`); concrete mappers implement `MapToDTO` only. A parallel `IEntityRequestMapper<TEntity, TCreateRequest, TIdentifierType>` maps incoming create requests to entities via the entity factory, returning `Result<T>`.
 
 ## Rationale
 - **Compile-time safety**: Mapping errors surface at build time, not runtime. Property renames break the build rather than silently mapping `null`.
@@ -19,5 +19,5 @@ Use explicit, hand-written DTO mappers registered via Scrutor assembly scanning.
 - **Performance**: No reflection or expression compilation at mapping time.
 
 ## Trade-offs
-- More files (27 mappers across Store + ADC). Mitigated by `EntityDTOMapperBase` which eliminates the `MapToDTOs` boilerplate.
+- More files (27 mappers across Store + ADC). Mitigated by the interface's default `MapToDTOs` implementation, which eliminates the batch-mapping boilerplate.
 - Adding a new entity requires creating a mapper class. This is consistent with the project's explicit-over-implicit philosophy.

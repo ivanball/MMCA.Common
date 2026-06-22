@@ -414,6 +414,7 @@ Notes.txt
 
 # NuGet pack output
 nupkgs/
+local-feed/
 
 # PEM keys (JWT signing keys, etc.) — never commit
 *.pem

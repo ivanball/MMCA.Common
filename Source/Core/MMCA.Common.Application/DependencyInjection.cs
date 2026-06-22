@@ -65,7 +65,7 @@ public static class DependencyInjection
         /// <code>
         ///   FeatureGateQueryDecorator         ← outermost: short-circuits if feature flag disabled
         ///     → LoggingQueryDecorator          ← logs start/end, captures full pipeline duration
-        ///       → CachingQueryDecorator        ← innermost: caches results (if IQueryCacheKeyProvider)
+        ///       → CachingQueryDecorator        ← innermost: caches results (if IQueryCacheable)
         ///         → ConcreteHandler            ← the actual query logic
         /// </code>
         /// </para>

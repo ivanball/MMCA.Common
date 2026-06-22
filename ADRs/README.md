@@ -16,7 +16,11 @@ pattern they describe — they capture context and trade-offs that aren't obviou
 | [009](009-resilience-and-recovery-objectives.md) | Resilience & recovery objectives | Standard resilience handler on every outbound client (fitness-enforced); consumers must declare RTO/RPO + drilled restore + single-region acceptance. |
 | [010](010-integration-event-schema-versioning.md) | Integration-event schema versioning | Every integration event carries a `SchemaVersion` (default 1, fitness-enforced); breaking changes use a new event type + upcaster, never a silent reshape. |
 | [011](011-single-locale-i18n.md) | Single-locale by design (no i18n) | en-US only is a deliberate, revisitable non-goal (rubric §27); multi-locale would be greenfield work. |
-| [012](012-grpc-host-transport.md) | gRPC-host transport convention | `Http2`-only h2c + gateway-routed JWKS (ADC, bidirectional gRPC) vs. `Http1AndHttp2` + ALPN + `ForwardHttp2=false` + direct JWKS (Store, consumer-only). Kestrel choice forces the gateway-forward mode + JWKS routing. |
+| [012](012-grpc-host-transport.md) | gRPC-host transport convention | Two coherent profiles; the Kestrel choice forces the gateway-forward mode + JWKS routing. **Both consumers now use Profile A** (`Http2`-only h2c + gateway-routed JWKS) after Store converged on 2026-06-22; Profile B (`Http1AndHttp2` + ALPN) is retained only as the SignalR/WebSocket exception (ADC's Notification service). |
+| [013](013-result-pattern.md) | Result pattern over exceptions | Expected failures are `Result`/`Result<T>` values with a transport-agnostic `ErrorType`; only the edge maps to HTTP/gRPC. Exceptions stay for the genuinely exceptional. |
+| [014](014-cqrs-decorator-pipeline.md) | CQRS decorator pipeline | Thin `ICommandHandler`/`IQueryHandler` use cases behind a Scrutor decorator chain (FeatureGate → Logging → Caching → Validating → Transactional → Handler); the order is load-bearing. |
+| [015](015-architecture-fitness-functions.md) | Architecture fitness functions | Invariants gate the build twice: a compile-time layer guard (MSBuild) + a shared NetArchTest rule library parameterized by `IArchitectureMap`, run identically across all three repos. |
+| [016](016-lockstep-versioning-masstransit-pin.md) | Lockstep versioning + MassTransit-v8 pin | All thirteen packages release at one version; consumers swept in one pass (no phased rollout). MassTransit is pinned to v8 (v9 needs a license) and the pin is a fitness-function build gate. |
 
 ## Writing a new ADR
 

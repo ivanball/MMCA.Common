@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-The application supports multiple database backends (SQL Server, Cosmos DB, SQLite). EF Core's `.Include()` works for SQL Server but fails for Cosmos DB cross-container relationships and certain SQLite configurations. Navigation properties that can't be loaded via Include are tagged with `[Navigation(Unsupported = true)]`.
+The application supports multiple database backends (SQL Server, Cosmos DB, SQLite). EF Core's `.Include()` works for SQL Server but fails for Cosmos DB cross-container relationships and certain SQLite configurations. Navigation properties are tagged with `[Navigation]` (the attribute's `IsCollection` flag distinguishes a child collection from an FK reference). Whether a given navigation can actually be loaded via `Include` is *not* a static attribute value: it is classified at runtime by `NavigationMetadataProvider`, which asks `IDataSourceService.HaveIncludeSupport(declaringType, targetType)`. Include is used when both ends share one relational source; a navigation whose ends live in different containers or databases (cross-container Cosmos, cross-database under database-per-service) is classified **unsupported** and routed to manual population instead.
 
 ## Decision
 Each entity that has unsupported navigations gets a `INavigationPopulator<TEntity>` implementation. A `DeclarativeNavigationPopulator<TEntity>` base class (added in MMCA.Common) allows populators to be defined as a list of `INavigationDescriptor<TEntity>` declarations rather than imperative if-check boilerplate.
