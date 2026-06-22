@@ -1,4 +1,4 @@
-# MMCA — Modular Monolith Clean Architecture
+# MMCA: Modular Monolith Clean Architecture
 
 A .NET 10.0 framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns.
 
@@ -17,6 +17,8 @@ A .NET 10.0 framework for building modular monolith applications using DDD, Clea
 | `MMCA.Common.Aspire.Hosting` | Aspire AppHost extensions: RabbitMQ broker, JWKS service discovery, gRPC project wiring |
 | `MMCA.Common.Testing` | Integration test base, JWT generator, fixtures |
 | `MMCA.Common.Testing.E2E` | Playwright E2E infrastructure: browser fixtures, Blazor nav helpers, Identity page objects |
+| `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers |
+| `MMCA.Common.Testing.Architecture` | `IArchitectureMap` + reusable NetArchTest rule library + abstract test bases (consumed by each repo's `*.Architecture.Tests`) |
 
 ## Requirements
 
@@ -29,6 +31,12 @@ dotnet add package MMCA.Common.API
 ```
 
 Each package transitively includes its dependencies (`API → Infrastructure → Application → Domain → Shared`).
+
+## Architecture & docs
+
+- **[Architecture scorecard](ArchitectureScorecard.md)**: the framework graded against a 34-category review rubric, with every category score, the weighted health index, top strengths, and the honest gaps.
+- **[Architecture Decision Records](ADRs/README.md)**: the accepted ADRs (001-012) explaining *why* the core cross-cutting patterns exist (outbox dual-dispatch, database-per-service, auth dual-fetch, soft-delete vs. erasure, gRPC extraction, and more).
+- **[Contributor guide](CLAUDE.md)**: package layout, layer dependency rules, and how to extend the framework.
 
 ## License
 
