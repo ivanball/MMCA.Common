@@ -3,6 +3,29 @@
 ## Status
 Accepted.
 
+## Update (2026-06-22): Store converged to Profile A
+Store originally chose Profile B, but its cross-service gRPC failed in Azure Container Apps. With
+`Http1AndHttp2` Kestrel + `transport: 'auto'` ingress on a **cleartext** endpoint there is no ALPN, so
+envoy delivered HTTP/1.1 to Catalog and Identity (which **do** serve inbound gRPC: Sales → Catalog,
+Sales → Identity) and Kestrel rejected it with `HTTP_1_1_REQUIRED` (Sales `AddItemCommand` 500'd calling
+`IProductVariantService.ExistsAsync`). The lesson: a "consumer-only / one-directional" edge topology
+still has inbound **cleartext gRPC servers**, and ACA cleartext ingress cannot deliver HTTP/2 to them
+under Profile B.
+
+Fixed in commit 49b7283 (deployed green) by adopting **Profile A** for Store:
+- Catalog + Identity run `Http2`-only on cleartext (`Kestrel:EndpointDefaults:Protocols=Http2`), ACA
+  ingress `transport: 'http2'`, with **TCP** startup/liveness probes (Http2-only Kestrel rejects the
+  kubelet's HTTP/1.1 `httpGet` probes with GOAWAY).
+- Gateway forwards HTTP/2 (`ForwardHttp2=true`, `VersionPolicy=RequestVersionExact`); Catalog/Identity
+  routes carry HTTP/2, Sales routes stay HTTP/1.1.
+- Sales (no gRPC server) stays `Http1AndHttp2` with `transport: 'http'`.
+- JWKS authority stays `http://identity` (unchanged): the http2 ingress carries the HTTP/1.1 JwtBearer
+  JWKS metadata fetch to the container.
+
+**Both consumers now use Profile A.** Profile B is retained below as (a) the original rationale for the
+split and (b) the still-valid SignalR/WebSocket exception: ADC's Notification service runs
+`Http1AndHttp2` because its WebSocket Upgrade handshake needs HTTP/1.1, and it serves no inbound gRPC.
+
 ## Context
 Once modules were extracted into separate service hosts (ADR-008) that call each other synchronously
 over gRPC (ADR-007), each service's Kestrel had to serve **both** REST traffic (HTTP/1.1 from the

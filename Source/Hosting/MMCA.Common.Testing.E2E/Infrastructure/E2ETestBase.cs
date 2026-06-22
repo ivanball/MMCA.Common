@@ -1,5 +1,6 @@
 using Microsoft.Playwright;
 using Xunit;
+using static Microsoft.Playwright.Assertions;
 
 namespace MMCA.Common.Testing.E2E.Infrastructure;
 
@@ -155,4 +156,24 @@ public abstract class E2ETestBase : IAsyncLifetime
         field.FillAndVerifyAsync(value);
 
     protected static string UniqueId() => Guid.NewGuid().ToString("N")[..8];
+
+    // Scan a MudDataGrid list page. The grid renders its container before its async ServerData load
+    // fires, so we must wait for a post-load signal (a data row) before scanning. Waiting for the
+    // loading bar to "hide" is racy: with no bar present yet that wait resolves instantly, then the
+    // transient unnamed role="progressbar" loading bar appears and trips aria-progressbar-name. Every
+    // scanned list page is seeded with at least one row, so a visible row reliably means the load settled.
+    protected async Task ScanGridAsync()
+    {
+        await Expect(Page.Locator(".mud-table-body .mud-table-row").First)
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await ScanAsync();
+    }
+
+    // Scan the current (settled) page for WCAG 2.1 AA violations. Guards against any residual loading
+    // bar so axe sees the stable DOM, not a transient loading state.
+    protected async Task ScanAsync()
+    {
+        await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 });
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
+    }
 }

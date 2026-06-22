@@ -52,6 +52,7 @@ public sealed class ExceptionHandlerTests
 
         capturedContext.Should().NotBeNull();
         capturedContext!.ProblemDetails.Title.Should().Be("Internal Server Error");
+        capturedContext.ProblemDetails.Detail.Should().Be("An error occurred while processing your request. Please try again");
     }
 
     // ── DomainExceptionHandler ──
@@ -138,7 +139,8 @@ public sealed class ExceptionHandlerTests
         await sut.TryHandleAsync(httpContext, new ValidationException(failures), CancellationToken.None);
 
         capturedContext.Should().NotBeNull();
-        capturedContext!.ProblemDetails.Extensions.Should().ContainKey("errors");
+        capturedContext!.ProblemDetails.Title.Should().Be("Validation Exception");
+        capturedContext.ProblemDetails.Extensions.Should().ContainKey("errors");
     }
 
     [Fact]
@@ -224,6 +226,88 @@ public sealed class ExceptionHandlerTests
         bool handled = await sut.TryHandleAsync(httpContext, new InvalidOperationException("not canceled"), CancellationToken.None);
 
         handled.Should().BeFalse();
+    }
+
+    // ── ProblemDetails Title/Detail assertions ported from the per-consumer WebAPI.Tests so that
+    //    MMCA.Common owns the full exception-handler coverage (the duplicated ADC/Store copies were
+    //    removed; Common is now the single source of these assertions). ──
+    [Fact]
+    public async Task GlobalExceptionHandler_WhenProblemDetailsServiceReturnsFalse_ReturnsFalse()
+    {
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .ReturnsAsync(false);
+        var sut = new GlobalExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<GlobalExceptionHandler>.Instance);
+
+        bool handled = await sut.TryHandleAsync(
+            new DefaultHttpContext(), new InvalidOperationException(), CancellationToken.None);
+
+        handled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DomainExceptionHandler_SetsProblemDetailsTitleAndDetail()
+    {
+        ProblemDetailsContext? capturedContext = null;
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
+            .ReturnsAsync(true);
+        var sut = new DomainExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<DomainExceptionHandler>.Instance);
+
+        await sut.TryHandleAsync(
+            new DefaultHttpContext(),
+            new DomainInvariantViolationException("Business rule violated"),
+            CancellationToken.None);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext!.ProblemDetails.Title.Should().Be("Domain Exception");
+        capturedContext.ProblemDetails.Detail.Should().Be("Business rule violated");
+    }
+
+    [Fact]
+    public async Task DbUpdateExceptionHandler_SetsConflictDetail()
+    {
+        ProblemDetailsContext? capturedContext = null;
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
+            .ReturnsAsync(true);
+        var sut = new DbUpdateExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<DbUpdateExceptionHandler>.Instance);
+
+        await sut.TryHandleAsync(
+            new DefaultHttpContext(),
+            new DbUpdateException("Conflict", new InvalidOperationException("inner")),
+            CancellationToken.None);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext!.ProblemDetails.Detail.Should().Be("A data conflict occurred. Please retry or contact support.");
+    }
+
+    [Fact]
+    public async Task OperationCanceledExceptionHandler_SetsProblemDetailsTitleAndDetail()
+    {
+        ProblemDetailsContext? capturedContext = null;
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
+            .ReturnsAsync(true);
+        var sut = new OperationCanceledExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<OperationCanceledExceptionHandler>.Instance);
+
+        await sut.TryHandleAsync(
+            new DefaultHttpContext(), new OperationCanceledException(), CancellationToken.None);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext!.ProblemDetails.Title.Should().Be("Operation Canceled Exception");
+        capturedContext.ProblemDetails.Detail.Should().Be("The operation was canceled by the client");
     }
 }
 
