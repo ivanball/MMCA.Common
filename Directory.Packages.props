@@ -90,8 +90,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.4.2" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.2" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.6" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.2" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
