@@ -32,6 +32,10 @@ dotnet add package MMCA.Common.API
 
 Each package transitively includes its dependencies (`API → Infrastructure → Application → Domain → Shared`).
 
+## Building a new app on MMCA.Common
+
+New to the framework? **[GETTING-STARTED.md](GETTING-STARTED.md)** is the step-by-step guide for standing up a brand-new application: solution plumbing, a module vertical slice (domain → handler → endpoint → migration), the Aspire host, the architecture-fitness map, and a fully worked extraction of a module into its own microservice. It builds monolith-first, then shows the "extract later, without a rewrite" path.
+
 ## Architecture & docs
 
 - **[Architecture scorecard](ArchitectureScorecard.md)**: the framework graded against a 34-category review rubric, with every category score, the weighted health index, top strengths, and the honest gaps.
