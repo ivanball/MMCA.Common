@@ -23,6 +23,16 @@ updates:
       # fitness test. Don't let Dependabot propose the major bump. See Directory.Packages.props.
       - dependency-name: "MassTransit*"
         update-types: ["version-update:semver-major"]
+      # VS.Threading.Analyzers v18 adds stricter rules (e.g. VSTHRD103) that error under
+      # TreatWarningsAsErrors; held at v17 until the flagged call sites are reworked.
+      - dependency-name: "Microsoft.VisualStudio.Threading.Analyzers"
+        update-types: ["version-update:semver-major"]
+      # Breaking majors held back deliberately. MessagePack is also pinned to a patched 2.x to
+      # override a vulnerable transitive (see Directory.Packages.props).
+      - dependency-name: "StackExchange.Redis"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "MessagePack"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
