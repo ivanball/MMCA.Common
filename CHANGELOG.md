@@ -6,6 +6,48 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.79.0] - 2026-06-24
+
+Polyglot-persistence ergonomics: moving an entity between data-source engines becomes a minimal,
+build-guarded change (ADR-006).
+
+### Added
+- **Unified entity configuration base.** `EntityTypeConfiguration<TEntity, TIdentifierType>`
+  (`MMCA.Common.Infrastructure`) declares an entity's target engine via a `[UseDataSource]` attribute
+  and applies the matching table/container/key conventions. `EntityTypeConfigurationSQLServer`,
+  `…Sqlite`, and `…Cosmos` are now thin attribute-carrying shims over it, so changing an entity's engine
+  is a one-token base-class (or attribute) change with no configuration-body edits.
+- **Cosmos / SQLite AppHost wiring.** `WithCosmosDataSource(...)` and `WithSqliteDataSource(...)`
+  Aspire.Hosting extensions (alongside the SQL Server helper) for routing a module to a polyglot data
+  source.
+- **Cross-source specification helper.** `CrossSourceSpecification.BuildAsync(...)` plus
+  `InlineSpecification` build a translatable `localPredicate AND foreignKey IN (resolved keys)` filter
+  for a dependent entity whose principal lives in a different physical data source — where a navigation
+  join is not translatable (e.g. a Cosmos dependent and a SQL Server principal).
+- **Specification fitness rule (opt-in).** `ArchitectureRules.SpecificationsDoNotNavigateToOtherEntities`
+  + `SpecificationConventionTestsBase` (`MMCA.Common.Testing.Architecture`) fail the build when a
+  specification's `Criteria` navigates to another entity — a latent cross-source hazard in a
+  database-per-service / polyglot setup. Polyglot-capable repos opt in; single-engine repos need not.
+
+### Changed
+- **(Breaking)** Renamed the Aspire.Hosting extension `WithDataSource` → **`WithSQLServerDataSource`**
+  for `With*DataSource` naming consistency with the new Cosmos/SQLite helpers. Consumers update their
+  AppHost calls to `service.WithSQLServerDataSource(db, "Module")`.
+
+### Fixed
+- **Cosmos config-body portability.** `CrossDataSourceDegradeConvention` no longer adds a compensating
+  index when degrading a cross-source foreign key in a **Cosmos** context — the Cosmos provider rejects
+  index definitions, so the re-added index previously failed model validation. A configuration body that
+  keeps a cross-source relationship (or a filtered index) is now portable to Cosmos unchanged.
+- **SQLite schema under the `"Migrate"` strategy.** `DatabaseInitializationExtensions` now
+  `EnsureCreated`s SQLite sources (which have no EF migrations) up front, independent of the
+  SQL-Server-oriented strategy; previously a SQLite source in use was never created under `"Migrate"`
+  (or `"None"`) and the first repository call failed.
+- **Cosmos container naming.** `EntityTypeConfigurationCosmos` derives the container from the module
+  namespace segment preceding `Domain` (the same rule as the SQL schema / logical database name); it
+  previously looked for a `Modules` segment that the actual namespaces do not contain, falling back to a
+  per-type container.
+
 ## [1.71.0] - 2026-06-19
 
 ### Added
