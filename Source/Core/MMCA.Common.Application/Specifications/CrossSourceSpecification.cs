@@ -83,7 +83,7 @@ public static class CrossSourceSpecification
             // Rebind the local predicate onto the FK selector's parameter, then AND (no Expression.Invoke,
             // so the combined predicate stays translatable on every provider).
             var reboundLocal = new ParameterReplacer(localPredicate.Parameters[0], parameter)
-                .Visit(localPredicate.Body)!;
+                .Visit(localPredicate.Body);
             body = Expression.AndAlso(reboundLocal, body);
         }
 

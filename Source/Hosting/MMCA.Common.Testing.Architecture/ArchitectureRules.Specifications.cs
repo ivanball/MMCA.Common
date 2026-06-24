@@ -96,7 +96,7 @@ public static partial class ArchitectureRules
     /// </summary>
     private sealed class CrossEntityNavigationFinder(Type ownEntityType) : ExpressionVisitor
     {
-        private readonly HashSet<string> _navigated = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _navigated = [];
 
         public HashSet<string> Find(Expression body)
         {
