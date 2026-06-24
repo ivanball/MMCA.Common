@@ -1,5 +1,6 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Azure;
 
 namespace MMCA.Common.Aspire.Hosting;
 
@@ -111,7 +112,7 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Wires a service project to its own database ("database per microservice", ADR-006).
+    /// Wires a service project to its own SQL Server database ("database per microservice", ADR-006).
     /// References the given database and injects its connection string twice:
     /// <list type="bullet">
     ///   <item><c>DataSources__{logicalName}__SQLServerConnectionString</c> — feeds the
@@ -128,7 +129,7 @@ public static class Extensions
     /// <param name="database">The service's own database resource.</param>
     /// <param name="logicalName">The module's logical data source name (e.g. <c>"Catalog"</c>).</param>
     /// <returns>The service resource builder for chaining.</returns>
-    public static IResourceBuilder<ProjectResource> WithDataSource(
+    public static IResourceBuilder<ProjectResource> WithSQLServerDataSource(
         this IResourceBuilder<ProjectResource> service,
         IResourceBuilder<SqlServerDatabaseResource> database,
         string logicalName)
@@ -141,5 +142,71 @@ public static class Extensions
             .WaitFor(database)
             .WithEnvironment($"DataSources__{logicalName}__SQLServerConnectionString", database.Resource.ConnectionStringExpression)
             .WithEnvironment("ConnectionStrings__SQLServerConnectionString", database.Resource.ConnectionStringExpression);
+    }
+
+    /// <summary>
+    /// Wires a service project to an Azure Cosmos DB database for a given logical data source
+    /// (polyglot persistence — entities whose configuration inherits <c>EntityTypeConfigurationCosmos</c>
+    /// and resolve to <paramref name="logicalName"/> are stored here). Injects:
+    /// <list type="bullet">
+    ///   <item><c>DataSources__{logicalName}__CosmosConnectionString</c> — the account connection
+    ///   string the multi-database resolver hands to <c>CosmosDbContext.UseCosmos(...)</c>.</item>
+    ///   <item><c>DataSources__{logicalName}__CosmosDatabaseName</c> — the Cosmos database name
+    ///   (<c>UseCosmos</c> takes the database separately from the connection string).</item>
+    ///   <item><c>ConnectionStrings__CosmosConnectionString</c> — the framework's <c>[Required]</c>
+    ///   validation / <c>Default</c> Cosmos source fallback.</item>
+    /// </list>
+    /// Unlike SQL Server, a service typically uses Cosmos for ONE module alongside its SQL Server
+    /// source, so this is layered on top of (not instead of) <see cref="WithSQLServerDataSource"/>.
+    /// </summary>
+    /// <param name="service">The service project resource.</param>
+    /// <param name="database">The Cosmos database resource (from <c>AddAzureCosmosDB(...).AddCosmosDatabase(...)</c>).</param>
+    /// <param name="logicalName">The module's logical data source name (e.g. <c>"Conference"</c>).</param>
+    /// <returns>The service resource builder for chaining.</returns>
+    public static IResourceBuilder<ProjectResource> WithCosmosDataSource(
+        this IResourceBuilder<ProjectResource> service,
+        IResourceBuilder<AzureCosmosDBDatabaseResource> database,
+        string logicalName)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(database);
+
+        return service
+            .WithReference(database)
+            .WaitFor(database)
+            .WithEnvironment($"DataSources__{logicalName}__CosmosConnectionString", database.Resource.ConnectionStringExpression)
+            .WithEnvironment($"DataSources__{logicalName}__CosmosDatabaseName", database.Resource.DatabaseName)
+            .WithEnvironment("ConnectionStrings__CosmosConnectionString", database.Resource.ConnectionStringExpression);
+    }
+
+    /// <summary>
+    /// Wires a service project to a SQLite database file for a given logical data source (polyglot
+    /// persistence — entities whose configuration inherits <c>EntityTypeConfigurationSqlite</c> and
+    /// resolve to <paramref name="logicalName"/> are stored here). SQLite has no Aspire container
+    /// resource (it is an in-process file), so this only injects connection-string env vars:
+    /// <list type="bullet">
+    ///   <item><c>DataSources__{logicalName}__SqliteConnectionString</c> — <c>Data Source=&lt;path&gt;</c>
+    ///   handed to <c>SqliteDbContext.UseSqlite(...)</c>.</item>
+    ///   <item><c>ConnectionStrings__SqliteConnectionString</c> — the framework's <c>Default</c>
+    ///   SQLite source fallback.</item>
+    /// </list>
+    /// </summary>
+    /// <param name="service">The service project resource.</param>
+    /// <param name="logicalName">The module's logical data source name (e.g. <c>"Conference"</c>).</param>
+    /// <param name="filePath">The absolute path to the SQLite database file.</param>
+    /// <returns>The service resource builder for chaining.</returns>
+    public static IResourceBuilder<ProjectResource> WithSqliteDataSource(
+        this IResourceBuilder<ProjectResource> service,
+        string logicalName,
+        string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        var connectionString = $"Data Source={filePath}";
+
+        return service
+            .WithEnvironment($"DataSources__{logicalName}__SqliteConnectionString", connectionString)
+            .WithEnvironment("ConnectionStrings__SqliteConnectionString", connectionString);
     }
 }

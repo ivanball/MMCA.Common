@@ -63,13 +63,14 @@ public sealed class CrossDataSourceDegradeConvention(
         // 1) Degrade FKs declared on LOCAL dependents that point at foreign principals
         //    (keep declared scalar FK columns + a compensating index). FKs declared on foreign
         //    dependents disappear together with the foreign entity type in step 3.
+        var addCompensatingIndex = contextKey.Engine != DataSource.CosmosDB;
         foreach (var entityType in localEntityTypes)
         {
             foreach (var foreignKey in entityType.GetDeclaredForeignKeys()
                 .Where(fk => foreignClrTypes.Contains(fk.PrincipalEntityType.ClrType))
                 .ToList())
             {
-                DegradeForeignKey(entityType, foreignKey);
+                DegradeForeignKey(entityType, foreignKey, addCompensatingIndex);
             }
         }
 
@@ -97,8 +98,17 @@ public sealed class CrossDataSourceDegradeConvention(
     /// Removes a cross-source FK (and both its navigations), then re-adds a plain index over the
     /// surviving declared scalar FK columns unless an existing index already covers them as a prefix
     /// (the conventional FK index disappears with the relationship).
+    /// <para>
+    /// The compensating index is skipped for Cosmos (<paramref name="addCompensatingIndex"/> is
+    /// <see langword="false"/>): Cosmos auto-indexes every property and the provider rejects explicit
+    /// index definitions, so adding one would fail model validation. This is what makes a
+    /// configuration body carrying a cross-source relationship portable to Cosmos without edits.
+    /// </para>
     /// </summary>
-    private static void DegradeForeignKey(IMutableEntityType dependent, IMutableForeignKey foreignKey)
+    private static void DegradeForeignKey(
+        IMutableEntityType dependent,
+        IMutableForeignKey foreignKey,
+        bool addCompensatingIndex)
     {
         var scalarProperties = foreignKey.Properties
             .Where(p => !p.IsShadowProperty())
@@ -106,7 +116,7 @@ public sealed class CrossDataSourceDegradeConvention(
 
         dependent.RemoveForeignKey(foreignKey);
 
-        if (scalarProperties.Count == 0)
+        if (!addCompensatingIndex || scalarProperties.Count == 0)
         {
             return;
         }

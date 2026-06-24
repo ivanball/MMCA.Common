@@ -1,36 +1,21 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
-using MMCA.Common.Domain.Extensions;
 using MMCA.Common.Infrastructure;
 
 namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 
 /// <summary>
-/// SQLite entity configuration base. Maps entities to tables named after the entity type
-/// and configures identity columns with auto-increment for supported key types.
+/// SQLite entity configuration base — a thin shim that fixes the engine to
+/// <see cref="DataSource.Sqlite"/>. All mapping logic (table name, auto-increment key) lives in the
+/// engine-aware <see cref="EntityTypeConfiguration{TEntity, TIdentifierType}"/>, which reads the
+/// <see cref="UseDataSourceAttribute"/> this shim carries. Deriving from this base is equivalent to
+/// deriving from <see cref="EntityTypeConfiguration{TEntity, TIdentifierType}"/> and annotating the
+/// concrete class with <c>[UseDataSource(DataSource.Sqlite)]</c>.
 /// </summary>
 /// <typeparam name="TEntity">The entity type being configured.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
 [UseDataSource(DataSource.Sqlite)]
 public abstract class EntityTypeConfigurationSqlite<TEntity, TIdentifierType>
-    : EntityTypeConfigurationBase<TEntity, TIdentifierType>,
-      IEntityTypeConfigurationSqlite<TEntity, TIdentifierType>
+    : EntityTypeConfiguration<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
-    where TIdentifierType : notnull
-{
-    /// <inheritdoc />
-    public override void Configure(EntityTypeBuilder<TEntity> builder)
-    {
-        base.Configure(builder);
-
-        builder.ToTable(typeof(TEntity).Name);
-
-        builder.HasKey(p => p.Id);
-        if (typeof(TEntity).IsIdValueGenerated)
-            builder.Property(p => p.Id).ValueGeneratedOnAdd().UseIdentityColumn(1, 1);
-        else
-            builder.Property(p => p.Id).ValueGeneratedNever();
-    }
-}
+    where TIdentifierType : notnull;

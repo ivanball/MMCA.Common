@@ -35,6 +35,24 @@ public abstract class Specification<TEntity, TIdentifierType>
 }
 
 /// <summary>
+/// A specification built from a pre-composed <see cref="Criteria"/> expression. Useful for
+/// dynamically constructed predicates (e.g. the cross-source filter produced by
+/// <c>CrossSourceSpecification</c>) where there is no fixed, hand-written specification class.
+/// </summary>
+/// <typeparam name="TEntity">The entity type this specification applies to.</typeparam>
+/// <typeparam name="TIdentifierType">The entity's identifier type.</typeparam>
+/// <param name="criteria">The criteria expression (must be EF-translatable to be used in a DB query).</param>
+public sealed class InlineSpecification<TEntity, TIdentifierType>(Expression<Func<TEntity, bool>> criteria)
+    : Specification<TEntity, TIdentifierType>
+    where TEntity : IBaseEntity<TIdentifierType>
+    where TIdentifierType : notnull
+{
+    /// <inheritdoc />
+    public override Expression<Func<TEntity, bool>> Criteria { get; } =
+        criteria ?? throw new ArgumentNullException(nameof(criteria));
+}
+
+/// <summary>
 /// Composes two specifications with a logical AND. Uses <c>Expression.Invoke</c>
 /// to embed each specification's expression tree into a new lambda, preserving
 /// EF Core translatability for LINQ-to-DB queries.

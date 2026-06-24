@@ -9,6 +9,9 @@
     <!-- WithDataSource wires a service to its own SqlServerDatabaseResource (database per
          microservice). This pulls in Aspire.Hosting.SqlServer for the resource type. -->
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <!-- WithCosmosDataSource wires a service to an Azure Cosmos DB database resource (polyglot
+         persistence). Pulls in Aspire.Hosting.Azure.CosmosDB for the resource type. -->
+    <PackageReference Include="Aspire.Hosting.Azure.CosmosDB" />
     <!-- Security pin: forces the transitive MessagePack (pulled by Aspire.Hosting) to a patched
          version. See the MessagePack note in Directory.Packages.props. -->
     <PackageReference Include="MessagePack" />

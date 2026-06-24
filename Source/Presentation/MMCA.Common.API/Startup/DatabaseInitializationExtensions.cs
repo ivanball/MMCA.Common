@@ -45,16 +45,21 @@ public static class DatabaseInitializationExtensions
 
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
 
-        // Cosmos sources are optional — integration tests may omit their connection strings.
-        // Cosmos is a document DB with no schema migrations; always use EnsureCreated.
-        foreach (var cosmosKey in sourcesInUse.Where(k => k.Engine == DataSource.CosmosDB))
+        // Cosmos and SQLite sources are optional — integration tests may omit their connection
+        // strings. Neither engine has EF Core schema migrations, so both are always created via
+        // EnsureCreated up front, independent of the SQL-Server-oriented DatabaseInitStrategy
+        // below. This is the ONLY path that creates SQLite sources under the "Migrate" and "None"
+        // strategies (which act on SQL Server alone) — without it a SQLite source in use is never
+        // created and the first repository call fails.
+        foreach (var migrationlessKey in sourcesInUse
+            .Where(k => k.Engine is DataSource.CosmosDB or DataSource.Sqlite))
         {
-            if (string.IsNullOrEmpty(resolver.GetPhysical(cosmosKey).ConnectionString))
+            if (string.IsNullOrEmpty(resolver.GetPhysical(migrationlessKey).ConnectionString))
             {
                 continue;
             }
 
-            await dbContextFactory.GetDbContext(cosmosKey).Database
+            await dbContextFactory.GetDbContext(migrationlessKey).Database
                 .EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
         }
 
