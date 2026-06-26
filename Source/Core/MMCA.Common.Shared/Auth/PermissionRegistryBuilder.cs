@@ -7,8 +7,13 @@ namespace MMCA.Common.Shared.Auth;
 /// </summary>
 public sealed class PermissionRegistryBuilder
 {
+    // IDE0028 suggests a collection expression here, but it cannot carry the OrdinalIgnoreCase
+    // comparer that keeps role keys case-insensitive (matching RoleValue). The concrete Dictionary
+    // type is kept for CA1859 (perf).
+#pragma warning disable IDE0028 // Collection initialization can be simplified
     private readonly Dictionary<string, HashSet<string>> _grants =
         new(StringComparer.OrdinalIgnoreCase);
+#pragma warning restore IDE0028
 
     /// <summary>
     /// Grants one or more permissions to a role. Additive and idempotent — duplicate grants
@@ -22,15 +27,15 @@ public sealed class PermissionRegistryBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(role);
         ArgumentNullException.ThrowIfNull(permissions);
 
-        if (!_grants.TryGetValue(role, out var set))
-        {
-            set = new HashSet<string>(StringComparer.Ordinal);
-            _grants[role] = set;
-        }
+        var granted = permissions.Where(permission => !string.IsNullOrWhiteSpace(permission));
 
-        foreach (var permission in permissions.Where(permission => !string.IsNullOrWhiteSpace(permission)))
+        if (_grants.TryGetValue(role, out var set))
         {
-            set.Add(permission);
+            set.UnionWith(granted);
+        }
+        else
+        {
+            _grants[role] = granted.ToHashSet(StringComparer.Ordinal);
         }
 
         return this;
