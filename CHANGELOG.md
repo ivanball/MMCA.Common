@@ -6,6 +6,29 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.82.0] - 2026-06-26
+
+Governance + supply-chain + E2E-stability hardening. No breaking changes.
+
+### Security
+- **RS256 pinned on the JWKS-forwarded auth path.** `ValidAlgorithms = [RsaSha256]` on the
+  forwarded-JWT (JWKS discovery) validation path in `MMCA.Common.API` — defense-in-depth against an
+  algorithm-confusion swap, matching the existing in-process pin.
+
+### Added
+- **ADRs 020-022** — 020 (permission-based authorization), 021 (consumer inbox idempotency),
+  022 (browser session-cookie auth); the committed ADR set is now 001-022.
+
+### Fixed
+- **Lock drift.** Pinned the transitive `Deque.AxeCore.Commons` to 4.12.0 in
+  `MMCA.Common.Testing.E2E` so a stale-cache restore no longer drifts it to 4.7.2 and dirties the lock.
+
+### Internal
+- **E2E register/login de-flake (R11).** `RegisterNewUserAsync`/`LoginAsync` now give the success
+  signal a grace window (`E2ETestConfiguration.AuthGraceTimeout`, default 15s, `E2E_AUTH_GRACE`) when a
+  transient error alert flashes during the success-path `forceLoad` — only a persistent error is a real
+  failure. Detection-only (cannot break auth), unlike the reverted WASM-forcing.
+
 ## [1.81.0] - 2026-06-26
 
 Post-v1.80.0 polish: an opt-in OpenAPI UI, FinOps documentation, and test-coverage hardening for the
