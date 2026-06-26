@@ -17,6 +17,13 @@ public static class RoleNames
     /// <summary>Attendee role — default for new registrations (ADC).</summary>
     public const string Attendee = "Attendee";
 
+    /// <summary>
+    /// Content editor role — curates the session catalog (sessions, speakers, categories) without
+    /// full organizer rights over event structure, rooms, questions, session selection, or user
+    /// administration (ADC). Holds a strict subset of the Organizer's capabilities.
+    /// </summary>
+    public const string ContentEditor = "ContentEditor";
+
     /// <summary>Administrator role — full access to admin features (Store).</summary>
     public const string Admin = "Admin";
 

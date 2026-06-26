@@ -28,8 +28,9 @@ Use single-responsibility handlers behind a Scrutor-composed decorator pipeline.
   transaction boundary (a rolled-back command does not evict valid cache), logging wraps the whole
   pipeline to time it, and the feature gate short-circuits first.
 - **Decoration is opt-in per concern** via marker interfaces: `ITransactional`, `ICacheInvalidating`
-  (with `CachePrefix`), `IQueryCacheKeyProvider`. A handler that implements none simply skips that
-  decorator's work, so messages pay only for the concerns they declare.
+  (with `CachePrefix`), `IQueryCacheable` (with `CacheKey` + `CacheDuration`). A handler that
+  implements none simply skips that decorator's work, so messages pay only for the concerns they
+  declare.
 - Handlers, validators, and mappers are auto-registered by convention
   (`ScanModuleApplicationServices<TMarker>()`); `AddApplicationDecorators()` MUST be called **last**,
   after every module's concrete handlers exist, so `TryDecorate` can find them. This is the fixed DI

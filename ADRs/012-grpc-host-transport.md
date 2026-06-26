@@ -36,8 +36,10 @@ deliberately pick different ones because their cross-service topologies differ:
 
 - **MMCA.ADC** has a **bidirectional** gRPC pair (Conference ↔ Engagement, plus Notification →
   Identity). A gRPC client over h2c must reach a server that speaks HTTP/2 on cleartext.
-- **MMCA.Store** has only **one-directional, consumer-only** gRPC edges (Sales → Catalog, Sales →
-  Identity); no service both serves gRPC and needs to forward REST as HTTP/2 internally.
+- **MMCA.Store** was *originally assumed* to have only **one-directional, consumer-only** gRPC edges
+  (Sales → Catalog, Sales → Identity). That assumption proved wrong in Azure Container Apps — Catalog
+  and Identity **do** serve inbound cleartext gRPC — which is why Store later converged on Profile A
+  (see the Update above). This section preserves the original split as historical rationale.
 
 The subtlety: a gRPC client using h2c **prior knowledge** sends an HTTP/2 preface with no upgrade
 handshake. If the server's cleartext endpoint is `Http1AndHttp2`, Kestrel — lacking ALPN on
@@ -65,7 +67,7 @@ Use when services must **serve** gRPC on cleartext (any bidirectional / inbound 
 - **Exception:** the Notification service runs `Http1AndHttp2` (Profile B Kestrel) because SignalR's
   WebSocket transport needs the HTTP/1.1 Upgrade handshake; it serves no inbound gRPC.
 
-### Profile B — Store: `Http1AndHttp2` + HTTPS/ALPN + `ForwardHttp2=false` + direct JWKS
+### Profile B — `Http1AndHttp2` + HTTPS/ALPN + `ForwardHttp2=false` + direct JWKS (Store's original choice; now retained only as the SignalR/WebSocket exception)
 Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-directional gRPC).
 
 - **Kestrel:** `ConfigureEndpointDefaults(o => o.Protocols = HttpProtocols.Http1AndHttp2)` (also
@@ -93,9 +95,12 @@ Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-di
   authority are downstream consequences, not independent knobs. Documenting them as a pair prevents
   the half-configured failure modes (`HTTP_1_1_REQUIRED` on gRPC, or a JwtBearer backchannel that
   can't fetch JWKS from an Http2-only endpoint).
-- **Each app picks the minimum that its topology needs.** Store has no inbound cleartext gRPC server,
-  so it keeps the simpler `Http1AndHttp2` + HTTP/1.1 forwarding profile; ADC's bidirectional gRPC
-  forces the `Http2`-only profile and the gateway-routed JWKS that comes with it.
+- **Each app picks the minimum that its topology needs.** ADC's bidirectional gRPC forced the
+  `Http2`-only profile (and the gateway-routed JWKS that comes with it) from the start. Store
+  originally chose Profile B on the assumption its gRPC edges were consumer-only, but Catalog and
+  Identity in fact serve inbound cleartext gRPC (Sales → Catalog, Sales → Identity), so it converged
+  on Profile A (see the Update above). The only remaining Profile B case is a service that serves no
+  inbound cleartext gRPC yet needs the HTTP/1.1 Upgrade handshake — ADC's Notification (SignalR).
 
 ## Trade-offs
 - **Two profiles to keep straight.** A service that gains an inbound gRPC edge must migrate from

@@ -23,6 +23,7 @@ namespace MMCA.Common.Infrastructure.Services;
 public sealed class TokenService : ITokenService, IDisposable
 {
     private readonly IJwtSettings _jwtSettings;
+    private readonly TimeProvider _timeProvider;
     private readonly SigningCredentials _signingCredentials;
     private readonly SecurityKey _validationKey;
     private readonly string _validationAlgorithm;
@@ -38,10 +39,16 @@ public sealed class TokenService : ITokenService, IDisposable
     /// configured key material.
     /// </summary>
     /// <param name="jwtSettings">The bound JWT settings.</param>
-    public TokenService(IJwtSettings jwtSettings)
+    /// <param name="timeProvider">
+    /// Clock used for token timestamps (<c>iat</c>, <c>nbf</c>, <c>exp</c>). Optional so the service
+    /// can be constructed directly in tests; resolved from DI in production and defaults to
+    /// <see cref="TimeProvider.System"/>.
+    /// </param>
+    public TokenService(IJwtSettings jwtSettings, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(jwtSettings);
         _jwtSettings = jwtSettings;
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
         {
@@ -64,11 +71,13 @@ public sealed class TokenService : ITokenService, IDisposable
         string fullName,
         IEnumerable<Claim>? additionalClaims = null)
     {
+        var now = _timeProvider.GetUtcNow();
+
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString(CultureInfo.InvariantCulture)),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
+            new(JwtRegisteredClaimNames.Iat, now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
             new("user_id", userId.ToString(CultureInfo.InvariantCulture)),
             new(ClaimTypes.Name, fullName),
             new(ClaimTypes.Email, email),
@@ -84,8 +93,8 @@ public sealed class TokenService : ITokenService, IDisposable
             issuer: _jwtSettings.Issuer,
             audience: _jwtSettings.Audience,
             claims: claims,
-            notBefore: DateTime.UtcNow,
-            expires: DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes),
+            notBefore: now.UtcDateTime,
+            expires: now.UtcDateTime.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes),
             signingCredentials: _signingCredentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

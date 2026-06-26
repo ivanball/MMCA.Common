@@ -76,7 +76,7 @@ public sealed class MarkAllNotificationsReadHandlerTests
         queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotification>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(unread);
 
-        var sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, queryableExecutor.Object);
+        var sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, queryableExecutor.Object, TimeProvider.System);
         var mocks = new HandlerMocks(unitOfWork, queryableExecutor);
 
         return (sut, mocks);

@@ -65,6 +65,14 @@ Extract **one service host per module** — `MMCA.ADC.{Identity,Conference,Engag
 - **Duplicated host wiring.** Each service repeats the same pipeline setup; shared concerns live in
   `MMCA.Common.API` / `ServiceDefaults` to limit the drift.
 
+## Applicability
+This ADR is framed around ADC (the first repo extracted), but the same topology is now the framework's
+**standard extraction shape**, not an ADC-only choice. MMCA.Store followed it: one service host per
+module (`MMCA.Store.{Catalog,Identity,Sales}.Service`) behind a single `MMCA.Store.Gateway` (also
+pinned to `https://localhost:6001`), with its combined `MMCA.Store.WebAPI` host likewise deleted.
+Store's cross-service topology differs in transport detail (see ADR-012 — both apps now run Profile A),
+but the extraction shape is identical.
+
 ## Related
 ADR-003 (outbox dual dispatch), ADR-004 (authentication dual-fetch / JWKS), ADR-006 (database per
 service), and ADR-007 (gRPC cross-service calls) are the facet decisions that sit under this extraction.

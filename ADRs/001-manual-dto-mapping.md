@@ -19,5 +19,5 @@ Use explicit, hand-written DTO mappers registered via Scrutor assembly scanning.
 - **Performance**: No reflection or expression compilation at mapping time.
 
 ## Trade-offs
-- More files (27 mappers across Store + ADC). Mitigated by the interface's default `MapToDTOs` implementation, which eliminates the batch-mapping boilerplate.
+- More files (27 DTO mappers across Store + ADC, plus the parallel `IEntityRequestMapper` classes). Mitigated by the interface's default `MapToDTOs` implementation, which eliminates the batch-mapping boilerplate.
 - Adding a new entity requires creating a mapper class. This is consistent with the project's explicit-over-implicit philosophy.

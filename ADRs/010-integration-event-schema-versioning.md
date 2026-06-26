@@ -17,8 +17,12 @@ a shape may evolve. Rubric §6 flags this as the one substantive CQRS/event gap.
 1. **Every integration event carries an explicit `SchemaVersion`.** `BaseIntegrationEvent` exposes
    `public virtual int SchemaVersion => 1;`. It is serialized with the payload (System.Text.Json on the
    outbox path, MassTransit on the broker path), so a consumer always sees the producer's declared
-   version. A fitness function (`EventVersioningConventionTests`) asserts every concrete
-   `IIntegrationEvent` declares an `int SchemaVersion`, so a new event cannot ship without one.
+   version. A fitness function asserts every concrete `IIntegrationEvent` declares an
+   `int SchemaVersion`, so a new event cannot ship without one. The rule body
+   (`ArchitectureRules.IntegrationEventsDeclareSchemaVersion`) lives once in the shared
+   `MMCA.Common.Testing.Architecture` package and is surfaced through `EventConventionTestsBase`,
+   alongside two companion rules: every integration event inherits `BaseIntegrationEvent` and resides
+   in a Shared-layer `*.IntegrationEvents` namespace.
 2. **Additive, optional changes keep the same version.** Adding a nullable/optional field, or a field
    with a safe default, is backward-compatible — consumers ignore unknown fields (System.Text.Json
    default) and old payloads deserialize with the default. No version bump required.
@@ -48,8 +52,11 @@ a shape may evolve. Rubric §6 flags this as the one substantive CQRS/event gap.
   yet ship an upcaster registration seam — building one is follow-up work, and until then the policy is
   enforced by convention + review, not by an upcaster pipeline.
 - The convention test is **vacuous in MMCA.Common today** (the framework ships no concrete integration
-  event); real enforcement lives in the consumer repos (ADC/Store), which should mirror the test against
-  their own event assemblies.
+  event): `EventVersioningConventionTests` runs the shared base against `CommonArchitectureMap` but has
+  nothing to check. Real enforcement already lives in the consumer repos — `EventConventionTests`
+  (subclassing `EventConventionTestsBase`) in both `MMCA.ADC.Architecture.Tests` and
+  `MMCA.Store.Architecture.Tests` runs the identical rules against their own event assemblies (ADC's
+  three and Store's one concrete integration events).
 - A get-only `SchemaVersion` is informational on the wire (it round-trips out, not back in) — intentional
   (version is a property of the type, not per-instance data), but it means you read it off the concrete
   type/JSON, not by mutating it.

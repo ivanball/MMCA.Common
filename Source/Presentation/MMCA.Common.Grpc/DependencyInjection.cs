@@ -8,7 +8,7 @@ namespace MMCA.Common.Grpc;
 
 /// <summary>
 /// gRPC infrastructure registration. Provides server-side defaults
-/// (<see cref="GrpcResultExceptionInterceptor"/>, reflection, response compression) and a
+/// (<see cref="GrpcResultExceptionInterceptor"/> and server reflection) and a
 /// typed-client convention that wires Aspire service discovery, Polly resilience, and
 /// JWT bearer forwarding via <see cref="JwtForwardingClientInterceptor"/>.
 /// </summary>
@@ -19,8 +19,8 @@ public static class DependencyInjection
         /// <summary>
         /// Registers gRPC server services with the MMCA defaults: the
         /// <see cref="GrpcResultExceptionInterceptor"/> for translating <c>Result</c> failures
-        /// to <c>RpcException</c>, server reflection so tools like grpcurl can introspect the
-        /// schema, and standard response compression.
+        /// to <c>RpcException</c>, and server reflection so tools like grpcurl can introspect the
+        /// schema.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddGrpcServiceDefaults()

@@ -17,7 +17,7 @@ Model expected failures as values using `Result` / `Result<T>` (`MMCA.Common.Sha
 not exceptions.
 
 - A `Result` is either success or failure; a failure carries one or more `Error` records (`Code`,
-  `Message`, `ErrorType`, optional `Source` / `Target`).
+  `Message`, `Type` of type `ErrorType`, optional `Source` / `Target`).
 - `ErrorType` is a **transport-agnostic** category: `Validation`, `Invariant`, `NotFound`, `Conflict`,
   `Unauthorized`, `Forbidden`, `UnprocessableEntity`, `Failure`. The domain never names an HTTP status.
 - Domain factory methods and mutators return `Result<T>`; application command/query handlers thread

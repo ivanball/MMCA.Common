@@ -21,10 +21,12 @@ Enforce architectural invariants as **automated checks that gate the build**, in
    with the fastest possible feedback.
 2. **Runtime fitness functions.** A shared `MMCA.Common.Testing.Architecture` package (the 13th package)
    holds the rule bodies once: an `ArchitectureRules.*` library (layers, modules, transport, events,
-   entities, handlers, naming, controllers, immutability, governance, purity) plus abstract `*TestsBase`
-   classes parameterized by an `IArchitectureMap`. Each repo (Common / Store / ADC) supplies a single
-   `IArchitectureMap` implementation declaring its layer and module assemblies, then inherits the test
-   bases. The same rules run identically everywhere via NetArchTest over the compiled assemblies.
+   entities, handlers, naming, controllers, immutability, governance, purity, specifications) plus
+   abstract `*TestsBase` classes parameterized by an `IArchitectureMap`. Each repo
+   (Common / Store / ADC / Helpdesk) supplies a single `IArchitectureMap` implementation
+   (`CommonArchitectureMap`, `StoreArchitectureMap`, `AdcArchitectureMap`, `HelpdeskArchitectureMap`)
+   declaring its layer and module assemblies, then inherits the test bases. The same rules run
+   identically everywhere via NetArchTest over the compiled assemblies.
 
 These tests run inside the normal `dotnet test` / CI tier, so a violated invariant fails CI like any
 other test (CI additionally guards with `--minimum-expected-tests 1` so an empty suite cannot pass
@@ -35,7 +37,7 @@ invariant is written once and inherited by every consumer.
 - **Invariant over discipline.** Turning "do not do X" into a red build is the only enforcement that
   scales. It is the same lever used by the layer rules, the resilience gate (ADR-009), the
   event-version gate (ADR-010), and the MassTransit pin (ADR-016).
-- **Write once, run everywhere.** The `IArchitectureMap` seam keeps the three repos' rules in lockstep
+- **Write once, run everywhere.** The `IArchitectureMap` seam keeps the four repos' rules in lockstep
   with zero duplication; a rule change lands for all consumers at once.
 - **Two layers, two speeds.** The MSBuild guard fails at compile time on the common case; the
   NetArchTest suite catches the subtler assembly-level violations a project-reference check cannot see.

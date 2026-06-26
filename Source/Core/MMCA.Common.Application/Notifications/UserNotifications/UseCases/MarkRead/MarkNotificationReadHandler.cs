@@ -11,7 +11,8 @@ namespace MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkR
 /// </summary>
 public sealed class MarkNotificationReadHandler(
     IUnitOfWork unitOfWork,
-    IQueryableExecutor queryableExecutor) : ICommandHandler<MarkNotificationReadCommand, Result>
+    IQueryableExecutor queryableExecutor,
+    TimeProvider timeProvider) : ICommandHandler<MarkNotificationReadCommand, Result>
 {
     /// <inheritdoc />
     public async Task<Result> HandleAsync(
@@ -34,7 +35,7 @@ public sealed class MarkNotificationReadHandler(
                 source: nameof(MarkNotificationReadHandler)));
         }
 
-        matches[0].MarkAsRead();
+        matches[0].MarkAsRead(timeProvider.GetUtcNow().UtcDateTime);
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success();

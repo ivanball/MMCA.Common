@@ -47,9 +47,15 @@ public sealed class UserNotification : AuditableAggregateRootEntity<UserNotifica
         Result.Success(new UserNotification(userId, pushNotificationId) { Id = default });
 
     /// <summary>
-    /// Marks the notification as read. Idempotent — subsequent calls are no-ops.
+    /// Marks the notification as read at the supplied UTC timestamp. Idempotent — subsequent
+    /// calls are no-ops, preserving the original read time.
     /// </summary>
-    public void MarkAsRead()
+    /// <param name="readOnUtc">
+    /// The UTC instant the notification was read. Supplied by the caller (from an injected
+    /// <see cref="TimeProvider"/>) so the domain stays free of ambient clock access and the
+    /// behavior is deterministically testable.
+    /// </param>
+    public void MarkAsRead(DateTime readOnUtc)
     {
         if (IsRead)
         {
@@ -57,6 +63,6 @@ public sealed class UserNotification : AuditableAggregateRootEntity<UserNotifica
         }
 
         IsRead = true;
-        ReadOn = DateTime.UtcNow;
+        ReadOn = readOnUtc;
     }
 }

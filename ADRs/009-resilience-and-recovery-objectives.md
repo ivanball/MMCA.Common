@@ -51,7 +51,9 @@ only that the numbers exist and the restore is drilled.
 
 ## Trade-offs
 - The fitness test asserts the *registration* wires resilience, not the *runtime* behavior of every
-  policy parameter — parameter tuning is still a review concern.
+  policy parameter — parameter tuning is still a review concern. The gate (`ResilienceHandlerTests`,
+  `MMCA.Common.Grpc.Tests`) currently asserts the gRPC client path (`AddTypedGrpcClient`);
+  `AddTypedServiceClient` wires the same standard handler but is not yet covered by an equivalent test.
 - Per-consumer DR docs can drift from reality; the drill-result table is the mitigation (a stale table
   is a visible smell).
 - A gRPC client that needs bespoke timeouts must override the standard handler explicitly rather than

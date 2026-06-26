@@ -20,22 +20,23 @@ public class UserNotificationTests
     public void MarkAsRead_SetsIsReadAndReadOn()
     {
         var notification = UserNotification.Create(userId: 1, pushNotificationId: 42).Value!;
+        var readOn = new DateTime(2026, 1, 1, 8, 30, 0, DateTimeKind.Utc);
 
-        notification.MarkAsRead();
+        notification.MarkAsRead(readOn);
 
         notification.IsRead.Should().BeTrue();
-        notification.ReadOn.Should().NotBeNull();
+        notification.ReadOn.Should().Be(readOn);
     }
 
     [Fact]
     public void MarkAsRead_IsIdempotent()
     {
         var notification = UserNotification.Create(userId: 1, pushNotificationId: 42).Value!;
+        var firstReadOn = new DateTime(2026, 1, 1, 8, 30, 0, DateTimeKind.Utc);
+        var laterReadOn = new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc);
 
-        notification.MarkAsRead();
-        DateTime? firstReadOn = notification.ReadOn;
-
-        notification.MarkAsRead();
+        notification.MarkAsRead(firstReadOn);
+        notification.MarkAsRead(laterReadOn);
 
         notification.ReadOn.Should().Be(firstReadOn);
     }

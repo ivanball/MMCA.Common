@@ -10,7 +10,8 @@ namespace MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkA
 /// </summary>
 public sealed class MarkAllNotificationsReadHandler(
     IUnitOfWork unitOfWork,
-    IQueryableExecutor queryableExecutor) : ICommandHandler<MarkAllNotificationsReadCommand, Result>
+    IQueryableExecutor queryableExecutor,
+    TimeProvider timeProvider) : ICommandHandler<MarkAllNotificationsReadCommand, Result>
 {
     /// <inheritdoc />
     public async Task<Result> HandleAsync(
@@ -23,9 +24,10 @@ public sealed class MarkAllNotificationsReadHandler(
             repository.Table.Where(un => un.UserId == command.UserId && !un.IsRead),
             cancellationToken).ConfigureAwait(false);
 
+        var readOnUtc = timeProvider.GetUtcNow().UtcDateTime;
         foreach (UserNotification notification in unread)
         {
-            notification.MarkAsRead();
+            notification.MarkAsRead(readOnUtc);
         }
 
         if (unread.Count > 0)

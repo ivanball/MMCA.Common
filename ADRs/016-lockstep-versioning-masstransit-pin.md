@@ -4,8 +4,10 @@
 Accepted
 
 ## Context
-MMCA.Common publishes thirteen NuGet packages consumed by two apps (Store, ADC). Two related
-governance questions had no recorded answer:
+MMCA.Common publishes thirteen NuGet packages consumed by three downstream repos — the two
+production apps (Store, ADC) and the reference seed Helpdesk (which defaults to local-source mode but
+declares the same thirteen `MMCA.Common.*` package versions in its own `Directory.Packages.props`).
+Two related governance questions had no recorded answer:
 
 1. **How do the packages version and roll out?** Independent per-package versions invite a
    combinatorial compatibility matrix ("which `.Domain` works with which `.Infrastructure`?"), and a
@@ -25,9 +27,9 @@ governance questions had no recorded answer:
    are designed to be non-breaking so the one-pass sweep is safe.
 3. **Pin MassTransit to v8 by policy, enforced by a fitness function.** `DependencyVersionTests` parses
    `Directory.Packages.props` and fails the build if the MassTransit major reaches 9 (ADR-015). The pin
-   is asserted only in MMCA.Common, where the version is actually declared; Store and ADC inherit it
-   transitively through `MMCA.Common.Infrastructure` and deliberately do **not** subclass the test (the
-   default rule would fail parsing a pin they do not declare).
+   is asserted only in MMCA.Common, where the version is actually declared; Store, ADC, and Helpdesk
+   inherit it transitively through `MMCA.Common.Infrastructure` and deliberately do **not** subclass the
+   test (the default rule would fail parsing a pin they do not declare).
 
 ## Rationale
 - **One version, one compatibility story.** Lockstep removes the N-package matrix: "everything on
