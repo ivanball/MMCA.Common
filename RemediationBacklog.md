@@ -77,15 +77,19 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 - ✅ **#34 — ADR-019 (layered rate limiting)** documents the pre-existing authenticated-only global limiter;
   ADRs 017/018 committed; ADR set now **001-019**.
 
-**Open framework-side follow-ups (next release — see the workspace remediation plan):**
-- ☐ **Finish the ambient-clock removal (#4 purity).** `BaseDomainEvent.DateOccurred` still defaults to
-  `DateTime.UtcNow` — stamp it from the injected `TimeProvider` at event-capture time in the SaveChanges
-  path (avoids a breaking aggregate-signature sweep).
-- ☐ **Test the rate-limiter partition/exemption logic.** `IsRateLimitBypassed`/`GlobalRateLimitPartition`
-  are `private static` and untested — make `internal` + `InternalsVisibleTo` and cover the bypass/anon/
-  per-user-partition/429 branches.
-- ☐ **Controlled-clock notification handler tests.** Add `Microsoft.Extensions.TimeProvider.Testing`
-  (`FakeTimeProvider`) and assert the stamped `ReadOn` (the two handler tests currently pass `TimeProvider.System`).
+**Framework-side follow-ups:**
+- ✅ **Rate-limiter partition/exemption tests** (#11/§ADR-019). `IsRateLimitBypassed`/`GlobalRateLimitPartition`
+  are now `internal` (via `InternalsVisibleTo`) and `RateLimitPartitionTests` covers the bypass paths,
+  anonymous-vs-authenticated branching, and the per-user partition-key fallback (name → user_id → IP →
+  constant). *(2026-06-26)*
+- ✅ **Controlled-clock notification handler tests** (#14). Both mark-as-read handler tests now inject a
+  fixed `TimeProvider` and assert the stamped `UserNotification.ReadOn`. *(2026-06-26)*
+- ✅ **`BaseDomainEvent.DateOccurred` ambient clock — accepted as deliberate, not removed** (#4). A domain
+  event's occurrence instant *is* the moment the aggregate raises it, so the creation-time default is the
+  correct event-sourcing / audit semantic (and four domain tests enforce it). Relocating the stamp to the
+  SaveChanges boundary would shift occurrence-time → persist-time and regress that semantic; threading a
+  clock through every aggregate is disproportionate. Documented as a deliberate choice in
+  `BaseDomainEvent` rather than changed. *(decision 2026-06-26)*
 
 ---
 
