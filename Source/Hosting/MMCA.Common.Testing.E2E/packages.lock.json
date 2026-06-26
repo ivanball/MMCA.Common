@@ -8,6 +8,15 @@
         "resolved": "9.4.0",
         "contentHash": "dJxkWiQ8D+xT6Gr2sSL83+Mar+Vpy2JTcUPxFcckpPJ8VYBfSgnk+zqpS6t7kcGnjz8NLyF14qfuoL4bKzzoew=="
       },
+      "Deque.AxeCore.Commons": {
+        "type": "Direct",
+        "requested": "[4.12.0, )",
+        "resolved": "4.12.0",
+        "contentHash": "s5mYpGoEL08/of5p20qNIBDE3JWKhabEAiG/zL3UkMYXV6V7YA58s5Utjkcym9TNPfshFqlQXfPX6oInrKUuQQ==",
+        "dependencies": {
+          "NewtonSoft.Json": "13.0.1"
+        }
+      },
       "Deque.AxeCore.Playwright": {
         "type": "Direct",
         "requested": "[4.12.0, )",
@@ -75,14 +84,6 @@
         "contentHash": "srY8z/oMPvh/t8axtO2DwrHajhFMH7tnqKildvYrVQIfICi8fOn3yIBWkVPAcrKmHMwvXRJ/XsQM3VMR6DOYfQ==",
         "dependencies": {
           "xunit.v3.common": "[3.2.2]"
-        }
-      },
-      "Deque.AxeCore.Commons": {
-        "type": "Transitive",
-        "resolved": "4.12.0",
-        "contentHash": "s5mYpGoEL08/of5p20qNIBDE3JWKhabEAiG/zL3UkMYXV6V7YA58s5Utjkcym9TNPfshFqlQXfPX6oInrKUuQQ==",
-        "dependencies": {
-          "NewtonSoft.Json": "13.0.1"
         }
       },
       "Microsoft.Bcl.AsyncInterfaces": {

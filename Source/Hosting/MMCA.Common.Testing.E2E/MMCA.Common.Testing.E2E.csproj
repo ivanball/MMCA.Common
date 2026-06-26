@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
+    <!-- Explicit pin of the transitive Deque.AxeCore.Commons (deterministic restore — see Directory.Packages.props). -->
+    <PackageReference Include="Deque.AxeCore.Commons" />
     <PackageReference Include="Deque.AxeCore.Playwright" />
     <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="MinVer">
