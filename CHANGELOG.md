@@ -6,20 +6,35 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.81.0] - 2026-06-26
+
+Post-v1.80.0 polish: an opt-in OpenAPI UI, FinOps documentation, and test-coverage hardening for the
+v1.80.0 rate-limiter and `TimeProvider` seams. Additive — no breaking changes and no consumer behavior
+change beyond the new opt-in helper.
+
 ### Added
-- **Scalar API-reference UI helper (opt-in, §9).** `MapCommonScalarUi()` (`MMCA.Common.API`) renders
-  the generated OpenAPI document as an interactive reference at `/scalar/{documentName}`, **outside
-  Production only**. Opt-in (a host calls it explicitly) and backed by the bundled `Scalar.AspNetCore`
-  package (no external CDN). Pairs with `AddCommonOpenApi()` / `MapCommonOpenApi()`. Internal services
-  behind the Gateway need not call it; it's for standalone-run hosts.
+- **Scalar API-reference UI helper (opt-in, §9).** `MapCommonScalarUi()` (`MMCA.Common.API`) renders the
+  generated OpenAPI document as an interactive reference at `/scalar/{documentName}`, **outside Production
+  only**. Opt-in (a host calls it explicitly); assets are served by the bundled `Scalar.AspNetCore` package
+  (no external CDN). Pairs with `AddCommonOpenApi()` / `MapCommonOpenApi()`. Internal services behind the
+  Gateway need not call it — it's for hosts run standalone where a rendered reference helps.
 - **`COST.md` (FinOps notes, §31)** — consolidates the framework's cost-relevant defaults (telemetry
   poll-span filtering, outbox poll/retention tuning) and the right-sizing / attribution / surge-revert
   levers consumers set downstream.
+- **ADR-019 (layered rate limiting)** documents the authenticated-only global limiter (shipped earlier),
+  bringing the committed ADR set to **001-019**; the CHANGELOG was also backfilled for 1.72.0-1.80.0.
+
+### Changed
+- **`MMCA.Common.API` takes a new dependency on `Scalar.AspNetCore`** (MIT) for the optional UI helper
+  above. Consumers referencing `MMCA.Common.API` pull it transitively; it has no runtime effect unless
+  `MapCommonScalarUi()` is called.
 
 ### Internal
 - Rate-limiter exemption/partition helpers are now `internal` (via `InternalsVisibleTo`) and unit-tested
-  (`RateLimitPartitionTests`); the notification read handlers assert their stamped time against a fixed
-  `TimeProvider`. No public-API or behavior change.
+  (`RateLimitPartitionTests` — bypass paths, anonymous-vs-authenticated, per-user partition-key fallback).
+- The two notification read-handler tests now assert the stamped read-time against a fixed `TimeProvider`.
+- `BaseDomainEvent.DateOccurred`'s creation-time default is documented as a deliberate occurrence-time
+  choice (event-sourcing / audit semantics), not changed.
 
 ## [1.80.0] - 2026-06-25
 
