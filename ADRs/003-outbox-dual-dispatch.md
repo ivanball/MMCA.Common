@@ -24,6 +24,9 @@ Use a dual-dispatch strategy:
 ## Trade-offs
 - Domain event handlers must be idempotent (this is a good practice regardless).
 - The outbox table grows until processed entries are cleaned up — `OutboxCleanupService` purges rows whose `ProcessedOn` is older than `Outbox:RetentionDays` (default 7; set `0` to disable). See ADR-005.
-- Dead-lettered messages (type not resolvable after 5 retries) require manual investigation.
+- Two distinct failure mechanisms exist. A message whose event **type cannot be resolved** is
+  dead-lettered immediately on first pickup (it can never succeed) and requires manual investigation.
+  A message that **throws during dispatch** is retried up to `Outbox:MaxRetries` (default 5) times,
+  then dropped from the eligible set (it stops being polled once `RetryCount >= MaxRetries`).
 - Failed-message retries pace at the polling interval: with a 300s prod interval, a persistently failing message dead-letters after ~25 minutes instead of seconds (an intentional, healthier backoff).
 - Rows orphaned by a process crash (no signal exists) wait up to the polling interval before the safety-net pickup.

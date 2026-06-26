@@ -40,9 +40,12 @@ mode is a single configuration switch (`JwtSettings.SigningAlgorithm`, default `
 - `ValidIssuer` is deliberately **not** pinned: the middleware takes the issuer from the discovery
   document, because the `authority` is the Aspire service-discovery URL (e.g. `http://identity`)
   while the token's `iss` claim is the public gateway origin (e.g. `https://localhost:6001`).
-- The validator pins `ValidAlgorithms` (RS256, or HS256 in the symmetric path) so an attacker cannot
-  force an algorithm swap (for example, signing an HS256 token using the RSA public key as the HMAC
-  secret).
+- Both validators pin `TokenValidationParameters.ValidAlgorithms` so an attacker cannot force an
+  algorithm swap (for example, signing an HS256 token using the RSA public key as the HMAC secret):
+  the **forwarded JWKS** validator (`AddForwardedJwtBearer`) pins `[RS256]` (the JWKS path only ever
+  validates Identity's asymmetric tokens), and the **in-process** validator
+  (`AddCommonAuthentication` → `BuildValidationParameters`) pins `[RS256]` for the asymmetric path or
+  `[HS256]` for the symmetric one.
 - `AddCommonAuthentication(configuration)` remains the in-process path: HS256 with the shared Base64
   secret (monolith default), or RS256 validating against a locally configured public-key PEM (no
   JWKS fetch). It requires `RsaPublicKeyPem` when RS256 is selected and directs extracted services to

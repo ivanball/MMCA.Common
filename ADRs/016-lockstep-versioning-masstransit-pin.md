@@ -22,9 +22,12 @@ Two related governance questions had no recorded answer:
    a single `vX.Y.Z` git tag); a release tags all thirteen at the same version. SemVer and the
    breaking-change policy live in `VERSIONING.md`.
 2. **Sweep every consumer in one pass, with no phased rollout.** A framework change ships and all
-   consumers bump every `MMCA.Common.*` entry in their `Directory.Packages.props` together (the apps
-   keep no lock files, so the sweep is a coordinated version bump). Framework-to-app (`[C->A]`) changes
-   are designed to be non-breaking so the one-pass sweep is safe.
+   consumers bump every `MMCA.Common.*` entry in their `Directory.Packages.props` together.
+   The two production apps (Store, ADC) now **commit NuGet lock files** (`RestorePackagesWithLockFile`,
+   R7/TD-01), so each one's sweep is a version bump **plus a restore that regenerates its lock files**
+   (the same `audit=all` / `--force-evaluate` mechanics Common already uses); Helpdesk, which defaults
+   to local-source mode, keeps no lock files. Framework-to-app (`[C->A]`) changes are designed to be
+   non-breaking so the one-pass sweep is safe.
 3. **Pin MassTransit to v8 by policy, enforced by a fitness function.** `DependencyVersionTests` parses
    `Directory.Packages.props` and fails the build if the MassTransit major reaches 9 (ADR-015). The pin
    is asserted only in MMCA.Common, where the version is actually declared; Store, ADC, and Helpdesk

@@ -208,6 +208,13 @@ public static class WebApplicationBuilderExtensions
                         // URL (e.g. "http://identity") while the token's iss claim is
                         // the public gateway URL (e.g. "https://localhost:6001").
                         ValidAudience = audience,
+                        // Pin the signature algorithm to RS256. The JWKS path only ever
+                        // validates Identity's asymmetric (RS256) tokens, so this is
+                        // defense-in-depth against an algorithm-confusion swap (e.g.
+                        // forging an HS256 token using the RSA public key as the HMAC
+                        // secret), matching the explicit pin on the in-process
+                        // BuildValidationParameters path.
+                        ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
                     };
 
                     // Same SignalR access_token query-string fallback as AddCommonAuthentication.

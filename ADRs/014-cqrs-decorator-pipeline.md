@@ -22,7 +22,9 @@ Use single-responsibility handlers behind a Scrutor-composed decorator pipeline.
   registered is outermost), the execution order (outermost to innermost) is:
   - **Commands:** FeatureGate -> Logging -> Caching -> Validating -> Transactional -> Handler
   - **Queries:** FeatureGate -> Logging -> Caching -> Handler
-  - plus an optional `Profiling` decorator when profiling is enabled.
+  - plus an optional pair of `Profiling` decorators (`ProfilingCommandDecorator` /
+    `ProfilingQueryDecorator`) registered by a **separate** opt-in `AddApplicationProfiling()` call,
+    not by `AddApplicationDecorators()`. No consumer host wires it today.
 - **The order is load-bearing and hard-coded** (not config-driven): validation runs *before* the
   transaction opens (an invalid command never touches the DB), cache invalidation runs *outside* the
   transaction boundary (a rolled-back command does not evict valid cache), logging wraps the whole
