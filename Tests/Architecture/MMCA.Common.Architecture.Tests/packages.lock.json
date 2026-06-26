@@ -1162,7 +1162,8 @@
           "MMCA.Common.Infrastructure": "[1.0.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.9, )",
           "Microsoft.AspNetCore.OpenApi": "[10.0.9, )",
-          "Microsoft.FeatureManagement.AspNetCore": "[4.5.0, )"
+          "Microsoft.FeatureManagement.AspNetCore": "[4.5.0, )",
+          "Scalar.AspNetCore": "[2.16.6, )"
         }
       },
       "mmca.common.application": {
@@ -1593,6 +1594,12 @@
         "dependencies": {
           "Polly.Core": "8.7.0"
         }
+      },
+      "Scalar.AspNetCore": {
+        "type": "CentralTransitive",
+        "requested": "[2.16.6, )",
+        "resolved": "2.16.6",
+        "contentHash": "rT7Pdk9wA25xfJJM5cCCTl4HXPsJd6/WcO5UfmB1iCjNl/zKy+ZftsW8rosERio1uJe3VlVJ4SfAaA8w3QmV4w=="
       },
       "Scrutor": {
         "type": "CentralTransitive",

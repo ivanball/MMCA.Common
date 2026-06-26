@@ -6,6 +6,21 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added
+- **Scalar API-reference UI helper (opt-in, §9).** `MapCommonScalarUi()` (`MMCA.Common.API`) renders
+  the generated OpenAPI document as an interactive reference at `/scalar/{documentName}`, **outside
+  Production only**. Opt-in (a host calls it explicitly) and backed by the bundled `Scalar.AspNetCore`
+  package (no external CDN). Pairs with `AddCommonOpenApi()` / `MapCommonOpenApi()`. Internal services
+  behind the Gateway need not call it; it's for standalone-run hosts.
+- **`COST.md` (FinOps notes, §31)** — consolidates the framework's cost-relevant defaults (telemetry
+  poll-span filtering, outbox poll/retention tuning) and the right-sizing / attribution / surge-revert
+  levers consumers set downstream.
+
+### Internal
+- Rate-limiter exemption/partition helpers are now `internal` (via `InternalsVisibleTo`) and unit-tested
+  (`RateLimitPartitionTests`); the notification read handlers assert their stamped time against a fixed
+  `TimeProvider`. No public-API or behavior change.
+
 ## [1.80.0] - 2026-06-25
 
 Opt-in permission-based authorization plus `TimeProvider` adoption on the time-sensitive paths.

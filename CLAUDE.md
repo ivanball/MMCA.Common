@@ -242,5 +242,6 @@ These docs live **in this repo** (committable, unlike the workspace-level `Docs/
 - `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
 - `VERSIONING.md` — SemVer + breaking-change policy; the thirteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
 - `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
+- `COST.md` — FinOps notes (rubric §31): the framework's cost-relevant defaults (telemetry-span filtering, outbox poll/retention tuning) and the right-sizing / attribution / surge-revert levers consumers set downstream.
 
 **Commit-message convention:** much of the recent history is remediation work tagged `R<n> §<m>: <summary>` (e.g. `R16 §30: ...`). `R<n>` is the remediation item in the workspace `Docs/Architecture/ArchitectureRemediation.md`; `§<m>` is the scorecard category above. When continuing remediation work, match this format and update `RemediationBacklog.md`.

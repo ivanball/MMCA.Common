@@ -13,6 +13,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />
