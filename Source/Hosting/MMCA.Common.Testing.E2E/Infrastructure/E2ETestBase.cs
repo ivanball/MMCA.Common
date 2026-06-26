@@ -94,12 +94,15 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         await visibleFirst;
 
-        if (await errorAlert.IsVisibleAsync())
+        // The error alert can flash transiently during the success-path forceLoad navigation (Blazor
+        // Server-interactive, before WASM hydrates): the backend auth succeeds and the logout button
+        // appears moments later. If the error alert won the race, give the success signal a grace window
+        // before concluding failure — only a persistent error (no logout button) is a real failure.
+        if (await errorAlert.IsVisibleAsync() && !await LogoutAppearsWithinGraceAsync(logoutButton))
         {
             var errorText = await errorAlert.TextContentAsync();
             throw new InvalidOperationException($"Login failed: {errorText}");
         }
-
     }
 
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
@@ -135,13 +138,34 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         await visibleFirst;
 
-        if (await regErrorAlert.IsVisibleAsync())
+        if (await regErrorAlert.IsVisibleAsync() && !await LogoutAppearsWithinGraceAsync(logoutButton))
         {
             var errorText = await regErrorAlert.TextContentAsync();
             throw new InvalidOperationException($"Registration failed: {errorText}");
         }
 
         return (email, password);
+    }
+
+    // Waits up to the grace window for the logout button to appear: true = auth actually succeeded (the
+    // success-path forceLoad navigation just hadn't completed when a transient error alert flashed),
+    // false = the error is persistent (a real failure). De-flakes the register/login success-detection
+    // race (the TD-06/07 cluster) without forcing WASM. See E2ETestConfiguration.AuthGraceTimeout.
+    private static async Task<bool> LogoutAppearsWithinGraceAsync(ILocator logoutButton)
+    {
+        try
+        {
+            await logoutButton.WaitForAsync(new()
+            {
+                State = WaitForSelectorState.Visible,
+                Timeout = E2ETestConfiguration.AuthGraceTimeout,
+            });
+            return true;
+        }
+        catch (PlaywrightException)
+        {
+            return false;
+        }
     }
 
     protected async Task NavigateAndWaitAsync(string path) =>

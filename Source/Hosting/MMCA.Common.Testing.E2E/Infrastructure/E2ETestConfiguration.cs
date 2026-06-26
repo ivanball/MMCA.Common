@@ -28,6 +28,17 @@ public static class E2ETestConfiguration
         float.TryParse(Environment.GetEnvironmentVariable("E2E_AUTH_TIMEOUT"), out var t) ? t : DefaultTimeout;
 
     /// <summary>
+    /// Extra grace window (ms) the post-auth wait gives the success signal (the logout button) to appear
+    /// AFTER a transient error alert flashed during the success-path <c>forceLoad</c> navigation (Blazor
+    /// Server-interactive, before WASM hydrates: the backend auth succeeds but the UI briefly shows the
+    /// generic error alert). Only a <b>persistent</b> error — no logout button within this window — is a
+    /// real failure. This de-flakes the register/login success-detection race (the TD-06/07 cluster)
+    /// without forcing WASM (which broke login). Tunable via <c>E2E_AUTH_GRACE</c>.
+    /// </summary>
+    public static float AuthGraceTimeout =>
+        float.TryParse(Environment.GetEnvironmentVariable("E2E_AUTH_GRACE"), out var t) ? t : 15_000;
+
+    /// <summary>
     /// Slows down each Playwright action by this many milliseconds. Useful for watching tests visually.
     /// Set E2E_SLOWMO=1000 for a 1-second delay between actions.
     /// </summary>
