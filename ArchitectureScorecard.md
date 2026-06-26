@@ -2,6 +2,22 @@
 
 **Weighted architecture-health index: 80%** (218 of 272 weighted points across 28 applicable categories; 6 N/A categories excluded). Scored against the 34-category rubric at `C:/Projects/MMCA/Docs/Architecture/ArchitectureEvaluationCriteria.md`.
 
+> **⚠️ Historical snapshot — superseded 2026-06-26.** This single-axis scorecard captures an
+> **earlier review cycle** (≈v1.57, eleven packages, single 0-4 axis). The **canonical, current**
+> evaluation is the two-axis workspace report
+> [`Docs/Architecture/ArchitectureEvaluation-MMCA.Common.md`](../Docs/Architecture/ArchitectureEvaluation-MMCA.Common.md)
+> at framework **v1.80.0** — **Maturity 92.2% / Implementation 82.6%**, **thirteen** packages, ADR set
+> **001-019**. Several red flags below have since been **resolved** and should not be acted on from this
+> file: (a) the framework now ships **thirteen** packages (incl. `MMCA.Common.Testing.Architecture`);
+> (b) a **CHANGELOG + VERSIONING + breaking-change policy**, **NuGet lock files**, an **SBOM release
+> gate**, and **Dependabot** all ship; (c) the **MassTransit-v8 pin is now a build-gating fitness
+> function** (`DependencyVersionTests`, ADR-016), not a comment; (d) **consumer-side inbox idempotency**
+> (`EfInboxStore`) and a **configured broker retry policy** ship (v1.69-71); (e) the **`IAnonymizable`
+> erasure seam + outbox purge** ship (ADR-005); (f) the ADR set now covers DB-per-service (006) and
+> gRPC extraction (007) and runs **68 fitness methods across 17 bases**; (g) v1.80.0 adds **opt-in
+> permission-based authorization** and **`TimeProvider` adoption**. The per-category rows below are
+> retained verbatim as the historical record; trust the workspace evaluation for current scores.
+
 ## Executive summary
 
 MMCA.Common is a mature, deliberately-engineered shared framework (eleven NuGet packages spanning DDD, Clean Architecture, CQRS, and Aspire hosting) that scores in the upper band on architecture health. Its defining strength is that the most consequential rules are *not prose* — they are executable fitness functions (NetArchTest layer/purity/extraction suites, all 25 passing) plus a redundant compile-time MSBuild guard, both gated in CI on every PR. This earns clean 4s in Clean Architecture, SOLID, Microservices Readiness, Data Architecture, and Testability, with strong supporting 4s in Design Patterns, Cross-Cutting Concerns, and Code Quality. The biggest risks cluster in two areas: (1) the asynchronous/broker reliability path, where at-least-once delivery is advertised but consumer-side idempotency and retry/backoff are convention-only and a code comment promises a retry policy that is never configured; and (2) governance/lifecycle hygiene for a *published* framework — no consumer-side idempotency seam, a safety-critical MassTransit v8 pin guarded only by a comment (which has already regressed in production), no CHANGELOG/breaking-change policy, and a single low score in Compliance/Privacy (soft-delete-only with no right-to-erasure seam). Front-end quality is solid but unenforced: zero bUnit component tests for a package whose job includes shipping reusable Blazor primitives.

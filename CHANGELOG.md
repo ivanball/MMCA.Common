@@ -6,6 +6,33 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.80.0] - 2026-06-25
+
+Opt-in permission-based authorization plus `TimeProvider` adoption on the time-sensitive paths.
+
+### Added
+- **Permission-based authorization (opt-in).** `IPermissionRegistry` + `PermissionRegistryBuilder`
+  (`MMCA.Common.Shared`) declare role→permission grants; `[HasPermission("x")]` (`MMCA.Common.API`)
+  resolves an on-demand `perm:x` policy via `PermissionPolicyProvider`, and
+  `PermissionAuthorizationHandler` grants access when the caller carries an explicit `permission`
+  claim or holds a role the registry grants it. Wired through `AddAuthorizationPolicies` +
+  `AddPermissions(...)`. **Backward-compatible** — the existing named role policies are untouched and
+  the mechanism is inert until a host calls `AddPermissions`. It is RBAC with a role→permission
+  capability indirection (policy-based, not resource/attribute-based).
+- **`RoleNames.ContentEditor`** — a granular conference-content role consumers can grant a permission
+  subset (used by ADC).
+- **ADR-019 (layered rate limiting)** documents the always-on, authenticated-only global limiter
+  (`AddCommonRateLimiting`): infrastructure traffic (`/health`, `/alive`, `/.well-known/*`,
+  `application/grpc`) and anonymous requests are exempt; authenticated callers are capped per principal.
+  The limiter code itself is pre-existing — this release adds the decision record. ADRs 017/018 are
+  also now committed (idempotency, polyglot persistence).
+
+### Changed
+- **`TimeProvider` adoption.** `TokenService` (token `iat`/`nbf`/`exp`) and the notification read
+  handlers now derive time from an injected `TimeProvider` instead of `DateTime.UtcNow`;
+  `UserNotification.MarkAsRead(DateTime readOnUtc)` takes an explicit UTC timestamp, keeping the
+  aggregate free of ambient clock access. Non-breaking — `TimeProvider.System` is the default.
+
 ## [1.79.0] - 2026-06-24
 
 Polyglot-persistence ergonomics: moving an entity between data-source engines becomes a minimal,
@@ -47,6 +74,62 @@ build-guarded change (ADR-006).
   namespace segment preceding `Domain` (the same rule as the SQL schema / logical database name); it
   previously looked for a `Modules` segment that the actual namespaces do not contain, falling back to a
   per-type container.
+
+## [1.78.0] - 2026-06-23
+
+### Changed
+- Upgraded NuGet dependencies to their latest stable versions (held packages — MassTransit v8,
+  `Microsoft.VisualStudio.Threading.Analyzers`, `StackExchange.Redis`, `MessagePack` — excluded per
+  the semver-major Dependabot ignores and the MassTransit-v8 license pin).
+
+### Added
+- **`GETTING-STARTED.md`** — a 9-phase framework-adoption guide (solution plumbing → a module vertical
+  slice → Aspire host → architecture-fitness map → a worked module extraction), with MMCA.Helpdesk as
+  its runnable companion.
+
+## [1.77.0] - 2026-06-22
+
+### Added
+- **ADRs 013-016** — Result pattern (013), CQRS decorator pipeline (014), architecture fitness
+  functions (015), lockstep versioning + MassTransit-v8 pin (016) — documenting patterns that
+  previously lived only in code. Docs-only release.
+
+## [1.76.0] - 2026-06-22
+
+### Changed
+- Documentation alignment with the workspace `Docs/` folder reorganization. Docs-only release.
+
+## [1.75.0] - 2026-06-21
+
+### Changed
+- Drift-reduction housekeeping (D5/D22/D29/D30): consolidated the exception-handler tests, lifted the
+  shared E2E scan helpers, documented the MassTransit-pin boundary (enforced only in MMCA.Common; ADC
+  and Store inherit it transitively), and reconciled ADR-012.
+- README now links the architecture scorecard + ADRs and lists all 13 packages.
+
+## [1.74.0] - 2026-06-21
+
+### Changed
+- **Promoted shared cross-cutting infrastructure up into MMCA.Common** (drift-reduction P4) so the
+  consumer apps inherit it instead of carrying parallel copies.
+
+## [1.73.0] - 2026-06-21
+
+### Added
+- **`MMCA.Common.Testing.Architecture`** package (the **13th**) — define-once architecture fitness
+  functions: an `IArchitectureMap`-parameterized NetArchTest rule library + abstract test bases, so
+  MMCA.Common, Store, and ADC run the *same* rules as thin subclasses rather than parallel copies
+  (ADR-015).
+
+### Fixed
+- Reverted the v1.72.0 "force WASM interactivity before auth submit" E2E change (it caused a CI
+  regression); fixed a CI-only IDE0370 null-forgiving analyzer error in the new arch-test package.
+
+## [1.72.0] - 2026-06-20
+
+### Added
+- **Resilience fault-injection test** (`ResilienceCircuitBreakerFaultInjectionTests`) that trips a Polly
+  circuit breaker and asserts short-circuiting, plus an outbox/inbox dedup test (tests only).
 
 ## [1.71.0] - 2026-06-19
 

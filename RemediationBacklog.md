@@ -58,6 +58,37 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 
 ---
 
+## Progress — v1.80.0 (2026-06-26)
+
+> The single-axis backlog above is from the **2026-06-08/09** review (index 80%). The framework has since
+> reached **v1.80.0** and the canonical current scoring is the two-axis workspace report
+> [`Docs/Architecture/ArchitectureEvaluation-MMCA.Common.md`](../Docs/Architecture/ArchitectureEvaluation-MMCA.Common.md)
+> (**Maturity 92.2% / Implementation 82.6%**). This entry records what shipped in v1.80.0 and the
+> remaining framework-side follow-ups; it does not re-derive the priority ranking above.
+
+- ✅ **#11 / #1 — permission-based authorization (opt-in).** `IPermissionRegistry`/`PermissionRegistryBuilder`
+  (Shared) + `[HasPermission]`/`PermissionPolicyProvider`/`PermissionAuthorizationHandler` (API), wired via
+  `AddAuthorizationPolicies` + `AddPermissions`, backward-compatible with the named role policies; 13 unit
+  tests. Adopted by ADC (≈20 endpoints + `RoleNames.ContentEditor`). RBAC-with-capability-indirection
+  (policy-based, not resource/attribute-based).
+- ✅ **#14 / #1 — `TimeProvider` adoption.** Injected into `TokenService` (token `iat`/`nbf`/`exp`) and the
+  notification read handlers; `UserNotification.MarkAsRead(DateTime readOnUtc)` now takes an explicit UTC
+  timestamp. Registered `TimeProvider.System` singleton.
+- ✅ **#34 — ADR-019 (layered rate limiting)** documents the pre-existing authenticated-only global limiter;
+  ADRs 017/018 committed; ADR set now **001-019**.
+
+**Open framework-side follow-ups (next release — see the workspace remediation plan):**
+- ☐ **Finish the ambient-clock removal (#4 purity).** `BaseDomainEvent.DateOccurred` still defaults to
+  `DateTime.UtcNow` — stamp it from the injected `TimeProvider` at event-capture time in the SaveChanges
+  path (avoids a breaking aggregate-signature sweep).
+- ☐ **Test the rate-limiter partition/exemption logic.** `IsRateLimitBypassed`/`GlobalRateLimitPartition`
+  are `private static` and untested — make `internal` + `InternalsVisibleTo` and cover the bypass/anon/
+  per-user-partition/429 branches.
+- ☐ **Controlled-clock notification handler tests.** Add `Microsoft.Extensions.TimeProvider.Testing`
+  (`FakeTimeProvider`) and assert the stamped `ReadOn` (the two handler tests currently pass `TimeProvider.System`).
+
+---
+
 ## 🔴 Priority 6 — highest leverage
 
 ### [ ] #28 · Front-End Testing & Quality — score 2 → 4 (weight 3)

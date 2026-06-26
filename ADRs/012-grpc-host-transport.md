@@ -112,5 +112,5 @@ Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-di
   gRPC, and document why.
 
 ## Related
-- ADR-004 (authentication dual-fetch / JWKS discovery), ADR-007 (gRPC cross-service calls),
-  ADR-008 (monolith → services + gateway topology).
+- ADR-004 (cross-service token validation via JWKS / OIDC discovery), ADR-007 (gRPC cross-service
+  calls), ADR-008 (monolith → services + gateway topology).

@@ -4,7 +4,8 @@
 Accepted. The framework plumbing is complete, covered by unit and integration tests
 (`DataSourceResolverTests`, `CrossDataSourceDegradeConventionTests`, `EntityTypeConfigurationTests`,
 `CosmosConfigurationPortabilityTests`, `MultiSourceSqliteIntegrationTests`, and others), and shipped to
-production (Common v1.79.0). No production entity routes to a non-SQL-Server engine today. An end-to-end
+production (the engine-agnostic plumbing released in Common v1.79.0; current release v1.80.0). No
+production entity routes to a non-SQL-Server engine today. An end-to-end
 trial (ADC's Conference `Session` to Cosmos DB and `Room` to SQLite, with its child entities) was built
 and tested locally, then deliberately reverted to all-SQL-Server while every framework seam was kept.
 Moving an aggregate to another engine later is a config-base-class change plus connection strings (and

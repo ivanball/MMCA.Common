@@ -34,8 +34,11 @@ Use **gRPC**, exposed through `MMCA.Common.Grpc`, with a contract-package conven
   on; swapping in-process for cross-process is a registration change.
 - **Transport stays at the edge** — `MicroserviceExtractionTests` forbid `MassTransit`/gRPC types in
   Application/Domain/Shared, so the choice is reversible and the core stays clean.
-- **Strong contracts** — `.proto` + the `[ServiceContract]` version attribute make the wire surface
-  explicit and versionable.
+- **Strong contracts** — the `.proto` definitions plus the in-process interface the adapter
+  implements are the wire surface. A `[ServiceContract(version)]` attribute (MMCA.Common.Shared) is
+  provided to mark and version contract types explicitly, but it is an **available seam, not yet
+  applied** — no contract type carries it today, and no fitness rule enforces it; the wire surface is
+  currently defined by the `.proto` files alone.
 
 ## Trade-offs
 - **Bidirectional pairs need care.** Conference ↔ Engagement is a mutual gRPC pair; the AppHost

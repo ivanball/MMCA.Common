@@ -74,5 +74,5 @@ Store's cross-service topology differs in transport detail (see ADR-012 — both
 but the extraction shape is identical.
 
 ## Related
-ADR-003 (outbox dual dispatch), ADR-004 (authentication dual-fetch / JWKS), ADR-006 (database per
-service), and ADR-007 (gRPC cross-service calls) are the facet decisions that sit under this extraction.
+ADR-003 (outbox dual dispatch), ADR-004 (cross-service token validation via JWKS), ADR-006 (database
+per service), and ADR-007 (gRPC cross-service calls) are the facet decisions that sit under this extraction.

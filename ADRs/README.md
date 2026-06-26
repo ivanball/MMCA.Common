@@ -8,7 +8,7 @@ pattern they describe — they capture context and trade-offs that aren't obviou
 | [001](001-manual-dto-mapping.md) | Manual DTO mapping | Explicit mappers chosen over AutoMapper. |
 | [002](002-navigation-populators.md) | Navigation populators | `INavigationPopulator<T>` for cross-container/cross-source eager loading. |
 | [003](003-outbox-dual-dispatch.md) | Outbox dual dispatch | Outbox + in-process dispatch + background processor; at-least-once delivery. |
-| [004](004-authentication-dual-fetch.md) | Authentication dual-fetch | JWKS discovery + fallback for cross-service token validation. |
+| [004](004-authentication-dual-fetch.md) | Cross-service token validation (JWKS) | Extracted services validate Identity's RS256 tokens via JWKS / OIDC discovery (no shared key); HS256 shared-secret stays the monolith default; discovery is gateway-routed with a direct-Identity fallback. |
 | [005](005-soft-delete-vs-erasure.md) | Soft-delete vs. erasure | Soft-delete stays for lifecycle; `IAnonymizable` + outbox purge for GDPR/CCPA erasure. |
 | [006](006-database-per-service.md) | Database per service | Each service owns its DB + outbox; one `SQLServerDbContext` class, one instance per DB. Removed the shared-outbox race (2026-06-07). |
 | [007](007-grpc-extraction.md) | gRPC cross-service calls | `*.Contracts` + typed clients + `Result`-over-the-wire for synchronous inter-service calls. |
@@ -23,6 +23,7 @@ pattern they describe — they capture context and trade-offs that aren't obviou
 | [016](016-lockstep-versioning-masstransit-pin.md) | Lockstep versioning + MassTransit-v8 pin | All thirteen packages release at one version; consumers swept in one pass (no phased rollout). MassTransit is pinned to v8 (v9 needs a license) and the pin is a fitness-function build gate. |
 | [017](017-request-idempotency.md) | HTTP request idempotency | `[Idempotent]` action filter dedups client retries via an `Idempotency-Key` header + cached replay (24h, `X-Idempotent-Replay`); distinct from ADR-003's handler idempotency. |
 | [018](018-polyglot-persistence.md) | Polyglot persistence (per-engine sources) | Three storage engines (SQL Server / Cosmos / SQLite) behind one model; engine is a `[UseDataSource]` attribute on the entity config (the orthogonal `Engine` axis to ADR-006's `Name` axis). Plumbing shipped + tested; first non-SQL entity not yet in production. |
+| [019](019-rate-limiting.md) | Layered rate limiting (authenticated-only global limiter) | An always-on global limiter caps authenticated callers per-user (default 300/min) and exempts infra (`/health`, `/alive`, `/.well-known`, gRPC) and anonymous traffic; anonymous abuse is covered by output caching + the login-protection service instead; named policies stay for opt-in per-endpoint tightening. |
 
 ## Writing a new ADR
 
