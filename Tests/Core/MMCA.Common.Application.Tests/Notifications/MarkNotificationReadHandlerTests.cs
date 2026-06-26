@@ -49,12 +49,34 @@ public sealed class MarkNotificationReadHandlerTests
         result.Errors.Should().Contain(e => e.Code == "UserNotification.NotFound");
     }
 
+    // ── Read time is stamped from the injected clock ──
+    [Fact]
+    public async Task HandleAsync_WhenNotificationExists_StampsReadOnFromInjectedClock()
+    {
+        var readInstant = new DateTimeOffset(2026, 6, 26, 14, 30, 0, TimeSpan.Zero);
+        var (sut, mocks) = CreateSut(notificationExists: true, timeProvider: new FixedTimeProvider(readInstant));
+
+        Result result = await sut.HandleAsync(new MarkNotificationReadCommand(NotificationId: 1, UserId: 42));
+
+        result.IsSuccess.Should().BeTrue();
+        mocks.Notification!.IsRead.Should().BeTrue();
+        mocks.Notification.ReadOn.Should().Be(readInstant.UtcDateTime);
+    }
+
     // ── Helpers ──
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
-        Mock<IQueryableExecutor> QueryableExecutor);
+        Mock<IQueryableExecutor> QueryableExecutor,
+        UserNotification? Notification);
 
-    private static (MarkNotificationReadHandler Sut, HandlerMocks Mocks) CreateSut(bool notificationExists)
+    private static (MarkNotificationReadHandler Sut, HandlerMocks Mocks) CreateSut(
+        bool notificationExists,
+        TimeProvider? timeProvider = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<UserNotification, UserNotificationIdentifierType>>();
@@ -68,18 +90,19 @@ public sealed class MarkNotificationReadHandlerTests
         repository.Setup(x => x.Table)
             .Returns(Enumerable.Empty<UserNotification>().AsQueryable());
 
+        UserNotification? notification = null;
         var matches = new List<UserNotification>();
         if (notificationExists)
         {
-            var notification = UserNotification.Create(userId: 42, pushNotificationId: 100).Value!;
+            notification = UserNotification.Create(userId: 42, pushNotificationId: 100).Value!;
             matches.Add(notification);
         }
 
         queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotification>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(matches);
 
-        var sut = new MarkNotificationReadHandler(unitOfWork.Object, queryableExecutor.Object, TimeProvider.System);
-        var mocks = new HandlerMocks(unitOfWork, queryableExecutor);
+        var sut = new MarkNotificationReadHandler(unitOfWork.Object, queryableExecutor.Object, timeProvider ?? TimeProvider.System);
+        var mocks = new HandlerMocks(unitOfWork, queryableExecutor, notification);
 
         return (sut, mocks);
     }

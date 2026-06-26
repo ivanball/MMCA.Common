@@ -29,7 +29,9 @@ public static class WebApplicationBuilderExtensions
 
     /// <summary>True for traffic that must bypass rate limiting: health/liveness probes, JWKS
     /// discovery, and gRPC inter-service calls — all legitimately high-frequency.</summary>
-    private static bool IsRateLimitBypassed(HttpContext httpContext) =>
+    /// <remarks>Internal (not private) so the partition/exemption logic is unit-testable via
+    /// <c>InternalsVisibleTo</c> rather than only through a full request flood.</remarks>
+    internal static bool IsRateLimitBypassed(HttpContext httpContext) =>
         httpContext.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase)
         || httpContext.Request.Path.StartsWithSegments("/alive", StringComparison.OrdinalIgnoreCase)
         || httpContext.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase)
@@ -37,7 +39,9 @@ public static class WebApplicationBuilderExtensions
 
     /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests,
     /// and limits authenticated callers per user (name → user_id → IP).</summary>
-    private static RateLimitPartition<string> GlobalRateLimitPartition(HttpContext httpContext, int globalPermitLimit)
+    /// <remarks>Internal (not private) so the partition-key selection is unit-testable via
+    /// <c>InternalsVisibleTo</c>.</remarks>
+    internal static RateLimitPartition<string> GlobalRateLimitPartition(HttpContext httpContext, int globalPermitLimit)
     {
         if (IsRateLimitBypassed(httpContext))
         {

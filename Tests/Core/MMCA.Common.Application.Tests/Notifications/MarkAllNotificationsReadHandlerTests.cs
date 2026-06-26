@@ -47,12 +47,34 @@ public sealed class MarkAllNotificationsReadHandlerTests
         result.IsSuccess.Should().BeTrue();
     }
 
+    // ── Read time is stamped from the injected clock ──
+    [Fact]
+    public async Task HandleAsync_WithUnreadNotifications_StampsReadOnFromInjectedClock()
+    {
+        var readInstant = new DateTimeOffset(2026, 6, 26, 14, 30, 0, TimeSpan.Zero);
+        var (sut, mocks) = CreateSut(unreadCount: 3, timeProvider: new FixedTimeProvider(readInstant));
+
+        Result result = await sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
+
+        result.IsSuccess.Should().BeTrue();
+        mocks.Unread.Should().HaveCount(3);
+        mocks.Unread.Should().OnlyContain(n => n.IsRead && n.ReadOn == readInstant.UtcDateTime);
+    }
+
     // ── Helpers ──
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
-        Mock<IQueryableExecutor> QueryableExecutor);
+        Mock<IQueryableExecutor> QueryableExecutor,
+        IReadOnlyList<UserNotification> Unread);
 
-    private static (MarkAllNotificationsReadHandler Sut, HandlerMocks Mocks) CreateSut(int unreadCount)
+    private static (MarkAllNotificationsReadHandler Sut, HandlerMocks Mocks) CreateSut(
+        int unreadCount,
+        TimeProvider? timeProvider = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<UserNotification, UserNotificationIdentifierType>>();
@@ -76,8 +98,8 @@ public sealed class MarkAllNotificationsReadHandlerTests
         queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotification>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(unread);
 
-        var sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, queryableExecutor.Object, TimeProvider.System);
-        var mocks = new HandlerMocks(unitOfWork, queryableExecutor);
+        var sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, queryableExecutor.Object, timeProvider ?? TimeProvider.System);
+        var mocks = new HandlerMocks(unitOfWork, queryableExecutor, unread);
 
         return (sut, mocks);
     }
