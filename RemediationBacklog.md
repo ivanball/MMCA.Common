@@ -130,26 +130,27 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 
 ## 🔴 Priority 6 — highest leverage
 
-### [ ] #28 · Front-End Testing & Quality — score 2 → 4 (weight 3)
+### [x] #28 · Front-End Testing & Quality — score 2 → 4 (weight 3) · *RESOLVED 2026-06-27*
 The package ships reusable Blazor primitives with **no fast test tier**.
-- **(medium)** No component tests for the UI library — `Tests/Presentation/MMCA.Common.UI.Tests` references only xUnit/Moq/AwesomeAssertions/coverlet (no bUnit), while `Source/Presentation/MMCA.Common.UI/Components/` ships ~12 components with real branching.
-- **(low)** No axe/Lighthouse or visual-regression step in `ci.yml`; no a11y tooling in `Directory.Packages.props`.
+- ~~**(medium)** No component tests for the UI library~~ — **RESOLVED:** `Tests/Presentation/MMCA.Common.UI.Tests` references `bunit` (2.7.2) + the shipped `MMCA.Common.Testing.UI` harness and ships **29 component tests** across the branching primitives (`MobileCardList`, `MobileInfiniteScrollList` — empty/cards/cap/click/error+retry), `UnsavedChangesGuard`, `NotificationBell`, `DeleteConfirmation`, `PageStateScope`, `RedirectToLogin`, and the `PageHeader`/`PageLoadingState`/`PageErrorState` primitives (`PrimitivesTests`).
+- ~~**(low)** No axe/Lighthouse or visual-regression step in `ci.yml`~~ — **RESOLVED:** `Deque.AxeCore.Playwright` (4.12.0) is pinned and shipped in `MMCA.Common.Testing.E2E` (`Page.AssertNoAccessibilityViolationsAsync()`); the `ui-e2e` CI job runs a **cross-browser matrix** (chromium required gate; firefox/webkit advisory) over the backend-less gallery with **6 axe-core WCAG 2.1 AA assertions** + render smoke.
 
 **Fix**
-- [ ] Add **bUnit**; write render/parameter/`EventCallback` tests, starting with the branching components (`MobileCardList`, `MobileInfiniteScrollList`).
-- [ ] Wire **`Deque.AxeCore.Playwright`** into the existing E2E flows (≥1 a11y assertion).
-- [ ] Run at least one **browser journey in MMCA.Common CI** so regressions in the shipped E2E helpers are caught here, not only downstream.
+- [x] Add **bUnit**; write render/parameter/`EventCallback` tests, starting with the branching components (`MobileCardList`, `MobileInfiniteScrollList`). → 29 component tests in `MMCA.Common.UI.Tests`.
+- [x] Wire **`Deque.AxeCore.Playwright`** into the existing E2E flows (≥1 a11y assertion). → 6 axe assertions across Login/Register/Components/Notifications.
+- [x] Run at least one **browser journey in MMCA.Common CI** so regressions in the shipped E2E helpers are caught here, not only downstream. → `ui-e2e` job (`.github/workflows/ci.yml`), gallery host self-served, chromium gate.
 
-### [ ] #30 · Compliance, Privacy & Data Governance — score 1 → (lowest score, weight 2)
-Soft-delete is the only deletion model — no lawful erasure path.
-- **(medium)** `AuditableBaseEntity.Delete()` sets `IsDeleted=true`; global query filters everywhere; CLAUDE.md states entities are "never hard-deleted" — the exact GDPR/CCPA conflict the rubric names. `ExecuteDeleteAsync` exists but bypasses audit/events.
-- **(low)** Processed outbox rows (serialized payloads, potential PII) are never purged — `OutboxProcessor` only sets `ProcessedOn`; ADR-003 itself notes the table "grows until cleaned up."
-- **(low)** No PII/consent/DSR machinery (the AES-256-GCM `EncryptedStringConverter` is a real, shippable PII control to build on).
+### [x] #30 · Compliance, Privacy & Data Governance — score 1 → 4 (weight 2) · *RESOLVED 2026-06-27*
+Soft-delete is the only deletion model — no lawful erasure path. *(All three fix items shipped; see the wave-1 progress entry above and the 2026-06-27 closeout below.)*
+- ~~**(medium)** `AuditableBaseEntity.Delete()` sets `IsDeleted=true` … the exact GDPR/CCPA conflict the rubric names.~~ — **RESOLVED:** `IAnonymizable` erasure seam (`Domain/Interfaces/IAnonymizable.cs`), enforced by the `PiiConventionTests` fitness rule (a `[Pii]`-marked property obliges `IAnonymizable`); the AES-256-GCM `EncryptedStringConverter` ships for retrievable PII.
+- ~~**(low)** Processed outbox rows … are never purged~~ — **RESOLVED:** `OutboxCleanupService` purges processed outbox (and inbox) rows older than `Outbox:RetentionDays` (default 7) from every relational source.
+- ~~**(low)** No PII/consent/DSR machinery~~ — **RESOLVED (framework seam):** `[Pii]` marker + `PiiConventionTests` + `EncryptedStringConverter`, and now `PiiRedactor` masks `[Pii]` members before they reach a structured log / telemetry attribute (closing the documented-but-missing log-redaction half of the `[Pii]` contract). DSR/erasure *endpoints* remain consumer-owned (ADC ships them — see ADC #30).
 
 **Fix**
-- [ ] Add an **`IAnonymizable` / erasure-orchestration seam** that reconciles soft-delete with subject deletion (anonymize-in-place, preserve audit trail).
-- [ ] Add an **outbox-purge** background option with configurable retention.
-- [ ] Write an **ADR** framing the soft-delete-vs-erasure tradeoff and the consumer's data-controller obligations.
+- [x] Add an **`IAnonymizable` / erasure-orchestration seam** that reconciles soft-delete with subject deletion (anonymize-in-place, preserve audit trail). → `IAnonymizable` + ADR-005 + `PiiConventionTests` guard.
+- [x] Add an **outbox-purge** background option with configurable retention. → `OutboxCleanupService` (`Outbox:RetentionDays`).
+- [x] Write an **ADR** framing the soft-delete-vs-erasure tradeoff and the consumer's data-controller obligations. → `ADRs/005-soft-delete-vs-erasure.md`.
+- [x] **(2026-06-27) Make the `[Pii]` log-masking real** — `PiiRedactor` (`Domain/Privacy/PiiRedactor.cs`) masks every `[Pii]`-marked member (shallow, value-erasing) so an entity carrying personal data can be logged without leaking clear-text PII; the `PiiAttribute` doc previously *advertised* this policy but no implementation existed. Covered by 7 `PiiRedactorTests`.
 
 ---
 
