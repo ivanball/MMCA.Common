@@ -30,6 +30,10 @@ dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests
 # UI accessibility + render smoke (Playwright/axe — NOT in the .slnx; needs `playwright install chromium` once)
 dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj
 
+# Performance smoke benchmarks (BenchmarkDotNet — NOT in the .slnx; run in Release, on demand)
+dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks
+# Fast correctness smoke (seconds): append the Dry job —  ... Benchmarks -- --job Dry
+
 # Pack NuGet packages
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
 

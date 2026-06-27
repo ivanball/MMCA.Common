@@ -1,3 +1,4 @@
+using System.Globalization;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -146,6 +147,7 @@ public static class Extensions
                     .AddMeter("MMCA.Common.Outbox")
                     .AddMeter("MMCA.Common.Cqrs"))
             .WithTracing(tracing =>
+            {
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddSource("MMCA.Common.Outbox")
                     .AddAspNetCoreInstrumentation()
@@ -156,11 +158,41 @@ public static class Extensions
                     // telemetry ingestion cost. Must be registered here, before
                     // AddOpenTelemetryExporters() below, so its OnEnd clears the Recorded flag
                     // before the exporters' batch processors check it.
-                    .AddProcessor(new Telemetry.OutboxPollFilterProcessor()));
+                    .AddProcessor(new Telemetry.OutboxPollFilterProcessor());
+
+                // Cost control (rubric §31): head-based trace sampling. Unset by default, so a
+                // host samples everything (no behavior change). A deployed host sets
+                // Telemetry:TracesSampleRatio in (0,1) — e.g. 0.1 to keep 10% of traces — to cut
+                // trace-ingestion cost, the largest observability line item. ParentBased so a
+                // sampled-in request keeps its whole trace intact across service boundaries.
+                if (TryGetTraceSampleRatio(builder.Configuration, out var traceSampleRatio))
+                    tracing.SetSampler(new ParentBasedSampler(new TraceIdRatioBasedSampler(traceSampleRatio)));
+            });
 
         builder.AddOpenTelemetryExporters();
 
         return builder;
+    }
+
+    /// <summary>
+    /// Reads the optional <c>Telemetry:TracesSampleRatio</c> knob (rubric §31). Returns true with a
+    /// ratio in the open interval (0,1) when a host opts into head-based trace sampling; returns false
+    /// (sample everything, the default) when the key is absent, unparseable, or outside (0,1) — so a
+    /// typo can never silently drop all telemetry.
+    /// </summary>
+    internal static bool TryGetTraceSampleRatio(IConfiguration configuration, out double ratio)
+    {
+        ratio = 1.0;
+        var raw = configuration["Telemetry:TracesSampleRatio"];
+        if (string.IsNullOrWhiteSpace(raw)
+            || !double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            || parsed is <= 0.0 or >= 1.0)
+        {
+            return false;
+        }
+
+        ratio = parsed;
+        return true;
     }
 
     /// <summary>

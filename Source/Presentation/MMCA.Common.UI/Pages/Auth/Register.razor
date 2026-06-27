@@ -19,151 +19,127 @@
     </div>
 
     <MudCard Elevation="1">
-        <MudCardContent Class="pa-6">
-            @if (!string.IsNullOrWhiteSpace(_errorMessage))
-            {
-                <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_errorMessage</MudAlert>
-            }
-            <MudGrid Spacing="3">
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_firstName" Label="First Name"
-                                  Immediate="true" Required="true" RequiredError="First name is required"
-                                  Variant="Variant.Outlined"
-                                  autocomplete="given-name" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_lastName" Label="Last Name"
-                                  Immediate="true" Required="true" RequiredError="Last name is required"
-                                  Variant="Variant.Outlined"
-                                  autocomplete="family-name" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email"
-                                  Immediate="true" Required="true" RequiredError="Email is required"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Email"
-                                  autocomplete="email" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password"
-                                  Immediate="true" Required="true" RequiredError="Password is required"
-                                  HelperText="Min 8 chars, with uppercase, lowercase, digit, and special character"
-                                  Variant="Variant.Outlined"
-                                  autocomplete="new-password" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_confirmPassword" Label="Confirm Password" InputType="InputType.Password"
-                                  Immediate="true" Required="true" RequiredError="Please confirm your password"
-                                  Variant="Variant.Outlined"
-                                  autocomplete="new-password" />
-                </MudItem>
-            </MudGrid>
-
-            <MudExpansionPanels Class="mt-4" Elevation="0">
-                <MudExpansionPanel Text="Address (Optional)">
-                    <MudGrid Spacing="3">
-                        <MudItem xs="12">
-                            <MudTextField @bind-Value="_addressLine1" Label="Address Line 1"
-                                          Variant="Variant.Outlined" autocomplete="address-line1" />
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudTextField @bind-Value="_addressLine2" Label="Address Line 2"
-                                          Variant="Variant.Outlined" autocomplete="address-line2" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="_city" Label="City"
-                                          Variant="Variant.Outlined" autocomplete="address-level2" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="_state" Label="State"
-                                          Variant="Variant.Outlined" autocomplete="address-level1" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="_zipCode" Label="Zip Code"
-                                          Variant="Variant.Outlined" autocomplete="postal-code" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="_country" Label="Country"
-                                          Variant="Variant.Outlined" autocomplete="country-name" />
-                        </MudItem>
-                    </MudGrid>
-                </MudExpansionPanel>
-            </MudExpansionPanels>
-        </MudCardContent>
-        <MudCardActions Class="d-flex flex-column pa-6 pt-2" Style="gap: 0.75rem;">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                       Disabled="@_isLoading" OnClick="HandleRegisterAsync" Size="Size.Large"
-                       aria-label="Create your account">
-                @if (_isLoading)
+        <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
+            <DataAnnotationsValidator />
+            <MudCardContent Class="pa-6">
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_errorMessage</MudAlert>
                 }
-                Create Account
-            </MudButton>
-            <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
-                Already have an account?
-                @* Underline.Always: an in-text link must be distinguishable without relying on colour
-                   alone (WCAG 2.1 AA / axe link-in-text-block). *@
-                <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">Sign In</MudLink>
-            </MudText>
-        </MudCardActions>
+                <MudGrid Spacing="3">
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.FirstName" For="@(() => _model.FirstName)" Label="First Name"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      autocomplete="given-name" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.LastName" For="@(() => _model.LastName)" Label="Last Name"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      autocomplete="family-name" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="Email" InputType="InputType.Email"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email"
+                                      autocomplete="email" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="Password" InputType="InputType.Password"
+                                      Immediate="true"
+                                      HelperText="Min 8 chars, with uppercase, lowercase, digit, and special character"
+                                      Variant="Variant.Outlined"
+                                      autocomplete="new-password" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.ConfirmPassword" For="@(() => _model.ConfirmPassword)" Label="Confirm Password" InputType="InputType.Password"
+                                      Immediate="true"
+                                      Variant="Variant.Outlined"
+                                      autocomplete="new-password" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudExpansionPanels Class="mt-4" Elevation="0">
+                    <MudExpansionPanel Text="Address (Optional)">
+                        <MudGrid Spacing="3">
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="_model.AddressLine1" Label="Address Line 1"
+                                              Variant="Variant.Outlined" autocomplete="address-line1" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="_model.AddressLine2" Label="Address Line 2"
+                                              Variant="Variant.Outlined" autocomplete="address-line2" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_model.City" Label="City"
+                                              Variant="Variant.Outlined" autocomplete="address-level2" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_model.State" Label="State"
+                                              Variant="Variant.Outlined" autocomplete="address-level1" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_model.ZipCode" Label="Zip Code"
+                                              Variant="Variant.Outlined" autocomplete="postal-code" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="_model.Country" Label="Country"
+                                              Variant="Variant.Outlined" autocomplete="country-name" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </MudCardContent>
+            <MudCardActions Class="d-flex flex-column pa-6 pt-2" Style="gap: 0.75rem;">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           Disabled="@_isLoading" ButtonType="ButtonType.Submit" Size="Size.Large"
+                           aria-label="Create your account">
+                    @if (_isLoading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Create Account
+                </MudButton>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                    Already have an account?
+                    @* Underline.Always: an in-text link must be distinguishable without relying on colour
+                       alone (WCAG 2.1 AA / axe link-in-text-block). *@
+                    <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">Sign In</MudLink>
+                </MudText>
+            </MudCardActions>
+        </EditForm>
     </MudCard>
 </MudContainer>
 
 @code {
-    private string _firstName = string.Empty;
-    private string _lastName = string.Empty;
-    private string _email = string.Empty;
-    private string _password = string.Empty;
-    private string _confirmPassword = string.Empty;
-    private string _addressLine1 = string.Empty;
-    private string? _addressLine2;
-    private string? _city;
-    private string? _state;
-    private string? _zipCode;
-    private string? _country;
+    private readonly RegisterModel _model = new();
     private string? _errorMessage;
     private bool _isLoading;
 
     private Address? BuildAddress()
     {
-        if (string.IsNullOrWhiteSpace(_addressLine1))
+        if (string.IsNullOrWhiteSpace(_model.AddressLine1))
             return null;
 
-        var result = Address.Create(_addressLine1, _addressLine2, _city, _state, _zipCode, _country);
+        var result = Address.Create(_model.AddressLine1, _model.AddressLine2, _model.City, _model.State, _model.ZipCode, _model.Country);
         return result.IsSuccess ? result.Value : null;
     }
 
     private async Task HandleRegisterAsync()
     {
+        // Field-level rules (required, email, password complexity, password match) are enforced by the
+        // EditForm + DataAnnotations before OnValidSubmit fires; this method only handles the call and
+        // any server-side failure, surfaced in the form-level MudAlert.
         _errorMessage = null;
-
-        if (_password != _confirmPassword)
-        {
-            _errorMessage = "Passwords do not match.";
-            return;
-        }
-
-        if (_password.Length < 8)
-        {
-            _errorMessage = "Password must be at least 8 characters.";
-            return;
-        }
-
-        if (!_password.Any(char.IsUpper) || !_password.Any(char.IsLower) ||
-            !_password.Any(char.IsDigit) || _password.All(char.IsLetterOrDigit))
-        {
-            _errorMessage = "Password must contain uppercase, lowercase, a digit, and a special character.";
-            return;
-        }
-
         _isLoading = true;
 
         try
         {
             var result = await AuthService.RegisterAsync(
-                new RegisterRequest(_email, _password, _firstName, _lastName, BuildAddress()));
+                new RegisterRequest(_model.Email, _model.Password, _model.FirstName, _model.LastName, BuildAddress()));
             if (result is not null)
             {
                 Navigation.NavigateTo("/", forceLoad: true);

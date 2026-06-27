@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- BenchmarkDotNet smoke harness for the framework's DB-free query/spec hot paths (rubric §12,
+         "measured, not assumed"). Deliberately OUTSIDE MMCA.Common.slnx (like the UI gallery) so the
+         unit-test run stays fast. Run on demand with `dotnet run -c Release` against this project; see
+         CLAUDE.md for the full command and the fast Dry-job smoke option. -->
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+    <!-- Out-of-solution dev tool: skip the ship-gates the framework projects enforce. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <NuGetAudit>false</NuGetAudit>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Domain\MMCA.Common.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
+  </ItemGroup>
+</Project>

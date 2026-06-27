@@ -1,0 +1,19 @@
+@page "/forbidden"
+@layout MainLayout
+
+<PageTitle>Access Denied</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center mt-16">
+    <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Large"
+             Color="Color.Error" Style="font-size: 5rem;" Class="mb-4" />
+    <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2" role="alert">Access Denied</MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6">
+        You are signed in, but you do not have permission to view this page.
+        If you believe this is a mistake, contact an administrator.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Home"
+               Href="/" Size="Size.Large">
+        Back to Home
+    </MudButton>
+</MudContainer>

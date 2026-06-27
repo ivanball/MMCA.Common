@@ -23,20 +23,21 @@
     </div>
 
     <MudCard Elevation="1">
-        <form @onsubmit="HandleLoginAsync">
+        <EditForm Model="_model" OnValidSubmit="HandleLoginAsync">
+            <DataAnnotationsValidator />
             <MudCardContent Class="pa-6">
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_errorMessage</MudAlert>
                 }
-                <MudTextField @bind-Value="_email" Label="Email" InputType="InputType.Email"
-                              Immediate="true" Required="true" RequiredError="Email is required"
+                <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="Email" InputType="InputType.Email"
+                              Immediate="true"
                               Variant="Variant.Outlined" Class="mb-4"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Email"
                               autocomplete="email" />
-                <MudTextField @bind-Value="_password" Label="Password" InputType="InputType.Password"
-                              Immediate="true" Required="true" RequiredError="Password is required"
+                <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="Password" InputType="InputType.Password"
+                              Immediate="true"
                               Variant="Variant.Outlined" Class="mb-2"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Key"
@@ -86,7 +87,7 @@
                     }
                 }
             </MudCardActions>
-        </form>
+        </EditForm>
     </MudCard>
 </MudContainer>
 
@@ -94,8 +95,7 @@
     [SupplyParameterFromQuery(Name = "returnUrl")]
     public string? ReturnUrl { get; set; }
 
-    private string _email = string.Empty;
-    private string _password = string.Empty;
+    private readonly LoginModel _model = new();
     private string? _errorMessage;
     private bool _isLoading;
     private bool _hasExternalProviders;
@@ -125,7 +125,7 @@
 
         try
         {
-            var result = await AuthService.LoginAsync(new LoginRequest(_email, _password));
+            var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password));
             if (result is not null)
             {
                 Navigation.NavigateTo(ReturnUrlProtector.Sanitize(ReturnUrl, "/"), forceLoad: true);

@@ -353,7 +353,10 @@ public sealed partial class OutboxProcessor(
     [LoggerMessage(Level = LogLevel.Debug, Message = "Processing {Count} pending outbox messages from {DataSourceName}")]
     private static partial void LogProcessingBatch(ILogger logger, int count, string dataSourceName);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Outbox message {MessageId} ({EventType}) dispatched successfully")]
+    // Debug, not Information: this fires once per dispatched message and would otherwise be the
+    // single noisiest log line in steady state — a real telemetry-ingestion cost (rubric §31, COST.md).
+    // Failures stay loud (dead-letter = Error, retry = Warning); success detail is Debug.
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Outbox message {MessageId} ({EventType}) dispatched successfully")]
     private static partial void LogMessageProcessed(ILogger logger, Guid messageId, string eventType);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} dead-lettered: type not resolvable — {EventType}")]

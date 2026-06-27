@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.Common.UI.Common.Interfaces
+@using MMCA.Common.UI.Pages
 @inject IEnumerable<IUIModule> UIModules
 
 <CascadingAuthenticationState>
@@ -20,9 +21,9 @@
                     }
                     else
                     {
-                        <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
-                            <MudAlert Severity="Severity.Warning">You are not authorized to access this page.</MudAlert>
-                        </MudContainer>
+                        @* Authenticated but lacking the required role/permission → a dedicated 403
+                           page rendered in the app shell (rubric §25), not a bare alert. *@
+                        <Forbidden />
                     }
                 </NotAuthorized>
             </AuthorizeRouteView>
