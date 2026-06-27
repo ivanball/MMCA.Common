@@ -21,6 +21,12 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Fast, dependency-free drift gate: FACTS.md must match what `build/facts` computes from source
+      # (version from the git tag, package count, ADR range, fitness-method/base counts). Fails the
+      # build if the committed FACTS.md is stale — regenerate with `dotnet run --project build/facts -- .`.
+      - name: Verify FACTS.md is current
+        run: dotnet run --project build/facts -- . --check
+
       - name: Restore
         run: dotnet restore MMCA.Common.slnx
 

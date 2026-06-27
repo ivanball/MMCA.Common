@@ -32,10 +32,13 @@ dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI
 
 # Pack NuGet packages
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
+
+# Regenerate FACTS.md from source (CI gates the build on `--check` drift)
+dotnet run --project build/facts -- .
 ```
 
 CI (`.github/workflows/ci.yml`) runs three jobs on every push/PR to `main`:
-- **`build-and-test`** — `restore → build -c Release → vuln-audit → test (with coverage)`. Tests run under `dotnet-coverage collect -f cobertura` (which wraps the MTP run and returns its exit code, so a test failure still gates) with `--minimum-expected-tests 1` — that guard fails the run if any test project discovers zero tests (Microsoft Testing Platform otherwise exits 8). The **vuln-audit** step runs `dotnet list package --vulnerable --include-transitive` and fails on any vulnerable-package row **except** advisories suppressed via `NuGetAuditSuppress` in `Directory.Build.props` (the single source of truth — `dotnet list --vulnerable` ignores `NuGetAuditSuppress`, so the step re-applies that accepted-advisory list itself, e.g. the accepted unpatched SQLite advisory).
+- **`build-and-test`** — `verify FACTS.md → restore → build -c Release → vuln-audit → test (with coverage)`. The **Verify FACTS.md** step runs `dotnet run --project build/facts -- . --check` — a fast, dependency-free drift gate that fails the build if the committed `FACTS.md` no longer matches what `build/facts` computes from source (version/packages/ADR range/fitness counts). Tests run under `dotnet-coverage collect -f cobertura` (which wraps the MTP run and returns its exit code, so a test failure still gates) with `--minimum-expected-tests 1` — that guard fails the run if any test project discovers zero tests (Microsoft Testing Platform otherwise exits 8). The **vuln-audit** step runs `dotnet list package --vulnerable --include-transitive` and fails on any vulnerable-package row **except** advisories suppressed via `NuGetAuditSuppress` in `Directory.Build.props` (the single source of truth — `dotnet list --vulnerable` ignores `NuGetAuditSuppress`, so the step re-applies that accepted-advisory list itself, e.g. the accepted unpatched SQLite advisory).
 - **`ui-e2e`** (*UI a11y + render smoke*) — a **cross-browser matrix** (`chromium`, `firefox`, `webkit`; `fail-fast: false`). It builds `Tests/Presentation/MMCA.Common.UI.E2E.Tests` directly (it and `MMCA.Common.UI.Gallery` are **deliberately outside `MMCA.Common.slnx`** so the unit-test job stays fast), installs Playwright for the matrix browser via `E2E_BROWSER`, then runs the suite headless. **chromium is the required merge gate; firefox/webkit are advisory** (`continue-on-error`) until proven reliably green. It self-hosts the backend-less gallery and scans the real Login/Register pages + primitives showcase with **axe-core (WCAG 2.1 AA)** plus a render smoke. To reproduce locally, build/test those csproj paths directly — `dotnet test --solution` will not touch them.
 - **`coverage`** (`needs: [build-and-test, ui-e2e]`, `if: always()`) — merges the unit/arch/bUnit + E2E cobertura tiers (ReportGenerator, `+MMCA.*;-*.Tests`, generated `*.generated.cs`/`*.g.cs` filtered out), publishes the summary to the run, and **enforces a coverage floor** as a regression backstop: the **unit tier must stay ≥ 53% line coverage** (gated on the unit tier alone, not the gallery-diluted merged report; ratchet up as it grows).
 
@@ -109,15 +112,15 @@ When changing project references or moving a type between packages, expect both 
 
 ### DI Registration Sequence
 
-Downstream apps must register services in this order (decorators require existing handler registrations):
+Downstream apps register `AddApplicationDecorators()` **last** — Scrutor `TryDecorate` can only wrap handlers that are already registered, so every module's handler scan must run first. Only that ordering is load-bearing; the relative position of `AddInfrastructure`/`AddAPI` is not. The reference service hosts do the module scan via `ModuleLoader.DiscoverAndRegister`; the fluent equivalent is:
 
 ```csharp
 services.AddApplication()                                    // Core services, event dispatcher
+    .AddInfrastructure(configuration)                        // Repos, UoW, DbContexts, caching, outbox
+    .AddAPI(modulesSettings)                                 // Controllers, idempotency, exception handlers
     .ScanModuleApplicationServices<ModuleAClassRef>()        // Module A handlers, validators, mappers
     .ScanModuleApplicationServices<ModuleBClassRef>()        // Module B handlers, validators, mappers
-    .AddApplicationDecorators()                              // MUST be last — Scrutor TryDecorate wraps existing handlers
-    .AddInfrastructure(configuration)                        // Repos, UoW, DbContexts, caching, outbox
-    .AddAPI(modulesSettings);                                // Controllers, idempotency, exception handlers
+    .AddApplicationDecorators();                             // MUST be last — wraps every scanned handler
 ```
 
 ### Result Pattern
@@ -237,11 +240,13 @@ The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers
 These docs live **in this repo** (committable, unlike the workspace-level `Docs/Architecture/ArchitecturalAnalysis.md`, `Docs/Architecture/ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
 
 - `GETTING-STARTED.md` — the step-by-step framework-adoption guide (solution plumbing → a module vertical slice → Aspire host → architecture-fitness map → a worked module-extraction). MMCA.Helpdesk is its runnable companion (every step maps to real code there). Read this before answering "how do I build an app on this framework?"
-- `ADRs/` — the accepted architecture decision records (001–022) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `Docs/ADRs/` is now a convenience mirror — add new ADRs here.
-- `ArchitectureScorecard.md` — the filled 34-category architecture evaluation (health index, per-category score + evidence). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
-- `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category.
+- `ADRs/` — the accepted architecture decision records (001–022) + index, explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `Docs/ADRs/` is now a **pointer** (no copies, since the workspace root can't be versioned) — add new ADRs here.
+- `ArchitectureEvaluationCriteria.md` — the **canonical** 34-category two-axis rubric (Maturity 0-4 + Implementation 0-10), shared by all three repos' scorecards. Moved here (mirroring the ADRs); the workspace `Docs/Architecture/ArchitectureEvaluationCriteria.md` is now a pointer.
+- `FACTS.md` — the **single source of truth** for framework-wide facts (version, the 13 packages, ADR range, fitness-method/base counts). Link here / to `ADRs/README.md`; do not restate these numbers inline. **Generated from source and CI-gated** by `build/facts` (a dependency-free tool) — regenerate with `dotnet run --project build/facts -- .`; the `build-and-test` CI job runs it with `--check` and fails on drift, so don't hand-edit the computed values. (The workspace `Tools/invtool -- facts ./MMCA.Common` shares the same generator.)
+- `ArchitectureScorecard.md` — the **canonical, two-axis** architecture scorecard for this repo (per-category Maturity+Implementation + indices + evidence). This is the single source of truth for Common's scores (it replaced the former single-axis snapshot; the old workspace `ArchitectureEvaluation-MMCA.Common.md` is now a pointer). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
+- `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category. The workspace `Docs/Architecture/ArchitectureRemediation.md` is a thin cross-repo `[C→A]` roll-up that links here (no status restated).
 - `VERSIONING.md` — SemVer + breaking-change policy; the thirteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
 - `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
 - `COST.md` — FinOps notes (rubric §31): the framework's cost-relevant defaults (telemetry-span filtering, outbox poll/retention tuning) and the right-sizing / attribution / surge-revert levers consumers set downstream.
 
-**Commit-message convention:** much of the recent history is remediation work tagged `R<n> §<m>: <summary>` (e.g. `R16 §30: ...`). `R<n>` is the remediation item in the workspace `Docs/Architecture/ArchitectureRemediation.md`; `§<m>` is the scorecard category above. When continuing remediation work, match this format and update `RemediationBacklog.md`.
+**Commit-message convention:** remediation work is tagged by **scorecard category** `§<m>: <summary>` (e.g. `§30: ...`), where `§<m>` is the rubric/scorecard category. When continuing remediation work, match this format and update `RemediationBacklog.md`. _(Older commits used an `R<n> §<m>` form; the parallel `R<n>` numbering in the workspace roll-up is retired — track by category now.)_

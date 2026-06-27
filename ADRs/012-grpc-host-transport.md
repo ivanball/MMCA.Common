@@ -22,9 +22,11 @@ Fixed in commit 49b7283 (deployed green) by adopting **Profile A** for Store:
 - JWKS authority stays `http://identity` (unchanged): the http2 ingress carries the HTTP/1.1 JwtBearer
   JWKS metadata fetch to the container.
 
-**Both consumers now use Profile A.** Profile B is retained below as (a) the original rationale for the
-split and (b) the still-valid SignalR/WebSocket exception: ADC's Notification service runs
-`Http1AndHttp2` because its WebSocket Upgrade handshake needs HTTP/1.1, and it serves no inbound gRPC.
+**Both consumers now use Profile A** for their gRPC-serving edges. `Http1AndHttp2` (Profile-B Kestrel)
+survives on two non-gRPC-serving hosts for two different reasons: ADC's **Notification** service (its
+WebSocket Upgrade handshake needs HTTP/1.1) and Store's **Sales** service (a consumer-only host that
+serves no inbound cleartext gRPC, so it never needed Http2-only). Profile B is retained below as (a) the
+original rationale for the split and (b) the still-valid rule for those no-inbound-gRPC hosts.
 
 ## Context
 Once modules were extracted into separate service hosts (ADR-008) that call each other synchronously
@@ -59,7 +61,9 @@ Use when services must **serve** gRPC on cleartext (any bidirectional / inbound 
   `"Kestrel:EndpointDefaults:Protocols": "Http2"` in appsettings). The cleartext endpoint is
   HTTP/2-only (h2c prior knowledge), so peer gRPC clients negotiate without TLS/ALPN.
 - **Gateway:** `ForwardHttp2 = true` → YARP forwards REST as HTTP/2 (`HttpVersion.Version20`,
-  `RequestVersionOrLower`). In Azure Container Apps, ingress must be `transport: http2`.
+  `VersionPolicy = RequestVersionExact`). `RequestVersionOrLower` would silently downgrade to HTTP/1.1,
+  which the Http2-only backend rejects with `HTTP_1_1_REQUIRED`, so the policy must be *exact*. In Azure
+  Container Apps, ingress must be `transport: http2`.
 - **JWKS discovery:** `WithJwksDiscovery(identity, gateway)`. The default JwtBearer metadata
   backchannel is HTTP/1.1 and **cannot** reach the Http2-only Identity endpoint directly, so the
   authority is set to the **gateway** HTTPS origin; the gateway terminates TLS, speaks HTTP/1.1 + 2
@@ -107,9 +111,9 @@ Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-di
   Profile B to Profile A *and* flip `ForwardHttp2` and the JWKS wiring together, or it breaks.
 - **ACA ingress coupling.** Profile A requires `transport: http2` on the container app ingress;
   Profile B uses default HTTP/1.1 ingress. The Bicep must match the chosen profile.
-- **Mixed profiles within one app are possible but sharp-edged** (ADC's Notification runs Profile B
-  Kestrel inside an otherwise-Profile-A app); only do this for a service with no inbound cleartext
-  gRPC, and document why.
+- **Mixed profiles within one app are possible but sharp-edged** (ADC's Notification and Store's Sales
+  each run `Http1AndHttp2` Kestrel inside an otherwise-Profile-A app); only do this for a service with
+  no inbound cleartext gRPC, and document why.
 
 ## Related
 - ADR-004 (cross-service token validation via JWKS / OIDC discovery), ADR-007 (gRPC cross-service

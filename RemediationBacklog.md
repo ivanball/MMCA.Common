@@ -1,6 +1,7 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (architecture-health index **80%**, 218/272).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.2% / Implementation 82.9%**, framework v1.82.0).
+The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
 
@@ -61,10 +62,10 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 ## Progress — v1.80.0 (2026-06-26)
 
 > The single-axis backlog above is from the **2026-06-08/09** review (index 80%). The framework has since
-> reached **v1.80.0** and the canonical current scoring is the two-axis workspace report
-> [`Docs/Architecture/ArchitectureEvaluation-MMCA.Common.md`](../Docs/Architecture/ArchitectureEvaluation-MMCA.Common.md)
-> (**Maturity 92.2% / Implementation 82.6%**). This entry records what shipped in v1.80.0 and the
-> remaining framework-side follow-ups; it does not re-derive the priority ranking above.
+> reached **v1.82.0** and the canonical current scoring is the **in-repo, two-axis**
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md)
+> (**Maturity 92.2% / Implementation 82.9%**). This entry records what shipped and the
+> remaining framework-side follow-ups; it does not re-derive the single-axis priority ranking above.
 
 - ✅ **#11 / #1 — permission-based authorization (opt-in).** `IPermissionRegistry`/`PermissionRegistryBuilder`
   (Shared) + `[HasPermission]`/`PermissionPolicyProvider`/`PermissionAuthorizationHandler` (API), wired via
@@ -90,6 +91,40 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   SaveChanges boundary would shift occurrence-time → persist-time and regress that semantic; threading a
   clock through every aggregate is disproportionate. Documented as a deliberate choice in
   `BaseDomainEvent` rather than changed. *(decision 2026-06-26)*
+
+---
+
+## Progress — v1.81.0/v1.82.0 + governance pass (2026-06-26)
+
+> Released since v1.80.0 (v1.81.0, v1.82.0) plus a sixth governance pass currently **in flight (uncommitted)**.
+> All of it lands in categories already scored 9-10, so the two-axis indices are unchanged
+> (**Maturity 92.2% / Implementation 82.9%**); these are evidence/governance enrichments, not score-movers.
+
+- ✅ **#9 — Scalar OpenAPI UI (opt-in, released v1.81.0).** `MapCommonScalarUi()` renders `/scalar/{doc}`
+  from the generated document, non-Production only, via the bundled `Scalar.AspNetCore 2.16.6` (no CDN).
+  The committed-baseline drift gate stays deliberately consumer-owned (the API surface lives in the
+  consumer hosts). §9 impl held at 9.
+- ✅ **#31 — `COST.md` FinOps note (released v1.81.0).** Consolidates the framework's cost levers
+  (telemetry poll-span filtering, outbox poll/retention tuning) and the right-sizing / attribution /
+  surge-revert defaults consumers set. Doc enrichment; §31 impl held at 6 (execution is consumer/IaC).
+- ✅ **#11 / #26 — RS256 pinned on the JWKS-forwarded auth path (v1.82.0).**
+  `ValidAlgorithms = [RsaSha256]` on the forwarded-JWT validation path, matching the in-process pin.
+- ✅ **#11 / #26 — security-response headers centralized (ADR-023, uncommitted pass).** One pluggable
+  middleware in `MMCA.Common.Aspire.Security` (`AddCommonSecurityHeaders` + `ICspPolicyProvider` +
+  `SecurityHeadersMiddleware`, unit-tested) replaces per-host hand-rolled headers. §11/§26 impl held at 9
+  (default static CSP deliberately omits `script-src`/`style-src` until a host registers a provider).
+- ✅ **#34 / #16 — FACTS.md now generated + CI drift-gated (uncommitted pass).** `build/facts` computes
+  the framework facts from source; `ci.yml:27-28` runs `dotnet run --project build/facts -- . --check` as
+  a drift gate, so version / package count / ADR range / fitness counts can no longer drift. The rubric
+  (`ArchitectureEvaluationCriteria.md`) and `FACTS.md` are now version-controlled in-repo. ADR set now
+  **001-023** (ADR-023 added). §34 impl held at 9 (residual: ArchitecturalAnalysis.md in the
+  uncommittable workspace root; plus this pass is mid-commit).
+
+**Open follow-up surfaced this cycle (governance hygiene, not a score-mover):**
+- [ ] **Commit the in-flight governance pass** (ADR-023, `FACTS.md`, `build/facts`, in-repo rubric,
+  this scorecard/backlog + CLAUDE/README + the six edited ADRs) and add the ADR-023 + CHANGELOG
+  `[Unreleased]` entries, so §34 traceability is consistent again (the scorecard header notes the
+  momentarily-dirty tree).
 
 ---
 

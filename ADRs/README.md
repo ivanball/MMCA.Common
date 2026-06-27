@@ -5,7 +5,7 @@ pattern they describe — they capture context and trade-offs that aren't obviou
 
 | # | Decision | Summary |
 |---|----------|---------|
-| [001](001-manual-dto-mapping.md) | Manual DTO mapping | Explicit mappers chosen over AutoMapper. |
+| [001](001-manual-dto-mapping.md) | Manual DTO mapping | Per-entity Mapperly source-generated mappers chosen over AutoMapper-style runtime reflection. |
 | [002](002-navigation-populators.md) | Navigation populators | `INavigationPopulator<T>` for cross-container/cross-source eager loading. |
 | [003](003-outbox-dual-dispatch.md) | Outbox dual dispatch | Outbox + in-process dispatch + background processor; at-least-once delivery. |
 | [004](004-authentication-dual-fetch.md) | Cross-service token validation (JWKS) | Extracted services validate Identity's RS256 tokens via JWKS / OIDC discovery (no shared key); HS256 shared-secret stays the monolith default; discovery is gateway-routed with a direct-Identity fallback. |
@@ -27,6 +27,7 @@ pattern they describe — they capture context and trade-offs that aren't obviou
 | [020](020-permission-based-authorization.md) | Permission-based authorization over roles | A capability layer over RBAC: `[HasPermission("…")]` resolves to on-demand `perm:*` policies backed by a central role→permission `IPermissionRegistry`; modules declare grants additively via `AddPermissions`. Opt-in and backward-compatible (named role policies untouched; inert until a host grants). Adopted by ADC (Conference/Identity), not yet by Store. |
 | [021](021-consumer-inbox-idempotency.md) | Consumer-side inbox idempotency | Opt-in inbox (`IInboxStore` / `EfInboxStore`, `MessageBus:EnableInbox`) dedups broker redeliveries by `MessageId`: `IntegrationEventConsumer` checks before handlers, records after success, in the consumer's own DB (unique index as the race guard). At-least-once-with-dedup (handlers stay idempotent for the crash window). The broker-consume sibling of ADR-003 / ADR-017. |
 | [022](022-browser-session-cookie-auth.md) | Browser session-cookie auth (Blazor SSR) | HttpOnly `mmca_auth_access` / `mmca_auth_refresh` cookies carry the session; `SessionCookieAuthenticationHandler` reads claims during SSR prerender (no signature check — the API stays the boundary, ADR-004) so `[Authorize]` passes on fresh GETs; refresh token stays server-side, hydrated via `/auth/session/token`. BFF-style, SameSite=Lax + Sec-Fetch-Site CSRF guard. |
+| [023](023-security-response-headers.md) | Security-response headers + pluggable CSP | Centralized hardened security-headers middleware (`AddCommonSecurityHeaders`) with an `ICspPolicyProvider` CSP seam; the baseline CSP omits `script-src`/`style-src` so it cannot break Blazor, and HTML hosts register their own policy (`BlazorCspPolicyProvider`). Adopted at both apps' Gateway + UI edges. |
 
 ## Writing a new ADR
 

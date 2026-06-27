@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Dependency-free generator/verifier for FACTS.md (the framework-wide facts SSOT).
+    No PackageReferences (BCL + regex only) so it carries no NuGet/audit/lock-file surface and
+    needs no restore in CI. Isolated from the framework's strict build via build/Directory.Build.props.
+    Run it with `dotnet run` against this project; pass the repo root and optionally a check flag.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <RunAnalyzers>false</RunAnalyzers>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <NuGetAudit>false</NuGetAudit>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

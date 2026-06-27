@@ -1,0 +1,9 @@
+<Project>
+  <!--
+    Boundary file. Tools under build/ deliberately do NOT inherit the framework's strict
+    root Directory.Build.props (TreatWarningsAsErrors, analyzers-at-error, EnforceCodeStyleInBuild,
+    Central Package Management, NuGet lock files, the layer-enforcement targets). They are
+    self-contained build/CI utilities, isolated from the packaged framework build.
+    (MSBuild imports the nearest Directory.Build.props walking up; this one stops that chain.)
+  -->
+</Project>

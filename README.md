@@ -39,7 +39,7 @@ New to the framework? **[GETTING-STARTED.md](GETTING-STARTED.md)** is the step-b
 ## Architecture & docs
 
 - **[Architecture scorecard](ArchitectureScorecard.md)**: the framework graded against a 34-category review rubric, with every category score, the weighted health index, top strengths, and the honest gaps.
-- **[Architecture Decision Records](ADRs/README.md)**: the accepted ADRs (001-016) explaining *why* the core cross-cutting patterns exist (outbox dual-dispatch, database-per-service, auth dual-fetch, soft-delete vs. erasure, gRPC extraction, and more).
+- **[Architecture Decision Records](ADRs/README.md)**: the accepted ADRs (001-022) explaining *why* the core cross-cutting patterns exist (outbox dual-dispatch, database-per-service, auth dual-fetch, soft-delete vs. erasure, gRPC extraction, and more). See `ADRs/README.md` for the current count/range.
 - **[Contributor guide](CLAUDE.md)**: package layout, layer dependency rules, and how to extend the framework.
 
 ## License

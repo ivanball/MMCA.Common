@@ -33,11 +33,13 @@ Use single-responsibility handlers behind a Scrutor-composed decorator pipeline.
   (with `CachePrefix`), `IQueryCacheable` (with `CacheKey` + `CacheDuration`). A handler that
   implements none simply skips that decorator's work, so messages pay only for the concerns they
   declare.
-- Handlers, validators, and mappers are auto-registered by convention
-  (`ScanModuleApplicationServices<TMarker>()`); `AddApplicationDecorators()` MUST be called **last**,
-  after every module's concrete handlers exist, so `TryDecorate` can find them. This is the fixed DI
-  sequence consumers follow (`AddApplication` -> `ScanModuleApplicationServices...` ->
-  `AddApplicationDecorators` -> `AddInfrastructure` -> `AddAPI`).
+- Handlers, validators, and mappers are auto-registered by convention (module handler scanning, driven
+  by `ModuleLoader.DiscoverAndRegister` in the service hosts, or `ScanModuleApplicationServices<TMarker>()`
+  directly); `AddApplicationDecorators()` MUST be called **last**, after every module's concrete handlers
+  exist, so `TryDecorate` can find them. The reference hosts call it at the very end of the DI sequence
+  (`AddApplication` -> `AddInfrastructure` -> `AddAPI` -> module handler scan via
+  `ModuleLoader.DiscoverAndRegister` -> `AddApplicationDecorators`). Only that decorators-last ordering is
+  load-bearing; the relative position of `AddInfrastructure`/`AddAPI` is not.
 
 ## Rationale
 - **Thin, testable handlers.** A handler has no transaction, logging, or caching plumbing, so it is

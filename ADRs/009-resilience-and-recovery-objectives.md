@@ -50,10 +50,13 @@ only that the numbers exist and the restore is drilled.
   backups never restored. Forcing a recorded drill closes the §29 gap that documentation alone leaves.
 
 ## Trade-offs
-- The fitness test asserts the *registration* wires resilience, not the *runtime* behavior of every
-  policy parameter — parameter tuning is still a review concern. The gate (`ResilienceHandlerTests`,
-  `MMCA.Common.Grpc.Tests`) currently asserts the gRPC client path (`AddTypedGrpcClient`);
-  `AddTypedServiceClient` wires the same standard handler but is not yet covered by an equivalent test.
+- The named gate (`ResilienceHandlerTests`, `MMCA.Common.Grpc.Tests`) asserts that the gRPC client path
+  (`AddTypedGrpcClient`) *registers* the standard handler, not the runtime behavior of every policy
+  parameter; parameter tuning is still a review concern. Runtime breaker behavior is no longer wholly
+  untested, though: a separate fault-injection test (`ResilienceCircuitBreakerFaultInjectionTests`, same
+  project) now drives sustained failures and proves the circuit breaker actually trips and short-circuits.
+  `AddTypedServiceClient` wires the same standard handler but is not yet covered by an equivalent
+  registration test.
 - Per-consumer DR docs can drift from reality; the drill-result table is the mitigation (a stale table
   is a visible smell).
 - A gRPC client that needs bespoke timeouts must override the standard handler explicitly rather than
