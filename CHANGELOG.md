@@ -6,6 +6,36 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.85.0] - 2026-06-27
+
+Under-8 Implementation remediation: every architecture-scorecard category scored Implementation < 8
+is lifted with shipped, tested evidence (reference samples + real code levers). No breaking changes.
+
+### Added
+- **Slice-cohesion fitness function (§5).** `SliceCohesionTestsBase` + `ArchitectureRules.Slices`
+  in `MMCA.Common.Testing.Architecture` (now 70 methods / 18 bases) — fails the build if a
+  use-case slice's handler/validator is stranded from its same-assembly command/query contract.
+  Re-run as a thin subclass in every repo.
+- **OTel trace sampler knob (§31).** `Telemetry:TracesSampleRatio` (a value in `(0,1)`) installs a
+  `ParentBasedSampler(TraceIdRatioBasedSampler)` in `AddServiceDefaults`; unset = sample everything.
+  The biggest lever on trace-ingestion cost.
+- **In-shell 403 page (§25).** `Pages/Forbidden.razor` rendered for the authenticated-but-unauthorized
+  route branch (was a bare alert), plus `NavigationFlow.md` documenting the Common UI route/role model.
+- **Reference deployment sample (§17).** `samples/deployment/{foundation,main}.bicep` (Container Apps
+  + ACR-via-managed-identity + Key Vault + SQL + cost tags + budget) + `DEPLOYMENT.md` (OIDC + UAMI
+  bootstrap + smoke-gate/auto-rollback).
+- **`RESILIENCE.md` (§29)** — baseline SLO/error-budget template + restore-drill runbook reference;
+  the warm-up readiness subsystem is now unit-tested.
+- **BenchmarkDotNet smoke harness (§12)** — `Tests/Performance/MMCA.Common.Benchmarks` (outside the
+  `.slnx`); hot-path spec efficiency is now measured, not assumed.
+
+### Changed
+- **Register/Login use `EditForm` + DataAnnotations field-level validation (§24)** — errors are tied
+  to the offending input (`ValidationMessage`) with the summary kept for form-level/server errors.
+- **Outbox per-message "dispatched" log moved Information → Debug (§31)** — the highest-volume log
+  line in steady state; failures stay loud (dead-letter = Error, retry = Warning).
+- **`COST.md`** gains cost-attribution-tag + cost-guard-workflow samples and documents the sampler knob.
+
 ## [1.82.0] - 2026-06-26
 
 Governance + supply-chain + E2E-stability hardening. No breaking changes.
