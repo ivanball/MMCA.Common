@@ -48,100 +48,41 @@ public abstract class E2ETestBase : IAsyncLifetime
         await _context.DisposeAsync();
     }
 
-    protected Task LoginAsAdminAsync() =>
-        UseAuthenticatedSessionAsync(
-            "admin",
-            page => LoginViaUiAsync(
-                page,
-                E2ETestConfiguration.AdminCredentials.Email,
-                E2ETestConfiguration.AdminCredentials.Password));
+    protected async Task LoginAsAdminAsync() =>
+        await LoginAsync(E2ETestConfiguration.AdminCredentials.Email, E2ETestConfiguration.AdminCredentials.Password);
 
-    protected Task LoginAsUserAsync() =>
-        UseAuthenticatedSessionAsync(
-            "user",
-            page => LoginViaUiAsync(
-                page,
-                E2ETestConfiguration.UserCredentials.Email,
-                E2ETestConfiguration.UserCredentials.Password));
+    protected async Task LoginAsUserAsync() =>
+        await LoginAsync(E2ETestConfiguration.UserCredentials.Email, E2ETestConfiguration.UserCredentials.Password);
 
-    /// <summary>
-    /// Logs in with an explicit credential pair via the real UI flow on the current page. Use this for the
-    /// login-flow tests themselves (valid/invalid credentials). The seeded admin/user roles instead reuse a
-    /// single cached session per role (see <see cref="LoginAsAdminAsync"/> / <see cref="LoginAsUserAsync"/>),
-    /// so the suite does not pay one full auth round-trip PER test on a contended CI runner (TD-06/07).
-    /// </summary>
-    protected Task LoginAsync(string email, string password) =>
-        LoginViaUiAsync(Page, email, password);
-
-    // Reuses ONE authenticated session per role across the collection: the first call for a role performs a
-    // single real UI login (in the fixture) and captures its storageState (auth cookie + any localStorage
-    // tokens); later calls just open a fresh context seeded with that state, so no further server-side auth
-    // round-trip happens. Then lands on "/" where a real login would, so callers behave identically.
-    private async Task UseAuthenticatedSessionAsync(string roleKey, Func<IPage, Task> performLogin)
-    {
-        var storageState = await _fixture.GetAuthenticatedStorageStateAsync(roleKey, performLogin);
-        await ReplaceContextWithStateAsync(storageState);
-        await Page.GotoAndWaitForBlazorAsync("/");
-    }
-
-    // Swaps the current (anonymous) context/page for one seeded from a captured authenticated storageState,
-    // keeping the same context options + optional tracing as InitializeAsync.
-    private async Task ReplaceContextWithStateAsync(string storageState)
-    {
-        if (E2ETestConfiguration.TracePath is not null)
-        {
-            await _context.Tracing.StopAsync();
-        }
-
-        await Page.CloseAsync();
-        await _context.DisposeAsync();
-
-        _context = await _fixture.Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            IgnoreHTTPSErrors = true,
-            BaseURL = BaseUrl,
-            StorageState = storageState,
-        });
-        _context.SetDefaultTimeout(E2ETestConfiguration.DefaultTimeout);
-
-        if (E2ETestConfiguration.TracePath is not null)
-        {
-            await _context.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true, Sources = true });
-        }
-
-        Page = await _context.NewPageAsync();
-    }
-
-    // The real UI login flow, factored to a static so the fixture can run it ONCE per role to capture the
-    // reusable session and the explicit-credential LoginAsync can share it. Operates on the given page.
-    private static async Task LoginViaUiAsync(IPage page, string email, string password)
+    protected async Task LoginAsync(string email, string password)
     {
         // If already authenticated, clear the existing session so the login page renders without a
         // pre-existing logout button that would cause the post-login wait to return before the new
         // credentials take effect. Cover BOTH token stores: localStorage (WASM/MAUI hosts) AND the
-        // HttpOnly session cookie (the Blazor Server host is cookie-only, so a localStorage clear alone is
-        // a no-op and the prior session would persist). The DELETE hits the same /auth/session-cookie
-        // endpoint the app's logout uses.
-        var logoutVisible = page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
+        // HttpOnly session cookie (the Blazor Server host is cookie-only, so a localStorage clear alone
+        // is a no-op and the prior session would persist — leaving the next login authenticated as the
+        // WRONG user). The DELETE hits the same /auth/session-cookie endpoint the app's logout uses.
+        var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
         if (await logoutVisible.IsVisibleAsync())
         {
-            await page.EvaluateAsync(
+            await Page.EvaluateAsync(
                 "async () => { localStorage.removeItem('auth_access_token'); localStorage.removeItem('auth_refresh_token');" +
                 " try { await fetch('/auth/session-cookie', { method: 'DELETE', credentials: 'same-origin' }); } catch (e) { } }");
         }
 
-        await page.GotoAndWaitForBlazorAsync("/login");
+        await Page.GotoAndWaitForBlazorAsync("/login");
 
-        // MudBlazor renders proper <label> elements — GetByLabel works. FillAndVerifyAsync guards against
-        // Blazor re-hydration clearing values.
-        await page.GetByLabel("Email").FillAndVerifyAsync(email);
-        await page.GetByLabel("Password").FillAndVerifyAsync(password);
+        // MudBlazor renders proper <label> elements — GetByLabel works.
+        // Use FillFieldAsync to guard against Blazor re-hydration clearing values.
+        await FillFieldAsync(Page.GetByLabel("Email"), email);
+        await FillFieldAsync(Page.GetByLabel("Password"), password);
 
-        await page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" }).ClickAsync();
+        // MudBlazor applies text-transform: uppercase — visible text is "LOGIN"
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" }).ClickAsync();
 
-        // On success, the Login page calls NavigateTo("/", forceLoad: true) — a full reload away from
-        // /login. On failure it stays at /login and shows an error alert.
-        await WaitForAuthResultAsync(page, "/login", "Login");
+        // On success, the Login page calls NavigateTo("/", forceLoad: true) — a full page reload away
+        // from /login. On failure it stays at /login and shows an error alert.
+        await WaitForAuthResultAsync("/login", "Login");
     }
 
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
@@ -167,7 +108,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         // Registration does NavigateTo("/", forceLoad: true) on success — a full page reload away from
         // /register. On failure it stays on /register and shows an error alert. Do NOT call
         // WaitForBlazorAsync here — the forceLoad navigation destroys the JS execution context.
-        await WaitForAuthResultAsync(Page, "/register", "Registration");
+        await WaitForAuthResultAsync("/register", "Registration");
 
         return (email, password);
     }
@@ -180,12 +121,12 @@ public abstract class E2ETestBase : IAsyncLifetime
     // signal; only an error alert that is still showing ON the auth page after the grace window is a
     // real failure. Strictly safer than waiting on the logout button alone: it declares failure in a
     // subset of the prior conditions, so it cannot turn a passing flow into a failing one.
-    private static async Task WaitForAuthResultAsync(IPage page, string authPagePath, string operation)
+    private async Task WaitForAuthResultAsync(string authPagePath, string operation)
     {
-        var logoutButton = page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
-        var errorAlert = page.Locator(".mud-alert-text-error");
+        var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
+        var errorAlert = Page.Locator(".mud-alert-text-error");
 
-        var leftAuthPage = page.WaitForURLAsync(
+        var leftAuthPage = Page.WaitForURLAsync(
             url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
             new() { Timeout = E2ETestConfiguration.AuthTimeout });
 
@@ -197,8 +138,8 @@ public abstract class E2ETestBase : IAsyncLifetime
         // Success is unambiguous once the forceLoad has navigated away from the auth page. Only treat an
         // error alert STILL on the auth page (after the grace window, with no navigation) as a failure.
         if (await errorAlert.IsVisibleAsync()
-            && page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase)
-            && !await AuthSucceededWithinGraceAsync(page, authPagePath, logoutButton))
+            && Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase)
+            && !await AuthSucceededWithinGraceAsync(authPagePath, logoutButton))
         {
             var errorText = await errorAlert.TextContentAsync();
             throw new InvalidOperationException($"{operation} failed: {errorText}");
@@ -208,11 +149,11 @@ public abstract class E2ETestBase : IAsyncLifetime
     // Within the grace window, treats EITHER the forceLoad navigating away from the auth page OR the
     // interactive logout button appearing as success — so a transient error-alert flash during a slow
     // Server-mode success path is not mistaken for a real failure. See E2ETestConfiguration.AuthGraceTimeout.
-    private static async Task<bool> AuthSucceededWithinGraceAsync(IPage page, string authPagePath, ILocator logoutButton)
+    private async Task<bool> AuthSucceededWithinGraceAsync(string authPagePath, ILocator logoutButton)
     {
         try
         {
-            await page.WaitForURLAsync(
+            await Page.WaitForURLAsync(
                 url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
                 new() { Timeout = E2ETestConfiguration.AuthGraceTimeout });
             return true;
