@@ -132,6 +132,51 @@ public static class PageExtensions
     }
 
     /// <summary>
+    /// Clicks <paramref name="button"/> and waits for <paramref name="expected"/> (the action's visible
+    /// effect, e.g. a "saved successfully" snackbar) to appear, re-clicking if it does not. This is the
+    /// submit-side counterpart to <see cref="FillAndVerifyAsync"/>: Blazor InteractiveAuto prerenders the
+    /// page as static HTML, so a click that lands before the runtime wires the component's
+    /// <c>@onclick</c> is silently ignored (see the type-level remarks) and the action never fires. On a
+    /// fast host the bare click routinely beats hydration, so a single click is unreliable. This polls:
+    /// click, wait a slice of <paramref name="timeout"/> for the effect, and if it has not appeared
+    /// re-assert interactivity and click again. A successful action surfaces its effect well within one
+    /// slice, so a genuinely-applied click is not re-issued (no double submit); only a no-op click is
+    /// retried. Use for create/edit/delete submits that assert on a resulting snackbar or navigation.
+    /// </summary>
+    public static async Task ClickAndVerifyAsync(this ILocator button, ILocator expected, float timeout = 15_000)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(expected);
+
+        var page = button.Page;
+        // The handler must be wired before the first click counts; without this the click is a no-op.
+        await page.WaitForBlazorAsync();
+
+        const int maxAttempts = 3;
+        var perAttempt = timeout / maxAttempts;
+        for (var attempt = 1; attempt < maxAttempts; attempt++)
+        {
+            await button.ClickAsync();
+            try
+            {
+                await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt });
+                return;
+            }
+            catch (PlaywrightException)
+            {
+                // The click most likely did not register (handler not yet attached on this fast host).
+                // Re-assert interactivity, then click again on the next loop turn.
+                await page.WaitForBlazorAsync();
+            }
+        }
+
+        // Final attempt: click once more and let the assertion throw with full diagnostics if it still
+        // has not taken effect (a real failure, not a hydration race).
+        await button.ClickAsync();
+        await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt });
+    }
+
+    /// <summary>
     /// Runs an axe-core accessibility scan against the current page and throws an
     /// <see cref="AccessibilityViolationException"/> if any violation is found. Call from a
     /// consumer E2E test once the page is interactive (e.g. after
