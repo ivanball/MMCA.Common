@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload coverage (unit + architecture + bUnit)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
           path: coverage.unit.cobertura.xml
@@ -126,7 +126,7 @@ jobs:
 
       - name: Upload coverage (E2E)
         if: ${{ always() && matrix.browser == 'chromium' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-e2e
           path: coverage.e2e.cobertura.xml
@@ -134,7 +134,7 @@ jobs:
 
       - name: Upload Playwright traces on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ui-e2e-traces-${{ matrix.browser }}
           path: Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release/net10.0/playwright-traces/**
@@ -200,7 +200,7 @@ jobs:
           cat coverage-report/Summary.txt
 
       - name: Upload HTML coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report-html
           path: coverage-report
