@@ -8,7 +8,9 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     // One captured authenticated session (storageState JSON: cookies + localStorage) per role key, shared
     // by the whole collection. Lets every test reuse a single login per role instead of authenticating per
     // test (the dominant resource-contention timeout on a 2-core CI runner — TD-06/07).
-    private readonly Dictionary<string, string> _storageStateByRole = new(StringComparer.Ordinal);
+    // Default Dictionary<string,string> comparer is already ordinal, which is what the "admin"/"user"
+    // role keys need (collection-expression form keeps IDE0028 happy on this collection type).
+    private readonly Dictionary<string, string> _storageStateByRole = [];
     private readonly SemaphoreSlim _stateLock = new(1, 1);
 
     public IPlaywright Playwright { get; private set; } = null!;
