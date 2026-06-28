@@ -140,6 +140,32 @@ jobs:
           path: Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release/net10.0/playwright-traces/**
           if-no-files-found: ignore
 
+  # Performance smoke (§12): build + run the BenchmarkDotNet harness with the Dry job (one invocation per
+  # benchmark — seconds, not the full multi-iteration timing run) on every push, so the benchmarked hot
+  # paths (Specification compiled-expression cache + criteria composition) are exercised by CI. This is a
+  # *runs-clean* gate — it fails the build if a benchmarked code path throws or no longer compiles, NOT a
+  # latency-regression gate (full timing runs stay on-demand; see CLAUDE.md / COST.md). Kept OUT of
+  # MMCA.Common.slnx (like ui-e2e) so the unit `dotnet test --solution` run stays fast.
+  performance-smoke:
+    name: Performance smoke (BenchmarkDotNet --job Dry)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # MinVer (on the referenced Source projects) needs full history
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Run benchmark smoke (Dry job)
+        # The Benchmarks project references MMCA.Common source directly (no GitHub Packages token needed),
+        # like the UI E2E project. --filter "*" selects every benchmark non-interactively (without it BDN
+        # prompts for a selection and would hang in CI); --job Dry runs each exactly once for correctness
+        # in seconds. --no-launch-profile keeps it deterministic on hosted runners.
+        run: dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks --no-launch-profile -- --filter "*" --job Dry
+
   # Merge the unit/architecture/bUnit + E2E coverage tiers into one report, publish it to the run
   # summary, and enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor").
   # Runs after both test jobs regardless of their outcome.
