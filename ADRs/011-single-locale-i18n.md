@@ -1,7 +1,9 @@
 # ADR-011: Single-Locale by Design (No Internationalization)
 
 ## Status
-Accepted (2026-06-19)
+**Superseded by [ADR-027](027-multi-locale-i18n.md) (2026-06-27).** Originally Accepted (2026-06-19).
+The "if multi-locale is ever required" scope below is the blueprint ADR-027 implements; this record is
+retained for history.
 
 ## Context
 The MMCA applications (the ADC conference app, the Store) and the `MMCA.Common.UI` library currently ship

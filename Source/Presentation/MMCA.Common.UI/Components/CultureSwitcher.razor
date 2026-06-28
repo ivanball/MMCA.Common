@@ -1,0 +1,40 @@
+@using MMCA.Common.Shared.Globalization
+@using Microsoft.Extensions.DependencyInjection
+@inject NavigationManager Navigation
+@inject IServiceProvider Services
+@inject IStringLocalizer<SharedResource> L
+
+<MudMenu Icon="@Icons.Material.Filled.Translate"
+         Color="Color.Inherit"
+         Dense="true"
+         AriaLabel="@L["Culture.Switcher.Label"].Value">
+    @foreach (var culture in SupportedCultures.All)
+    {
+        <MudMenuItem OnClick="@(() => SetCulture(culture))">@GetCultureName(culture)</MudMenuItem>
+    }
+</MudMenu>
+
+@code {
+    private string GetCultureName(string culture)
+    {
+        var localized = L[$"Culture.Name.{culture}"];
+        return localized.ResourceNotFound ? culture : localized.Value;
+    }
+
+    private async Task SetCulture(string culture)
+    {
+        // Persist to the signed-in user's profile (best-effort; no-op when anonymous) before the reload.
+        var writer = Services.GetService<IUserPreferenceWriter>();
+        if (writer is not null)
+        {
+            await writer.SaveAsync(culture, theme: null);
+        }
+
+        var current = new Uri(Navigation.Uri).PathAndQuery;
+        var url = $"/culture/set?culture={Uri.EscapeDataString(culture)}&redirectUri={Uri.EscapeDataString(current)}";
+
+        // Full reload: the server re-renders SSR under the new cookie and the WASM runtime re-reads it,
+        // keeping prerender and hydration on the same culture (ADR-027).
+        Navigation.NavigateTo(url, forceLoad: true);
+    }
+}

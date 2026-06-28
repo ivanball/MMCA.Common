@@ -32,15 +32,15 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 12. `MMCA.Common.Testing.E2E`
 13. `MMCA.Common.Testing.UI`
 
-## Architecture Decision Records — **23 (001-023)**
+## Architecture Decision Records — **28 (001-028)**
 The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the range/count and the one-line
 summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
 
 ## Architecture fitness functions
-- **70 test methods across 18 abstract `*TestsBase` classes**, shipped once in the
+- **71 test methods across 18 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **33** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **38** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

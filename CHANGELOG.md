@@ -6,6 +6,43 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+Internationalization (ADR-027) + Day/Dark theme mode (ADR-028), plus maturity-axis remediation (§29, §30)
+and DDD fitness hardening (§4). No breaking changes (the static `ErrorMessages` signatures are preserved).
+
+### Added
+- **Multi-locale i18n (ADR-027, supersedes ADR-011).** Framework now supports `en-US` + Spanish (`es`):
+  - **Edge error localization keyed by `Error.Code`.** `IErrorLocalizer` (`MMCA.Common.API/Localization`)
+    translates the human-readable message at the HTTP edge (`ErrorHttpMapping.BuildErrorsExtension`,
+    applied in `ApiControllerBase.HandleFailure` + `UnhandledResultFailureFilter`), falling back to the
+    English `Error.Message` for any unmapped code; the ProblemDetails `title` and the `Code`/`Source`/
+    `Target` stay verbatim. Common ships `ErrorResources.{resx,es.resx}`; modules add their own via
+    `AddErrorResources<TResource>()`. Wired automatically by `AddAPI` (`AddErrorLocalization`).
+  - **Request localization + culture switch.** `UseCommonRequestLocalization()` (in the shared service
+    pipeline) and `MapCultureEndpoint()` (`GET /culture/set`) plus a `SupportedCultures` allowlist
+    (`MMCA.Common.Shared`). UI: `AddUIShared` registers `AddLocalization()` + a `CultureDelegatingHandler`
+    that forwards the active culture as `Accept-Language`; a `CultureSwitcher` component; and
+    `MmcaCultureBootstrap.SetBrowserCultureAsync` for the WASM `.Client` to match SSR (no locale flash).
+  - **Localized shared chrome.** `MainLayout`, `ErrorMessages`, and `DataGridListPageBase` snackbars now
+    resolve from `SharedResource.{resx,es.resx}` via `IStringLocalizer`.
+- **Day/Dark theme mode (ADR-028).** `MudThemeProvider` is now bound (`@bind-IsDarkMode`) to the existing
+  `MMCATheme.PaletteDark`; a `ThemeService` persists the choice to a cookie + localStorage (default = OS
+  `prefers-color-scheme`) and a `ThemeToggle` ships in the shared app bar beside the culture switcher.
+- **In-repo restore-drill smoke (§29).** `DatabaseRestoreDrillTests`
+  (`Tests/Core/MMCA.Common.Infrastructure.Tests/Resilience/`) exercises the full recovery procedure —
+  seed → backup → simulated catastrophic data loss → restore → verify zero data loss, timing the RTO —
+  against an ephemeral SQLite database via the SQLite online-backup API. The framework now demonstrates
+  the restore *procedure* centrally instead of only inheriting it downstream; `RESILIENCE.md` records the
+  baseline.
+- **Non-vacuous PII erasure-contract fitness (§30).** `PiiErasureContractFitnessTests` forces a
+  representative `[Pii]`-carrying data subject through `PiiRedactor` (masking + no clear-text leak) and
+  `IAnonymizable` (idempotent in-place erasure), proving the three §30 mechanisms compose end to end —
+  closing the "no fitness function forces a type through the redactor" gap (ADR-005).
+- **Aggregate private-constructor fitness rule (§4).** `AggregateConventionTestsBase` now also asserts
+  Domain-layer aggregate roots expose no public constructor (construction goes through the static
+  `Create(...)` Result-factory) via `ArchitectureRules.DomainAggregateRootsHaveNoPublicConstructors` —
+  the minimal-base counterpart to the module-scoped rule, so the framework's own aggregates are covered
+  (now 71 fitness methods / 18 bases).
+
 ## [1.85.0] - 2026-06-27
 
 Under-8 Implementation remediation: every architecture-scorecard category scored Implementation < 8
@@ -35,6 +72,31 @@ is lifted with shipped, tested evidence (reference samples + real code levers). 
 - **Outbox per-message "dispatched" log moved Information → Debug (§31)** — the highest-volume log
   line in steady state; failures stay loud (dead-letter = Error, retry = Warning).
 - **`COST.md`** gains cost-attribution-tag + cost-guard-workflow samples and documents the sampler knob.
+
+## [1.84.0] - 2026-06-27
+
+PII log/telemetry redaction (§30). No breaking changes.
+
+### Added
+- **`PiiRedactor` (§30).** `Domain/Privacy/PiiRedactor.cs` masks every `[Pii]`-marked member (shallow,
+  value-erasing `[REDACTED]` token, per-type reflection cache) before an entity carrying personal data
+  reaches a structured log or telemetry attribute — the redaction half of the `[Pii]` contract (ADR-005),
+  complementing the `IAnonymizable` erasure seam. Covered by `PiiRedactorTests` (incl. "never emits the
+  clear-text PII values").
+
+## [1.83.0] - 2026-06-26
+
+Governance + front-end security hardening. No breaking changes.
+
+### Added
+- **ADR-023 — centralized security-response headers (§26).** Documents the hardened security-headers
+  middleware + pluggable `ICspPolicyProvider` CSP seam (`AddCommonSecurityHeaders`), replacing per-host
+  hand-rolled headers.
+- **Source-generated, CI-gated `FACTS.md` (§34).** `build/facts` computes version / package-count /
+  ADR-range / fitness counts from source; the `build-and-test` job runs it with `--check` and fails the
+  build on drift, so the framework facts are a computed-and-gated artifact rather than hand-maintained prose.
+- **Canonical two-axis `ArchitectureScorecard.md` (§34).** The rubric (`ArchitectureEvaluationCriteria.md`)
+  and scorecard are version-controlled in-repo (mirroring the ADR governance pattern).
 
 ## [1.82.0] - 2026-06-26
 

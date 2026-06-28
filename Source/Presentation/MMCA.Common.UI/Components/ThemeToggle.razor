@@ -1,0 +1,31 @@
+@using Microsoft.Extensions.DependencyInjection
+@inject ThemeService ThemeService
+@inject IServiceProvider Services
+@inject IStringLocalizer<SharedResource> L
+@implements IDisposable
+
+<MudIconButton Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+               Color="Color.Inherit"
+               title="@L["Theme.Toggle.Label"].Value"
+               aria-label="@(ThemeService.IsDarkMode ? L["Theme.Toggle.ToLight"].Value : L["Theme.Toggle.ToDark"].Value)"
+               OnClick="ToggleAsync" />
+
+@code {
+    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+
+    private async Task ToggleAsync()
+    {
+        await ThemeService.ToggleAsync();
+
+        // Persist to the signed-in user's profile (best-effort; no-op when anonymous).
+        var writer = Services.GetService<IUserPreferenceWriter>();
+        if (writer is not null)
+        {
+            await writer.SaveAsync(culture: null, theme: ThemeService.IsDarkMode ? "dark" : "light");
+        }
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
+}

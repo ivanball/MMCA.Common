@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services;
 using MudBlazor;
 using MudBlazor.Services;
@@ -18,6 +20,7 @@ namespace MMCA.Common.UI.Pages.Common;
 public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewportObserver, IAsyncDisposable, IDisposable
 {
     [Inject] protected ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IStringLocalizer<SharedResource> Localizer { get; set; } = default!;
     [Inject] private IBrowserViewportService BrowserViewportService { get; set; } = default!;
     [Inject] private ListPageStateService ListPageStateService { get; set; } = default!;
     [Inject] private ListPageQueryStateService QueryStateService { get; set; } = default!;
@@ -463,7 +466,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
             // snackbar is a no-op (separate render — no JS toast host), so no special-casing is needed.
             if (showCancelSnackbar)
-                Snackbar.Add("Loading cancelled.", Severity.Info);
+                Snackbar.Add(Localizer["Grid.Snackbar.LoadCancelled"], Severity.Info);
             return new GridData<TDto> { Items = [], TotalItems = 0 };
         }
         catch (Exception ex)

@@ -28,9 +28,10 @@ mode is a single configuration switch (`JwtSettings.SigningAlgorithm`, default `
   configured, the provider returns an empty key set, so the endpoint stays queryable.
 - Two well-known endpoints are mapped centrally for every host (`MapJwksEndpoint`,
   `MapOidcDiscoveryEndpoint`), both anonymous: `/.well-known/jwks.json` and
-  `/.well-known/openid-configuration`. The discovery document advertises only `issuer` + `jwks_uri`
-  and returns `404` when `Jwt:Issuer` is unset, so a non-Identity host serving the same route exposes
-  nothing.
+  `/.well-known/openid-configuration`. The discovery document advertises the validation-relevant
+  `issuer` + `jwks_uri` (plus minimal OIDC metadata: `response_types_supported`,
+  `subject_types_supported`, `id_token_signing_alg_values_supported`) and returns `404` when
+  `Jwt:Issuer` is unset, so a non-Identity host serving the same route exposes nothing.
 
 **Validator side (every other service).**
 - `AddForwardedJwtBearer(authority, audience)` points the JWT bearer middleware at an `Authority`, so

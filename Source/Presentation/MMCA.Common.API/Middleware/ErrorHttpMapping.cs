@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using MMCA.Common.API.Localization;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.API.Middleware;
@@ -39,12 +40,16 @@ internal static class ErrorHttpMapping
     /// <summary>
     /// Builds the "errors" extension array used in Problem Details responses. Each error is
     /// projected into an anonymous object with Code, Message, Type, Source, and Target properties.
+    /// The human-readable <c>Message</c> is localized at the edge via <paramref name="localizer"/>,
+    /// keyed by the stable <c>Code</c> (ADR-027); <c>Code</c>/<c>Type</c>/<c>Source</c>/<c>Target</c>
+    /// stay verbatim so clients can still branch on them. A <see langword="null"/> localizer (no
+    /// localization registered) leaves the original English <c>Message</c> unchanged.
     /// </summary>
-    internal static object[] BuildErrorsExtension(IReadOnlyList<Error> errors) =>
+    internal static object[] BuildErrorsExtension(IReadOnlyList<Error> errors, IErrorLocalizer? localizer) =>
         [.. errors.Select(e => new
         {
             e.Code,
-            e.Message,
+            Message = localizer is null ? e.Message : localizer.Localize(e.Code, e.Message),
             Type = e.Type.ToString(),
             e.Source,
             e.Target

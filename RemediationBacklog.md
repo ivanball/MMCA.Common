@@ -1,6 +1,6 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.2% / Implementation 82.9%**, framework v1.82.0).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.8% / Implementation 85.0%**, framework v1.85.0).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
@@ -62,9 +62,10 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 ## Progress — v1.80.0 (2026-06-26)
 
 > The single-axis backlog above is from the **2026-06-08/09** review (index 80%). The framework has since
-> reached **v1.82.0** and the canonical current scoring is the **in-repo, two-axis**
+> reached **v1.82.0** and the canonical scoring was the **in-repo, two-axis**
 > [`ArchitectureScorecard.md`](ArchitectureScorecard.md)
-> (**Maturity 92.2% / Implementation 82.9%**). This entry records what shipped and the
+> (**Maturity 92.2% / Implementation 82.9%** at that wave — current: **92.8% / 85.0%**, see the scorecard
+> header). This entry records what shipped and the
 > remaining framework-side follow-ups; it does not re-derive the single-axis priority ranking above.
 
 - ✅ **#11 / #1 — permission-based authorization (opt-in).** `IPermissionRegistry`/`PermissionRegistryBuilder`
@@ -97,8 +98,9 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 ## Progress — v1.81.0/v1.82.0 + governance pass (2026-06-26)
 
 > Released since v1.80.0 (v1.81.0, v1.82.0) plus a sixth governance pass currently **in flight (uncommitted)**.
-> All of it lands in categories already scored 9-10, so the two-axis indices are unchanged
-> (**Maturity 92.2% / Implementation 82.9%**); these are evidence/governance enrichments, not score-movers.
+> All of it lands in categories already scored 9-10, so the two-axis indices were unchanged at that wave
+> (**Maturity 92.2% / Implementation 82.9%**; current: **92.8% / 85.0%**); these are evidence/governance
+> enrichments, not score-movers.
 
 - ✅ **#9 — Scalar OpenAPI UI (opt-in, released v1.81.0).** `MapCommonScalarUi()` renders `/scalar/{doc}`
   from the generated document, non-Production only, via the bundled `Scalar.AspNetCore 2.16.6` (no CDN).
@@ -121,10 +123,109 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   uncommittable workspace root; plus this pass is mid-commit).
 
 **Open follow-up surfaced this cycle (governance hygiene, not a score-mover):**
-- [ ] **Commit the in-flight governance pass** (ADR-023, `FACTS.md`, `build/facts`, in-repo rubric,
-  this scorecard/backlog + CLAUDE/README + the six edited ADRs) and add the ADR-023 + CHANGELOG
-  `[Unreleased]` entries, so §34 traceability is consistent again (the scorecard header notes the
-  momentarily-dirty tree).
+- [x] **Commit the sixth governance pass** — ADR-023, the source-generated CI-drift-gated `FACTS.md` +
+  `build/facts`, the in-repo rubric, and this two-axis scorecard all shipped in **v1.83.0** (`b9a6a28`),
+  resolving the prior cycle's "ADR-023 uncommitted" §34 caveat. *(Done 2026-06-27.)*
+- [~] **Backfill the CHANGELOG and commit the docs pass.** *Partly addressed, superseded by the
+  v1.85.0 follow-up below:* a `[1.85.0]` CHANGELOG entry was added (commit `f224595`), but **v1.83.0 and
+  v1.84.0 still have no release notes** and the v1.85.0 docs governance pass (ADRs 024/025/026, the
+  `FACTS.md` ADR-count bump, ADR cross-links, this scorecard/backlog) is still uncommitted. Tracked now
+  under "Progress — v1.85.0 → Open follow-up". *(§34, transient hygiene nit, effort S.)*
+
+---
+
+## Progress — v1.83.0/v1.84.0 (2026-06-27)
+
+> Released since v1.82.0 (v1.83.0, v1.84.0) plus a docs-only governance pass currently **in flight
+> (uncommitted)**. **One score moved at this wave**: §30 Implementation 7→8. The canonical scoring at
+> v1.84.0 was **Maturity 92.2% / Implementation 83.1%** (was 82.9%) per the in-repo
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md); the v1.85.0 eighth wave below then took it to
+> **92.8% / 85.0%**.
+
+- ✅ **#30 — `PiiRedactor` log-masking shipped (v1.84.0, score 7→8).** `Domain/Privacy/PiiRedactor.cs`
+  masks every `[Pii]`-marked member (shallow, value-erasing, `[REDACTED]` token, per-type reflection
+  cache) before an entity carrying personal data reaches a structured log or telemetry attribute —
+  closing the §30 red flag the rubric names verbatim ("PII in logs/telemetry"), previously
+  documented-but-missing. Covered by **7 `PiiRedactorTests`** (incl. "never emits the clear-text PII
+  values"). §30 **maturity holds at 3**: DSAR/export endpoints, consent capture, the personal-data
+  inventory, residency verification, and retention *execution* stay consumer-owned, and
+  `PiiConventionTests` still passes vacuously in-repo (no PII-carrying type lives here; no fitness
+  function forces types through the redactor).
+- ✅ **#34 — sixth governance pass committed (v1.83.0).** ADR-023 (security-response headers), the
+  source-generated CI-drift-gated `FACTS.md` + `build/facts`, the in-repo rubric, and the two-axis
+  scorecard all shipped, resolving the prior "ADR-023 uncommitted" caveat. §34 holds at M4/I9.
+- ✅ **#13 / #29 — warm-up / readiness subsystem documented (ADR-025).** `WarmupHostedService` +
+  `WarmupReadinessGate` + `OpenIdConnectMetadataWarmupTask` (wired into `AddServiceDefaults`) gate
+  `/health/ready` until startup warm-up runs, holding cold replicas out of rotation (gate opens even on
+  task failure = availability over warmth, lazy-retry under ADR-009). **Enrichment, not a score move:**
+  §13 holds at I9 and §29 holds at 3/7 because the subsystem ships **without unit tests** and the §29
+  recovery gaps (restore drill, RTO/RPO, SLOs) are unchanged. *(See the new #29 follow-up below.)*
+- ✅ **#6 — two-channel notifications documented (ADR-024).** The pre-existing SignalR-push + durable
+  `UserNotification`-inbox seams (`IPushNotificationSender`/`INotificationRecipientProvider`, no-op
+  defaults) are now formally recorded. §6 evidence enriched, no move.
+
+**Framework-side follow-ups surfaced this cycle:**
+- [x] **#29 — unit-test the warm-up/readiness subsystem.** *RESOLVED in the eighth wave (v1.85.0):*
+  `Tests/Hosting/MMCA.Common.Aspire.Tests/Warmup/{WarmupReadinessGate,WarmupHostedService,WarmupReadinessHealthCheck}Tests.cs`
+  now cover the gate latch/idempotency/thread-safety, the hosted service running each `IWarmupTask`
+  once + opening the gate even on task failure, and the health-check transitions. This converted
+  "warm-up exists" into "warm-up verified" and lifted §29 Implementation 7→8.
+
+---
+
+## Progress — v1.85.0 (eighth wave: under-8 Implementation remediation, 2026-06-27)
+
+> The under-8 Implementation remediation (commit `78e5312`, **tag `v1.85.0`**, HEAD `7082a5f`) lifted
+> every category scored Implementation < 8 with shipped, tested in-repo evidence, and additionally moved
+> one maturity score. Re-verified against current source. Canonical scoring is now
+> **Maturity 92.8% / Implementation 85.0%** per the in-repo
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md) (was 92.2% / 83.1%). Full Release build clean
+> (0 warnings); 1651 tests pass.
+
+- ✅ **#5 — Vertical Slice: Implementation 7→8 AND maturity 3→4.** `ArchitectureRules.Slices.cs` +
+  `SliceCohesionTestsBase` (shared `MMCA.Common.Testing.Architecture`, the 18th fitness base) + a Common
+  `SliceCohesionTests` subclass fail the build if a use-case slice's handler/validator is stranded from
+  its same-assembly command/query contract. Because this is **automatic CI enforcement of the slice
+  convention**, §5 now meets the rubric's maturity-4 "enforced automatically by tests/CI" bar (like every
+  other fitness-gated category) — the one maturity move this cycle. §5 moves to the level-4 protect list.
+- ✅ **#12 — Performance: Implementation 7→8.** `Tests/Performance/MMCA.Common.Benchmarks` (BenchmarkDotNet
+  smoke harness, outside the `.slnx`) makes hot-path spec efficiency *measured, not assumed*; the
+  max-page-size guard already shipped at v1.84.0.
+- ✅ **#17 — DevOps: Implementation 7→8.** Reference `samples/deployment/{foundation,main}.bicep`
+  (Container Apps + ACR-via-managed-identity + Key Vault + SQL + cost tags + budget; lint clean via
+  `az bicep build`) + `DEPLOYMENT.md` (OIDC federated-credential + UAMI bootstrap + smoke-gate/auto-rollback).
+  Held at 8 — a library can't self-deploy; full CD-to-Azure lives in consumer repos.
+- ✅ **#24 — Forms/Validation: Implementation 7→8.** Register/Login converted to `EditForm` +
+  `DataAnnotationsValidator` + per-field `ValidationMessage` over typed `RegisterModel`/`LoginModel`
+  (`PasswordComplexityAttribute` mirroring the server rule), closing the "errors not tied to the input"
+  red flag; `AuthModelValidationTests` + `RegisterFormTests` cover it.
+- ✅ **#25 — Navigation: Implementation 7→8.** In-shell `Pages/Forbidden.razor` (403) wired into
+  `Routes.razor` (NotAuthorized→`<Forbidden/>`) + `NavigationFlow.md` documenting the Common UI route/role
+  model; `ForbiddenTests` cover it.
+- ✅ **#29 — Resilience: Implementation 7→8.** Warm-up subsystem now unit-tested (above) + `RESILIENCE.md`
+  (baseline SLO/error-budget template + restore-drill runbook reference). Maturity held at 3 — the drill
+  itself executes in consumer IaC; no in-repo measured RTO/RPO or SLO.
+- ✅ **#31 — FinOps: Implementation 6→7.** OTel `Telemetry:TracesSampleRatio` →
+  `ParentBasedSampler(TraceIdRatioBasedSampler)` knob (unit-tested, the biggest trace-ingestion lever) +
+  outbox per-message log moved Information→Debug + `COST.md` cost-attribution-tag/cost-guard samples.
+  Maturity held at 2 — right-sizing/attribution/reversible-scale is consumer/IaC.
+- ✅ **#9 / #34 — `ServiceContractAttribute` doc-comment corrected.** It no longer claims a dedicated
+  `[ServiceContract]` architecture test exists in each consumer solution; it now states the contract-purity
+  invariant is upheld by the transport/layer-purity fitness rules (ADR-015) and that the attribute is an
+  available documentation marker no contract type carries yet — closing the long-standing #9 "documents a
+  test that doesn't exist" sub-item (§9 already impl 9, no score move).
+- ✅ **#10 / #34 — ADR-026 (two-tier caching strategy) added.** Documents the `ICacheService` substrate
+  (startup-time memory-or-distributed swap via `AddCaching`) + the HTTP output-cache edge, and the
+  TTL-backstopped best-effort prefix invalidation — formalizing pre-existing §10 code (no score move).
+
+**Open follow-up surfaced this cycle (governance hygiene, not a score-mover):**
+- [ ] **Commit the v1.85.0 docs governance pass + backfill the CHANGELOG.** ADRs 024/025/026 are
+  untracked, the `FACTS.md` ADR-count bump (23→26) + ADR-003/004/005/010/015 cross-links + the
+  `ServiceContractAttribute` doc-fix are modified, and **this scorecard/backlog refresh** is uncommitted.
+  The CHANGELOG now carries a `[1.85.0]` entry but still **lacks v1.83.0 and v1.84.0** sections (and
+  `[Unreleased]` is empty), so those two releases have no notes. Add the 1.83.0 + 1.84.0 CHANGELOG
+  sections and commit the docs pass so §34 traceability is consistent again. *(§34, transient hygiene
+  nit, effort S.)*
 
 ---
 
@@ -244,24 +345,32 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 - **(low ×2)** `Docs/Architecture/ArchitecturalAnalysis.md` contradicts the code on DB-per-service ("deliberately not database-per-service," race "only mitigated"); the two biggest recent decisions (DB-per-service, gRPC extraction) lack ADRs.
 - [ ] Refresh the analysis doc; write the **two missing ADRs**; add an ADR index/template.
 
-### [ ] #5 · Vertical Slice Architecture *(no confirmed red flags)*
-- [ ] Add a **slice-cohesion NetArchTest** (a feature's command/handler/validator/mapper stay co-located).
+### [x] #5 · Vertical Slice Architecture — **DONE (eighth wave: impl 7→8 AND maturity 3→4)** → moved to the level-4 protect list
+- [x] Slice-cohesion fitness function added: `ArchitectureRules.Slices.cs` + `SliceCohesionTestsBase` (shared package, the 18th fitness base) + Common/ADC subclasses — fails the build if a handler/validator is stranded from its same-assembly contract. Because this is automatic CI enforcement of the slice convention, §5 maturity also rose 3→4 (the rubric's maturity-4 "enforced automatically by tests/CI" bar), so §5 now belongs in "Already at level 4 — protect, don't regress" below.
 
-### [ ] #12 · Performance & Scalability *(no confirmed red flags)*
-- [ ] Add a **BenchmarkDotNet** smoke project; add a framework-level **max-page-size guard**.
+### [x] #12 · Performance & Scalability — **DONE (eighth wave, impl 7→8)**
+- [x] BenchmarkDotNet smoke project added (`Tests/Performance/MMCA.Common.Benchmarks`, outside the .slnx). Max-page-size guard already shipped at v1.84.0 (`ApplicationSettings.MaxPageSize` clamp + `EntityQueryPipeline.MaxUnboundedResultLimit`).
 
-### [ ] #31 · Cost Efficiency / FinOps *(no confirmed red flags)*
-- [ ] Expose an **OTel sampler** knob; cap per-message Info logging volume.
+### [x] #31 · Cost Efficiency / FinOps — **DONE (eighth wave, impl 6→7)**
+- [x] OTel sampler knob exposed (`Telemetry:TracesSampleRatio` → ParentBased/TraceIdRatio, unit-tested); outbox per-message "dispatched" log moved Info→Debug; `COST.md` gained cost-attribution-tag + cost-guard samples. (Reaching 8 needs consumer-side cost execution.)
+
+### [x] #17 · DevOps & Deployment — **DONE (eighth wave, impl 7→8)**
+- [x] In-repo reference deployment sample added: `samples/deployment/{foundation,main}.bicep` (lint clean via `az bicep build`) + `DEPLOYMENT.md` (OIDC federated-credential + UAMI bootstrap + smoke-gate/auto-rollback). (Deeper CD-to-Azure lives in consumer repos.)
+
+### [x] #29 · Resilience & Business Continuity — **DONE (eighth wave, impl 7→8)**
+- [x] Warm-up subsystem unit-tested (gate/hosted-service/health-check); `RESILIENCE.md` adds an in-repo SLO/error-budget template + restore-drill runbook reference. (The drill itself executes in consumer IaC — ADC's `dr-restore-drill.ps1`.)
 
 ---
 
 ## ✅ Already at level 4 — protect, don't regress
-#1 SOLID · #2 Design Patterns · #3 Clean Architecture · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · #14 Testability · #15 Best Practices & Code Quality
+#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (new this cycle — maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · #14 Testability · #15 Best Practices & Code Quality
 *(All backed by fitness functions — the regression guard is keeping those tests green.)*
 
-## ⚪ N/A for a framework (excluded from the index)
-#21 Accessibility · #22 Responsive · #24 Forms/UX Safety · #25 Navigation · #26 Front-End Security · #27 i18n
-*(Assessable only in consumer apps; #26 shared surface is covered under #11.)*
+## ⚪ Mostly consumer-assessed (the shared Common.UI surface is scored here)
+#21 Accessibility · #22 Responsive · #26 Front-End Security · #27 i18n
+*(Assessable mainly in consumer apps; #26 shared surface is covered under #11.)*
+- **#24 Forms/UX Safety — DONE for the shared surface (eighth wave, impl 7→8):** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored.
+- **#25 Navigation — DONE for the shared surface (eighth wave, impl 7→8):** an in-shell `Forbidden` (403) page + `NavigationFlow.md` for the Common UI surface. Per-actor module flows remain consumer-scored.
 
 ---
 

@@ -1,7 +1,7 @@
 # ADR-010: Integration-Event Schema Versioning & Upcaster Policy
 
 ## Status
-Accepted (2026-06-19)
+Accepted (2026-06-19). Updated 2026-06-27 (Helpdesk enforcement gap closed; all three consumers now gate the convention).
 
 ## Context
 Integration events cross service boundaries (Identity → Conference, Conference ↔ Engagement, …) and
@@ -53,14 +53,13 @@ a shape may evolve. Rubric §6 flags this as the one substantive CQRS/event gap.
   enforced by convention + review, not by an upcaster pipeline.
 - The convention test is **vacuous in MMCA.Common today** (the framework ships no concrete integration
   event): `EventVersioningConventionTests` runs the shared base against `CommonArchitectureMap` but has
-  nothing to check. Real enforcement lives in the consumer repos: `EventConventionTests`
-  (subclassing `EventConventionTestsBase`) in `MMCA.ADC.Architecture.Tests` and
-  `MMCA.Store.Architecture.Tests` runs the identical rules against their own event assemblies (ADC's
-  three and Store's one concrete integration events). A third consumer, **MMCA.Helpdesk**, now also
-  ships a concrete integration event (`TicketOpenedIntegrationEvent`), but its `ArchitectureTests` does
-  **not** yet subclass `EventConventionTestsBase`, so that event is currently unenforced. This is a
-  known gap: close it by adding a Helpdesk `EventConventionTests` (the rule body already ships in the
-  shared package, so the fix is a thin subclass plus the Helpdesk architecture map).
+  nothing to check. Real enforcement lives in the consumer repos: all three now subclass
+  `EventConventionTestsBase` and run the identical rules against their own event assemblies:
+  `EventConventionTests` in `MMCA.ADC.Architecture.Tests` (ADC's three events) and
+  `MMCA.Store.Architecture.Tests` (Store's one), and a matching `EventConventionTests` in
+  `MMCA.Helpdesk.Architecture.Tests` (`ArchitectureTests.cs`) that gates the seed's
+  `TicketOpenedIntegrationEvent`. The earlier Helpdesk gap (the rule was once subclassed only in ADC and
+  Store) is **closed**: every concrete integration event across all three consumers is now enforced.
 - A get-only `SchemaVersion` is informational on the wire (it round-trips out, not back in) — intentional
   (version is a property of the type, not per-instance data), but it means you read it off the concrete
   type/JSON, not by mutating it.

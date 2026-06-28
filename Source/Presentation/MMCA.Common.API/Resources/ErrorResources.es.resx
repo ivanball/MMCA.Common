@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Error.NotFound" xml:space="preserve">
+    <value>Entidad no encontrada.</value>
+  </data>
+  <data name="Error.AlreadyDeleted" xml:space="preserve">
+    <value>La entidad ya ha sido eliminada.</value>
+  </data>
+  <data name="Error.InvalidEntityField" xml:space="preserve">
+    <value>El campo de entidad proporcionado no es válido.</value>
+  </data>
+  <data name="PhoneNumber.Empty" xml:space="preserve">
+    <value>El número de teléfono no puede estar vacío.</value>
+  </data>
+  <data name="PhoneNumber.InvalidLength" xml:space="preserve">
+    <value>El número de teléfono debe tener entre 7 y 20 caracteres.</value>
+  </data>
+  <data name="PhoneNumber.InvalidFormat" xml:space="preserve">
+    <value>El número de teléfono contiene caracteres no válidos.</value>
+  </data>
+  <data name="Email.Empty" xml:space="preserve">
+    <value>El correo electrónico no puede estar vacío.</value>
+  </data>
+  <data name="Email.TooLong" xml:space="preserve">
+    <value>El correo electrónico no puede superar los 256 caracteres.</value>
+  </data>
+  <data name="Email.InvalidFormat" xml:space="preserve">
+    <value>El formato del correo electrónico no es válido.</value>
+  </data>
+  <data name="Currency.Empty" xml:space="preserve">
+    <value>El código de moneda no puede estar vacío.</value>
+  </data>
+  <data name="Currency.Invalid" xml:space="preserve">
+    <value>Código de moneda no válido.</value>
+  </data>
+  <data name="Money.NoCurrency" xml:space="preserve">
+    <value>La moneda es obligatoria.</value>
+  </data>
+  <data name="Money.CurrencyMismatch" xml:space="preserve">
+    <value>Las monedas deben ser iguales.</value>
+  </data>
+  <data name="DateTimeRange.Invalid" xml:space="preserve">
+    <value>La fecha de fin debe ser mayor o igual que la fecha de inicio.</value>
+  </data>
+  <data name="DateRange.Invalid" xml:space="preserve">
+    <value>La fecha de fin debe ser mayor o igual que la fecha de inicio.</value>
+  </data>
+</root>

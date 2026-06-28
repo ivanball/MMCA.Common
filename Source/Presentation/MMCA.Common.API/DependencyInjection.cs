@@ -2,13 +2,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Localization;
 using Microsoft.FeatureManagement;
 using Microsoft.FeatureManagement.Mvc;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.FeatureManagement;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.JsonConverters;
+using MMCA.Common.API.Localization;
 using MMCA.Common.API.Middleware;
+using MMCA.Common.API.Resources;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
@@ -70,6 +73,37 @@ public static class DependencyInjection
             services.AddFeatureManagement();
             services.AddSingleton<IDisabledFeaturesHandler, DisabledFeatureHandler>();
 
+            // Server-side error-message localization at the HTTP edge, keyed by Error.Code (ADR-027).
+            services.AddErrorLocalization();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the edge error-localization seam (ADR-027): <see cref="IErrorLocalizer"/> plus the
+        /// framework's own <see cref="ErrorResources"/> source. Called automatically by <c>AddAPI</c>.
+        /// Modules add their own error translations additively via <see cref="AddErrorResources{TResource}"/>.
+        /// </summary>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddErrorLocalization()
+        {
+            services.AddLocalization();
+            services.TryAddSingleton<IErrorLocalizer, ErrorLocalizer>();
+            services.AddErrorResources<ErrorResources>();
+            return services;
+        }
+
+        /// <summary>
+        /// Registers a module's resource type as an additional <see cref="ErrorResourceSource"/> so its
+        /// error codes localize through the shared <see cref="IErrorLocalizer"/> (ADR-027). The
+        /// <typeparamref name="TResource"/> anchor's <c>.resx</c> siblings are keyed by error <c>Code</c>.
+        /// </summary>
+        /// <typeparam name="TResource">The module's resource anchor type (co-located with its <c>.resx</c>).</typeparam>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddErrorResources<TResource>()
+        {
+            services.AddSingleton(serviceProvider => new ErrorResourceSource(
+                serviceProvider.GetRequiredService<IStringLocalizerFactory>().Create(typeof(TResource))));
             return services;
         }
 

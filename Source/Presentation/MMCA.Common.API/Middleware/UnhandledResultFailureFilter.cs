@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MMCA.Common.API.Localization;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.API.Middleware;
@@ -41,7 +43,8 @@ public sealed partial class UnhandledResultFailureFilter(
             Detail = "The action returned a Result.Failure that was not mapped to an HTTP error response."
         };
 
-        problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(result.Errors);
+        var localizer = context.HttpContext.RequestServices?.GetService<IErrorLocalizer>();
+        problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(result.Errors, localizer);
 
         context.Result = new ObjectResult(problemDetails) { StatusCode = statusCode };
     }

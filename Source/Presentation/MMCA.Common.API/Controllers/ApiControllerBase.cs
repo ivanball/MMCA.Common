@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.API.Localization;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.Shared.Abstractions;
 
@@ -42,7 +44,8 @@ public abstract class ApiControllerBase : ControllerBase
             Detail = "One or more errors occurred."
         };
 
-        problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(errorList);
+        var localizer = HttpContext.RequestServices?.GetService<IErrorLocalizer>();
+        problemDetails.Extensions["errors"] = ErrorHttpMapping.BuildErrorsExtension(errorList, localizer);
 
         return StatusCode(statusCode, problemDetails);
     }

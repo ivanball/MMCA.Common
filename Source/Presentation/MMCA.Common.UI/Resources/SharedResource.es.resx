@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Common.Button.Login" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="Common.Button.Logout" xml:space="preserve">
+    <value>Cerrar sesión</value>
+  </data>
+  <data name="Common.Button.Register" xml:space="preserve">
+    <value>Registrarse</value>
+  </data>
+  <data name="Common.Button.Logout.Aria" xml:space="preserve">
+    <value>Cerrar la sesión de su cuenta</value>
+  </data>
+  <data name="Layout.SkipToMainContent" xml:space="preserve">
+    <value>Saltar al contenido principal</value>
+  </data>
+  <data name="Layout.UnhandledError" xml:space="preserve">
+    <value>Se ha producido un error inesperado.</value>
+  </data>
+  <data name="Layout.Reload" xml:space="preserve">
+    <value>Recargar</value>
+  </data>
+  <data name="Common.Error.Load" xml:space="preserve">
+    <value>Error al cargar {0}. {1}</value>
+  </data>
+  <data name="Common.Error.Save" xml:space="preserve">
+    <value>Error al guardar {0}. {1}</value>
+  </data>
+  <data name="Common.Error.Delete" xml:space="preserve">
+    <value>Error al eliminar {0}. {1}</value>
+  </data>
+  <data name="Common.Error.DeleteFailed" xml:space="preserve">
+    <value>No se pudo eliminar {0}.</value>
+  </data>
+  <data name="Common.Error.NotFound" xml:space="preserve">
+    <value>No se encontró {0} con Id {1}.</value>
+  </data>
+  <data name="Common.Error.Validation" xml:space="preserve">
+    <value>Hubo errores de validación. Por favor, revise el formulario.</value>
+  </data>
+  <data name="Common.Success" xml:space="preserve">
+    <value>{0} {1} correctamente.</value>
+  </data>
+  <data name="Grid.Snackbar.LoadCancelled" xml:space="preserve">
+    <value>Carga cancelada.</value>
+  </data>
+  <data name="Culture.Switcher.Label" xml:space="preserve">
+    <value>Idioma</value>
+  </data>
+  <data name="Culture.Name.en-US" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Culture.Name.es" xml:space="preserve">
+    <value>Español</value>
+  </data>
+  <data name="Theme.Toggle.Label" xml:space="preserve">
+    <value>Alternar tema claro/oscuro</value>
+  </data>
+  <data name="Theme.Toggle.ToLight" xml:space="preserve">
+    <value>Cambiar a modo claro</value>
+  </data>
+  <data name="Theme.Toggle.ToDark" xml:space="preserve">
+    <value>Cambiar a modo oscuro</value>
+  </data>
+</root>

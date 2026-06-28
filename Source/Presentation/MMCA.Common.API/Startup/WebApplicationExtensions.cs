@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
 using MMCA.Common.API.Middleware;
+using MMCA.Common.Shared.Globalization;
 
 namespace MMCA.Common.API.Startup;
 
@@ -42,6 +46,12 @@ public static class WebApplicationExtensions
         {
             app.UseExceptionHandler();
             app.UseMiddleware<CorrelationIdMiddleware>();
+
+            // Set CurrentUICulture for the request (ADR-027) so edge error localization and any
+            // culture-aware formatting run under the caller's culture. The UI forwards the active
+            // culture as Accept-Language (the default providers include that header + the cookie).
+            app.UseCommonRequestLocalization();
+
             var forwardedHeadersOptions = new ForwardedHeadersOptions
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
@@ -98,6 +108,58 @@ public static class WebApplicationExtensions
             app.MapOidcDiscoveryEndpoint();
 
             app.MapControllers();
+
+            return app;
+        }
+
+        /// <summary>
+        /// Adds <c>RequestLocalization</c> for the framework's supported cultures
+        /// (<see cref="SupportedCultures"/>, ADR-027). Wired into <see cref="UseCommonMiddlewarePipeline"/>
+        /// for REST/gRPC service hosts; Blazor UI hosts call this explicitly before <c>MapRazorComponents</c>
+        /// so SSR prerender runs under the right culture. The default providers resolve culture from the
+        /// query string, the ASP.NET culture cookie, then the <c>Accept-Language</c> header.
+        /// </summary>
+        public WebApplication UseCommonRequestLocalization()
+        {
+            string[] supported = [.. SupportedCultures.All];
+            var options = new RequestLocalizationOptions()
+                .SetDefaultCulture(SupportedCultures.Default)
+                .AddSupportedCultures(supported)
+                .AddSupportedUICultures(supported);
+
+            app.UseRequestLocalization(options);
+            return app;
+        }
+
+        /// <summary>
+        /// Maps the <c>GET /culture/set?culture={c}&amp;redirectUri={uri}</c> endpoint (ADR-027) that the
+        /// culture switcher calls. It writes the standard ASP.NET culture cookie (non-HttpOnly so the WASM
+        /// client can read it) and local-redirects back, forcing a full reload so SSR re-renders and the
+        /// WASM runtime re-reads the cookie. Anonymous-accessible; only allowlisted cultures are honored.
+        /// Map on Blazor UI hosts.
+        /// </summary>
+        public WebApplication MapCultureEndpoint()
+        {
+            app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext context) =>
+            {
+                if (SupportedCultures.IsSupported(culture))
+                {
+                    context.Response.Cookies.Append(
+                        CookieRequestCultureProvider.DefaultCookieName,
+                        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                        new CookieOptions
+                        {
+                            Path = "/",
+                            Expires = DateTimeOffset.UtcNow.AddYears(1),
+                            IsEssential = true,
+                            HttpOnly = false,
+                            SameSite = SameSiteMode.Lax,
+                        });
+                }
+
+                var target = string.IsNullOrWhiteSpace(redirectUri) ? "/" : redirectUri;
+                return Results.LocalRedirect(target);
+            }).AllowAnonymous();
 
             return app;
         }

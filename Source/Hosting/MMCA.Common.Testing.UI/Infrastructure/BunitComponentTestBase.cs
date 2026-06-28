@@ -44,6 +44,12 @@ public abstract class BunitComponentTestBase : BunitContext
         Services.AddAuthorizationCore();
         Services.AddSingleton<IAuthorizationService, IsAuthenticatedAuthorizationService>();
         Services.AddSingleton<AuthenticationStateProvider>(_authProvider);
+
+        // Localization (ADR-027): components/pages now inject IStringLocalizer<T>. Registering the open
+        // generic here lets every component test render localized markup (resolving to the neutral/English
+        // resources in the component's own assembly) without per-test setup.
+        Services.AddLogging();
+        Services.AddLocalization();
     }
 
     /// <summary>Sets the principal the injected <see cref="AuthenticationStateProvider"/> returns (and notifies listeners) without re-rendering a new root — useful for mid-test auth changes.</summary>

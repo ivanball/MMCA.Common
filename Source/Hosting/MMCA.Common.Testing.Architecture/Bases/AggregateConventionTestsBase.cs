@@ -14,4 +14,7 @@ public abstract class AggregateConventionTestsBase
 
     [Fact]
     public void AggregateRoots_ShouldHave_ResultReturningCreateFactory() => ArchitectureRules.AggregateRootsHaveResultFactory(Map);
+
+    [Fact]
+    public void AggregateRoots_ShouldHave_NoPublicConstructors() => ArchitectureRules.DomainAggregateRootsHaveNoPublicConstructors(Map);
 }

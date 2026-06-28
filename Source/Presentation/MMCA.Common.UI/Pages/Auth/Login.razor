@@ -9,6 +9,8 @@
 @inject IOAuthUISettings OAuthSettings
 @inject IOptions<ApiSettings> ApiSettingsOptions
 @inject NavigationManager Navigation
+@inject IUserPreferenceReader PreferenceReader
+@inject ThemeService ThemeService
 
 <PageTitle>Login</PageTitle>
 
@@ -128,7 +130,7 @@
             var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password));
             if (result is not null)
             {
-                Navigation.NavigateTo(ReturnUrlProtector.Sanitize(ReturnUrl, "/"), forceLoad: true);
+                await ApplyStoredPreferencesAndNavigateAsync(ReturnUrlProtector.Sanitize(ReturnUrl, "/"));
             }
             else
             {
@@ -143,5 +145,30 @@
         {
             _isLoading = false;
         }
+    }
+
+    // Applies the signed-in user's stored culture/theme (ADR-027/028) once, right after login, so the
+    // preference follows them across devices. Best-effort: an empty/failed read just navigates normally.
+    // Loop-free because this only runs on the explicit login action.
+    private async Task ApplyStoredPreferencesAndNavigateAsync(string destination)
+    {
+        var preferences = await PreferenceReader.GetAsync();
+
+        if (preferences.Theme is not null)
+        {
+            await ThemeService.SetDarkModeAsync(string.Equals(preferences.Theme, "dark", StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (preferences.Culture is not null
+            && !string.Equals(preferences.Culture, System.Globalization.CultureInfo.CurrentUICulture.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            // Route through /culture/set to write the culture cookie, then reload to the destination.
+            Navigation.NavigateTo(
+                $"/culture/set?culture={Uri.EscapeDataString(preferences.Culture)}&redirectUri={Uri.EscapeDataString(destination)}",
+                forceLoad: true);
+            return;
+        }
+
+        Navigation.NavigateTo(destination, forceLoad: true);
     }
 }

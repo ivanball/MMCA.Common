@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Services;
@@ -33,8 +34,13 @@ public static class DependencyInjection
             services.AddOptions<LayoutSettings>()
                 .Bind(configuration.GetSection(LayoutSettings.SectionName));
 
-            // Auth handler injects Bearer token into every outgoing API request
+            // Resource-based localization for IStringLocalizer<T> across all UI hosts (ADR-027).
+            services.AddLocalization();
+
+            // Auth handler injects Bearer token into every outgoing API request; culture handler forwards
+            // the active UI culture as Accept-Language so the API localizes error messages to match.
             services.AddTransient<AuthDelegatingHandler>();
+            services.AddTransient<CultureDelegatingHandler>();
 
             // Named HttpClient used by all EntityServiceBase-derived services
             services.AddHttpClient("APIClient", (serviceProvider, client) =>
@@ -48,13 +54,22 @@ public static class DependencyInjection
                 client.BaseAddress = new Uri(apiSettings.ApiEndpoint, UriKind.Absolute);
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
-            }).AddHttpMessageHandler<AuthDelegatingHandler>();
+            })
+                .AddHttpMessageHandler<AuthDelegatingHandler>()
+                .AddHttpMessageHandler<CultureDelegatingHandler>();
 
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
             services.TryAddScoped<ListPageStateService>();
             services.TryAddScoped<ListPageQueryStateService>();
             services.TryAddScoped<NavigationHistoryService>();
+
+            // Day/Dark theme preference (ADR-028): cookie + localStorage persistence, system-pref default.
+            services.TryAddScoped<ThemeService>();
+
+            // Per-user culture/theme persistence to the backend (ADR-027/028) — best-effort, anon no-op.
+            services.TryAddScoped<IUserPreferenceWriter, ApiUserPreferenceWriter>();
+            services.TryAddScoped<IUserPreferenceReader, ApiUserPreferenceReader>();
 
             // Default no-op OAuth settings — downstream apps override with TryAdd before this runs,
             // or replace after by calling AddSingleton<IOAuthUISettings, ConcreteSettings>()

@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.Common.UI.Common.Interfaces
+@using MMCA.Common.UI.Pages.Common
 @using MMCA.Common.UI.Services.Auth
 @using Microsoft.Extensions.Options
 @using MMCA.Common.UI.Common.Settings
@@ -9,13 +10,16 @@
 @inject IAuthUIService AuthService
 @inject IEnumerable<IUIModule> UIModules
 @inject IOptions<LayoutSettings> LayoutSettingsOptions
+@inject IStringLocalizer<SharedResource> L
+@inject ThemeService ThemeService
+@implements IDisposable
 
-<MudThemeProvider Theme="MMCATheme.Instance" />
+<MudThemeProvider Theme="MMCATheme.Instance" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<a href="#main-content" class="skip-nav">Skip to main content</a>
+<a href="#main-content" class="skip-nav">@L["Layout.SkipToMainContent"]</a>
 
 <div class="page">
     <aside class="sidebar" aria-label="Main navigation">
@@ -30,6 +34,11 @@
         <div class="appbar-container">
             <MudAppBar Elevation="1" Dense="true" Fixed="false" aria-label="Top navigation bar">
                 <div class="appbar-spacer"></div>
+                @* Culture + theme controls are available to everyone, authenticated or not. *@
+                <span class="appbar-icon-actions">
+                    <CultureSwitcher />
+                    <ThemeToggle />
+                </span>
                 <AuthorizeView>
                     <Authorized>
                         <span class="appbar-auth-items">
@@ -42,15 +51,15 @@
                             <MudText Typo="Typo.body2" Class="mr-4 user-name">@context.User.Identity?.Name</MudText>
                             <span class="appbar-text-actions">
                                 <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="HandleLogoutAsync"
-                                           aria-label="Sign out of your account">Logout</MudButton>
+                                           aria-label="@L["Common.Button.Logout.Aria"].Value">@L["Common.Button.Logout"]</MudButton>
                             </span>
                         </span>
                     </Authorized>
                     <NotAuthorized>
                         <span class="appbar-auth-items">
                             <span class="appbar-text-actions">
-                                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
-                                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/register">Register</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">@L["Common.Button.Login"]</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/register">@L["Common.Button.Register"]</MudButton>
                             </span>
                         </span>
                     </NotAuthorized>
@@ -77,12 +86,13 @@
 </div>
 
 <div id="blazor-error-ui" data-nosnippet role="alert">
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
+    @L["Layout.UnhandledError"]
+    <a href="." class="reload">@L["Layout.Reload"]</a>
     <span class="dismiss">X</span>
 </div>
 
 @code {
+    private bool _isDarkMode;
     private List<Type> _appBarComponents = [];
     private List<Type> _layoutComponents = [];
 
@@ -90,7 +100,31 @@
     {
         _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
         _layoutComponents = UIModules.SelectMany(m => m.LayoutComponentTypes).ToList();
+
+        // Back the static ErrorMessages helper with the shared localizer (ADR-027). The layout renders for
+        // every page in both Server and WASM, so this configures it once per circuit/host.
+        ErrorMessages.Configure(L);
+        ThemeService.OnChange += OnThemeChanged;
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // JS interop (cookie/localStorage read) is only available after the first interactive render.
+            await ThemeService.InitializeAsync();
+            _isDarkMode = ThemeService.IsDarkMode;
+            StateHasChanged();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        _isDarkMode = ThemeService.IsDarkMode;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
 
     private async Task HandleLogoutAsync()
     {

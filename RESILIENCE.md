@@ -4,8 +4,11 @@ MMCA.Common is a library, so it cannot *operate* a deployment — restores, RTO/
 are executed in the consumer apps' IaC (e.g. MMCA.ADC's `infra/DISASTER-RECOVERY.md`,
 `scripts/dr-restore-drill.ps1`, `dr-drill.yml`, and the SLO metric-alerts in `infra/main.bicep`).
 What the framework *can* do is (1) ship the failure-isolation and graceful-startup mechanisms, tested
-centrally, and (2) give consumers a baseline SLO/error-budget template and a restore-drill runbook so
-the recovery story is defined once and adopted, not reinvented per app. This complements
+centrally, (2) run a **central, headless restore-drill smoke** against an ephemeral database that
+exercises the backup → catastrophic-loss → restore → verify cycle and records a baseline restore time,
+so the recovery *procedure* itself is demonstrated in CI rather than only described, and (3) give
+consumers a baseline SLO/error-budget template and a restore-drill runbook so the recovery story is
+defined once and adopted, not reinvented per app. This complements
 [`ADRs/009-resilience-and-recovery-objectives.md`](ADRs/009-resilience-and-recovery-objectives.md)
 (the *decision*); this file is the *operational reference*.
 
@@ -17,10 +20,22 @@ the recovery story is defined once and adopted, not reinvented per app. This com
 | Graceful degradation: integration-event publish failure buffers for redelivery (at-least-once) | `Infrastructure/Persistence/Outbox/OutboxProcessor.cs` | `OutboxProcessorTests.IntegrationEventPublishFailure_DegradesGracefully_BuffersForRedelivery` |
 | Broker retry (exponential) on RabbitMQ / Azure Service Bus | `Infrastructure` (`ConfigureBrokerTransport`, `MessageBusSettings.RetryLimit/RetryMin/MaxIntervalSeconds`) | covered by messaging tests |
 | Warm-up / readiness gate: holds `/health/ready` closed until startup warm-up runs, opens **even on task failure** (availability over warmth), pre-warms OIDC discovery to kill ACA cold-start | `Aspire/Warmup/` (`WarmupHostedService`, `WarmupReadinessGate`, `WarmupReadinessHealthCheck`, `OpenIdConnectMetadataWarmupTask`) — wired by `AddServiceDefaults` | `WarmupReadinessGateTests`, `WarmupReadinessHealthCheckTests`, `WarmupHostedServiceTests` (ADR-025) |
+| **Restore drill (central, in-repo)**: seed a database → take a backup → simulate catastrophic data loss → restore from the backup → verify zero data loss, timing the recovery (RTO) | `Tests/Core/MMCA.Common.Infrastructure.Tests/Resilience/DatabaseRestoreDrillTests.cs` (ephemeral SQLite via the SQLite online-backup API — the same primitive a real backup/restore uses) | `DatabaseRestoreDrillTests` (recovers every row after simulated loss; completes within a bounded RTO ceiling; emits the measured restore time to test output) |
 
-Failure isolation, graceful degradation, and graceful startup are therefore demonstrated and tested
-centrally; the gaps a library structurally cannot fill — drilled restores, RTO/RPO numbers, and
-measured SLOs — are the consumer's, with the templates below.
+Failure isolation, graceful degradation, graceful startup, **and the restore procedure itself** are
+therefore demonstrated and tested centrally — the framework drills backup→restore against an ephemeral
+DB and records a baseline restore time (see below). The gaps a library structurally cannot fill —
+production RTO/RPO against real cloud backups and measured production SLOs — remain the consumer's, with
+the templates below.
+
+### In-repo restore-drill baseline
+
+`DatabaseRestoreDrillTests` runs every CI build: it seeds a 500-row table, backs it up, deletes all
+rows (the simulated disaster), restores from the backup, and asserts every row returns byte-for-byte.
+The measured restore time is emitted to test output (`Restore RTO (measured): … ms`) and completes in
+well under a second locally; the assertion ceiling is a deliberately generous 30 s hang-detector, not a
+performance gate. This is the framework's own analog of the consumer cloud drill below — proving the
+*procedure*; the consumer drill proves it against production-grade backups and real RTO targets.
 
 ## Baseline SLO / error-budget template (consumers fill in)
 

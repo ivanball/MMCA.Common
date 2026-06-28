@@ -40,6 +40,26 @@ public static partial class ArchitectureRules
             "every aggregate root must be constructed via a static Create factory returning Result<T> (DDD convention)");
     }
 
+    /// <summary>
+    /// Aggregate roots across the WHOLE Domain layer (framework + module) expose no public constructor —
+    /// construction goes through the static <c>Create(...)</c> factory. This is the minimal-base
+    /// counterpart to <see cref="AggregateRootsHaveNoPublicConstructors"/>, which scopes to per-module
+    /// domains only and so is vacuous in a module-less framework repo (MMCA.Common). Pairs with
+    /// <see cref="AggregateRootsHaveResultFactory"/> to fully pin the private-ctor + Result-factory
+    /// construction invariant.
+    /// </summary>
+    public static void DomainAggregateRootsHaveNoPublicConstructors(IArchitectureMap map)
+    {
+        var violations = map.OfLayer(Layer.Domain)
+            .SelectMany(a => a.ConcreteClasses())
+            .Where(t => t.InheritsAggregateRoot()
+                && t.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Length > 0)
+            .Select(t => $"  - {t.FullName}");
+
+        ArchitectureAssert.NoViolations(violations,
+            "aggregate roots must have no public constructor — use the static Create(...) factory");
+    }
+
     /// <summary>Module domain entities are sealed (prevents unintended inheritance of an aggregate).</summary>
     public static void DomainEntitiesAreSealed(IArchitectureMap map)
     {

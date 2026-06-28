@@ -80,29 +80,9 @@ public abstract class E2ETestBase : IAsyncLifetime
         // MudBlazor applies text-transform: uppercase — visible text is "LOGIN"
         await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" }).ClickAsync();
 
-        // On success, the Login page calls NavigateTo("/", forceLoad: true) which triggers
-        // a full page reload to the home page. On failure, it stays at /login and shows
-        // an error alert. Wait for the end result directly — this survives both full page
-        // reloads and Blazor enhanced navigation without relying on Playwright navigation
-        // event detection (which can miss history.pushState changes).
-        var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
-        var errorAlert = Page.Locator(".mud-alert-text-error");
-
-        var visibleFirst = await Task.WhenAny(
-            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
-            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }));
-
-        await visibleFirst;
-
-        // The error alert can flash transiently during the success-path forceLoad navigation (Blazor
-        // Server-interactive, before WASM hydrates): the backend auth succeeds and the logout button
-        // appears moments later. If the error alert won the race, give the success signal a grace window
-        // before concluding failure — only a persistent error (no logout button) is a real failure.
-        if (await errorAlert.IsVisibleAsync() && !await LogoutAppearsWithinGraceAsync(logoutButton))
-        {
-            var errorText = await errorAlert.TextContentAsync();
-            throw new InvalidOperationException($"Login failed: {errorText}");
-        }
+        // On success, the Login page calls NavigateTo("/", forceLoad: true) — a full page reload away
+        // from /login. On failure it stays at /login and shows an error alert.
+        await WaitForAuthResultAsync("/login", "Login");
     }
 
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
@@ -125,46 +105,63 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Create your account" }).ClickAsync();
 
-        // Registration does NavigateTo("/", forceLoad: true) on success which triggers a
-        // full page reload. On failure, it stays on /register and shows an error alert.
-        // Do NOT call WaitForBlazorAsync here — the forceLoad navigation destroys the JS
-        // execution context. Instead, wait directly for the end result.
-        var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
-        var regErrorAlert = Page.Locator(".mud-alert-text-error");
-
-        var visibleFirst = await Task.WhenAny(
-            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
-            regErrorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }));
-
-        await visibleFirst;
-
-        if (await regErrorAlert.IsVisibleAsync() && !await LogoutAppearsWithinGraceAsync(logoutButton))
-        {
-            var errorText = await regErrorAlert.TextContentAsync();
-            throw new InvalidOperationException($"Registration failed: {errorText}");
-        }
+        // Registration does NavigateTo("/", forceLoad: true) on success — a full page reload away from
+        // /register. On failure it stays on /register and shows an error alert. Do NOT call
+        // WaitForBlazorAsync here — the forceLoad navigation destroys the JS execution context.
+        await WaitForAuthResultAsync("/register", "Registration");
 
         return (email, password);
     }
 
-    // Waits up to the grace window for the logout button to appear: true = auth actually succeeded (the
-    // success-path forceLoad navigation just hadn't completed when a transient error alert flashed),
-    // false = the error is persistent (a real failure). De-flakes the register/login success-detection
-    // race (the TD-06/07 cluster) without forcing WASM. See E2ETestConfiguration.AuthGraceTimeout.
-    private static async Task<bool> LogoutAppearsWithinGraceAsync(ILocator logoutButton)
+    // Waits for the post-submit auth result, racing THREE signals so success detection does NOT depend
+    // on the interactive "Sign out" button having hydrated — which under Blazor Server-mode prerender on
+    // a contended CI runner can lag well behind the successful forceLoad (the TD-06/07 register/login
+    // contention failure mode). The forceLoad URL change away from the auth page (<paramref
+    // name="authPagePath"/>, e.g. "/login" or "/register") is the interactivity-INDEPENDENT success
+    // signal; only an error alert that is still showing ON the auth page after the grace window is a
+    // real failure. Strictly safer than waiting on the logout button alone: it declares failure in a
+    // subset of the prior conditions, so it cannot turn a passing flow into a failing one.
+    private async Task WaitForAuthResultAsync(string authPagePath, string operation)
+    {
+        var logoutButton = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
+        var errorAlert = Page.Locator(".mud-alert-text-error");
+
+        var leftAuthPage = Page.WaitForURLAsync(
+            url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
+            new() { Timeout = E2ETestConfiguration.AuthTimeout });
+
+        await Task.WhenAny(
+            leftAuthPage,
+            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
+            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }));
+
+        // Success is unambiguous once the forceLoad has navigated away from the auth page. Only treat an
+        // error alert STILL on the auth page (after the grace window, with no navigation) as a failure.
+        if (await errorAlert.IsVisibleAsync()
+            && Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase)
+            && !await AuthSucceededWithinGraceAsync(authPagePath, logoutButton))
+        {
+            var errorText = await errorAlert.TextContentAsync();
+            throw new InvalidOperationException($"{operation} failed: {errorText}");
+        }
+    }
+
+    // Within the grace window, treats EITHER the forceLoad navigating away from the auth page OR the
+    // interactive logout button appearing as success — so a transient error-alert flash during a slow
+    // Server-mode success path is not mistaken for a real failure. See E2ETestConfiguration.AuthGraceTimeout.
+    private async Task<bool> AuthSucceededWithinGraceAsync(string authPagePath, ILocator logoutButton)
     {
         try
         {
-            await logoutButton.WaitForAsync(new()
-            {
-                State = WaitForSelectorState.Visible,
-                Timeout = E2ETestConfiguration.AuthGraceTimeout,
-            });
+            await Page.WaitForURLAsync(
+                url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
+                new() { Timeout = E2ETestConfiguration.AuthGraceTimeout });
             return true;
         }
         catch (PlaywrightException)
         {
-            return false;
+            // No navigation within grace — fall back to the interactive logout-button signal.
+            return await logoutButton.IsVisibleAsync();
         }
     }
 
