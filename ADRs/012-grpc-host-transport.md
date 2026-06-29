@@ -19,8 +19,12 @@ Fixed in commit 49b7283 (deployed green) by adopting **Profile A** for Store:
 - Gateway forwards HTTP/2 (`ForwardHttp2=true`, `VersionPolicy=RequestVersionExact`); Catalog/Identity
   routes carry HTTP/2, Sales routes stay HTTP/1.1.
 - Sales (no gRPC server) stays `Http1AndHttp2` with `transport: 'http'`.
-- JWKS authority stays `http://identity` (unchanged): the http2 ingress carries the HTTP/1.1 JwtBearer
-  JWKS metadata fetch to the container.
+- JWKS authority differs by environment: **prod ACA** keeps the direct `http://identity` authority (the
+  http2 ingress carries the HTTP/1.1 JwtBearer JWKS metadata fetch to the container), while the
+  **local-Aspire** path was subsequently moved to the gateway-routed `WithJwksDiscovery(identity, gateway)`
+  form (the D32 fix) — a single-arg local `WithJwksDiscovery` would aim the HTTP/1.1 backchannel at the
+  now-Http2-only Identity HTTPS endpoint and fail on the ALPN mismatch. So Store's local JWKS now matches
+  Profile A's gateway-routed discovery; only prod uses the in-cluster direct authority.
 
 **Both consumers now use Profile A** for their gRPC-serving edges. `Http1AndHttp2` (Profile-B Kestrel)
 survives on two non-gRPC-serving hosts for two different reasons: ADC's **Notification** service (its

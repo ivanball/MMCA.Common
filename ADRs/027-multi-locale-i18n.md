@@ -48,7 +48,7 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
 5. **One culture cookie is the single source of truth across SSR + Server + WASM.** UI hosts run
    `UseRequestLocalization([en-US, es])` with a `CookieRequestCultureProvider` so SSR prerender renders in
    the right culture; a `/culture/set` endpoint writes the standard ASP.NET culture cookie and forces a
-   full reload; the WASM client reads the same cookie on startup (`UseMmcaCultureAsync`) and sets
+   full reload; the WASM client reads the same cookie on startup (`MmcaCultureBootstrap.SetBrowserCultureAsync`) and sets
    `CultureInfo.DefaultThreadCurrent[UI]Culture` before `RunAsync()`, so prerender and hydration agree.
    The UI forwards the active culture to the API as `Accept-Language` (`CultureDelegatingHandler` on the
    `"APIClient"`), because the cross-origin Gateway does not carry the cookie to the services — that header
@@ -60,8 +60,12 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
 
 7. **Display formatting is culture-aware; machine boundaries stay invariant.** UI rendering of dates /
    numbers uses `CurrentCulture`. `InvariantCulture` is retained where the string is a machine contract
-   (JWT timestamps, EF/grid filter parsing, URL/query state, claims, value-object canonical strings). A
-   fitness function (ADR-015) guards against culture-less `.ToString()` on dates/numbers in UI code.
+   (JWT timestamps, EF/grid filter parsing, URL/query state, claims, value-object canonical strings).
+   Hygiene against accidental culture-less formatting is **currently advisory, not a build gate**: the
+   Meziantou analyzer `MA0076` (implicit culture-sensitive `ToString` in interpolation) is set to
+   `suggestion` severity in `.editorconfig`, *not* an ADR-015 NetArchTest fitness rule. Promoting it to a
+   gate (raise `MA0076` to `error`, or add a culture-hygiene rule to the fitness library) is tracked as
+   follow-up.
 
 ## Rationale
 - **Keying error localization on the existing `Error.Code` is the cheapest correct seam.** The codes are
@@ -84,7 +88,8 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
 
 ## Related
 [ADR-011](011-single-locale-i18n.md) (superseded), [ADR-013](013-result-pattern.md) (the `Error.Code`
-this localizes on), [ADR-015](015-architecture-fitness-functions.md) (the i18n-hygiene fitness rule),
+this localizes on), [ADR-015](015-architecture-fitness-functions.md) (where an i18n-hygiene gate would live; today only the
+advisory `MA0076` analyzer suggestion exists),
 [ADR-016](016-lockstep-versioning-masstransit-pin.md) (satellite assemblies ship in the lockstep release),
 [ADR-022](022-browser-session-cookie-auth.md) (the SSR cookie pattern this mirrors),
 [ADR-028](028-dark-theme-mode.md) (the theme toggle that shares this cookie/profile/bootstrap machinery).

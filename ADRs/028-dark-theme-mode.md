@@ -9,25 +9,31 @@ alongside `PaletteLight`, but `MudThemeProvider` was hard-wired to light: no `@r
 binding, no toggle, no persistence. Dark mode was designed and then never connected. This ADR connects it.
 
 The mechanics are the same ones ADR-027 solves for locale: a Blazor `InteractiveAuto` app must agree on the
-theme across SSR prerender, the InteractiveServer circuit, and the InteractiveWebAssembly client *before*
-first paint, or the user sees a flash of the wrong theme (FOUC) on every load. So the theme toggle reuses
-the i18n persistence and bootstrap machinery rather than inventing a parallel one.
+theme across SSR prerender, the InteractiveServer circuit, and the InteractiveWebAssembly client to avoid a
+flash of the wrong theme (FOUC) on load. So the theme toggle reuses the i18n persistence machinery (cookie +
+localStorage + profile) rather than inventing a parallel one; the matching no-flash SSR bootstrap is the
+intended end state but is not yet wired for theme (see Decision 3).
 
 ## Decision
 
-1. **Bind the existing theme.** `MainLayout` binds `MudThemeProvider` with `@ref` + `@bind-IsDarkMode`
-   against the already-complete `MMCATheme.Instance`. No new palette work.
+1. **Bind the existing theme.** `MainLayout` binds `MudThemeProvider` with `@bind-IsDarkMode` against the
+   already-complete `MMCATheme.Instance` (a two-way binding to the layout's `_isDarkMode` field; no `@ref`
+   is used). No new palette work.
 
 2. **A `ThemeService` (`MMCA.Common.UI`) owns the preference**, registered in `AddUIShared`. It holds the
    current mode, reads/writes a **non-HttpOnly cookie + localStorage**, and raises a change event so the
-   app-bar toggle and `MainLayout` stay in sync. First-visit default is the OS `prefers-color-scheme`
-   (via `MudThemeProvider.GetSystemPreference()`), used only when no cookie/profile value exists.
+   app-bar toggle and `MainLayout` stay in sync. First-visit default is the OS `prefers-color-scheme`, read
+   via a small JS interop call (`theme.js` `systemPrefersDark()` →
+   `window.matchMedia('(prefers-color-scheme: dark)')`), used only when no cookie/profile value exists.
 
-3. **No flash across SSR → WASM.** The theme cookie is read **server-side during SSR prerender** so the
-   first painted HTML already carries the correct theme (a `data-theme` attribute / tiny inline `<head>`
-   script set from the cookie before Blazor hydrates); the WASM client reads the same cookie on startup and
-   binds `IsDarkMode` to match. This is the cookie-as-single-source-of-truth pattern of ADR-027, applied to
-   theme instead of culture.
+3. **Theme is restored from the cookie/localStorage after first render — the no-flash SSR bootstrap is
+   outstanding.** `ThemeService.InitializeAsync` reads the persisted value via JS interop from
+   `OnAfterRenderAsync(firstRender)` and deliberately does **not** run during SSR prerender, so the bound
+   `IsDarkMode` is corrected just after hydration. The cookie-as-single-source-of-truth persistence of
+   ADR-027 is reused, but the *server-side* prerender read that makes locale flash-free (a `data-theme`
+   attribute / inline `<head>` script emitted from the cookie before Blazor hydrates) is **not yet wired for
+   theme**. A brief wrong-theme flash on first paint is therefore currently possible; emitting the theme
+   server-side at prerender to close it is tracked as follow-up.
 
 4. **The toggle ships in the shared `MainLayout`**, next to the i18n culture switcher, in the app-bar
    `appbar-icon-actions` slot — so every consumer gets both controls without per-host wiring.
@@ -42,24 +48,26 @@ the i18n persistence and bootstrap machinery rather than inventing a parallel on
    an `InteractiveServer`-only host it has no WASM boundary, but it still reads the cookie for consistency.
 
 ## Rationale
-- **Reusing the i18n cookie/profile/bootstrap machinery** means one persistence model and one no-flash
-  mechanism for both user preferences, instead of two subtly different ones. Theme and locale are the same
-  shape of problem.
+- **Reusing the i18n cookie/profile machinery** means one persistence model for both user preferences,
+  instead of two subtly different ones. Theme and locale are the same shape of problem, so the no-flash SSR
+  bootstrap built for locale is the template theme will follow when it is wired.
 - **The palette already existed**, so the cost is wiring + persistence, not design — and `BrandColorTokenTests`
   already guards the C#↔CSS token sync, so the dark surfaces stay on-brand.
 - **Defaulting to the OS preference** respects the user's system setting on first visit while letting an
   explicit choice win and follow them across devices.
 
 ## Trade-offs
-- **The same FOUC hazard as locale** must be handled deliberately at SSR (the `data-theme`/inline-script
-  read), or the first paint flashes — there is no free no-flash for InteractiveAuto.
+- **The same FOUC hazard as locale is not yet closed for theme.** The SSR `data-theme`/inline-script read is
+  unimplemented (Decision 3), so the first paint can briefly flash the wrong theme before the post-render JS
+  interop corrects it; there is no free no-flash for InteractiveAuto.
 - **Helpdesk's custom layout** had to be touched separately because it does not inherit Common's
   `MainLayout`; future hosts that fork the layout inherit the same obligation.
 - **Per-user persistence adds a column** to the Identity `User` (folded into the ADR-027 migration, so no
   extra migration), and a profile-edit surface.
 
 ## Related
-[ADR-027](027-multi-locale-i18n.md) (shares the cookie source-of-truth, the SSR/WASM no-flash bootstrap,
-and the `User` preference migration), [ADR-022](022-browser-session-cookie-auth.md) (the SSR cookie-read
-pattern), [ADR-015](015-architecture-fitness-functions.md) (the host-wiring fitness assertion).
+[ADR-027](027-multi-locale-i18n.md) (shares the cookie source-of-truth and the `User` preference migration,
+and is the model for the theme no-flash SSR bootstrap that is not yet wired),
+[ADR-022](022-browser-session-cookie-auth.md) (the SSR cookie-read pattern),
+[ADR-015](015-architecture-fitness-functions.md) (the host-wiring fitness assertion).
 ```

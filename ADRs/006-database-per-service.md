@@ -2,6 +2,8 @@
 
 ## Status
 Accepted (2026-06-07). Supersedes the earlier "deliberately one shared database" stance.
+Clarified 2026-06-27: the single context class became **one sealed context class per engine** when
+ADR-018 added the orthogonal engine axis (the `Name`/database axis here is unchanged).
 
 ## Context
 When the modules were first extracted into independently-deployable services, all services in an
@@ -19,10 +21,14 @@ a configuration/deployment change, not a framework rewrite.
 Adopt **database-per-service**: each service owns its own physical database with its own
 `OutboxMessages` table.
 
-- **One `SQLServerDbContext` *class*, one instance per database.** We do **not** introduce
-  per-module DbContext classes (see the "Don't split SQLServerDbContext" convention). The single
-  context class is materialized once per `DataSourceKey`; entities route to a physical source by
-  logical name (`[UseDatabase]` / module namespace) via `DataSourceResolver`.
+- **One sealed concrete context class *per engine*, one instance per database.** We do **not**
+  introduce per-module DbContext classes (see the "Don't split SQLServerDbContext" convention). The
+  default engine is SQL Server (`SQLServerDbContext`); ADR-018 later added `SqliteDbContext` and
+  `CosmosDbContext`, each a sealed subclass of the abstract `ApplicationDbContext`. The right context
+  class is materialized once per `DataSourceKey(Engine, Name)` by `PhysicalDbContextFactory`; entities
+  route to a physical source by logical name (`[UseDatabase]` / module namespace) via
+  `DataSourceResolver`, and to an engine by configuration base class (`[UseDataSource]`, ADR-018).
+  The forbidden split is *per-module*, not per-engine.
 - **ADC** runs `ADC_Identity`, `ADC_Conference`, `ADC_Engagement`, `ADC_Notification` — locally on
   the shared Aspire SQL container and in Azure as four Basic-tier databases. The legacy `AtlDevCon`
   database is retained **read-only** as an archive and rollback path.

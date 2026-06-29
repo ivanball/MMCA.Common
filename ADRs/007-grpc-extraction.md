@@ -20,8 +20,11 @@ Use **gRPC**, exposed through `MMCA.Common.Grpc`, with a contract-package conven
 - **Typed clients** via `AddTypedGrpcClient<T>(serviceName)` resolve `http://<service>` through
   Aspire service discovery, wrapped in the standard Polly resilience pipeline and a
   `JwtForwardingClientInterceptor` (the inbound bearer token is forwarded downstream).
-- **`Result` over the wire**: `GrpcResultExceptionInterceptor` maps `Result` failures to
-  `RpcException` and back, so callers keep programming against `Result<T>`.
+- **`Result` failures over the wire**: the server-side `GrpcResultExceptionInterceptor` maps a failed
+  `Result` to an `RpcException` carrying the structured `ErrorType`/code, mirroring the HTTP
+  `HandleFailure` edge mapping (ADR-013). The mapping is **server-side only** — the extracted interface
+  adapters expose plain return types (e.g. `Task<int>` / `Task<bool>`), so a remote failure reaches the
+  caller as an exception, not a re-hydrated `Result<T>`.
 - **HTTP/2 cleartext (h2c)**: the REST services serve HTTP/2 on their cleartext endpoint so clients
   negotiate without TLS/ALPN (a deliberate `SocketsHttpHandler` override).
 - **Federated auth, not a shared secret**: services validate forwarded JWTs against the issuer's
