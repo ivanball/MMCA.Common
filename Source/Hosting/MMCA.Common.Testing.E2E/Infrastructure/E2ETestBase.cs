@@ -1,5 +1,7 @@
+using System.IO;
 using Microsoft.Playwright;
 using Xunit;
+using Xunit.Sdk;
 using static Microsoft.Playwright.Assertions;
 
 namespace MMCA.Common.Testing.E2E.Infrastructure;
@@ -41,11 +43,39 @@ public abstract class E2ETestBase : IAsyncLifetime
         GC.SuppressFinalize(this);
         if (E2ETestConfiguration.TracePath is not null)
         {
-            await _context.Tracing.StopAsync(new() { Path = E2ETestConfiguration.TracePath });
+            await StopTracingAsync(E2ETestConfiguration.TracePath);
         }
 
         await Page.CloseAsync();
         await _context.DisposeAsync();
+    }
+
+    // Stops the Playwright trace. When E2E_TRACE names a DIRECTORY (per-test mode), a trace is written
+    // named by the current test, but ONLY when that test failed: a full-suite run then yields just the
+    // failing traces, each under its own name (no overwriting), which is what makes a scale-only failure
+    // inspectable. A plain file path keeps the original single-file behavior (one test at a time).
+    private async Task StopTracingAsync(string tracePath)
+    {
+        var isDirectory = Directory.Exists(tracePath)
+            || tracePath.EndsWith('/')
+            || tracePath.EndsWith('\\');
+        if (!isDirectory)
+        {
+            await _context.Tracing.StopAsync(new() { Path = tracePath });
+            return;
+        }
+
+        if (TestContext.Current.TestState?.Result == TestResult.Failed)
+        {
+            Directory.CreateDirectory(tracePath);
+            var raw = TestContext.Current.Test?.TestDisplayName ?? "unknown";
+            var safe = string.Concat(raw.Split(Path.GetInvalidFileNameChars()));
+            await _context.Tracing.StopAsync(new() { Path = Path.Combine(tracePath, safe + ".zip") });
+        }
+        else
+        {
+            await _context.Tracing.StopAsync();
+        }
     }
 
     protected async Task LoginAsAdminAsync() =>
