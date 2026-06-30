@@ -113,6 +113,21 @@ public abstract class E2ETestBase : IAsyncLifetime
         // On success, the Login page calls NavigateTo("/", forceLoad: true) — a full page reload away
         // from /login. On failure it stays at /login and shows an error alert.
         await WaitForAuthResultAsync("/login", "Login");
+
+        // Wait for the post-login "/" page to become interactive before returning (symmetric with
+        // RegisterNewUserAsync). The forceLoad reload re-boots the runtime, and under WebAssembly the
+        // client auth state (role claims parsed from the stored token) only populates once that boot
+        // finishes; a caller that immediately client-side-navigates to an [Authorize] page (the
+        // LoginAsAdmin -> protected create/list flows) would otherwise race a not-yet-authorized,
+        // not-yet-rendered page. Guard the context-destroyed race from an in-flight reload.
+        try
+        {
+            await Page.WaitForBlazorAsync();
+        }
+        catch (PlaywrightException)
+        {
+            await Page.WaitForBlazorAsync();
+        }
     }
 
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
@@ -135,10 +150,25 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         await Page.GetByRole(AriaRole.Button, new() { Name = "Create your account" }).ClickAsync();
 
-        // Registration does NavigateTo("/", forceLoad: true) on success — a full page reload away from
+        // Registration does NavigateTo("/", forceLoad: true) on success: a full page reload away from
         // /register. On failure it stays on /register and shows an error alert. Do NOT call
-        // WaitForBlazorAsync here — the forceLoad navigation destroys the JS execution context.
+        // WaitForBlazorAsync before the result settles: the forceLoad navigation destroys the JS context.
         await WaitForAuthResultAsync("/register", "Registration");
+
+        // The forceLoad reload lands on a freshly served "/" whose interactive runtime is still starting
+        // (under WebAssembly that is a full CLR boot, slower than a Server circuit). Wait for interactivity
+        // HERE so every caller gets an interactive page back, instead of each test having to remember it
+        // (the post-register sign-out click / protected-page open would otherwise hit a non-interactive
+        // DOM). Guard the context-destroyed race from an in-flight reload, then re-assert on the fresh
+        // context (mirrors BlazorNavigateAsync).
+        try
+        {
+            await Page.WaitForBlazorAsync();
+        }
+        catch (PlaywrightException)
+        {
+            await Page.WaitForBlazorAsync();
+        }
 
         return (email, password);
     }
@@ -188,9 +218,13 @@ public abstract class E2ETestBase : IAsyncLifetime
                 new() { Timeout = E2ETestConfiguration.AuthGraceTimeout });
             return true;
         }
-        catch (PlaywrightException)
+        catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
         {
-            // No navigation within grace — fall back to the interactive logout-button signal.
+            // No navigation within the grace window. Playwright surfaces this as a navigation
+            // PlaywrightException or, for WaitForURLAsync specifically, a System.TimeoutException, so catch
+            // both. Fall back to the interactive logout-button signal: the failed-login path (e.g. the
+            // deleted-account relogin) has neither navigation nor a logout button, so the caller then
+            // raises the InvalidOperationException it expects instead of leaking this timeout.
             return await logoutButton.IsVisibleAsync();
         }
     }

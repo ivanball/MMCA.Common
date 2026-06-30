@@ -40,17 +40,25 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         var registerPage = new RegisterPage(Page);
         var id = UniqueId();
 
-        // Act
+        // Act — fill with the re-hydration-safe helper so every value is bound to the EditForm model
+        // before submit (under WebAssembly a plain Fill on a not-yet-hydrated input can be wiped). Submit
+        // ONCE: the [Compare] validation fires OnInvalidSubmit and the error alert stays visible, so a
+        // re-clicking ClickAndVerify is wrong here (each re-submit re-runs validation and makes the alert
+        // flicker out from under the wait); a single click plus an auto-waiting visibility assert is right.
         await registerPage.GotoAsync();
-        await registerPage.FirstNameField.FillAsync($"First{id}");
-        await registerPage.LastNameField.FillAsync($"Last{id}");
-        await registerPage.EmailField.FillAsync($"mismatch-{id}@test.com");
-        await registerPage.PasswordField.FillAsync("TestPass123!");
-        await registerPage.ConfirmPasswordField.FillAsync("DifferentPass123!");
+        await registerPage.FirstNameField.FillAndVerifyAsync($"First{id}");
+        await registerPage.LastNameField.FillAndVerifyAsync($"Last{id}");
+        await registerPage.EmailField.FillAndVerifyAsync($"mismatch-{id}@test.com");
+        await registerPage.PasswordField.FillAndVerifyAsync("TestPass123!");
+        await registerPage.ConfirmPasswordField.FillAndVerifyAsync("DifferentPass123!");
         await registerPage.RegisterButton.ClickAsync();
 
-        // Assert — should show password mismatch error and stay on register page
-        await Expect(registerPage.ErrorAlert).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        // Assert — the [Compare] mismatch is caught CLIENT-side, so it surfaces as the field-level
+        // validation message rather than a page-level error alert. (The Server-mode prerender path
+        // produced a ".mud-alert-text-error" alert; the WebAssembly path shows only the inline field
+        // error, with no server round-trip.) Assert the validation TEXT, which is present in both render
+        // modes, and that we stay on /register.
+        await Expect(Page.GetByText("Passwords do not match")).ToBeVisibleAsync(new() { Timeout = 10_000 });
         await Expect(Page).ToHaveURLAsync(new Regex("/register$"));
     }
 
