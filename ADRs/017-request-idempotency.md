@@ -22,11 +22,13 @@ Provide opt-in, client-driven request idempotency as an MVC action filter in `MM
 - **Client supplies the key.** The caller sends an `Idempotency-Key` header. If the header is absent or
   blank, the action runs normally with **no** deduplication — the key is the client's assertion that "two
   requests with this key are the same operation."
-- **Cache-backed replay.** The first response (status code + serialized body) is stored in the
-  distributed cache (`ICacheService`) under `idempotency:{key}` for a bounded window (default 24h,
-  configurable via `IdempotencySettings.CacheExpirationHours`). A later request with the same key replays
-  the cached response and adds an `X-Idempotent-Replay: true` header so clients can tell a replay from a
-  fresh execution.
+- **Cache-backed replay.** The first response (status code + serialized body) is stored via
+  `ICacheService` under `idempotency:{key}` for a bounded window (default 24h, configurable via
+  `IdempotencySettings.CacheExpirationHours`). `ICacheService` resolves to the distributed (Redis) store
+  when the host wires one and otherwise to an in-process memory cache (ADR-026), so cross-instance /
+  cross-restart replay holds only when a distributed backing is configured. A later request with the same
+  key replays the cached response and adds an `X-Idempotent-Replay: true` header so clients can tell a
+  replay from a fresh execution.
 - **Concurrency-safe within an instance.** The filter uses a fast-path cache read (no lock), then a
   per-key `SemaphoreSlim` (double-check locking) so concurrent duplicates that arrive before the first
   completes are serialized rather than both executing. Per-key semaphores are removed once no waiters
@@ -39,15 +41,17 @@ Provide opt-in, client-driven request idempotency as an MVC action filter in `MM
   thin use case (ADR-014) and does not grow ad-hoc "did I already do this?" checks.
 - **Client owns the identity of an operation.** Only the caller knows that a retry is the *same*
   operation; a server-generated key cannot distinguish a retry from a legitimately-similar new request.
-- **Distributed-cache backing** means replays work across instances and across a service restart within
-  the window, matching the database-per-service / multi-host deployment (ADR-006, ADR-008).
+- **Distributed-cache backing (when configured)** makes replays work across instances and across a
+  service restart within the window, matching the database-per-service / multi-host deployment (ADR-006,
+  ADR-008); with the in-memory fallback (ADR-026) the replay is per-instance and lost on restart.
 - **Invariant-friendly default.** Absent header ⇒ no behavior change, so adding `[Idempotent]` is a safe,
   additive annotation.
 
 ## Trade-offs
 - **The in-process semaphore only serializes duplicates landing on the same instance.** Two simultaneous
-  identical requests routed to *different* instances can both miss the cache and execute; the distributed
-  cache makes the *replay* consistent afterward but does not provide cross-instance mutual exclusion. For
+  identical requests routed to *different* instances can both miss the cache and execute; a configured
+  distributed cache makes the *replay* consistent afterward but does not provide cross-instance mutual
+  exclusion. For
   exactly-once across instances, the operation itself must also be naturally idempotent or guarded by a
   unique constraint.
 - **Bounded window.** Replays only work within the retention window (default 24h); a duplicate after
@@ -59,6 +63,7 @@ Provide opt-in, client-driven request idempotency as an MVC action filter in `MM
   same audit-the-inventory caveat as ADR-005's `IAnonymizable`.
 
 ## Related
-ADR-003 (handler idempotency for outbox/event consumers — a distinct concern), ADR-013 (Result is the
+ADR-003 (handler idempotency for outbox/event consumers, a distinct concern), ADR-013 (Result is the
 response the filter caches/replays), ADR-014 (the filter keeps the handler thin), ADR-009 (the resilience
-pipeline that re-issues requests is the main source of the duplicates this filter absorbs).
+pipeline that re-issues requests is the main source of the duplicates this filter absorbs), ADR-026 (the
+`ICacheService` substrate whose distributed-vs-memory backing determines cross-instance replay).

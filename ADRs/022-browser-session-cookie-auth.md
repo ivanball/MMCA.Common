@@ -33,9 +33,10 @@ companion, and both apps' Web UI hosts wire it.
   "validate-or-refresh" endpoint the browser calls to hydrate its **in-memory** access token;
   `CookieSessionRefresher` reads the HttpOnly refresh cookie server-side, refreshes if needed, and
   returns only the access token plus expiry. The refresh token is never exposed to JavaScript.
-- **CSRF defense-in-depth.** The cookies are `SameSite=Lax`; the refresh endpoint additionally rejects
-  cross-site POSTs via the `Sec-Fetch-Site` header, and the cookie endpoints disable antiforgery
-  deliberately (they carry no antiforgery token and are guarded by SameSite + Sec-Fetch-Site + POST).
+- **CSRF defense-in-depth.** All cookies are `SameSite=Lax`. The seed/clear endpoints (`POST` and
+  `DELETE /auth/session-cookie`) deliberately disable antiforgery (they carry no antiforgery token) and
+  rest on `SameSite=Lax` alone; the `/auth/session/token` refresh endpoint additionally rejects
+  cross-site requests via the `Sec-Fetch-Site` header.
 
 This is a backend-for-frontend (BFF) style token-storage layer: the browser holds an HttpOnly session
 whose refresh half it cannot read, the SSR pass authenticates from the access cookie without trusting
@@ -65,13 +66,13 @@ it as the security boundary, and the real enforcement stays at the API.
   an in-memory bearer token (interactive API calls); the two must stay in sync, which is what the
   `/auth/session/token` hydrate endpoint and the UI's `ISessionCookieSync` manage.
 - **CSRF surface.** Cookie-based auth reintroduces CSRF considerations a pure bearer-header scheme
-  avoids; mitigated by SameSite=Lax + Sec-Fetch-Site + POST-only, but it is a surface a header-only
-  design would not have.
+  avoids; mitigated by `SameSite=Lax` (plus the refresh endpoint's `Sec-Fetch-Site` check), but it is a
+  surface a header-only design would not have.
 - **Expiry is checked, not cryptographically enforced, at the SSR edge.** A tampered cookie yields
   claims that fail at the API on the next call, but the prerendered HTML for that one pass is produced
   from unverified claims.
 
 ## Related
 ADR-004 (the JWT/JWKS validation the API performs on every call, which is why the SSR handler can skip
-signature validation), ADR-008 (the gateway and topology the UI talks to), ADR-019 (the
-login-protection and rate limiting on the auth surface this session seeds from).
+signature validation), ADR-008 (the gateway and topology the UI talks to), ADR-019 (rate limiting on the
+auth surface), ADR-029 (the login brute-force protection this session seeds from).

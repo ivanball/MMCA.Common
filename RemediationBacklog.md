@@ -1,6 +1,6 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.8% / Implementation 85.0%**, framework v1.85.0).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 91.7% / Implementation 84.1%**, framework v1.92.0).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
@@ -229,6 +229,58 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
 
 ---
 
+## Progress — v1.86.0→v1.92.0 (ninth wave: i18n + re-score, 2026-06-29)
+
+> Re-scored against current source at framework **v1.92.0** (HEAD `93ffcac`, dirty tree). Canonical scoring
+> is now **Maturity 91.7% / Implementation 84.1%** (was 92.8% / 85.0%) per the in-repo
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md). **Five scores moved**: one new category (§27),
+> one offsetting maturity regression (§23), and three closer-evidence recalibrations (§11, §22, §30-reviewed).
+> Both indices dip slightly — honest re-calibration plus a newly-scored immature category, not regressed work.
+
+- ➕ **#27 — i18n flipped N/A → Maturity 2 / Implementation 6 (NEW open item).** Multi-locale i18n
+  (en-US + Spanish) now ships *in the framework itself* (ADR-027, superseding the single-locale ADR-011):
+  co-located `.resx` + `IStringLocalizer<T>`, edge error localization keyed by `Error.Code`, a culture
+  cookie forwarded as `Accept-Language`, and `User.PreferredCulture`. The last N/A category is now scored,
+  so all 34 count. *Gap (the freshest in-repo gap, weight 1, priority 2):* no missing-key/translation-coverage
+  CI gate, no pseudo-localization pass, culture-less formatting guarded only by an advisory analyzer
+  (`MA0076`). *(See the Priority-2 #27 item below.)* — `Shared/Globalization/SupportedCultures.cs:18`;
+  `API/Localization/ErrorResourceSource.cs` + `*.es.resx`; `UI/Components/CultureSwitcher.razor`.
+- 🔻 **#11 — Security Implementation 9→8 (recalibration; still Maturity 4).** "Strong", not "Exemplary":
+  vault/managed-identity secret binding is deployer-owned and authz is RBAC-with-capability-indirection,
+  not resource/attribute-based. *Enriched this wave (no further move):* ADR-032 PBKDF2-HMAC-SHA512 password
+  hashing (`PasswordHasher.cs`, 600k iterations + legacy-salt migrate + `FixedTimeEquals`, 11 tests) and
+  ADR-029 brute-force protection now documented.
+- 🔻 **#22 — Responsive Implementation 8→7 (recalibration).** Cross-browser gate is chromium-only
+  (firefox/webkit advisory), the 48px touch-target rule is cart-drawer-scoped, no density options. Already
+  tracked consumer-assessed; no new item.
+- 🔻 **#23 — Front-End Performance Maturity 4→3 (recalibration).** The patterns are convention/review-enforced,
+  not automatically gated or measured (no Core Web Vitals/Lighthouse anywhere). Already an open Priority-2
+  item (#23); the regression aligns the backlog with reality.
+- ◐ **#29 — broker retry sub-items now CLOSE.** `ConfigureBrokerTransport` applies `cfg.UseMessageRetry`
+  (exponential) on **both** RabbitMQ (`DependencyInjection.cs:432`) and Azure Service Bus (`:449`); the
+  `IntegrationEventConsumer` comment + the doc-comment are corrected. The Priority-3 #29 descriptive text
+  ("no `UseMessageRetry`") is **drifted** and corrected below. `UseDelayedRedelivery` stays deliberately
+  omitted (`DependencyInjection.cs:408`, accepted). **Category #29 itself stays open at Maturity 3** on the
+  unchanged recovery gaps (no in-repo RTO/RPO, drilled restore, SLOs).
+- ◐ **#30 — PII erasure contract now gated; Maturity held at 3 (reviewed).** A new
+  `PiiErasureContractFitnessTests` build gate forces a `[Pii]` `DataSubjectSample` through `PiiRedactor` +
+  `IAnonymizable` (`Tests/Architecture/.../PiiErasureContractFitnessTests.cs:19-40`), closing the prior
+  "vacuous PII guard" sub-item. **Maturity was reviewed and held at 3** (not lifted to 4): the gate verifies
+  the erasure *mechanism*, but the structural `PiiConventionTests` scan is still vacuous (no PII-bearing type
+  in Common's Domain) and the broad §30 governance (DSAR/consent/residency/retention/inventory) is
+  consumer-resident. See the #30 clarification below.
+- ✅ **Evidence enrichment, no score move:** ADR-028 day/dark theme (§20 — wired toggle, raw-hex/`!important`
+  deductions hold), ADR-030 startup sole-migrator (§8/§17 — runtime self-migration, not the CI migration-apply
+  gate those gaps name), ADR-031 feature-flag management (§10). ADR set grew 026→032; `FACTS.md` fitness
+  counts advanced (71 methods/18 bases, Common runs 38).
+
+**Open follow-up surfaced this cycle (governance hygiene, not a score-mover):**
+- [ ] **Commit the v1.86.0→v1.92.0 docs/source pass.** ADR-032 is untracked; ADRs 001/007/008/017/020/022/030
+  + `ADRs/README.md` + `FACTS.md` + one `WebApplicationExtensions.cs` source edit are modified; this
+  scorecard/backlog refresh is uncommitted. Commit so §34 traceability is consistent again. *(§34, S.)*
+
+---
+
 ## 🔴 Priority 6 — highest leverage
 
 ### [x] #28 · Front-End Testing & Quality — score 2 → 4 (weight 3) · *RESOLVED 2026-06-27*
@@ -242,6 +294,8 @@ The package ships reusable Blazor primitives with **no fast test tier**.
 - [x] Run at least one **browser journey in MMCA.Common CI** so regressions in the shipped E2E helpers are caught here, not only downstream. → `ui-e2e` job (`.github/workflows/ci.yml`), gallery host self-served, chromium gate.
 
 ### [x] #30 · Compliance, Privacy & Data Governance — score 1 → 4 (weight 2) · *RESOLVED 2026-06-27*
+> _Single-axis review only. In the live two-axis scorecard §30 is **Maturity 3 / Implementation 8** — the in-repo erasure mechanism is complete (and now fitness-gated, see the 2026-06-29 item below), but the broad governance process (DSAR/consent/residency/retention/inventory) is consumer-owned, so two-axis maturity is held at 3, not 4._
+
 Soft-delete is the only deletion model — no lawful erasure path. *(All three fix items shipped; see the wave-1 progress entry above and the 2026-06-27 closeout below.)*
 - ~~**(medium)** `AuditableBaseEntity.Delete()` sets `IsDeleted=true` … the exact GDPR/CCPA conflict the rubric names.~~ — **RESOLVED:** `IAnonymizable` erasure seam (`Domain/Interfaces/IAnonymizable.cs`), enforced by the `PiiConventionTests` fitness rule (a `[Pii]`-marked property obliges `IAnonymizable`); the AES-256-GCM `EncryptedStringConverter` ships for retrievable PII.
 - ~~**(low)** Processed outbox rows … are never purged~~ — **RESOLVED:** `OutboxCleanupService` purges processed outbox (and inbox) rows older than `Outbox:RetentionDays` (default 7) from every relational source.
@@ -252,19 +306,20 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 - [x] Add an **outbox-purge** background option with configurable retention. → `OutboxCleanupService` (`Outbox:RetentionDays`).
 - [x] Write an **ADR** framing the soft-delete-vs-erasure tradeoff and the consumer's data-controller obligations. → `ADRs/005-soft-delete-vs-erasure.md`.
 - [x] **(2026-06-27) Make the `[Pii]` log-masking real** — `PiiRedactor` (`Domain/Privacy/PiiRedactor.cs`) masks every `[Pii]`-marked member (shallow, value-erasing) so an entity carrying personal data can be logged without leaking clear-text PII; the `PiiAttribute` doc previously *advertised* this policy but no implementation existed. Covered by 7 `PiiRedactorTests`.
+- [x] **(2026-06-29) Gate the erasure contract with a fitness function** — `PiiErasureContractFitnessTests` (`Tests/Architecture/.../PiiErasureContractFitnessTests.cs:19-40`) forces a `[Pii]`-marked `DataSubjectSample` through `PiiRedactor` + `IAnonymizable` end-to-end, so the redaction/erasure mechanism is no longer un-gated. *Note:* this verifies the **mechanism**; the repo-wide `PiiConventionTests` scan stays vacuous (no PII-bearing type lives in Common's Domain) and the DSAR/consent/residency/inventory **process** stays consumer-owned, so two-axis §30 maturity is held at 3.
 
 ---
 
 ## 🟠 Priority 3 — score 3, weight 3 (one rung from a 4)
 
 ### [ ] #29 · Resilience, Reliability & Business Continuity — 3 → 4
-- **(medium)** `IntegrationEventConsumer` rethrows with a comment claiming "MassTransit will retry per its configured policy," but `ConfigureBrokerTransport` (`DependencyInjection.cs:403-431`) calls only `cfg.ConfigureEndpoints(context)` — **no** `UseMessageRetry`/`UseDelayedRedelivery`. Faulted messages dead-letter with zero retries on the extracted-microservice path the framework markets.
-- *Gap:* no backup/restore, RTO/RPO, failover, SLOs; resilience config not fully test-enforced. *(chaos/fault-injection now covered — see below.)*
+- ~~**(medium)** No broker retry policy on the extracted-microservice path~~ — **RESOLVED (re-verified 2026-06-29):** `ConfigureBrokerTransport` applies `cfg.UseMessageRetry` (exponential) on **both** RabbitMQ (`DependencyInjection.cs:432`) and Azure Service Bus (`:449`), and the `IntegrationEventConsumer` comment + log are corrected. `UseDelayedRedelivery` is deliberately omitted (`DependencyInjection.cs:408`, accepted — needs the RabbitMQ delayed-exchange plugin).
+- *Gap (why #29 stays open at Maturity 3):* no in-repo backup/restore drill, RTO/RPO, failover, or SLOs. *(chaos/fault-injection covered — see below.)*
 
 **Fix**
 - [x] **Fault-injection / chaos test landed (C-8, 2026-06-19).** `ResilienceCircuitBreakerFaultInjectionTests` (Grpc.Tests) drives an always-failing dependency through the standard resilience handler and asserts the circuit breaker trips and short-circuits further calls; `OutboxProcessorTests.IntegrationEventPublishFailure_DegradesGracefully_BuffersForRedelivery` asserts the outbox buffers the event (retry++, left unprocessed) when the broker is unreachable instead of crashing the processor.
-- [ ] Add a default **`UseMessageRetry` (backoff + jitter)** and **`UseDelayedRedelivery`** in `ConfigureBrokerTransport`; expose a hook for consumers to tune it.
-- [ ] **Correct or remove** the misleading comment + log message.
+- [x] Add a default **`UseMessageRetry` (backoff + jitter)** in `ConfigureBrokerTransport`; expose a hook for consumers to tune it (`MessageBusSettings.RetryLimit`/`RetryMinIntervalSeconds`/`RetryMaxIntervalSeconds`). *(`UseDelayedRedelivery` deliberately omitted — accepted.)*
+- [x] **Correct or remove** the misleading comment + log message. *(Done — `IntegrationEventConsumer.cs:59-60` + the doc-comments at `DependencyInjection.cs:401,408`.)*
 
 ### [ ] #32 · Dependency & Supply-Chain Management — 3 → 4 (weight 3, framework)
 - **(medium)** The safety-critical **MassTransit v8 pin** (`Directory.Packages.props:28-36`) is guarded only by a prose comment; a blanket "update all" once bumped it to v9.1.2, which crashes every broker-enabled host at startup — and CI never starts a broker, so the build stays green. *(Matches the standing MassTransit-v8 constraint.)*
@@ -367,8 +422,9 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 *(All backed by fitness functions — the regression guard is keeping those tests green.)*
 
 ## ⚪ Mostly consumer-assessed (the shared Common.UI surface is scored here)
-#21 Accessibility · #22 Responsive · #26 Front-End Security · #27 i18n
+#21 Accessibility · #22 Responsive · #26 Front-End Security
 *(Assessable mainly in consumer apps; #26 shared surface is covered under #11.)*
+- **#27 i18n — no longer consumer-assessed/N/A.** It is now an active, in-repo scored category (Maturity 2 / Implementation 6) after ADR-027 shipped en-US + Spanish in the framework, superseding the single-locale ADR-011. Tracked as an open item in the ninth-wave progress section above.
 - **#24 Forms/UX Safety — DONE for the shared surface (eighth wave, impl 7→8):** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored.
 - **#25 Navigation — DONE for the shared surface (eighth wave, impl 7→8):** an in-shell `Forbidden` (403) page + `NavigationFlow.md` for the Common UI surface. Per-actor module flows remain consumer-scored.
 

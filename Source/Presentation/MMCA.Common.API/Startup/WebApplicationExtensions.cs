@@ -93,8 +93,12 @@ public static class WebApplicationExtensions
             app.UseCors(app.Environment.IsDevelopment()
                 ? WebApplicationBuilderExtensions.CorsPolicyAllowAll
                 : WebApplicationBuilderExtensions.CorsPolicyAllowSpecificOrigins);
-            app.UseRateLimiter();
             app.UseAuthentication();
+            // Rate limiting runs AFTER authentication on purpose (ADR-019): GlobalRateLimitPartition
+            // partitions by the authenticated principal and routes anonymous traffic down a NoLimiter
+            // branch, so HttpContext.User must already be populated here — otherwise every request
+            // looks anonymous and the per-user cap never engages.
+            app.UseRateLimiter();
             app.UseMiddleware<SoftDeletedUserMiddleware>();
             app.UseAuthorization();
             app.UseOutputCache();

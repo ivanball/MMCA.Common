@@ -22,9 +22,11 @@ Use **gRPC**, exposed through `MMCA.Common.Grpc`, with a contract-package conven
   `JwtForwardingClientInterceptor` (the inbound bearer token is forwarded downstream).
 - **`Result` failures over the wire**: the server-side `GrpcResultExceptionInterceptor` maps a failed
   `Result` to an `RpcException` carrying the structured `ErrorType`/code, mirroring the HTTP
-  `HandleFailure` edge mapping (ADR-013). The mapping is **server-side only** — the extracted interface
-  adapters expose plain return types (e.g. `Task<int>` / `Task<bool>`), so a remote failure reaches the
-  caller as an exception, not a re-hydrated `Result<T>`.
+  `HandleFailure` edge mapping (ADR-013). Adapters whose interface returns a `Result` (for example
+  `SessionBookmarkValidationServiceGrpcAdapter`) re-hydrate that failure **client-side** by parsing the
+  `error-{i}-*` trailers, so the caller sees the same `Result` shape it would from an in-process call.
+  Adapters whose interface returns a plain type (for example `Task<int>` or `Task<IReadOnlyList<T>>`)
+  surface a remote failure as a thrown exception instead.
 - **HTTP/2 cleartext (h2c)**: the REST services serve HTTP/2 on their cleartext endpoint so clients
   negotiate without TLS/ALPN (a deliberate `SocketsHttpHandler` override).
 - **Federated auth, not a shared secret**: services validate forwarded JWTs against the issuer's

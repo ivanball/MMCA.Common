@@ -5,9 +5,10 @@ Accepted (2026-06-25).
 
 ## Context
 Authorization started as pure role-based access control (RBAC). Endpoints declared the role they
-required with `[Authorize(Policy = ...)]` against named policies (`RequireOrganizer`,
-`RequireAttendee`, `RequireAdmin`, `RequireAuthenticated`) that each call `RequireRole(...)`. That
-couples every endpoint to a role *name*, and it has two concrete failure modes:
+required with `[Authorize(Policy = ...)]` against named policies: `RequireOrganizer`, `RequireAttendee`,
+and `RequireAdmin` each call `RequireRole(...)`, while `RequireAuthenticated` calls
+`RequireAuthenticatedUser()`. That couples every role-guarded endpoint to a role *name*, and it has two
+concrete failure modes:
 
 - **Reshaping who-can-do-what means editing endpoints.** Splitting a coarse role into a narrower one
   (for example, a content editor who may curate the session catalog but not manage events, rooms, or

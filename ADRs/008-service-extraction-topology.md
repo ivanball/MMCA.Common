@@ -31,7 +31,9 @@ Extract **one service host per module** — `MMCA.ADC.{Identity,Conference,Engag
   The Domain/Application/Shared code is identical whether it runs in-process or extracted.
 - **The Gateway is the only client entry point.** It owns the route→service map (`/Auth`, `/Events`,
   `/Bookmarks`, `/hubs`, `/.well-known`, …); clients (Blazor/MAUI) never address a service directly. It
-  has no DbContext or controllers — CORS + static files + forwarders only.
+  has no DbContext or controllers: security-headers middleware (ADR-023), CORS, static files, a
+  `/privacy` minimal-API endpoint, and the route forwarders (ADC; Store's Gateway is the same minus the
+  static files).
 - **Cross-service communication uses edge transports:** synchronous calls over gRPC contracts (ADR-007);
   asynchronous flows over the outbox → MassTransit broker (ADR-003, ADR-006). Token validation is
   federated via JWKS through the Gateway (ADR-004). Each service owns its own database (ADR-006).

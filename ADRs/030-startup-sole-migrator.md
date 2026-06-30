@@ -31,7 +31,7 @@ migration (no `sqlcmd` / `dotnet ef database update` apply in `deploy.yml`).
   racing sibling replicas of the same revision.
 - **No deploy-step backstop, on purpose.** Both `deploy.yml` files carry an explicit comment that there
   is *no external `sqlcmd` migration backstop* and that each service is the **sole migrator**
-  (`MMCA.Store/.github/workflows/deploy.yml:445`, `MMCA.ADC/.github/workflows/deploy.yml:498`). The
+  (`MMCA.Store/.github/workflows/deploy.yml:445`, `MMCA.ADC/.github/workflows/deploy.yml:522`). The
   `sqlcmd` that *is* installed in the pipeline is a connectivity/readiness probe, not a migration apply.
 - **Build-time drift gate, not a runtime apply.** CI runs
   `dotnet ef migrations has-pending-model-changes` (Store `deploy.yml:86`, ADC `deploy.yml:89`) so a
