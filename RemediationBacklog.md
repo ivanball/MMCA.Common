@@ -1,6 +1,6 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 91.7% / Implementation 84.1%**, framework v1.92.0).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.9% / Implementation 84.9%**, framework v1.92.0; tenth-wave in-repo remediation 2026-06-30).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
@@ -275,9 +275,54 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   counts advanced (71 methods/18 bases, Common runs 38).
 
 **Open follow-up surfaced this cycle (governance hygiene, not a score-mover):**
-- [ ] **Commit the v1.86.0→v1.92.0 docs/source pass.** ADR-032 is untracked; ADRs 001/007/008/017/020/022/030
-  + `ADRs/README.md` + `FACTS.md` + one `WebApplicationExtensions.cs` source edit are modified; this
-  scorecard/backlog refresh is uncommitted. Commit so §34 traceability is consistent again. *(§34, S.)*
+- [x] **Commit the v1.86.0→v1.92.0 docs/source pass.** **DONE 2026-06-30** (commit `5321aee`): ADR-032 +
+  the modified ADRs 001/007/008/017/020/022/030 + `ADRs/README.md` + `FACTS.md` + the
+  `WebApplicationExtensions.cs` rate-limiter-ordering edit committed; §34 traceability consistent again.
+
+---
+
+## Progress — tenth wave (focused in-repo remediation, 2026-06-30)
+
+> Four scores moved **up** on shipped, tested in-repo evidence; both indices rose for the first time in
+> several waves: **Maturity 91.7% → 92.9%** (301/324), **Implementation 84.1% → 84.9%** (688/810). Full
+> Release build clean (0/0); 1670 unit/arch/bUnit tests + 12 chromium E2E pass. Commits `21fbdf9` (§27),
+> `c04f456` (§29), `a28ce98` (§28), `fbb463b` (§21).
+
+- ✅ **#27 — i18n: Maturity 2→3, Implementation 6→7.** Closes the two ADR-027 §7 follow-ups the scorecard
+  named. (a) **Translation-coverage fitness gate:** `ResourceTranslationsAreComplete` (shared
+  `MMCA.Common.Testing.Architecture`, the 19th fitness base) run as `LocalizationResourceTests` against
+  `SupportedCultures.All` fails the build if any base `.resx` under `Source/` lacks a complete, non-empty
+  sibling for a required culture, so coverage is verified not assumed. (b) **Culture-less formatting is now a
+  build gate:** `MA0076` raised `suggestion`→`error` in `.editorconfig`; the 33 surfaced sites (validation
+  messages, gRPC error details, UI log/notification text, tests) now use explicit `InvariantCulture`. ADR-027
+  §7/§8 document both gates plus a locale-addition governance step. Held below M4: no pseudo-localization
+  pass, only two locales.
+- ✅ **#29 — Resilience: Maturity 3→4.** The in-repo restore drill (`DatabaseRestoreDrillTests`) runs on
+  **every CI build** (a build gate in the unit tier, NOT a non-gating scheduled cron, which is the standard
+  that keeps a scheduled drill at M3), and `RESILIENCE.md` now records the framework's **measured** restore
+  baseline (~5 ms median RTO over 5 runs, 0-row RPO byte-for-byte asserted). The recovery procedure is thus
+  demonstrated, measured, and automatically enforced in-repo, meeting the M4 bar. Implementation held at 8:
+  production RTO/RPO against real cloud backups + measured production SLOs stay consumer IaC.
+- ✅ **#28 — Front-End Testing: Implementation 8→9.** Closes "no visual-regression layer" with a
+  **render-snapshot (golden-markup) regression** tier: `MarkupSnapshot` (shipped in `Testing.UI` for consumer
+  reuse) normalizes per-render MudBlazor GUIDs and diffs shared-primitive markup against committed baselines
+  (`PrimitivesSnapshotTests`, 5 baselines), failing the build on an unintended structural change. Deterministic
+  and OS-independent (markup, not pixels), so it runs in the in-solution unit tier on every CI platform with
+  no per-platform golden management (the Windows-dev-box-cannot-produce-Linux-CI-pixel-goldens constraint).
+- ✅ **#21 — Accessibility: Implementation 8→9.** Broadened the chromium axe gate to the **loading
+  (named progressbar) and error (alert) component states**, and added `ACCESSIBILITY.md` (documented manual
+  screen-reader pass: landmarks/focus-order/ARIA-names/form-error association). Broadening the scan **found
+  and fixed a real WCAG 4.1.2 defect**: `PageLoadingState` carried a prohibited `aria-label` on a bare `<div>`
+  around an anonymous progressbar (now `role="status"` + a named spinner).
+
+**Open follow-ups surfaced this wave:**
+- [ ] **#20 — dark-mode palette contrast (Implementation, NEW).** The §21 dark-mode axe prototype found the
+  dark palette's **filled-primary button label** and **error-alert message text** fail WCAG AA contrast
+  (`PaletteDark.Primary`/`Error` paired with auto-computed text). Tracked here (documented in
+  `ACCESSIBILITY.md`), deliberately NOT gated yet; tuning the dark palette is the remediation. *(§20, M.)*
+- [ ] **Release + sweep deferred (deliberate).** This wave lands in-repo only; tagging a new Common version +
+  sweeping all 13 packages into ADC/Store/Helpdesk is a separate, explicitly-confirmed step (push = prod
+  deploy). *(§16/§34.)*
 
 ---
 
