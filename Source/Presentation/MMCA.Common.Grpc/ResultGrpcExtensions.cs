@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Globalization;
 using Grpc.Core;
 using MMCA.Common.Grpc.Exceptions;
 using MMCA.Common.Shared.Abstractions;
@@ -105,17 +106,17 @@ public static class ResultGrpcExtensions
         for (var i = 0; i < errors.Count; i++)
         {
             var error = errors[i];
-            trailers.Add($"error-{i}-code", error.Code);
-            trailers.Add($"error-{i}-message", error.Message);
-            trailers.Add($"error-{i}-type", error.Type.ToString());
+            trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-code"), error.Code);
+            trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-message"), error.Message);
+            trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-type"), error.Type.ToString());
             if (!string.IsNullOrEmpty(error.Source))
             {
-                trailers.Add($"error-{i}-source", error.Source);
+                trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-source"), error.Source);
             }
 
             if (!string.IsNullOrEmpty(error.Target))
             {
-                trailers.Add($"error-{i}-target", error.Target);
+                trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-target"), error.Target);
             }
         }
 

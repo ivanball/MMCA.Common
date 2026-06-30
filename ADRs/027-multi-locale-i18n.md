@@ -61,11 +61,25 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
 7. **Display formatting is culture-aware; machine boundaries stay invariant.** UI rendering of dates /
    numbers uses `CurrentCulture`. `InvariantCulture` is retained where the string is a machine contract
    (JWT timestamps, EF/grid filter parsing, URL/query state, claims, value-object canonical strings).
-   Hygiene against accidental culture-less formatting is **currently advisory, not a build gate**: the
-   Meziantou analyzer `MA0076` (implicit culture-sensitive `ToString` in interpolation) is set to
-   `suggestion` severity in `.editorconfig`, *not* an ADR-015 NetArchTest fitness rule. Promoting it to a
-   gate (raise `MA0076` to `error`, or add a culture-hygiene rule to the fitness library) is tracked as
-   follow-up.
+   Hygiene against accidental culture-less formatting is **enforced as a build gate** (since 2026-06-29):
+   the Meziantou analyzer `MA0076` (implicit culture-sensitive `ToString` in interpolation) is set to
+   `error` severity in `.editorconfig`, so a culture-less interpolation fails the build and must declare an
+   explicit `IFormatProvider` (`CultureInfo.InvariantCulture` at machine boundaries, `CurrentCulture` for
+   UI display). This closes the prior "advisory only" follow-up.
+
+8. **Translation completeness is a fitness gate (ADR-015).** `ResourceTranslationsAreComplete`
+   (`MMCA.Common.Testing.Architecture`, run as `LocalizationResourceTests` against `SupportedCultures.All`)
+   fails the build if any base `.resx` under `Source/` lacks a complete, non-empty sibling for a required
+   culture — so a new English string cannot ship without its Spanish translation. Coverage is **verified,
+   not assumed**, closing the prior "no missing-key/translation-coverage gate" follow-up. The rule is opt-in
+   and repo-agnostic (it takes the required-culture list), so the consumer apps can adopt the same gate for
+   their module `.resx`.
+
+   **Locale-addition governance.** Adding a locale is a bounded, gated process: (a) add the culture to
+   `SupportedCultures.All`; (b) add the `.<culture>.resx` sibling for every base `.resx`; (c) the coverage
+   fitness gate then refuses to build until every key is translated. No other infrastructure change is
+   needed — `UseRequestLocalization`, the culture switcher, and the Identity `User.PreferredCulture` guard
+   all read `SupportedCultures`, so they cannot drift from the allowlist.
 
 ## Rationale
 - **Keying error localization on the existing `Error.Code` is the cheapest correct seam.** The codes are
@@ -88,8 +102,8 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
 
 ## Related
 [ADR-011](011-single-locale-i18n.md) (superseded), [ADR-013](013-result-pattern.md) (the `Error.Code`
-this localizes on), [ADR-015](015-architecture-fitness-functions.md) (where an i18n-hygiene gate would live; today only the
-advisory `MA0076` analyzer suggestion exists),
+this localizes on), [ADR-015](015-architecture-fitness-functions.md) (the i18n gates now live here: the `MA0076` culture-less
+formatting build gate and the `ResourceTranslationsAreComplete` translation-coverage fitness rule),
 [ADR-016](016-lockstep-versioning-masstransit-pin.md) (satellite assemblies ship in the lockstep release),
 [ADR-022](022-browser-session-cookie-auth.md) (the SSR cookie pattern this mirrors),
 [ADR-028](028-dark-theme-mode.md) (the theme toggle that shares this cookie/profile/bootstrap machinery).

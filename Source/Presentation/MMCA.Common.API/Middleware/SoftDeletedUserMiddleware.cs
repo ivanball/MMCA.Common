@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
@@ -59,7 +60,7 @@ public sealed class SoftDeletedUserMiddleware(RequestDelegate next)
             return;
         }
 
-        var cacheKey = $"user:deleted:{userId.Value}";
+        var cacheKey = string.Create(CultureInfo.InvariantCulture, $"user:deleted:{userId.Value}");
 
         // Check cache first
         var cachedResult = await cacheService.GetAsync<bool?>(cacheKey);

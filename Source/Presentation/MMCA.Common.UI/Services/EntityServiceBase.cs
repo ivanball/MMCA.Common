@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
@@ -58,8 +59,8 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     {
         var queryParams = new List<string>
         {
-            $"pageNumber={pageNumber}",
-            $"pageSize={pageSize}",
+            string.Create(CultureInfo.InvariantCulture, $"pageNumber={pageNumber}"),
+            string.Create(CultureInfo.InvariantCulture, $"pageSize={pageSize}"),
             $"sortColumn={Uri.EscapeDataString(sortColumn ?? string.Empty)}",
             $"sortDirection={Uri.EscapeDataString(sortDirection ?? string.Empty)}",
             $"includeChildren={includeChildren}"

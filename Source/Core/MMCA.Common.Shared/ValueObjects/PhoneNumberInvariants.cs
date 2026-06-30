@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using MMCA.Common.Shared.Abstractions;
 
@@ -39,7 +40,7 @@ public static partial class PhoneNumberInvariants
         {
             return Result.Failure(Error.Invariant(
                 code: "PhoneNumber.InvalidLength",
-                message: $"Phone number must be between {MinLength} and {MaxLength} characters.",
+                message: string.Create(CultureInfo.InvariantCulture, $"Phone number must be between {MinLength} and {MaxLength} characters."),
                 source: source,
                 target: nameof(phoneNumber)));
         }

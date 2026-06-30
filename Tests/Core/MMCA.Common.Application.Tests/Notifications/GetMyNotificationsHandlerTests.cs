@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox;
@@ -79,8 +80,8 @@ public sealed class GetMyNotificationsHandlerTests
             {
                 Id = i + 1,
                 PushNotificationId = i + 1,
-                Title = $"Title {i}",
-                Body = $"Body {i}",
+                Title = string.Create(CultureInfo.InvariantCulture, $"Title {i}"),
+                Body = string.Create(CultureInfo.InvariantCulture, $"Body {i}"),
                 IsRead = false,
                 SentOn = DateTime.UtcNow,
             });

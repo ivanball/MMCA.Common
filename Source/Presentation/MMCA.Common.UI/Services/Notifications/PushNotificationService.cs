@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
@@ -33,7 +34,7 @@ public sealed class PushNotificationService(
         int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var url = $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}";
+        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}");
         return await SendRequestAsync<PagedCollectionResult<PushNotificationDTO>>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken);

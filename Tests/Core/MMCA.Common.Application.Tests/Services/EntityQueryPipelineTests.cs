@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -228,7 +229,7 @@ public sealed class EntityQueryPipelineTests
     {
         // A caller that omits pagination must not trigger an unbounded materialization (rubric §12).
         var entities = Enumerable.Range(1, EntityQueryPipeline.MaxUnboundedResultLimit + 50)
-            .Select(i => new TestEntity { Id = i, Name = $"E{i}" })
+            .Select(i => new TestEntity { Id = i, Name = string.Create(CultureInfo.InvariantCulture, $"E{i}") })
             .ToList();
         var query = entities.AsQueryable();
 

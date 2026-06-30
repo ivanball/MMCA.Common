@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
@@ -72,7 +73,7 @@ public sealed class GetNotificationHistoryHandlerTests
         for (int i = 0; i < pageItems; i++)
         {
             Result<PushNotification> notificationResult = PushNotification.Create(
-                $"Title {i}", $"Body {i}", sentByUserId: 1, recipientCount: 5);
+                string.Create(CultureInfo.InvariantCulture, $"Title {i}"), string.Create(CultureInfo.InvariantCulture, $"Body {i}"), sentByUserId: 1, recipientCount: 5);
             notifications.Add(notificationResult.Value!);
         }
 

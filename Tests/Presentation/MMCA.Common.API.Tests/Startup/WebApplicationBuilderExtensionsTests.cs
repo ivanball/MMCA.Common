@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Http;
@@ -277,6 +278,6 @@ public sealed class WebApplicationBuilderExtensionsTests
     private static IConfiguration CreateCorsConfiguration(params string[] allowedOrigins) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(
-                [.. allowedOrigins.Select((origin, i) => KeyValuePair.Create<string, string?>($"Cors:AllowedOrigins:{i}", origin))])
+                [.. allowedOrigins.Select((origin, i) => KeyValuePair.Create<string, string?>(string.Create(CultureInfo.InvariantCulture, $"Cors:AllowedOrigins:{i}"), origin))])
             .Build();
 }

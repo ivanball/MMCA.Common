@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +34,7 @@ public sealed class NotificationInboxTests : BunitTestBase
         {
             Id = id,
             PushNotificationId = id,
-            Title = $"Notice {id}",
+            Title = string.Create(CultureInfo.InvariantCulture, $"Notice {id}"),
             Body = "body",
             IsRead = false,
             SentOn = new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc),

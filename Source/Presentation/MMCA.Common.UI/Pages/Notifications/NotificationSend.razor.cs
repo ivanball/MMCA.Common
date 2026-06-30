@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
@@ -54,7 +55,7 @@ public partial class NotificationSend : IDisposable
 
             if (result is not null)
             {
-                Snackbar.Add($"Notification sent to {result.RecipientCount} recipients.", Severity.Success);
+                Snackbar.Add(string.Create(CultureInfo.InvariantCulture, $"Notification sent to {result.RecipientCount} recipients."), Severity.Success);
                 NavigationManager.NavigateTo(NotificationRoutePaths.Notifications);
             }
         }

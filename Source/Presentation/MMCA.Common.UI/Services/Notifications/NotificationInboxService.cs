@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.UserNotifications;
@@ -22,7 +23,7 @@ public sealed class NotificationInboxService(
         CancellationToken cancellationToken = default)
     {
         using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}";
+        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}");
 
         HttpResponseMessage response = await RetryPolicy
             .ExecuteAsync(() => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken));
@@ -60,7 +61,7 @@ public sealed class NotificationInboxService(
         CancellationToken cancellationToken = default)
     {
         using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = $"{Endpoint}/{id}/read";
+        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{id}/read");
 
         HttpResponseMessage response = await RetryPolicy
             .ExecuteAsync(() => httpClient.PutAsync(new Uri(url, UriKind.Relative), content: null, cancellationToken));

@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Validation;
@@ -34,7 +35,7 @@ public sealed class AddressValidationRulesTests
         var result = line1Validator.TestValidate(model);
 
         result.ShouldHaveValidationErrorFor(p => p.AddressLine1)
-            .WithErrorMessage($"Address Line 1 cannot be longer than {AddressInvariants.AddressLine1MaxLength} characters");
+            .WithErrorMessage(string.Create(CultureInfo.InvariantCulture, $"Address Line 1 cannot be longer than {AddressInvariants.AddressLine1MaxLength} characters"));
     }
 
     [Fact]

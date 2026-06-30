@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
@@ -325,7 +326,7 @@ public static class WebApplicationBuilderExtensions
         if (keyBytes.Length < 32)
         {
             throw new InvalidOperationException(
-                $"JWT SecretForKey must be at least 256 bits (32 bytes) for HMAC-SHA256. Current key is {keyBytes.Length * 8} bits.");
+                string.Create(CultureInfo.InvariantCulture, $"JWT SecretForKey must be at least 256 bits (32 bytes) for HMAC-SHA256. Current key is {keyBytes.Length * 8} bits."));
         }
 
         return keyBytes;

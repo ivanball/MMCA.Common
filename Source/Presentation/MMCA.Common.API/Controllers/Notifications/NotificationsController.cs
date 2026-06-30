@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -52,7 +53,7 @@ public sealed class NotificationsController(
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
-            : Created(new Uri($"/notifications/{result.Value!.Id}", UriKind.Relative), result.Value);
+            : Created(new Uri(string.Create(CultureInfo.InvariantCulture, $"/notifications/{result.Value!.Id}"), UriKind.Relative), result.Value);
     }
 
     /// <summary>Gets push notification history (GET /api/notifications).</summary>

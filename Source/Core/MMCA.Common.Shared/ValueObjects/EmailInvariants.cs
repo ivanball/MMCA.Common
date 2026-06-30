@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using MMCA.Common.Shared.Abstractions;
 
@@ -34,7 +35,7 @@ public static partial class EmailInvariants
         {
             return Result.Failure(Error.Invariant(
                 code: "Email.TooLong",
-                message: $"Email address cannot exceed {MaxLength} characters.",
+                message: string.Create(CultureInfo.InvariantCulture, $"Email address cannot exceed {MaxLength} characters."),
                 source: source,
                 target: nameof(email)));
         }

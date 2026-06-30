@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using FluentValidation;
 
@@ -14,7 +15,7 @@ public class RequiredStringRules<T> : AbstractValidator<T>
     public RequiredStringRules(Expression<Func<T, string>> selector, string fieldName, int maxLength)
         => RuleFor(selector)
             .NotEmpty().WithMessage($"You must enter a {fieldName}")
-            .MaximumLength(maxLength).WithMessage($"{fieldName} cannot be longer than {maxLength} characters");
+            .MaximumLength(maxLength).WithMessage(string.Create(CultureInfo.InvariantCulture, $"{fieldName} cannot be longer than {maxLength} characters"));
 }
 
 /// <summary>
@@ -25,7 +26,7 @@ public class OptionalStringRules<T> : AbstractValidator<T>
 {
     public OptionalStringRules(Expression<Func<T, string?>> selector, string fieldName, int maxLength)
         => RuleFor(selector)
-            .MaximumLength(maxLength).WithMessage($"{fieldName} cannot be longer than {maxLength} characters");
+            .MaximumLength(maxLength).WithMessage(string.Create(CultureInfo.InvariantCulture, $"{fieldName} cannot be longer than {maxLength} characters"));
 }
 
 /// <summary>
@@ -38,7 +39,7 @@ public class EmailRules<T> : AbstractValidator<T>
         => RuleFor(selector)
             .NotEmpty().WithMessage($"You must enter a {fieldName}")
             .EmailAddress().WithMessage($"You must enter a valid {fieldName}")
-            .MaximumLength(maxLength).WithMessage($"{fieldName} cannot be longer than {maxLength} characters");
+            .MaximumLength(maxLength).WithMessage(string.Create(CultureInfo.InvariantCulture, $"{fieldName} cannot be longer than {maxLength} characters"));
 }
 
 /// <summary>
