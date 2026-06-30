@@ -17,6 +17,16 @@
         <EmptyState Message="No records found." />
     </MudPaper>
 
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Loading state</MudText>
+    <MudPaper Outlined="true" Class="pa-2">
+        <PageLoadingState Label="Loading sample data" />
+    </MudPaper>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Error state</MudText>
+    <MudPaper Outlined="true" Class="pa-2">
+        <PageErrorState Message="Could not load the sample data." />
+    </MudPaper>
+
     <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile card list</MudText>
     <MobileCardList TItem="SampleItem" Items="_items" TotalItems="_items.Count" PageSize="10">
         <CardTemplate>
