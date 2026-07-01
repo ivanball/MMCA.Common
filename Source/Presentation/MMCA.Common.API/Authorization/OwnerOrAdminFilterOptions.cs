@@ -16,6 +16,10 @@ public sealed class OwnerOrAdminFilterOptions
     /// <summary>The role that bypasses the ownership check. Default: <c>Admin</c>.</summary>
     public string BypassRole { get; set; } = "Admin";
 
-    /// <summary>The route parameter compared against the owner claim. Default: <c>id</c>.</summary>
-    public string RouteParameterName { get; set; } = "id";
+    /// <summary>
+    /// The parameter compared against the owner claim: a route value (<c>/customers/{id}</c>) or,
+    /// when absent from the route, a model-bound query/body argument (<c>?userId=42</c>).
+    /// Default: <c>id</c>.
+    /// </summary>
+    public string OwnerParameterName { get; set; } = "id";
 }

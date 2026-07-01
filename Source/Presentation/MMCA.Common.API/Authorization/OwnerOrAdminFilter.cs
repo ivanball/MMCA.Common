@@ -43,15 +43,35 @@ public sealed class OwnerOrAdminFilter(
             return;
         }
 
-        if (context.RouteData.Values.TryGetValue(settings.RouteParameterName, out var routeIdValue)
-            && routeIdValue is not null
-            && int.TryParse(routeIdValue.ToString(), out var routeId)
-            && routeId != ownerId.Value)
+        if (TryGetOwnerParameter(context, settings.OwnerParameterName, out var requestedId)
+            && requestedId != ownerId.Value)
         {
             context.Result = new ForbidResult();
             return;
         }
 
         await next().ConfigureAwait(false);
+    }
+
+    // The owner identifier can arrive as a route value (/customers/{id}) or as a model-bound
+    // query/body argument (/bookmarks?userId=42); check the route first, then the bound arguments.
+    private static bool TryGetOwnerParameter(ActionExecutingContext context, string parameterName, out int value)
+    {
+        if (context.RouteData.Values.TryGetValue(parameterName, out var routeValue)
+            && routeValue is not null
+            && int.TryParse(routeValue.ToString(), out value))
+        {
+            return true;
+        }
+
+        if (context.ActionArguments.TryGetValue(parameterName, out var argumentValue)
+            && argumentValue is not null
+            && int.TryParse(argumentValue.ToString(), out value))
+        {
+            return true;
+        }
+
+        value = 0;
+        return false;
     }
 }

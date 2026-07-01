@@ -110,7 +110,7 @@ public sealed class OwnerOrAdminFilterTests
         {
             OwnerClaimType = "UserId",
             BypassRole = "Organizer",
-            RouteParameterName = "userId",
+            OwnerParameterName = "userId",
         });
 
         await sut.OnActionExecutionAsync(context, () =>
@@ -134,7 +134,7 @@ public sealed class OwnerOrAdminFilterTests
         {
             OwnerClaimType = "UserId",
             BypassRole = "Organizer",
-            RouteParameterName = "userId",
+            OwnerParameterName = "userId",
         };
 
         // Matching userId passes through.
