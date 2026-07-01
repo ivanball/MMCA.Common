@@ -81,7 +81,7 @@ public sealed class DataSourceServiceAdditionalTests
         _sut.HaveIncludeSupport("NonExistent.Entity1", "NonExistent.Entity2").Should().BeFalse();
 
     // ── Test types ──
-    private sealed class FakeEntity { }
+    private sealed class FakeEntity;
 
-    private sealed class UnregisteredEntity { }
+    private sealed class UnregisteredEntity;
 }

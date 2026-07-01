@@ -747,6 +747,13 @@ dotnet_diagnostic.IDE0303.severity = none
 dotnet_diagnostic.IDE0304.severity = none
 dotnet_diagnostic.IDE0305.severity = none
 
+# EF Core's DbSet.Add used to seed entities in arrange blocks is not sync-over-async
+# (Add is in-memory; AddAsync exists only for special value generators). VSTHRD103's
+# Add->AddAsync heuristic flags every seeding call, so relax it in tests. It stays at
+# error in Source, where the few genuine EF/serialize sites carry documented per-line
+# #pragma suppressions.
+dotnet_diagnostic.VSTHRD103.severity = suggestion
+
 ###############################################################################
 # Razor/Blazor files
 ###############################################################################

@@ -162,5 +162,5 @@ public sealed class DataSourceServiceTests
     }
 
     // ── Test types ──
-    private sealed class FakeEntity { }
+    private sealed class FakeEntity;
 }

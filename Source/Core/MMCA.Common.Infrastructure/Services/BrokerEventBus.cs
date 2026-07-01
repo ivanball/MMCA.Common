@@ -51,7 +51,9 @@ public sealed class BrokerEventBus(
         }
 
         var outboxEntry = OutboxMessage.FromDomainEvent(integrationEvent);
+#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
         context.Set<OutboxMessage>().Add(outboxEntry);
+#pragma warning restore VSTHRD103
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Wake the OutboxProcessor immediately so the broker publish doesn't wait for the

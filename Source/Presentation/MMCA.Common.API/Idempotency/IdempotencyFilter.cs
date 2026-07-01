@@ -104,9 +104,11 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
             // Only cache ObjectResult responses (not redirects, file results, etc.)
             if (executedContext.Result is ObjectResult objectResult)
             {
+#pragma warning disable VSTHRD103 // JsonSerializer.Serialize to a string is correctly synchronous; SerializeAsync is only for writing to a stream.
                 var record = new IdempotencyRecord(
                     objectResult.StatusCode ?? StatusCodes.Status200OK,
                     JsonSerializer.Serialize(objectResult.Value, JsonSerializerOptions.Web));
+#pragma warning restore VSTHRD103
 
                 var idempotencySettings = context.HttpContext.RequestServices
                     .GetService<IOptions<IdempotencySettings>>();

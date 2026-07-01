@@ -6,6 +6,4 @@ namespace MMCA.Common.Architecture.Tests;
 /// Dependency-pin rule for the MassTransit v9 commercial-license trap, driven by the shared
 /// <see cref="DependencyVersionTestsBase"/> (parses this repo's Directory.Packages.props).
 /// </summary>
-public sealed class DependencyVersionTests : DependencyVersionTestsBase
-{
-}
+public sealed class DependencyVersionTests : DependencyVersionTestsBase;

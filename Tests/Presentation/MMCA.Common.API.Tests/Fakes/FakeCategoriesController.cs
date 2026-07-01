@@ -4,6 +4,4 @@
 
 namespace Fakes.MMCA.Store.Catalog.API.Controllers;
 
-public sealed class FakeCategoriesController
-{
-}
+public sealed class FakeCategoriesController;

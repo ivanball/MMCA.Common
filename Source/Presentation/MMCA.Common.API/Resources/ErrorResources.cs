@@ -6,6 +6,4 @@ namespace MMCA.Common.API.Resources;
 /// (e.g. <c>"PhoneNumber.Empty"</c>) and resolved by <see cref="Localization.IErrorLocalizer"/> via
 /// <c>IStringLocalizerFactory.Create(typeof(ErrorResources))</c> (ADR-027).
 /// </summary>
-public sealed class ErrorResources
-{
-}
+public sealed class ErrorResources;

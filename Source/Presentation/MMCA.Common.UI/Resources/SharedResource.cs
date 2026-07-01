@@ -6,6 +6,4 @@ namespace MMCA.Common.UI.Resources;
 /// Injected as <c>IStringLocalizer&lt;SharedResource&gt;</c>; its <c>.resx</c> siblings
 /// (<c>SharedResource.resx</c> / <c>SharedResource.es.resx</c>) hold the dotted, stable keys.
 /// </summary>
-public sealed class SharedResource
-{
-}
+public sealed class SharedResource;

@@ -34,12 +34,14 @@ public sealed partial class EfInboxStore(
     public async Task MarkProcessedAsync(Guid messageId, string eventType, CancellationToken cancellationToken)
     {
         var context = ResolveContext();
+#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
         context.Set<InboxMessage>().Add(new InboxMessage
         {
             MessageId = messageId,
             EventType = eventType,
             ProcessedOn = DateTime.UtcNow,
         });
+#pragma warning restore VSTHRD103
 
         try
         {

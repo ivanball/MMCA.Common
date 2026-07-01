@@ -61,6 +61,4 @@ public sealed class ReadRepositoryExtensionsTests
 }
 
 // ── Test helpers ──
-public sealed class TestReadEntity : AuditableBaseEntity<int>
-{
-}
+public sealed class TestReadEntity : AuditableBaseEntity<int>;

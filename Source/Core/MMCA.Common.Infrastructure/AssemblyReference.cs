@@ -8,4 +8,4 @@ public static class AssemblyReference
     public static readonly string AssemblyName = Assembly.GetName().Name ?? string.Empty;
 }
 
-public class ClassReference { }
+public class ClassReference;

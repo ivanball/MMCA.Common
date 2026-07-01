@@ -17,4 +17,4 @@ public static class AssemblyReference
 /// <summary>
 /// Marker class used when a type reference is needed for assembly scanning rather than an assembly reference.
 /// </summary>
-public class ClassReference { }
+public class ClassReference;

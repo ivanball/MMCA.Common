@@ -100,4 +100,4 @@ public static class DependencyInjection
 }
 
 /// <summary>Marker class used to reference the UI.Shared assembly (e.g., for Scrutor scanning).</summary>
-public class UISharedAssemblyReference { }
+public class UISharedAssemblyReference;

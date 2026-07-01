@@ -15,4 +15,4 @@ public static class AssemblyReference
 /// Anchor type used for assembly resolution when <see cref="AssemblyReference"/> cannot be
 /// used (e.g., generic type constraints that require a non-static class).
 /// </summary>
-public class ClassReference { }
+public class ClassReference;
