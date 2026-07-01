@@ -8,6 +8,9 @@
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Direct reference so the Directory.Packages.props pin forces the transitive Microsoft.OpenApi
+         (pulled by AspNetCore.OpenApi) up to the GHSA-v5pm-xwqc-g5wc-patched 2.7.5. -->
+    <PackageReference Include="Microsoft.OpenApi" />
     <PackageReference Include="Microsoft.FeatureManagement.AspNetCore" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
