@@ -13,7 +13,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.FeatureManagement" />
+    <PackageReference Include="Respawn" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>

@@ -15,7 +15,12 @@ public static partial class ArchitectureRules
     /// The non-default cultures every base <c>.resx</c> must fully translate (e.g. <c>["es"]</c>). An empty
     /// collection makes the rule a no-op (single-locale repos need no coverage gate).
     /// </param>
-    public static void ResourceTranslationsAreComplete(IReadOnlyCollection<string> requiredCultures)
+    /// <param name="minimumBaseResources">
+    /// Minimum number of base <c>.resx</c> files the scan must discover — a non-vacuous guard so a wrong
+    /// scan root or a repo re-layout cannot let the gate pass having checked nothing. Zero (the default)
+    /// skips the guard.
+    /// </param>
+    public static void ResourceTranslationsAreComplete(IReadOnlyCollection<string> requiredCultures, int minimumBaseResources = 0)
     {
         if (requiredCultures.Count == 0)
         {
@@ -29,6 +34,9 @@ public static partial class ArchitectureRules
             .Where(p => !IsCultureSpecificResx(p) && !IsUnderBuildOutput(p))
             .Order(StringComparer.Ordinal)
             .ToList();
+
+        (baseResxFiles.Count >= minimumBaseResources).Should().BeTrue(
+            because: $"at least {minimumBaseResources} base .resx file(s) under Source/ must be discovered, so translation completeness is actually verified rather than passing vacuously");
 
         var violations = baseResxFiles
             .SelectMany(basePath => requiredCultures

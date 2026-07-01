@@ -12,7 +12,15 @@ public abstract class LocalizationResourceTestsBase
     /// <summary>The non-default cultures every base <c>.resx</c> must fully translate (e.g. <c>["es"]</c>).</summary>
     protected abstract IReadOnlyCollection<string> RequiredCultures { get; }
 
+    /// <summary>
+    /// Minimum number of base <c>.resx</c> files the scan must discover — a non-vacuous guard so a wrong
+    /// scan root or a repo re-layout cannot let the gate pass having checked nothing. Override in the
+    /// subclass to (a floor of) the repo's known localized-resource count; the default of zero skips the
+    /// guard.
+    /// </summary>
+    protected virtual int MinimumBaseResources => 0;
+
     [Fact]
     public void Translations_AreComplete_ForEveryRequiredCulture() =>
-        ArchitectureRules.ResourceTranslationsAreComplete(RequiredCultures);
+        ArchitectureRules.ResourceTranslationsAreComplete(RequiredCultures, MinimumBaseResources);
 }

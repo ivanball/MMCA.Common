@@ -87,6 +87,46 @@ public static class PageExtensions
     }
 
     /// <summary>
+    /// Navigates to an auth-protected Blazor page using client-side routing. SSR cannot read JWT
+    /// tokens from browser localStorage, so full page loads to [Authorize] pages redirect to /login.
+    /// This ensures the Blazor runtime is available (by loading a public page if needed) before using
+    /// <see cref="BlazorNavigateAsync"/> for client-side navigation, and re-routes via "/" first so
+    /// navigating to the target path always triggers a fresh component lifecycle.
+    /// </summary>
+    public static async Task GotoProtectedAsync(this IPage page, string path)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+
+        bool blazorReady;
+        try
+        {
+            blazorReady = await page.EvaluateAsync<bool>("() => !!window.Blazor?._internal");
+        }
+        catch (PlaywrightException)
+        {
+            blazorReady = false;
+        }
+
+        if (!blazorReady)
+        {
+            // External page (e.g., Stripe) or Blazor not initialized — load a public page first.
+            await page.GotoAndWaitForBlazorAsync("/");
+        }
+        else
+        {
+            // Ensure we're on a different route so navigating to the target path
+            // always triggers a fresh component lifecycle (OnInitializedAsync, ServerData, etc.).
+            var currentPath = await page.EvaluateAsync<string>("() => window.location.pathname");
+            if (!string.Equals(currentPath, "/", StringComparison.Ordinal))
+            {
+                await page.BlazorNavigateAsync("/");
+            }
+        }
+
+        await page.BlazorNavigateAsync(path);
+    }
+
+    /// <summary>
     /// Waits for a full page load + Blazor readiness. Use after clicking a link or button
     /// that triggers a full-page navigation (e.g., clicking "View Details" on a product card).
     /// </summary>
