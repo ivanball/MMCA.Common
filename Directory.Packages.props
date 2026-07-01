@@ -64,7 +64,7 @@
     <PackageVersion Include="MudBlazor" Version="9.5.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.110" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.117" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.27.0.140913" />
