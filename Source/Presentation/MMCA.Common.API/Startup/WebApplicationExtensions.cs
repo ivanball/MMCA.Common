@@ -125,11 +125,21 @@ public static class WebApplicationExtensions
         /// </summary>
         public WebApplication UseCommonRequestLocalization()
         {
-            string[] supported = [.. SupportedCultures.All];
+            List<string> supported = [.. SupportedCultures.All];
+
+            // Pseudo-localization (ADR-027 §8): a Development-only locale that runtime-transforms every
+            // resolved resource string to surface hard-coded strings, truncation, and concatenation.
+            // Never offered outside Development, so the pseudo decorator stays inert in production.
+            if (app.Environment.IsDevelopment())
+            {
+                supported.Add(SupportedCultures.PseudoLocale);
+            }
+
+            string[] supportedArray = [.. supported];
             var options = new RequestLocalizationOptions()
                 .SetDefaultCulture(SupportedCultures.Default)
-                .AddSupportedCultures(supported)
-                .AddSupportedUICultures(supported);
+                .AddSupportedCultures(supportedArray)
+                .AddSupportedUICultures(supportedArray);
 
             app.UseRequestLocalization(options);
             return app;
@@ -144,9 +154,12 @@ public static class WebApplicationExtensions
         /// </summary>
         public WebApplication MapCultureEndpoint()
         {
+            // Permit the pseudo locale only in Development (ADR-027 §8); it is a developer diagnostic,
+            // never a production culture.
+            var allowPseudo = app.Environment.IsDevelopment();
             app.MapGet("/culture/set", (string culture, string? redirectUri, HttpContext context) =>
             {
-                if (SupportedCultures.IsSupported(culture))
+                if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
                 {
                     context.Response.Cookies.Append(
                         CookieRequestCultureProvider.DefaultCookieName,

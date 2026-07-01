@@ -31,16 +31,41 @@ public class ListPageQueryStateServiceTests
     [Fact]
     public void ParseQueryString_AllReservedKeys_RoundTripsValues()
     {
-        var state = ListPageQueryStateService.ParseQueryString("?p=2&ps=25&mp=3&s=Name&sd=desc&q=shirt&f:status=Accepted&f:category=42");
+        var state = ListPageQueryStateService.ParseQueryString("?p=2&ps=25&mp=3&s=Name&sd=desc&d=1&q=shirt&f:status=Accepted&f:category=42");
 
         state.Page.Should().Be(2);
         state.PageSize.Should().Be(25);
         state.MobilePage.Should().Be(3);
         state.SortColumn.Should().Be("Name");
         state.SortDescending.Should().BeTrue();
+        state.DenseGrid.Should().BeTrue();
         state.Filters.Should().ContainKey("search").WhoseValue.Should().Be("shirt");
         state.Filters.Should().ContainKey("status").WhoseValue.Should().Be("Accepted");
         state.Filters.Should().ContainKey("category").WhoseValue.Should().Be("42");
+    }
+
+    [Fact]
+    public void ParseQueryString_NoDenseKey_DefaultsToFalse()
+    {
+        var state = ListPageQueryStateService.ParseQueryString("?p=2");
+
+        state.DenseGrid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void BuildPath_DenseGrid_EncodesDenseKey()
+    {
+        var path = ListPageQueryStateService.BuildPath("/products", new ListPageState { DenseGrid = true });
+
+        path.Should().Contain("d=1");
+    }
+
+    [Fact]
+    public void BuildPath_ComfortableDensity_OmitsDenseKey()
+    {
+        var path = ListPageQueryStateService.BuildPath("/products", new ListPageState { DenseGrid = false, Page = 2 });
+
+        path.Should().NotContain("d=");
     }
 
     [Fact]
@@ -184,6 +209,7 @@ public class ListPageQueryStateServiceTests
             MobilePage = 2,
             SortColumn = "CreatedOn",
             SortDescending = true,
+            DenseGrid = true,
             Filters = new Dictionary<string, string>
             {
                 ["search"] = "alpha",
@@ -202,6 +228,7 @@ public class ListPageQueryStateServiceTests
         roundTripped.MobilePage.Should().Be(original.MobilePage);
         roundTripped.SortColumn.Should().Be(original.SortColumn);
         roundTripped.SortDescending.Should().Be(original.SortDescending);
+        roundTripped.DenseGrid.Should().Be(original.DenseGrid);
         roundTripped.Filters.Should().BeEquivalentTo(original.Filters);
     }
 }

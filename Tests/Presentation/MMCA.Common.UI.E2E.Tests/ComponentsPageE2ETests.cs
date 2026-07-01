@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Playwright;
 using MMCA.Common.Testing.E2E.Infrastructure;
 using MMCA.Common.UI.E2E.Tests.Infrastructure;
@@ -46,6 +47,25 @@ public sealed class ComponentsPageE2ETests : GalleryAxeTestBase
         await Expect(confirm).ToBeVisibleAsync();
         await confirm.ClickAsync();
         await Expect(confirm).Not.ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task ComponentsPage_TouchTarget_MeetsMinimumSizeOnMobileViewport()
+    {
+        // Drive a phone-sized viewport so the mobile-scoped 48px touch-target rule applies, then
+        // assert the shared `.mmca-touch-target` affordance yields at least the WCAG 2.5.5 minimum
+        // (24px AA / 44px AAA target; our rule sets 48px, so a >= 44px assertion has margin and is
+        // robust to sub-pixel layout rounding).
+        await Page.SetViewportSizeAsync(390, 844);
+        await Page.GotoAndWaitForBlazorAsync("/components");
+
+        var button = Page.GetByRole(AriaRole.Button, new() { Name = "Touch target sample" });
+        await Expect(button).ToBeVisibleAsync();
+
+        var box = await button.BoundingBoxAsync();
+        Assert.NotNull(box);
+        Assert.True(box!.Width >= 44, $"Touch-target width was {box.Width.ToString(CultureInfo.InvariantCulture)}px, expected >= 44px.");
+        Assert.True(box.Height >= 44, $"Touch-target height was {box.Height.ToString(CultureInfo.InvariantCulture)}px, expected >= 44px.");
     }
 
     [Fact]

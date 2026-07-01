@@ -49,7 +49,7 @@ Cache in two tiers, each with its own substrate.
 ### Tier 2: an HTTP output-cache edge
 - **The pipeline always enables it; policies are opt-in per host.** `MMCA.Common.API` calls
   `app.UseOutputCache()` in the shared middleware pipeline
-  (`MMCA.Common.API/Startup/WebApplicationExtensions.cs:100`), but ships no policies. Each service
+  (`MMCA.Common.API/Startup/WebApplicationExtensions.cs:104`), but ships no policies. Each service
   registers its own `AddOutputCache(...)`: most declare a `NoCache` base policy (Identity, Sales,
   Engagement, Notification), while the read-heavy public services declare real cacheable policies. ADC
   Conference and Store Catalog are the adopters today, with named policies and `[OutputCache]` on their

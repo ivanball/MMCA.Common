@@ -17,6 +17,7 @@ public class ListPageStateServiceTests
             PageSize = 25,
             MobilePage = 2,
             ScrollPosition = 1234.5,
+            DenseGrid = true,
             Filters = new Dictionary<string, string>
             {
                 ["search"] = "shirt",
@@ -32,8 +33,29 @@ public class ListPageStateServiceTests
         retrieved.PageSize.Should().Be(25);
         retrieved.MobilePage.Should().Be(2);
         retrieved.ScrollPosition.Should().Be(1234.5);
+        retrieved.DenseGrid.Should().BeTrue();
         retrieved.Filters.Should().ContainKey("search").WhoseValue.Should().Be("shirt");
         retrieved.Filters.Should().ContainKey("status").WhoseValue.Should().Be("Accepted");
+    }
+
+    [Fact]
+    public void DenseGrid_DefaultsToFalse()
+    {
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
+        sut.SaveState("/products", new ListPageState { Page = 1, PageSize = 10 });
+
+        sut.GetState("/products")!.DenseGrid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UpdateScrollPosition_PreservesDenseGrid()
+    {
+        var sut = new ListPageStateService(Mock.Of<IJSRuntime>());
+        sut.SaveState("/orders", new ListPageState { Page = 2, PageSize = 25, DenseGrid = true });
+
+        sut.UpdateScrollPosition("/orders", 500);
+
+        sut.GetState("/orders")!.DenseGrid.Should().BeTrue();
     }
 
     [Fact]

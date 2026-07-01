@@ -33,6 +33,14 @@ public sealed record ListPageState
     public bool SortDescending { get; init; }
 
     /// <summary>
+    /// <see langword="true"/> when the user has opted into the compact (dense) grid density.
+    /// Defaults to <see langword="false"/> (comfortable density). Bound in derived list pages via
+    /// <c>Dense="@DenseGrid"</c>; persisted alongside paging/sort so the chosen density survives
+    /// navigation, refresh, and shareable links.
+    /// </summary>
+    public bool DenseGrid { get; init; }
+
+    /// <summary>
     /// Named filter values (e.g., "search" → "shirt", "status" → "Accepted").
     /// Keys are page-specific; each page decides what to save/restore.
     /// </summary>

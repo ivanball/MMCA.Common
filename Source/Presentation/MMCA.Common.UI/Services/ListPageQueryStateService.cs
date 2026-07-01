@@ -19,6 +19,7 @@ namespace MMCA.Common.UI.Services;
 ///   <item><description><c>mp</c> = 1-indexed mobile page</description></item>
 ///   <item><description><c>s</c> = sort column property name</description></item>
 ///   <item><description><c>sd</c> = sort direction (<c>desc</c> only — ascending is the default and omitted)</description></item>
+///   <item><description><c>d</c> = dense grid density (<c>1</c> only — comfortable is the default and omitted)</description></item>
 ///   <item><description><c>q</c> = free-text search (extracted from <see cref="ListPageState.Filters"/> by convention)</description></item>
 ///   <item><description><c>f:&lt;name&gt;</c> = any other named filter</description></item>
 /// </list>
@@ -31,10 +32,12 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
     private const string MobilePageKey = "mp";
     private const string SortKey = "s";
     private const string SortDirKey = "sd";
+    private const string DenseKey = "d";
     private const string SearchKey = "q";
     private const string FilterPrefix = "f:";
     private const string SearchFilterName = "search";
     private const string DescendingMarker = "desc";
+    private const string DenseMarker = "1";
 
     /// <summary>
     /// Reads list-page state from the current <see cref="NavigationManager.Uri"/>.
@@ -74,6 +77,12 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
             sortDescending = string.Equals(sortDirValues.ToString(), DescendingMarker, StringComparison.OrdinalIgnoreCase);
         }
 
+        var denseGrid = false;
+        if (parsed.TryGetValue(DenseKey, out var denseValues))
+        {
+            denseGrid = string.Equals(denseValues.ToString(), DenseMarker, StringComparison.Ordinal);
+        }
+
         var filters = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (key, valuesAcrossDuplicates) in parsed)
         {
@@ -100,6 +109,7 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
             MobilePage = mobilePage,
             SortColumn = sortColumn,
             SortDescending = sortDescending,
+            DenseGrid = denseGrid,
             Filters = filters,
         };
     }
@@ -138,6 +148,11 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
             {
                 parameters[SortDirKey] = DescendingMarker;
             }
+        }
+
+        if (state.DenseGrid)
+        {
+            parameters[DenseKey] = DenseMarker;
         }
 
         foreach (var (name, value) in state.Filters)

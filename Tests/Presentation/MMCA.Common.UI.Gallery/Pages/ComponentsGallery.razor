@@ -60,6 +60,18 @@
             <MudText Typo="Typo.body2" Color="Color.Secondary">@context.Description</MudText>
         </CardTemplate>
     </MobileInfiniteScrollList>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Touch target affordance</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+        Icon buttons carrying the shared <c>mmca-touch-target</c> class meet the WCAG 2.5.5/2.5.8
+        48px minimum hit area on mobile viewports.
+    </MudText>
+    <MudPaper Outlined="true" Class="pa-2">
+        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                       Class="mmca-touch-target"
+                       aria-label="Touch target sample"
+                       Color="Color.Primary" />
+    </MudPaper>
 </MudContainer>
 
 <DeleteConfirmation @ref="_deleteConfirmation" EntityType="Item" />

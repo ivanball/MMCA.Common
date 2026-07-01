@@ -139,9 +139,22 @@ h1:focus {
     }
 }
 
-/* Larger touch targets for cart buttons on mobile (48px minimum per Material Design) */
+/* ── Touch targets (WCAG 2.5.5 / 2.5.8): 48px minimum on interactive controls ──
+   A shared affordance, not scoped to one component. `.mmca-touch-target` is an opt-in
+   utility class any component can add to guarantee a 48px hit area; the mobile media
+   query below also enforces the minimum on icon buttons across the shared mobile
+   surfaces (cart drawer, mobile cards, data-grid pager) so the rule generalizes rather
+   than living per-component. */
+.mmca-touch-target {
+    min-width: 48px;
+    min-height: 48px;
+}
+
 @media (max-width: 1023.98px) {
-    .cart-drawer .mud-icon-button {
+    .mmca-touch-target,
+    .cart-drawer .mud-icon-button,
+    .mobile-list-card .mud-card-content .mud-icon-button,
+    .mud-table-pagination-toolbar .mud-icon-button {
         min-width: 48px !important;
         min-height: 48px !important;
     }
@@ -217,14 +230,10 @@ h1:focus {
         gap: 0.25rem;
     }
 
-    /* Mobile card list items */
+    /* Mobile card list items (the 48px touch target on their icon buttons is enforced by the
+       shared `.mmca-touch-target` rule group above). */
     .mobile-list-card {
         cursor: pointer;
-    }
-
-    .mobile-list-card .mud-card-content .mud-icon-button {
-        min-width: 48px;
-        min-height: 48px;
     }
 }
 

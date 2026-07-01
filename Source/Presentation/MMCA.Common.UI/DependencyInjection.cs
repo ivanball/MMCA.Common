@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Navigation;
@@ -36,6 +37,13 @@ public static class DependencyInjection
 
             // Resource-based localization for IStringLocalizer<T> across all UI hosts (ADR-027).
             services.AddLocalization();
+
+            // Pseudo-localization decorator (ADR-027 §8): wraps the localizer factory so every resolved
+            // string is runtime-transformed (accents + padding + bracket sentinel) when the current UI
+            // culture is the pseudo locale. Registered unconditionally because it is inert under every
+            // other culture; the pseudo locale is only ever activatable in Development (request
+            // localization + the culture switcher add it there only).
+            services.Decorate<IStringLocalizerFactory, PseudoStringLocalizerFactory>();
 
             // Auth handler injects Bearer token into every outgoing API request; culture handler forwards
             // the active UI culture as Accept-Language so the API localizes error messages to match.

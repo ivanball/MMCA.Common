@@ -1,12 +1,11 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.9% / Implementation 84.9%**, framework v1.92.0; tenth-wave in-repo remediation 2026-06-30).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.9% / Implementation 85.3%**, framework v1.94.0 pending release; twelfth wave 2026-06-30 lifted §22 + §27 Implementation 7→8 and recorded the §31 FinOps cap as accepted).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
 
-**Scope:** 18 remediation items across 20 categories (two share a fix).
-8 categories already score 4 (protect, don't regress); 6 are N/A for a framework.
+**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **23 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14, 15, 16, 18, 19, 20, 21, 26, 28, 29, 32, 34); the open work is the 11 categories still below Maturity 4.
 
 > **Two fixes each clear multiple items — do them once:**
 > - **MassTransit v8 guard** closes the medium red flags in **#32** *and* **#16**.
@@ -320,9 +319,71 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   dark palette's **filled-primary button label** and **error-alert message text** fail WCAG AA contrast
   (`PaletteDark.Primary`/`Error` paired with auto-computed text). Tracked here (documented in
   `ACCESSIBILITY.md`), deliberately NOT gated yet; tuning the dark palette is the remediation. *(§20, M.)*
-- [ ] **Release + sweep deferred (deliberate).** This wave lands in-repo only; tagging a new Common version +
-  sweeping all 13 packages into ADC/Store/Helpdesk is a separate, explicitly-confirmed step (push = prod
-  deploy). *(§16/§34.)*
+- [~] **Release done, sweep noted (deliberate).** The tenth wave was **released as `v1.93.0`** (git tag at
+  HEAD `3e72bfa`; `FACTS.md` records it). Sweeping all 13 packages into ADC/Store/Helpdesk is the separate,
+  cross-repo step and is **not verifiable from this repo** (memory records the sweep on 2026-06-30; confirm
+  in each consumer's `Directory.Packages.props`). *(§16/§34.)*
+
+---
+
+## Progress — eleventh wave (ADR governance, 2026-06-30)
+
+> **No score moves.** A full 34-category evidence re-score at framework **v1.93.0** (HEAD `3e72bfa`, dirty
+> tree) re-confirmed every category at its tenth-wave value; indices hold at **Maturity 92.9% (301/324) /
+> Implementation 84.9% (688/810)**. The wave records two pre-existing mechanisms as ADRs and syncs the
+> scorecard/`FACTS.md` prose; no remediation lever moved.
+
+- ✅ **ADR-033 + ADR-034 written (governance, no score move).** Both document mechanisms that **already ship
+  in framework code**: ADR-033 (resource-ownership authorization) records the `OwnerOrAdminFilter` +
+  `OwnershipHelper` axis (single-resource 403 on a `customer_id`-claim mismatch + an ownership `Specification`
+  row-scoping collection queries, one admin bypass; opt-in, claim-trusting, not ABAC, Store-adopted), and
+  ADR-034 (generic entity controllers + dynamic query contract) records the `EntityControllerBase` /
+  `AggregateRootEntityControllerBase` generic REST surface + OData-lite query contract. ADR-033 is the
+  resource-ownership criterion §11's Implementation-8 cap named, but it stays ownership-not-ABAC + opt-in, so
+  **§11 correctly holds at I8** (watch-item, not a lever).
+- ✅ **Scorecard + `FACTS.md` prose synced to ADR set 001-034** and **72 fitness methods / 19 bases** (Common
+  runs 39); the stale §16/§34 ADR-count and Top-strength fitness/test counts were corrected.
+
+**Open follow-up surfaced this wave (governance hygiene, not a score-mover):**
+- [ ] **#34 — commit the ADR 033/034 docs pass.** The tree is dirty (ADRs 033/034 added; ADRs 015/026/030 +
+  `ADRs/README.md` + `FACTS.md` modified) while the scorecard/backlog now reference 001-034 — the recurring
+  per-cycle traceability nit, resolves on commit. *(§34, effort S; #34 holds M4/I9.)*
+
+## Progress — twelfth wave (under-8 Implementation lift, v1.94.0 pending, 2026-06-30)
+
+> **Two Implementation scores move up**, Maturity holds: **Implementation 84.9% → 85.3% (691/810)**,
+> **Maturity 92.9% (301/324)** unchanged. Full Release build clean, **1685 tests pass**. Held for review
+> at this writing (v1.94.0 not yet tagged), so the tree is dirty against v1.93.0.
+
+- [x] **#22 · Responsive & Cross-Browser — Implementation 7→8.** Closes the two execution gaps the prior 7
+  named: (a) **grid density options** now ship on `DataGridListPageBase` (`DenseGrid` + `ToggleDensity()`,
+  round-tripped through `ListPageState` / URL key `d` / sessionStorage, unit-tested in
+  `ListPageStateServiceTests` + `ListPageQueryStateServiceTests`); (b) the **48px touch target is generalized**
+  from the cart-drawer-only rule into a shared `.mmca-touch-target` affordance (cart drawer + mobile cards +
+  data-grid pager), enforced by a phone-viewport Playwright bounding-box test (passes locally, 13/13 UI E2E);
+  (c) a **`RESPONSIVE.md`** device/breakpoint/browser matrix is documented (closing the "matrix implicit" note),
+  referenced from `CLAUDE.md`. *Maturity held at 3: firefox/webkit still advisory (chromium-only blocking gate).*
+- [x] **#27 · Internationalization — Implementation 7→8.** A real **pseudo-localization pass** ships:
+  `PseudoLocalizer.Transform` (accents every letter, ~40% padding, bracket sentinel, preserves `{0}`
+  placeholders) applied by a `PseudoStringLocalizer`/`PseudoStringLocalizerFactory` decorator over
+  `IStringLocalizerFactory` (registered in `AddUIShared`, inert unless the pseudo culture is active),
+  activated by a **Development-only `qps-Ploc` culture** wired into `UseCommonRequestLocalization` +
+  `MapCultureEndpoint` + the `CultureSwitcher`, with `SupportedCultures.PseudoLocale` deliberately kept out of
+  `All` so the translation-completeness gate is unaffected. Unit-tested in `PseudoLocalizationTests`. Closes
+  the pseudo-localization gap the prior 7 named. *Maturity held at 3: only two locales ship and the pseudo
+  pass is a dev diagnostic, not a CI gate.*
+- [accepted] **#31 · Cost Efficiency / FinOps — Implementation deliberately capped at 7 (not chased).** A
+  documented structural acceptance, not an open lever: the two unmet §31 criteria — **right-sizing** and
+  **reversible scale-events** — are consumer/IaC execution a NuGet library provisions nothing to perform, and
+  **per-service cost attribution** via Aspire resource annotations is inert for the hand-written-`main.bicep`
+  consumers (ADC/Store), so even the one library-addressable criterion does not move the score for the actual
+  consumers. The in-repo levers are already shipped (`Telemetry:TracesSampleRatio` sampler, outbox-log trim to
+  Debug, `COST.md` attribution-tag + cost-guard samples). Further movement is a consumer-side lift, not an
+  in-repo one. *(§31 holds M2/I7; see `COST.md` and the §31 scorecard row.)*
+
+**Deferred follow-up (recorded, not done this wave):**
+- [ ] **#22 — promote firefox (then webkit) from advisory to a blocking cross-browser gate** once observed
+  reliably green, to lift §22 Maturity 3→4. *(`ci.yml:89`; effort S, gated on a green streak.)*
 
 ---
 
@@ -357,9 +418,9 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 
 ## 🟠 Priority 3 — score 3, weight 3 (one rung from a 4)
 
-### [ ] #29 · Resilience, Reliability & Business Continuity — 3 → 4
+### [x] #29 · Resilience, Reliability & Business Continuity — 3 → 4 · *RESOLVED 2026-06-30 (tenth wave) — now on the level-4 protect list*
 - ~~**(medium)** No broker retry policy on the extracted-microservice path~~ — **RESOLVED (re-verified 2026-06-29):** `ConfigureBrokerTransport` applies `cfg.UseMessageRetry` (exponential) on **both** RabbitMQ (`DependencyInjection.cs:432`) and Azure Service Bus (`:449`), and the `IntegrationEventConsumer` comment + log are corrected. `UseDelayedRedelivery` is deliberately omitted (`DependencyInjection.cs:408`, accepted — needs the RabbitMQ delayed-exchange plugin).
-- *Gap (why #29 stays open at Maturity 3):* no in-repo backup/restore drill, RTO/RPO, failover, or SLOs. *(chaos/fault-injection covered — see below.)*
+- ~~*Gap (why #29 stays open at Maturity 3):* no in-repo backup/restore drill, RTO/RPO, failover, or SLOs.~~ — **CLOSED (tenth wave, Maturity 3→4):** the in-repo `DatabaseRestoreDrillTests` runs as a **build gate on every CI build** (seed→backup→catastrophic-wipe→restore→verify on ephemeral SQLite; 0-row RPO byte-for-byte asserted), and `RESILIENCE.md` records the measured restore baseline (~5 ms median RTO over 5 runs), meeting the M4 "enforced automatically" bar. Production RTO/RPO against real cloud backups + measured prod SLOs stay consumer IaC, so Implementation is held at 8. *(chaos/fault-injection covered below.)*
 
 **Fix**
 - [x] **Fault-injection / chaos test landed (C-8, 2026-06-19).** `ResilienceCircuitBreakerFaultInjectionTests` (Grpc.Tests) drives an always-failing dependency through the standard resilience handler and asserts the circuit breaker trips and short-circuits further calls; `OutboxProcessorTests.IntegrationEventPublishFailure_DegradesGracefully_BuffersForRedelivery` asserts the outbox buffers the event (retry++, left unprocessed) when the broker is unreachable instead of crashing the processor.
@@ -463,8 +524,8 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 ---
 
 ## ✅ Already at level 4 — protect, don't regress
-#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (new this cycle — maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · #14 Testability · #15 Best Practices & Code Quality
-*(All backed by fitness functions — the regression guard is keeping those tests green.)*
+#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · #14 Testability · #15 Best Practices & Code Quality · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
+*(All backed by fitness functions — the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 23 categories — see the Scope note at the top.)*
 
 ## ⚪ Mostly consumer-assessed (the shared Common.UI surface is scored here)
 #21 Accessibility · #22 Responsive · #26 Front-End Security

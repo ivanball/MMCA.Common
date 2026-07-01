@@ -18,6 +18,16 @@ public static class SupportedCultures
     public static IReadOnlyList<string> All { get; } = [Default, "es"];
 
     /// <summary>
+    /// The Windows-standard pseudo-localization locale (ADR-027 §8). Deliberately <b>not</b> part of
+    /// <see cref="All"/>, so the translation-completeness fitness gate does not demand a
+    /// <c>.qps-Ploc.resx</c> sibling for it. Wired into request localization, the culture-switch
+    /// endpoint, and the culture switcher in <b>Development only</b>, where it runtime-transforms every
+    /// resolved resource string (accents + padding + bracket sentinel) to surface hard-coded strings,
+    /// truncation, and string concatenation without translating anything.
+    /// </summary>
+    public const string PseudoLocale = "qps-Ploc";
+
+    /// <summary>
     /// Returns <see langword="true"/> when <paramref name="culture"/> is a non-empty, supported culture
     /// (matched case-insensitively against <see cref="All"/>).
     /// </summary>
@@ -25,4 +35,12 @@ public static class SupportedCultures
     public static bool IsSupported(string? culture) =>
         !string.IsNullOrWhiteSpace(culture)
         && All.Any(c => string.Equals(c, culture, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Returns <see langword="true"/> when <paramref name="culture"/> is the pseudo-localization locale
+    /// (<see cref="PseudoLocale"/>), matched case-insensitively.
+    /// </summary>
+    /// <param name="culture">The culture name to test (e.g. <c>CultureInfo.CurrentUICulture.Name</c>).</param>
+    public static bool IsPseudoLocale(string? culture) =>
+        string.Equals(culture, PseudoLocale, StringComparison.OrdinalIgnoreCase);
 }

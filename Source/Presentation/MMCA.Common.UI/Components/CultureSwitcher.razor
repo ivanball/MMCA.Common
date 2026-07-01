@@ -1,5 +1,6 @@
 @using MMCA.Common.Shared.Globalization
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Hosting
 @inject NavigationManager Navigation
 @inject IServiceProvider Services
 @inject IStringLocalizer<SharedResource> L
@@ -8,13 +9,22 @@
          Color="Color.Inherit"
          Dense="true"
          AriaLabel="@L["Culture.Switcher.Label"].Value">
-    @foreach (var culture in SupportedCultures.All)
+    @foreach (var culture in OfferedCultures)
     {
         <MudMenuItem OnClick="@(() => SetCulture(culture))">@GetCultureName(culture)</MudMenuItem>
     }
 </MudMenu>
 
 @code {
+    // The supported cultures, plus the pseudo-localization locale in Development only (ADR-027 §8).
+    // IHostEnvironment is registered on the Blazor Server host; on a WASM-only render it resolves to
+    // null and the pseudo entry is simply not offered (a developer can still activate it via the
+    // /culture/set endpoint, which the cookie reload re-reads).
+    private IReadOnlyList<string> OfferedCultures =>
+        Services.GetService<IHostEnvironment>()?.IsDevelopment() == true
+            ? [.. SupportedCultures.All, SupportedCultures.PseudoLocale]
+            : SupportedCultures.All;
+
     private string GetCultureName(string culture)
     {
         var localized = L[$"Culture.Name.{culture}"];

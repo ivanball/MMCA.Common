@@ -57,6 +57,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     protected int RowsPerPageState { get; set; } = 10;
 
+    /// <summary>
+    /// Compact (dense) grid density toggle. Bind in Razor via <c>Dense="@DenseGrid"</c> on the
+    /// <see cref="MudDataGrid{T}"/> and surface a toggle that calls <see cref="ToggleDensity"/>.
+    /// Restored from saved state on initialization and persisted (URL + in-memory + sessionStorage)
+    /// so the user's density choice survives navigation, refresh, and shareable links. Defaults to
+    /// <see langword="false"/> (comfortable density).
+    /// </summary>
+    protected bool DenseGrid { get; private set; }
+
     // Upper bound (ms) on the SSR pre-render data fetch. In prod the backend is warm and the fetch
     // completes well under this, so the persist/restore optimization below still works; under a cold
     // or unreachable backend (e.g. CI cold-start) it caps how long prerender can block before falling
@@ -164,6 +173,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         MobileCurrentPage = effectiveState.MobilePage;
         _savedSortColumn = effectiveState.SortColumn;
         _savedSortDescending = effectiveState.SortDescending;
+        DenseGrid = effectiveState.DenseGrid;
         RestoreFilters(effectiveState.Filters);
 
         // When neither URL nor in-memory state is available (new circuit after
@@ -209,6 +219,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         _savedSortColumn = urlState.SortColumn;
         _savedSortDescending = urlState.SortDescending;
+        DenseGrid = urlState.DenseGrid;
         MobileCurrentPage = urlState.MobilePage;
         RestoreFilters(urlState.Filters);
 
@@ -354,6 +365,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         MobileCurrentPage = state.MobilePage;
         _savedSortColumn = state.SortColumn;
         _savedSortDescending = state.SortDescending;
+        DenseGrid = state.DenseGrid;
         RestoreFilters(state.Filters);
     }
 
@@ -589,6 +601,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             MobilePage = MobileCurrentPage,
             SortColumn = sortColumn,
             SortDescending = sortDescending,
+            DenseGrid = DenseGrid,
             Filters = filters,
             ScrollPosition = existing?.ScrollPosition ?? 0,
         };
@@ -601,6 +614,40 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // Fire-and-forget the sessionStorage write — it tolerates SSR/JSDisconnected internally.
         // Skip during the deferred window so OnAfterRenderAsync can still hydrate the original
         // sessionStorage values before they are overwritten.
+        if (!_deferSessionPersist)
+        {
+            _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
+        }
+    }
+
+    /// <summary>
+    /// Flips the grid density (comfortable ↔ dense) and persists the choice (URL + in-memory +
+    /// sessionStorage) so it survives navigation, refresh, and shareable links. Wire a toggle in the
+    /// derived page's markup to call this; the bound <c>Dense="@DenseGrid"</c> re-renders the grid.
+    /// </summary>
+    protected void ToggleDensity()
+    {
+        DenseGrid = !DenseGrid;
+        PersistDensity();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Writes the current <see cref="DenseGrid"/> value through to the saved <see cref="ListPageState"/>,
+    /// the URL query string, and sessionStorage, preserving all other fields. Mirrors the persistence
+    /// tail of <see cref="SaveCurrentState"/> but updates only the density, so a toggle made before the
+    /// grid's first <c>ServerData</c> save is not lost.
+    /// </summary>
+    private void PersistDensity()
+    {
+        var routePath = GetRoutePath();
+        var existing = ListPageStateService.GetState(routePath) ?? new ListPageState();
+        var updated = existing with { DenseGrid = DenseGrid };
+        ListPageStateService.SaveState(routePath, updated);
+
+        _suppressNextLocationChanged = true;
+        QueryStateService.ReplaceState(updated);
+
         if (!_deferSessionPersist)
         {
             _ = ListPageStateService.PersistToSessionAsync(routePath).AsTask();
