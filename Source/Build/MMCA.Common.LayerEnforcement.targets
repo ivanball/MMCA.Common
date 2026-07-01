@@ -87,4 +87,21 @@
            Text="Layer violation: MMCA.Common.UI must not reference %(_ForbiddenUIRefs.Filename). UI depends only on Shared for Blazor WASM compatibility." />
   </Target>
 
+  <!-- UI.Web: the server-side Blazor host bridge — may reference UI, API, Aspire, and Shared,
+       but never the Domain/Application/Infrastructure layers directly (those flow transitively
+       through API where legitimate; a direct reference would turn a host-support package into a
+       backdoor around the layer rules). -->
+  <Target Name="EnforceUIWebLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.UI.Web'">
+    <ItemGroup>
+      <_ForbiddenUIWebRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenUIWebRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.UI.Web must not reference %(_ForbiddenUIWebRefs.Filename) directly. UI.Web bridges UI, API and Aspire only." />
+  </Target>
+
 </Project>

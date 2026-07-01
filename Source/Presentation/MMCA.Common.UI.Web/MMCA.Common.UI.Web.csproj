@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.UI.Web</PackageId>
+    <Description>MMCA framework — server-side Blazor Web host support: cookie-backed token storage, dynamic CSP provider, SSR error page, and host registration extensions</Description>
+    <!-- Compile only against the three declared bridge references (UI, API, Aspire). Without this,
+         NuGet injects API's transitive ProjectReferences (Infrastructure -> Application -> ...) into
+         @(ProjectReference) and the EnforceUIWebLayerBoundary guard cannot tell a deliberate direct
+         reference from transitive plumbing. -->
+    <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The server-side bridge between the WASM-safe MMCA.Common.UI (ITokenStorageService, ApiSettings),
+         the session-cookie plumbing in MMCA.Common.API, and the security-headers CSP seam in
+         MMCA.Common.Aspire. Deliberately a separate package: MMCA.Common.UI stays Shared-only for
+         Blazor WASM compatibility and must never pull these server dependencies. -->
+    <ProjectReference Include="..\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+    <ProjectReference Include="..\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <ProjectReference Include="..\..\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

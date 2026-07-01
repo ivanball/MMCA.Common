@@ -4,9 +4,9 @@
 Accepted
 
 ## Context
-MMCA.Common publishes thirteen NuGet packages consumed by three downstream repos — the two
+MMCA.Common publishes fourteen NuGet packages consumed by three downstream repos — the two
 production apps (Store, ADC) and the reference seed Helpdesk (which defaults to local-source mode but
-declares the same thirteen `MMCA.Common.*` package versions in its own `Directory.Packages.props`).
+declares the same fourteen `MMCA.Common.*` package versions in its own `Directory.Packages.props`).
 Two related governance questions had no recorded answer:
 
 1. **How do the packages version and roll out?** Independent per-package versions invite a
@@ -18,8 +18,8 @@ Two related governance questions had no recorded answer:
    broker-enabled service at startup.
 
 ## Decision
-1. **Version the thirteen packages in lockstep.** All packages share one version (MinVer, derived from
-   a single `vX.Y.Z` git tag); a release tags all thirteen at the same version. SemVer and the
+1. **Version the fourteen packages in lockstep.** All packages share one version (MinVer, derived from
+   a single `vX.Y.Z` git tag); a release tags all fourteen at the same version. SemVer and the
    breaking-change policy live in `VERSIONING.md`.
 2. **Sweep every consumer in one pass, with no phased rollout.** A framework change ships and all
    consumers bump every `MMCA.Common.*` entry in their `Directory.Packages.props` together.

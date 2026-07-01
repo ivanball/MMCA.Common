@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-07-01 (framework v1.95.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-07-01 (framework v1.96.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A bare `(001-NNN)` ADR
@@ -10,12 +10,12 @@ _As of: 2026-07-01 (framework v1.95.0) — **generated from source by `build/fac
 > repo's own test totals and scorecard indices) live in that repo's `ArchitectureScorecard.md`, **not** here.
 
 ## Framework version
-- **Current: `v1.95.0`** (MinVer-derived from the git tag at `main` HEAD).
+- **Current: `v1.96.0`** (MinVer-derived from the git tag at `main` HEAD).
 - All consumers (**MMCA.ADC**, **MMCA.Store**, MMCA.Helpdesk) track this version in **lockstep** — every
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **13**
+## Published packages — **14**
 Released in lockstep to GitHub Packages (the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.Application`
@@ -25,12 +25,13 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 5. `MMCA.Common.API`
 6. `MMCA.Common.Grpc`
 7. `MMCA.Common.UI`
-8. `MMCA.Common.Aspire`
-9. `MMCA.Common.Aspire.Hosting`
-10. `MMCA.Common.Testing`
-11. `MMCA.Common.Testing.Architecture`
-12. `MMCA.Common.Testing.E2E`
-13. `MMCA.Common.Testing.UI`
+8. `MMCA.Common.UI.Web`
+9. `MMCA.Common.Aspire`
+10. `MMCA.Common.Aspire.Hosting`
+11. `MMCA.Common.Testing`
+12. `MMCA.Common.Testing.Architecture`
+13. `MMCA.Common.Testing.E2E`
+14. `MMCA.Common.Testing.UI`
 
 ## Architecture Decision Records — **34 (001-034)**
 The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the range/count and the one-line

@@ -15,6 +15,7 @@
     <Project Path="Source/Presentation/MMCA.Common.API/MMCA.Common.API.csproj" />
     <Project Path="Source/Presentation/MMCA.Common.Grpc/MMCA.Common.Grpc.csproj" />
     <Project Path="Source/Presentation/MMCA.Common.UI/MMCA.Common.UI.csproj" />
+    <Project Path="Source/Presentation/MMCA.Common.UI.Web/MMCA.Common.UI.Web.csproj" />
   </Folder>
   <Folder Name="/Source/Hosting/">
     <Project Path="Source/Hosting/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />

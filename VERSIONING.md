@@ -1,6 +1,6 @@
 # Versioning & Breaking-Change Policy
 
-MMCA.Common publishes thirteen NuGet packages that are versioned and released **together** as a
+MMCA.Common publishes fourteen NuGet packages that are versioned and released **together** as a
 single unit. They share one version number so a consumer never has to reason about cross-package
 compatibility.
 
