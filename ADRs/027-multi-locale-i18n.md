@@ -1,7 +1,7 @@
 # ADR-027: Multi-Locale Internationalization (Supersedes ADR-011)
 
 ## Status
-Accepted (2026-06-27). **Supersedes [ADR-011](011-single-locale-i18n.md)** (single-locale by design).
+Accepted (2026-06-27, amended 2026-07-02). **Supersedes [ADR-011](011-single-locale-i18n.md)** (single-locale by design).
 
 ## Context
 ADR-011 recorded single-locale (en-US) as a deliberate, *revisitable* non-goal and sketched what
@@ -78,8 +78,19 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
    **Locale-addition governance.** Adding a locale is a bounded, gated process: (a) add the culture to
    `SupportedCultures.All`; (b) add the `.<culture>.resx` sibling for every base `.resx`; (c) the coverage
    fitness gate then refuses to build until every key is translated. No other infrastructure change is
-   needed — `UseRequestLocalization`, the culture switcher, and the Identity `User.PreferredCulture` guard
+   needed: `UseRequestLocalization`, the culture switcher, and the Identity `User.PreferredCulture` guard
    all read `SupportedCultures`, so they cannot drift from the allowlist.
+
+   **Development-only pseudo-localization.** A Windows-standard pseudo-locale, `qps-Ploc`
+   (`SupportedCultures.PseudoLocale`), is available as a developer diagnostic and is deliberately kept out of
+   `SupportedCultures.All` so the coverage gate never demands a `.qps-Ploc.resx` sibling. It is offered only
+   when the host runs in Development: `UseCommonRequestLocalization` adds it to the request-localization
+   allowlist under `IsDevelopment()`, and `MapCultureEndpoint` honors it from the culture switcher only under
+   the same guard. When it is the active UI culture, a `PseudoStringLocalizerFactory` decorator (registered
+   unconditionally, inert under every other culture) runtime-transforms every resolved resource string
+   (accents, padding, and a bracket sentinel) so that hard-coded strings, truncation, and string
+   concatenation become visible without translating anything. Outside Development it is never offered and the
+   decorator stays inert, so it is a build-and-test aid, not a production culture.
 
 ## Rationale
 - **Keying error localization on the existing `Error.Code` is the cheapest correct seam.** The codes are

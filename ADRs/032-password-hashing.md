@@ -1,7 +1,7 @@
 # ADR-032: Password Hashing (PBKDF2-HMAC-SHA512) with Legacy-Hash Backward Compatibility
 
 ## Status
-Accepted (2026-06-29).
+Accepted (2026-06-29, adoption note revised 2026-07-02).
 
 ## Context
 Identity stores a credential as a (salt, hash) pair, never plaintext. The framework needs one
@@ -47,11 +47,18 @@ the singleton lifetime is safe.
 - **Comparison is constant time.** Both paths compare the recomputed bytes to the stored hash with
   `CryptographicOperations.FixedTimeEquals` (`PasswordHasher.cs:58`), which always reads the full length
   so the verify time does not leak how many leading bytes matched.
-- **Adopted by both apps' Identity flow.** Store and ADC `AuthenticationService` resolve `IPasswordHasher`
-  and call `VerifyPassword` at login and `HashPassword` at registration / change-password (for example
-  `MMCA.ADC/.../Identity.Application/Users/AuthenticationService.cs:93` and `AuthenticationService.cs:174`;
-  Store wires the same dependency at `MMCA.Store/.../Identity.Application/Users/AuthenticationService.cs:22`
-  and `.../UseCases/ChangePassword/ChangePasswordHandler.cs:16`).
+- **Adopted by both apps' Identity flow, through a shared base.** Each app's `AuthenticationService` is now a
+  sealed subclass of `AuthenticationServiceBase<TUser>`
+  (`Source/Core/MMCA.Common.Application/Auth/AuthenticationServiceBase.cs:34`) that passes `IPasswordHasher`
+  into the base constructor rather than calling the hasher itself. The login-time `VerifyPassword`
+  (`AuthenticationServiceBase.cs:102`) and the registration-time `HashPassword` (`AuthenticationServiceBase.cs:150`)
+  both live once in that base, so a single hoisted call site verifies and hashes for both apps. ADC's subclass
+  declares the `IPasswordHasher` parameter and forwards it to the base
+  (`MMCA.ADC/.../Identity.Application/Users/AuthenticationService.cs:25`, forwarded at `AuthenticationService.cs:30`);
+  Store's subclass does the same (`MMCA.Store/.../Identity.Application/Users/AuthenticationService.cs:24`,
+  forwarded at `AuthenticationService.cs:33`). The one remaining direct consumer is Store's `ChangePasswordHandler`,
+  which injects `IPasswordHasher` (`.../UseCases/ChangePassword/ChangePasswordHandler.cs:16`) to verify the
+  current password before hashing the new one.
 
 ## Rationale
 - **One framework-owned primitive, not per-app crypto.** Putting the algorithm, work factor, salt size,

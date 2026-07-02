@@ -119,15 +119,8 @@ public abstract class E2ETestBase : IAsyncLifetime
         // client auth state (role claims parsed from the stored token) only populates once that boot
         // finishes; a caller that immediately client-side-navigates to an [Authorize] page (the
         // LoginAsAdmin -> protected create/list flows) would otherwise race a not-yet-authorized,
-        // not-yet-rendered page. Guard the context-destroyed race from an in-flight reload.
-        try
-        {
-            await Page.WaitForBlazorAsync();
-        }
-        catch (PlaywrightException)
-        {
-            await Page.WaitForBlazorAsync();
-        }
+        // not-yet-rendered page.
+        await WaitForInteractiveOrReloadAsync();
     }
 
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
@@ -159,18 +152,34 @@ public abstract class E2ETestBase : IAsyncLifetime
         // (under WebAssembly that is a full CLR boot, slower than a Server circuit). Wait for interactivity
         // HERE so every caller gets an interactive page back, instead of each test having to remember it
         // (the post-register sign-out click / protected-page open would otherwise hit a non-interactive
-        // DOM). Guard the context-destroyed race from an in-flight reload, then re-assert on the fresh
-        // context (mirrors BlazorNavigateAsync).
+        // DOM).
+        await WaitForInteractiveOrReloadAsync();
+
+        return (email, password);
+    }
+
+    // Waits for the post-auth page to become interactive; if the wait fails, RELOADS once and waits
+    // again rather than re-waiting on the same stuck page. Two failure modes feed this (both
+    // trace-proven on the shared 2-core CI runner, ADC run 28589825631, 2026-07-02):
+    // (1) a context-destroyed PlaywrightException from the in-flight forceLoad reload (the original
+    //     guarded race), and (2) a TimeoutException when the freshly loaded page never initializes its
+    //     runtime under contention (InteractiveAuto's second visit boots the downloaded WASM bundle,
+    //     which can exceed the wait on a saturated host). The old catch handled only
+    //     PlaywrightException, so Playwright's TimeoutException (which derives from
+    //     System.TimeoutException, not PlaywrightException) skipped the retry entirely; and re-waiting
+    //     without reloading just watched the same stalled boot. A reload issues a fresh request whose
+    //     framework assets are now HTTP-cached, giving the retry a genuinely new attempt.
+    private async Task WaitForInteractiveOrReloadAsync()
+    {
         try
         {
             await Page.WaitForBlazorAsync();
         }
-        catch (PlaywrightException)
+        catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
         {
+            await Page.ReloadAsync(new() { WaitUntil = WaitUntilState.Load });
             await Page.WaitForBlazorAsync();
         }
-
-        return (email, password);
     }
 
     // Waits for the post-submit auth result, racing THREE signals so success detection does NOT depend

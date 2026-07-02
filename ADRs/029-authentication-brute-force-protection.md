@@ -1,7 +1,9 @@
 # ADR-029: Authentication Brute-Force Protection and Registration Throttling
 
 ## Status
-Accepted (2026-06-27).
+Accepted (2026-06-27). Updated 2026-07-02 (the check/increment/reset call sequence was hoisted
+into `AuthenticationServiceBase<TUser>`; the adoption note and the "convention the consumer must
+call" trade-off were rewritten to match).
 
 ## Context
 ADR-019's global rate limiter is **authenticated-only**: it caps requests per authenticated principal
@@ -37,9 +39,14 @@ table.
   via cache TTL — a lockout is inherently ephemeral, so expiry *is* the reset.
 - **Returns `Result` (ADR-013)**, so the HTTP edge maps every failure to a uniform `401` without the
   endpoint special-casing it.
-- **Adopted by both apps' Identity flow.** Store and ADC `AuthenticationService` call check-before /
-  increment-on-failure / reset-on-success around login, and the registration check around sign-up;
-  settings bind from the `"LoginProtection"` section.
+- **Centralized in the shared authentication base.** The call sequence lives once in
+  `AuthenticationServiceBase<TUser>` (`MMCA.Common.Application.Auth`): `CheckLockoutAsync` before
+  credential validation, `IncrementFailedAttemptsAsync` on each failed attempt,
+  `ResetFailedAttemptsAsync` on a successful login, and `CheckRegistrationRateLimitAsync` /
+  `IncrementRegistrationCountAsync` around sign-up. Store and ADC `AuthenticationService` are sealed
+  subclasses that inject `ILoginProtectionService` into the base constructor and inherit those calls;
+  neither app invokes the protection methods directly. Settings bind from the `"LoginProtection"`
+  section.
 
 ## Rationale
 - **Complements ADR-019 rather than duplicating it.** The global limiter protects authenticated
@@ -63,8 +70,12 @@ table.
 - **IP-keyed registration throttle is coarse.** Shared NAT/proxy IPs throttle innocents together, and
   per-attacker IP rotation evades it; it is fail-open on a missing IP. It raises the cost of bulk signup,
   it does not stop a determined distributed attacker.
-- **It is a convention the consumer must call.** The framework registers the service but does not
-  intercept the endpoints; an Identity flow that forgets to call it is unprotected — the same
+- **Protection rides on the shared base class, not on the HTTP edge.** Because the call sequence is
+  centralized in `AuthenticationServiceBase<TUser>`, a consumer whose `AuthenticationService`
+  subclasses it inherits the lockout and registration-throttle checks automatically (both apps do), so
+  it is no longer a per-flow convention that a subclass can forget. What the framework still does not do
+  is intercept the HTTP endpoints: an Identity flow written *without* the base class (calling
+  `ILoginProtectionService` by hand, or not at all) remains unprotected. That residual is the same
   audit-the-inventory caveat as the other opt-in capabilities (ADR-019/020/021/026).
 
 ## Related

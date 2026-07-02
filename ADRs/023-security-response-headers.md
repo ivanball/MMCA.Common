@@ -1,7 +1,7 @@
 # ADR-023: Centralized Security-Response-Headers Middleware with a Pluggable CSP
 
 ## Status
-Accepted (2026-06-26).
+Accepted (2026-07-02).
 
 ## Context
 Every client-facing host (the YARP Gateway and the Blazor UI web host in each app) must stamp the same
@@ -38,9 +38,11 @@ with `AddCommonSecurityHeaders(configuration?, configure?)` and inserted early w
   `style-src 'unsafe-inline'`). This baseline is the right complete policy for JSON/WebSocket/static
   hosts (API, Gateway) and a safe-but-partial policy for an unconfigured HTML host.
 - **HTML hosts register their own `ICspPolicyProvider`** before calling `AddCommonSecurityHeaders`
-  (the registration uses `TryAddSingleton`, so the first-registered provider wins). In both apps the
-  Blazor UI host ships a `BlazorCspPolicyProvider` that pins `connect-src` to `'self'` plus the
-  configured API/Gateway origin (https + wss, from `ApiSettings`), adds `script-src 'self'
+  (the registration uses `TryAddSingleton`, so the first-registered provider wins). Both apps register
+  one shared `BlazorCspPolicyProvider` (a single `internal sealed` class hoisted into
+  `MMCA.Common.UI.Web`, byte-identical to the copies the app hosts formerly carried) via
+  `AddCommonBlazorCsp` ahead of `AddCommonSecurityHeaders`. It pins `connect-src` to `'self'` plus the
+  configured API/Gateway origin (https + wss, from the shared `ApiSettings`), adds `script-src 'self'
   'wasm-unsafe-eval'` and `style-src 'self' 'unsafe-inline'`, and **degrades to a permissive
   `Report-Only` policy if the origin cannot be resolved** (never enforce a CSP it could not build
   correctly). It loosens the policy for localhost only in Development (Visual Studio Browser Link / Hot
@@ -72,9 +74,11 @@ with `AddCommonSecurityHeaders(configuration?, configure?)` and inserted early w
 - **Registration order is a foot-gun.** Because the provider is registered with `TryAddSingleton`, a host
   must register its custom `ICspPolicyProvider` *before* `AddCommonSecurityHeaders`, or the static
   default wins silently.
-- **Per-host CSP code is duplicated across apps.** Store and ADC each carry a near-identical
-  `BlazorCspPolicyProvider`; the connect-src/origin logic is copied rather than shared, since each app
-  owns its own `ApiSettings` shape and origin rules.
+- **A shared Blazor CSP provider constrains per-host divergence.** `BlazorCspPolicyProvider` now lives
+  once in `MMCA.Common.UI.Web`, over the shared `ApiSettings` type, and both apps register it via
+  `AddCommonBlazorCsp`, so the connect-src/origin logic is no longer copied per app. The remaining
+  trade-off is that a host needing genuinely different CSP logic cannot edit an app-local class: it must
+  supply its own `ICspPolicyProvider` (registered before `AddCommonSecurityHeaders`) instead.
 - **A degraded (Report-Only) policy protects nothing.** The fail-safe path means a broken dynamic policy
   is non-blocking but also non-enforcing until someone notices the Report-Only header.
 

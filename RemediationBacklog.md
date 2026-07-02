@@ -1,11 +1,11 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 92.9% / Implementation 85.3%**, framework v1.94.0 pending release; twelfth wave 2026-06-30 lifted §22 + §27 Implementation 7→8 and recorded the §31 FinOps cap as accepted).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 93.5% / Implementation 84.0%**, framework v1.99.0; the 2026-07-02 re-score closed §12 Performance & Scalability to Maturity 4 on the build-gating `performance-smoke` CI job, moved the §31 FinOps cap to the *Deliberate / accepted* section below, and recalibrated §14/§19/§26/§34 Implementation down one band while holding their Maturity 4).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
 
-**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **23 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14, 15, 16, 18, 19, 20, 21, 26, 28, 29, 32, 34); the open work is the 11 categories still below Maturity 4.
+**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **24 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 26, 28, 29, 32, 34); the open work is the **10 categories still below Maturity 4**. Ranked by two-axis priority = (4 − maturity) × weight: **#31** FinOps (Maturity 2, weight 2, computed priority 4) is the highest weighted gap but a documented accepted cap (see *Deliberate / accepted* below), not scheduled work; then the weight-2 Maturity-3 pack at **priority 2** (#9, #17, #22, #23, #24, #25, #30, #33); then **#27** i18n at **priority 1** (weight 1, the lowest gap).
 
 > **Two fixes each clear multiple items — do them once:**
 > - **MassTransit v8 guard** closes the medium red flags in **#32** *and* **#16**.
@@ -509,13 +509,11 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 ### [x] #5 · Vertical Slice Architecture — **DONE (eighth wave: impl 7→8 AND maturity 3→4)** → moved to the level-4 protect list
 - [x] Slice-cohesion fitness function added: `ArchitectureRules.Slices.cs` + `SliceCohesionTestsBase` (shared package, the 18th fitness base) + Common/ADC subclasses — fails the build if a handler/validator is stranded from its same-assembly contract. Because this is automatic CI enforcement of the slice convention, §5 maturity also rose 3→4 (the rubric's maturity-4 "enforced automatically by tests/CI" bar), so §5 now belongs in "Already at level 4 — protect, don't regress" below.
 
-### [x] #12 · Performance & Scalability — **DONE (eighth wave, impl 7→8)**
+### [x] #12 · Performance & Scalability: **DONE (eighth wave impl 7→8; Maturity 3→4 on the `performance-smoke` CI gate, 2026-07-02), moved to the level-4 protect list below**
 - [x] BenchmarkDotNet smoke project added (`Tests/Performance/MMCA.Common.Benchmarks`, outside the .slnx). Max-page-size guard already shipped at v1.84.0 (`ApplicationSettings.MaxPageSize` clamp + `EntityQueryPipeline.MaxUnboundedResultLimit`).
+- [x] **Maturity 3→4 via the build-gating `performance-smoke` job.** `.github/workflows/ci.yml:143-167` runs the BenchmarkDotNet harness (`--filter "*" --job Dry`) on every push/PR with no `continue-on-error`, so a benchmarked hot path (Specification compiled-expression cache plus criteria composition) that throws or no longer compiles fails the build. That automatic CI enforcement meets the rubric maturity-4 "enforced automatically by tests/CI" bar (`ci.yml:143-148`). It is a runs-clean smoke gate, **not** a latency-regression gate (`ci.yml:146-147`), so Implementation holds at 8.
 
-### [x] #31 · Cost Efficiency / FinOps — **DONE (eighth wave, impl 6→7)**
-- [x] OTel sampler knob exposed (`Telemetry:TracesSampleRatio` → ParentBased/TraceIdRatio, unit-tested); outbox per-message "dispatched" log moved Info→Debug; `COST.md` gained cost-attribution-tag + cost-guard samples. (Reaching 8 needs consumer-side cost execution.)
-
-### [x] #17 · DevOps & Deployment — **DONE (eighth wave, impl 7→8)**
+### [x] #17 · DevOps & Deployment: **DONE (eighth wave, impl 7→8)**
 - [x] In-repo reference deployment sample added: `samples/deployment/{foundation,main}.bicep` (lint clean via `az bicep build`) + `DEPLOYMENT.md` (OIDC federated-credential + UAMI bootstrap + smoke-gate/auto-rollback). (Deeper CD-to-Azure lives in consumer repos.)
 
 ### [x] #29 · Resilience & Business Continuity — **DONE (eighth wave, impl 7→8)**
@@ -524,13 +522,17 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 ---
 
 ## ✅ Already at level 4 — protect, don't regress
-#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · #14 Testability · #15 Best Practices & Code Quality · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
-*(All backed by fitness functions — the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 23 categories — see the Scope note at the top.)*
+#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
+*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 24 categories, see the Scope note at the top.)*
+
+## 🔒 Deliberate / accepted (documented caps, not scheduled work)
+### [accepted] #31 · Cost Efficiency / FinOps: held at Maturity 2 / Implementation 7 by documented acceptance
+Moved out of the active priority queue on 2026-07-02 (user-approved). Its computed priority = (4 − 2) × 2 = **4** is the highest weighted gap of any open category, but the unmet §31 criteria are consumer/IaC execution a NuGet library cannot perform: **right-sizing** and **reversible scale-events** are host-infrastructure actions the framework provisions nothing to take, and **per-service cost attribution** via Aspire resource annotations is inert for the hand-written `main.bicep` consumers (ADC/Store), so even the one library-addressable criterion does not move the score for the actual consumers. The in-repo levers are already shipped and documented: the `Telemetry:TracesSampleRatio` OTel sampler knob, the outbox per-message log trimmed Information→Debug, and `COST.md`'s cost-attribution-tag plus cost-guard samples. Further movement is a consumer-side lift, not an in-repo one, so §31 is recorded here as an accepted cap rather than scheduled work. *(See `COST.md`, the §31 scorecard row, and the twelfth-wave `[accepted]` note above for provenance.)*
 
 ## ⚪ Mostly consumer-assessed (the shared Common.UI surface is scored here)
 #21 Accessibility · #22 Responsive · #26 Front-End Security
 *(Assessable mainly in consumer apps; #26 shared surface is covered under #11.)*
-- **#27 i18n — no longer consumer-assessed/N/A.** It is now an active, in-repo scored category (Maturity 2 / Implementation 6) after ADR-027 shipped en-US + Spanish in the framework, superseding the single-locale ADR-011. Tracked as an open item in the ninth-wave progress section above.
+- **#27 i18n, no longer consumer-assessed/N/A.** It is now an active, in-repo scored category (**Maturity 3 / Implementation 8** as of the twelfth wave) after ADR-027 shipped en-US + Spanish in the framework, superseding the single-locale ADR-011. It stays open below Maturity 4 at weight 1 (the lowest-priority open gap), pending more than two shipped locales and promoting the pseudo-localization pass from a Development-only diagnostic to a CI gate; see the ninth/tenth/twelfth-wave progress sections above.
 - **#24 Forms/UX Safety — DONE for the shared surface (eighth wave, impl 7→8):** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored.
 - **#25 Navigation — DONE for the shared surface (eighth wave, impl 7→8):** an in-shell `Forbidden` (403) page + `NavigationFlow.md` for the Common UI surface. Per-actor module flows remain consumer-scored.
 

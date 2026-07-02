@@ -19,7 +19,7 @@ Enforce architectural invariants as **automated checks that gate the build**, in
    inspects `ProjectReference`s in a pre-build step and **fails the build** before tests run if a layer
    references a forbidden upstream layer. This catches the most common mistake (a bad project reference)
    with the fastest possible feedback.
-2. **Runtime fitness functions.** A shared `MMCA.Common.Testing.Architecture` package (the 13th package)
+2. **Runtime fitness functions.** A shared `MMCA.Common.Testing.Architecture` package
    holds the rule bodies once: an `ArchitectureRules.*` library (layers, modules, transport, events,
    entities, handlers, naming, controllers, immutability, governance, purity, specifications, slices,
    localization) plus
