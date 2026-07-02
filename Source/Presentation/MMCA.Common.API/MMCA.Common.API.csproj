@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.API</PackageId>
     <Description>MMCA framework — base controllers, middleware, idempotency, error-to-HTTP mapping</Description>
@@ -7,6 +7,8 @@
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="AspNet.Security.OAuth.GitHub" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <!-- Direct reference so the Directory.Packages.props pin forces the transitive Microsoft.OpenApi
          (pulled by AspNetCore.OpenApi) up to the GHSA-v5pm-xwqc-g5wc-patched 2.7.5. -->
