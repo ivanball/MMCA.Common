@@ -247,11 +247,16 @@ public abstract class E2ETestBase : IAsyncLifetime
     // loading bar to "hide" is racy: with no bar present yet that wait resolves instantly, then the
     // transient unnamed role="progressbar" loading bar appears and trips aria-progressbar-name. Every
     // scanned list page is seeded with at least one row, so a visible row reliably means the load settled.
+    // Scans with the pager-combobox exception: a grid list page's sole combobox is its MudTablePager
+    // "rows per page" select, which MudBlazor 9.6.0 renders without an accessible name (see
+    // AxeOptions.Wcag21AaExceptMudPagerCombobox — accepted upstream limitation, not reachable from app
+    // markup). Every other WCAG 2.1 AA rule still runs; non-grid scans (ScanAsync) stay fully strict.
     protected async Task ScanGridAsync()
     {
         await Expect(Page.Locator(".mud-table-body .mud-table-row").First)
             .ToBeVisibleAsync(new() { Timeout = 15_000 });
-        await ScanAsync();
+        await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 });
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21AaExceptMudPagerCombobox);
     }
 
     // Scan the current (settled) page for WCAG 2.1 AA violations. Guards against any residual loading
