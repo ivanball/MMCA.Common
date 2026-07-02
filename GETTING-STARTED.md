@@ -314,11 +314,11 @@ public sealed class Ticket : AuditableAggregateRootEntity<TicketIdentifierType>
         Status = TicketStatus.Open;
     }
 
-    public static Result<Ticket> Open(TicketIdentifierType? id, string title, string description, int requesterUserId)
+    public static Result<Ticket> Create(TicketIdentifierType? id, string title, string description, int requesterUserId)
     {
         var validation = Result.Combine(
-            TicketInvariants.EnsureTitleIsValid(title, nameof(Open)),
-            TicketInvariants.EnsureDescriptionIsValid(description, nameof(Open)));
+            TicketInvariants.EnsureTitleIsValid(title, nameof(Create)),
+            TicketInvariants.EnsureDescriptionIsValid(description, nameof(Create)));
         if (validation.IsFailure) { return Result.Failure<Ticket>(validation.Errors); }
 
         // When the id is DB-generated, leave it default; the supplied id is only used for engines that
@@ -436,7 +436,7 @@ public sealed class CreateTicketHandler(
 {
     public async Task<Result<TicketDTO>> HandleAsync(TicketCreateRequest command, CancellationToken cancellationToken = default)
     {
-        var result = await requestMapper.CreateEntityAsync(command, cancellationToken);   // runs Ticket.Open
+        var result = await requestMapper.CreateEntityAsync(command, cancellationToken);   // runs Ticket.Create
         if (result.IsFailure) { return Result.Failure<TicketDTO>(result.Errors); }
 
         var entity = result.Value!;
@@ -794,8 +794,8 @@ out, and that an outbox row was written for the `TicketOpenedIntegrationEvent`.
 The reference app ships two test projects — both run anywhere with **no database**:
 
 - `Tests/Modules/Tickets/...Domain.Tests`: xUnit v3 + AwesomeAssertions. Test factory methods,
-  invariants, state transitions, and domain events (including the assertion that `Open` raises **no**
-  domain event, since the id is DB-generated — don't "fix" it).
+  invariants, state transitions, and domain events (including the assertion that `Create` raises **no**
+  domain event, since the id is DB-generated; don't "fix" it).
 - `Tests/Architecture/...Architecture.Tests`: the fitness functions (below).
 
 Optional additions as the app grows:
