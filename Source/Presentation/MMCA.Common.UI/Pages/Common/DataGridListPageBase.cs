@@ -149,6 +149,13 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             },
             Microsoft.AspNetCore.Components.Web.RenderMode.InteractiveAuto);
 
+        // Pin THIS page's route while it is provably current. Grid-state writes are inherently
+        // deferred (debounced search, late ServerData completions), so deriving the route from
+        // NavigationManager.Uri at WRITE time raced page navigation: a stale write saved state
+        // under the NEXT page's key and stamped grid params onto its URL (E2E-diagnosed spurious
+        // navigation to /inventory/create?ps=10 that disposed freshly-navigated detail pages).
+        _ownRoutePath = new Uri(NavigationManager.Uri).AbsolutePath;
+
         var urlState = QueryStateService.ReadCurrent();
         var routePath = GetRoutePath();
         var savedState = ListPageStateService.GetState(routePath);
@@ -590,6 +597,13 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
     private void SaveCurrentState(int page, int pageSize, string? sortColumn, bool sortDescending)
     {
+        // Drop stale writes outright: a debounced/late save landing after navigation must
+        // neither persist under a foreign route key nor mirror grid params onto that page's URL.
+        if (!IsOwnRouteCurrent())
+        {
+            return;
+        }
+
         var routePath = GetRoutePath();
         var existing = ListPageStateService.GetState(routePath);
         var filters = new Dictionary<string, string>();
@@ -610,7 +624,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // Mirror to URL (replace current entry — filter changes must not pollute the back stack)
         // and to sessionStorage so the state survives circuit teardown / forceLoad navigations.
         _suppressNextLocationChanged = true;
-        QueryStateService.ReplaceState(state);
+        QueryStateService.ReplaceState(routePath, state);
         // Fire-and-forget the sessionStorage write — it tolerates SSR/JSDisconnected internally.
         // Skip during the deferred window so OnAfterRenderAsync can still hydrate the original
         // sessionStorage values before they are overwritten.
@@ -640,13 +654,19 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     private void PersistDensity()
     {
+        // Same stale-write guard as SaveCurrentState: never persist/mirror after navigating away.
+        if (!IsOwnRouteCurrent())
+        {
+            return;
+        }
+
         var routePath = GetRoutePath();
         var existing = ListPageStateService.GetState(routePath) ?? new ListPageState();
         var updated = existing with { DenseGrid = DenseGrid };
         ListPageStateService.SaveState(routePath, updated);
 
         _suppressNextLocationChanged = true;
-        QueryStateService.ReplaceState(updated);
+        QueryStateService.ReplaceState(routePath, updated);
 
         if (!_deferSessionPersist)
         {
@@ -654,7 +674,17 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
     }
 
-    private string GetRoutePath() => new Uri(NavigationManager.Uri).AbsolutePath;
+    // The route pinned at OnInitialized; falls back to the live URI only before init.
+    private string? _ownRoutePath;
+
+    private string GetRoutePath() => _ownRoutePath ?? new Uri(NavigationManager.Uri).AbsolutePath;
+
+    /// <summary>
+    /// True while this list page's route is still the CURRENT location. Deferred grid-state
+    /// writes must be dropped once the user navigated away (see <c>_ownRoutePath</c>).
+    /// </summary>
+    private bool IsOwnRouteCurrent() =>
+        string.Equals(new Uri(NavigationManager.Uri).AbsolutePath, GetRoutePath(), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Called when the viewport switches to mobile or on first render in mobile mode.

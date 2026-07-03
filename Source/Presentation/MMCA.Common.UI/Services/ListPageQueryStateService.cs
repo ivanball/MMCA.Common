@@ -179,14 +179,32 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
 
     /// <summary>
     /// Replaces the current browser history entry with one whose URL reflects
-    /// <paramref name="state"/>. Uses <see cref="NavigationOptions.ReplaceHistoryEntry"/>
+    /// <paramref name="state"/>, anchored to the OWNING list page's
+    /// <paramref name="basePath"/>. Uses <see cref="NavigationOptions.ReplaceHistoryEntry"/>
     /// so filter changes do not pollute the back stack.
     /// </summary>
-    public void ReplaceState(ListPageState state)
+    /// <remarks>
+    /// The write is DROPPED when the current location's path no longer matches
+    /// <paramref name="basePath"/>: a grid-state write is inherently deferred (debounced search,
+    /// a late <c>ServerData</c> completion), so it can land after the user has already navigated
+    /// away. Building from the then-current URI used to stamp grid params onto the NEXT page's
+    /// URL and issue a spurious navigation that disposed it mid-load (E2E-diagnosed: a stale
+    /// write navigated to <c>/inventory/create?ps=10</c>, and detail pages reached via a list
+    /// row click had their first data fetch canceled ~66ms in, leaving them stuck on their
+    /// loading state).
+    /// </remarks>
+    public void ReplaceState(string basePath, ListPageState state)
     {
+        ArgumentException.ThrowIfNullOrEmpty(basePath);
         ArgumentNullException.ThrowIfNull(state);
 
-        var basePath = navigation.ToAbsoluteUri(navigation.Uri).GetLeftPart(UriPartial.Path);
+        var currentPath = navigation.ToAbsoluteUri(navigation.Uri).AbsolutePath;
+        var ownPath = navigation.ToAbsoluteUri(basePath).AbsolutePath;
+        if (!string.Equals(currentPath, ownPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         var target = BuildPath(basePath, state);
         navigation.NavigateTo(target, new NavigationOptions { ReplaceHistoryEntry = true });
     }

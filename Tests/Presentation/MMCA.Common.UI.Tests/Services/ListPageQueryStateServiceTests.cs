@@ -231,4 +231,43 @@ public class ListPageQueryStateServiceTests
         roundTripped.DenseGrid.Should().Be(original.DenseGrid);
         roundTripped.Filters.Should().BeEquivalentTo(original.Filters);
     }
+
+    // ── ReplaceState stale-write guard ─────────────────────────────────────
+    // Grid-state writes are deferred (debounced search, late ServerData completions), so a write
+    // can land AFTER the user navigated away. Building from the then-current URI stamped grid
+    // params onto the NEXT page's URL and issued a spurious navigation that disposed it mid-load
+    // (E2E-diagnosed as a navigation to /inventory/create?ps=10 and detail pages stuck loading).
+    [Fact]
+    public void ReplaceState_WhileOwnPathIsCurrent_NavigatesWithEncodedState()
+    {
+        var navigation = new RecordingNavigationManager("https://localhost/products?q=old");
+        var sut = new ListPageQueryStateService(navigation);
+
+        sut.ReplaceState("/products", new ListPageState { PageSize = 10, SortColumn = "Name" });
+
+        navigation.LastNavigatedTo.Should().NotBeNull();
+        navigation.LastNavigatedTo.Should().StartWith("/products?");
+        navigation.LastNavigatedTo.Should().Contain("ps=10").And.Contain("s=Name");
+    }
+
+    [Fact]
+    public void ReplaceState_AfterNavigatingAway_DropsTheStaleWrite()
+    {
+        var navigation = new RecordingNavigationManager("https://localhost/inventory/create");
+        var sut = new ListPageQueryStateService(navigation);
+
+        sut.ReplaceState("/products", new ListPageState { PageSize = 10 });
+
+        navigation.LastNavigatedTo.Should().BeNull("a stale grid-state write must never navigate a foreign page");
+    }
+
+    private sealed class RecordingNavigationManager : Microsoft.AspNetCore.Components.NavigationManager
+    {
+        public RecordingNavigationManager(string uri) => Initialize("https://localhost/", uri);
+
+        public string? LastNavigatedTo { get; private set; }
+
+        protected override void NavigateToCore(string uri, Microsoft.AspNetCore.Components.NavigationOptions options) =>
+            LastNavigatedTo = uri;
+    }
 }
