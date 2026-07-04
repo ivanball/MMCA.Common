@@ -32,6 +32,7 @@ public sealed class NavMenuTests : BunitTestBase
     [Fact]
     public void WhenAnonymous_ShowsLoginAndRegister_NotLogout()
     {
+        RenderMudProviders(); // CultureSwitcher's MudMenu (mobile top-row) needs the popover provider.
         var cut = RenderUnderTest<NavMenu>(_ => { });
 
         cut.Markup.Should().Contain("Login");
@@ -42,6 +43,7 @@ public sealed class NavMenuTests : BunitTestBase
     [Fact]
     public void WhenAuthenticated_ShowsLogoutAndUserName_NotLogin()
     {
+        RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(name: "Ada Lovelace"), _ => { });
 
         cut.Markup.Should().Contain("Logout");
@@ -53,6 +55,7 @@ public sealed class NavMenuTests : BunitTestBase
     public void ClickingLogout_CallsLogoutAndNavigatesToLogin()
     {
         var nav = Services.GetRequiredService<NavigationManager>();
+        RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
 
         // An OnClick-only MudNavLink (no Href) renders as a <div class="mud-nav-link">, not an anchor.
@@ -71,6 +74,7 @@ public sealed class NavMenuTests : BunitTestBase
             new NavItem("Browse Catalog", "/catalog", "icon"),
             new NavItem("Manage Events", "/events", "icon", RequiredRole: "Organizer", Section: NavSection.Admin));
 
+        RenderMudProviders();
         var cut = RenderUnderTest<NavMenu>(_ => { });
 
         cut.Markup.Should().Contain("Browse Catalog");
@@ -84,6 +88,7 @@ public sealed class NavMenuTests : BunitTestBase
             new NavItem("Browse Catalog", "/catalog", "icon"),
             new NavItem("Manage Events", "/events", "icon", RequiredRole: "Organizer", Section: NavSection.Admin));
 
+        RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.Organizer(), _ => { });
 
         cut.Markup.Should().Contain("Browse Catalog");

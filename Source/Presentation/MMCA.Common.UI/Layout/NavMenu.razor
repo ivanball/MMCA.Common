@@ -17,17 +17,23 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="@RoutePaths.Home" aria-label="@L["Nav.BrandHome.Aria", LayoutSettingsOptions.Value.BrandName]">@LayoutSettingsOptions.Value.BrandName</a>
     </div>
-    <AuthorizeView>
-        <Authorized>
-            <div class="toprow-actions" aria-label="@L["Nav.QuickActions.Aria"]">
+    @* Mobile-only quick actions (CSS hides this row at >=1024px, where the MudAppBar takes over; the
+       app bar itself is hidden below 1024px). Culture + theme must be available to everyone here,
+       authenticated or not (ADR-027/028); only the module app-bar components and the user name are
+       gated on authentication. *@
+    <div class="toprow-actions" aria-label="@L["Nav.QuickActions.Aria"]">
+        <CultureSwitcher />
+        <ThemeToggle />
+        <AuthorizeView>
+            <Authorized>
                 @foreach (var componentType in _appBarComponents)
                 {
                     <DynamicComponent Type="componentType" />
                 }
                 <span class="toprow-user-name" title="@context.User.Identity?.Name">@context.User.Identity?.Name</span>
-            </div>
-        </Authorized>
-    </AuthorizeView>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 </div>
 
 <input type="checkbox" title="@L["Nav.ToggleMenu.Aria"]" class="navbar-toggler"

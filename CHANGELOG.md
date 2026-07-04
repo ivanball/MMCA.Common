@@ -6,6 +6,15 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed (2026-07-04 mobile parity)
+- **Culture + theme controls are now reachable on phones (§22 / ADR-027/028).** The shared layout
+  hides the whole `MudAppBar` below 1024px, and the `CultureSwitcher`/`ThemeToggle` lived only there,
+  so no phone user (anonymous or signed-in) could switch language or theme. `NavMenu`'s mobile
+  top-row now renders both controls unconditionally (module app-bar components and the user name
+  stay auth-gated); existing top-row CSS handles compact sizing, white icons, and the desktop hide,
+  so nothing renders twice. Pinned by `MobileTopRowE2ETests` (phone + desktop viewports) in the
+  required chromium `ui-e2e` job.
+
 i18n completion train (ADR-027 amended 2026-07-03, §27): every remaining user-visible literal in the
 shared UI is externalized, MudBlazor chrome localizes, and two new gates keep it that way.
 **Consumer-breaking on purpose:** `ErrorMessages.Success(entity, action)` is now `[Obsolete]`
