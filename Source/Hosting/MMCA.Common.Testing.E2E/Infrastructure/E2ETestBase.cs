@@ -92,12 +92,22 @@ public abstract class E2ETestBase : IAsyncLifetime
         // HttpOnly session cookie (the Blazor Server host is cookie-only, so a localStorage clear alone
         // is a no-op and the prior session would persist — leaving the next login authenticated as the
         // WRONG user). The DELETE hits the same /auth/session-cookie endpoint the app's logout uses.
-        var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
-        if (await logoutVisible.IsVisibleAsync())
+        try
         {
-            await Page.EvaluateAsync(
-                "async () => { localStorage.removeItem('auth_access_token'); localStorage.removeItem('auth_refresh_token');" +
-                " try { await fetch('/auth/session-cookie', { method: 'DELETE', credentials: 'same-origin' }); } catch (e) { } }");
+            var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
+            if (await logoutVisible.IsVisibleAsync())
+            {
+                await Page.EvaluateAsync(
+                    "async () => { localStorage.removeItem('auth_access_token'); localStorage.removeItem('auth_refresh_token');" +
+                    " try { await fetch('/auth/session-cookie', { method: 'DELETE', credentials: 'same-origin' }); } catch (e) { } }");
+            }
+        }
+        catch (PlaywrightException)
+        {
+            // A caller-initiated navigation (e.g. a logout forceLoad still in flight) can destroy the
+            // execution context mid-evaluate. That navigation is itself clearing the session, and the
+            // GotoAndWaitForBlazorAsync below re-lands on a fresh /login deterministically, so the
+            // cleanup's goal is met either way — don't fail the test over the race.
         }
 
         await Page.GotoAndWaitForBlazorAsync("/login");

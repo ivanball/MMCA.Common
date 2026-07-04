@@ -20,9 +20,12 @@ public abstract class UserLoginTestsBase : E2ETestBase
         // Arrange — register a fresh user
         var (email, password) = await RegisterNewUserAsync();
 
-        // Log out first (registration auto-logs in) — logout does a forceLoad redirect
+        // Log out first (registration auto-logs in) — logout does a forceLoad redirect to /login.
+        // Wait for that URL, not for LoadState.Load: the CURRENT document's load event fired long ago,
+        // so WaitForLoadState returns immediately and LoginAsync would race the in-flight logout
+        // navigation (its pre-login cleanup evaluate dies with "execution context was destroyed").
         await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync();
-        await Page.WaitForLoadStateAsync(LoadState.Load);
+        await Page.WaitForURLAsync(new Regex("/login"), new() { Timeout = 15_000 });
 
         // Act — log in with the registered credentials
         await LoginAsync(email, password);
