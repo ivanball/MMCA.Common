@@ -34,6 +34,15 @@ public abstract class AuthorizationTestsBase : E2ETestBase
     /// </summary>
     protected virtual string? AuthenticatedUserPath => null;
 
+    /// <summary>
+    /// Admin-only paths — a freshly-registered regular user navigating client-side must be shown the
+    /// shared Forbidden page (Routes.razor renders <c>&lt;Forbidden /&gt;</c> for an authenticated user
+    /// lacking the required role), never the admin content. Empty when the app has no admin surface
+    /// (the test then passes, same convention as <see cref="AuthenticatedUserPath"/>). This covers the
+    /// escalation direction the anonymous-redirect test cannot: a logged-in non-admin probing admin routes.
+    /// </summary>
+    protected virtual IReadOnlyList<string> AdminPaths => [];
+
     [Fact]
     public async Task AnonymousUser_ProtectedPages_ShouldRedirectToLogin()
     {
@@ -81,5 +90,32 @@ public abstract class AuthorizationTestsBase : E2ETestBase
 
         // Assert — the page loads (even if it shows an empty-state alert).
         await Expect(Page).ToHaveURLAsync(new Regex(Regex.Escape(authenticatedPath)), new() { Timeout = 15_000 });
+    }
+
+    [Fact]
+    public async Task RegisteredUser_AdminPages_ShouldBeForbidden()
+    {
+        // Same no-dynamic-skip convention as RegisteredUser_AuthenticatedPage: an app that declares no
+        // admin surface simply passes.
+        if (AdminPaths.Count == 0)
+        {
+            return;
+        }
+
+        // Arrange — register as a regular (non-admin) user.
+        await RegisterNewUserAsync();
+
+        foreach (var path in AdminPaths)
+        {
+            // Act — navigate client-side: SSR cannot read the JWT from browser storage, so a full page
+            // load would bounce to /login and never exercise the ROLE check this test exists for.
+            await Page.GotoProtectedAsync(path);
+
+            // Assert — the shared Forbidden page renders (its h1 carries role="alert" and the localized
+            // "Access Denied" title). Role denial is not a redirect: the URL stays on the requested
+            // path, so the page CONTENT is the only reliable denial signal.
+            await Expect(Page.Locator("h1[role='alert']"))
+                .ToContainTextAsync("Access Denied", new() { Timeout = 15_000 });
+        }
     }
 }

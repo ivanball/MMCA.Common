@@ -14,6 +14,14 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
     {
     }
 
+    /// <summary>
+    /// Whether the app's profile page offers an email-change section. Off by default: no reference app
+    /// currently exposes one, and the previous DOM-probing version of the test passed vacuously when the
+    /// field was absent (reporting coverage for a journey the app does not offer). A consumer that ships
+    /// email change opts in by overriding to true; the test then FAILS LOUD if the field goes missing.
+    /// </summary>
+    protected virtual bool ProfileSupportsEmailChange => false;
+
     [Fact]
     public async Task ChangeName_ShouldUpdateProfileName()
     {
@@ -98,33 +106,31 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
     [Fact]
     public async Task ChangeEmail_ShouldUpdateEmail()
     {
+        // Declared opt-in, not DOM-probed (see ProfileSupportsEmailChange): an app without the feature
+        // simply passes — the same no-dynamic-skip convention as
+        // AuthorizationTestsBase.RegisteredUser_AuthenticatedPage.
+        if (!ProfileSupportsEmailChange)
+        {
+            return;
+        }
+
         // Arrange
         await RegisterNewUserAsync();
         var profilePage = new ProfilePage(Page);
         await profilePage.GotoAsync();
         await Page.WaitForLoadStateAsync(LoadState.Load);
 
-        // Check if email field exists on profile page
+        // The consumer declared email change supported — a missing field is now a real failure.
         var emailField = Page.GetByLabel("Email");
-        if (!await emailField.IsVisibleAsync())
-        {
-            // Email change may not be on the profile page — skip
-            return;
-        }
+        await Expect(emailField).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         var newEmail = $"newemail-{UniqueId()}@test.com";
 
         // Act
         await emailField.ClearAsync();
         await emailField.FillAsync(newEmail);
-
-        // Look for a save email button
-        var saveEmailButton = Page.GetByRole(AriaRole.Button, new() { Name = "Save Email" });
-        if (await saveEmailButton.IsVisibleAsync())
-        {
-            await saveEmailButton.ClickAsync();
-            await Page.WaitForLoadStateAsync(LoadState.Load);
-        }
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Save Email" }).ClickAsync();
+        await Page.WaitForLoadStateAsync(LoadState.Load);
 
         // Assert — reload and verify
         await profilePage.GotoAsync();

@@ -6,6 +6,20 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-04 E2E authorization depth, §14)
+- **`AuthorizationTestsBase.AdminPaths` + `RegisteredUser_AdminPages_ShouldBeForbidden`**
+  (`MMCA.Common.Testing.E2E`): consumers declare their admin-only routes and the shared base verifies a
+  freshly-registered regular user gets the shared Forbidden page ("Access Denied") on each: the
+  escalation direction the anonymous-redirect test cannot cover. Empty default keeps apps without an
+  admin surface passing unchanged.
+
+### Changed (2026-07-04 E2E authorization depth, §14)
+- **`ProfileManagementTestsBase.ChangeEmail_ShouldUpdateEmail` no longer probes the DOM** to decide
+  whether email change exists (that made it pass vacuously on apps whose profile page has no email
+  section). It is now gated by the new `ProfileSupportsEmailChange` opt-in (default false); a consumer
+  that opts in gets a loud failure when the email field goes missing. No consumer opts in today, so
+  observed behavior is unchanged: the test's silence is now declared instead of accidental.
+
 ### Fixed (2026-07-04 mobile parity)
 - **Culture + theme controls are now reachable on phones (§22 / ADR-027/028).** The shared layout
   hides the whole `MudAppBar` below 1024px, and the `CultureSwitcher`/`ThemeToggle` lived only there,
