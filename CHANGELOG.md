@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed (2026-07-04 logout-then-login race, remaining site)
+- **`ProfileManagementTestsBase.ChangePassword_WithValidCurrentPassword_ShouldSucceed` is now
+  navigation-safe**: it waited on `LoadState.Load` after the sign-out click (already fired for the
+  current document), so the re-login raced the in-flight logout forceLoad and died with
+  `net::ERR_ABORTED` / "interrupted by another navigation" on contended runners (deterministic on
+  Store's v1.104.1 e2e-gate). Now waits for the `/login` URL, the same fix v1.103.1 applied to
+  `UserLoginTestsBase`; this was the one remaining sign-out-then-login site on the racy pattern.
+
 ### Fixed (2026-07-04 warning-chip contrast, §20/§22)
 - **Filled Warning components now meet WCAG 2.1 AA in both palettes** (`MMCATheme`): MudBlazor's
   default white contrast text is ~2.65:1 on the light palette's `#F57F17` (and ~2.0:1 on the dark
