@@ -14,7 +14,7 @@
                OnClick="MarkAllReadAsync"
                Disabled="IsSaving"
                Class="mb-4">
-        Mark All as Read
+        @L["Notif.MarkAllRead"]
     </MudButton>
 }
 
@@ -24,7 +24,7 @@
 }
 else if (_notifications.Count == 0)
 {
-    <MudAlert Severity="Severity.Info" Class="mb-4">You have no notifications.</MudAlert>
+    <MudAlert Severity="Severity.Info" Class="mb-4">@L["Notif.Inbox.Empty"]</MudAlert>
 }
 else
 {
@@ -52,7 +52,7 @@ else
                             <MudIconButton Icon="@Icons.Material.Filled.CheckCircleOutline"
                                            Color="Color.Primary"
                                            Size="Size.Small"
-                                           aria-label="Mark as read"
+                                           aria-label="@L["Notif.MarkRead.Aria"]"
                                            OnClick="() => MarkReadAsync(notification)"
                                            Disabled="IsSaving" />
                         }

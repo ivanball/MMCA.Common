@@ -10,14 +10,16 @@
 @inject IAuthUIService AuthService
 @inject NavigationManager Navigation
 @inject IOptions<LayoutSettings> LayoutSettingsOptions
+@inject IStringLocalizer<SharedResource> L
+@inject IStringLocalizerFactory LocalizerFactory
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="@($"{LayoutSettingsOptions.Value.BrandName} home")">@LayoutSettingsOptions.Value.BrandName</a>
+        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="@L["Nav.BrandHome.Aria", LayoutSettingsOptions.Value.BrandName]">@LayoutSettingsOptions.Value.BrandName</a>
     </div>
     <AuthorizeView>
         <Authorized>
-            <div class="toprow-actions" aria-label="Quick actions">
+            <div class="toprow-actions" aria-label="@L["Nav.QuickActions.Aria"]">
                 @foreach (var componentType in _appBarComponents)
                 {
                     <DynamicComponent Type="componentType" />
@@ -28,24 +30,24 @@
     </AuthorizeView>
 </div>
 
-<input type="checkbox" title="Toggle navigation menu" class="navbar-toggler"
-       aria-label="Toggle navigation menu" aria-expanded="false"
+<input type="checkbox" title="@L["Nav.ToggleMenu.Aria"]" class="navbar-toggler"
+       aria-label="@L["Nav.ToggleMenu.Aria"]" aria-expanded="false"
        aria-controls="nav-menu" />
 
 <div class="nav-backdrop" aria-hidden="true"></div>
 
-<nav id="nav-menu" class="nav-scrollable" aria-label="Site navigation">
+<nav id="nav-menu" class="nav-scrollable" aria-label="@L["Nav.SiteNavigation.Aria"]">
     <MudNavMenu Color="Color.Default">
-        <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">Home</MudNavLink>
+        <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">@L["Nav.Home"]</MudNavLink>
 
         @foreach (var group in _generalItems.GroupBy(i => i.Group))
         {
             if (group.Key is not null)
             {
-                <MudNavGroup Title="@group.Key" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+                <MudNavGroup Title="@DisplayGroup(group)" Icon="@Icons.Material.Filled.Folder" Expanded="false">
                     @foreach (var item in group)
                     {
-                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                     }
                 </MudNavGroup>
             }
@@ -53,22 +55,22 @@
             {
                 @foreach (var item in group)
                 {
-                    <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                    <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                 }
             }
         }
 
         @if (_userItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
         {
-            <div class="nav-section-label" role="heading" aria-level="2">My Account</div>
+            <div class="nav-section-label" role="heading" aria-level="2">@L["Nav.MyAccount"]</div>
             @foreach (var group in _userItems.GroupBy(i => i.Group))
             {
                 if (group.Key is not null)
                 {
-                    <MudNavGroup Title="@group.Key" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+                    <MudNavGroup Title="@DisplayGroup(group)" Icon="@Icons.Material.Filled.Folder" Expanded="false">
                         @foreach (var item in group)
                         {
-                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                         }
                     </MudNavGroup>
                 }
@@ -76,7 +78,7 @@
                 {
                     @foreach (var item in group)
                     {
-                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                     }
                 }
             }
@@ -84,15 +86,15 @@
 
         @if (_adminItems.Count > 0)
         {
-            <div class="nav-section-label" role="heading" aria-level="2">Administration</div>
+            <div class="nav-section-label" role="heading" aria-level="2">@L["Nav.Administration"]</div>
             @foreach (var group in _adminItems.GroupBy(i => i.Group))
             {
                 if (group.Key is not null)
                 {
-                    <MudNavGroup Title="@group.Key" Icon="@Icons.Material.Filled.Folder" Expanded="false">
+                    <MudNavGroup Title="@DisplayGroup(group)" Icon="@Icons.Material.Filled.Folder" Expanded="false">
                         @foreach (var item in group)
                         {
-                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                            <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                         }
                     </MudNavGroup>
                 }
@@ -100,7 +102,7 @@
                 {
                     @foreach (var item in group)
                     {
-                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@item.Title</MudNavLink>
+                        <MudNavLink Href="@item.Href" Icon="@item.Icon">@Display(item)</MudNavLink>
                     }
                 }
             }
@@ -115,13 +117,13 @@
                     <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
                 </div>
                 <MudNavMenu Color="Color.Default">
-                    <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">Logout</MudNavLink>
+                    <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">@L["Common.Button.Logout"]</MudNavLink>
                 </MudNavMenu>
             </Authorized>
             <NotAuthorized>
                 <MudNavMenu Color="Color.Default">
-                    <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">Login</MudNavLink>
-                    <MudNavLink Href="/register" Icon="@Icons.Material.Filled.PersonAdd">Register</MudNavLink>
+                    <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">@L["Common.Button.Login"]</MudNavLink>
+                    <MudNavLink Href="/register" Icon="@Icons.Material.Filled.PersonAdd">@L["Common.Button.Register"]</MudNavLink>
                 </MudNavMenu>
             </NotAuthorized>
         </AuthorizeView>
@@ -134,6 +136,32 @@
     private List<NavItem> _generalItems = [];
     private List<NavItem> _userItems = [];
     private List<NavItem> _adminItems = [];
+
+    // ADR-027: items carrying a TitleResource treat Title/Group as resource keys resolved at render
+    // time against that type's resx pair, so the menu follows the active culture; items without one
+    // (or with a missing key) render the raw string, keeping literal-titled modules working unchanged.
+    private string Display(NavItem item)
+    {
+        if (item.TitleResource is null)
+        {
+            return item.Title;
+        }
+
+        var localized = LocalizerFactory.Create(item.TitleResource)[item.Title];
+        return localized.ResourceNotFound ? item.Title : localized.Value;
+    }
+
+    private string DisplayGroup(IGrouping<string?, NavItem> group)
+    {
+        var first = group.FirstOrDefault(i => i.TitleResource is not null);
+        if (group.Key is null || first is null)
+        {
+            return group.Key ?? string.Empty;
+        }
+
+        var localized = LocalizerFactory.Create(first.TitleResource!)[group.Key];
+        return localized.ResourceNotFound ? group.Key : localized.Value;
+    }
 
     private async Task HandleLogoutAsync()
     {

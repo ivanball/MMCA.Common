@@ -12,7 +12,7 @@
            StartIcon="@Icons.Material.Filled.Send"
            OnClick="NavigateToSend"
            Class="mb-4">
-    Send New Notification
+    @L["Notif.List.SendNew"]
 </MudButton>
 
 @if (IsLoading)
@@ -21,7 +21,7 @@
 }
 else if (_notifications.Count == 0)
 {
-    <MudAlert Severity="Severity.Info" Class="mb-4">No notifications have been sent yet.</MudAlert>
+    <MudAlert Severity="Severity.Info" Class="mb-4">@L["Notif.List.Empty"]</MudAlert>
 }
 else
 {
@@ -31,29 +31,31 @@ else
               Hover="true"
               Elevation="1">
         <HeaderContent>
-            <MudTh>Title</MudTh>
-            <MudTh>Recipients</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Sent</MudTh>
+            <MudTh>@L["Notif.List.Col.Title"]</MudTh>
+            <MudTh>@L["Notif.List.Col.Recipients"]</MudTh>
+            <MudTh>@L["Notif.List.Col.Status"]</MudTh>
+            <MudTh>@L["Notif.List.Col.Sent"]</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Title">@context.Title</MudTd>
-            <MudTd DataLabel="Recipients">@context.RecipientCount</MudTd>
-            <MudTd DataLabel="Status">
+            <MudTd DataLabel="@L["Notif.List.Col.Title"]">@context.Title</MudTd>
+            <MudTd DataLabel="@L["Notif.List.Col.Recipients"]">@context.RecipientCount</MudTd>
+            <MudTd DataLabel="@L["Notif.List.Col.Status"]">
+                @* Status comparisons stay on the wire value; only the display text localizes
+                   (Notif.Status.* keys, raw value as fallback for unknown statuses). *@
                 @if (context.Status == "Sent")
                 {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
                 }
                 else if (context.Status == "Failed")
                 {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
                 }
                 else
                 {
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
                 }
             </MudTd>
-            <MudTd DataLabel="Sent">@context.CreatedOn.ToString("g")</MudTd>
+            <MudTd DataLabel="@L["Notif.List.Col.Sent"]">@context.CreatedOn.ToString("g")</MudTd>
         </RowTemplate>
         <PagerContent>
             <MudTablePager />

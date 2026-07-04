@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using MMCA.Common.Shared.Globalization;
 using MMCA.Common.UI;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Gallery.Components;
@@ -77,6 +78,17 @@ public static class GalleryHost
         builder.Services.AddUIShared(builder.Configuration);
 
         var app = builder.Build();
+
+        // Request localization mirrors the real hosts' allowlist (ADR-027) and additionally enables the
+        // qps-Ploc pseudo-locale UNCONDITIONALLY: this host is unpackaged test infrastructure (never
+        // deployed), and the pseudo pass here is a required CI gate (PseudoLocalizationE2ETests, the
+        // rubric §27 resource-round-trip + text-expansion evidence). Do not copy this into a real host;
+        // production keeps qps-Ploc Development-only via UseCommonRequestLocalization.
+        string[] galleryCultures = [.. SupportedCultures.All, SupportedCultures.PseudoLocale];
+        app.UseRequestLocalization(options => options
+            .SetDefaultCulture(SupportedCultures.Default)
+            .AddSupportedCultures(galleryCultures)
+            .AddSupportedUICultures(galleryCultures));
 
         // Razor Component endpoints carry anti-forgery metadata — the middleware must be present even
         // though the gallery's interactive forms never POST over HTTP.

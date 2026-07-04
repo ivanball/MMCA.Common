@@ -1,17 +1,25 @@
-<MudMessageBox @ref="_messageBox" CancelText="Cancel">
+@inject IStringLocalizer<SharedResource> L
+
+<MudMessageBox @ref="_messageBox" CancelText="@L["Common.Button.Cancel"]">
     <TitleContent>
-        <MudText Typo="Typo.h6">Delete @EntityType</MudText>
+        <MudText Typo="Typo.h6">@L["Delete.Title", DisplayEntityType]</MudText>
     </TitleContent>
     <MessageContent>
-        Are you sure you want to delete @(EntityType.ToLowerInvariant()) "@_entityName"?
+        @L["Delete.Message", DisplayEntityType.ToLower(System.Globalization.CultureInfo.CurrentUICulture), _entityName ?? string.Empty]
     </MessageContent>
     <YesButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" data-testid="confirm-delete">Delete</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" data-testid="confirm-delete">@L["Delete.Confirm"]</MudButton>
     </YesButton>
 </MudMessageBox>
 
 @code {
-    [Parameter] public string EntityType { get; set; } = "Item";
+    /// <summary>
+    /// Display name of the entity being deleted. Pass a LOCALIZED noun (e.g. <c>L["EntityName"]</c> from
+    /// the page's own resources, ADR-027); defaults to the localized generic "item".
+    /// </summary>
+    [Parameter] public string? EntityType { get; set; }
+
+    private string DisplayEntityType => EntityType ?? L["Delete.Entity.Item"];
 
     private string? _entityName;
     private MudMessageBox _messageBox = null!;

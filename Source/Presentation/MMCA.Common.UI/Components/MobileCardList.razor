@@ -41,7 +41,8 @@ else
     [Parameter, EditorRequired] public RenderFragment<TItem> CardTemplate { get; set; } = default!;
     [Parameter] public EventCallback<int> OnPageChanged { get; set; }
     [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
-    [Parameter] public string EmptyMessage { get; set; } = "No records found.";
+    /// <summary>Empty-state text; when null, <see cref="EmptyState"/> shows its localized default (ADR-027).</summary>
+    [Parameter] public string? EmptyMessage { get; set; }
     [Parameter] public string EmptyIcon { get; set; } = Icons.Material.Outlined.SearchOff;
 
     private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)TotalItems / PageSize));

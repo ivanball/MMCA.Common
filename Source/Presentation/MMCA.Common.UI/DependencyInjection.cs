@@ -45,6 +45,12 @@ public static class DependencyInjection
             // localization + the culture switcher add it there only).
             services.Decorate<IStringLocalizerFactory, PseudoStringLocalizerFactory>();
 
+            // MudBlazor built-in component text (pager, filter menus, pickers, close buttons) follows
+            // the active culture via the MudTranslations resource pair (ADR-027). AddMudServices does
+            // not register a MudLocalizer of its own (guarded by a DI resolution test), so TryAdd is
+            // authoritative regardless of host registration order.
+            services.TryAddTransient<MudBlazor.MudLocalizer, ResxMudLocalizer>();
+
             // Auth handler injects Bearer token into every outgoing API request; culture handler forwards
             // the active UI culture as Accept-Language so the API localizes error messages to match.
             services.AddTransient<AuthDelegatingHandler>();

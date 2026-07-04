@@ -3,6 +3,7 @@
 @inject NotificationState State
 @inject INotificationInboxUIService InboxService
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<SharedResource> L
 @implements IDisposable
 
 <MudBadge Content="@State.UnreadCount"
@@ -12,7 +13,7 @@
           Class="mr-2">
     <MudIconButton Icon="@Icons.Material.Filled.Notifications"
                    Color="Color.Inherit"
-                   aria-label="Notification inbox"
+                   aria-label="@L["Notif.Bell.Aria"]"
                    OnClick="NavigateToInbox" />
 </MudBadge>
 

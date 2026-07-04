@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> L
 
 @if (_isInitialLoad)
 {
@@ -39,8 +40,8 @@ else
     @if (_loadError && _hasMore)
     {
         <div class="d-flex flex-column align-center pa-4 gap-2">
-            <MudText Typo="Typo.body2" Color="Color.Error">Failed to load more items.</MudText>
-            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">Retry</MudButton>
+            <MudText Typo="Typo.body2" Color="Color.Error">@L["Grid.LoadMoreFailed"]</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">@L["Common.Button.Retry"]</MudButton>
         </div>
     }
 }
@@ -50,7 +51,8 @@ else
     [Parameter, EditorRequired] public Func<int, int, CancellationToken, Task<(IReadOnlyList<TItem> Items, int TotalItems)>> FetchPage { get; set; } = default!;
     [Parameter] public int PageSize { get; set; } = 10;
     [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
-    [Parameter] public string EmptyMessage { get; set; } = "No records found.";
+    /// <summary>Empty-state text; when null, <see cref="EmptyState"/> shows its localized default (ADR-027).</summary>
+    [Parameter] public string? EmptyMessage { get; set; }
     [Parameter] public string EmptyIcon { get; set; } = Icons.Material.Outlined.SearchOff;
 
     /// <summary>
@@ -170,14 +172,16 @@ else
         {
             _currentPage--;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _currentPage--;
             _loadError = true;
 
             if (isInitial)
             {
-                Snackbar.Add($"Failed to load data: {ex.Message}", Severity.Error);
+                // Localized, sanitized message: raw exception text is neither translatable nor safe to
+                // surface (ADR-027 / rubric §24).
+                Snackbar.Add(L["Grid.Snackbar.LoadFailed"], Severity.Error);
             }
         }
         finally

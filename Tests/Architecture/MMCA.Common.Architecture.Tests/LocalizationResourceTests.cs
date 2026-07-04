@@ -15,4 +15,8 @@ public sealed class LocalizationResourceTests : LocalizationResourceTestsBase
         SupportedCultures.All
             .Where(c => !string.Equals(c, SupportedCultures.Default, StringComparison.Ordinal))
             .ToList();
+
+    // Non-vacuous floor: ErrorResources (API), SharedResource + MudTranslations (UI). A wrong scan
+    // root or repo re-layout can no longer let the gate pass having checked nothing.
+    protected override int MinimumBaseResources => 3;
 }

@@ -1,11 +1,11 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 93.5% / Implementation 84.0%**, framework v1.99.0; the 2026-07-02 re-score closed §12 Performance & Scalability to Maturity 4 on the build-gating `performance-smoke` CI job, moved the §31 FinOps cap to the *Deliberate / accepted* section below, and recalibrated §14/§19/§26/§34 Implementation down one band while holding their Maturity 4).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 94.1% / Implementation 83.6%**, framework v1.101.0; the 2026-07-03 fourteenth-wave re-score at a clean tree lifted §24 Forms/Validation to Maturity 4 on the CI-gated auth-form tests, recalibrated §14 Testability Implementation 9→8 for rubric-band consistency, declined four further proposed downgrades after adversarial review (§7/§9/§13 hold at Implementation 9; §25/§34 unchanged), and confirmed the recurring §34 uncommitted-docs caveat closed).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
 
-**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **24 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 26, 28, 29, 32, 34); the open work is the **10 categories still below Maturity 4**. Ranked by two-axis priority = (4 − maturity) × weight: **#31** FinOps (Maturity 2, weight 2, computed priority 4) is the highest weighted gap but a documented accepted cap (see *Deliberate / accepted* below), not scheduled work; then the weight-2 Maturity-3 pack at **priority 2** (#9, #17, #22, #23, #24, #25, #30, #33); then **#27** i18n at **priority 1** (weight 1, the lowest gap).
+**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **26 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 24, 26, 27, 28, 29, 32, 34; **#27 joined 2026-07-03** on the fifteenth-wave i18n completion train, M4/I9); the open work is the **8 categories still below Maturity 4**. Ranked by two-axis priority = (4 − maturity) × weight: **#31** FinOps (Maturity 2, weight 2, computed priority 4) is the highest weighted gap but a documented accepted cap (see *Deliberate / accepted* below), not scheduled work; then the weight-2 Maturity-3 pack at **priority 2** (#9, #17, #22, #23, #25, #30, #33).
 
 > **Two fixes each clear multiple items — do them once:**
 > - **MassTransit v8 guard** closes the medium red flags in **#32** *and* **#16**.
@@ -345,9 +345,11 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   runs 39); the stale §16/§34 ADR-count and Top-strength fitness/test counts were corrected.
 
 **Open follow-up surfaced this wave (governance hygiene, not a score-mover):**
-- [ ] **#34 — commit the ADR 033/034 docs pass.** The tree is dirty (ADRs 033/034 added; ADRs 015/026/030 +
-  `ADRs/README.md` + `FACTS.md` modified) while the scorecard/backlog now reference 001-034 — the recurring
-  per-cycle traceability nit, resolves on commit. *(§34, effort S; #34 holds M4/I9.)*
+- [x] **#34: commit the ADR 033/034 docs pass.** The tree is dirty (ADRs 033/034 added; ADRs 015/026/030 +
+  `ADRs/README.md` + `FACTS.md` modified) while the scorecard/backlog now reference 001-034, the recurring
+  per-cycle traceability nit, resolves on commit. *(§34, effort S; #34 holds M4/I9.)* **RESOLVED 2026-07-03
+  (fourteenth wave):** the working tree is clean at v1.101.0 (HEAD `5e55be2`), ADRs through 036 are committed,
+  and `FACTS.md` matches the tag.
 
 ## Progress — twelfth wave (under-8 Implementation lift, v1.94.0 pending, 2026-06-30)
 
@@ -363,7 +365,7 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   data-grid pager), enforced by a phone-viewport Playwright bounding-box test (passes locally, 13/13 UI E2E);
   (c) a **`RESPONSIVE.md`** device/breakpoint/browser matrix is documented (closing the "matrix implicit" note),
   referenced from `CLAUDE.md`. *Maturity held at 3: firefox/webkit still advisory (chromium-only blocking gate).*
-- [x] **#27 · Internationalization — Implementation 7→8.** A real **pseudo-localization pass** ships:
+- [x] **#27 · Internationalization · Implementation 7→8.** A real **pseudo-localization pass** ships:
   `PseudoLocalizer.Transform` (accents every letter, ~40% padding, bracket sentinel, preserves `{0}`
   placeholders) applied by a `PseudoStringLocalizer`/`PseudoStringLocalizerFactory` decorator over
   `IStringLocalizerFactory` (registered in `AddUIShared`, inert unless the pseudo culture is active),
@@ -372,6 +374,21 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   `All` so the translation-completeness gate is unaffected. Unit-tested in `PseudoLocalizationTests`. Closes
   the pseudo-localization gap the prior 7 named. *Maturity held at 3: only two locales ship and the pseudo
   pass is a dev diagnostic, not a CI gate.*
+- [x] **#27 · Internationalization · Maturity 3→4 + Implementation 8→9 (fifteenth wave, 2026-07-03, i18n
+  completion train; ADR-027 Decision 9).** Both remaining holds are closed with CI-enforced evidence:
+  (a) the pseudo pass is now a REQUIRED CI gate (`PseudoLocalizationE2ETests` in the blocking chromium
+  `ui-e2e` job: `[!!` sentinel round-trip + no horizontal overflow under ~40% expansion on `/login`,
+  `/register`, `/components`, plus an `en-US` leak guard; the gallery host enables `qps-Ploc`
+  unconditionally as unpackaged test infrastructure); (b) a second fitness gate
+  (`LocalizedTextConventionTests`, subclassing the new shared `LocalizedTextConventionTestsBase`) fails
+  the build on hard-coded snackbar/title/`<PageTitle>`/breadcrumb/`NavItem` literals. Implementation 9:
+  MudBlazor chrome localized (`ResxMudLocalizer` + `MudTranslations.{resx,es.resx}`, all 145 built-in
+  keys en+es, DI-resolution-tested); the framework's own chrome fully externalized (`SharedResource` 22→136
+  keys: NavMenu, auth pages, error/empty/loading states, ReconnectModal, notification pages, UI.Web SSR
+  Error page); `ErrorMessages.Success` fragment concatenation `[Obsolete]` (whole-sentence page keys);
+  `Common.Error.*` no longer surfaces raw `ex.Message`; `NavItem.TitleResource` culture-aware nav;
+  `LocalizationResourceTests` non-vacuous floor (`MinimumBaseResources = 3`). *Held below 10: two
+  locales, no RTL. §27 joins the protect set at M4/I9.*
 - [accepted] **#31 · Cost Efficiency / FinOps — Implementation deliberately capped at 7 (not chased).** A
   documented structural acceptance, not an open lever: the two unmet §31 criteria — **right-sizing** and
   **reversible scale-events** — are consumer/IaC execution a NuGet library provisions nothing to perform, and
@@ -382,8 +399,43 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   in-repo one. *(§31 holds M2/I7; see `COST.md` and the §31 scorecard row.)*
 
 **Deferred follow-up (recorded, not done this wave):**
-- [ ] **#22 — promote firefox (then webkit) from advisory to a blocking cross-browser gate** once observed
+- [ ] **#22: promote firefox (then webkit) from advisory to a blocking cross-browser gate** once observed
   reliably green, to lift §22 Maturity 3→4. *(`ci.yml:89`; effort S, gated on a green streak.)*
+
+---
+
+## Progress - fourteenth wave (clean-tree evidence re-score at v1.101.0, 2026-07-03)
+
+> A full 34-category, two-pass evidence re-score (per-category scorer plus adversarial verifier) at framework
+> **v1.101.0** (HEAD `5e55be2`, working tree **clean**: the recurring uncommitted-docs caveat is closed).
+> **Two scores moved.** Canonical scoring is now **Maturity 94.1% (305/324) / Implementation 83.6% (677/810)**
+> per the in-repo [`ArchitectureScorecard.md`](ArchitectureScorecard.md) (was 93.5% / 84.0%). Four further
+> first-pass downgrade proposals were not applied: §25 (I8 to 7) and §34 (M4/I8 to M3/I7) were refuted by the
+> adversarial verifier, and §7/§9/§13 (each I9 to 8, band recalibrations) were declined on review (kept at I9);
+> those rows received evidence corrections only.
+
+- ✅ **#24 · Forms, Validation & UX Safety: Maturity 3→4 (CLOSED, moved to the level-4 protect list).** The
+  shared auth-form convention is enforced automatically in the CI-gated `.slnx` unit tier:
+  `Tests/Presentation/MMCA.Common.UI.Tests/Pages/Auth/AuthModelValidationTests.cs` (8 facts:
+  required/email/complexity/password-match) plus `RegisterFormTests.cs` (the per-field `ValidationMessage`
+  renders on an empty submit and the auth service is never invoked), meeting the rubric M4 "enforced
+  automatically by tests/CI" bar, consistent with §19's M4 on the same CI-gated guard tests. *Caveat recorded:
+  the shared `FormsConventionTestsBase` (`Testing.Architecture/Bases/FormsConventionTestsBase.cs:41,51`) is
+  consumer-scoped (it enumerates create forms under `Source/Modules`, absent in Common, and no Common subclass
+  exists), so the in-repo M4 rests on the bUnit/model tests, not that fitness base.*
+- 🔻 **#14 · Testability: Implementation 9→8 (band recalibration, no work regressed).** The row's own stated
+  reasoning (a modest 53% gated coverage floor, no mutation testing) describes the rubric's Strong band (7-8)
+  while 9 sits in Exemplary, so 8 is the internally-consistent value. Maturity holds at 4. Path back to 9:
+  ratchet the coverage floor upward and add mutation testing on the Core tier.
+- ✅ **#34 follow-up (commit the ADR 033/034 docs pass) RESOLVED.** Clean tree at v1.101.0 (HEAD `5e55be2`);
+  ADRs through 036 committed, `FACTS.md` matches the tag. Ticked in the eleventh-wave section above.
+- ◐ **Evidence-cell corrections, scores unchanged:** §7 (the extraction rule body lives in the shared
+  `Testing.Architecture` package: `ArchitectureRules.Transport.cs:19` plus `Bases/MicroserviceExtractionTestsBase.cs:13`,
+  subclassed at `MicroserviceExtractionTests.cs:10`); §9 (`Scalar.AspNetCore` is 2.16.7 at
+  `Directory.Packages.props:24`, not 2.16.6 at `:17`); §13 (drifted `Aspire/Extensions.cs` anchors re-pointed
+  to `:37/:92/:147-148/:161/:264/:268/:277/:306/:314`, and the stale "warm-up ships without unit tests"
+  hold-reason removed: 9 warm-up tests have existed since the eighth wave, so the hold at I9 rests solely on
+  deployer-owned SLO alerting/dashboards/runbooks).
 
 ---
 
@@ -522,8 +574,8 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 ---
 
 ## ✅ Already at level 4 — protect, don't regress
-#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
-*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 24 categories, see the Scope note at the top.)*
+#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#24 Forms, Validation & UX Safety (maturity 3→4 on the CI-gated auth-form tests, fourteenth wave)** · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
+*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 25 categories, see the Scope note at the top.)*
 
 ## 🔒 Deliberate / accepted (documented caps, not scheduled work)
 ### [accepted] #31 · Cost Efficiency / FinOps: held at Maturity 2 / Implementation 7 by documented acceptance
@@ -533,7 +585,7 @@ Moved out of the active priority queue on 2026-07-02 (user-approved). Its comput
 #21 Accessibility · #22 Responsive · #26 Front-End Security
 *(Assessable mainly in consumer apps; #26 shared surface is covered under #11.)*
 - **#27 i18n, no longer consumer-assessed/N/A.** It is now an active, in-repo scored category (**Maturity 3 / Implementation 8** as of the twelfth wave) after ADR-027 shipped en-US + Spanish in the framework, superseding the single-locale ADR-011. It stays open below Maturity 4 at weight 1 (the lowest-priority open gap), pending more than two shipped locales and promoting the pseudo-localization pass from a Development-only diagnostic to a CI gate; see the ninth/tenth/twelfth-wave progress sections above.
-- **#24 Forms/UX Safety — DONE for the shared surface (eighth wave, impl 7→8):** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored.
+- **#24 Forms/UX Safety: DONE for the shared surface (eighth wave, impl 7→8).** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored. **Maturity reached 4 on the fourteenth-wave re-score** (the CI-gated `AuthModelValidationTests` + `RegisterFormTests` meet the automatic-enforcement bar); the category is closed and on the protect list above.
 - **#25 Navigation — DONE for the shared surface (eighth wave, impl 7→8):** an in-shell `Forbidden` (403) page + `NavigationFlow.md` for the Common UI surface. Per-actor module flows remain consumer-scored.
 
 ---

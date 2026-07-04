@@ -1,8 +1,9 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Pages.Common;
+using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
 
@@ -17,23 +18,29 @@ public partial class NotificationSend : IDisposable
     [Inject] private IPushNotificationUIService NotificationService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
 
-    private static string Title => "Send Push Notification";
+    private string Title => L["Notif.Send.Title"].Value;
 
-    private readonly List<BreadcrumbItem> _breadcrumbs =
-    [
-        new("Home", "/", icon: Icons.Material.Filled.Home),
-        new("Push Notifications", NotificationRoutePaths.Notifications),
-        new("Send", href: null, disabled: true),
-    ];
+    private List<BreadcrumbItem> _breadcrumbs = [];
 
     protected bool IsSaving { get; private set; }
 
-    private string _title = string.Empty;
-    private string _body = string.Empty;
+    // Named to avoid colliding with the localized Title page property (SonarAnalyzer S4275).
+    private string _notificationTitle = string.Empty;
+    private string _notificationBody = string.Empty;
     private MudForm? _form;
+
+    protected override void OnInitialized() =>
+        // Built here (not in a field initializer) so the injected localizer is available (ADR-027).
+        _breadcrumbs =
+        [
+            new(L["Breadcrumb.Home"].Value, "/", icon: Icons.Material.Filled.Home),
+            new(L["Notif.List.Title"].Value, NotificationRoutePaths.Notifications),
+            new(L["Notif.Breadcrumb.Send"].Value, href: null, disabled: true),
+        ];
 
     private async Task SendNotificationAsync()
     {
@@ -50,12 +57,12 @@ public partial class NotificationSend : IDisposable
         IsSaving = true;
         try
         {
-            var request = new SendPushNotificationRequest(_title, _body);
+            var request = new SendPushNotificationRequest(_notificationTitle, _notificationBody);
             PushNotificationDTO? result = await NotificationService.SendAsync(request, _cts.Token);
 
             if (result is not null)
             {
-                Snackbar.Add(string.Create(CultureInfo.InvariantCulture, $"Notification sent to {result.RecipientCount} recipients."), Severity.Success);
+                Snackbar.Add(L["Notif.Send.SentTo", result.RecipientCount], Severity.Success);
                 NavigationManager.NavigateTo(NotificationRoutePaths.Notifications);
             }
         }
@@ -65,7 +72,7 @@ public partial class NotificationSend : IDisposable
         }
         catch (Exception ex)
         {
-            Snackbar.Add(ErrorMessages.SaveError("Notification", ex), Severity.Error);
+            Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notification"], ex), Severity.Error);
         }
         finally
         {

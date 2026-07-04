@@ -5,16 +5,19 @@
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> L
 
-<PageTitle>Create Account</PageTitle>
+<PageTitle>@L["Auth.Register.PageTitle"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="auth-container">
     <div class="d-flex flex-column align-center mb-6">
         <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Large"
                  Color="Color.Primary" Class="mb-2" />
-        <MudText Typo="Typo.h4" Align="Align.Center">Create Account</MudText>
+        <MudText Typo="Typo.h4" Align="Align.Center">@L["Auth.Register.Title"]</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-            Join the Atlanta Cloud + AI Conference community
+            @* Generic subtitle (ADR-027): the previous literal was ADC-conference copy leaking into
+               every consumer of this shared page. *@
+            @L["Auth.Register.Subtitle"]
         </MudText>
     </div>
 
@@ -28,19 +31,19 @@
                 }
                 <MudGrid Spacing="3">
                     <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.FirstName" For="@(() => _model.FirstName)" Label="First Name"
+                        <MudTextField @bind-Value="_model.FirstName" For="@(() => _model.FirstName)" Label="@L["Auth.Field.FirstName"]"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       autocomplete="given-name" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.LastName" For="@(() => _model.LastName)" Label="Last Name"
+                        <MudTextField @bind-Value="_model.LastName" For="@(() => _model.LastName)" Label="@L["Auth.Field.LastName"]"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       autocomplete="family-name" />
                     </MudItem>
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="Email" InputType="InputType.Email"
+                        <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Email"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       Adornment="Adornment.Start"
@@ -48,14 +51,14 @@
                                       autocomplete="email" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="Password" InputType="InputType.Password"
+                        <MudTextField @bind-Value="_model.Password" For="@(() => _model.Password)" Label="@L["Auth.Field.Password"]" InputType="InputType.Password"
                                       Immediate="true"
-                                      HelperText="Min 8 chars, with uppercase, lowercase, digit, and special character"
+                                      HelperText="@L["Auth.Register.PasswordHelper"]"
                                       Variant="Variant.Outlined"
                                       autocomplete="new-password" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.ConfirmPassword" For="@(() => _model.ConfirmPassword)" Label="Confirm Password" InputType="InputType.Password"
+                        <MudTextField @bind-Value="_model.ConfirmPassword" For="@(() => _model.ConfirmPassword)" Label="@L["Auth.Field.ConfirmPassword"]" InputType="InputType.Password"
                                       Immediate="true"
                                       Variant="Variant.Outlined"
                                       autocomplete="new-password" />
@@ -63,30 +66,30 @@
                 </MudGrid>
 
                 <MudExpansionPanels Class="mt-4" Elevation="0">
-                    <MudExpansionPanel Text="Address (Optional)">
+                    <MudExpansionPanel Text="@L["Auth.Register.AddressOptional"]">
                         <MudGrid Spacing="3">
                             <MudItem xs="12">
-                                <MudTextField @bind-Value="_model.AddressLine1" Label="Address Line 1"
+                                <MudTextField @bind-Value="_model.AddressLine1" Label="@L["Auth.Field.AddressLine1"]"
                                               Variant="Variant.Outlined" autocomplete="address-line1" />
                             </MudItem>
                             <MudItem xs="12">
-                                <MudTextField @bind-Value="_model.AddressLine2" Label="Address Line 2"
+                                <MudTextField @bind-Value="_model.AddressLine2" Label="@L["Auth.Field.AddressLine2"]"
                                               Variant="Variant.Outlined" autocomplete="address-line2" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.City" Label="City"
+                                <MudTextField @bind-Value="_model.City" Label="@L["Auth.Field.City"]"
                                               Variant="Variant.Outlined" autocomplete="address-level2" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.State" Label="State"
+                                <MudTextField @bind-Value="_model.State" Label="@L["Auth.Field.State"]"
                                               Variant="Variant.Outlined" autocomplete="address-level1" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.ZipCode" Label="Zip Code"
+                                <MudTextField @bind-Value="_model.ZipCode" Label="@L["Auth.Field.ZipCode"]"
                                               Variant="Variant.Outlined" autocomplete="postal-code" />
                             </MudItem>
                             <MudItem xs="12" sm="6">
-                                <MudTextField @bind-Value="_model.Country" Label="Country"
+                                <MudTextField @bind-Value="_model.Country" Label="@L["Auth.Field.Country"]"
                                               Variant="Variant.Outlined" autocomplete="country-name" />
                             </MudItem>
                         </MudGrid>
@@ -96,18 +99,18 @@
             <MudCardActions Class="d-flex flex-column pa-6 pt-2" Style="gap: 0.75rem;">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                            Disabled="@_isLoading" ButtonType="ButtonType.Submit" Size="Size.Large"
-                           aria-label="Create your account">
+                           aria-label="@L["Auth.Register.CreateAccount.Aria"]">
                     @if (_isLoading)
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    Create Account
+                    @L["Auth.Register.CreateAccount"]
                 </MudButton>
                 <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
-                    Already have an account?
+                    @L["Auth.Register.AlreadyHaveAccount"]
                     @* Underline.Always: an in-text link must be distinguishable without relying on colour
                        alone (WCAG 2.1 AA / axe link-in-text-block). *@
-                    <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">Sign In</MudLink>
+                    <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.SignIn"]</MudLink>
                 </MudText>
             </MudCardActions>
         </EditForm>
@@ -146,12 +149,12 @@
             }
             else
             {
-                _errorMessage = AuthService.LastError ?? "Registration failed. Please try again.";
+                _errorMessage = AuthService.LastError ?? L["Auth.Register.Failed"];
             }
         }
         catch
         {
-            _errorMessage = "An error occurred during registration. Please try again.";
+            _errorMessage = L["Auth.Register.GenericError"];
         }
         finally
         {

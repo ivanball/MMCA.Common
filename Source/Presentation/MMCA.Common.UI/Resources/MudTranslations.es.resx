@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MudDataGrid_SelectRow" xml:space="preserve">
+    <value>Seleccionar fila</value>
+  </data>
+  <data name="MudCarousel_Index" xml:space="preserve">
+    <value>Índice {0}</value>
+  </data>
+  <data name="MudDataGridPager_LastPage" xml:space="preserve">
+    <value>Última página</value>
+  </data>
+  <data name="MudDataGridPager_PreviousPage" xml:space="preserve">
+    <value>Página anterior</value>
+  </data>
+  <data name="MudDataGrid_ExpandAllGroups" xml:space="preserve">
+    <value>Expandir todos los grupos</value>
+  </data>
+  <data name="MudAlert_Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="MudStepper_Skip" xml:space="preserve">
+    <value>Omitir</value>
+  </data>
+  <data name="MudDataGridPager_NextPage" xml:space="preserve">
+    <value>Página siguiente</value>
+  </data>
+  <data name="MudDataGrid_IsEmpty" xml:space="preserve">
+    <value>está vacío</value>
+  </data>
+  <data name="Converter_ConversionFailed" xml:space="preserve">
+    <value>La conversión de {0} a {1} falló: {2}</value>
+  </data>
+  <data name="MudDataGrid_OpenFilters" xml:space="preserve">
+    <value>Abrir filtros</value>
+  </data>
+  <data name="MudTablePager_LastPage" xml:space="preserve">
+    <value>Última página</value>
+  </data>
+  <data name="MudDataGrid_RefreshData" xml:space="preserve">
+    <value>Actualizar datos</value>
+  </data>
+  <data name="MudDataGrid_Sort" xml:space="preserve">
+    <value>Ordenar</value>
+  </data>
+  <data name="MudDataGrid_Columns" xml:space="preserve">
+    <value>Columnas</value>
+  </data>
+  <data name="MudDataGrid_IsNotEmpty" xml:space="preserve">
+    <value>no está vacío</value>
+  </data>
+  <data name="MudDataGridPager_RowsPerPage" xml:space="preserve">
+    <value>Filas por página:</value>
+  </data>
+  <data name="MudDataGrid_GreaterThanSign" xml:space="preserve">
+    <value>&gt;</value>
+  </data>
+  <data name="Converter_InvalidDateTime" xml:space="preserve">
+    <value>No es una fecha y hora válida</value>
+  </data>
+  <data name="MudDataGrid_IsOnOrBefore" xml:space="preserve">
+    <value>es igual o anterior a</value>
+  </data>
+  <data name="MudTreeView_CollapseItem" xml:space="preserve">
+    <value>Contraer</value>
+  </data>
+  <data name="MudPagination_CurrentPage" xml:space="preserve">
+    <value>Página actual {0}</value>
+  </data>
+  <data name="MudTabs_ScrollLeft" xml:space="preserve">
+    <value>Desplazar pestañas a la izquierda</value>
+  </data>
+  <data name="MudExitPrompt_Exit" xml:space="preserve">
+    <value>Aceptar</value>
+  </data>
+  <data name="MudDataGrid_Filter" xml:space="preserve">
+    <value>Filtro</value>
+  </data>
+  <data name="MudTabs_ScrollUp" xml:space="preserve">
+    <value>Desplazar pestañas hacia arriba</value>
+  </data>
+  <data name="MudPageContentNavigation_NavMenu" xml:space="preserve">
+    <value>Contenido</value>
+  </data>
+  <data name="MudDataGrid_ExpandGroup" xml:space="preserve">
+    <value>Expandir grupo</value>
+  </data>
+  <data name="MudDataGrid_Contains" xml:space="preserve">
+    <value>contiene</value>
+  </data>
+  <data name="MudDataGrid_Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="MudDataGrid_LessThanSign" xml:space="preserve">
+    <value>&lt;</value>
+  </data>
+  <data name="MudColorPicker_SpectrumView" xml:space="preserve">
+    <value>Espectro</value>
+  </data>
+  <data name="MudFileUpload_DragAndDrop" xml:space="preserve">
+    <value>Arrastre archivos aquí o haga clic para examinar</value>
+  </data>
+  <data name="MudDataGrid_NotEquals" xml:space="preserve">
+    <value>no es igual a</value>
+  </data>
+  <data name="MudTabs_ScrollDown" xml:space="preserve">
+    <value>Desplazar pestañas hacia abajo</value>
+  </data>
+  <data name="MudColorPicker_PaletteView" xml:space="preserve">
+    <value>Paleta</value>
+  </data>
+  <data name="MudColorPicker_GridView" xml:space="preserve">
+    <value>Cuadrícula</value>
+  </data>
+  <data name="MudDataGrid_LessThanOrEqualSign" xml:space="preserve">
+    <value>&lt;=</value>
+  </data>
+  <data name="MudPagination_NextPage" xml:space="preserve">
+    <value>Página siguiente</value>
+  </data>
+  <data name="MudDataGrid_IsAfter" xml:space="preserve">
+    <value>es posterior a</value>
+  </data>
+  <data name="MudDateRangePicker_End" xml:space="preserve">
+    <value>Fecha de fin</value>
+  </data>
+  <data name="MudDataGrid_CollapseGroup" xml:space="preserve">
+    <value>Contraer grupo</value>
+  </data>
+  <data name="MudStepper_Previous" xml:space="preserve">
+    <value>Anterior</value>
+  </data>
+  <data name="MudDataGrid_Column" xml:space="preserve">
+    <value>Columna</value>
+  </data>
+  <data name="MudTablePager_PreviousPage" xml:space="preserve">
+    <value>Página anterior</value>
+  </data>
+  <data name="MudBaseDatePicker_NextMonth" xml:space="preserve">
+    <value>Mes siguiente {0}</value>
+  </data>
+  <data name="MudPagination_LastPage" xml:space="preserve">
+    <value>Última página</value>
+  </data>
+  <data name="MudDataGrid_NotContains" xml:space="preserve">
+    <value>no contiene</value>
+  </data>
+  <data name="Converter_InvalidGUID" xml:space="preserve">
+    <value>No es un GUID válido</value>
+  </data>
+  <data name="MudDataGrid_False" xml:space="preserve">
+    <value>falso</value>
+  </data>
+  <data name="MudDataGrid_Apply" xml:space="preserve">
+    <value>Aplicar</value>
+  </data>
+  <data name="MudDataGrid_Clear" xml:space="preserve">
+    <value>Borrar</value>
+  </data>
+  <data name="MudTable_CollapseGroup" xml:space="preserve">
+    <value>Contraer grupo</value>
+  </data>
+  <data name="MudTimePicker_Open" xml:space="preserve">
+    <value>Abrir</value>
+  </data>
+  <data name="MudDataGrid_Value" xml:space="preserve">
+    <value>Valor</value>
+  </data>
+  <data name="MudInput_Increment" xml:space="preserve">
+    <value>Aumentar</value>
+  </data>
+  <data name="MudDataGrid_Group" xml:space="preserve">
+    <value>Agrupar</value>
+  </data>
+  <data name="MudExitPrompt_Text" xml:space="preserve">
+    <value>¿Salir del sitio? Es posible que los cambios no se guarden.</value>
+  </data>
+  <data name="MudBaseDatePicker_PrevMonth" xml:space="preserve">
+    <value>Mes anterior {0}</value>
+  </data>
+  <data name="MudDataGrid_ToggleGroupExpansion" xml:space="preserve">
+    <value>Alternar grupo</value>
+  </data>
+  <data name="MudBaseDatePicker_Open" xml:space="preserve">
+    <value>Abrir</value>
+  </data>
+  <data name="MudDataGrid_GreaterThanOrEqualSign" xml:space="preserve">
+    <value>&gt;=</value>
+  </data>
+  <data name="MudDataGrid_Equals" xml:space="preserve">
+    <value>es igual a</value>
+  </data>
+  <data name="MudStepper_Next" xml:space="preserve">
+    <value>Siguiente</value>
+  </data>
+  <data name="MudDialog_Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="MudDataGrid_MoveUp" xml:space="preserve">
+    <value>Mover hacia arriba</value>
+  </data>
+  <data name="MudTabs_CloseTab" xml:space="preserve">
+    <value>Cerrar pestaña</value>
+  </data>
+  <data name="Converter_InvalidTimeSpan" xml:space="preserve">
+    <value>No es un intervalo de tiempo válido</value>
+  </data>
+  <data name="MudInput_Decrement" xml:space="preserve">
+    <value>Disminuir</value>
+  </data>
+  <data name="MudDataGrid_ClearFilter" xml:space="preserve">
+    <value>Borrar filtro</value>
+  </data>
+  <data name="MudDataGrid_Is" xml:space="preserve">
+    <value>es</value>
+  </data>
+  <data name="MudCarousel_Previous" xml:space="preserve">
+    <value>Anterior</value>
+  </data>
+  <data name="MudTable_Loading" xml:space="preserve">
+    <value>Cargando...</value>
+  </data>
+  <data name="MudBaseDatePicker_NextYear" xml:space="preserve">
+    <value>Año siguiente {0}</value>
+  </data>
+  <data name="Converter_InvalidType" xml:space="preserve">
+    <value>No es un {0} válido</value>
+  </data>
+  <data name="MudDataGrid_IsBefore" xml:space="preserve">
+    <value>es anterior a</value>
+  </data>
+  <data name="MudFileUpload_Button" xml:space="preserve">
+    <value>Examinar archivos</value>
+  </data>
+  <data name="MudDataGrid_Operator" xml:space="preserve">
+    <value>Operador</value>
+  </data>
+  <data name="MudBaseDatePicker_PrevYear" xml:space="preserve">
+    <value>Año anterior {0}</value>
+  </data>
+  <data name="MudDataGrid_SelectAllRows" xml:space="preserve">
+    <value>Seleccionar todas las filas</value>
+  </data>
+  <data name="HeatMap_Less" xml:space="preserve">
+    <value>Menos</value>
+  </data>
+  <data name="MudPagination_PageIndex" xml:space="preserve">
+    <value>Página {0}</value>
+  </data>
+  <data name="MudTablePager_FirstPage" xml:space="preserve">
+    <value>Primera página</value>
+  </data>
+  <data name="MudExitPrompt_Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="MudColorPicker_Open" xml:space="preserve">
+    <value>Abrir</value>
+  </data>
+  <data name="MudDataGrid_CollapseAllGroups" xml:space="preserve">
+    <value>Contraer todos los grupos</value>
+  </data>
+  <data name="MudDataGrid_Unsort" xml:space="preserve">
+    <value>Quitar orden</value>
+  </data>
+  <data name="MudInput_Clear" xml:space="preserve">
+    <value>Borrar</value>
+  </data>
+  <data name="Converter_NotValueOf" xml:space="preserve">
+    <value>No es un valor de {0}</value>
+  </data>
+  <data name="MudDataGridPager_FirstPage" xml:space="preserve">
+    <value>Primera página</value>
+  </data>
+  <data name="MudDateRangePicker_Start" xml:space="preserve">
+    <value>Fecha de inicio</value>
+  </data>
+  <data name="MudDataGrid_Save" xml:space="preserve">
+    <value>Guardar</value>
+  </data>
+  <data name="MudDataGrid_True" xml:space="preserve">
+    <value>verdadero</value>
+  </data>
+  <data name="MudDataGridPager_InfoFormat" xml:space="preserve">
+    <value>{0}-{1} de {2}</value>
+  </data>
+  <data name="Converter_ConversionError" xml:space="preserve">
+    <value>Error de conversión: {0}</value>
+  </data>
+  <data name="MudPagination_PreviousPage" xml:space="preserve">
+    <value>Página anterior</value>
+  </data>
+  <data name="MudColorPicker_HueSlider" xml:space="preserve">
+    <value>Control deslizante de tono</value>
+  </data>
+  <data name="MudStepper_Reset" xml:space="preserve">
+    <value>Restablecer</value>
+  </data>
+  <data name="Converter_InvalidNumber" xml:space="preserve">
+    <value>No es un número válido</value>
+  </data>
+  <data name="MudDataGrid_Ungroup" xml:space="preserve">
+    <value>Desagrupar</value>
+  </data>
+  <data name="MudFileUpload_MaximumFileCountExceeded" xml:space="preserve">
+    <value>Se seleccionaron {0} archivos, lo que supera el máximo de {1}</value>
+  </data>
+  <data name="MudTreeView_ExpandItem" xml:space="preserve">
+    <value>Expandir</value>
+  </data>
+  <data name="MudDataGrid_ShowColumnOptions" xml:space="preserve">
+    <value>Opciones de columna</value>
+  </data>
+  <data name="Converter_UnableToConvert" xml:space="preserve">
+    <value>No se puede convertir a {0} desde el tipo {1}</value>
+  </data>
+  <data name="MudDataGrid_RemoveFilter" xml:space="preserve">
+    <value>Quitar filtro</value>
+  </data>
+  <data name="MudColorPicker_AlphaSlider" xml:space="preserve">
+    <value>Control deslizante alfa</value>
+  </data>
+  <data name="MudChip_Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="MudFileUpload_FileSizeError" xml:space="preserve">
+    <value>El archivo '{0}' supera el tamaño máximo permitido de {1} bytes.</value>
+  </data>
+  <data name="MudStepper_Complete" xml:space="preserve">
+    <value>Completar</value>
+  </data>
+  <data name="MudColorPicker_ShowSwatches" xml:space="preserve">
+    <value>Mostrar muestras</value>
+  </data>
+  <data name="MudDataGrid_IsNot" xml:space="preserve">
+    <value>no es</value>
+  </data>
+  <data name="MudDataGrid_NotEqualSign" xml:space="preserve">
+    <value>!=</value>
+  </data>
+  <data name="MudDataGrid_IsOnOrAfter" xml:space="preserve">
+    <value>es igual o posterior a</value>
+  </data>
+  <data name="MudTable_CancelEditRow" xml:space="preserve">
+    <value>Cancelar edición</value>
+  </data>
+  <data name="MudDataGrid_MoveDown" xml:space="preserve">
+    <value>Mover hacia abajo</value>
+  </data>
+  <data name="Converter_ConversionNotImplemented" xml:space="preserve">
+    <value>Conversión al tipo {0} no implementada</value>
+  </data>
+  <data name="MudDataGrid_HideAll" xml:space="preserve">
+    <value>Ocultar todas</value>
+  </data>
+  <data name="MudDataGrid_AddFilter" xml:space="preserve">
+    <value>Agregar filtro</value>
+  </data>
+  <data name="MudDataGrid_EqualSign" xml:space="preserve">
+    <value>=</value>
+  </data>
+  <data name="MudColorPicker_ModeSwitch" xml:space="preserve">
+    <value>Cambiar modo</value>
+  </data>
+  <data name="MudRangeInput_Start" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="MudColorPicker_Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+  <data name="MudExitPrompt_Title" xml:space="preserve">
+    <value>Confirmar navegación</value>
+  </data>
+  <data name="MudRatingItem_Label" xml:space="preserve">
+    <value>Valoración {0}</value>
+  </data>
+  <data name="HeatMap_More" xml:space="preserve">
+    <value>Más</value>
+  </data>
+  <data name="MudTabs_ScrollRight" xml:space="preserve">
+    <value>Desplazar pestañas a la derecha</value>
+  </data>
+  <data name="MudDataGrid_Loading" xml:space="preserve">
+    <value>Cargando...</value>
+  </data>
+  <data name="MudTable_CommitRow" xml:space="preserve">
+    <value>Confirmar edición</value>
+  </data>
+  <data name="Converter_InvalidBoolean" xml:space="preserve">
+    <value>No es un booleano válido</value>
+  </data>
+  <data name="MudDataGrid_Hide" xml:space="preserve">
+    <value>Ocultar</value>
+  </data>
+  <data name="MudRangeInput_End" xml:space="preserve">
+    <value>Fin</value>
+  </data>
+  <data name="MudTable_ExpandGroup" xml:space="preserve">
+    <value>Expandir grupo</value>
+  </data>
+  <data name="MudDataGrid_FilterValue" xml:space="preserve">
+    <value>Valor del filtro</value>
+  </data>
+  <data name="MudTable_EditRow" xml:space="preserve">
+    <value>Editar fila</value>
+  </data>
+  <data name="MudDataGrid_ShowAll" xml:space="preserve">
+    <value>Mostrar todas</value>
+  </data>
+  <data name="MudDataGridPager_AllItems" xml:space="preserve">
+    <value>Todas</value>
+  </data>
+  <data name="MudNavGroup_ToggleExpand" xml:space="preserve">
+    <value>Alternar {0}</value>
+  </data>
+  <data name="MudTablePager_NextPage" xml:space="preserve">
+    <value>Página siguiente</value>
+  </data>
+  <data name="MudCarousel_Next" xml:space="preserve">
+    <value>Siguiente</value>
+  </data>
+  <data name="MudDataGrid_StartsWith" xml:space="preserve">
+    <value>empieza con</value>
+  </data>
+  <data name="MudColorPicker_HideSwatches" xml:space="preserve">
+    <value>Ocultar muestras</value>
+  </data>
+  <data name="MudDataGrid_EndsWith" xml:space="preserve">
+    <value>termina con</value>
+  </data>
+  <data name="MudPagination_FirstPage" xml:space="preserve">
+    <value>Primera página</value>
+  </data>
+  <data name="MudTabs_AddTab" xml:space="preserve">
+    <value>Agregar pestaña</value>
+  </data>
+  <data name="MudSnackbar_Close" xml:space="preserve">
+    <value>Cerrar</value>
+  </data>
+</root>

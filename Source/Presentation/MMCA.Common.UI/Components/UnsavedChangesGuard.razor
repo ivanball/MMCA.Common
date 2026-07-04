@@ -11,6 +11,7 @@
 *@
 @using Microsoft.AspNetCore.Components.Routing
 @inject IDialogService DialogService
+@inject IStringLocalizer<SharedResource> L
 
 <NavigationLock ConfirmExternalNavigation="@CurrentIsDirty"
                 OnBeforeInternalNavigation="HandleBeforeInternalNavigationAsync" />
@@ -33,17 +34,17 @@
 
     private bool CurrentIsDirty => IsDirtyAccessor?.Invoke() ?? IsDirty;
 
-    /// <summary>Title of the in-app confirmation dialog.</summary>
-    [Parameter] public string Title { get; set; } = "Unsaved changes";
+    /// <summary>Title of the in-app confirmation dialog; defaults to the localized text (ADR-027).</summary>
+    [Parameter] public string? Title { get; set; }
 
-    /// <summary>Body text of the in-app confirmation dialog.</summary>
-    [Parameter] public string Message { get; set; } = "You have unsaved changes. Leave this page anyway?";
+    /// <summary>Body text of the in-app confirmation dialog; defaults to the localized text (ADR-027).</summary>
+    [Parameter] public string? Message { get; set; }
 
-    /// <summary>Label of the primary (leave) button.</summary>
-    [Parameter] public string LeaveButtonText { get; set; } = "Leave";
+    /// <summary>Label of the primary (leave) button; defaults to the localized text (ADR-027).</summary>
+    [Parameter] public string? LeaveButtonText { get; set; }
 
-    /// <summary>Label of the secondary (stay) button.</summary>
-    [Parameter] public string StayButtonText { get; set; } = "Stay";
+    /// <summary>Label of the secondary (stay) button; defaults to the localized text (ADR-027).</summary>
+    [Parameter] public string? StayButtonText { get; set; }
 
     private async Task HandleBeforeInternalNavigationAsync(LocationChangingContext context)
     {
@@ -53,10 +54,10 @@
         }
 
         var confirmed = await DialogService.ShowMessageBoxAsync(
-            Title,
-            Message,
-            yesText: LeaveButtonText,
-            cancelText: StayButtonText);
+            Title ?? L["UnsavedChanges.Title"],
+            Message ?? L["UnsavedChanges.Message"],
+            yesText: LeaveButtonText ?? L["UnsavedChanges.Leave"],
+            cancelText: StayButtonText ?? L["UnsavedChanges.Stay"]);
 
         if (confirmed is not true)
         {

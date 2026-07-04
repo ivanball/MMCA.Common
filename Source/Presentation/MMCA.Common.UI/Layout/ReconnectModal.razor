@@ -1,6 +1,7 @@
 ﻿@* Blazor Server / InteractiveAuto reconnect UX (hoisted from the app hosts, byte-identical there).
    The collocated JS module now ships as a static web asset of this RCL, so the asset key carries the
    _content/{PackageId} prefix. *@
+@inject IStringLocalizer<SharedResource> L
 <script type="module" src="@Assets["_content/MMCA.Common.UI/Layout/ReconnectModal.razor.js"]"></script>
 
 <dialog id="components-reconnect-modal" data-nosnippet>
@@ -10,25 +11,27 @@
             <div></div>
         </div>
         <p class="components-reconnect-first-attempt-visible">
-            Rejoining the server...
+            @L["Reconnect.Rejoining"]
         </p>
         <p class="components-reconnect-repeated-attempt-visible">
-            Rejoin failed... trying again in <span id="components-seconds-to-next-attempt"></span> seconds.
+            @* Split around the countdown span whose content Blazor's reconnect JS writes by id;
+               the two keys are documented as one sentence in the resx (ADR-027). *@
+            @L["Reconnect.RetryPrefix"] <span id="components-seconds-to-next-attempt"></span> @L["Reconnect.RetrySuffix"]
         </p>
         <p class="components-reconnect-failed-visible">
-            Failed to rejoin.<br />Please retry or reload the page.
+            @L["Reconnect.Failed"]<br />@L["Reconnect.FailedAction"]
         </p>
         <button id="components-reconnect-button" class="components-reconnect-failed-visible">
-            Retry
+            @L["Common.Button.Retry"]
         </button>
         <p class="components-pause-visible">
-            The session has been paused by the server.
+            @L["Reconnect.Paused"]
         </p>
         <button id="components-resume-button" class="components-pause-visible">
-            Resume
+            @L["Reconnect.Resume"]
         </button>
         <p class="components-resume-failed-visible">
-            Failed to resume the session.<br />Please reload the page.
+            @L["Reconnect.ResumeFailed"]<br />@L["Reconnect.ResumeFailedAction"]
         </p>
     </div>
 </dialog>

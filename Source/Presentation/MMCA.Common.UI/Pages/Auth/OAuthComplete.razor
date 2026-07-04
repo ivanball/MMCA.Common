@@ -4,8 +4,9 @@
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> L
 
-<PageTitle>Completing sign in...</PageTitle>
+<PageTitle>@L["Auth.OAuth.CompletingSignIn"]</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="auth-container">
     <div class="d-flex flex-column align-center">
@@ -13,13 +14,13 @@
         {
             <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login">
-                Back to Login
+                @L["Auth.OAuth.BackToLogin"]
             </MudButton>
         }
         else
         {
             <MudProgressCircular Indeterminate="true" Size="Size.Large" Color="Color.Primary" />
-            <MudText Typo="Typo.body1" Class="mt-4">Completing sign in...</MudText>
+            <MudText Typo="Typo.body1" Class="mt-4">@L["Auth.OAuth.CompletingSignIn"]</MudText>
         }
     </div>
 </MudContainer>
@@ -46,14 +47,14 @@
 
         if (!string.IsNullOrEmpty(Error))
         {
-            _error = $"Authentication failed: {Error}";
+            _error = L["Auth.OAuth.Failed", Error];
             StateHasChanged();
             return;
         }
 
         if (string.IsNullOrEmpty(Code))
         {
-            _error = "Authentication failed: missing exchange code.";
+            _error = L["Auth.OAuth.MissingCode"];
             StateHasChanged();
             return;
         }
@@ -63,7 +64,7 @@
             var result = await AuthService.ExchangeOAuthCodeAsync(Code);
             if (result is null)
             {
-                _error = AuthService.LastError ?? "Failed to complete sign in. Please try again.";
+                _error = AuthService.LastError ?? L["Auth.OAuth.CompleteFailed"];
                 StateHasChanged();
                 return;
             }
@@ -72,7 +73,7 @@
         }
         catch
         {
-            _error = "Failed to complete sign in. Please try again.";
+            _error = L["Auth.OAuth.CompleteFailed"];
             StateHasChanged();
         }
     }

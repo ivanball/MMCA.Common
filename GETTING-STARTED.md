@@ -712,6 +712,41 @@ ProblemDetails message (e.g. "Comments cannot be added to a closed ticket.") bef
 pages show a meaningful error. `Program.cs` is the standard Razor-components host plus
 `AddServiceDefaults()` / `MapDefaultEndpoints()`.
 
+### Internationalization (ADR-027): every visible string follows the selected language
+
+The framework ships multi-locale i18n (`en-US` + `es`) end to end; adopting it in a new app is five
+mechanical steps, and MMCA.Helpdesk is the worked example for each:
+
+1. **Externalize page strings to co-located `.resx` pairs.** Inject
+   `IStringLocalizer<YourPage> L` and render `@L["Key"]`; put `YourPage.resx` + `YourPage.es.resx`
+   next to the page (see `MMCA.Helpdesk.UI.Web/Components/Pages/Tickets.resx` and its `es` sibling).
+   Snackbar/confirmation text uses whole-sentence keys (`Snackbar.Created` = "Ticket created
+   successfully."); never compose sentences from fragments (the obsoleted
+   `ErrorMessages.Success(entity, action)` shows why: Spanish gender agreement breaks). Always add
+   the `en` and `es` values in the same commit, or the completeness gate below fails the build.
+2. **Wire request localization + the culture switcher.** API-layer hosts get it for free from
+   `UseCommonMiddlewarePipeline()` (which calls `UseCommonRequestLocalization()`) plus
+   `MapCultureEndpoint()`; a UI host that deliberately does not reference `MMCA.Common.API` inlines
+   the same three lines against `SupportedCultures` (see `MMCA.Helpdesk.UI.Web/Program.cs`, which
+   documents the inline variant). Drop the shared `<CultureSwitcher />` (and `<ThemeToggle />`) into
+   the layout; a WASM client also calls `MmcaCultureBootstrap.SetBrowserCultureAsync` before
+   `RunAsync()`.
+3. **Localize backend error text by `Error.Code`.** Register
+   `services.AddErrorResources<YourModuleErrorResources>()` in the host and keep a
+   `YourModuleErrorResources.{resx,es.resx}` pair keyed by the module's `Error.Code` values; the
+   HTTP edge then returns localized ProblemDetails messages while domain code stays culture-agnostic.
+4. **Subclass the two i18n fitness gates** in your architecture-test project (Phase 6):
+   `LocalizationResourceTestsBase` (every base `.resx` must have a complete, non-empty `es` sibling)
+   and `LocalizedTextConventionTestsBase` (no hard-coded snackbar/title/`<PageTitle>`/breadcrumb/
+   `NavItem` literals; mark deliberate literals such as brand names with an `i18n: allow` comment).
+5. **Verify visually with the pseudo-locale.** In Development, pick `qps-Ploc` in the culture
+   switcher: every properly externalized string renders with a `[!!` sentinel and ~40% padding, so a
+   hard-coded literal or a clipped layout is immediately visible without translating anything.
+
+MudBlazor's own component chrome (pager, pickers, filter menus) localizes automatically through the
+framework's `ResxMudLocalizer`; nav menu items localize by giving each `NavItem` a `TitleResource`
+(its `Title`/`Group` then act as resource keys resolved at render time).
+
 ### The Aspire AppHost
 
 `Source/Hosting/MMCA.Helpdesk.AppHost` orchestrates the local stack. For the monolith it is small:

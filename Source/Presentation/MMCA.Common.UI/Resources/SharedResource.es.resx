@@ -80,13 +80,13 @@
     <value>Recargar</value>
   </data>
   <data name="Common.Error.Load" xml:space="preserve">
-    <value>Error al cargar {0}. {1}</value>
+    <value>Error al cargar {0}.</value>
   </data>
   <data name="Common.Error.Save" xml:space="preserve">
-    <value>Error al guardar {0}. {1}</value>
+    <value>Error al guardar {0}.</value>
   </data>
   <data name="Common.Error.Delete" xml:space="preserve">
-    <value>Error al eliminar {0}. {1}</value>
+    <value>Error al eliminar {0}.</value>
   </data>
   <data name="Common.Error.DeleteFailed" xml:space="preserve">
     <value>No se pudo eliminar {0}.</value>
@@ -120,5 +120,350 @@
   </data>
   <data name="Theme.Toggle.ToDark" xml:space="preserve">
     <value>Cambiar a modo oscuro</value>
+  </data>
+  <data name="Auth.Field.FirstName" xml:space="preserve">
+    <value>Nombre</value>
+  </data>
+  <data name="Notif.Send.Sending" xml:space="preserve">
+    <value>Enviando...</value>
+  </data>
+  <data name="Notif.MarkAllRead" xml:space="preserve">
+    <value>Marcar todas como leídas</value>
+  </data>
+  <data name="Delete.Message" xml:space="preserve">
+    <value>¿Está seguro de que desea eliminar {0} "{1}"?</value>
+  </data>
+  <data name="Auth.Register.PageTitle" xml:space="preserve">
+    <value>Crear cuenta</value>
+  </data>
+  <data name="Grid.LoadMoreFailed" xml:space="preserve">
+    <value>No se pudieron cargar más elementos.</value>
+  </data>
+  <data name="Auth.Login.OrContinueWith" xml:space="preserve">
+    <value>O continúe con</value>
+  </data>
+  <data name="Notif.List.Empty" xml:space="preserve">
+    <value>Aún no se ha enviado ninguna notificación.</value>
+  </data>
+  <data name="Auth.Field.City" xml:space="preserve">
+    <value>Ciudad</value>
+  </data>
+  <data name="Nav.Administration" xml:space="preserve">
+    <value>Administración</value>
+  </data>
+  <data name="Page.NotFound.Message" xml:space="preserve">
+    <value>Lo sentimos, la página que busca no existe o se ha movido.</value>
+  </data>
+  <data name="Nav.SiteNavigation.Aria" xml:space="preserve">
+    <value>Navegación del sitio</value>
+  </data>
+  <data name="Nav.BrandHome.Aria" xml:space="preserve">
+    <value>Inicio de {0}</value>
+  </data>
+  <data name="Notif.Send.Description" xml:space="preserve">
+    <value>Esta notificación se enviará a todos los destinatarios en tiempo real.</value>
+  </data>
+  <data name="Auth.Login.SignIn.Aria" xml:space="preserve">
+    <value>Iniciar sesión en su cuenta</value>
+  </data>
+  <data name="Auth.Login.PageTitle" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="Nav.MyAccount" xml:space="preserve">
+    <value>Mi cuenta</value>
+  </data>
+  <data name="Auth.OAuth.Failed" xml:space="preserve">
+    <value>Error de autenticación: {0}</value>
+  </data>
+  <data name="Notif.Inbox.Title" xml:space="preserve">
+    <value>Notificaciones</value>
+  </data>
+  <data name="Common.Button.Retry" xml:space="preserve">
+    <value>Reintentar</value>
+  </data>
+  <data name="Notif.Send.Compose" xml:space="preserve">
+    <value>Redactar notificación</value>
+  </data>
+  <data name="Auth.Login.NoAccount" xml:space="preserve">
+    <value>¿No tiene una cuenta?</value>
+  </data>
+  <data name="Page.Forbidden.Message" xml:space="preserve">
+    <value>Ha iniciado sesión, pero no tiene permiso para ver esta página. Si cree que es un error, contacte con un administrador.</value>
+  </data>
+  <data name="Reconnect.RetrySuffix" xml:space="preserve">
+    <value>segundos.</value>
+  </data>
+  <data name="Notif.Status.Pending" xml:space="preserve">
+    <value>Pendiente</value>
+  </data>
+  <data name="Breadcrumb.Home" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="Common.EmptyState.NoRecords" xml:space="preserve">
+    <value>No se encontraron registros.</value>
+  </data>
+  <data name="Reconnect.ResumeFailed" xml:space="preserve">
+    <value>No se pudo reanudar la sesión.</value>
+  </data>
+  <data name="Page.Home.Configure" xml:space="preserve">
+    <value>Configure una página de inicio registrando una implementación de IHomePageContent.</value>
+  </data>
+  <data name="Auth.Login.CreateAccount" xml:space="preserve">
+    <value>Crear cuenta</value>
+  </data>
+  <data name="Notif.AllMarkedRead" xml:space="preserve">
+    <value>Todas las notificaciones se marcaron como leídas.</value>
+  </data>
+  <data name="UnsavedChanges.Message" xml:space="preserve">
+    <value>Tiene cambios sin guardar. ¿Desea salir de esta página de todos modos?</value>
+  </data>
+  <data name="Auth.Field.State" xml:space="preserve">
+    <value>Estado o provincia</value>
+  </data>
+  <data name="Auth.Field.Country" xml:space="preserve">
+    <value>País</value>
+  </data>
+  <data name="Auth.OAuth.MissingCode" xml:space="preserve">
+    <value>Error de autenticación: falta el código de intercambio.</value>
+  </data>
+  <data name="Delete.Entity.Item" xml:space="preserve">
+    <value>elemento</value>
+  </data>
+  <data name="Notif.Send.Title" xml:space="preserve">
+    <value>Enviar notificación push</value>
+  </data>
+  <data name="Page.BackToHome" xml:space="preserve">
+    <value>Volver al inicio</value>
+  </data>
+  <data name="Auth.Login.SignIn" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="UnsavedChanges.Stay" xml:space="preserve">
+    <value>Quedarse</value>
+  </data>
+  <data name="Auth.Field.ConfirmPassword" xml:space="preserve">
+    <value>Confirmar contraseña</value>
+  </data>
+  <data name="Notif.MarkRead.Aria" xml:space="preserve">
+    <value>Marcar como leída</value>
+  </data>
+  <data name="Auth.Login.WelcomeBack" xml:space="preserve">
+    <value>Bienvenido de nuevo</value>
+  </data>
+  <data name="Notif.Send.Field.Message" xml:space="preserve">
+    <value>Mensaje</value>
+  </data>
+  <data name="Auth.Field.ZipCode" xml:space="preserve">
+    <value>Código postal</value>
+  </data>
+  <data name="Auth.Login.Subtitle" xml:space="preserve">
+    <value>Inicie sesión en su cuenta para continuar</value>
+  </data>
+  <data name="Auth.Field.AddressLine2" xml:space="preserve">
+    <value>Dirección línea 2</value>
+  </data>
+  <data name="Notif.List.Col.Sent" xml:space="preserve">
+    <value>Enviada</value>
+  </data>
+  <data name="Common.Button.Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="UnsavedChanges.Leave" xml:space="preserve">
+    <value>Salir</value>
+  </data>
+  <data name="Reconnect.Rejoining" xml:space="preserve">
+    <value>Reconectando con el servidor...</value>
+  </data>
+  <data name="Notif.Bell.Aria" xml:space="preserve">
+    <value>Bandeja de notificaciones</value>
+  </data>
+  <data name="Notif.List.Col.Recipients" xml:space="preserve">
+    <value>Destinatarios</value>
+  </data>
+  <data name="Page.NotFound.Title" xml:space="preserve">
+    <value>Página no encontrada</value>
+  </data>
+  <data name="Reconnect.RetryPrefix" xml:space="preserve">
+    <value>La reconexión falló... reintentando en</value>
+  </data>
+  <data name="Reconnect.FailedAction" xml:space="preserve">
+    <value>Reintente o recargue la página.</value>
+  </data>
+  <data name="Auth.Register.CreateAccount.Aria" xml:space="preserve">
+    <value>Crear su cuenta</value>
+  </data>
+  <data name="Notif.List.Title" xml:space="preserve">
+    <value>Notificaciones push</value>
+  </data>
+  <data name="Page.Counter.ClickMe" xml:space="preserve">
+    <value>Haga clic</value>
+  </data>
+  <data name="Nav.Home" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="Auth.Register.Subtitle" xml:space="preserve">
+    <value>Cree su cuenta para empezar</value>
+  </data>
+  <data name="Notif.Send.Field.Message.Required" xml:space="preserve">
+    <value>El mensaje es obligatorio.</value>
+  </data>
+  <data name="Auth.OAuth.BackToLogin" xml:space="preserve">
+    <value>Volver a iniciar sesión</value>
+  </data>
+  <data name="Notif.Send.Field.Title" xml:space="preserve">
+    <value>Título</value>
+  </data>
+  <data name="Notif.Send.Field.Title.Required" xml:space="preserve">
+    <value>El título es obligatorio.</value>
+  </data>
+  <data name="Auth.Login.SignInWithGitHub" xml:space="preserve">
+    <value>Iniciar sesión con GitHub</value>
+  </data>
+  <data name="Reconnect.Failed" xml:space="preserve">
+    <value>No se pudo reconectar.</value>
+  </data>
+  <data name="Auth.Register.Title" xml:space="preserve">
+    <value>Crear cuenta</value>
+  </data>
+  <data name="Reconnect.Resume" xml:space="preserve">
+    <value>Reanudar</value>
+  </data>
+  <data name="Reconnect.Paused" xml:space="preserve">
+    <value>El servidor ha pausado la sesión.</value>
+  </data>
+  <data name="Auth.Register.SignIn" xml:space="preserve">
+    <value>Iniciar sesión</value>
+  </data>
+  <data name="Notif.List.Col.Title" xml:space="preserve">
+    <value>Título</value>
+  </data>
+  <data name="Reconnect.ResumeFailedAction" xml:space="preserve">
+    <value>Recargue la página.</value>
+  </data>
+  <data name="Page.Home.Welcome" xml:space="preserve">
+    <value>Bienvenido</value>
+  </data>
+  <data name="Page.Counter.CurrentCount" xml:space="preserve">
+    <value>Recuento actual: {0}</value>
+  </data>
+  <data name="Notif.Breadcrumb.Send" xml:space="preserve">
+    <value>Enviar</value>
+  </data>
+  <data name="Page.Home.PageTitle" xml:space="preserve">
+    <value>Inicio</value>
+  </data>
+  <data name="Auth.OAuth.CompletingSignIn" xml:space="preserve">
+    <value>Completando el inicio de sesión...</value>
+  </data>
+  <data name="Delete.Confirm" xml:space="preserve">
+    <value>Eliminar</value>
+  </data>
+  <data name="Notif.List.SendNew" xml:space="preserve">
+    <value>Enviar nueva notificación</value>
+  </data>
+  <data name="Entity.Notification" xml:space="preserve">
+    <value>la notificación</value>
+  </data>
+  <data name="Page.Counter.Title" xml:space="preserve">
+    <value>Contador</value>
+  </data>
+  <data name="Auth.Register.AddressOptional" xml:space="preserve">
+    <value>Dirección (opcional)</value>
+  </data>
+  <data name="Auth.Register.PasswordHelper" xml:space="preserve">
+    <value>Mínimo 8 caracteres, con mayúscula, minúscula, dígito y carácter especial</value>
+  </data>
+  <data name="Auth.OAuth.CompleteFailed" xml:space="preserve">
+    <value>No se pudo completar el inicio de sesión. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Auth.Login.SignInWithGoogle" xml:space="preserve">
+    <value>Iniciar sesión con Google</value>
+  </data>
+  <data name="Auth.Register.AlreadyHaveAccount" xml:space="preserve">
+    <value>¿Ya tiene una cuenta?</value>
+  </data>
+  <data name="Auth.Field.Email" xml:space="preserve">
+    <value>Correo electrónico</value>
+  </data>
+  <data name="UnsavedChanges.Title" xml:space="preserve">
+    <value>Cambios sin guardar</value>
+  </data>
+  <data name="Notif.Send.SendToAll" xml:space="preserve">
+    <value>Enviar a todos los destinatarios</value>
+  </data>
+  <data name="Auth.Register.CreateAccount" xml:space="preserve">
+    <value>Crear cuenta</value>
+  </data>
+  <data name="Notif.List.Col.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Notif.Status.Failed" xml:space="preserve">
+    <value>Fallida</value>
+  </data>
+  <data name="Loading.Label" xml:space="preserve">
+    <value>Cargando</value>
+  </data>
+  <data name="Auth.Register.Failed" xml:space="preserve">
+    <value>El registro falló. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Auth.Login.GenericError" xml:space="preserve">
+    <value>Se produjo un error al iniciar sesión. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Notif.Status.Sent" xml:space="preserve">
+    <value>Enviada</value>
+  </data>
+  <data name="Common.ErrorState.Generic" xml:space="preserve">
+    <value>Se produjo un error.</value>
+  </data>
+  <data name="Auth.Register.GenericError" xml:space="preserve">
+    <value>Se produjo un error durante el registro. Inténtelo de nuevo.</value>
+  </data>
+  <data name="Auth.Field.LastName" xml:space="preserve">
+    <value>Apellidos</value>
+  </data>
+  <data name="Entity.Notifications" xml:space="preserve">
+    <value>las notificaciones</value>
+  </data>
+  <data name="Page.Forbidden.Title" xml:space="preserve">
+    <value>Acceso denegado</value>
+  </data>
+  <data name="Grid.Snackbar.LoadFailed" xml:space="preserve">
+    <value>No se pudieron cargar los datos.</value>
+  </data>
+  <data name="Auth.Field.AddressLine1" xml:space="preserve">
+    <value>Dirección línea 1</value>
+  </data>
+  <data name="Nav.QuickActions.Aria" xml:space="preserve">
+    <value>Acciones rápidas</value>
+  </data>
+  <data name="Auth.Field.Password" xml:space="preserve">
+    <value>Contraseña</value>
+  </data>
+  <data name="Notif.Inbox.Empty" xml:space="preserve">
+    <value>No tiene notificaciones.</value>
+  </data>
+  <data name="Nav.ToggleMenu.Aria" xml:space="preserve">
+    <value>Alternar el menú de navegación</value>
+  </data>
+  <data name="Notif.Send.SentTo" xml:space="preserve">
+    <value>Notificación enviada a {0} destinatarios.</value>
+  </data>
+  <data name="Delete.Title" xml:space="preserve">
+    <value>Eliminar {0}</value>
+  </data>
+  <data name="Auth.Login.InvalidCredentials" xml:space="preserve">
+    <value>Correo electrónico o contraseña no válidos.</value>
+  </data>
+  <data name="Error.RequestId" xml:space="preserve">
+    <value>Id. de solicitud:</value>
+  </data>
+  <data name="Error.Message" xml:space="preserve">
+    <value>Se produjo un error al procesar su solicitud.</value>
+  </data>
+  <data name="Error.PageTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Error.Heading" xml:space="preserve">
+    <value>Error.</value>
   </data>
 </root>

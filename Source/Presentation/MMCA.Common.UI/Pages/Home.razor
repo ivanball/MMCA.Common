@@ -1,6 +1,7 @@
 @page "/"
 @using MMCA.Common.UI.Common.Interfaces
 @inject IEnumerable<IHomePageContent> HomePageProviders
+@inject IStringLocalizer<SharedResource> L
 
 <PageTitle>@_pageTitle</PageTitle>
 
@@ -12,16 +13,16 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center justify-center" Style="min-height: 60vh;">
         <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Large" Color="Color.Primary" Class="mb-4" />
-        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">Welcome</MudText>
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">@L["Page.Home.Welcome"]</MudText>
         <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
-            Configure a home page by registering an <code>IHomePageContent</code> implementation.
+            @L["Page.Home.Configure"]
         </MudText>
     </MudContainer>
 }
 
 @code {
     private Type? _contentType;
-    private string _pageTitle = "Home";
+    private string? _pageTitle;
 
     protected override void OnInitialized()
     {
@@ -30,6 +31,10 @@ else
         {
             _contentType = provider.ComponentType;
             _pageTitle = provider.PageTitle;
+        }
+        else
+        {
+            _pageTitle = L["Page.Home.PageTitle"];
         }
     }
 }

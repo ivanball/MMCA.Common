@@ -1,7 +1,10 @@
 @page "/Error"
 @using System.Diagnostics
 @using Microsoft.Extensions.Hosting
+@using Microsoft.Extensions.Localization
+@using MMCA.Common.UI.Resources
 @inject IHostEnvironment Environment
+@inject IStringLocalizer<SharedResource> L
 
 @*
     SSR error page rendered by UseExceptionHandler("/Error") re-execution. Hoisted from the app Blazor
@@ -9,17 +12,20 @@
     lives in MMCA.Common.UI.Web rather than the WASM-safe MMCA.Common.UI. Hosts pick it up by adding
     this package's assembly to MapRazorComponents().AddAdditionalAssemblies(...)
     (typeof(MMCA.Common.UI.Web._Imports).Assembly).
+    The user-facing strings localize through SharedResource (ADR-027; request localization has already
+    run when the exception handler re-executes the pipeline); the Development-mode block below is
+    developer-only diagnostics and deliberately stays English.
 *@
 
-<PageTitle>Error</PageTitle>
+<PageTitle>@L["Error.PageTitle"]</PageTitle>
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<h1 class="text-danger">@L["Error.Heading"]</h1>
+<h2 class="text-danger">@L["Error.Message"]</h2>
 
 @if (ShowRequestId)
 {
     <p>
-        <strong>Request ID:</strong> <code>@RequestId</code>
+        <strong>@L["Error.RequestId"]</strong> <code>@RequestId</code>
     </p>
 }
 

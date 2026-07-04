@@ -1,5 +1,8 @@
-<MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="my-4">@Message</MudAlert>
+@inject IStringLocalizer<SharedResource> L
+
+<MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="my-4">@(Message ?? L["Common.ErrorState.Generic"])</MudAlert>
 
 @code {
-    [Parameter] public string Message { get; set; } = "An error occurred.";
+    /// <summary>Error text; defaults to the localized "An error occurred." (ADR-027).</summary>
+    [Parameter] public string? Message { get; set; }
 }

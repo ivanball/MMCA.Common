@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 using MMCA.Common.UI.Pages.Common;
+using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
 
@@ -17,16 +19,13 @@ public partial class NotificationInbox : IDisposable
     [Inject] private INotificationInboxUIService InboxService { get; set; } = default!;
     [Inject] private NotificationState NotificationState { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
 
-    private static string Title => "Notifications";
+    private string Title => L["Notif.Inbox.Title"].Value;
 
-    private readonly List<BreadcrumbItem> _breadcrumbs =
-    [
-        new("Home", "/", icon: Icons.Material.Filled.Home),
-        new("Notifications", href: null, disabled: true),
-    ];
+    private List<BreadcrumbItem> _breadcrumbs = [];
 
     protected bool IsLoading { get; private set; }
     protected bool IsSaving { get; private set; }
@@ -35,7 +34,18 @@ public partial class NotificationInbox : IDisposable
     private int _currentPage = 1;
     private int _totalPages = 1;
 
-    protected override async Task OnInitializedAsync() => await LoadNotificationsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        // Breadcrumbs are built here (not in a field initializer) so the injected localizer is
+        // available; labels re-resolve per circuit and follow the active culture (ADR-027).
+        _breadcrumbs =
+        [
+            new(L["Breadcrumb.Home"].Value, "/", icon: Icons.Material.Filled.Home),
+            new(L["Notif.Inbox.Title"].Value, href: null, disabled: true),
+        ];
+
+        await LoadNotificationsAsync();
+    }
 
     private async Task LoadNotificationsAsync()
     {
@@ -59,7 +69,7 @@ public partial class NotificationInbox : IDisposable
         }
         catch (Exception ex)
         {
-            Snackbar.Add(ErrorMessages.LoadError("notifications", ex), Severity.Error);
+            Snackbar.Add(ErrorMessages.LoadError(L["Entity.Notifications"], ex), Severity.Error);
         }
         finally
         {
@@ -97,7 +107,7 @@ public partial class NotificationInbox : IDisposable
         }
         catch (Exception ex)
         {
-            Snackbar.Add(ErrorMessages.SaveError("notification", ex), Severity.Error);
+            Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notification"], ex), Severity.Error);
         }
         finally
         {
@@ -122,7 +132,7 @@ public partial class NotificationInbox : IDisposable
             }
 
             NotificationState.SetUnreadCount(0);
-            Snackbar.Add("All notifications marked as read.", Severity.Success);
+            Snackbar.Add(L["Notif.AllMarkedRead"], Severity.Success);
         }
         catch (OperationCanceledException)
         {
@@ -130,7 +140,7 @@ public partial class NotificationInbox : IDisposable
         }
         catch (Exception ex)
         {
-            Snackbar.Add(ErrorMessages.SaveError("notifications", ex), Severity.Error);
+            Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notifications"], ex), Severity.Error);
         }
         finally
         {

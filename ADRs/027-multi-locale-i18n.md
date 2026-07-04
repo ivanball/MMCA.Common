@@ -1,7 +1,7 @@
 # ADR-027: Multi-Locale Internationalization (Supersedes ADR-011)
 
 ## Status
-Accepted (2026-06-27, amended 2026-07-02). **Supersedes [ADR-011](011-single-locale-i18n.md)** (single-locale by design).
+Accepted (2026-06-27, amended 2026-07-02 and 2026-07-03). **Supersedes [ADR-011](011-single-locale-i18n.md)** (single-locale by design).
 
 ## Context
 ADR-011 recorded single-locale (en-US) as a deliberate, *revisitable* non-goal and sketched what
@@ -92,6 +92,30 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
    concatenation become visible without translating anything. Outside Development it is never offered and the
    decorator stays inert, so it is a build-and-test aid, not a production culture.
 
+   **The pseudo pass is also a required CI gate (since 2026-07-03).** The backend-less gallery host
+   (test-only, never packaged) enables `qps-Ploc` unconditionally, and `PseudoLocalizationE2ETests`
+   (in the required chromium `ui-e2e` job) renders `/login`, `/register`, and `/components` under it,
+   asserting (a) the bracket sentinel appears (every displayed string made the resource round-trip)
+   and (b) the page does not overflow horizontally under the ~40% expansion (the layout-tolerance
+   criterion). A leak-guard test asserts the sentinel is absent under `en-US`. Production hosts are
+   unchanged: they keep `qps-Ploc` Development-only.
+
+9. **User-visible literals are kept out of markup and code-behind by a second fitness gate, and
+   composed sentences are banned.** `LocalizedTextConventionTestsBase`
+   (`MMCA.Common.Testing.Architecture`, subclassed by every repo) scans `Source/**/*.razor{,.cs}` and
+   fails the build on hard-coded snackbar messages, page `Title` properties, literal `<PageTitle>`
+   markup, literal breadcrumb labels, and `NavItem` rows that carry no `TitleResource`; deliberate
+   literals (brand names) are exempted per line with an `i18n: allow` marker. Snackbar text uses
+   **whole-sentence keys in the page's own resource pair** (`Snackbar.Created` = "Event created
+   successfully." / "Evento creado correctamente."): `ErrorMessages.Success(entity, action)` is
+   `[Obsolete]` because fragment composition cannot translate (Spanish gender agreement breaks), and
+   the shared `Common.Error.Load/Save/Delete` templates no longer append raw `ex.Message` (neither
+   localizable nor safe to surface). `NavItem` gained an optional `TitleResource` type: when set, the
+   shared `NavMenu` treats `Title`/`Group` as resource keys resolved per circuit at render time, so
+   module nav menus follow the active culture. MudBlazor's own component chrome localizes through
+   `ResxMudLocalizer` over the `MudTranslations` resource pair (all built-in keys of the pinned
+   MudBlazor version, en + es), registered in `AddUIShared` and covered by the same completeness gate.
+
 ## Rationale
 - **Keying error localization on the existing `Error.Code` is the cheapest correct seam.** The codes are
   already stable and already cross the wire; localizing at the edge keeps the Result pattern pure and means
@@ -106,10 +130,12 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
   the cost ADR-011 always named.
 - **WASM Spanish formatting needs ICU globalization data** (not `InvariantGlobalization`), a payload cost
   on the client bundle.
-- **Mixed-language responses are possible during rollout** — an untranslated code falls back to English by
+- **Mixed-language responses are possible during rollout**: an untranslated code falls back to English by
   design, so coverage is incremental rather than all-or-nothing within a release.
 - **MudBlazor's own built-in component text** may need a `MudLocalizer` for full coverage; tracked as a
-  follow-up rather than blocking.
+  follow-up rather than blocking. **Closed 2026-07-03:** `ResxMudLocalizer` + the `MudTranslations`
+  resource pair now localize the MudBlazor chrome (Decision 9); unknown keys still fall back to
+  MudBlazor's built-in English, and `en-US` deliberately keeps the built-ins.
 
 ## Related
 [ADR-011](011-single-locale-i18n.md) (superseded), [ADR-013](013-result-pattern.md) (the `Error.Code`

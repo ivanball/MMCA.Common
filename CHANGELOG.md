@@ -6,6 +6,52 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+i18n completion train (ADR-027 amended 2026-07-03, §27): every remaining user-visible literal in the
+shared UI is externalized, MudBlazor chrome localizes, and two new gates keep it that way.
+**Consumer-breaking on purpose:** `ErrorMessages.Success(entity, action)` is now `[Obsolete]`
+(a warning, which consumer `TreatWarningsAsErrors` promotes to a build error), forcing the same-pass
+sweep to whole-sentence page resource keys per ADR-016's lockstep rule.
+
+### Added (2026-07-03 i18n completion)
+- **`ResxMudLocalizer` + `MudTranslations.{resx,es.resx}`** (`MMCA.Common.UI`): MudBlazor built-in
+  component text (data-grid pager and filter menus, pickers, table editing, pagination, close buttons)
+  now follows the active culture; all built-in keys of the pinned MudBlazor version ship en + es.
+  Registered in `AddUIShared` via `TryAddTransient<MudLocalizer, ResxMudLocalizer>` (guarded by a DI
+  resolution test).
+- **`LocalizedTextConventionTestsBase` + `ArchitectureRules.UserVisibleTextIsLocalized`**
+  (`MMCA.Common.Testing.Architecture`, now 78 methods / 25 bases): fails the build on hard-coded
+  snackbar literals, literal page `Title` properties, literal `<PageTitle>` markup, literal breadcrumb
+  labels, and `NavItem` rows without a `TitleResource`; per-line `i18n: allow` marker for deliberate
+  literals (brand names). Subclass in every repo.
+- **Pseudo-localization CI gate** (`PseudoLocalizationE2ETests`, required chromium `ui-e2e` job): the
+  gallery renders `/login`, `/register`, `/components` under `qps-Ploc` and asserts the bracket
+  sentinel appears and no horizontal overflow occurs under the ~40% expansion (rubric §27 layout
+  tolerance); an `en-US` leak-guard asserts the sentinel never ships to a real locale.
+- **`NavItem.TitleResource`** (optional, defaulted): when set, the shared `NavMenu` resolves
+  `Title`/`Group` as resource keys per circuit so module nav menus follow the culture; literal-titled
+  items render unchanged.
+- **Fully localized shared chrome** (`SharedResource.{resx,es.resx}`, 136 keys): NavMenu, Login,
+  Register, OAuthComplete, Forbidden, NotFound, Home fallback, Counter, the notification pages
+  (titles, breadcrumbs, table headers, status chips, form labels), ReconnectModal, EmptyState,
+  PageErrorState, PageLoadingState, DeleteConfirmation, UnsavedChangesGuard, MobileCardList,
+  MobileInfiniteScrollList, and the `UI.Web` SSR Error page.
+
+### Changed (2026-07-03 i18n completion)
+- **`Common.Error.Load/Save/Delete` resource values no longer append raw `ex.Message`** (neither
+  localizable nor safe to surface); method signatures are unchanged, extra format args are ignored.
+- **Component parameter defaults localize** (`UnsavedChangesGuard`, `PageLoadingState`, `EmptyState`,
+  `PageErrorState`, `DeleteConfirmation`, `MobileCardList`, `MobileInfiniteScrollList`): the affected
+  string parameters are now nullable with localized fallbacks; explicit consumer values still win.
+- **The shared Register page subtitle is generic** ("Create your account to get started"): the
+  previous literal was ADC-conference copy leaking into every consumer of the shared page.
+- **`LocalizationResourceTests` (Common) sets `MinimumBaseResources = 3`** so the completeness gate
+  can no longer pass vacuously.
+
+### Deprecated (2026-07-03 i18n completion)
+- **`ErrorMessages.Success(entity, action)`**: composed sentences cannot be translated (Spanish gender
+  agreement breaks). Use a whole-sentence key in the page's own resource pair, e.g.
+  `Snackbar.Add(L["Snackbar.Created"], ...)`.
+
 Internationalization (ADR-027) + Day/Dark theme mode (ADR-028), plus maturity-axis remediation (§29, §30)
 and DDD fitness hardening (§4). No breaking changes (the static `ErrorMessages` signatures are preserved).
 

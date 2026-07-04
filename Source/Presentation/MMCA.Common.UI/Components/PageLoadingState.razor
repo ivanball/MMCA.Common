@@ -1,10 +1,13 @@
+@inject IStringLocalizer<SharedResource> L
+
 <div role="status" aria-live="polite" aria-busy="true">
     @* role="status" makes this a live region (a bare div may not carry aria-label, WCAG 4.1.2); the
        spinner itself carries the accessible name so the progressbar is not anonymous. *@
     <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" Class="my-4"
-                         aria-label="@Label" />
+                         aria-label="@(Label ?? L["Loading.Label"])" />
 </div>
 
 @code {
-    [Parameter] public string Label { get; set; } = "Loading";
+    /// <summary>Accessible label; defaults to the localized "Loading" when not supplied (ADR-027).</summary>
+    [Parameter] public string? Label { get; set; }
 }
