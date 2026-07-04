@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed (2026-07-04 warning-chip contrast, §20/§22)
+- **Filled Warning components now meet WCAG 2.1 AA in both palettes** (`MMCATheme`): MudBlazor's
+  default white contrast text is ~2.65:1 on the light palette's `#F57F17` (and ~2.0:1 on the dark
+  palette's `#FFA726`); `WarningContrastText` is now dark in both palettes (~7.9:1 / ~10.8:1, the
+  standard Material treatment on amber). Latent until Store's new Buy Now E2E put a "Pending
+  Payment" chip on the gated admin-order-list axe scan. Visual change: warning chips/buttons
+  render dark-on-amber instead of white-on-amber.
+
 ### Added (2026-07-04 E2E authorization depth, §14)
 - **`AuthorizationTestsBase.AdminPaths` + `RegisteredUser_AdminPages_ShouldBeForbidden`**
   (`MMCA.Common.Testing.E2E`): consumers declare their admin-only routes and the shared base verifies a

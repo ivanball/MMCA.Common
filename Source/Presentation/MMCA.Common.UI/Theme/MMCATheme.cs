@@ -28,6 +28,11 @@ public static class MMCATheme
             Info = "#1976D2",
             Success = "#2E7D32",
             Warning = "#F57F17",
+            // MudBlazor's default warning contrast text is white, which is ~2.65:1 on #F57F17 and
+            // fails the WCAG 2.1 AA 4.5:1 floor on every filled Warning chip/button (caught by the
+            // gated admin-order-list axe scan on a "Pending Payment" chip). Dark text is ~7.9:1 and
+            // is the standard Material treatment on amber. Info/Success/Error pass with white.
+            WarningContrastText = "#212121",
             Error = "#C62828",
             AppbarBackground = "#1A2035",
             AppbarText = "#FFFFFF",
@@ -56,6 +61,8 @@ public static class MMCATheme
             Info = "#42A5F5",
             Success = "#66BB6A",
             Warning = "#FFA726",
+            // Same fix as the light palette: white on #FFA726 is ~2.0:1; dark text is ~10.8:1.
+            WarningContrastText = "rgba(0,0,0,0.87)",
             Error = "#EF5350",
             AppbarBackground = "#1A2035",
             AppbarText = "#FFFFFF",
