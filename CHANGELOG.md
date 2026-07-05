@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-04 user-preferences E2E base, §14/§27/§28)
+- **`UserPreferencesTestsBase`** (`MMCA.Common.Testing.E2E`, `Workflows.Preferences`): three
+  self-contained facts consumers inherit with a one-line subclass: Spanish culture switch with
+  cookie persistence across reload (probed via the shared /login "Welcome Back" heading), dark-mode
+  toggle asserting the emitted `--mud-palette-background` variable flips to the PaletteDark value
+  and persists across reload, and a 390px-viewport fact pinning the v1.103.0 mobile top-row
+  controls in real apps (not just the gallery). No app-specific overrides needed.
+
 ### Fixed (2026-07-04 logout-then-login race, remaining site)
 - **`ProfileManagementTestsBase.ChangePassword_WithValidCurrentPassword_ShouldSucceed` is now
   navigation-safe**: it waited on `LoadState.Load` after the sign-out click (already fired for the
