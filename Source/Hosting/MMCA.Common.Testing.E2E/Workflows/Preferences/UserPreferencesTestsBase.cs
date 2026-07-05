@@ -49,7 +49,12 @@ public abstract class UserPreferencesTestsBase : E2ETestBase
         // writes the .AspNetCore.Culture cookie) and LocalRedirects back to /login; the Spanish
         // probe assertion below auto-waits across that navigation.
         await DesktopActions.GetByRole(AriaRole.Button, new() { Name = "Language" }).ClickAsync();
-        await Page.Locator(".mud-popover-open .mud-list-item", new() { HasText = "Español" }).ClickAsync();
+
+        // MudMenu items render as .mud-menu-item (NOT .mud-list-item, and with no menuitem role) —
+        // verified against the live gallery DOM; the popover carries .mud-popover-open once Blazor
+        // interactivity has attached (SSR markup alone never opens it).
+        await Page.Locator(".mud-popover-open .mud-menu-item", new() { HasText = "Español" })
+            .ClickAsync(new() { Timeout = 15_000 });
 
         // Assert — the probe is Spanish, and stays Spanish across a fresh full page load (cookie
         // persistence, not just the in-flight request).
