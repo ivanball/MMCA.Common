@@ -174,13 +174,13 @@ public sealed class CqrsMetricsTests
         measurement.Tags.Should().Contain("outcome", "completed");
     }
 
-    // ── Query duration: business failure keeps the completed outcome ──
+    // ── Query duration: business failure ──
     [Fact]
-    public async Task QueryDuration_OnFailureResult_StillRecordsCompletedOutcome()
+    public async Task QueryDuration_OnFailureResult_RecordsFailedOutcome()
     {
-        // Unlike the command decorator, the query decorator does not inspect the Result: only an
-        // exception changes the outcome tag. This pins the current asymmetry so a future change
-        // to it is a deliberate one.
+        // The query decorator inspects the Result the same way the command decorator does, so a
+        // business failure (Result.IsFailure) records outcome=failed rather than being conflated
+        // with genuine successes. Only an unhandled exception records outcome=exception.
         var (sut, inner) = CreateQuerySut();
         inner.Setup(x => x.HandleAsync(It.IsAny<CqrsMetricsProbeQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<string>(Error.NotFoundError("Test.Missing", "not found")));
@@ -191,7 +191,7 @@ public sealed class CqrsMetricsTests
             nameof(CqrsMetricsProbeQuery));
 
         measurements.Should().ContainSingle()
-            .Which.Tags.Should().Contain("outcome", "completed");
+            .Which.Tags.Should().Contain("outcome", "failed");
     }
 
     // ── Query duration: exception ──

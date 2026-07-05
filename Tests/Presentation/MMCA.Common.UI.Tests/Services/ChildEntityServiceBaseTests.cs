@@ -5,20 +5,23 @@ using System.Net;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Exceptions;
 using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Tests.Infrastructure;
+using Moq;
 
 namespace MMCA.Common.UI.Tests.Services;
 
 /// <summary>
 /// Pins the join-entity contract of <see cref="ChildEntityServiceBase"/> through a minimal concrete
 /// subclass: POST of the join payload to the configured endpoint, DELETE by id under it (404 maps to
-/// <see langword="false"/> instead of throwing), the named APIClient, and domain-error extraction via
+/// <see langword="false"/> instead of throwing), the named APIClient, the Bearer-token plumbing via
+/// <see cref="AuthenticatedServiceBase"/>, and domain-error extraction via
 /// <see cref="ServiceExceptionHelper"/>.
 /// </summary>
 public sealed class ChildEntityServiceBaseTests
 {
-    private sealed class MembershipService(IHttpClientFactory httpClientFactory)
-        : ChildEntityServiceBase(httpClientFactory, "teams/5/members")
+    private sealed class MembershipService(IHttpClientFactory httpClientFactory, ITokenStorageService tokenStorageService)
+        : ChildEntityServiceBase(httpClientFactory, tokenStorageService, "teams/5/members")
     {
         public Task<HttpResponseMessage> AddAsync<TRequest>(TRequest request, CancellationToken cancellationToken) =>
             PostAsync(request, cancellationToken);
@@ -30,11 +33,14 @@ public sealed class ChildEntityServiceBaseTests
     private sealed record Mocks(StubHttpMessageHandler Handler, StubHttpClientFactory Factory);
 
     private static (MembershipService Sut, Mocks Mocks) CreateSut(
-        Func<HttpRequestMessage, HttpResponseMessage> responder)
+        Func<HttpRequestMessage, HttpResponseMessage> responder,
+        string? token = "stored-access-token")
     {
         var handler = new StubHttpMessageHandler(responder);
         var factory = new StubHttpClientFactory(handler);
-        return (new MembershipService(factory), new Mocks(handler, factory));
+        var tokenStorage = new Mock<ITokenStorageService>();
+        tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync(token);
+        return (new MembershipService(factory, tokenStorage.Object), new Mocks(handler, factory));
     }
 
     private const string DomainErrorJson =
@@ -54,6 +60,32 @@ public sealed class ChildEntityServiceBaseTests
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Post);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/teams/5/members");
         mocks.Handler.LastRequest.Body.Should().Contain("42");
+        mocks.Handler.LastRequest.Authorization!.ToString().Should().Be("Bearer stored-access-token");
+    }
+
+    // == Bearer-token plumbing ==
+    [Fact]
+    public async Task PostAsyncAndDeleteByIdAsync_AttachBearerTokenToEveryRequest()
+    {
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        using var response = await sut.AddAsync(new { MemberId = 42 }, TestContext.Current.CancellationToken);
+        await sut.RemoveAsync("42", TestContext.Current.CancellationToken);
+
+        mocks.Handler.Requests.Should().HaveCount(2);
+        mocks.Handler.Requests.Should().AllSatisfy(r =>
+            r.Authorization!.ToString().Should().Be("Bearer stored-access-token"));
+    }
+
+    [Fact]
+    public async Task PostAsync_WithNoStoredToken_SendsAnonymousRequest()
+    {
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.Created), token: null);
+
+        using var response = await sut.AddAsync(new { MemberId = 42 }, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        mocks.Handler.LastRequest.Authorization.Should().BeNull();
     }
 
     [Fact]

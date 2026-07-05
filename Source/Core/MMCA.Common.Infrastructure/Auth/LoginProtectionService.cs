@@ -50,7 +50,12 @@ public sealed class LoginProtectionService(
         if (newCount >= _settings.MaxFailedAttempts)
         {
             var excessAttempts = newCount - _settings.MaxFailedAttempts;
-            var lockoutSeconds = Math.Min(1 << excessAttempts, _settings.MaxLockoutSeconds);
+
+            // Clamp the shift exponent: C# masks int shift counts to 5 bits, so 1 << 31 is negative
+            // and 1 << 32 wraps back to 1, silently shrinking (or negating) the lockout TTL for a
+            // sufficiently persistent attacker. 1 << 30 already exceeds any permitted
+            // MaxLockoutSeconds (range caps at 3600), so deep excess always lands on the cap.
+            var lockoutSeconds = Math.Min(1 << Math.Min(excessAttempts, 30), _settings.MaxLockoutSeconds);
             var lockoutKey = $"login:lockout:{email}";
             await cacheService.SetAsync(lockoutKey, true, TimeSpan.FromSeconds(lockoutSeconds), cancellationToken).ConfigureAwait(false);
         }

@@ -11,6 +11,8 @@
     <!-- In-memory TestServer for the SessionCookieEndpoints route smoke tests (already pinned
          centrally; MMCA.Common.Testing references the same package). -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <!-- FakeTimeProvider for the deterministic session-cookie expiry test. -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

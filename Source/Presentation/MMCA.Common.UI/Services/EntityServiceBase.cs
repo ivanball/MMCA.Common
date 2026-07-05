@@ -91,7 +91,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         string nameProperty,
         CancellationToken cancellationToken = default)
     {
-        var url = $"{Endpoint}/lookup?nameProperty={nameProperty}";
+        var url = $"{Endpoint}/lookup?nameProperty={Uri.EscapeDataString(nameProperty)}";
         var result = await SendRequestAsync<CollectionResult<BaseLookup<TIdentifierType>>>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken

@@ -6,6 +6,37 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed (2026-07-05 defect-fix wave C-1..C-5)
+- **`LoginProtectionService` lockout backoff no longer overflows on deep failure counts** (C-1,
+  security): the shift exponent is clamped to 30, so 31 or more excess failed attempts keep the
+  `MaxLockoutSeconds` cap instead of computing a negative or wrapped-back-to-seconds lockout TTL
+  (C# masks int shift counts to 5 bits).
+- **`OAuthControllerBase.CompleteAsync` no longer throws when the ticket has no returnUrl** (C-2):
+  an external-login ticket whose `AuthenticationProperties` omits the `returnUrl` item now completes
+  with the `/` fallback instead of failing the whole OAuth flow with `KeyNotFoundException`.
+- **Query metrics no longer count business failures as completed** (C-3): `LoggingQueryDecorator`
+  inspects the returned `Result` the same way the command decorator does, so `cqrs.query.duration`
+  records `outcome=failed` for `Result.IsFailure` (and logs a warning with the error summary)
+  instead of conflating failures with successes.
+- **`ChildEntityServiceBase` now attaches the JWT Bearer token to its requests** (C-4,
+  **consumer-breaking**): it derives from `AuthenticatedServiceBase` and its constructor now
+  requires an `ITokenStorageService` between the `IHttpClientFactory` and the endpoint, which
+  subclasses must pass through. Previously every join-entity POST/DELETE was sent anonymously and
+  failed against `[Authorize]` endpoints; consumer subclasses must add the parameter in the same
+  release sweep.
+- **`EntityServiceBase.GetAllForLookupAsync` escapes `nameProperty`** (C-5): a space, ampersand, or
+  other reserved character in the lookup property name is now percent-encoded (the same treatment
+  the paged path gives its sort/filter parameters) instead of corrupting the query string.
+
+### Changed (2026-07-05 TimeProvider seams C-6/C-7)
+- **`OutboxCleanupService` gains an optional trailing `TimeProvider` constructor parameter** (C-6,
+  non-breaking, defaults to `TimeProvider.System`): the hour-scale sweep interval and the retention
+  cutoff run on the injectable clock, making the purge sweep deterministically unit-testable with
+  `FakeTimeProvider` (which the new sweep tests do).
+- **`SessionCookieAuthenticationHandler` checks JWT expiry against the handler's `TimeProvider`**
+  (C-7) instead of `DateTime.UtcNow`; no constructor change (set `options.TimeProvider` in tests
+  for a deterministic clock).
+
 ### Added (2026-07-04 user-preferences E2E base, §14/§27/§28)
 - **`UserPreferencesTestsBase`** (`MMCA.Common.Testing.E2E`, `Workflows.Preferences`): three
   self-contained facts consumers inherit with a one-line subclass: Spanish culture switch with

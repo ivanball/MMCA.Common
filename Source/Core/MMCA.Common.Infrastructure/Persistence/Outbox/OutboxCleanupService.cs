@@ -27,16 +27,20 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <param name="messageBusOptions">Message-bus settings; used to gate inbox purging on <c>EnableInbox</c>.</param>
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
+/// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff; defaults to
+/// <see cref="TimeProvider.System"/> so tests can drive the hour-scale loop deterministically.</param>
 public sealed partial class OutboxCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxCleanupService> logger,
     IOptions<OutboxSettings> outboxOptions,
     IOptions<MessageBusSettings> messageBusOptions,
     IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver) : BackgroundService
+    IDataSourceResolver dataSourceResolver,
+    TimeProvider? timeProvider = null) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
     private readonly bool _inboxEnabled = messageBusOptions.Value.EnableInbox;
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -55,7 +59,7 @@ public sealed partial class OutboxCleanupService(
         {
             try
             {
-                await Task.Delay(interval, stoppingToken).ConfigureAwait(false);
+                await _timeProvider.Delay(interval, stoppingToken).ConfigureAwait(false);
                 await PurgeAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -71,7 +75,7 @@ public sealed partial class OutboxCleanupService(
 
     private async Task PurgeAsync(CancellationToken cancellationToken)
     {
-        var cutoff = DateTime.UtcNow.Subtract(TimeSpan.FromDays(_settings.RetentionDays));
+        var cutoff = _timeProvider.GetUtcNow().UtcDateTime.Subtract(TimeSpan.FromDays(_settings.RetentionDays));
 
         foreach (var source in GetRelationalSources())
         {

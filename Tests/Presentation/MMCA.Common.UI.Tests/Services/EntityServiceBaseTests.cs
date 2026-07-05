@@ -174,6 +174,22 @@ public sealed class EntityServiceBaseTests
         result.Should().ContainSingle().Which.Name.Should().Be("First");
     }
 
+    [Fact]
+    public async Task GetAllForLookupAsync_EscapesNamePropertyInQueryString()
+    {
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new CollectionResult<BaseLookup<int>>([])),
+        });
+
+        await sut.GetAllForLookupAsync("Display Name&Sort", TestContext.Current.CancellationToken);
+
+        // A space or ampersand in the property name must be percent-encoded, not smuggled into the
+        // query string as a separator (same treatment the paged path gives its filter parameters).
+        mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be(
+            "/widgets/lookup?nameProperty=Display%20Name%26Sort");
+    }
+
     // == GetByIdAsync ==
     [Fact]
     public async Task GetByIdAsync_RequestsIdRouteWithChildrenFlag_ReturnsDto()

@@ -49,7 +49,10 @@ public sealed class SessionCookieAuthenticationHandler(
             }
 
             var jwt = jwtHandler.ReadJwtToken(token);
-            if (jwt.ValidTo < DateTime.UtcNow)
+
+            // The base handler's TimeProvider (options.TimeProvider ?? TimeProvider.System) keeps the
+            // expiry check on the same injectable clock as the rest of the authentication stack.
+            if (jwt.ValidTo < TimeProvider.GetUtcNow().UtcDateTime)
             {
                 return Task.FromResult(AuthenticateResult.Fail("Session cookie JWT is expired."));
             }

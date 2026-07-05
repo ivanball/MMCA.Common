@@ -91,7 +91,10 @@ public abstract class OAuthControllerBase(
         }
 
         var response = result.Value;
-        var returnUrl = authenticateResult.Properties?.Items["returnUrl"] ?? "/";
+        // Safe lookup (GetString is TryGetValue under the hood): the challenge normally stashes
+        // returnUrl, but a ticket minted without it (custom challenge, provider round-trip edge)
+        // must fall back to "/" instead of throwing KeyNotFoundException on the Items indexer.
+        var returnUrl = authenticateResult.Properties?.GetString("returnUrl") ?? "/";
 
         // Clear the temporary external login cookie
         await HttpContext.SignOutAsync(ExternalLoginScheme);

@@ -437,6 +437,30 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   hold-reason removed: 9 warm-up tests have existed since the eighth wave, so the hold at I9 rests solely on
   deployer-owned SLO alerting/dashboards/runbooks).
 
+## Progress - defect-fix wave C-1..C-7 (2026-07-05)
+
+Seven approved defect fixes, each behavior change landed with its pinning test flipped (or a new
+regression test) in the same change; build 0/0 and the full `.slnx` suite green. One new test-only
+package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
+
+- ✅ **C-1 (security, §11)** `LoginProtectionService`: clamped the exponential-backoff shift exponent
+  (excess >= 31 formerly yielded negative or wrapped lockout TTLs); backoff theory extended with deep rows.
+- ✅ **C-2** `OAuthControllerBase.CompleteAsync`: safe `returnUrl` lookup with `/` fallback instead of
+  `KeyNotFoundException` when the ticket lacks the item; regression test added.
+- ✅ **C-3 (§13)** `LoggingQueryDecorator`: business failures now record `outcome=failed` on
+  `cqrs.query.duration` plus a warning log (parity with the command decorator); the pin documenting
+  the old asymmetry as intentional was flipped.
+- ✅ **C-4 (BREAKING)** `ChildEntityServiceBase`: derives from `AuthenticatedServiceBase` and attaches
+  the Bearer token on POST/DELETE; ctor now requires `ITokenStorageService` (consumer subclasses must
+  pass it in the release sweep).
+- ✅ **C-5** `EntityServiceBase.GetAllForLookupAsync`: `nameProperty` now `Uri.EscapeDataString`-escaped;
+  escape-needing test added.
+- ✅ **C-6** `OutboxCleanupService`: optional trailing `TimeProvider` ctor param (defaults to System);
+  the purge sweep is now deterministically unit-tested with `FakeTimeProvider` over in-memory SQLite
+  (old processed rows purged, newer/pending survive, per-source error isolation, `EnableInbox` gate).
+- ✅ **C-7** `SessionCookieAuthenticationHandler`: expiry check moved from `DateTime.UtcNow` to the base
+  handler's `TimeProvider`; deterministic fake-clock expiry test added.
+
 ---
 
 ## 🔴 Priority 6 — highest leverage

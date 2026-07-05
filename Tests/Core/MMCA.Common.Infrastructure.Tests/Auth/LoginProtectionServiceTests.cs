@@ -89,6 +89,9 @@ public sealed class LoginProtectionServiceTests
     [InlineData(12, 256)] // newCount 13, excess 8: 1 << 8 = 256s (last value under the cap)
     [InlineData(13, 300)] // newCount 14, excess 9: 1 << 9 = 512s, capped to MaxLockoutSeconds
     [InlineData(20, 300)] // deep excess stays pinned at the cap
+    [InlineData(35, 300)] // excess 31: unclamped 1 << 31 is negative; the clamped exponent keeps the cap
+    [InlineData(36, 300)] // excess 32: unclamped shift masks to 1 << 0 = 1s; must stay at the cap
+    [InlineData(40, 300)] // excess 36: unclamped shift masks to 1 << 4 = 16s; must stay at the cap
     public async Task IncrementFailedAttemptsAsync_ExponentialBackoff_MatchesMinOfShiftAndCap(
         int previousAttempts,
         int expectedLockoutSeconds)

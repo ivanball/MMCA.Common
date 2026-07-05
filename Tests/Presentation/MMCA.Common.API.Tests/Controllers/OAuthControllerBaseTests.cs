@@ -277,6 +277,33 @@ public sealed class OAuthControllerBaseTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task CompleteAsync_WhenReturnUrlItemMissing_FallsBackToRootInsteadOfThrowing()
+    {
+        // A ticket whose AuthenticationProperties carries no "returnUrl" item (a challenge issued
+        // outside ChallengeProvider, or properties lost across the provider round trip) must complete
+        // with the "/" fallback rather than throwing KeyNotFoundException on the Items indexer.
+        var (sut, mocks) = CreateSut();
+        var properties = new AuthenticationProperties(); // deliberately no returnUrl item
+        SetupExternalAuthentication(mocks, AuthenticateResult.Success(
+            new AuthenticationTicket(CreatePrincipal(), properties, ExternalAuthExtensions.ExternalLoginScheme)));
+        mocks.AuthService
+            .Setup(x => x.ExternalLoginAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(CreateAuthResponse()));
+
+        var result = await sut.CompleteAsync();
+
+        var url = result.Should().BeOfType<RedirectResult>().Which.Url;
+        url.Should().StartWith($"{UIBaseUrl}/auth/oauth-complete?code=");
+        url.Should().EndWith($"&returnUrl={Uri.EscapeDataString("/")}");
+    }
+
     // ── CompleteAsync: name extraction fallbacks ──
     [Theory]
     [InlineData("Jane", "Doe", null, "Jane", "Doe")]

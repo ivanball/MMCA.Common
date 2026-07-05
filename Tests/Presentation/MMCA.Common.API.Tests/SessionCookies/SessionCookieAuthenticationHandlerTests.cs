@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.API.SessionCookies;
 using Moq;
 
@@ -107,6 +108,26 @@ public sealed class SessionCookieAuthenticationHandlerTests
         result.Ticket!.Principal.FindFirst("user_id")!.Value.Should().Be("42");
     }
 
+    [Fact]
+    public async Task AuthenticateAsync_ExpiryUsesTheHandlerTimeProvider_NotTheSystemClock()
+    {
+        // A token long expired by the REAL clock but still valid on the injected clock must
+        // authenticate: the expiry check consults the AuthenticationHandler's TimeProvider
+        // (options.TimeProvider), not DateTime.UtcNow, so it is deterministic and consistent
+        // with the rest of the authentication stack.
+        var fakeTime = new FakeTimeProvider(new DateTimeOffset(2000, 1, 1, 23, 45, 0, TimeSpan.Zero));
+        string token = CreateJwt(
+            expires: new DateTime(2000, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+            new Claim("user_id", "42"));
+        var context = CreateContextWithAccessCookie(token);
+        var sut = await CreateSutAsync(context, new AuthenticationSchemeOptions { TimeProvider = fakeTime });
+
+        AuthenticateResult result = await sut.AuthenticateAsync();
+
+        result.Succeeded.Should().BeTrue();
+        result.Ticket!.Principal.FindFirst("user_id")!.Value.Should().Be("42");
+    }
+
     // ── Challenge / Forbid ──
     [Fact]
     public async Task ChallengeAsync_RedirectsToLoginWithEscapedReturnUrl()
@@ -148,12 +169,14 @@ public sealed class SessionCookieAuthenticationHandlerTests
             notBefore: expires.AddMinutes(-30),
             expires: expires));
 
-    private static async Task<SessionCookieAuthenticationHandler> CreateSutAsync(DefaultHttpContext context)
+    private static async Task<SessionCookieAuthenticationHandler> CreateSutAsync(
+        DefaultHttpContext context,
+        AuthenticationSchemeOptions? schemeOptions = null)
     {
         var options = new Mock<IOptionsMonitor<AuthenticationSchemeOptions>>();
         options
             .Setup(x => x.Get(SessionCookieAuthenticationHandler.SchemeName))
-            .Returns(new AuthenticationSchemeOptions());
+            .Returns(schemeOptions ?? new AuthenticationSchemeOptions());
 
         var accessor = new Mock<IHttpContextAccessor>();
         accessor.SetupGet(x => x.HttpContext).Returns(context);
