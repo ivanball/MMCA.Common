@@ -116,7 +116,12 @@ public sealed class OutboxCleanupServiceTests
 
         await service.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
 
-        service.ExecuteTask.IsCompletedSuccessfully.Should().BeTrue(
+        // .NET 10's BackgroundService dispatches ExecuteAsync via Task.Run(..., stoppingToken), so a
+        // stop that wins the race against the thread pool cancels ExecuteTask outright before
+        // ExecuteAsync ever runs (task ends Canceled, not RanToCompletion). Both outcomes are a
+        // graceful prompt shutdown; the contract to pin is completed-without-fault and no sweep.
+        service.ExecuteTask.IsCompleted.Should().BeTrue("StopAsync must not return before the execute task settles");
+        service.ExecuteTask.IsFaulted.Should().BeFalse(
             "cancellation during the interval wait must exit the loop gracefully, not fault");
         mocks.ScopeFactory.Verify(
             f => f.CreateScope(),
@@ -133,10 +138,22 @@ public sealed class OutboxCleanupServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         await service.StartAsync(cts.Token);
-        await service.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
+        try
+        {
+            await service.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
+        }
+        catch (OperationCanceledException)
+        {
+            // .NET 10's BackgroundService dispatches ExecuteAsync via Task.Run(..., stoppingToken):
+            // when the 100ms token fires before the pool runs the work item, ExecuteTask ends
+            // Canceled without ExecuteAsync ever starting. That is still a graceful non-faulted exit.
+        }
+
         await service.StopAsync(CancellationToken.None);
 
-        service.ExecuteTask.IsCompletedSuccessfully.Should().BeTrue();
+        service.ExecuteTask!.IsCompleted.Should().BeTrue();
+        service.ExecuteTask.IsFaulted.Should().BeFalse(
+            "cancelling the start token during the interval wait must exit gracefully, not fault");
         mocks.ScopeFactory.Verify(f => f.CreateScope(), Times.Never);
     }
 

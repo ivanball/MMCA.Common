@@ -36,6 +36,7 @@
     <Project Path="Tests/Presentation/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />
     <Project Path="Tests/Presentation/MMCA.Common.Grpc.Tests/MMCA.Common.Grpc.Tests.csproj" />
     <Project Path="Tests/Presentation/MMCA.Common.UI.Tests/MMCA.Common.UI.Tests.csproj" />
+    <Project Path="Tests/Presentation/MMCA.Common.UI.Web.Tests/MMCA.Common.UI.Web.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Hosting/">
     <Project Path="Tests/Hosting/MMCA.Common.Aspire.Tests/MMCA.Common.Aspire.Tests.csproj" />
