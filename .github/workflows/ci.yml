@@ -209,8 +209,9 @@ jobs:
       # Coverage floor (§14): a regression backstop gating the UNIT/arch/bUnit tier, with GENERATED code
       # excluded (*.generated.cs / *.g.cs) — source generators (e.g. Microsoft.AspNetCore.OpenApi) emit
       # large uncovered files that otherwise tank the number (raw 45.3% vs hand-written 61.9% on
-      # 2026-06-19). We gate the unit tier, not the merged report (the gallery E2E tier dilutes it). 53%
-      # sits a few points below the ~62% baseline; ratchet up as it grows. Parsing uses sed (locale-robust).
+      # 2026-06-19). We gate the unit tier, not the merged report (the gallery E2E tier dilutes it). 68.3%
+      # sits 2 points below the 70.3% measured after the 2026-07 coverage program (session auth, broker
+      # bus, Grpc/OAuth/JWKS, UI services); ratchet up as it grows. Parsing uses sed (locale-robust).
       - name: Enforce coverage floor (unit/arch/bUnit tier, generated code excluded)
         # Only enforce when build-and-test succeeded (so the unit coverage artifact exists); an upstream
         # failure shouldn't add a confusing secondary coverage failure.
@@ -222,4 +223,4 @@ jobs:
           reportgenerator -reports:"$unit" -targetdir:coverage-unit-report -reporttypes:TextSummary -assemblyfilters:'+MMCA.*;-*.Tests' -filefilters:'-**/*.generated.cs;-**/*.g.cs'
           line=$(sed -n 's/.*Line coverage:[[:space:]]*\([0-9.]*\)%.*/\1/p' coverage-unit-report/Summary.txt | head -1)
           test -n "$line" || { echo "::error::could not parse unit line coverage"; exit 1; }
-          awk -v l="$line" -v m="53.0" 'BEGIN{ if (l+0 < m+0) { printf("::error::Unit line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Unit line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
+          awk -v l="$line" -v m="68.3" 'BEGIN{ if (l+0 < m+0) { printf("::error::Unit line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Unit line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
