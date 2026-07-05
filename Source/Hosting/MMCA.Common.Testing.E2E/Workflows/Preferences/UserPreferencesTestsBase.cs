@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using Microsoft.Playwright;
 using MMCA.Common.Testing.E2E.Infrastructure;
 using Xunit;
@@ -12,19 +13,30 @@ namespace MMCA.Common.Testing.E2E.Workflows.Preferences;
 /// "Bienvenido de nuevo"), and persistence is the anonymous cookie pair (.AspNetCore.Culture +
 /// mmca_theme), so no app-specific overrides are needed. The mobile fact pins the v1.103.0
 /// regression (controls lived only in the app bar, which is hidden below 1024px).
+/// Selectors mirror the gallery's MobileTopRowE2ETests exactly: the controls are located by
+/// accessible name / title inside their container (the app bar's .appbar-icon-actions on desktop,
+/// NavMenu's .toprow-actions on phones) — the MudMenu activator does NOT expose a literal
+/// aria-label attribute, so raw CSS attribute selectors do not match it.
 /// </summary>
 public abstract class UserPreferencesTestsBase : E2ETestBase
 {
+    // MudBlazor emits the palette as CSS variables on :root; depending on version the value is the
+    // raw hex ("#1a2027") or its rgba form ("rgba(26,32,39,1)"). Accept either, whitespace-free.
+    private const string DarkBackgroundProbeScript =
+        "() => { const v = getComputedStyle(document.documentElement)" +
+        ".getPropertyValue('--mud-palette-background').replace(/\\s+/g, '').toLowerCase();" +
+        " return v === '#1a2027' || v === 'rgba(26,32,39,1)'; }";
+
     protected UserPreferencesTestsBase(PlaywrightFixture fixture)
         : base(fixture)
     {
     }
 
-    // Both a desktop app-bar instance and a mobile top-row instance are ALWAYS in the DOM (one
-    // hidden by the 1024px media query), so every selector must filter to the visible one.
-    private ILocator VisibleCultureButton => Page.Locator("button[aria-label='Language']:visible");
+    // Desktop container: the app bar's action cluster (NavMenu's mobile duplicate is display:none
+    // at >=1024px but still in the DOM, so container scoping is what disambiguates).
+    private ILocator DesktopActions => Page.Locator(".appbar-icon-actions").First;
 
-    private ILocator VisibleThemeToggle => Page.Locator("button[aria-label='Switch to dark mode']:visible");
+    private ILocator MobileActions => Page.Locator(".toprow-actions");
 
     [Fact]
     public async Task CultureSwitch_ToSpanish_ShouldLocalizeAndPersist()
@@ -34,14 +46,14 @@ public abstract class UserPreferencesTestsBase : E2ETestBase
         await Expect(Page.GetByText("Welcome Back")).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         // Act — pick Español. The switcher forceLoad-navigates through GET /culture/set (which
-        // writes the .AspNetCore.Culture cookie) and LocalRedirects back to /login.
-        await VisibleCultureButton.ClickAsync();
+        // writes the .AspNetCore.Culture cookie) and LocalRedirects back to /login; the Spanish
+        // probe assertion below auto-waits across that navigation.
+        await DesktopActions.GetByRole(AriaRole.Button, new() { Name = "Language" }).ClickAsync();
         await Page.Locator(".mud-popover-open .mud-list-item", new() { HasText = "Español" }).ClickAsync();
-        await Page.WaitForLoadStateAsync(LoadState.Load);
 
         // Assert — the probe is Spanish, and stays Spanish across a fresh full page load (cookie
         // persistence, not just the in-flight request).
-        await Expect(Page.GetByText("Bienvenido de nuevo")).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Expect(Page.GetByText("Bienvenido de nuevo")).ToBeVisibleAsync(new() { Timeout = 30_000 });
         await Page.ReloadAsync(new() { WaitUntil = WaitUntilState.Load });
         await Expect(Page.GetByText("Bienvenido de nuevo")).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
@@ -51,15 +63,17 @@ public abstract class UserPreferencesTestsBase : E2ETestBase
     {
         await Page.GotoAndWaitForBlazorAsync("/login");
 
-        // Act — toggle dark. No navigation: MudThemeProvider re-emits its CSS variables.
-        await VisibleThemeToggle.ClickAsync();
+        // Act — toggle dark via the title-stable button (its aria-label flips with state, its title
+        // does not). No navigation: MudThemeProvider re-emits its CSS variables in place.
+        await DesktopActions.GetByTitle("Toggle light/dark theme").ClickAsync();
 
-        // Assert — the palette background variable flips to the dark value (MMCATheme PaletteDark),
-        // and the toggle's accessible name flips. Then reload: theme.js + ThemeService re-apply the
-        // persisted mmca_theme cookie/localStorage value on the fresh document.
+        // Assert — the palette background variable flips to the PaletteDark value and the choice is
+        // persisted (theme.js writes the mmca_theme cookie + localStorage mirror), then survives a
+        // fresh full page load.
         await AssertDarkPaletteAsync();
-        await Expect(Page.Locator("button[aria-label='Switch to light mode']:visible"))
-            .ToBeVisibleAsync(new() { Timeout = 15_000 });
+        var persisted = await Page.EvaluateAsync<string?>(
+            "() => { try { return localStorage.getItem('mmca_theme'); } catch { return null; } }");
+        persisted.Should().Be("dark");
 
         await Page.ReloadAsync(new() { WaitUntil = WaitUntilState.Load });
         await AssertDarkPaletteAsync();
@@ -73,19 +87,17 @@ public abstract class UserPreferencesTestsBase : E2ETestBase
         await Page.SetViewportSizeAsync(390, 844);
         await Page.GotoAndWaitForBlazorAsync("/login");
 
-        await Expect(Page.Locator(".toprow-actions button[aria-label='Language']"))
+        await Expect(MobileActions.GetByRole(AriaRole.Button, new() { Name = "Language" }))
             .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         // The mobile theme toggle must actually work, not merely render.
-        await Page.Locator(".toprow-actions button[aria-label='Switch to dark mode']").ClickAsync();
+        await MobileActions.GetByTitle("Toggle light/dark theme").ClickAsync();
         await AssertDarkPaletteAsync();
     }
 
-    // The dark palette's background token (#1A2027) read off the emitted CSS variables: independent
-    // of which element happens to paint it, and polls until the provider re-renders.
     private async Task AssertDarkPaletteAsync() =>
         await Page.WaitForFunctionAsync(
-            "() => getComputedStyle(document.documentElement).getPropertyValue('--mud-palette-background').trim().toLowerCase() === '#1a2027'",
+            DarkBackgroundProbeScript,
             null,
             new PageWaitForFunctionOptions { Timeout = 15_000 });
 }
