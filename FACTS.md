@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-07-05 (framework v1.105.1) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-07-05 (framework v1.105.2) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A bare `(001-NNN)` ADR
@@ -10,7 +10,7 @@ _As of: 2026-07-05 (framework v1.105.1) — **generated from source by `build/fa
 > repo's own test totals and scorecard indices) live in that repo's `ArchitectureScorecard.md`, **not** here.
 
 ## Framework version
-- **Current: `v1.105.1`** (MinVer-derived from the git tag at `main` HEAD).
+- **Current: `v1.105.2`** (MinVer-derived from the git tag at `main` HEAD).
 - All consumers (**MMCA.ADC**, **MMCA.Store**, MMCA.Helpdesk) track this version in **lockstep** — every
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
