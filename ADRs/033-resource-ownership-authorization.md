@@ -72,22 +72,22 @@ bypass role (`Admin` by default).
   caller's normal `Result`/HTTP edge (ADR-013), not exceptions.
 
 **Adoption.** MMCA.Store wires both in production. The filter guards
-`MMCA.Store/.../Sales.API/Controllers/ShoppingCartsController.cs:37` and
+`MMCA.Store/.../Sales.API/Controllers/ShoppingCartsController.cs:38` and
 `MMCA.Store/.../Identity.API/Controllers/CustomersController.cs:32` as a `[ServiceFilter]`. The
 ownership specification scopes list/get queries:
 `ShoppingCartsController` builds a `ShoppingCartByCustomerSpecification`
-(`MMCA.Store/.../Sales.API/Controllers/ShoppingCartsController.cs:52`,
+(`MMCA.Store/.../Sales.API/Controllers/ShoppingCartsController.cs:53`,
 `MMCA.Store/.../Sales.Application/ShoppingCarts/Specifications/ShoppingCartByCustomerSpecification.cs:19`,
 which filters by `Id` because a cart is keyed by customer, `ShoppingCartByCustomerSpecification.cs:23`)
 and `OrdersController` builds an `OrdersByCustomerSpecification`
-(`MMCA.Store/.../Sales.API/Controllers/OrdersController.cs:52`,
+(`MMCA.Store/.../Sales.API/Controllers/OrdersController.cs:53`,
 `MMCA.Store/.../Sales.Application/Orders/Specifications/OrdersByCustomerSpecification.cs:13`, filtering
 by `CustomerId`, `OrdersByCustomerSpecification.cs:17`), passing it into each query (for example
-`OrdersController.cs:67`). `OrdersController` does not use the class-level filter for its mutating
+`OrdersController.cs:68`). `OrdersController` does not use the class-level filter for its mutating
 routes; it runs an explicit per-mutation ownership check, `ValidateOwnershipAsync`
-(`OrdersController.cs:291`), that reuses `OwnershipHelper.IsAdmin` (`OrdersController.cs:50`) and
+(`OrdersController.cs:293`), that reuses `OwnershipHelper.IsAdmin` (`OrdersController.cs:51`) and
 deliberately returns **404 NotFound** rather than 403 so it does not reveal that another customer's
-order exists (`OrdersController.cs:289`, `OrdersController.cs:314`).
+order exists (`OrdersController.cs:291`, `OrdersController.cs:316`).
 
 MMCA.ADC's Engagement module is the first host to configure the filter's vocabulary rather than take
 the defaults. `AddModuleEngagementAPI`

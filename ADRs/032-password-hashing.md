@@ -1,7 +1,7 @@
 # ADR-032: Password Hashing (PBKDF2-HMAC-SHA512) with Legacy-Hash Backward Compatibility
 
 ## Status
-Accepted (2026-06-29, adoption note revised 2026-07-02).
+Accepted (2026-06-29, adoption note revised 2026-07-06).
 
 ## Context
 Identity stores a credential as a (salt, hash) pair, never plaintext. The framework needs one
@@ -55,10 +55,12 @@ the singleton lifetime is safe.
   both live once in that base, so a single hoisted call site verifies and hashes for both apps. ADC's subclass
   declares the `IPasswordHasher` parameter and forwards it to the base
   (`MMCA.ADC/.../Identity.Application/Users/AuthenticationService.cs:25`, forwarded at `AuthenticationService.cs:30`);
-  Store's subclass does the same (`MMCA.Store/.../Identity.Application/Users/AuthenticationService.cs:24`,
-  forwarded at `AuthenticationService.cs:33`). The one remaining direct consumer is Store's `ChangePasswordHandler`,
-  which injects `IPasswordHasher` (`.../UseCases/ChangePassword/ChangePasswordHandler.cs:16`) to verify the
-  current password before hashing the new one.
+  Store's subclass does the same (`MMCA.Store/.../Identity.Application/Users/AuthenticationService.cs:23`,
+  forwarded at `AuthenticationService.cs:30`). A handful of use cases still inject `IPasswordHasher` directly
+  rather than through the base: both apps' `ChangePasswordHandler`
+  (`MMCA.ADC` and `MMCA.Store` `.../UseCases/ChangePassword/ChangePasswordHandler.cs:16`) verify the current
+  password before hashing the new one, and both apps' `IdentityModuleDbSeeder`
+  (`.../Persistence/DbContexts/Seeding/IdentityModuleDbSeeder.cs:18`) hash the seeded accounts' passwords.
 
 ## Rationale
 - **One framework-owned primitive, not per-app crypto.** Putting the algorithm, work factor, salt size,

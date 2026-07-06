@@ -22,7 +22,8 @@ Enforce architectural invariants as **automated checks that gate the build**, in
 2. **Runtime fitness functions.** A shared `MMCA.Common.Testing.Architecture` package
    holds the rule bodies once: an `ArchitectureRules.*` library (layers, modules, transport, events,
    entities, handlers, naming, controllers, immutability, governance, purity, specifications, slices,
-   localization) plus
+   and localization in two rules: resx translation-coverage and no-hardcoded-UI-literal text, among
+   others) plus
    abstract `*TestsBase` classes parameterized by an `IArchitectureMap`. Each repo
    (Common / Store / ADC / Helpdesk) supplies a single `IArchitectureMap` implementation
    (`CommonArchitectureMap`, `StoreArchitectureMap`, `AdcArchitectureMap`, `HelpdeskArchitectureMap`)

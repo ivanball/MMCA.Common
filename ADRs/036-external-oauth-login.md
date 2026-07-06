@@ -1,7 +1,7 @@
 # ADR-036: External OAuth Login (Federated Google/GitHub) with Local-JWT Exchange
 
 ## Status
-Accepted (2026-07-02).
+Accepted (2026-07-02, migration attribution corrected 2026-07-06).
 
 ## Context
 The framework's Identity story so far is entirely first-party: a user registers with an email and
@@ -59,10 +59,15 @@ a local `User`.
   a local login.
 - **The linkage is two nullable columns and a filtered unique index.** `User.LoginProvider`
   (`varchar(50)`) and `User.ProviderKey` (`varchar(256)`) are null for local accounts;
-  `IsExternalLogin` is derived from `LoginProvider is not null`. ADC's `AddExternalLoginProviderFields`
-  migration adds both columns and a unique index over the pair filtered to non-null rows, so two
-  external identities cannot map to the same local account while local (null,null) accounts are
-  unconstrained. `User.Anonymize` clears both fields on erasure (ADR-005).
+  `IsExternalLogin` is derived from `LoginProvider is not null`. In ADC's per-service Identity database
+  both columns and a unique index over the pair (filtered to non-null rows) are created by the Identity
+  `InitialCreate` migration
+  (`MMCA.ADC/Source/Hosting/MMCA.ADC.Migrations.SqlServer.Identity/Migrations/20260606053130_InitialCreate.cs:63`,
+  index at `20260606053130_InitialCreate.cs:100`), so two external identities cannot map to the same
+  local account while local (null,null) accounts are unconstrained. (The earlier standalone
+  `AddExternalLoginProviderFields` migration survives only in the frozen combined single-DB archive
+  under `MMCA.ADC.Migrations.SqlServer/` and is never applied to the per-service database.)
+  `User.Anonymize` clears both fields on erasure (ADR-005).
 - **New external users re-use the local registration side-effect.** A brand-new external `User`
   publishes the same post-commit `UserRegistered` integration event the local `RegisterAsync` path
   publishes, so Conference runs the BR-207 speaker email-match auto-link asynchronously. The first
