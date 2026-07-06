@@ -110,6 +110,8 @@ public sealed class BlazorCspPolicyProviderTests
     [InlineData("   ")]
     [InlineData("not a url")]
     [InlineData("/relative/path")]
+    [InlineData("file:///etc/hosts")]
+    [InlineData("ftp://gateway.example.com")]
     public void GetPolicy_WithMissingOrUnparseableEndpoint_DegradesToPermissiveReportOnly(string? endpoint)
     {
         var policy = GetPolicy(endpoint);

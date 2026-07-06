@@ -39,8 +39,12 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
     {
         var endpoint = api.WasmApiEndpoint ?? api.ApiEndpoint;
 
+        // The scheme check matters on Linux, where a rooted path like "/relative/path" parses as an
+        // absolute file:// URI; only an http(s) endpoint yields a connect-src origin worth enforcing.
         if (string.IsNullOrWhiteSpace(endpoint) ||
-            !Uri.TryCreate(endpoint, UriKind.Absolute, out var apiUri))
+            !Uri.TryCreate(endpoint, UriKind.Absolute, out var apiUri) ||
+            !string.Equals(apiUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(apiUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
         {
             return new CspPolicy(BuildPolicy("connect-src 'self' https: wss:", isDevelopment), Enforce: false);
         }
