@@ -97,7 +97,7 @@
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient matches the version EF
          Core SqlServer already resolves transitively so the pin cannot skew the graph. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <!-- Health Checks -->
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
