@@ -102,9 +102,23 @@ main {
 @media (min-width: 1024px) {
     .page {
         flex-direction: row;
+        /* Let the footer wrap onto its own full-width line below the sidebar+content
+           row. The top-level <footer> is deliberately a sibling of <main> (so the
+           contentinfo landmark is not nested in <main> — axe landmark-contentinfo-is-
+           top-level); without wrapping it becomes a THIRD column in this flex row and
+           steals its own content-width from main, leaving empty space on the right
+           (the gap tracked the footer text width, so it differed per app). The 100vh
+           sticky sidebar keeps the wrapped footer pinned to the viewport bottom. */
+        flex-wrap: wrap;
         width: 100%;
         max-width: 100vw;
         overflow-x: hidden;
+    }
+
+    /* Force the footer onto the next flex line so it spans full width instead of
+       sitting as a column beside main. */
+    .app-footer {
+        flex-basis: 100%;
     }
 
     .sidebar {

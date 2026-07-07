@@ -1,6 +1,6 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 94.1% / Implementation 83.6%**, framework v1.101.0; the 2026-07-03 fourteenth-wave re-score at a clean tree lifted §24 Forms/Validation to Maturity 4 on the CI-gated auth-form tests, recalibrated §14 Testability Implementation 9→8 for rubric-band consistency, declined four further proposed downgrades after adversarial review (§7/§9/§13 hold at Implementation 9; §25/§34 unchanged), and confirmed the recurring §34 uncommitted-docs caveat closed).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 94.4% / Implementation 84.1%**, framework v1.106.0; the 2026-07-06 sixteenth-wave two-pass re-score at a clean tree lifted §14 Testability Implementation 8→9 on the ratcheted 68.3% coverage floor plus the C1-C4 coverage program, re-confirmed all 33 other categories at their prior scores, refreshed the ADR range to 001-038, and held §34 at M4/I8 after declining an adversarial 8→7 that this refresh itself cures).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
@@ -460,6 +460,38 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
   (old processed rows purged, newer/pending survive, per-source error isolation, `EnableInbox` gate).
 - ✅ **C-7** `SessionCookieAuthenticationHandler`: expiry check moved from `DateTime.UtcNow` to the base
   handler's `TimeProvider`; deterministic fake-clock expiry test added.
+
+---
+
+## Progress: sixteenth wave (clean-tree re-score at v1.106.0, 2026-07-06)
+
+> A full 34-category, two-pass evidence re-score (per-category scorer plus adversarial verifier) at framework
+> **v1.106.0** (HEAD `6f8b917`, one commit past the v1.106.0 tag, working tree **clean**). **One score moved.**
+> Canonical scoring is now **Maturity 94.4% (306/324) / Implementation 84.1% (681/810)** per the in-repo
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md) (was 94.4% / 83.7%).
+
+- ✅ **#14 · Testability & Test Strategy: Implementation 8→9.** The fourteenth wave capped §14 at 8 on
+  "a modest 53% gated coverage floor"; that floor was ratcheted **53.0 → 68.3** (`.github/workflows/ci.yml:226`,
+  commit `b75fa8f`, measured ~70.3%) and the suite grew from 1586 to **1880** `[Fact]`/`[Theory]` across
+  **262** files via a coverage-driven program that found and fixed **seven real defects** (C-1..C-7, `55f3cab`),
+  so the top band is now supported. Maturity holds at 4 (CI-gated fitness tests, the blocking coverage-floor
+  gate, and the zero-discovery min-tests guard). Held below 10 by the one remaining Exemplary gap: no mutation
+  testing on the Core tier. §14 stays on the level-4 protect list.
+- ◐ **#34 · Architecture Governance & Docs: held at M4/I8 (adversarial 8→7 declined).** The re-score's
+  adversarial pass proposed docking §34 to Implementation 7 because the scorecard's own prose was stale against
+  the CI-gated `FACTS.md` (it self-dated v1.101.0 / ADRs 001-036 while `FACTS.md` reports v1.106.0 / 001-038).
+  That staleness is cured by this very refresh (the rewritten scorecard is current at commit time); the durable
+  Strong-8 cap remains the uncommittable `ArchitecturalAnalysis.md` in the workspace root. Evidence refreshed to
+  ADR set **001-038** and **78 fitness methods / 25 bases (Common runs 40)**.
+- ◐ **Evidence enrichment, no score move:** ADR-037 (field-level encryption at rest: `EncryptedStringConverter`
+  ships but is explicitly latent/unadopted, §11/§30) and ADR-038 (supply-chain provenance: records the SBOM as
+  generated-not-yet-signed, §32) land in categories already at 8-9; the C-1..C-7 defect fixes (§11 backoff-overflow
+  clamp, §13 query-failure RED-metric parity) tighten existing mechanisms without moving a band.
+
+**Doc-hygiene follow-ups surfaced this wave (outside the scorecard/backlog, not score-movers):**
+- [ ] **`SECURITY.md:5` still says "thirteen packages"** (should be fourteen) and **`GETTING-STARTED.md`'s
+  `Directory.Packages.props` sample lists 13 package entries plus a stale `1.77.0` example version.** Minor
+  §34-adjacent staleness against the CI-gated `FACTS.md` (14 packages); refresh in a docs pass. *(§34, effort S.)*
 
 ---
 
