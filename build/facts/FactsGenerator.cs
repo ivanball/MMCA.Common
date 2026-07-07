@@ -196,8 +196,11 @@ internal static class FactsGenerator
 
     private static string Norm(string p) => p.Replace('\\', '/');
 
-    // neutralize CRLF/LF + trailing whitespace so --check isn't a false "stale" across platforms / .gitattributes.
-    private static string Normalize(string s) => s.Replace("\r\n", "\n").TrimEnd();
+    // neutralize CRLF/LF + trailing whitespace so --check isn't a false "stale" across platforms / .gitattributes,
+    // and the generation timestamp (the "As of" date) so --check gates on the computed facts, not the calendar day
+    // it runs — otherwise every PR/push on a day after the last FACTS commit fails purely on the refreshed date.
+    private static string Normalize(string s) =>
+        Regex.Replace(s.Replace("\r\n", "\n").TrimEnd(), @"(?m)^_As of: \d{4}-\d{2}-\d{2}\b", "_As of: <date>");
 
     private const string Template = """
 # MMCA.Common — Canonical Facts
