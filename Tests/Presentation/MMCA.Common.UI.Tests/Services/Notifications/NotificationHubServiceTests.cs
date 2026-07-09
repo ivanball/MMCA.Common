@@ -12,11 +12,13 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 
 /// <summary>
 /// Verifies the testable surface of <see cref="NotificationHubService"/>: constructor endpoint
-/// validation and the idle lifecycle (not connected before start; stop/dispose are safe no-ops).
-/// PARTIAL BY DESIGN: <c>StartAsync</c>, the retry/backoff loop, and the ReceiveNotification
-/// callback wiring build a real SignalR <c>HubConnection</c> internally via
-/// <c>HubConnectionBuilder</c> with no injectable seam, so exercising them would attempt real
-/// network connections with multi-second backoff. Left uncovered rather than changing Source.
+/// validation, the idle lifecycle (not connected before start; stop/dispose are safe no-ops), and
+/// the channel API's argument validation, subscription registry, and disconnected no-op paths.
+/// PARTIAL BY DESIGN: <c>StartAsync</c>, the retry/backoff loop, the ReceiveNotification and
+/// ReceiveChannelEvent wiring, and the join/re-join invocations build a real SignalR
+/// <c>HubConnection</c> internally via <c>HubConnectionBuilder</c> with no injectable seam, so
+/// exercising them would attempt real network connections with multi-second backoff. Left
+/// uncovered rather than changing Source (covered end to end by the consuming apps' E2E suites).
 /// </summary>
 public sealed class NotificationHubServiceTests
 {
@@ -76,5 +78,96 @@ public sealed class NotificationHubServiceTests
         };
 
         await act.Should().NotThrowAsync();
+    }
+
+    // ── Channel API: argument validation ──
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task JoinChannelAsync_WithBlankChannel_ThrowsArgumentException(string channelKey)
+    {
+        await using var sut = CreateSut();
+
+        var act = () => sut.JoinChannelAsync(channelKey);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task LeaveChannelAsync_WithBlankChannel_ThrowsArgumentException(string channelKey)
+    {
+        await using var sut = CreateSut();
+
+        var act = () => sut.LeaveChannelAsync(channelKey);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task OnChannelEvent_WithBlankChannel_ThrowsArgumentException()
+    {
+        await using var sut = CreateSut();
+
+        var act = () => sut.OnChannelEvent(" ", (_, _) => Task.CompletedTask);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task OnChannelEvent_WithNullHandler_ThrowsArgumentNull()
+    {
+        await using var sut = CreateSut();
+
+        var act = () => sut.OnChannelEvent("event:1", null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ── Channel API: subscription lifecycle ──
+    [Fact]
+    public async Task OnChannelEvent_ReturnsSubscription_WhoseDisposeIsIdempotent()
+    {
+        await using var sut = CreateSut();
+
+        IDisposable subscription = sut.OnChannelEvent("event:1", (_, _) => Task.CompletedTask);
+
+        var act = () =>
+        {
+            subscription.Dispose();
+            subscription.Dispose();
+        };
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task OnChannelEvent_AllowsMultipleSubscribersOnSameChannel()
+    {
+        await using var sut = CreateSut();
+
+        IDisposable first = sut.OnChannelEvent("event:1", (_, _) => Task.CompletedTask);
+        IDisposable second = sut.OnChannelEvent("event:1", (_, _) => Task.CompletedTask);
+
+        var act = () =>
+        {
+            first.Dispose();
+            second.Dispose();
+        };
+
+        act.Should().NotThrow();
+    }
+
+    // ── Channel API: disconnected no-op ──
+    [Fact]
+    public async Task LeaveChannelAsync_WithoutConnection_DoesNotThrow()
+    {
+        await using var sut = CreateSut();
+
+        var act = () => sut.LeaveChannelAsync("event:1");
+
+        await act.Should().NotThrowAsync();
+        sut.IsConnected.Should().BeFalse();
     }
 }

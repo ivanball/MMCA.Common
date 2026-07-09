@@ -239,16 +239,22 @@ public class PushNotificationSettingsTests
         new PushNotificationSettings().HubPath.Should().Be("/hubs/notifications");
 
     [Fact]
+    public void Default_ChannelKeyPattern_MatchesEventAndSessionKeys() =>
+        new PushNotificationSettings().ChannelKeyPattern.Should().Be("^(event|session):[0-9]+$");
+
+    [Fact]
     public void Properties_RoundTrip()
     {
         var sut = new PushNotificationSettings
         {
             Enabled = true,
             HubPath = "/custom/hub",
+            ChannelKeyPattern = "^room:[a-z]+$",
         };
 
         sut.Enabled.Should().BeTrue();
         sut.HubPath.Should().Be("/custom/hub");
+        sut.ChannelKeyPattern.Should().Be("^room:[a-z]+$");
     }
 
     [Fact]

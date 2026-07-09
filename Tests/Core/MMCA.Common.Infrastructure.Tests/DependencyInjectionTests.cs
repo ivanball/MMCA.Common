@@ -209,6 +209,20 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
+    public void AddServices_RegistersLiveChannelPublisher()
+    {
+        var services = new ServiceCollection();
+        services.AddServices();
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(ILiveChannelPublisher));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Transient);
+        descriptor.ImplementationType.Should().Be<NullLiveChannelPublisher>();
+    }
+
+    [Fact]
     public void AddServices_RegistersTimeProvider()
     {
         var services = new ServiceCollection();
@@ -244,11 +258,13 @@ public sealed class DependencyInjectionTests
         int eventBusCount = services.Count(d => d.ServiceType == typeof(IEventBus));
         int emailSenderCount = services.Count(d => d.ServiceType == typeof(IEmailSender));
         int pushSenderCount = services.Count(d => d.ServiceType == typeof(IPushNotificationSender));
+        int liveChannelPublisherCount = services.Count(d => d.ServiceType == typeof(ILiveChannelPublisher));
 
         passwordHasherCount.Should().Be(1);
         eventBusCount.Should().Be(1);
         emailSenderCount.Should().Be(1);
         pushSenderCount.Should().Be(1);
+        liveChannelPublisherCount.Should().Be(1);
     }
 
     [Fact]

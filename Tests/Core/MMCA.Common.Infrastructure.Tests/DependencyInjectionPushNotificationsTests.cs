@@ -60,6 +60,45 @@ public sealed class DependencyInjectionPushNotificationsTests
         descriptor.Lifetime.Should().Be(ServiceLifetime.Transient);
     }
 
+    // ── AddPushNotifications registers SignalRLiveChannelPublisher ──
+    [Fact]
+    public void AddPushNotifications_RegistersSignalRLiveChannelPublisher()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateConfigurationWithRedis();
+
+        services.AddPushNotifications(config);
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(ILiveChannelPublisher));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.ImplementationType.Should().Be<SignalRLiveChannelPublisher>();
+        descriptor.Lifetime.Should().Be(ServiceLifetime.Transient);
+    }
+
+    // ── AddPushNotifications binds ChannelKeyPattern from configuration ──
+    [Fact]
+    public void AddPushNotifications_BindsChannelKeyPatternFromConfiguration()
+    {
+        var services = new ServiceCollection();
+        var configData = new Dictionary<string, string?>
+        {
+            ["PushNotifications:Enabled"] = "true",
+            ["PushNotifications:ChannelKeyPattern"] = "^room:[a-z]+$",
+        };
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+
+        services.AddPushNotifications(config);
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+        PushNotificationSettings settings = sp.GetRequiredService<IOptions<PushNotificationSettings>>().Value;
+
+        settings.ChannelKeyPattern.Should().Be("^room:[a-z]+$");
+    }
+
     // ── AddPushNotifications registers ClaimBasedUserIdProvider ──
     [Fact]
     public void AddPushNotifications_RegistersClaimBasedUserIdProvider()

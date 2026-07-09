@@ -196,6 +196,7 @@ public static class DependencyInjection
             services.TryAddSingleton(TimeProvider.System);
             services.TryAddTransient<IEmailSender, SmtpEmailSender>();
             services.TryAddTransient<IPushNotificationSender, NullPushNotificationSender>();
+            services.TryAddTransient<ILiveChannelPublisher, NullLiveChannelPublisher>();
 
             return services;
         }
@@ -233,7 +234,8 @@ public static class DependencyInjection
 
         /// <summary>
         /// Registers SignalR push notification services, replacing the default <see cref="NullPushNotificationSender"/>
-        /// with <see cref="SignalRPushNotificationSender"/>. Optionally configures a Redis backplane when a Redis
+        /// with <see cref="SignalRPushNotificationSender"/> and the default <see cref="NullLiveChannelPublisher"/>
+        /// with <see cref="SignalRLiveChannelPublisher"/>. Optionally configures a Redis backplane when a Redis
         /// connection string is available.
         /// </summary>
         /// <param name="configuration">Application configuration for binding settings and detecting Redis.</param>
@@ -255,8 +257,9 @@ public static class DependencyInjection
                 signalRBuilder.AddStackExchangeRedis(redisConnectionString);
             }
 
-            // Replace the default NullPushNotificationSender with the SignalR implementation.
+            // Replace the default Null implementations with the SignalR-backed ones.
             services.AddTransient<IPushNotificationSender, SignalRPushNotificationSender>();
+            services.AddTransient<ILiveChannelPublisher, SignalRLiveChannelPublisher>();
             services.TryAddSingleton<IUserIdProvider, ClaimBasedUserIdProvider>();
 
             return services;

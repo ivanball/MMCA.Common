@@ -6,6 +6,21 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-09 live channels, [ADR-039](ADRs/039-live-channel-push.md))
+- **Ephemeral live channel events over the existing notification hub**: `NotificationHub` gains its
+  first client-invokable methods, `JoinChannel` / `LeaveChannel` (SignalR group membership; channel
+  keys validated against the new `PushNotificationSettings.ChannelKeyPattern`, default
+  `^(event|session):[0-9]+$`, invalid keys rejected with `HubException`), plus a
+  `ReceiveChannelEvent` client method. A new `ILiveChannelPublisher` abstraction (Application,
+  beside `IPushNotificationSender`) publishes `(channelKey, eventName, payloadJson)` to a channel;
+  `SignalRLiveChannelPublisher` delivers via group send, and the no-op `NullLiveChannelPublisher`
+  is the default registration, swapped by `AddPushNotifications()` (the ADR-024 pattern).
+  `NotificationHubService` (UI) gains `JoinChannelAsync` / `LeaveChannelAsync` and multicast
+  `OnChannelEvent` subscriptions on the existing connection, and re-joins tracked channels
+  automatically after an automatic reconnect (SignalR group membership does not survive one).
+  Fully additive: the `IPushNotificationSettings` interface and all existing notification
+  behavior are unchanged.
+
 ### Fixed (2026-07-05 defect-fix wave C-1..C-5)
 - **`LoginProtectionService` lockout backoff no longer overflows on deep failure counts** (C-1,
   security): the shift exponent is clamped to 30, so 31 or more excess failed attempts keep the

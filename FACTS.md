@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-07-07 (framework v1.107.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-07-09 (framework v1.107.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A bare `(001-NNN)` ADR
@@ -33,7 +33,7 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 13. `MMCA.Common.Testing.E2E`
 14. `MMCA.Common.Testing.UI`
 
-## Architecture Decision Records — **38 (001-038)**
+## Architecture Decision Records — **39 (001-039)**
 The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the range/count and the one-line
 summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
 
@@ -41,7 +41,7 @@ summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
 - **78 test methods across 25 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **40** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **41** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

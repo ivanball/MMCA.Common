@@ -1,3 +1,4 @@
+using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Testing.Architecture;
@@ -41,6 +42,11 @@ public sealed class FrameworkSanityTests
     public void IJwksProvider_LivesInInfrastructureLayer() =>
         typeof(IJwksProvider).Assembly.Should().BeSameAs(Infrastructure,
             "the JWKS provider handles crypto/PEM material, so it belongs in Infrastructure");
+
+    [Fact]
+    public void ILiveChannelPublisher_LivesInApplicationLayer() =>
+        typeof(ILiveChannelPublisher).Assembly.Should().BeSameAs(Application,
+            "the live-channel publish abstraction must remain in Application (beside IPushNotificationSender) so application code stays transport-free");
 
     private static void AssertNoDependency(Assembly assembly, string forbiddenNamespace, string reason)
     {
