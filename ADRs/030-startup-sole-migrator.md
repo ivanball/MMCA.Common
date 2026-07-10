@@ -24,8 +24,8 @@ in production and is the sole migrator of its own database** — it applies its 
 at startup, before the new revision serves traffic. There is deliberately **no** separate deploy-step
 migration (no `sqlcmd` / `dotnet ef database update` apply in `deploy.yml`).
 
-- **Set in prod for every service.** `MMCA.Store/infra/main.bicep:639,734,817` (Identity/Catalog/Sales)
-  and `MMCA.ADC/infra/main.bicep:659,774,863,957` (Identity/Conference/Engagement/Notification) all set
+- **Set in prod for every service.** `MMCA.Store/infra/main.bicep:704,804,892` (Identity/Catalog/Sales)
+  and `MMCA.ADC/infra/main.bicep:726,847,942,1058` (Identity/Conference/Engagement/Notification) all set
   `DatabaseInitStrategy = 'Migrate'`.
 - **One applier per revision.** Each service runs `minReplicas: 1`, so the startup `MigrateAsync` is not
   racing sibling replicas of the same revision.

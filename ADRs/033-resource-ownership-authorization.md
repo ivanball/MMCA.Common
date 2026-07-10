@@ -91,12 +91,12 @@ order exists (`OrdersController.cs:291`, `OrdersController.cs:316`).
 
 MMCA.ADC's Engagement module is the first host to configure the filter's vocabulary rather than take
 the defaults. `AddModuleEngagementAPI`
-(`MMCA.ADC/Source/Modules/Engagement/MMCA.ADC.Engagement.API/DependencyInjection.cs:38`) calls
-`services.Configure<OwnerOrAdminFilterOptions>(...)` (`DependencyInjection.cs:39`) to point the shared
+(`MMCA.ADC/Source/Modules/Engagement/MMCA.ADC.Engagement.API/DependencyInjection.cs:42`) calls
+`services.Configure<OwnerOrAdminFilterOptions>(...)` (`DependencyInjection.cs:44`) to point the shared
 filter at ADC's own ownership terms: the `user_id` claim its token service emits
-(`DependencyInjection.cs:41`), the `Organizer` bypass role (`RoleNames.Organizer`,
-`Source/Core/MMCA.Common.Shared/Auth/RoleNames.cs:15`, `DependencyInjection.cs:42`), and the `userId`
-query argument its Bookmarks list endpoints bind (`DependencyInjection.cs:43`). The filter type is
+(`DependencyInjection.cs:46`), the `Organizer` bypass role (`RoleNames.Organizer`,
+`Source/Core/MMCA.Common.Shared/Auth/RoleNames.cs:15`, `DependencyInjection.cs:47`), and the `userId`
+query argument its Bookmarks list endpoints bind (`DependencyInjection.cs:48`). The filter type is
 unchanged; only the options differ, which is exactly what the options object exists for. The Bookmarks
 **delete** keeps a separate DB-backed inline ownership check that returns 404-not-403 (the same
 per-mutation, existence-hiding pattern Store's `OrdersController` uses).

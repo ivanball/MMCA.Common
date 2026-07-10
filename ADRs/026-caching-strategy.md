@@ -1,7 +1,7 @@
 # ADR-026: Two-Tier Caching: a Swappable `ICacheService` Substrate plus an HTTP Output-Cache Edge
 
 ## Status
-Accepted (2026-06-27).
+Accepted (2026-06-27, amended 2026-07-10).
 
 ## Context
 The framework needs caching in two distinct places. Inside the application pipeline, query results
@@ -54,16 +54,30 @@ Cache in two tiers, each with its own substrate.
   Engagement, Notification), while the read-heavy public services declare real cacheable policies. ADC
   Conference and Store Catalog are the adopters today, with named policies and `[OutputCache]` on their
   public read controllers.
+- **Public-read policies cache authenticated requests too (amended by ADR-040).** The framework UI
+  attaches a Bearer token to every outgoing API request, including reads of `[AllowAnonymous]`,
+  user-independent endpoints, and ASP.NET Core's built-in default output-cache policy refuses to serve
+  or store a cached response for any request carrying an `Authorization` header. So the adopters do not
+  cache only anonymous traffic: they register their public-read policies through
+  `OutputCacheOptions.AddPublicEndpointPolicy(name, expiration, tags)`
+  (`MMCA.Common.API/Caching/OutputCacheOptionsExtensions.cs:20`), backed by
+  `PublicEndpointOutputCachePolicy` (`MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:25`),
+  which caches GET/HEAD regardless of the caller's auth state
+  (`MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:45-50`). ADC Conference and Store Catalog
+  register these policies on their public read controllers; ADR-040 records that the built-in default
+  policy served 0% of logged-in (bearer-carrying) traffic on conference day.
 
 ## Rationale
 - **One substrate, swapped by environment.** Keeping `ICacheService` as the only thing application code
   sees lets the deployment decide memory vs distributed. The auto-swap (presence of a real
   `IDistributedCache`) means there is no flag to forget and no per-handler branching.
 - **Two tiers because the jobs differ.** Tier 1 memoizes handler results and invalidates them precisely
-  on mutation (prefix/`ICacheInvalidating`). Tier 2 skips the handler entirely for anonymous/public
-  reads at the HTTP edge, which is also the anonymous-traffic lever ADR-019 leans on (anonymous callers
-  are exempt from the per-user rate limiter, so output caching absorbs that load instead). They are not
-  unified by design: different keys, different lifetimes, different eviction.
+  on mutation (prefix/`ICacheInvalidating`). Tier 2 skips the handler entirely for public reads at the
+  HTTP edge. It began as the anonymous-traffic lever ADR-019 leans on (anonymous callers are exempt from
+  the per-user rate limiter, so output caching absorbs that load instead); as amended by ADR-040 the
+  adopters' public-read policies now cache authenticated (bearer-carrying) requests too, so the edge
+  absorbs logged-in read load as well (the anonymous-only description is the pre-ADR-040 behavior). They
+  are not unified by design: different keys, different lifetimes, different eviction.
 - **TTL-bounded correctness over distributed-invalidation guarantees.** A short default TTL makes the
   cache eventually consistent cheaply, so the system stays correct-enough even where prefix invalidation
   is best-effort, rather than depending on a perfectly fan-out invalidation.
@@ -88,4 +102,5 @@ Cache in two tiers, each with its own substrate.
 ADR-014 (the Caching decorators and `IQueryCacheable` / `ICacheInvalidating` markers that consume this
 substrate), ADR-019 (output caching as the anonymous-traffic lever, and `LoginProtectionService` is
 another `ICacheService` consumer), ADR-006 / ADR-008 (the same monolith-to-services swap seam this
-substrate follows).
+substrate follows), ADR-040 (amends this ADR's Tier 2: the adopters' public-read policies cache
+authenticated, bearer-carrying requests too, not only anonymous traffic).

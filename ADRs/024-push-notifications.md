@@ -78,5 +78,7 @@ recipient policy both behind abstractions.
 ADR-003 (the outbox dual-dispatch path, which is distinct: that carries service-to-service integration
 events, this carries user-facing notifications), ADR-004 (the `/hubs` `access_token` query-string auth
 the hub relies on), ADR-008 (extraction: ADC runs a dedicated `MMCA.ADC.Notification.Service` built on
-these seams), ADR-012 (that Notification service is the Profile-B `Http1AndHttp2` host, because SignalR
-needs the WebSocket/HTTP/1.1 path), ADR-022 (the browser-edge auth context the UI client runs in).
+these seams), ADR-012 (that Notification service is now a mixed-endpoint host: its default endpoint
+stays Profile-B `Http1AndHttp2` for the SignalR WebSocket/HTTP/1.1 path, and since 2026-07-09 it also
+serves an inbound `Http2`-only h2c gRPC edge on a dedicated named endpoint per ADR-039), ADR-022 (the
+browser-edge auth context the UI client runs in).

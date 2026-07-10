@@ -1,7 +1,7 @@
 # ADR-027: Multi-Locale Internationalization (Supersedes ADR-011)
 
 ## Status
-Accepted (2026-06-27, amended 2026-07-02 and 2026-07-03). **Supersedes [ADR-011](011-single-locale-i18n.md)** (single-locale by design).
+Accepted (2026-06-27, amended 2026-07-02, 2026-07-03, and 2026-07-09). **Supersedes [ADR-011](011-single-locale-i18n.md)** (single-locale by design).
 
 ## Context
 ADR-011 recorded single-locale (en-US) as a deliberate, *revisitable* non-goal and sketched what

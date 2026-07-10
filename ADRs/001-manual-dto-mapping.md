@@ -19,5 +19,5 @@ Use explicit, per-entity DTO mappers (each a Riok.Mapperly `[Mapper] partial cla
 - **Performance**: No reflection or expression compilation at mapping time.
 
 ## Trade-offs
-- More files (27 DTO mappers across Store + ADC, plus the parallel `IEntityRequestMapper` classes). The interface's default `MapToDTOs` implementation is available to remove the batch-mapping boilerplate, though in practice each concrete mapper re-declares the identical one-line projection rather than relying on the default.
+- More files (28 DTO mappers across Store + ADC, plus the parallel `IEntityRequestMapper` classes). The interface's default `MapToDTOs` implementation is available to remove the batch-mapping boilerplate, though in practice each concrete mapper re-declares the identical one-line projection rather than relying on the default.
 - Adding a new entity requires creating a mapper class. This is consistent with the project's explicit-over-implicit philosophy.

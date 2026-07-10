@@ -1,7 +1,7 @@
 # ADR-020: Permission-Based Authorization Layered over Roles
 
 ## Status
-Accepted (2026-06-25).
+Accepted (2026-06-25, amended 2026-07-10).
 
 ## Context
 Authorization started as pure role-based access control (RBAC). Endpoints declared the role they
@@ -50,9 +50,11 @@ Add a **permission (capability) layer over RBAC**, opt-in and backward-compatibl
   existing role policies keep working unchanged.
 
 Adoption is asymmetric and that is intentional: ADC's Conference module defines seven capabilities
-(including a curation subset granted to a new `RoleNames.ContentEditor`) and its Identity module
-defines `identity:users:read`; MMCA.Store has not adopted it and still authorizes by role policy
-only. The registry, handler, policy provider, and the ADC grant tables are all covered by tests.
+(including a curation subset granted to a new `RoleNames.ContentEditor`), its Engagement module
+defines `engagement:live:manage` (granted to `Organizer` and `Admin`, gating the conference-day
+live-poll management endpoints) and its Identity module defines `identity:users:read`; MMCA.Store
+has not adopted it and still authorizes by role policy only. The registry, handler, policy provider,
+and the ADC grant tables (Conference and Engagement) are all covered by tests.
 
 ## Rationale
 - **Capabilities decouple endpoints from roles.** A route says what it *does*

@@ -101,23 +101,23 @@ contract, supplied by two controller bases over a shared query pipeline.
   not unbounded in the engine: each property is filtered only by a registered
   `IFilterStrategy` whose `SupportedOperators` are validated before the database is
   touched (`QueryFilterService.ValidateFilters`, `QueryFilterService.cs:124`,
-  invoked at `Source/Core/MMCA.Common.Application/Services/EntityQueryService.cs:103`),
+  invoked at `Source/Core/MMCA.Common.Application/Services/EntityQueryService.cs:102`),
   and `MaxUnboundedResultLimit` (`EntityQueryPipeline.cs:22`) plus the `MaxPageSize`
   clamp (`EntityControllerBase.cs:127`) bound the result size.
 - **Composes with manual DTO mapping (ADR-001).** Entities are projected to DTOs by
-  an injected `IEntityDTOMapper` (`EntityQueryService.cs:33`, `:49`) via
-  `DTOMapper.MapToDTOs` (`EntityQueryService.cs:135`); a `DTOToEntityPropertyMap`
-  (`EntityQueryService.cs:59`) translates DTO field names to entity property paths
+  an injected `IEntityDTOMapper` (`EntityQueryService.cs:32`, `:48`) via
+  `DTOMapper.MapToDTOs` (`EntityQueryService.cs:137`); a `DTOToEntityPropertyMap`
+  (`EntityQueryService.cs:58`) translates DTO field names to entity property paths
   for filter and sort, so the wire contract speaks DTO names while the engine speaks
   entity names.
 - **Composes with populators (ADR-002).** The unsupported-include path delegates to
-  `INavigationPopulator` (`EntityQueryService.cs:34`), the same cross-source batch
+  `INavigationPopulator` (`EntityQueryService.cs:33`), the same cross-source batch
   loader that bridges relationships EF cannot JOIN.
 
 ## Trade-offs
 - **The wire contract tracks the entity model.** Filterable, sortable, and
   projectable surface is the entity's property set. A model change is an API change
-  unless mediated by the DTO and `DTOToEntityPropertyMap` (`EntityQueryService.cs:59`),
+  unless mediated by the DTO and `DTOToEntityPropertyMap` (`EntityQueryService.cs:58`),
   which is the seam that decouples the two when needed.
 - **Dynamic filtering is an injection and over-fetch surface.** Arbitrary
   client-supplied property/operator/value triples are an attack surface; it is
