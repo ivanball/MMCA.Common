@@ -1,6 +1,6 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 94.4% / Implementation 84.1%**, framework v1.106.0; the 2026-07-06 sixteenth-wave two-pass re-score at a clean tree lifted §14 Testability Implementation 8→9 on the ratcheted 68.3% coverage floor plus the C1-C4 coverage program, re-confirmed all 33 other categories at their prior scores, refreshed the ADR range to 001-038, and held §34 at M4/I8 after declining an adversarial 8→7 that this refresh itself cures).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 94.4% / Implementation 83.7%**, framework v1.108.0; the 2026-07-09 seventeenth-wave two-pass re-score at a clean tree, HEAD `6c3b3bc`, recalibrated §21 Accessibility Implementation 9→8 (the shipped dark theme's two un-gated WCAG AA contrast failures are an unmet §21 color-and-contrast criterion, incompatible with the Exemplary band; the remediation is the open §20 dark-palette item), re-confirmed all 33 other categories at their prior scores, declined two adversarial first-pass lifts (§8 and §22 hold at Implementation 8), and refreshed the ADR range to 001-039).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
@@ -495,6 +495,36 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
 
 ---
 
+## Progress - seventeenth wave (evidence re-score at v1.108.0, 2026-07-09)
+
+> A full 34-category, two-pass evidence re-score (per-category scorer plus adversarial verifier) at framework
+> **v1.108.0** (git HEAD `6c3b3bc`, working tree clean, one commit ahead of origin: the ADR-012 mixed-endpoint
+> amendment awaiting push) moves one score and closes nothing: no open item below is proven shipped this run,
+> and no below-Maturity-4 category reached M4, so the priority ranking is unchanged (#31 at computed priority 4,
+> the documented accepted cap; the seven weight-2 Maturity-3 categories at priority 2).
+
+- ◐ **#21 · Accessibility: Implementation recalibrated 9→8 (Maturity holds 4).** The tenth-wave 9 sat in the
+  Exemplary band while the shipped, user-toggleable dark theme carries two documented, deliberately un-gated
+  WCAG AA contrast failures (filled-primary button label + error-alert text, `ACCESSIBILITY.md` known
+  limitations), a directly unmet §21 color-and-contrast criterion. With the standing smaller gaps (no automated
+  focus-trap/reading-order assertion, manual pass only; axe breadth scoped to the gallery's representative
+  states) the honest band is Strong; held at 8, not 7, because the gaps read as one minor cluster whose
+  contrast half is a single palette-tuning item **already tracked as the open §20 follow-up above** (no
+  duplicate item added; tuning the dark palette and gating the dark-mode axe scan is also the path back to 9).
+- ◐ **#8 · Data Architecture: held at M4/I8 (adversarial 8→9 declined).** The first pass proposed an
+  Implementation lift; refuted because the rubric's §8 "migrations run in CI/CD" criterion stays structurally
+  unmet in-repo (`ci.yml` has no migration-apply step; ADR-030 boot-time self-migration is a runtime mechanism,
+  not that gate), so the scorecard's standing "Held at 8 (not lifted)" note stands.
+- ◐ **#22 · Responsive & Cross-Browser: held at M3/I8 (adversarial 8→9 declined).** No repo change since the
+  twelfth-wave 7→8 lift; firefox/webkit remain advisory `continue-on-error` (`ci.yml:89`). The open follow-up
+  above (promote firefox to blocking, +1 Maturity) is still the sole §22 lift.
+- ◐ **Evidence enrichment, no score move:** ADR-039 (live channel push: ephemeral events over the notification
+  hub via `ILiveChannelPublisher`) and the ADR-012 mixed-endpoint transport-profile amendment land in
+  categories already scored 8-9; the ADR range refreshes to **001-039** (`FACTS.md`: 78 fitness methods /
+  25 bases, Common runs 41).
+
+---
+
 ## 🔴 Priority 6 — highest leverage
 
 ### [x] #28 · Front-End Testing & Quality — score 2 → 4 (weight 3) · *RESOLVED 2026-06-27*
@@ -630,8 +660,8 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 ---
 
 ## ✅ Already at level 4 — protect, don't regress
-#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#24 Forms, Validation & UX Safety (maturity 3→4 on the CI-gated auth-form tests, fourteenth wave)** · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
-*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 25 categories, see the Scope note at the top.)*
+#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#24 Forms, Validation & UX Safety (maturity 3→4 on the CI-gated auth-form tests, fourteenth wave)** · **#27 i18n (maturity 3→4 on the fifteenth-wave completion train, 2026-07-03)** · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
+*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 26 categories, see the Scope note at the top.)*
 
 ## 🔒 Deliberate / accepted (documented caps, not scheduled work)
 ### [accepted] #31 · Cost Efficiency / FinOps: held at Maturity 2 / Implementation 7 by documented acceptance
@@ -640,7 +670,7 @@ Moved out of the active priority queue on 2026-07-02 (user-approved). Its comput
 ## ⚪ Mostly consumer-assessed (the shared Common.UI surface is scored here)
 #21 Accessibility · #22 Responsive · #26 Front-End Security
 *(Assessable mainly in consumer apps; #26 shared surface is covered under #11.)*
-- **#27 i18n, no longer consumer-assessed/N/A.** It is now an active, in-repo scored category (**Maturity 3 / Implementation 8** as of the twelfth wave) after ADR-027 shipped en-US + Spanish in the framework, superseding the single-locale ADR-011. It stays open below Maturity 4 at weight 1 (the lowest-priority open gap), pending more than two shipped locales and promoting the pseudo-localization pass from a Development-only diagnostic to a CI gate; see the ninth/tenth/twelfth-wave progress sections above.
+- **#27 i18n: CLOSED at Maturity 4 / Implementation 9 (fifteenth-wave completion train, 2026-07-03).** No longer consumer-assessed/N/A: it became an active in-repo category after ADR-027 shipped en-US + Spanish (superseding the single-locale ADR-011), and the ADR-027 Decision 9 train closed every stated hold: the pseudo-localization pass is a REQUIRED chromium CI gate (`PseudoLocalizationE2ETests`: `[!!` sentinel round-trip + overflow guard + `en-US` leak guard), the hard-coded-literal gate (`LocalizedTextConventionTests`) and the translation-coverage gate fail the build, and MudBlazor's built-in chrome localizes via `ResxMudLocalizer` (145 keys en+es). Held below 10 only by two locales / no RTL; on the protect list above.
 - **#24 Forms/UX Safety: DONE for the shared surface (eighth wave, impl 7→8).** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored. **Maturity reached 4 on the fourteenth-wave re-score** (the CI-gated `AuthModelValidationTests` + `RegisterFormTests` meet the automatic-enforcement bar); the category is closed and on the protect list above.
 - **#25 Navigation — DONE for the shared surface (eighth wave, impl 7→8):** an in-shell `Forbidden` (403) page + `NavigationFlow.md` for the Common UI surface. Per-actor module flows remain consumer-scored.
 
