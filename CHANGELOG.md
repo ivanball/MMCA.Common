@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Changed (2026-07-10 notification inbox live refresh)
+- **`NotificationInbox` reloads on real-time push**: the inbox page now subscribes to
+  `NotificationState.OnRefreshRequested` (the same signal `NotificationListener` raises on every
+  SignalR `ReceiveNotification`) and reloads its current page, so an open inbox shows a new
+  notification without navigation. Previously a push only produced a toast and a bell-badge bump.
+  Overlapping refreshes coalesce (a push arriving mid-load is skipped; the next push or
+  navigation reconciles).
+
 ### Added (2026-07-10 runtime performance wave, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
 - **`PublicEndpointOutputCachePolicy` + `OutputCacheOptions.AddPublicEndpointPolicy(name, expiration, tags)`**
   (MMCA.Common.API): output-cache policy for `[AllowAnonymous]`, user-independent GET endpoints

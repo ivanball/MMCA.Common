@@ -11,6 +11,8 @@ namespace MMCA.Common.UI.Pages.Notifications;
 /// <summary>
 /// Code-behind for the notification inbox page.
 /// Displays the current user's notifications with read/unread state and pagination.
+/// Reloads the current page when a real-time push requests a refresh via
+/// <see cref="NotificationState.OnRefreshRequested"/>.
 /// </summary>
 public partial class NotificationInbox : IDisposable
 {
@@ -44,7 +46,32 @@ public partial class NotificationInbox : IDisposable
             new(L["Notif.Inbox.Title"].Value, href: null, disabled: true),
         ];
 
+        NotificationState.OnRefreshRequested += HandleRefreshRequested;
+
         await LoadNotificationsAsync();
+    }
+
+    private void HandleRefreshRequested(object? sender, EventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(RefreshFromPushAsync);
+    }
+
+    private async Task RefreshFromPushAsync()
+    {
+        // Coalesce overlapping refreshes: the toast and bell badge still signal the push,
+        // and the next push or navigation reconciles the list.
+        if (_disposed || IsLoading)
+        {
+            return;
+        }
+
+        await LoadNotificationsAsync();
+        StateHasChanged();
     }
 
     private async Task LoadNotificationsAsync()
@@ -156,6 +183,7 @@ public partial class NotificationInbox : IDisposable
             return;
         if (disposing)
         {
+            NotificationState.OnRefreshRequested -= HandleRefreshRequested;
             _cts.Cancel();
             _cts.Dispose();
         }

@@ -89,6 +89,42 @@ public sealed class NotificationInboxTests : BunitTestBase
     }
 
     [Fact]
+    public void WhenRefreshRequested_ReloadsCurrentPage()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1)));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 1"));
+
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        _state.RequestRefresh();
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 2"));
+        _inbox.Verify(x => x.GetInboxAsync(1, It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task WhenRefreshRequestedAfterDispose_DoesNotReload()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1)));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Notice 1"));
+
+        await DisposeComponentsAsync();
+        _state.RequestRefresh();
+
+        _inbox.Verify(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
     public void ClickingMarkAllAsRead_MarksAllAndZeroesSharedCount()
     {
         _inbox
