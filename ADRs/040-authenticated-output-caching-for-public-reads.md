@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted (2026-07-10).
+Accepted (2026-07-10). Amended (2026-07-10): explicit query-string variance parity with the
+built-in default policy (the initial release accidentally dropped it, collapsing every query
+variant of a path onto one cache entry), plus an opt-in `bypassRoles` escape hatch for endpoints
+whose payload is elevated for one privileged role.
 
 ## Context
 
@@ -35,7 +38,10 @@ authenticated caller (mobile hosts, cross-service calls, curl with a token) unca
 the built-in default policy with one deliberate difference: it does not disable cache lookup or
 storage when the request carries an `Authorization` header or an authenticated identity. It
 enforces the same response-side guards (GET/HEAD only; never store `Set-Cookie` responses or
-non-200s) and takes the expiration and eviction tags as constructor arguments.
+non-200s), varies the cache key by every query-string parameter (`CacheVaryByRules.QueryKeys =
+"*"`, the same rule as the default policy; a raw `IOutputCachePolicy` registration replaces the
+whole default chain, so the policy must restate it), and takes the expiration and eviction tags
+as constructor arguments.
 
 Hosts register it per named policy via the `OutputCacheOptions.AddPublicEndpointPolicy(name,
 expiration, tags)` extension and reference it from `[OutputCache(PolicyName = ...)]` exactly like
@@ -45,6 +51,13 @@ The contract for applying it is strict: ONLY endpoints that are `[AllowAnonymous
 response does not vary by caller identity. A cached response is served verbatim to every
 subsequent caller, so a user-dependent payload behind this policy is an information-disclosure
 bug, not a perf tweak.
+
+One bounded relaxation exists for role-elevated payloads: the `AddPublicEndpointPolicy(name,
+expiration, bypassRoles, tags)` overload makes callers in a bypass role skip the cache entirely
+(no lookup, no storage), so they always read fresh and their elevated responses are never stored.
+Use it when the payload is identical for every caller EXCEPT one privileged role (e.g. ADC
+organizers see unpublished rows per BR-108). Per-user payloads remain out of scope: bypass roles
+handle role-shaped variance, not identity-shaped variance.
 
 ## Rationale
 

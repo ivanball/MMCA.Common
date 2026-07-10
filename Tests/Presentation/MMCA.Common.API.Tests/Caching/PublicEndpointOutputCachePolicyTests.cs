@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
@@ -9,12 +10,19 @@ public class PublicEndpointOutputCachePolicyTests
 {
     private static readonly TimeSpan Expiration = TimeSpan.FromMinutes(5);
 
-    private static OutputCacheContext CreateContext(string method, bool withBearer = false)
+    private static OutputCacheContext CreateContext(string method, bool withBearer = false, string? role = null)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Method = method;
         if (withBearer)
             httpContext.Request.Headers.Authorization = "Bearer some-user-token";
+
+        if (role is not null)
+        {
+            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.Role, role)],
+                authenticationType: "TestAuth"));
+        }
 
         return new OutputCacheContext { HttpContext = httpContext };
     }
@@ -45,6 +53,47 @@ public class PublicEndpointOutputCachePolicyTests
         await sut.CacheRequestAsync(context, CancellationToken.None);
 
         context.AllowCacheLookup.Should().BeTrue();
+        context.AllowCacheStorage.Should().BeTrue();
+    }
+
+    // ── Cache-key parity with the built-in default policy ──
+    [Fact]
+    public async Task CacheRequest_VariesByEveryQueryKey_LikeTheDefaultPolicy()
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration);
+        var context = CreateContext(HttpMethods.Get);
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.CacheVaryByRules.QueryKeys.ToString().Should().Be(
+            "*",
+            "search, paging, filter, and field-projection variants of a path must not share one cache entry");
+    }
+
+    // ── Bypass roles: elevated callers skip the cache entirely ──
+    [Fact]
+    public async Task CacheRequest_CallerInBypassRole_DisallowsLookupAndStorage()
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(
+            Expiration, bypassRoles: ["Organizer"], tags: ["conference:events"]);
+        var context = CreateContext(HttpMethods.Get, withBearer: true, role: "Organizer");
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.AllowCacheLookup.Should().BeFalse("bypass-role callers receive elevated payloads that must never come from or land in the shared cache");
+        context.AllowCacheStorage.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CacheRequest_AuthenticatedCallerNotInBypassRole_AllowsLookupAndStorage()
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(
+            Expiration, bypassRoles: ["Organizer"], tags: ["conference:events"]);
+        var context = CreateContext(HttpMethods.Get, withBearer: true, role: "Attendee");
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.AllowCacheLookup.Should().BeTrue("non-bypass callers share the identity-independent cached payload");
         context.AllowCacheStorage.Should().BeTrue();
     }
 

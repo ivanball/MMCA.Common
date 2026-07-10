@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Primitives;
@@ -16,26 +17,48 @@ namespace MMCA.Common.API.Caching;
 /// such endpoints: it caches GET/HEAD responses regardless of the caller's auth state.
 /// </para>
 /// <para>
-/// SECURITY: apply this policy ONLY to endpoints that are <c>[AllowAnonymous]</c> AND whose
-/// response does not depend on the caller's identity. A cached response is served verbatim
-/// to every subsequent caller. Responses that set cookies or return non-200 status codes are
-/// never stored.
+/// Like the built-in default policy, the cache key varies by every query-string parameter
+/// (<c>CacheVaryByRules.QueryKeys = "*"</c>) — search, paging, filtering, and field-projection
+/// variants of the same path each get their own entry.
+/// </para>
+/// <para>
+/// SECURITY: apply this policy ONLY to endpoints whose response does not depend on the
+/// caller's identity — a cached response is served verbatim to every subsequent caller.
+/// When an endpoint returns an elevated payload for a privileged role (e.g. organizers see
+/// unpublished rows), pass that role via <c>bypassRoles</c>: callers in a bypass
+/// role skip the cache entirely (no lookup, no storage), so their elevated responses are
+/// never cached and they always read fresh, while every other caller's identical payload
+/// stays cacheable. Responses that set cookies or return non-200 status codes are never
+/// stored.
 /// </para>
 /// </summary>
 public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
 {
     private readonly TimeSpan _expiration;
+    private readonly string[] _bypassRoles;
     private readonly string[] _tags;
 
     /// <summary>Initializes the policy with an expiration and invalidation tags.</summary>
     /// <param name="expiration">How long a cached response stays valid.</param>
     /// <param name="tags">Tags for targeted eviction via <c>IOutputCacheStore.EvictByTagAsync</c>.</param>
     public PublicEndpointOutputCachePolicy(TimeSpan expiration, params string[] tags)
+        : this(expiration, [], tags)
+    {
+    }
+
+    /// <summary>Initializes the policy with an expiration, cache-bypassing roles, and invalidation tags.</summary>
+    /// <param name="expiration">How long a cached response stays valid.</param>
+    /// <param name="bypassRoles">Roles whose callers skip the cache entirely (no lookup, no storage) —
+    /// use for roles that receive an elevated, identity-dependent payload from the endpoint.</param>
+    /// <param name="tags">Tags for targeted eviction via <c>IOutputCacheStore.EvictByTagAsync</c>.</param>
+    public PublicEndpointOutputCachePolicy(TimeSpan expiration, string[] bypassRoles, string[] tags)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiration, TimeSpan.Zero);
+        ArgumentNullException.ThrowIfNull(bypassRoles);
         ArgumentNullException.ThrowIfNull(tags);
 
         _expiration = expiration;
+        _bypassRoles = bypassRoles;
         _tags = tags;
     }
 
@@ -44,12 +67,18 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
     {
         // Mirrors the built-in default policy MINUS the Authorization-header / authenticated-
         // identity bail-out: the response is user-independent by contract (see class docs).
-        var attemptOutputCaching = IsCacheableRequest(context.HttpContext.Request);
+        // Callers in a bypass role get the default-policy behavior back: no lookup, no storage.
+        var attemptOutputCaching = IsCacheableRequest(context.HttpContext.Request)
+            && !IsBypassedCaller(context.HttpContext.User);
         context.EnableOutputCaching = true;
         context.AllowCacheLookup = attemptOutputCaching;
         context.AllowCacheStorage = attemptOutputCaching;
         context.AllowLocking = true;
         context.ResponseExpirationTimeSpan = _expiration;
+
+        // Same rule as the built-in default policy: every query-string variant of the path
+        // (search, paging, filters, field projections) is its own cache entry.
+        context.CacheVaryByRules.QueryKeys = "*";
 
         foreach (var tag in _tags)
             context.Tags.Add(tag);
@@ -79,4 +108,7 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
 
     private static bool IsCacheableRequest(HttpRequest request) =>
         HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method);
+
+    private bool IsBypassedCaller(ClaimsPrincipal user) =>
+        Array.Exists(_bypassRoles, user.IsInRole);
 }

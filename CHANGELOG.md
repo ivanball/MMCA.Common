@@ -6,6 +6,23 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed (2026-07-10 output-cache policy regressions, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
+- **`PublicEndpointOutputCachePolicy` now varies the cache key by every query-string parameter**
+  (`CacheVaryByRules.QueryKeys = "*"`, the same rule as the built-in default policy). The v1.110.0
+  policy replaced the whole default-policy chain, so it silently dropped query variance: every
+  search, paging, filter, and field-projection variant of a path shared ONE cache entry, serving
+  whichever response populated first (surfaced as ADC/Store integration + E2E gate failures on
+  the v1.110.0 sweep deploys, e.g. a no-ids `variant-lookup` returning another test's cached
+  non-empty payload and grid reads returning wrong pages).
+
+### Added (2026-07-10 output-cache bypass roles)
+- **`AddPublicEndpointPolicy(name, expiration, bypassRoles, tags)` overload** (and the matching
+  `PublicEndpointOutputCachePolicy(expiration, bypassRoles, tags)` constructor): callers in a
+  bypass role skip the output cache entirely (no lookup, no storage) and always read fresh. Use
+  for `[AllowAnonymous]` endpoints whose payload is identical for every caller EXCEPT a privileged
+  role receiving an elevated payload (e.g. ADC organizers see unpublished events per BR-108).
+  Without this, an elevated response could be cached and served verbatim to anonymous callers.
+
 ### Changed (2026-07-10 notification inbox live refresh)
 - **`NotificationInbox` reloads on real-time push**: the inbox page now subscribes to
   `NotificationState.OnRefreshRequested` (the same signal `NotificationListener` raises on every
