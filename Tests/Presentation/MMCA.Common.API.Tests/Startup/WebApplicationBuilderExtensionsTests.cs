@@ -106,7 +106,9 @@ public sealed class WebApplicationBuilderExtensionsTests
 
         ServiceProvider provider = services.BuildServiceProvider();
         var gzipOptions = provider.GetRequiredService<IOptions<GzipCompressionProviderOptions>>();
-        gzipOptions.Value.Level.Should().Be(System.IO.Compression.CompressionLevel.SmallestSize);
+        // Fastest, matching Brotli: dynamic API payloads on fractional vCPUs make
+        // SmallestSize's extra CPU per response a bad trade.
+        gzipOptions.Value.Level.Should().Be(System.IO.Compression.CompressionLevel.Fastest);
     }
 
     [Fact]

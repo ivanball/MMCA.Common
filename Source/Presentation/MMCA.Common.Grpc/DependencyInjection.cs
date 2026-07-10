@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.Grpc.Interceptors;
+using MMCA.Common.Shared.Resilience;
 
 namespace MMCA.Common.Grpc;
 
@@ -81,17 +82,31 @@ public static class DependencyInjection
             // pipeline can wrap the primary handler in a way that defeats HTTP/2 negotiation
             // (the default HttpClientHandler doesn't always honor HTTP/2 preference even when
             // the request specifies Version=2.0). Setting SocketsHttpHandler explicitly
-            // bypasses that wrapper for the gRPC client only.
+            // bypasses that wrapper for the gRPC client only — so the connection-hygiene
+            // values (pooled lifetime for ACA replica-rollover DNS pickup, keep-alive pings)
+            // must be re-applied here from the same HttpResilienceDefaults source of truth.
             builder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
                 EnableMultipleHttp2Connections = true,
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+                PooledConnectionLifetime = HttpResilienceDefaults.PooledConnectionLifetime,
+                PooledConnectionIdleTimeout = HttpResilienceDefaults.PooledConnectionIdleTimeout,
+                KeepAlivePingDelay = HttpResilienceDefaults.KeepAlivePingDelay,
+                KeepAlivePingTimeout = HttpResilienceDefaults.KeepAlivePingTimeout,
+                KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
             });
 
             // AddStandardResilienceHandler returns IHttpStandardResiliencePipelineBuilder; the
             // pipeline is wired onto the same IHttpClientBuilder, so return the original builder
-            // for chaining further customization (e.g., additional message handlers).
-            builder.AddStandardResilienceHandler();
+            // for chaining further customization (e.g., additional message handlers). The
+            // options mirror MMCA.Common.Aspire's ConfigureHttpClientDefaults exactly (they
+            // previously drifted to the 10s/30s library defaults).
+            builder.AddStandardResilienceHandler(options =>
+            {
+                options.AttemptTimeout.Timeout = HttpResilienceDefaults.AttemptTimeout;
+                options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
+                options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
+                options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
+            });
             return builder;
         }
     }

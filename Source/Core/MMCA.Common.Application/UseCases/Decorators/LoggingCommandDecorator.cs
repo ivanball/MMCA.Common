@@ -22,11 +22,7 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
         var commandName = typeof(TCommand).Name;
         var correlationId = correlationContext.CorrelationId;
 
-        using (logger.BeginScope(new Dictionary<string, object>
-        {
-            ["CorrelationId"] = correlationId,
-            ["CommandName"] = commandName,
-        }))
+        using (BeginCommandScope(logger, commandName, correlationId))
         {
             LogCommandStarted(logger, commandName, correlationId);
 
@@ -67,7 +63,16 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Executing command {CommandName} [CorrelationId: {CorrelationId}]")]
+    /// <summary>
+    /// Source-generated scope: avoids the per-command dictionary/boxing allocation of an
+    /// anonymous <c>BeginScope</c> payload while keeping the same structured keys.
+    /// </summary>
+    private static readonly Func<ILogger, string, string, IDisposable?> BeginCommandScope =
+        LoggerMessage.DefineScope<string, string>("Command {CommandName} [CorrelationId: {CorrelationId}]");
+
+    // Started is Debug: the completion line already carries the name and duration, and two
+    // Information rows per command doubles ingestion cost for no diagnostic gain.
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Executing command {CommandName} [CorrelationId: {CorrelationId}]")]
     private static partial void LogCommandStarted(ILogger logger, string commandName, string correlationId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Command {CommandName} completed in {ElapsedMs}ms [CorrelationId: {CorrelationId}]")]

@@ -561,6 +561,7 @@
           "AspNetCore.HealthChecks.Rabbitmq": "[9.0.0, )",
           "AspNetCore.HealthChecks.Redis": "[9.0.0, )",
           "Azure.Monitor.OpenTelemetry.AspNetCore": "[1.5.0, )",
+          "MMCA.Common.Shared": "[1.0.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.7.0, )",
           "Microsoft.Extensions.ServiceDiscovery": "[10.7.0, )",
           "OpenTelemetry.Api": "[1.16.0, )",
@@ -570,6 +571,9 @@
           "OpenTelemetry.Instrumentation.Http": "[1.16.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )"
         }
+      },
+      "mmca.common.shared": {
+        "type": "Project"
       },
       "AspNetCore.HealthChecks.Rabbitmq": {
         "type": "CentralTransitive",

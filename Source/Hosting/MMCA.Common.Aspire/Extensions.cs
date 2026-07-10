@@ -8,6 +8,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Aspire.Warmup;
+using MMCA.Common.Shared.Resilience;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -41,15 +42,20 @@ public static class Extensions
         // HttpClient registered downstream (typed clients, named clients, YARP forwarder).
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
-            // Polly resilience pipeline:
+            // Polly resilience pipeline (values from HttpResilienceDefaults, shared with the
+            // gRPC typed clients in MMCA.Common.Grpc):
             //   - 30s per-attempt timeout
             //   - Circuit breaker sampled over 60s
             //   - 90s total request timeout (including retries)
+            //   - ONE retry per hop: the UI service base classes own user-facing retries;
+            //     stacking full retry budgets at every hop multiplies load during a backend
+            //     brownout (previously up to 4 outer x 4 inner = 16 gateway hits per action).
             http.AddStandardResilienceHandler(options =>
             {
-                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
-                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
-                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(90);
+                options.AttemptTimeout.Timeout = HttpResilienceDefaults.AttemptTimeout;
+                options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
+                options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
+                options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
             });
             http.AddServiceDiscovery();
 
@@ -66,10 +72,10 @@ public static class Extensions
             //     single connection can become a bottleneck; allow new ones when needed.
             http.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(10),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                PooledConnectionLifetime = HttpResilienceDefaults.PooledConnectionLifetime,
+                PooledConnectionIdleTimeout = HttpResilienceDefaults.PooledConnectionIdleTimeout,
+                KeepAlivePingDelay = HttpResilienceDefaults.KeepAlivePingDelay,
+                KeepAlivePingTimeout = HttpResilienceDefaults.KeepAlivePingTimeout,
                 KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
                 EnableMultipleHttp2Connections = true,
             });

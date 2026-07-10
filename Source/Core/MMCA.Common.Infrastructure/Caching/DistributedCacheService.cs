@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using MMCA.Common.Application.Interfaces;
@@ -40,7 +39,15 @@ internal sealed class DistributedCacheService(
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
         cache.RemoveAsync(key, cancellationToken);
 
+    /// <summary>Keys per delete round trip during prefix invalidation.</summary>
+    private const int DeleteBatchSize = 512;
+
     /// <inheritdoc />
+    /// <remarks>
+    /// SCAN enumerates matching keys incrementally; deletes are issued in batches of
+    /// <see cref="DeleteBatchSize"/> (one round trip per batch instead of one per key),
+    /// keeping mutating commands from stalling on large invalidations.
+    /// </remarks>
     public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
     {
         if (connectionMultiplexer is null)
@@ -52,21 +59,25 @@ internal sealed class DistributedCacheService(
 
         var keys = server.KeysAsync(pattern: $"{prefix}*");
         var db = connectionMultiplexer.GetDatabase();
+        var batch = new List<RedisKey>(DeleteBatchSize);
 
         await foreach (var key in keys.WithCancellation(cancellationToken))
         {
-            await db.KeyDeleteAsync(key).ConfigureAwait(false);
+            batch.Add(key);
+            if (batch.Count == DeleteBatchSize)
+            {
+                await db.KeyDeleteAsync([.. batch]).ConfigureAwait(false);
+                batch.Clear();
+            }
         }
+
+        if (batch.Count > 0)
+            await db.KeyDeleteAsync([.. batch]).ConfigureAwait(false);
     }
 
     private static T Deserialize<T>(byte[] bytes)
         => JsonSerializer.Deserialize<T>(bytes)!;
 
     private static byte[] Serialize<T>(T value)
-    {
-        var buffer = new ArrayBufferWriter<byte>();
-        using var writer = new Utf8JsonWriter(buffer);
-        JsonSerializer.Serialize(writer, value);
-        return buffer.WrittenSpan.ToArray();
-    }
+        => JsonSerializer.SerializeToUtf8Bytes(value);
 }

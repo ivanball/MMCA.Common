@@ -1,4 +1,3 @@
-using System.Dynamic;
 using System.Linq.Expressions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -61,7 +60,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     private const string IdField = "Id";
 
     /// <inheritdoc />
-    public virtual async Task<Result<PagedCollectionResult<ExpandoObject>>> GetAllAsync(
+    public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
         Specification<TEntity, TIdentifierType>? specification = null,
@@ -82,7 +81,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
-    public virtual async Task<Result<PagedCollectionResult<ExpandoObject>>> GetAllAsync(
+    public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
         Specification<TEntity, TIdentifierType>? specification = null,
@@ -112,7 +111,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
                 })
                 .ToList();
 
-            return Result.Failure<PagedCollectionResult<ExpandoObject>>(errors);
+            return Result.Failure<PagedCollectionResult<object>>(errors);
         }
 
         // Step 2: Execute the query pipeline (includes, criteria, filters, sort, pagination, field selection)
@@ -129,14 +128,21 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             asTracking: asTracking,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // Step 3: Map entities to DTOs and shape output to requested fields
+        // Step 3: Map entities to DTOs and shape output to requested fields.
+        // Shaping into dynamic objects only pays off when a field subset was requested;
+        // otherwise the typed DTOs are returned as-is and serialize to the same camelCase
+        // JSON without the per-row ExpandoObject allocation and boxing.
         var paginationMetadata = BuildPaginationMetadata(totalItemCount, pageNumber, pageSize);
 
         var pagedDTOs = DTOMapper.MapToDTOs(entities);
 
-        var paginationResult = new PagedCollectionResult<ExpandoObject>
+        ICollection<object> items = string.IsNullOrWhiteSpace(fields)
+            ? [.. pagedDTOs.Cast<object>()]
+            : [.. QueryFieldService.ShapeCollectionData(pagedDTOs, fields)];
+
+        var paginationResult = new PagedCollectionResult<object>
         {
-            Items = QueryFieldService.ShapeCollectionData(pagedDTOs, fields),
+            Items = items,
             PaginationMetadata = paginationMetadata
         };
 
@@ -225,7 +231,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public virtual async Task<Result<ExpandoObject>> GetByIdAsync(
+    public virtual async Task<Result<object>> GetByIdAsync(
         TIdentifierType id,
         bool includeFKs = false,
         bool includeChildren = false,
@@ -244,11 +250,14 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             asTracking: asTracking,
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (getResult.IsFailure)
-            return Result.Failure<ExpandoObject>(getResult.Errors);
+            return Result.Failure<object>(getResult.Errors);
 
         var dto = DTOMapper.MapToDTO(getResult.Value!);
 
-        return Result.Success(QueryFieldService.ShapeData(dto, fields));
+        // Same rule as the list path: only shape when a field subset was requested.
+        return string.IsNullOrWhiteSpace(fields)
+            ? Result.Success<object>(dto!)
+            : Result.Success<object>(QueryFieldService.ShapeData(dto, fields));
     }
 
     /// <inheritdoc />

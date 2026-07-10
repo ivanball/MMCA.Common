@@ -45,7 +45,7 @@ public sealed class EntityControllerBaseTests
         };
     }
 
-    private void SetupGetAllPagedSuccess(PagedCollectionResult<ExpandoObject> items) =>
+    private void SetupGetAllPagedSuccess(PagedCollectionResult<object> items) =>
         _queryServiceMock
             .Setup(q => q.GetAllAsync(
                 It.IsAny<bool>(),
@@ -75,13 +75,13 @@ public sealed class EntityControllerBaseTests
                 It.IsAny<int?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<PagedCollectionResult<ExpandoObject>>(error));
+            .ReturnsAsync(Result.Failure<PagedCollectionResult<object>>(error));
 
     // ── GetAllAsync (non-paged) ──
     [Fact]
     public async Task GetAllAsync_Success_ReturnsOkWithResult()
     {
-        var items = new PagedCollectionResult<ExpandoObject>(
+        var items = new PagedCollectionResult<object>(
             items: [],
             paginationMetadata: new PaginationMetadata(0, 500, 1));
         SetupGetAllPagedSuccess(items);
@@ -116,7 +116,7 @@ public sealed class EntityControllerBaseTests
     public async Task GetAllPaged_Success_ReturnsOkWithPaginationHeader()
     {
         var metadata = new PaginationMetadata(totalItemCount: 50, pageSize: 10, currentPage: 1);
-        var items = new PagedCollectionResult<ExpandoObject>(items: [], paginationMetadata: metadata);
+        var items = new PagedCollectionResult<object>(items: [], paginationMetadata: metadata);
         SetupGetAllPagedSuccess(items);
         TestEntityController sut = CreateController(maxPageSize: 100);
 
@@ -153,7 +153,7 @@ public sealed class EntityControllerBaseTests
     {
         const int maxPageSize = 25;
         var metadata = new PaginationMetadata(totalItemCount: 100, pageSize: maxPageSize, currentPage: 1);
-        var items = new PagedCollectionResult<ExpandoObject>(items: [], paginationMetadata: metadata);
+        var items = new PagedCollectionResult<object>(items: [], paginationMetadata: metadata);
         _queryServiceMock
             .Setup(q => q.GetAllAsync(
                 It.IsAny<bool>(),
@@ -254,7 +254,7 @@ public sealed class EntityControllerBaseTests
                 It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(expando));
+            .ReturnsAsync(Result.Success<object>(expando));
         TestEntityController sut = CreateController(maxPageSize: 100);
 
         ActionResult<TestDTO> result = await sut.GetByIdAsync(42, cancellationToken: CancellationToken.None);
@@ -277,7 +277,7 @@ public sealed class EntityControllerBaseTests
                 It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<ExpandoObject>(
+            .ReturnsAsync(Result.Failure<object>(
                 Error.NotFoundError("Test.NotFound", "Entity not found")));
         TestEntityController sut = CreateController(maxPageSize: 100);
 

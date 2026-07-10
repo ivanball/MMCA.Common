@@ -148,8 +148,11 @@ public static class WebApplicationBuilderExtensions
             });
             services.Configure<BrotliCompressionProviderOptions>(options =>
                 options.Level = CompressionLevel.Fastest);
+            // Fastest for gzip too: these are dynamic per-request API payloads on fractional
+            // vCPUs, so the CPU cost of SmallestSize outweighs the marginal size win for the
+            // gzip-only-client minority (Brotli-capable clients never hit this provider).
             services.Configure<GzipCompressionProviderOptions>(options =>
-                options.Level = CompressionLevel.SmallestSize);
+                options.Level = CompressionLevel.Fastest);
 
             return services;
         }

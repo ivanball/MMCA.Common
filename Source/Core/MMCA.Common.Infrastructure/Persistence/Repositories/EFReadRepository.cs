@@ -249,6 +249,9 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 
     /// <summary>
     /// Applies string-based eager loading includes to the query. Skips empty/whitespace entries.
+    /// Mirrors the query pipeline's heuristic: when any include targets a collection navigation,
+    /// the query opts into split-query mode so sibling collections don't multiply rows
+    /// (cartesian explosion) under EF's default single-query JOIN strategy.
     /// </summary>
     protected static IQueryable<TEntity> ApplyIncludes(
         IQueryable<TEntity> query,
@@ -257,11 +260,41 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(includes);
 
+        var hasCollectionInclude = false;
+
         foreach (string include in includes.Where(i => !string.IsNullOrWhiteSpace(i)))
         {
             query = query.Include(include);
+            hasCollectionInclude = hasCollectionInclude || IsCollectionNavigationPath(include);
         }
 
-        return query;
+        return hasCollectionInclude ? query.AsSplitQuery() : query;
     }
+
+    /// <summary>
+    /// Caches, per include path, whether any segment of the path is a collection navigation.
+    /// The reflection walk runs once per distinct path; dispatch afterwards is a dictionary hit.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> CollectionIncludeCache =
+        new(StringComparer.Ordinal);
+
+    private static bool IsCollectionNavigationPath(string includePath)
+        => CollectionIncludeCache.GetOrAdd(includePath, static path =>
+        {
+            var type = typeof(TEntity);
+            foreach (var segment in path.Split('.'))
+            {
+                var property = type.GetProperty(segment, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (property is null)
+                    return false; // unknown segment: leave the split decision to EF's own include validation
+
+                var propertyType = property.PropertyType;
+                if (propertyType != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType))
+                    return true;
+
+                type = propertyType;
+            }
+
+            return false;
+        });
 }

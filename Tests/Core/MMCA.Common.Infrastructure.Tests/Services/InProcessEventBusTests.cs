@@ -77,7 +77,7 @@ public sealed class InProcessEventBusTests : IDisposable
             .WithParameterName("integrationEvents");
     }
 
-    // ── Batch dispatches each event ──
+    // ── Batch dispatches every event in a single call ──
     [Fact]
     public async Task PublishBatch_DispatchesEachEvent()
     {
@@ -87,9 +87,13 @@ public sealed class InProcessEventBusTests : IDisposable
 
         await _sut.PublishAsync(events, CancellationToken.None);
 
+        // The batch is dispatched in one call carrying every event (one save + one
+        // set-based mark-processed instead of two round trips per event).
         _mockDispatcher.Verify(
-            x => x.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), CancellationToken.None),
-            Times.Exactly(2));
+            x => x.DispatchAsync(
+                It.Is<IEnumerable<IDomainEvent>>(e => e.Contains(event1.Object) && e.Contains(event2.Object)),
+                CancellationToken.None),
+            Times.Once);
     }
 
     // ── Empty batch does not dispatch ──

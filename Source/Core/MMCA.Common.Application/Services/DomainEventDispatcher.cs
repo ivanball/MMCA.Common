@@ -18,11 +18,14 @@ public sealed class DomainEventDispatcher(IServiceProvider serviceProvider, ILog
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
     /// <summary>
-    /// Caches compiled delegates keyed by (eventType, handlerInterfaceType).
-    /// Each entry compiles a single expression tree that invokes <c>HandleAsync</c> on
-    /// the target handler interface without boxing or reflection at call time.
+    /// Caches the closed handler interface type and its compiled invoker keyed by
+    /// (eventType, handlerInterfaceType). Each entry compiles a single expression tree that
+    /// invokes <c>HandleAsync</c> without boxing or reflection at call time; caching the
+    /// closed type alongside it keeps <see cref="Type.MakeGenericType"/> off the per-dispatch path.
     /// </summary>
-    private static readonly ConcurrentDictionary<(Type EventType, Type HandlerInterface), Func<object, object, CancellationToken, Task>> CompiledDelegates = new();
+    private static readonly ConcurrentDictionary<
+        (Type EventType, Type HandlerInterface),
+        (Type ClosedHandlerType, Func<object, object, CancellationToken, Task> Invoker)> DispatchCache = new();
 
     /// <inheritdoc />
     public async Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
@@ -44,11 +47,10 @@ public sealed class DomainEventDispatcher(IServiceProvider serviceProvider, ILog
 
     private async Task DispatchToHandlersAsync(Type eventType, Type openHandlerType, IDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        var closedHandlerType = openHandlerType.MakeGenericType(eventType);
-        var handlers = _serviceProvider.GetServices(closedHandlerType);
-        var invoker = CompiledDelegates.GetOrAdd(
+        var (closedHandlerType, invoker) = DispatchCache.GetOrAdd(
             (eventType, openHandlerType),
-            static key => BuildInvoker(key.EventType, key.HandlerInterface));
+            static key => (key.HandlerInterface.MakeGenericType(key.EventType), BuildInvoker(key.EventType, key.HandlerInterface)));
+        var handlers = _serviceProvider.GetServices(closedHandlerType);
 
         foreach (var handler in handlers)
         {

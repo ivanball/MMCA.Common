@@ -89,6 +89,42 @@ public sealed class CachingQueryDecoratorTests
             x => x.SetAsync(It.IsAny<string>(), It.IsAny<Result<string>>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    // ── Stampede protection: concurrent misses on one key execute the handler once ──
+    [Fact]
+    public async Task HandleAsync_ConcurrentMissesOnSameKey_ExecuteHandlerOnce()
+    {
+        var inner = new Mock<IQueryHandler<StampedeTestQuery, Result<string>>>();
+        var cacheService = new Mock<ICacheService>();
+        Result<string>? stored = null;
+        var executions = 0;
+
+        cacheService.Setup(x => x.GetAsync<Result<string>>("stampede-cache-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => stored);
+        cacheService.Setup(x => x.SetAsync(
+                "stampede-cache-key", It.IsAny<Result<string>>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, Result<string> value, TimeSpan? _, CancellationToken _) => stored = value)
+            .Returns(Task.CompletedTask);
+        inner.Setup(x => x.HandleAsync(It.IsAny<StampedeTestQuery>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                Interlocked.Increment(ref executions);
+                await Task.Delay(50);
+                return Result.Success("expensive-data");
+            });
+
+        var sut = new CachingQueryDecorator<StampedeTestQuery, Result<string>>(inner.Object, cacheService.Object);
+
+        Result<string>[] results = await Task.WhenAll(
+            Enumerable.Range(0, 8).Select(_ => Task.Run(() => sut.HandleAsync(new StampedeTestQuery()))));
+
+        executions.Should().Be(1, "concurrent misses on the same key must collapse to a single handler execution");
+        results.Should().AllSatisfy(r =>
+        {
+            r.IsSuccess.Should().BeTrue();
+            r.Value.Should().Be("expensive-data");
+        });
+    }
 }
 
 // ── Test helpers ──
@@ -97,5 +133,11 @@ public sealed record NonCacheableTestQuery;
 public sealed record CacheableTestQuery : IQueryCacheable
 {
     public string CacheKey => "test-cache-key";
+    public TimeSpan CacheDuration => TimeSpan.FromMinutes(5);
+}
+
+public sealed record StampedeTestQuery : IQueryCacheable
+{
+    public string CacheKey => "stampede-cache-key";
     public TimeSpan CacheDuration => TimeSpan.FromMinutes(5);
 }

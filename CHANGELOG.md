@@ -6,6 +6,67 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-10 runtime performance wave, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
+- **`PublicEndpointOutputCachePolicy` + `OutputCacheOptions.AddPublicEndpointPolicy(name, expiration, tags)`**
+  (MMCA.Common.API): output-cache policy for `[AllowAnonymous]`, user-independent GET endpoints
+  that caches despite an `Authorization` header. The UI attaches a Bearer token to every request,
+  so the built-in default policy served logged-in users a 0% cache hit rate and every public read
+  landed on the database; see ADR-040 for the strict apply-only-to-identity-independent contract.
+- **`HttpResilienceDefaults`** (MMCA.Common.Shared.Resilience): single source of truth for the
+  outbound-HTTP resilience and socket-handler values shared by `MMCA.Common.Aspire` and
+  `MMCA.Common.Grpc` (the two hand-mirrored copies had drifted). MMCA.Common.Aspire now
+  references MMCA.Common.Shared.
+
+### Changed (2026-07-10 runtime performance wave)
+- **BREAKING: `IEntityQueryService` shaped payloads widened from `ExpandoObject` to `object`**
+  (`GetAllAsync` returns `Result<PagedCollectionResult<object>>`, `GetByIdAsync` returns
+  `Result<object>`). When no `fields` subset is requested (the overwhelming majority of list/read
+  traffic), the typed DTOs are now returned as-is instead of being reshaped into one
+  `ExpandoObject` per row (per-row allocation + boxing + slower dictionary serialization on 100%
+  of list GETs). Explicit `fields` selections still shape. The wire format is unchanged (same
+  camelCase JSON); consumers only need mechanical retyping where they name the old generic
+  (typically controller-test mocks). Note: DTO `[JsonPropertyName]`/`[JsonIgnore]` attributes are
+  now honored on unshaped responses (the Expando path ignored them); no shipped DTO relied on that.
+- **Outbox mark-processed is set-based and fully async**: after in-process dispatch,
+  `DomainEventSaveChangesInterceptor` (and `InProcessEventBus`) stamp `ProcessedOn` with one
+  `ExecuteUpdateAsync` instead of a nested synchronous `SaveChanges()`. This removes a blocking
+  thread-pool DB round trip (plus a full re-entrant interceptor pipeline) from every
+  event-raising command in every consumer. `InProcessEventBus` batch publishes now persist all
+  events in ONE save and dispatch in one call (previously 2 round trips per event); a dispatch
+  failure leaves the whole batch for the outbox processor (at-least-once, inbox dedup unchanged).
+- **`Result` success path is allocation-free**: the error list is lazily allocated (every Result
+  previously allocated a `List<Error>` even on success) and `Result.Success()` returns a shared
+  instance. **`Result`/`Result<T>` are now JSON round-trippable** via an attribute-applied
+  converter factory (`{"value": ..., "errors": [...]}` shape): required by the distributed query
+  cache, where a Redis hit previously could not rehydrate (internal ctors, get-only `Value`) and
+  the in-memory fallback masked it.
+- **`CachingQueryDecorator` gained stampede protection**: per-cache-key double-check locking (the
+  `IdempotencyFilter` pattern) so concurrent misses on a hot expired key run the handler once.
+- **`DistributedCacheService`**: prefix invalidation now deletes keys in batches of 512 (one
+  Redis round trip per batch instead of one per key, sequential, on the request thread);
+  serialization uses `SerializeToUtf8Bytes` (drops a full buffer copy per cache write).
+- **Retry ownership bounded**: the standard resilience handler applied to every factory client by
+  `AddServiceDefaults()` now retries ONCE (was 3): the UI service base classes own user-facing
+  retries, and stacked budgets amplified a backend brownout up to 16x. `AddTypedGrpcClient`'s
+  resilience options now mirror the Aspire defaults exactly (they had silently drifted to the
+  10s/30s library defaults) and its `SocketsHttpHandler` regains `PooledConnectionLifetime` +
+  keep-alive pings (gRPC connections were never recycled, pinning stale ACA replicas after scale
+  events).
+- **`EFReadRepository.ApplyIncludes` opts into split query when any string include targets a
+  collection navigation** (cached reflection walk), mirroring the query pipeline's heuristic:
+  sibling collection includes on the direct repository path multiplied rows via JOIN products.
+- **`LoggingCommandDecorator`**: the started line dropped to Debug (the completion line already
+  carries name + duration; two Information rows per command doubled ingestion) and the logging
+  scope is source-generated (`LoggerMessage.DefineScope`) instead of a per-command dictionary.
+- **Reflection off hot paths**: `DomainEventDispatcher` caches the closed handler type beside the
+  compiled invoker (no `MakeGenericType` per dispatch); `ResultFailureFactory` compiles the
+  generic failure constructor once per closed type (no `MethodInfo.Invoke` per short-circuit);
+  `OutboxMessage.DeserializeEvent` caches `Type.GetType` lookups and now deserializes with the
+  same cycle-ignoring options used to serialize; `EFRepository.UpdateAsync` uses the tracker's
+  O(1) `LocalView.FindEntry` instead of scanning the local view.
+- **Gzip response compression level moved from `SmallestSize` to `Fastest`** (Brotli already
+  `Fastest`): dynamic API payloads on fractional vCPUs.
+
 ### Changed (2026-07-09 domain rejection messages in error toasts, [ADR-027](ADRs/027-multi-locale-i18n.md) Decision 9 carve-out)
 - **`ErrorMessages.LoadError/SaveError/DeleteError` surface a `DomainInvariantViolationException`
   message verbatim** in place of the generic "Error loading/saving/deleting {0}." template, and the

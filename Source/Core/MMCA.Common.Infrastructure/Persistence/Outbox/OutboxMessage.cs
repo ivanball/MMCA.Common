@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,6 +17,12 @@ public sealed class OutboxMessage
     {
         ReferenceHandler = ReferenceHandler.IgnoreCycles,
     };
+
+    /// <summary>
+    /// Caches resolved event types per assembly-qualified name; <see cref="Type.GetType(string)"/>
+    /// is a per-call reflection lookup otherwise. Unresolvable names cache as null.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, Type?> EventTypeCache = new(StringComparer.Ordinal);
 
     /// <summary>Gets the unique identifier for this outbox entry.</summary>
     public Guid Id { get; init; } = Guid.NewGuid();
@@ -71,10 +78,12 @@ public sealed class OutboxMessage
     /// <returns>The deserialized domain event, or <see langword="null"/> if the type cannot be resolved.</returns>
     public IDomainEvent? DeserializeEvent()
     {
-        var type = Type.GetType(EventType);
+        var type = EventTypeCache.GetOrAdd(EventType, static typeName => Type.GetType(typeName));
         if (type is null)
             return null;
 
-        return JsonSerializer.Deserialize(Payload, type) as IDomainEvent;
+        // Deserialize with the same options used by FromDomainEvent so payloads written
+        // with cycle-ignoring semantics read back symmetrically.
+        return JsonSerializer.Deserialize(Payload, type, SerializerOptions) as IDomainEvent;
     }
 }

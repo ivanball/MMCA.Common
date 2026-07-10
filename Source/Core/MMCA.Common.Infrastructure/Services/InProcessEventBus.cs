@@ -31,25 +31,7 @@ public sealed class InProcessEventBus(
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
-        var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
-        var context = dbContextFactory.GetDbContext(target);
-
-        if (context.SupportsOutbox)
-        {
-            var outboxEntry = OutboxMessage.FromDomainEvent(integrationEvent);
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
-            context.Set<OutboxMessage>().Add(outboxEntry);
-#pragma warning restore VSTHRD103
-            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            await domainEventDispatcher.DispatchAsync([integrationEvent], cancellationToken).ConfigureAwait(false);
-
-            outboxEntry.ProcessedOn = DateTime.UtcNow;
-            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        await domainEventDispatcher.DispatchAsync([integrationEvent], cancellationToken).ConfigureAwait(false);
+        await PublishBatchAsync([integrationEvent], cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -57,9 +39,41 @@ public sealed class InProcessEventBus(
     {
         ArgumentNullException.ThrowIfNull(integrationEvents);
 
-        foreach (var integrationEvent in integrationEvents)
+        var events = integrationEvents as IIntegrationEvent[] ?? [.. integrationEvents];
+        if (events.Length == 0)
+            return;
+
+        await PublishBatchAsync(events, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Persists all events to the outbox in a single save, dispatches them, then marks them
+    /// processed with one set-based update. A dispatch failure leaves every entry in the batch
+    /// unprocessed for the <see cref="OutboxProcessor"/> to retry (at-least-once delivery;
+    /// handlers are idempotent via the inbox store).
+    /// </summary>
+    private async Task PublishBatchAsync(IIntegrationEvent[] events, CancellationToken cancellationToken)
+    {
+        var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
+        var context = dbContextFactory.GetDbContext(target);
+
+        if (!context.SupportsOutbox)
         {
-            await PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
+            await domainEventDispatcher.DispatchAsync(events, cancellationToken).ConfigureAwait(false);
+            return;
         }
+
+        var outboxEntries = new List<OutboxMessage>(events.Length);
+        foreach (var integrationEvent in events)
+            outboxEntries.Add(OutboxMessage.FromDomainEvent(integrationEvent));
+
+#pragma warning disable VSTHRD103 // EF DbSet.AddRange is intentionally synchronous (in-memory); AddRangeAsync is only for special value generators (EF guidance).
+        context.Set<OutboxMessage>().AddRange(outboxEntries);
+#pragma warning restore VSTHRD103
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await domainEventDispatcher.DispatchAsync(events, cancellationToken).ConfigureAwait(false);
+
+        await OutboxFinalizer.MarkProcessedAsync(context, outboxEntries, cancellationToken).ConfigureAwait(false);
     }
 }

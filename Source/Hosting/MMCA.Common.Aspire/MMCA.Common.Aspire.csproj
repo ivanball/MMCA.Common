@@ -27,6 +27,11 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Shared holds HttpResilienceDefaults — the single source of truth for the resilience
+         values this package and MMCA.Common.Grpc must keep identical. -->
+    <ProjectReference Include="..\..\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

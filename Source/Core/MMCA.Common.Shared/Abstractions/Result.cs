@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using MMCA.Common.Shared.Serialization;
+
 namespace MMCA.Common.Shared.Abstractions;
 
 /// <summary>
@@ -11,26 +14,33 @@ namespace MMCA.Common.Shared.Abstractions;
 /// Use the non-generic <see cref="Result"/> for void-equivalent operations (e.g. invariant checks).
 /// Combine multiple results with <see cref="Combine"/> to aggregate all errors before returning.
 /// </remarks>
+[JsonConverter(typeof(ResultJsonConverterFactory))]
 public class Result
 {
-    private readonly List<Error> _errors = [];
+    private static readonly Result CachedSuccess = new();
+    private static readonly Error[] NoErrors = [];
+
+    // Lazily allocated: the success path (the overwhelming majority of Results created
+    // per request) never pays for an error list allocation.
+    private List<Error>? _errors;
 
     /// <summary>Gets the list of errors. Empty when <see cref="IsSuccess"/> is <see langword="true"/>.</summary>
-    public IReadOnlyList<Error> Errors => _errors;
+    public IReadOnlyList<Error> Errors => _errors ?? (IReadOnlyList<Error>)NoErrors;
 
     /// <summary>Gets a value indicating whether the operation succeeded (no errors).</summary>
-    public bool IsSuccess => _errors.Count == 0;
+    public bool IsSuccess => _errors is null || _errors.Count == 0;
 
     /// <summary>Gets a value indicating whether the operation failed (one or more errors).</summary>
-    public bool IsFailure => _errors.Count > 0;
+    public bool IsFailure => !IsSuccess;
 
     /// <summary>Appends errors to this result. Used by <see cref="Result{T}"/> constructors.</summary>
     /// <param name="errors">The errors to add.</param>
-    protected void AddErrors(IEnumerable<Error> errors) => _errors.AddRange(errors);
+    protected void AddErrors(IEnumerable<Error> errors) => (_errors ??= []).AddRange(errors);
 
     /// <summary>Creates a successful non-generic result.</summary>
+    /// <remarks>Returns a shared immutable instance; success results carry no per-instance state.</remarks>
     /// <returns>A success <see cref="Result"/> with no errors.</returns>
-    public static Result Success() => new();
+    public static Result Success() => CachedSuccess;
 
     /// <summary>Creates a successful result carrying <paramref name="value"/>.</summary>
     /// <typeparam name="T">The type of the success value.</typeparam>
@@ -50,7 +60,7 @@ public class Result
     public static Result Failure(IEnumerable<Error> errors)
     {
         var result = new Result();
-        result._errors.AddRange(errors);
+        result.AddErrors(errors);
         return result;
     }
 
@@ -88,7 +98,7 @@ public class Result
             if (r.IsFailure)
             {
                 allErrors ??= [];
-                allErrors.AddRange(r._errors);
+                allErrors.AddRange(r.Errors);
             }
         }
 
@@ -105,6 +115,7 @@ public class Result
 /// <see cref="Result.IsFailure"/> at every step.
 /// </summary>
 /// <typeparam name="T">The type of the success value.</typeparam>
+[JsonConverter(typeof(ResultJsonConverterFactory))]
 public sealed class Result<T> : Result
 {
     /// <summary>Gets the success value. <see langword="null"/> when <see cref="Result.IsFailure"/> is <see langword="true"/>.</summary>

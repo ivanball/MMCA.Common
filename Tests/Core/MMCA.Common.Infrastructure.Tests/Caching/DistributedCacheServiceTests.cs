@@ -116,15 +116,20 @@ public class DistributedCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .Returns(keys.ToAsyncEnumerable());
 
-        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
-            .ReturnsAsync(true);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(2);
 
         var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
 
         await sut.RemoveByPrefixAsync("prefix:");
 
-        dbMock.Verify(d => d.KeyDeleteAsync((RedisKey)"prefix:key1", It.IsAny<CommandFlags>()), Times.Once);
-        dbMock.Verify(d => d.KeyDeleteAsync((RedisKey)"prefix:key2", It.IsAny<CommandFlags>()), Times.Once);
+        // Deletes are batched: both keys go out in one round trip instead of one per key.
+        dbMock.Verify(
+            d => d.KeyDeleteAsync(
+                It.Is<RedisKey[]>(k => k.Length == 2 && k[0] == (RedisKey)"prefix:key1" && k[1] == (RedisKey)"prefix:key2"),
+                It.IsAny<CommandFlags>()),
+            Times.Once);
+        dbMock.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
@@ -12,6 +13,8 @@ internal static class ResultFailureFactory
     /// <summary>
     /// Builds a delegate that creates a <typeparamref name="TResult"/> failure.
     /// Handles both non-generic <see cref="Result"/> and generic <see cref="Result{T}"/>.
+    /// The generic branch compiles an expression tree once per closed type, so invoking the
+    /// returned delegate never goes through <c>MethodInfo.Invoke</c>.
     /// </summary>
     /// <typeparam name="TResult">The result type (typically <see cref="Result"/> or <see cref="Result{T}"/>).</typeparam>
     internal static Func<IEnumerable<Error>, TResult> Build<TResult>()
@@ -32,7 +35,9 @@ internal static class ResultFailureFactory
                          && m.GetParameters()[0].ParameterType == typeof(IEnumerable<Error>))
                 .MakeGenericMethod(innerType);
 
-            return errors => (TResult)failureMethod.Invoke(null, [errors])!;
+            var errorsParam = Expression.Parameter(typeof(IEnumerable<Error>), "errors");
+            return Expression.Lambda<Func<IEnumerable<Error>, TResult>>(
+                Expression.Call(failureMethod, errorsParam), errorsParam).Compile();
         }
 
         throw new InvalidOperationException(

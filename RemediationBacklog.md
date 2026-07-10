@@ -523,6 +523,37 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
   categories already scored 8-9; the ADR range refreshes to **001-039** (`FACTS.md`: 78 fitness methods /
   25 bases, Common runs 41).
 
+## Progress - eighteenth wave (runtime performance wave, 2026-07-10)
+
+> A cross-repo runtime-performance audit (4 parallel auditors: framework, ADC, Store, hosting/config)
+> found the framework strong on read-path fundamentals (no-tracking, SQL pagination, batched populators,
+> pipeline split-query, outbox smart-wait) but flagged a cluster of hot-path costs, all fixed this wave
+> (details in `CHANGELOG.md` [Unreleased] and ADR-040). Mostly §12 Performance & Scalability plus §26
+> caching evidence:
+
+- ✅ **§12 · Outbox mark-processed set-based + async** (`ExecuteUpdateAsync`; was a nested synchronous
+  `SaveChanges()` blocking a thread-pool thread per event-raising command); `InProcessEventBus` batch
+  publish = 1 save + 1 update (was 2 round trips per event).
+- ✅ **§12/§26 · ADR-040 `PublicEndpointOutputCachePolicy`**: authenticated requests no longer bypass the
+  output cache on `[AllowAnonymous]` user-independent GETs (the UI's Bearer-on-every-request made the
+  whole output-cache layer serve 0% of logged-in traffic).
+- ✅ **§26 · Query cache hardening**: stampede protection in `CachingQueryDecorator` (per-key double-check
+  locking); `Result`/`Result<T>` JSON round-trip converter (a Redis cache hit previously could not
+  rehydrate: latent production incident once Redis appears); batched prefix invalidation (512-key
+  deletes); single-copy serialization.
+- ✅ **§12 · Retry ownership**: standard resilience handler capped at 1 retry (UI policy owns user-facing
+  retries; stacked budgets amplified brownouts up to 16x); gRPC client resilience unified with the Aspire
+  values via new `HttpResilienceDefaults` (Shared) + restored `PooledConnectionLifetime`/keep-alive.
+- ✅ **§12 · Allocation/reflection batch**: lazy `Result` error list + shared success instance; typed-DTO
+  list responses skip per-row `ExpandoObject` shaping when no `fields` requested (BREAKING: query-service
+  generics widened to `object`; wire format unchanged); dispatcher closed-type cache; compiled failure
+  factory; `Type.GetType` cache; `LocalView.FindEntry`; split-query heuristic in
+  `EFReadRepository.ApplyIncludes`; command started-log to Debug + source-generated scope; gzip Fastest.
+- ⏸ **Deferred with rationale**: interceptor `DetectChanges` reduction (the second detection pass may be
+  load-bearing for audit stamps; needs a dedicated EF-internals investigation; silent-data-loss failure
+  mode) and a by-id fast path around the dynamic query pipeline (larger refactor; pressure mostly removed
+  by ADR-040).
+
 ---
 
 ## 🔴 Priority 6 — highest leverage

@@ -336,6 +336,9 @@
         "resolved": "4.5.0",
         "contentHash": "wLBKzFnDCxP12VL9ANydSYhk59fC4cvOr9ypYQLPnAj48NQIhqnjdD2yhP8yEKyBJEjERWS9DisKL7rX5eU25Q=="
       },
+      "mmca.common.shared": {
+        "type": "Project"
+      },
       "StackExchange.Redis": {
         "type": "CentralTransitive",
         "requested": "[2.13.17, )",

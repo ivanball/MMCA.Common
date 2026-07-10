@@ -67,8 +67,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Synchronous path (used by MarkOutboxAsProcessed). Domain events are only
-    /// captured during the async path, so the synchronous hook is a no-op.
+    /// Domain events are only captured during the async path, so the synchronous hook is a no-op.
     /// </remarks>
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result) =>
         base.SavedChanges(eventData, result);
@@ -123,12 +122,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         {
             await domainEventDispatcher.DispatchAsync(state.DomainEvents, cancellationToken).ConfigureAwait(false);
 
-            // Clear BEFORE the nested SaveChanges in MarkOutboxAsProcessed: that save re-enters
-            // this interceptor synchronously, and any events still on the aggregates would be
-            // captured a second time, writing duplicate outbox rows.
             ClearDomainEvents(state);
 
-            MarkOutboxAsProcessed(context, state.OutboxEntries);
+            await OutboxFinalizer.MarkProcessedAsync(context, state.OutboxEntries, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -150,24 +146,6 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     {
         foreach (var aggregateRootEntity in state.AggregateRootEntities)
             aggregateRootEntity.Entity.ClearDomainEvents();
-    }
-
-    /// <summary>
-    /// Marks outbox entries as processed after successful in-process dispatch.
-    /// Uses <c>base.SaveChanges()</c> (synchronous) to avoid re-entering the async pipeline.
-    /// </summary>
-    private static void MarkOutboxAsProcessed(ApplicationDbContext context, List<OutboxMessage> outboxEntries)
-    {
-        if (outboxEntries.Count == 0)
-            return;
-
-        var now = TimeProvider.System.GetUtcNow().UtcDateTime;
-        foreach (var entry in outboxEntries)
-            entry.ProcessedOn = now;
-
-        // SaveChanges triggers this interceptor synchronously, but no aggregate roots
-        // will have events (they were just cleared), so CaptureEventsAndPersistToOutbox is a no-op.
-        context.SaveChanges();
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "In-process domain event dispatch failed; the outbox processor will retry")]

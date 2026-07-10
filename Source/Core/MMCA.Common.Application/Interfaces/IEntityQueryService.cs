@@ -1,4 +1,3 @@
-using System.Dynamic;
 using System.Linq.Expressions;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
@@ -10,7 +9,9 @@ namespace MMCA.Common.Application.Interfaces;
 /// <summary>
 /// Provides generic query operations (GetAll, GetById, Exists) with support for
 /// navigation includes, dynamic filtering, sorting, pagination, and field projection.
-/// Returns DTOs shaped as <see cref="ExpandoObject"/> for flexible field selection.
+/// When no field subset is requested the typed DTOs are returned as-is (no per-row
+/// shaping cost); an explicit <c>fields</c> selection returns dynamically shaped objects.
+/// Both serialize to the same camelCase JSON.
 /// </summary>
 /// <typeparam name="TEntity">The domain entity type.</typeparam>
 /// <typeparam name="TEntityDTO">The DTO type for entity mapping.</typeparam>
@@ -32,8 +33,8 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     /// <param name="fields">Comma-separated list of fields to include in the response.</param>
     /// <param name="asTracking">Whether to track entities in the EF change tracker.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A paged result of shaped DTOs.</returns>
-    Task<Result<PagedCollectionResult<ExpandoObject>>> GetAllAsync(
+    /// <returns>A paged result of DTOs (typed, or shaped when a field subset was requested).</returns>
+    Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
         Specification<TEntity, TIdentifierType>? specification = null,
@@ -55,8 +56,8 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     /// <param name="pageSize">Number of items per page.</param>
     /// <param name="asTracking">Whether to track entities in the EF change tracker.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A paged result of shaped DTOs with pagination metadata.</returns>
-    Task<Result<PagedCollectionResult<ExpandoObject>>> GetAllAsync(
+    /// <returns>A paged result of DTOs (typed, or shaped when a field subset was requested) with pagination metadata.</returns>
+    Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
         Specification<TEntity, TIdentifierType>? specification = null,
@@ -108,7 +109,8 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a single entity by its identifier, returning a shaped DTO as an <see cref="ExpandoObject"/>.
+    /// Retrieves a single entity by its identifier, returning its DTO
+    /// (typed, or shaped when a field subset was requested).
     /// </summary>
     /// <param name="id">The typed identifier value.</param>
     /// <param name="includeFKs">Whether to include FK reference navigations.</param>
@@ -117,8 +119,8 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     /// <param name="fields">Comma-separated list of fields to include in the response.</param>
     /// <param name="asTracking">Whether to track the entity in the EF change tracker.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A shaped DTO or a NotFound error.</returns>
-    Task<Result<ExpandoObject>> GetByIdAsync(
+    /// <returns>The DTO or a NotFound error.</returns>
+    Task<Result<object>> GetByIdAsync(
         TIdentifierType id,
         bool includeFKs = false,
         bool includeChildren = false,

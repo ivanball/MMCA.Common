@@ -45,9 +45,11 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(entity);
         try
         {
-            var trackedEntity = Entities.Local.FirstOrDefault(e => e.Id.Equals(entity.Id));
-            if (trackedEntity is not null)
-                _context.Entry(trackedEntity).CurrentValues.SetValues(entity);
+            // FindEntry is an O(1) key lookup against the tracker's identity map (and never
+            // falls back to the database), replacing a linear scan of the LocalView.
+            var trackedEntry = Entities.Local.FindEntry(entity.Id);
+            if (trackedEntry is not null)
+                trackedEntry.CurrentValues.SetValues(entity);
             else
                 Entities.Update(entity);
             return Task.CompletedTask;
