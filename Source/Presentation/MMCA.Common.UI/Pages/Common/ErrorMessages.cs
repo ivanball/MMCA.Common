@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Exceptions;
 
 namespace MMCA.Common.UI.Pages.Common;
 
@@ -40,20 +41,41 @@ public static class ErrorMessages
 
     /// <summary>
     /// Load-failure message. Pass a LOCALIZED entity name (e.g. the page's localized <c>Title</c> or an
-    /// <c>L["Entity.X"]</c> value). The exception is accepted for call-site ergonomics and future logging
-    /// only; its <c>Message</c> is deliberately NOT shown to the user (raw exception text is neither
-    /// localizable nor safe to surface — ADR-027 / rubric §24).
+    /// <c>L["Entity.X"]</c> value). A <see cref="DomainInvariantViolationException"/> is the one exception
+    /// whose <c>Message</c> IS shown, replacing the template: <c>ServiceExceptionHelper</c> rethrows the
+    /// API's Problem Details errors as that type, and their text is curated domain wording already
+    /// localized server-side to the request culture (ADR-027 Decisions 3 and 5), so the user sees the
+    /// actual business rule that rejected the action. Every other exception's <c>Message</c> is
+    /// deliberately NOT shown (raw exception text is neither localizable nor safe to surface, ADR-027
+    /// Decision 9 / rubric §24).
     /// </summary>
     public static string LoadError(string entityName, Exception ex) =>
-        Localize("Common.Error.Load", "Error loading {0}.", entityName, ex.Message);
+        ex is DomainInvariantViolationException
+            ? ex.Message
+            : Localize("Common.Error.Load", "Error loading {0}.", entityName, ex.Message);
 
     /// <inheritdoc cref="LoadError"/>
     public static string SaveError(string entityName, Exception ex) =>
-        Localize("Common.Error.Save", "Error saving {0}.", entityName, ex.Message);
+        ex is DomainInvariantViolationException
+            ? ex.Message
+            : Localize("Common.Error.Save", "Error saving {0}.", entityName, ex.Message);
 
     /// <inheritdoc cref="LoadError"/>
     public static string DeleteError(string entityName, Exception ex) =>
-        Localize("Common.Error.Delete", "Error deleting {0}.", entityName, ex.Message);
+        ex is DomainInvariantViolationException
+            ? ex.Message
+            : Localize("Common.Error.Delete", "Error deleting {0}.", entityName, ex.Message);
+
+    /// <summary>
+    /// Message for a failed user action reported via snackbar, for pages whose fallback is a
+    /// whole-sentence key of their own resource pair rather than an entity-noun template. A
+    /// <see cref="DomainInvariantViolationException"/> shows its <c>Message</c> verbatim (see
+    /// <see cref="LoadError"/> for why that is safe); any other exception yields
+    /// <paramref name="localizedFallback"/>, which the caller must have localized already
+    /// (e.g. <c>L["Snackbar.ActionFailed"].Value</c>).
+    /// </summary>
+    public static string ActionError(Exception ex, string localizedFallback) =>
+        ex is DomainInvariantViolationException ? ex.Message : localizedFallback;
 
     public static string DeleteFailed(string entityName) =>
         Localize("Common.Error.DeleteFailed", "Failed to delete the {0}.", entityName);

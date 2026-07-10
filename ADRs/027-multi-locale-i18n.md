@@ -110,7 +110,19 @@ machine `Code`, which makes server-side error localization a keyed lookup rather
    successfully." / "Evento creado correctamente."): `ErrorMessages.Success(entity, action)` is
    `[Obsolete]` because fragment composition cannot translate (Spanish gender agreement breaks), and
    the shared `Common.Error.Load/Save/Delete` templates no longer append raw `ex.Message` (neither
-   localizable nor safe to surface). `NavItem` gained an optional `TitleResource` type: when set, the
+   localizable nor safe to surface).
+
+   **Carve-out (2026-07-09): a `DomainInvariantViolationException` message IS shown verbatim.**
+   `ErrorMessages.LoadError/SaveError/DeleteError` return that exception's `Message` in place of the
+   generic template, and the new `ErrorMessages.ActionError(ex, localizedFallback)` does the same for
+   pages whose fallback is a whole-sentence snackbar key. This does not weaken the raw-text rule:
+   `ServiceExceptionHelper` mints that exception type exclusively from the API's Problem Details
+   errors, whose text is curated domain wording already localized server-side to the request culture
+   (Decision 3, carried by the Decision 5 `Accept-Language` forwarding), so the user sees the actual
+   business rule ("This action is only available while the event is live.") instead of a generic
+   failure toast. All other exception types keep the generic localized message.
+
+   `NavItem` gained an optional `TitleResource` type: when set, the
    shared `NavMenu` treats `Title`/`Group` as resource keys resolved per circuit at render time, so
    module nav menus follow the active culture. MudBlazor's own component chrome localizes through
    `ResxMudLocalizer` over the `MudTranslations` resource pair (all built-in keys of the pinned

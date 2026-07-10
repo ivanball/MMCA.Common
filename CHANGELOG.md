@@ -6,6 +6,18 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Changed (2026-07-09 domain rejection messages in error toasts, [ADR-027](ADRs/027-multi-locale-i18n.md) Decision 9 carve-out)
+- **`ErrorMessages.LoadError/SaveError/DeleteError` surface a `DomainInvariantViolationException`
+  message verbatim** in place of the generic "Error loading/saving/deleting {0}." template, and the
+  new **`ErrorMessages.ActionError(ex, localizedFallback)`** does the same for pages whose fallback
+  is a whole-sentence snackbar key of their own resource pair. `ServiceExceptionHelper` mints that
+  exception type exclusively from the API's Problem Details errors, whose text is curated domain
+  wording already localized server-side to the request culture (Accept-Language via
+  `CultureDelegatingHandler`), so users now see the actual business rule that rejected an action
+  ("This action is only available while the event is live.") instead of a generic failure toast.
+  Behavior change, not a breaking one: no signatures moved, and every other exception type still
+  gets the generic localized message (raw exception text is still never shown, ADR-027 Decision 9).
+
 ### Added (2026-07-09 live channels, [ADR-039](ADRs/039-live-channel-push.md))
 - **Ephemeral live channel events over the existing notification hub**: `NotificationHub` gains its
   first client-invokable methods, `JoinChannel` / `LeaveChannel` (SignalR group membership; channel
