@@ -31,6 +31,41 @@ survives on two non-gRPC-serving hosts for two different reasons: ADC's **Notifi
 WebSocket Upgrade handshake needs HTTP/1.1) and Store's **Sales** service (a consumer-only host that
 serves no inbound cleartext gRPC, so it never needed Http2-only). Profile B is retained below as (a) the
 original rationale for the split and (b) the still-valid rule for those no-inbound-gRPC hosts.
+*(Since 2026-07-09, ADC's Notification does serve one inbound gRPC edge, from a dedicated Http2-only
+endpoint alongside its Http1AndHttp2 default endpoint: see the mixed-endpoint update below.)*
+
+## Update (2026-07-09): ADC Notification adds a mixed-endpoint profile (per-endpoint protocols)
+
+The live-channel push seam (ADR-039) gave ADC's Notification service an **inbound cleartext gRPC
+server** (`LiveChannelPushService.PushToChannel`, called best-effort by Engagement command handlers)
+while it still hosts the SignalR hub whose WebSocket transport needs the HTTP/1.1 Upgrade handshake.
+That combination breaks the original per-host rule ("a WebSocket host cannot be a cleartext gRPC
+server"): neither whole-host profile fits, because the constraint was only ever per **endpoint**, not
+per host. The resolution is to split protocols across two Kestrel endpoints in one process:
+
+- **Kestrel (per-endpoint, not per-host):** the default `http` endpoint (container port 8080) stays
+  `Http1AndHttp2` for REST, health probes, and the SignalR WebSocket Upgrade; a second named `grpc`
+  endpoint (container port 8081) is `Http2`-only for h2c prior-knowledge gRPC. Declared in
+  `Kestrel:Endpoints` in the service's appsettings (with distinct fixed ports in the dev profile).
+- **Aspire (local):** the AppHost wires `engagementService.WithReference(notificationService)`, which
+  injects `services__notification__grpc__0`; the typed client registers against the **named endpoint
+  scheme** `http://_grpc.notification` so service discovery resolves the gRPC port, not the default
+  one. Deliberately no `WaitFor`: the publish path is best-effort and must not couple Engagement
+  startup to Notification availability.
+- **ACA (prod):** the main ingress stays HTTP/1.1-capable for WebSockets; the gRPC port is exposed via
+  `additionalPortMappings` as a dedicated **internal TCP** port mapping (TCP passthrough sidesteps the
+  envoy single-transport limitation: one app cannot serve HTTP/1.1 WebSockets and end-to-end HTTP/2 on
+  the same HTTP ingress). The Bicep injects the same discovery variable pointing at
+  `http://<app>-notification:8081`.
+- **Probes and gateway: unchanged.** The default endpoint still answers the kubelet's HTTP/1.1
+  `httpGet` probes (no TCP-probe workaround needed, unlike full Profile A hosts), and the gateway
+  never routes the gRPC endpoint (it is service-to-service only).
+
+Rule refinement: a service that needs the HTTP/1.1 Upgrade handshake AND must serve inbound cleartext
+gRPC uses this **mixed-endpoint profile**: Profile B protocols on the default endpoint, a Profile A
+`Http2`-only named endpoint for gRPC, discovery via the named-endpoint scheme, and (in ACA) an
+additional internal TCP port. It costs one extra port everywhere (appsettings, launch profile, Bicep)
+and is only worth it when both constraints genuinely meet in one host.
 
 ## Context
 Once modules were extracted into separate service hosts (ADR-008) that call each other synchronously
@@ -72,8 +107,11 @@ Use when services must **serve** gRPC on cleartext (any bidirectional / inbound 
   backchannel is HTTP/1.1 and **cannot** reach the Http2-only Identity endpoint directly, so the
   authority is set to the **gateway** HTTPS origin; the gateway terminates TLS, speaks HTTP/1.1 + 2
   via ALPN, and routes `/.well-known/*` on to Identity over HTTP/2 (ADR-004).
-- **Exception:** the Notification service runs `Http1AndHttp2` (Profile B Kestrel) because SignalR's
-  WebSocket transport needs the HTTP/1.1 Upgrade handshake; it serves no inbound gRPC.
+- **Exception:** the Notification service keeps `Http1AndHttp2` on its default endpoint because
+  SignalR's WebSocket transport needs the HTTP/1.1 Upgrade handshake. Since 2026-07-09 it also serves
+  one inbound gRPC edge from a dedicated `Http2`-only named endpoint (the mixed-endpoint profile in
+  the update above), so "serves no inbound gRPC" no longer holds for the host, only for its default
+  endpoint.
 
 ### Profile B — `Http1AndHttp2` + HTTPS/ALPN + `ForwardHttp2=false` + direct JWKS (Store's original choice; now retained only as the SignalR/WebSocket exception)
 Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-directional gRPC).
@@ -95,8 +133,10 @@ Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-di
   that in turn forces `ForwardHttp2=true` and gateway-routed JWKS.
 - **Only consumer-only / one-directional gRPC, with gRPC riding the HTTPS/ALPN endpoint → Profile B.**
   Keep `Http1AndHttp2`, `ForwardHttp2=false`, and direct `WithJwksDiscovery(identity)`.
-- A service needing the **HTTP/1.1 Upgrade** handshake (SignalR WebSockets) must use `Http1AndHttp2`
-  regardless (ADC's Notification service), so it cannot be a cleartext gRPC server.
+- A service needing the **HTTP/1.1 Upgrade** handshake (SignalR WebSockets) must keep `Http1AndHttp2`
+  on that endpoint (ADC's Notification service). If it must also serve cleartext gRPC, do not flip the
+  host profile: add a dedicated `Http2`-only named endpoint instead (the 2026-07-09 mixed-endpoint
+  update above).
 
 ## Rationale
 - **The Kestrel protocol choice is the root constraint**; the gateway-forward mode and the JWKS
@@ -116,9 +156,14 @@ Use when no service needs to **serve** gRPC on cleartext (consumer-only / one-di
 - **ACA ingress coupling.** Profile A requires `transport: http2` on the container app ingress;
   Profile B uses default HTTP/1.1 ingress. The Bicep must match the chosen profile.
 - **Mixed profiles within one app are possible but sharp-edged** (ADC's Notification and Store's Sales
-  each run `Http1AndHttp2` Kestrel inside an otherwise-Profile-A app); only do this for a service with
-  no inbound cleartext gRPC, and document why.
+  each run `Http1AndHttp2` Kestrel defaults inside an otherwise-Profile-A app); only do this for a
+  service whose default endpoint serves no cleartext gRPC, and document why.
+- **Mixed endpoints within one host cost a port.** The Notification mixed-endpoint profile needs the
+  extra gRPC port declared consistently in appsettings, the dev launch profile, and the ACA
+  `additionalPortMappings`; a missing declaration in any one of them fails only at runtime (discovery
+  resolves a port nothing listens on, or ACA never exposes it).
 
 ## Related
 - ADR-004 (cross-service token validation via JWKS / OIDC discovery), ADR-007 (gRPC cross-service
-  calls), ADR-008 (monolith → services + gateway topology).
+  calls), ADR-008 (monolith → services + gateway topology), ADR-039 (live-channel push: the seam
+  that gave Notification its inbound gRPC edge and motivated the mixed-endpoint profile).
