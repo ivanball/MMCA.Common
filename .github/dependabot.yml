@@ -6,6 +6,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Scoped Commits (scope-first, see CONTRIBUTING.md), not the conventional-commits default.
+    commit-message:
+      prefix: "deps"
     groups:
       analyzers:
         patterns:
@@ -38,3 +41,5 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "ci"
