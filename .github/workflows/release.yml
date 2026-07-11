@@ -107,4 +107,7 @@ jobs:
           if-no-files-found: error
 
       - name: Push to GitHub Packages
+        # bash, not the windows-default pwsh: PowerShell passes *.nupkg through unexpanded and
+        # dotnet nuget push then fails with "File does not exist" on the un-globbed pattern.
+        shell: bash
         run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
