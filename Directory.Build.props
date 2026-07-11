@@ -36,7 +36,7 @@
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
     <Authors>Ivan Ball</Authors>
     <Company>MMCA</Company>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/ivanball/MMCA.Common</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>

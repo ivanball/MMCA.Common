@@ -44,4 +44,4 @@ New to the framework? **[GETTING-STARTED.md](GETTING-STARTED.md)** is the step-b
 
 ## License
 
-MIT
+Apache License 2.0 - see [LICENSE](LICENSE). The license includes an express patent grant from contributors to users.
