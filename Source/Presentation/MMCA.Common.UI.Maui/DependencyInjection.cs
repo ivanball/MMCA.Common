@@ -48,6 +48,10 @@ public static class DependencyInjection
             // token, so this stays wired-but-inert until push credentials exist.
             services.AddSingleton<IPushRegistrationService, MauiPushRegistrationService>();
 
+            // Photo pick/capture for avatar upload (ADR-045). Capture prompts for the camera
+            // permission; the head must declare it (Android CAMERA + iOS usage strings).
+            services.AddSingleton<IMediaPickerService, MauiMediaPickerService>();
+
             // Scoped: navigates through the circuit's NavigationManager after the system-browser
             // round trip. Inert (IsAvailable == false) until the head configures
             // OAuth:MobileRedirectScheme and registers the platform callback.

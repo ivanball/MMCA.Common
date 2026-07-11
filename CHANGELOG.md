@@ -6,6 +6,20 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-11 managed file storage + avatars, [ADR-045](ADRs/045-managed-file-storage-and-avatars.md))
+- **`IFileStorageService`** with unconfigured Null default and `AzureBlobFileStorageService`
+  swapped in by `AddAzureBlobFileStorage(configuration)` when the `FileStorage` section is
+  complete (`ContainerName` + `ServiceUri` for DefaultAzureCredential auth or
+  `ConnectionString` for local Azurite). New pins: `Azure.Storage.Blobs`, `Azure.Identity`.
+- **`IImageProcessor`** with `ImageSharpImageProcessor` (always registered): decodes untrusted
+  uploads, bakes in EXIF orientation, center-crops to an exact square, strips ALL metadata
+  (EXIF GPS is PII), and re-encodes as JPEG so only pixels survive; undecodable content is a
+  validation failure. New pin: `SixLabors.ImageSharp` (Six Labors Split License; Apache 2.0
+  terms apply to this project's use).
+- **`IMediaPickerService` UI capability** (ADR-042 pattern) with `MauiMediaPickerService` in
+  UI.Maui (photo pick/capture, permission flow encapsulated, cancelled/denied returns null);
+  web heads keep the Null default and render an `InputFile` instead.
+
 ### Added (2026-07-11 native push delivery, [ADR-044](ADRs/044-native-push-delivery.md))
 - **Native push pipeline (third notification channel)**: `INativePushSender` +
   `IPushDeviceRegistrar` Application abstractions with inert Null defaults, Azure Notification

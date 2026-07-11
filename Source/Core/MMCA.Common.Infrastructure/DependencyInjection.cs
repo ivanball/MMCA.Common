@@ -203,6 +203,11 @@ public static class DependencyInjection
             services.TryAddTransient<INativePushSender, NullNativePushSender>();
             services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
 
+            // Managed file storage (ADR-045): unconfigured default swapped by
+            // AddAzureBlobFileStorage; the image processor is dependency-free and always real.
+            services.TryAddTransient<IFileStorageService, NullFileStorageService>();
+            services.TryAddSingleton<IImageProcessor, ImageSharpImageProcessor>();
+
             return services;
         }
 
@@ -298,6 +303,41 @@ public static class DependencyInjection
                     settings.ConnectionString, settings.HubName));
             services.AddTransient<INativePushSender, AzureNotificationHubNativePushSender>();
             services.AddTransient<IPushDeviceRegistrar, AzureNotificationHubDeviceRegistrar>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers Azure Blob Storage as the <see cref="IFileStorageService"/> (ADR-045),
+        /// replacing the unconfigured <see cref="NullFileStorageService"/> default. Reads the
+        /// <c>FileStorage</c> section: <c>ServiceUri</c> (managed-identity auth via
+        /// DefaultAzureCredential, the production path) or <c>ConnectionString</c> (local
+        /// Azurite), plus the required <c>ContainerName</c>. An incomplete section makes this a
+        /// no-op, so hosts register it unconditionally.
+        /// </summary>
+        /// <param name="configuration">Application configuration providing the <c>FileStorage</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddAzureBlobFileStorage(IConfiguration configuration)
+        {
+            services.AddOptions<FileStorageSettings>()
+                .Bind(configuration.GetSection(FileStorageSettings.SectionName));
+
+            var settings = configuration.GetSection(FileStorageSettings.SectionName).Get<FileStorageSettings>();
+            if (settings is null
+                || string.IsNullOrWhiteSpace(settings.ContainerName)
+                || settings is { ServiceUri: null } && string.IsNullOrWhiteSpace(settings.ConnectionString))
+            {
+                return services;
+            }
+
+            services.TryAddSingleton(_ =>
+            {
+                var serviceClient = settings.ServiceUri is null
+                    ? new Azure.Storage.Blobs.BlobServiceClient(settings.ConnectionString)
+                    : new Azure.Storage.Blobs.BlobServiceClient(settings.ServiceUri, new Azure.Identity.DefaultAzureCredential());
+                return serviceClient.GetBlobContainerClient(settings.ContainerName);
+            });
+            services.AddTransient<IFileStorageService, AzureBlobFileStorageService>();
 
             return services;
         }

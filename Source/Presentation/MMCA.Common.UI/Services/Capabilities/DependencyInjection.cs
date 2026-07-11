@@ -48,6 +48,9 @@ public static class DependencyInjection
             services.TryAddSingleton<IPushRegistrationService, NullPushRegistrationService>();
             services.TryAddSingleton<IPushDeviceTokenProvider, NullPushDeviceTokenProvider>();
 
+            // Media picking (ADR-045): web heads render InputFile instead (IsSupported false).
+            services.TryAddSingleton<IMediaPickerService, NullMediaPickerService>();
+
             // Scoped so the Blazor Server fallback holds per-circuit (per-user) state,
             // never cross-user state.
             services.TryAddScoped<IDevicePreferences, InMemoryDevicePreferences>();
