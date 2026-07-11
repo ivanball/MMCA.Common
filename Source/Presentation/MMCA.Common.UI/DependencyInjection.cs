@@ -107,6 +107,15 @@ public static class DependencyInjection
             services.TryAddScoped<ISessionCookieSync, JsFetchSessionCookieSync>();
             return services;
         }
+
+        /// <summary>
+        /// Registers the WebAssembly <see cref="IFormFactor"/> (<see cref="WasmFormFactor"/>: reports
+        /// "WebAssembly" plus the browser-reported OS description). Call from the WASM .Client host;
+        /// the Blazor Server head registers <c>AddCommonWebFormFactor()</c> (MMCA.Common.UI.Web) and
+        /// the MAUI head <c>AddMauiFormFactor()</c> (MMCA.Common.UI.Maui) instead.
+        /// </summary>
+        public IServiceCollection AddWasmFormFactor() =>
+            services.AddSingleton<IFormFactor, WasmFormFactor>();
     }
 }
 

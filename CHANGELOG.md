@@ -6,6 +6,44 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-11 move-to-Common extraction wave, E1-E12 of `Docs/Planning/DriftAnalysis-plan.md` 2026-07-11)
+- **`RouteAuthorizationTestsBase`** (`MMCA.Common.Testing.Architecture`): reflection fitness base
+  asserting every governed routable Blazor page carries the required role, with seams
+  `TargetAssembly` / `RequiredRole` / `IsGovernedPage(Type)` / `MinimumGovernedPages` and a
+  non-vacuity guard; replaces five hand-rolled per-repo copies. Attribute detection is
+  full-name-based, preserving the package's zero-ASP.NET-reference design.
+- **Contract-test bases** (`MMCA.Common.Testing`): `ServiceInfoVersioningContractTestsBase<T>`
+  (the whole /ServiceInfo v1/v2 + version-headers body), `OpenApiContractTestsBase<T>`
+  (document served + well-formed 3.x, seams `MinimumPathCount` / `CorePublicResources`), and
+  `ProblemDetailsContractTestsBase<T>` (RFC 9457 shape probes + the shared
+  `AssertProblemDetailsShapeAsync` helper); app-specific 409 facts stay app-side.
+- **UI HTTP-service test harness** (`MMCA.Common.Testing.UI`): `CapturingHttpMessageHandler`
+  (responder-delegate AND route-registration modes, 404 default), `CapturedRequest`,
+  `UiHttpServiceHarness` + `FreshApiClientFactory` (fresh "APIClient" per call),
+  `StubTokenStorageService` (swappable `AccessTokenProvider`), and static `HttpTestDoubles`
+  helpers; replaces four hand-rolled per-repo doubles sets.
+- **`ClickAndWaitForUrlAsync`** (`MMCA.Common.Testing.E2E` `PageExtensions`): URL-navigation twin
+  of `ClickAndVerifyAsync` (click + URL wait + reclick belt), lifted from Store's
+  row-navigation helper.
+- **`ImageContentSniffer`** (`MMCA.Common.Application`): dependency-free magic-byte jpeg/png/webp
+  allowlist beside `IImageProcessor` (ADR-045); app-side size limits and error codes stay
+  app-side.
+- **`MapAppAssociationEndpoints` + `AppAssociationOptions`** (`MMCA.Common.API`): config-driven
+  `/.well-known/assetlinks.json` and `/apple-app-site-association` mappers (ADR-043) beside the
+  JWKS/OIDC mappers; the per-app applinks component list is passed via options.
+- **`WithE2eRsaKeys`** (`MMCA.Common.Aspire.Hosting`): opt-in AppHost extension forwarding the
+  E2E ephemeral RS256 keypair env vars onto the Identity resource, replacing the identical
+  inline blocks in both consumer AppHosts.
+- **`IFormFactor` concretes**: `WebFormFactor` (`MMCA.Common.UI.Web`, + `AddCommonWebFormFactor()`),
+  `WasmFormFactor` (`MMCA.Common.UI`, + `AddWasmFormFactor()`), `MauiFormFactor`
+  (`MMCA.Common.UI.Maui`, + `AddMauiFormFactor()`); replaces six per-host copies.
+- **`BiometricGate`** (`MMCA.Common.UI` `Components/Capabilities`): the app-lock overlay component
+  with its en/es resx pair (de-branded strings), plus `DevicePreferenceKeys.AppLockEnabled`
+  (`"applock.enabled"`; consumers migrating from an app-prefixed key need a one-time app-side
+  preference migration).
+- **`MmcaThemeProviders`** (`MMCA.Common.UI`): the four Mud providers + the ADR-028 Day/Dark
+  lifecycle in one component; `MainLayout` now renders it instead of carrying the inline block.
+
 ### Added (2026-07-11 managed file storage + avatars, [ADR-045](ADRs/045-managed-file-storage-and-avatars.md))
 - **`IFileStorageService`** with unconfigured Null default and `AzureBlobFileStorageService`
   swapped in by `AddAzureBlobFileStorage(configuration)` when the `FileStorage` section is

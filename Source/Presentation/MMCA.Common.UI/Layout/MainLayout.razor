@@ -5,19 +5,13 @@
 @using MMCA.Common.UI.Services.Auth
 @using Microsoft.Extensions.Options
 @using MMCA.Common.UI.Common.Settings
-@using MMCA.Common.UI.Theme
 @inject NavigationManager Navigation
 @inject IAuthUIService AuthService
 @inject IEnumerable<IUIModule> UIModules
 @inject IOptions<LayoutSettings> LayoutSettingsOptions
 @inject IStringLocalizer<SharedResource> L
-@inject ThemeService ThemeService
-@implements IDisposable
 
-<MudThemeProvider Theme="MMCATheme.Instance" @bind-IsDarkMode="_isDarkMode" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+<MmcaThemeProviders />
 
 <a href="#main-content" class="skip-nav">@L["Layout.SkipToMainContent"]</a>
 
@@ -95,7 +89,6 @@
 </div>
 
 @code {
-    private bool _isDarkMode;
     private List<Type> _appBarComponents = [];
     private List<Type> _layoutComponents = [];
 
@@ -107,27 +100,7 @@
         // Back the static ErrorMessages helper with the shared localizer (ADR-027). The layout renders for
         // every page in both Server and WASM, so this configures it once per circuit/host.
         ErrorMessages.Configure(L);
-        ThemeService.OnChange += OnThemeChanged;
     }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            // JS interop (cookie/localStorage read) is only available after the first interactive render.
-            await ThemeService.InitializeAsync();
-            _isDarkMode = ThemeService.IsDarkMode;
-            StateHasChanged();
-        }
-    }
-
-    private void OnThemeChanged(object? sender, EventArgs e)
-    {
-        _isDarkMode = ThemeService.IsDarkMode;
-        InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
 
     private async Task HandleLogoutAsync()
     {

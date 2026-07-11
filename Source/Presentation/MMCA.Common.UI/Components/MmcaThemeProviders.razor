@@ -1,0 +1,39 @@
+@using MMCA.Common.UI.Theme
+@inject ThemeService ThemeService
+@implements IDisposable
+
+@* The four Mud providers every root layout needs (theme, popover, dialog, snackbar) plus the
+   Day/Dark lifecycle (ADR-028) owned in one place: subscribe to ThemeService.OnChange, resolve
+   the stored/OS preference on the first interactive render (JS interop is unavailable during
+   SSR prerender), and re-render on changes. Root layouts render this component once instead of
+   duplicating the provider block and its wiring. *@
+
+<MudThemeProvider Theme="MMCATheme.Instance" @bind-IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@code {
+    private bool _isDarkMode;
+
+    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // JS interop (cookie/localStorage read) is only available after the first interactive render.
+            await ThemeService.InitializeAsync();
+            _isDarkMode = ThemeService.IsDarkMode;
+            StateHasChanged();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        _isDarkMode = ThemeService.IsDarkMode;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
+}

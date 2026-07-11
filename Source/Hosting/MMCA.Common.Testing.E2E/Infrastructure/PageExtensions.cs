@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Deque.AxeCore.Commons;
 using Deque.AxeCore.Playwright;
 using Microsoft.Playwright;
@@ -214,6 +215,41 @@ public static class PageExtensions
         // has not taken effect (a real failure, not a hydration race).
         await button.ClickAsync();
         await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt });
+    }
+
+    /// <summary>
+    /// Clicks a locator that navigates (typically an in-cell link on a grid row) and verifies the
+    /// navigation actually happened, re-clicking if it did not. This is the navigation-side
+    /// counterpart to <see cref="ClickAndVerifyAsync"/>: list pages often have NO RowClick handler
+    /// because every cell wraps its content in a MudLink Href, so clicking the ROW element's center
+    /// lands on cell padding between the inline anchors and silently does nothing. Call this on
+    /// <c>row.GetByRole(AriaRole.Link).First</c>, never on the row itself; the URL verify stays as
+    /// the belt because a link click can still race a grid re-render. Waits for the page and Blazor
+    /// to settle once the URL matches <paramref name="urlPattern"/> (a regular expression).
+    /// </summary>
+    public static async Task ClickAndWaitForUrlAsync(this ILocator clickable, IPage page, string urlPattern)
+    {
+        ArgumentNullException.ThrowIfNull(clickable);
+        ArgumentNullException.ThrowIfNull(page);
+
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await clickable.ClickAsync();
+            try
+            {
+                await page.WaitForURLAsync(new Regex(urlPattern), new() { Timeout = 5_000 });
+                await page.WaitForPageAndBlazorAsync();
+                return;
+            }
+            catch (Exception ex) when (ex is TimeoutException or PlaywrightException)
+            {
+                // Swallowed click: the URL never changed. Re-click the now-settled element.
+            }
+        }
+
+        await clickable.ClickAsync();
+        await page.WaitForURLAsync(new Regex(urlPattern), new() { Timeout = 15_000 });
+        await page.WaitForPageAndBlazorAsync();
     }
 
     /// <summary>

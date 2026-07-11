@@ -1,0 +1,72 @@
+@using MMCA.Common.UI.Services.Auth
+@using MMCA.Common.UI.Services.Capabilities
+@inject IBiometricAuthenticator Biometrics
+@inject IDevicePreferences Preferences
+@inject ITokenStorageService TokenStorage
+@inject NavigationManager Navigation
+@inject IStringLocalizer<BiometricGate> L
+
+@* App-lock overlay (ADR-042 Wave 4). Rendered once per app start through the IUIModule
+   layout-component list; when the opt-in preference (DevicePreferenceKeys.AppLockEnabled) is set
+   and stored tokens exist, it blocks the UI until the platform prompt verifies the owner.
+   Declining offers sign-out (clears tokens); it never falls through to the signed-in session. *@
+
+@if (_locked)
+{
+    <MudOverlay Visible="true" DarkBackground="true" Style="z-index: 2000;">
+        <MudPaper Class="pa-6 d-flex flex-column align-center gap-3" Elevation="4">
+            <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@L["Title"]</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAsync">
+                @L["Button.Unlock"]
+            </MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="SignOutAsync">
+                @L["Button.SignOut"]
+            </MudButton>
+        </MudPaper>
+    </MudOverlay>
+}
+
+@code {
+    private bool _locked;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        var appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
+        if (!appLockEnabled)
+        {
+            return;
+        }
+
+        // Nothing to protect without a stored session.
+        if (await TokenStorage.GetRefreshTokenAsync() is null)
+        {
+            return;
+        }
+
+        _locked = true;
+        StateHasChanged();
+        await UnlockAsync();
+    }
+
+    private async Task UnlockAsync()
+    {
+        if (await Biometrics.AuthenticateAsync(L["Prompt.Reason"].Value))
+        {
+            _locked = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SignOutAsync()
+    {
+        await TokenStorage.ClearTokensAsync();
+        _locked = false;
+        Navigation.NavigateTo("/login");
+    }
+}

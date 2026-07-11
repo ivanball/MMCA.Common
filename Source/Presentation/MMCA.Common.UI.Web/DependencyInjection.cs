@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Aspire.Security;
+using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Web.Security;
 using MMCA.Common.UI.Web.Services;
@@ -37,5 +38,13 @@ public static class DependencyInjection
         /// </summary>
         public IServiceCollection AddCommonBlazorCsp() =>
             services.AddSingleton<ICspPolicyProvider, BlazorCspPolicyProvider>();
+
+        /// <summary>
+        /// Registers the Blazor Server <see cref="IFormFactor"/> (<see cref="WebFormFactor"/>: reports
+        /// "Web" plus the server OS description). The WASM client registers <c>AddWasmFormFactor()</c>
+        /// from MMCA.Common.UI instead.
+        /// </summary>
+        public IServiceCollection AddCommonWebFormFactor() =>
+            services.AddSingleton<IFormFactor, WebFormFactor>();
     }
 }

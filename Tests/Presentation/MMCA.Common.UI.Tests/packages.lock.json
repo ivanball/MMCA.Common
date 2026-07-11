@@ -737,6 +737,7 @@
       "mmca.common.testing.ui": {
         "type": "Project",
         "dependencies": {
+          "MMCA.Common.UI": "[1.0.0, )",
           "MudBlazor": "[9.6.0, )",
           "bunit": "[2.7.2, )"
         }

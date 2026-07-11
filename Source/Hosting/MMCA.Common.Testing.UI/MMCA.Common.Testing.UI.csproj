@@ -17,6 +17,11 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <!-- The UiHttpServiceHarness token-storage stub implements MMCA.Common.UI's ITokenStorageService
+         (the same contract the HTTP-backed UI services under test consume). -->
+    <ProjectReference Include="..\..\Presentation\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

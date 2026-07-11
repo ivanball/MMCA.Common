@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Maui.Capabilities;
+using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Capabilities;
 
 namespace MMCA.Common.UI.Maui;
@@ -58,5 +59,14 @@ public static class DependencyInjection
             services.AddScoped<IExternalAuthBroker, MauiExternalAuthBroker>();
             return services;
         }
+
+        /// <summary>
+        /// Registers the native <see cref="IFormFactor"/> (<see cref="MauiFormFactor"/>: DeviceInfo
+        /// idiom plus platform and version). Deliberately separate from
+        /// <see cref="AddMauiDeviceCapabilities"/> so heads that still register their own
+        /// implementation keep last-registration-wins control.
+        /// </summary>
+        public IServiceCollection AddMauiFormFactor() =>
+            services.AddSingleton<IFormFactor, MauiFormFactor>();
     }
 }

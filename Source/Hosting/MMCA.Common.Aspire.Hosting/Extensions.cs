@@ -112,6 +112,35 @@ public static class Extensions
     }
 
     /// <summary>
+    /// CI/E2E only: forwards an ephemeral RSA keypair from the AppHost's own environment to the
+    /// Identity service so it can sign RS256 tokens. The signing keys are normally supplied via
+    /// user-secrets (local) or Key Vault (prod); E2E workflows generate a throwaway keypair and pass
+    /// it through the <c>E2E_JWT_PRIVATE_KEY_PEM</c> / <c>E2E_JWT_PUBLIC_KEY_PEM</c> environment
+    /// variables. When both are present this maps them onto <c>Jwt__RsaPrivateKeyPem</c> /
+    /// <c>Jwt__RsaPublicKeyPem</c> / <c>Jwks__RsaPublicKeyPem</c>; without the forwarding every CI
+    /// login/register fails ("No supported key formats were found") and the readiness gate times
+    /// out. No-op locally and in prod (vars absent, so user-secrets / Key Vault are used).
+    /// </summary>
+    /// <param name="identity">The Identity service project resource builder.</param>
+    /// <returns>The Identity resource builder for chaining.</returns>
+    public static IResourceBuilder<ProjectResource> WithE2eRsaKeys(this IResourceBuilder<ProjectResource> identity)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+
+        var privateKey = Environment.GetEnvironmentVariable("E2E_JWT_PRIVATE_KEY_PEM");
+        var publicKey = Environment.GetEnvironmentVariable("E2E_JWT_PUBLIC_KEY_PEM");
+        if (string.IsNullOrWhiteSpace(privateKey) || string.IsNullOrWhiteSpace(publicKey))
+        {
+            return identity;
+        }
+
+        return identity
+            .WithEnvironment("Jwt__RsaPrivateKeyPem", privateKey)
+            .WithEnvironment("Jwt__RsaPublicKeyPem", publicKey)
+            .WithEnvironment("Jwks__RsaPublicKeyPem", publicKey);
+    }
+
+    /// <summary>
     /// Wires a service project to its own SQL Server database ("database per microservice", ADR-006).
     /// References the given database and injects its connection string twice:
     /// <list type="bullet">
