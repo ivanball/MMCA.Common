@@ -115,19 +115,52 @@ public class SendPushNotificationHandlerTests
         result.Errors.Should().Contain(e => e.Code == "PushNotification.Title.Empty");
     }
 
+    // -- HandleAsync: native (third) channel, ADR-044 --
+    [Fact]
+    public async Task HandleAsync_WithValidRequest_AlsoCallsNativePushSender()
+    {
+        var (sut, mocks) = CreateSut();
+
+        SendPushNotificationCommand command = CreateCommand();
+        await sut.HandleAsync(command);
+
+        mocks.NativePushSender.Verify(
+            x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                "Test Title",
+                "Test Body",
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenNativeSendFails_IsNonFatalAndStatusStaysSent()
+    {
+        var (sut, _) = CreateSut(nativeSendThrows: true);
+
+        SendPushNotificationCommand command = CreateCommand();
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Status.Should().Be(nameof(PushNotificationStatus.Sent));
+    }
+
     // -- Helpers --
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
         Mock<IRepository<PushNotification, PushNotificationIdentifierType>> NotificationRepo,
         Mock<INotificationRecipientProvider> RecipientProvider,
-        Mock<IPushNotificationSender> PushNotificationSender);
+        Mock<IPushNotificationSender> PushNotificationSender,
+        Mock<INativePushSender> NativePushSender);
 
     private static SendPushNotificationCommand CreateCommand() =>
         new(new SendPushNotificationRequest("Test Title", "Test Body"), SentByUserId: 1);
 
     private static (SendPushNotificationHandler Sut, HandlerMocks Mocks) CreateSut(
         int recipientCount = 3,
-        bool sendThrows = false)
+        bool sendThrows = false,
+        bool nativeSendThrows = false)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var notificationRepo = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
@@ -156,12 +189,25 @@ public class SendPushNotificationHandlerTests
                 .ThrowsAsync(new InvalidOperationException("SignalR connection failed"));
         }
 
+        var nativePushSender = new Mock<INativePushSender>();
+        if (nativeSendThrows)
+        {
+            nativePushSender.Setup(x => x.SendToUsersAsync(
+                    It.IsAny<IEnumerable<UserIdentifierType>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<Dictionary<string, string>?>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Notification hub unreachable"));
+        }
+
         var dtoMapper = new PushNotificationDTOMapper();
 
         var sut = new SendPushNotificationHandler(
             unitOfWork.Object,
             recipientProvider.Object,
             pushNotificationSender.Object,
+            nativePushSender.Object,
             dtoMapper,
             NullLogger<SendPushNotificationHandler>.Instance);
 
@@ -169,7 +215,8 @@ public class SendPushNotificationHandlerTests
             unitOfWork,
             notificationRepo,
             recipientProvider,
-            pushNotificationSender);
+            pushNotificationSender,
+            nativePushSender);
 
         return (sut, mocks);
     }

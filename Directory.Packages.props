@@ -49,6 +49,8 @@
     <PackageVersion Include="MassTransit" Version="8.5.5" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.5" />
     <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.5" />
+    <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
+    <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.31.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />

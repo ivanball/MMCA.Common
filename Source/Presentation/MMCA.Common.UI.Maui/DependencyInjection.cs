@@ -43,6 +43,11 @@ public static class DependencyInjection
             services.AddSingleton<IBiometricAuthenticator, MauiBiometricAuthenticator>();
             services.AddSingleton<ISpeechToTextService, MauiSpeechToTextService>();
 
+            // Native push registration (ADR-044). Real deliveries additionally need the app to
+            // register a credentialed IPushDeviceTokenProvider; the shared default yields no
+            // token, so this stays wired-but-inert until push credentials exist.
+            services.AddSingleton<IPushRegistrationService, MauiPushRegistrationService>();
+
             // Scoped: navigates through the circuit's NavigationManager after the system-browser
             // round trip. Inert (IsAvailable == false) until the head configures
             // OAuth:MobileRedirectScheme and registers the platform callback.

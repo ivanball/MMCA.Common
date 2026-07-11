@@ -42,6 +42,12 @@ public static class DependencyInjection
             services.TryAddSingleton<IExternalAuthBroker, UnavailableExternalAuthBroker>();
             services.TryAddSingleton<ILocalCacheStore, NullLocalCacheStore>();
 
+            // Native push registration (ADR-044): both default to inert. UI.Maui overrides the
+            // registration service; the app overrides the token provider once real FCM/APNs
+            // credentials exist - until then even native heads stay registered-but-tokenless.
+            services.TryAddSingleton<IPushRegistrationService, NullPushRegistrationService>();
+            services.TryAddSingleton<IPushDeviceTokenProvider, NullPushDeviceTokenProvider>();
+
             // Scoped so the Blazor Server fallback holds per-circuit (per-user) state,
             // never cross-user state.
             services.TryAddScoped<IDevicePreferences, InMemoryDevicePreferences>();

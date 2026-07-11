@@ -198,6 +198,11 @@ public static class DependencyInjection
             services.TryAddTransient<IPushNotificationSender, NullPushNotificationSender>();
             services.TryAddTransient<ILiveChannelPublisher, NullLiveChannelPublisher>();
 
+            // Native push (ADR-044) defaults to inert no-ops; AddNativePushNotifications swaps in
+            // the Azure Notification Hubs implementations when an enabled hub is configured.
+            services.TryAddTransient<INativePushSender, NullNativePushSender>();
+            services.TryAddTransient<IPushDeviceRegistrar, NullPushDeviceRegistrar>();
+
             return services;
         }
 
@@ -261,6 +266,38 @@ public static class DependencyInjection
             services.AddTransient<IPushNotificationSender, SignalRPushNotificationSender>();
             services.AddTransient<ILiveChannelPublisher, SignalRLiveChannelPublisher>();
             services.TryAddSingleton<IUserIdProvider, ClaimBasedUserIdProvider>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers OS-level native push delivery through Azure Notification Hubs (ADR-044),
+        /// replacing the default <see cref="NullNativePushSender"/>/<see cref="NullPushDeviceRegistrar"/>
+        /// pair. Reads the <c>NativePush</c> section (<c>Enabled</c>, <c>ConnectionString</c>,
+        /// <c>HubName</c>); when disabled or incomplete the call is a no-op, so hosts register it
+        /// unconditionally and deployments switch the channel on by configuration alone (the hub
+        /// itself is provisioned before its FCM/APNs credentials exist).
+        /// </summary>
+        /// <param name="configuration">Application configuration providing the <c>NativePush</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddNativePushNotifications(IConfiguration configuration)
+        {
+            services.AddOptions<NativePushSettings>()
+                .Bind(configuration.GetSection(NativePushSettings.SectionName));
+
+            var settings = configuration.GetSection(NativePushSettings.SectionName).Get<NativePushSettings>();
+            if (settings is not { Enabled: true }
+                || string.IsNullOrWhiteSpace(settings.ConnectionString)
+                || string.IsNullOrWhiteSpace(settings.HubName))
+            {
+                return services;
+            }
+
+            services.TryAddSingleton<Microsoft.Azure.NotificationHubs.INotificationHubClient>(_ =>
+                Microsoft.Azure.NotificationHubs.NotificationHubClient.CreateClientFromConnectionString(
+                    settings.ConnectionString, settings.HubName));
+            services.AddTransient<INativePushSender, AzureNotificationHubNativePushSender>();
+            services.AddTransient<IPushDeviceRegistrar, AzureNotificationHubDeviceRegistrar>();
 
             return services;
         }

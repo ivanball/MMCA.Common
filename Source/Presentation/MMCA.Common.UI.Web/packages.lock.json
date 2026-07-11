@@ -563,6 +563,7 @@
           "MassTransit.RabbitMQ": "[8.5.5, )",
           "MessagePack": "[2.5.302, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.9, )",
+          "Microsoft.Azure.NotificationHubs": "[4.2.0, )",
           "Microsoft.EntityFrameworkCore.Cosmos": "[10.0.9, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.9, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.9, )",
@@ -732,6 +733,15 @@
         "dependencies": {
           "MessagePack": "2.5.301",
           "StackExchange.Redis": "2.7.27"
+        }
+      },
+      "Microsoft.Azure.NotificationHubs": {
+        "type": "CentralTransitive",
+        "requested": "[4.2.0, )",
+        "resolved": "4.2.0",
+        "contentHash": "LOCxFB/sB1frfuXjecdDRDKEHkH+I1qKRatS5NyWIgYhpKhIcAlPNIJajcwLgQBShckdc3hMG9E+75CnL3qDhQ==",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
         }
       },
       "Microsoft.Data.SqlClient": {

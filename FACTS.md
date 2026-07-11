@@ -34,7 +34,7 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 14. `MMCA.Common.Testing.E2E`
 15. `MMCA.Common.Testing.UI`
 
-## Architecture Decision Records — **43 (001-043)**
+## Architecture Decision Records — **44 (001-044)**
 The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the range/count and the one-line
 summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
 

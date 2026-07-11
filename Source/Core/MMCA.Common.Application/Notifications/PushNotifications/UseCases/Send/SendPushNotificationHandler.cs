@@ -18,6 +18,7 @@ public sealed partial class SendPushNotificationHandler(
     IUnitOfWork unitOfWork,
     INotificationRecipientProvider recipientProvider,
     IPushNotificationSender pushNotificationSender,
+    INativePushSender nativePushSender,
     PushNotificationDTOMapper dtoMapper,
     ILogger<SendPushNotificationHandler> logger) : ICommandHandler<SendPushNotificationCommand, Result<PushNotificationDTO>>
 {
@@ -84,6 +85,25 @@ public sealed partial class SendPushNotificationHandler(
             LogNotificationFailed(logger, notification.Id, ex);
         }
 
+        // Third channel (ADR-044): OS-level push through the native sender, reaching devices the
+        // SignalR hub cannot (app backgrounded or killed). Best-effort by design — the SignalR leg
+        // above already decided the audit status, and the default NullNativePushSender keeps this
+        // a no-op until a notification hub is configured.
+        try
+        {
+            await nativePushSender.SendToUsersAsync(
+                recipientIds,
+                command.Request.Title,
+                command.Request.Body,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types — native delivery is best-effort
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            LogNativePushFailed(logger, notification.Id, ex);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success(dtoMapper.MapToDTO(notification));
@@ -94,4 +114,7 @@ public sealed partial class SendPushNotificationHandler(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Push notification {NotificationId} delivery failed")]
     private static partial void LogNotificationFailed(ILogger logger, PushNotificationIdentifierType notificationId, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Push notification {NotificationId} native (OS-level) delivery failed; inbox and SignalR legs unaffected")]
+    private static partial void LogNativePushFailed(ILogger logger, PushNotificationIdentifierType notificationId, Exception exception);
 }

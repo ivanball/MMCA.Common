@@ -58,6 +58,15 @@
           "StackExchange.Redis": "2.7.27"
         }
       },
+      "Microsoft.Azure.NotificationHubs": {
+        "type": "Direct",
+        "requested": "[4.2.0, )",
+        "resolved": "4.2.0",
+        "contentHash": "LOCxFB/sB1frfuXjecdDRDKEHkH+I1qKRatS5NyWIgYhpKhIcAlPNIJajcwLgQBShckdc3hMG9E+75CnL3qDhQ==",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
+        }
+      },
       "Microsoft.EntityFrameworkCore.Cosmos": {
         "type": "Direct",
         "requested": "[10.0.9, )",

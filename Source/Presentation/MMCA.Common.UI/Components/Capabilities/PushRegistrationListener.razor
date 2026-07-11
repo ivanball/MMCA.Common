@@ -1,0 +1,62 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using MMCA.Common.UI.Services.Capabilities
+@inject IPushRegistrationService PushRegistration
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
+
+@* Invisible component (ADR-044) — keeps this device's push installation in sync with the
+   signed-in user. Rendered once in the native layout (via the host's LayoutComponentTypes
+   seam), it registers on startup when a user is already signed in and re-registers whenever
+   the auth state flips to authenticated (fresh login, token refresh with a rotated platform
+   token). Unregistration is NOT handled here: it must happen while still authenticated, so
+   AuthUIService.LogoutAsync owns it. Inert when unsupported or the token provider yields
+   nothing. *@
+
+@code {
+    private bool _subscribed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !PushRegistration.IsSupported)
+        {
+            return;
+        }
+
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        _subscribed = true;
+
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated == true)
+        {
+            await PushRegistration.RegisterAsync();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed)
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        try
+        {
+            var state = await task;
+            if (state.User.Identity?.IsAuthenticated == true)
+            {
+                await InvokeAsync(() => PushRegistration.RegisterAsync());
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Renderer torn down between the auth event and the dispatch — nothing to sync.
+        }
+        catch (InvalidOperationException)
+        {
+            // Component no longer attached; same disposition.
+        }
+    }
+}

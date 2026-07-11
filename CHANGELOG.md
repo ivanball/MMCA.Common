@@ -6,6 +6,25 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-11 native push delivery, [ADR-044](ADRs/044-native-push-delivery.md))
+- **Native push pipeline (third notification channel)**: `INativePushSender` +
+  `IPushDeviceRegistrar` Application abstractions with inert Null defaults, Azure Notification
+  Hubs implementations (installation model, `user:{id}` tags, FCM v1 + APNs payloads, tag
+  expressions OR-chunked at the hub's 20-tag cap) swapped in by
+  `AddNativePushNotifications(configuration)` only when the `NativePush` section is enabled and
+  complete. `SendPushNotificationHandler` gains the OS-level leg after the SignalR attempt,
+  best-effort and non-fatal (new constructor parameter; DI-resolved, so hosts are unaffected).
+  New `DevicesController` (PUT/DELETE `/Notifications/Devices`, any authenticated user,
+  feature-gated with `Notification.PushNotifications`) ships through the existing
+  `AddNotificationControllers` application part. New pin: `Microsoft.Azure.NotificationHubs`.
+- **Client-side push registration capability** (ADR-042 pattern): `IPushRegistrationService` +
+  `IPushDeviceTokenProvider` contracts with inert defaults in `MMCA.Common.UI`;
+  `MauiPushRegistrationService` in UI.Maui (stable installation id in device preferences,
+  registration synced over the API client); `PushRegistrationListener` component re-registers
+  on auth-state changes; `AuthUIService.LogoutAsync` unregisters the device BEFORE clearing
+  tokens (`AuthUIService` gains a constructor parameter; DI-resolved). Everything stays inert
+  until the app registers a credentialed token provider (Firebase / APNs).
+
 ### Fixed (2026-07-10 v1.112.1 OAuth allowlist null-section regression)
 - **`OAuthControllerBase` no longer throws when `IConfiguration.GetSection` returns null**
   (loose configuration test doubles in consumer suites; surfaced by ADC's

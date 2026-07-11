@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.Shared.Auth;
+using MMCA.Common.UI.Services.Capabilities;
 
 namespace MMCA.Common.UI.Services.Auth;
 
@@ -15,7 +16,8 @@ public sealed class AuthUIService(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService,
     ITokenRefresher tokenRefresher,
-    AuthenticationStateProvider authStateProvider) : IAuthUIService
+    AuthenticationStateProvider authStateProvider,
+    IPushRegistrationService pushRegistration) : IAuthUIService
 {
     private const string ApiClientName = "APIClient";
 
@@ -169,6 +171,20 @@ public sealed class AuthUIService(
 
     public async Task LogoutAsync()
     {
+        // Native push (ADR-044): drop this device's installation while the access token is
+        // still valid — the Devices DELETE is authenticated. No-op on web heads. Best-effort:
+        // a failure must never block sign-out.
+        try
+        {
+            await pushRegistration.UnregisterAsync();
+        }
+#pragma warning disable CA1031 // Do not catch general exception types — unregistration is best-effort
+        catch
+#pragma warning restore CA1031
+        {
+            // Ignore errors - we still want to sign out locally.
+        }
+
         using var httpClient = httpClientFactory.CreateClient(ApiClientName);
 
         var accessToken = await tokenStorageService.GetAccessTokenAsync();
