@@ -67,6 +67,9 @@
             </MudAppBar>
         </div>
         <article id="main-content" class="content px-4">
+            @* Offline awareness (ADR-042 Wave 3): renders nothing while online; the Blazor
+               Server fallback is always online, so only MAUI/WASM heads ever show it. *@
+            <MMCA.Common.UI.Components.Capabilities.OfflineBanner />
             @Body
         </article>
     </main>

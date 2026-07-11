@@ -52,6 +52,15 @@ public sealed class CapabilityFallbackTests
     }
 
     [Fact]
+    public async Task NullGeocodingService_ReturnsNull()
+    {
+        var sut = new NullGeocodingService();
+
+        sut.IsSupported.Should().BeFalse();
+        (await sut.GeocodeAsync("123 Peachtree St")).Should().BeNull();
+    }
+
+    [Fact]
     public async Task AlwaysOnlineConnectivity_IsOnlineAndInitializeIsANoOp()
     {
         var sut = new AlwaysOnlineConnectivityStatusService();

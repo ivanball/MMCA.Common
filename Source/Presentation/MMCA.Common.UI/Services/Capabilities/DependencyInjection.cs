@@ -30,6 +30,7 @@ public static class DependencyInjection
             services.TryAddSingleton<IHapticFeedbackService, NullHapticFeedbackService>();
             services.TryAddSingleton<IMapNavigationService, NullMapNavigationService>();
             services.TryAddSingleton<IGeolocationService, NullGeolocationService>();
+            services.TryAddSingleton<IGeocodingService, NullGeocodingService>();
             services.TryAddSingleton<IExternalLinkService, NullExternalLinkService>();
             services.TryAddSingleton<ITextToSpeechService, NullTextToSpeechService>();
             services.TryAddSingleton<IAccessibilityAnnouncer, NullAccessibilityAnnouncer>();

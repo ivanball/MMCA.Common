@@ -32,6 +32,7 @@ public static class DependencyInjection
             services.AddSingleton<IHapticFeedbackService, MauiHapticFeedbackService>();
             services.AddSingleton<IMapNavigationService, MauiMapNavigationService>();
             services.AddSingleton<IGeolocationService, MauiGeolocationService>();
+            services.AddSingleton<IGeocodingService, MauiGeocodingService>();
             services.AddSingleton<IExternalLinkService, MauiExternalLinkService>();
             services.AddSingleton<ITextToSpeechService, MauiTextToSpeechService>();
             services.AddSingleton<IAccessibilityAnnouncer, MauiAccessibilityAnnouncer>();

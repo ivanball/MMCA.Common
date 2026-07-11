@@ -19,11 +19,20 @@ public sealed class MauiExternalLinkService : IExternalLinkService
 
         try
         {
-            await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred).ConfigureAwait(false);
+            if (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            {
+                await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred).ConfigureAwait(false);
+                return;
+            }
+
+            // Browser.Default only accepts http(s); everything else (mailto:, tel:, sms:) goes
+            // to the OS handler via the launcher so contact links work inside the WebView.
+            await Launcher.Default.TryOpenAsync(uri).ConfigureAwait(false);
         }
         catch (FeatureNotSupportedException)
         {
-            // No browser available — swallow; the link is a convenience, not a workflow.
+            // No handler available — swallow; the link is a convenience, not a workflow.
         }
     }
 }
