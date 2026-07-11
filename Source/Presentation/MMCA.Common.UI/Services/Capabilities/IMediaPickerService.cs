@@ -18,12 +18,25 @@ public interface IMediaPickerService
     Task<PickedMedia?> CapturePhotoAsync(CancellationToken cancellationToken = default);
 }
 
-/// <summary>A picked or captured photo. Dispose the stream after upload.</summary>
-/// <param name="Content">The photo bytes, positioned at the start.</param>
-/// <param name="FileName">The original or generated file name.</param>
-/// <param name="ContentType">The MIME type as reported by the platform.</param>
-public sealed record PickedMedia(Stream Content, string FileName, string ContentType) : IDisposable
+/// <summary>
+/// A picked or captured photo. Dispose the stream after upload. Deliberately a class rather
+/// than a record: a record's <c>IEquatable&lt;T&gt;</c> is a generic WinRT interface, which
+/// trips CsWinRT AOT generation (CsWinRT1030) on the windows TFM of UI.Maui.
+/// </summary>
+/// <param name="content">The photo bytes, positioned at the start.</param>
+/// <param name="fileName">The original or generated file name.</param>
+/// <param name="contentType">The MIME type as reported by the platform.</param>
+public sealed class PickedMedia(Stream content, string fileName, string contentType) : IDisposable
 {
+    /// <summary>Gets the photo bytes, positioned at the start.</summary>
+    public Stream Content { get; } = content;
+
+    /// <summary>Gets the original or generated file name.</summary>
+    public string FileName { get; } = fileName;
+
+    /// <summary>Gets the MIME type as reported by the platform.</summary>
+    public string ContentType { get; } = contentType;
+
     /// <inheritdoc />
     public void Dispose() => Content.Dispose();
 }

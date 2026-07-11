@@ -23,6 +23,12 @@
          interfaces (IDisposable); MA0204/RCS1043 (other TFMs) call the same modifier
          redundant. The windows requirement wins — silence the redundancy style rules here. -->
     <NoWarn>$(NoWarn);MA0204;RCS1043</NoWarn>
+
+    <!-- CsWinRT1030 (windows TFM): custom types crossing the WinRT ABI inside generics
+         (Task&lt;PickedMedia&gt; from IMediaPickerService) need CsWinRT-generated marshaling
+         code, which is emitted as unsafe. This only permits the GENERATOR's output; no
+         hand-written unsafe code exists in this package. -->
+    <AllowUnsafeBlocks Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
