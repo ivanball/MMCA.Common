@@ -73,6 +73,14 @@
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
+    <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (requires Controls >= 10.0.60),
+         bump together with Microsoft.Maui.Controls. -->
+    <PackageVersion Include="CommunityToolkit.Maui" Version="14.2.0" />
+    <!-- Android-only biometric prompt binding for UI.Maui (platform-direct, ADR-042 Wave 4).
+         Pinned to the release built against MAUI 10.0.70's AndroidX train (Fragment 1.8.8.x /
+         Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
+         upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
+    <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.117" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />

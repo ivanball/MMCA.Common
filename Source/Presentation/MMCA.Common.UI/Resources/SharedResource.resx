@@ -469,4 +469,7 @@
   <data name="Capabilities.Offline.Banner" xml:space="preserve">
     <value>You are offline. Some content may be out of date.</value>
   </data>
+  <data name="Auth.Login.ExternalSignInFailed" xml:space="preserve">
+    <value>External sign-in did not complete. Please try again.</value>
+  </data>
 </root>

@@ -40,6 +40,13 @@ public static class DependencyInjection
             services.AddSingleton<IScreenshotService, MauiScreenshotService>();
             services.AddSingleton<IDevicePreferences, MauiDevicePreferences>();
             services.AddSingleton<ILocalCacheStore, MauiLocalCacheStore>();
+            services.AddSingleton<IBiometricAuthenticator, MauiBiometricAuthenticator>();
+            services.AddSingleton<ISpeechToTextService, MauiSpeechToTextService>();
+
+            // Scoped: navigates through the circuit's NavigationManager after the system-browser
+            // round trip. Inert (IsAvailable == false) until the head configures
+            // OAuth:MobileRedirectScheme and registers the platform callback.
+            services.AddScoped<IExternalAuthBroker, MauiExternalAuthBroker>();
             return services;
         }
     }

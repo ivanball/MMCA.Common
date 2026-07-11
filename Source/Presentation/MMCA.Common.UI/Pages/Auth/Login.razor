@@ -3,6 +3,7 @@
 @using MMCA.Common.Shared.Auth
 @using MMCA.Common.UI.Common.Settings
 @using MMCA.Common.UI.Services.Auth
+@using MMCA.Common.UI.Services.Capabilities
 @using MMCA.Common.UI.Services.Navigation
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
@@ -11,6 +12,7 @@
 @inject NavigationManager Navigation
 @inject IUserPreferenceReader PreferenceReader
 @inject ThemeService ThemeService
+@inject IExternalAuthBroker ExternalAuthBroker
 @inject IStringLocalizer<SharedResource> L
 
 <PageTitle>@L["Auth.Login.PageTitle"]</PageTitle>
@@ -70,23 +72,49 @@
                     <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
                         @L["Auth.Login.OrContinueWith"]
                     </MudText>
+                    @* Native heads route external sign-in through the system-browser broker
+                       (ADR-043); web heads keep the anchor redirect flow. *@
                     @if (OAuthSettings.GoogleEnabled)
                     {
-                        <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
-                                   StartIcon="@Icons.Custom.Brands.Google"
-                                   Href="@BuildOAuthUrl("google")"
-                                   aria-label="@L["Auth.Login.SignInWithGoogle"]">
-                            @L["Auth.Login.SignInWithGoogle"]
-                        </MudButton>
+                        @if (ExternalAuthBroker.IsAvailable)
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                       StartIcon="@Icons.Custom.Brands.Google"
+                                       OnClick="@(() => SignInWithBrokerAsync("google"))"
+                                       aria-label="@L["Auth.Login.SignInWithGoogle"]">
+                                @L["Auth.Login.SignInWithGoogle"]
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                       StartIcon="@Icons.Custom.Brands.Google"
+                                       Href="@BuildOAuthUrl("google")"
+                                       aria-label="@L["Auth.Login.SignInWithGoogle"]">
+                                @L["Auth.Login.SignInWithGoogle"]
+                            </MudButton>
+                        }
                     }
                     @if (OAuthSettings.GitHubEnabled)
                     {
-                        <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
-                                   StartIcon="@Icons.Custom.Brands.GitHub"
-                                   Href="@BuildOAuthUrl("github")"
-                                   aria-label="@L["Auth.Login.SignInWithGitHub"]">
-                            @L["Auth.Login.SignInWithGitHub"]
-                        </MudButton>
+                        @if (ExternalAuthBroker.IsAvailable)
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                       StartIcon="@Icons.Custom.Brands.GitHub"
+                                       OnClick="@(() => SignInWithBrokerAsync("github"))"
+                                       aria-label="@L["Auth.Login.SignInWithGitHub"]">
+                                @L["Auth.Login.SignInWithGitHub"]
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                       StartIcon="@Icons.Custom.Brands.GitHub"
+                                       Href="@BuildOAuthUrl("github")"
+                                       aria-label="@L["Auth.Login.SignInWithGitHub"]">
+                                @L["Auth.Login.SignInWithGitHub"]
+                            </MudButton>
+                        }
                     }
                 }
             </MudCardActions>
@@ -119,6 +147,19 @@
             url += $"?returnUrl={Uri.EscapeDataString(safeReturnUrl)}";
         }
         return url;
+    }
+
+    private async Task SignInWithBrokerAsync(string provider)
+    {
+        _errorMessage = null;
+
+        // On success the broker hands off to the shared completion page, which finishes the
+        // sign-in. A false result covers dismissal and provider failure alike.
+        if (!await ExternalAuthBroker.SignInAsync(provider))
+        {
+            _errorMessage = L["Auth.Login.ExternalSignInFailed"].Value;
+            StateHasChanged();
+        }
     }
 
     private async Task HandleLoginAsync()
