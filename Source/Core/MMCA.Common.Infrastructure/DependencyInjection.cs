@@ -323,18 +323,23 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(FileStorageSettings.SectionName));
 
             var settings = configuration.GetSection(FileStorageSettings.SectionName).Get<FileStorageSettings>();
-            if (settings is null
-                || string.IsNullOrWhiteSpace(settings.ContainerName)
-                || settings is { ServiceUri: null } && string.IsNullOrWhiteSpace(settings.ConnectionString))
+            if (settings is null || string.IsNullOrWhiteSpace(settings.ContainerName))
+            {
+                return services;
+            }
+
+            // An empty-string ServiceUri binds to a RELATIVE Uri; only an absolute one counts.
+            var hasServiceUri = settings.ServiceUri is { IsAbsoluteUri: true };
+            if (!hasServiceUri && string.IsNullOrWhiteSpace(settings.ConnectionString))
             {
                 return services;
             }
 
             services.TryAddSingleton(_ =>
             {
-                var serviceClient = settings.ServiceUri is null
-                    ? new Azure.Storage.Blobs.BlobServiceClient(settings.ConnectionString)
-                    : new Azure.Storage.Blobs.BlobServiceClient(settings.ServiceUri, new Azure.Identity.DefaultAzureCredential());
+                var serviceClient = hasServiceUri
+                    ? new Azure.Storage.Blobs.BlobServiceClient(settings.ServiceUri, new Azure.Identity.DefaultAzureCredential())
+                    : new Azure.Storage.Blobs.BlobServiceClient(settings.ConnectionString);
                 return serviceClient.GetBlobContainerClient(settings.ContainerName);
             });
             services.AddTransient<IFileStorageService, AzureBlobFileStorageService>();
