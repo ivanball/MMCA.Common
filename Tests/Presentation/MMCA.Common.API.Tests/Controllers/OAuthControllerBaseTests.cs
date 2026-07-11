@@ -533,6 +533,46 @@ public sealed class OAuthControllerBaseTests
             .Which.Url.Should().Be("atldevcon://oauth-complete?error=missing_claims");
     }
 
+    [Fact]
+    public async Task CompleteAsync_WithMockedConfigurationReturningNullSections_DoesNotThrow()
+    {
+        // Consumer test suites (ADC's OAuthControllerTests) construct the controller over a loose
+        // Mock<IConfiguration>, whose GetSection returns null. The allowlist lookup must treat that
+        // exactly like an empty allowlist instead of throwing from ConfigurationBinder (the
+        // v1.112.0 sweep regression this pins).
+        var authService = new Mock<IAuthenticationService>();
+        var cacheService = new Mock<ICacheService>();
+        var httpAuth = new Mock<AspNetAuthenticationService>();
+        var configuration = new Mock<IConfiguration>();
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = new SingleServiceProvider(httpAuth.Object),
+        };
+        var sut = new TestOAuthController(authService.Object, cacheService.Object, configuration.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext },
+        };
+        httpAuth
+            .Setup(x => x.AuthenticateAsync(It.IsAny<HttpContext>(), ExternalAuthExtensions.ExternalLoginScheme))
+            .ReturnsAsync(SuccessfulAuthentication(CreatePrincipal(), returnUrl: "atldevcon://oauth-complete"));
+        authService
+            .Setup(x => x.ExternalLoginAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(CreateAuthResponse()));
+
+        var result = await sut.CompleteAsync();
+
+        // Null sections = empty allowlist: even a custom-scheme returnUrl flows to the web redirect.
+        result.Should().BeOfType<RedirectResult>()
+            .Which.Url.Should().StartWith("/auth/oauth-complete?code=");
+    }
+
     // ── ExchangeAsync ──
     [Fact]
     public async Task ExchangeAsync_WithWhitespaceCode_ReturnsBadRequestWithoutTouchingTheCache()

@@ -6,6 +6,13 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Fixed (2026-07-10 v1.112.1 OAuth allowlist null-section regression)
+- **`OAuthControllerBase` no longer throws when `IConfiguration.GetSection` returns null**
+  (loose configuration test doubles in consumer suites; surfaced by ADC's
+  `OAuthControllerTests` failing the v1.112.0 sweep CI). A null/missing
+  `OAuth:AllowedReturnUrlSchemes` section now means "empty allowlist" (the exact pre-ADR-043
+  behavior); pinned by a Common-side regression test using a mocked configuration.
+
 ### Added (2026-07-10 device-capability layer, [ADR-042](ADRs/042-device-capability-abstraction.md) / [ADR-043](ADRs/043-mobile-deep-links-and-native-oauth-callback.md))
 - **`MMCA.Common.UI.Maui` (NEW, fifteenth package)**: native device-capability implementations for
   MAUI Blazor Hybrid heads over MAUI Essentials + Plugin.LocalNotification (connectivity, battery,

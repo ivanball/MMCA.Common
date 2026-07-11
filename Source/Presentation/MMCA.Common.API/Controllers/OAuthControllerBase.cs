@@ -239,7 +239,10 @@ public abstract class OAuthControllerBase(
             return null;
         }
 
-        var allowedSchemes = configuration.GetSection("OAuth:AllowedReturnUrlSchemes").Get<string[]>() ?? [];
+        // Null-tolerant on purpose: a missing section, an empty section, or an IConfiguration
+        // test double whose GetSection returns null must all mean "no allowlist" (the exact
+        // pre-ADR-043 behavior), never a throw from ConfigurationBinder.
+        var allowedSchemes = configuration.GetSection("OAuth:AllowedReturnUrlSchemes")?.Get<string[]>() ?? [];
         return allowedSchemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase) ? uri : null;
     }
 
