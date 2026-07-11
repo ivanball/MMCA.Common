@@ -6,6 +6,33 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-10 device-capability layer, [ADR-042](ADRs/042-device-capability-abstraction.md) / [ADR-043](ADRs/043-mobile-deep-links-and-native-oauth-callback.md))
+- **`MMCA.Common.UI.Maui` (NEW, fifteenth package)**: native device-capability implementations for
+  MAUI Blazor Hybrid heads over MAUI Essentials + Plugin.LocalNotification (connectivity, battery,
+  share sheet, clipboard, haptics/vibration, maps launch, geolocation, system-browser links,
+  text-to-speech, screen-reader announce, local notifications with tap-to-deep-link, screenshot,
+  device preferences, offline JSON cache). Register with `builder.UseMauiDeviceCapabilities()`
+  AFTER `AddUIShared`. The package multi-targets the four MAUI TFMs, lives outside
+  `MMCA.Common.slnx`, and is built/packed by dedicated windows CI jobs (`build-maui`,
+  `publish-maui`); its layer boundary (UI + Shared only) is compile-time enforced.
+- **Device-capability contracts + safe defaults in `MMCA.Common.UI`**
+  (`Services/Capabilities`, ADR-042): 18 per-capability interfaces with null/neutral fallbacks
+  TryAdd-registered by `AddUIShared`, plus `AddBrowserDeviceCapabilities()` overrides for web heads
+  (`navigator.share`/clipboard/onLine watching, aria-live announcements, localStorage preferences
+  and cache via the new `capabilities-interop.js`; all prerender-safe). New shared components:
+  `DeepLinkListener` (native route requests -> Blazor navigation, cold-start buffered),
+  `ExternalLink` (replaces raw `target="_blank"`, which dead-ends inside a BlazorWebView), and
+  `OfflineBanner` (localized en-US + es).
+- **Native OAuth callback allowlist** (`OAuth:AllowedReturnUrlSchemes`, ADR-043):
+  `OAuthControllerBase.CompleteAsync` can redirect the single-use completion code (and completion
+  errors) to an allow-listed custom scheme (e.g. `atldevcon://oauth-complete`) so a MAUI head's
+  `WebAuthenticator` flow can capture it. http(s) never matches (no open redirect); the default
+  empty list preserves the previous behavior exactly.
+- **`IcsCalendarBuilder` + `IcsEvent`** (MMCA.Common.Shared, `Calendars/`): dependency-free
+  RFC 5545 writer (UTC-only timestamps, TEXT escaping, CRLF + 75-octet folding that never splits a
+  multi-byte character, deterministic via caller-supplied DTSTAMP) for the upcoming
+  add-to-calendar endpoints.
+
 ### Fixed (2026-07-10 output-cache policy regressions, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
 - **`PublicEndpointOutputCachePolicy` now varies the cache key by every query-string parameter**
   (`CacheVaryByRules.QueryKeys = "*"`, the same rule as the built-in default policy). The v1.110.0

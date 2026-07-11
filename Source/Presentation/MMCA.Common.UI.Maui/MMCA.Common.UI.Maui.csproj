@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Clear the single net10.0 TargetFramework inherited from Directory.Build.props;
+         this package multi-targets the MAUI platform TFMs instead. The windows TFM is
+         unconditional (unlike the app heads) so the published .nupkg always carries the
+         same four TFMs regardless of the build OS. CI builds and packs this project on a
+         windows runner (ubuntu cannot build MAUI TFMs), which is also why it stays out of
+         MMCA.Common.slnx — the same mechanism as UI.Gallery / UI.E2E.Tests. -->
+    <TargetFramework />
+    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <UseMaui>true</UseMaui>
+    <PackageId>MMCA.Common.UI.Maui</PackageId>
+    <Description>MMCA framework — native device-capability implementations (share, clipboard, haptics, geolocation, local notifications, biometrics, deep links) for MAUI Blazor Hybrid heads; pairs with the capability contracts in MMCA.Common.UI</Description>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+
+    <!-- CsWinRT1028 (windows TFM) requires `partial` on classes implementing projected
+         interfaces (IDisposable); MA0204/RCS1043 (other TFMs) call the same modifier
+         redundant. The windows requirement wins — silence the redundancy style rules here. -->
+    <NoWarn>$(NoWarn);MA0204;RCS1043</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" />
+    <PackageReference Include="Plugin.LocalNotification" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MMCA.Common.UI\MMCA.Common.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

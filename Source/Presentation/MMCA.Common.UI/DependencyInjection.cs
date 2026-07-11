@@ -7,6 +7,7 @@ using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI;
@@ -88,6 +89,10 @@ public static class DependencyInjection
             // Default no-op OAuth settings — downstream apps override with TryAdd before this runs,
             // or replace after by calling AddSingleton<IOAuthUISettings, ConcreteSettings>()
             services.TryAddSingleton<IOAuthUISettings, DefaultOAuthUISettings>();
+
+            // Device-capability defaults (ADR-042): every contract resolves on every head;
+            // MAUI/browser hosts override AFTER this call (last registration wins).
+            services.AddDeviceCapabilityDefaults();
 
             return services;
         }

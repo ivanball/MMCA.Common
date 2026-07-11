@@ -70,6 +70,31 @@ jobs:
           path: coverage.unit.cobertura.xml
           if-no-files-found: warn
 
+  # The MAUI multi-target package (MMCA.Common.UI.Maui) cannot build on ubuntu — its four TFMs
+  # (android/ios/maccatalyst/windows) need the MAUI workloads — so it builds in its own
+  # windows job and stays OUT of MMCA.Common.slnx, the same mechanism that keeps the gallery
+  # and UI E2E projects out of the unit run. Required merge gate alongside build-and-test.
+  # (No tests here: the capability contracts and fallbacks are covered in MMCA.Common.UI.Tests
+  # on ubuntu; the MAUI implementations are thin Essentials wrappers exercised on-device.)
+  build-maui:
+    name: Build MMCA.Common.UI.Maui (windows, 4 TFMs)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Build (android + ios + maccatalyst + windows)
+        run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release
+
   # Real-browser axe (WCAG 2.1 AA) + render-smoke gate for the shared MMCA.Common.UI. A backend-less
   # gallery host (Tests/Presentation/MMCA.Common.UI.Gallery) renders the real Login/Register pages and a
   # primitives showcase; MMCA.Common.UI.E2E.Tests self-hosts it in-process and scans it with Playwright.

@@ -1,0 +1,51 @@
+@using MMCA.Common.UI.Services.Capabilities
+@inject IConnectivityStatusService Connectivity
+@inject IStringLocalizer<SharedResource> Localizer
+@implements IDisposable
+
+@* Offline awareness banner (ADR-042). Renders nothing while online. Hosts whose
+   connectivity is constant (Blazor Server's always-online fallback) therefore never show it;
+   MAUI and WebAssembly heads surface it when the device drops off the network. *@
+
+@if (!Connectivity.IsOnline)
+{
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mmca-offline-banner">
+        @Localizer["Capabilities.Offline.Banner"]
+    </MudAlert>
+}
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        Connectivity.ConnectivityChanged += OnConnectivityChanged;
+        await Connectivity.InitializeAsync();
+
+        if (!Connectivity.IsOnline)
+        {
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose() => Connectivity.ConnectivityChanged -= OnConnectivityChanged;
+
+    private async void OnConnectivityChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component already disposed; nothing to refresh.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer detached; same disposition.
+        }
+    }
+}

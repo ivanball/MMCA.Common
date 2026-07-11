@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes fourteen NuGet packages to GitHub Packages — it is not a runnable app itself.
+MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes fifteen NuGet packages to GitHub Packages; it is not a runnable app itself. (`MMCA.Common.UI.Maui` is the one MAUI-TFM package: outside `MMCA.Common.slnx`, built/packed by dedicated windows jobs in `ci.yml`/`release.yml`, ADR-042.)
 
 The framework also provides the seams for **extracting modules into standalone microservices** (gRPC transport, a transport-agnostic message bus, cross-service JWKS auth, and Aspire hosting extensions). See "Microservices Extraction Seams" below — much of the recent work targets this path.
 
@@ -85,7 +85,7 @@ Tests/                               # Mirrors Source/ structure
 
 `Tests/Presentation/MMCA.Common.UI.Gallery` (a backend-less Blazor host rendering the real Login/Register pages + a primitives showcase) and `MMCA.Common.UI.E2E.Tests` (Playwright axe/render-smoke) are **intentionally excluded from `MMCA.Common.slnx`** so `dotnet build`/`dotnet test --solution` stay fast. They reference MMCA.Common source projects directly (no GitHub Packages token needed) and only run in CI's `ui-e2e` job. Build/test them by csproj path.
 
-All fourteen `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project).
+All fifteen `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project). `Source/Presentation/MMCA.Common.UI.Maui` is the exception to the slnx rule: it is packable but lives OUTSIDE `MMCA.Common.slnx` (its four MAUI TFMs cannot build on the ubuntu CI runner) and is built/packed by the `build-maui`/`publish-maui` windows jobs.
 
 ## Architecture
 
@@ -249,7 +249,7 @@ These docs live **in this repo** (committable, unlike the workspace-level `Docs/
 - `FACTS.md` — the **single source of truth** for framework-wide facts (version, the package list, ADR range, fitness-method/base counts). Link here / to `ADRs/README.md`; do not restate these numbers inline. **Generated from source and CI-gated** by `build/facts` (a dependency-free tool) — regenerate with `dotnet run --project build/facts -- .`; the `build-and-test` CI job runs it with `--check` and fails on drift, so don't hand-edit the computed values. (The workspace `Tools/invtool -- facts ./MMCA.Common` shares the same generator.)
 - `ArchitectureScorecard.md` — the **canonical, two-axis** architecture scorecard for this repo (per-category Maturity+Implementation + indices + evidence). This is the single source of truth for Common's scores (it replaced the former single-axis snapshot; the old workspace `ArchitectureEvaluation-MMCA.Common.md` is now a pointer). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
 - `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category. The workspace `Docs/Architecture/ArchitectureRemediation.md` is a thin cross-repo `[C→A]` roll-up that links here (no status restated).
-- `VERSIONING.md` — SemVer + breaking-change policy; the fourteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
+- `VERSIONING.md`: SemVer + breaking-change policy; the fifteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
 - `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
 - `COST.md` — FinOps notes (rubric §31): the framework's cost-relevant defaults (telemetry-span filtering, outbox poll/retention tuning) and the right-sizing / attribution / surge-revert levers consumers set downstream.
 - `RESPONSIVE.md` covers responsive design & cross-browser support (rubric §22): the supported-device/breakpoint matrix (C# `BreakpointConstants` ↔ CSS media queries), the shared `.mmca-touch-target` 48px affordance, the `DataGridListPageBase` density option, and the Playwright browser matrix (chromium required; firefox/webkit advisory).

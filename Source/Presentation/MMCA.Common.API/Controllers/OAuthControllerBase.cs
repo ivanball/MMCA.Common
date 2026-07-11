@@ -62,6 +62,13 @@ public abstract class OAuthControllerBase(
     /// Completes the OAuth flow after the middleware has processed the provider callback.
     /// Reads external claims from the <c>ExternalLogin</c> cookie, finds or creates a local
     /// user account, issues a JWT token pair, and redirects to the UI.
+    /// <para>
+    /// Native heads (ADR-044): when the stashed <c>returnUrl</c> uses a custom scheme listed in
+    /// <c>OAuth:AllowedReturnUrlSchemes</c> (e.g. <c>atldevcon://oauth-complete</c>), the redirect
+    /// targets that URL instead of <c>OAuth:UIBaseUrl</c>, so the system-browser
+    /// <c>WebAuthenticator</c> window captures the single-use code and closes. An empty allowlist
+    /// (the default) preserves the web-only behavior exactly.
+    /// </para>
     /// </summary>
     [HttpGet("complete")]
     [ApiExplorerSettings(IgnoreApi = true)]
@@ -72,14 +79,22 @@ public abstract class OAuthControllerBase(
 
         if (!authenticateResult.Succeeded || authenticateResult.Principal is null)
         {
+            // No authentication properties survive this failure, so the stashed returnUrl is
+            // unavailable — the web login page is the only possible destination.
             return Redirect($"{uiBaseUrl}/login?error=oauth_failed");
         }
+
+        // Safe lookup (GetString is TryGetValue under the hood): the challenge normally stashes
+        // returnUrl, but a ticket minted without it (custom challenge, provider round-trip edge)
+        // must fall back to "/" instead of throwing KeyNotFoundException on the Items indexer.
+        var returnUrl = authenticateResult.Properties?.GetString("returnUrl") ?? "/";
+        var mobileReturnUrl = GetAllowedMobileReturnUrl(returnUrl);
 
         var (providerName, providerKey, email, firstName, lastName) = ExtractClaims(authenticateResult.Principal);
 
         if (string.IsNullOrEmpty(providerKey) || string.IsNullOrEmpty(email))
         {
-            return Redirect($"{uiBaseUrl}/login?error=missing_claims");
+            return RedirectError(uiBaseUrl, mobileReturnUrl, "missing_claims");
         }
 
         var result = await authenticationService.ExternalLoginAsync(
@@ -87,14 +102,10 @@ public abstract class OAuthControllerBase(
 
         if (result.IsFailure)
         {
-            return RedirectToLoginWithError(uiBaseUrl, result.Errors);
+            return RedirectError(uiBaseUrl, mobileReturnUrl, GetErrorCode(result.Errors));
         }
 
         var response = result.Value;
-        // Safe lookup (GetString is TryGetValue under the hood): the challenge normally stashes
-        // returnUrl, but a ticket minted without it (custom challenge, provider round-trip edge)
-        // must fall back to "/" instead of throwing KeyNotFoundException on the Items indexer.
-        var returnUrl = authenticateResult.Properties?.GetString("returnUrl") ?? "/";
 
         // Clear the temporary external login cookie
         await HttpContext.SignOutAsync(ExternalLoginScheme);
@@ -106,9 +117,13 @@ public abstract class OAuthControllerBase(
         await cacheService.SetAsync(
             OAuthExchangeCodePrefix + exchangeCode, response, OAuthExchangeCodeLifetime, HttpContext.RequestAborted);
 
-        return Redirect(
-            $"{uiBaseUrl}/auth/oauth-complete?code={exchangeCode}&returnUrl={Uri.EscapeDataString(returnUrl)}");
+        return Redirect(BuildSuccessRedirectUrl(uiBaseUrl, mobileReturnUrl, exchangeCode, returnUrl));
     }
+
+    private static string BuildSuccessRedirectUrl(string uiBaseUrl, Uri? mobileReturnUrl, string exchangeCode, string returnUrl) =>
+        mobileReturnUrl is null
+            ? $"{uiBaseUrl}/auth/oauth-complete?code={exchangeCode}&returnUrl={Uri.EscapeDataString(returnUrl)}"
+            : AppendQuery(mobileReturnUrl, $"code={exchangeCode}");
 
     /// <summary>
     /// Exchanges a single-use OAuth completion code for the access/refresh token pair. Called by the
@@ -193,10 +208,48 @@ public abstract class OAuthControllerBase(
         return (fullName[..spaceIndex], fullName[(spaceIndex + 1)..]);
     }
 
-    private RedirectResult RedirectToLoginWithError(string uiBaseUrl, IReadOnlyCollection<Error> errors)
+    private static string GetErrorCode(IReadOnlyList<Error> errors) =>
+        errors.Count > 0 ? errors[0].Code : "unknown";
+
+    private RedirectResult RedirectToLoginWithError(string uiBaseUrl, string errorCode) =>
+        Redirect($"{uiBaseUrl}/login?error={Uri.EscapeDataString(errorCode)}");
+
+    /// <summary>
+    /// Redirects a completion failure to the right surface: the web login page normally, or the
+    /// allow-listed native callback (so the WebAuthenticator window closes) when one is in play.
+    /// </summary>
+    private RedirectResult RedirectError(string uiBaseUrl, Uri? mobileReturnUrl, string errorCode) =>
+        mobileReturnUrl is null
+            ? RedirectToLoginWithError(uiBaseUrl, errorCode)
+            : Redirect(AppendQuery(mobileReturnUrl, $"error={Uri.EscapeDataString(errorCode)}"));
+
+    /// <summary>
+    /// Returns the stashed return URL as the redirect target when it is an absolute URI whose
+    /// custom scheme appears in <c>OAuth:AllowedReturnUrlSchemes</c> (ADR-044); otherwise
+    /// <see langword="null"/>, which keeps the config-pinned <c>OAuth:UIBaseUrl</c> redirect.
+    /// http/https URLs never match — web destinations always flow through the pinned base URL,
+    /// so the allowlist cannot become an open redirect.
+    /// </summary>
+    private Uri? GetAllowedMobileReturnUrl(string returnUrl)
     {
-        var errorCode = errors.Count > 0 ? errors.First().Code : "unknown";
-        return Redirect($"{uiBaseUrl}/login?error={Uri.EscapeDataString(errorCode)}");
+        if (!Uri.TryCreate(returnUrl, UriKind.Absolute, out var uri)
+            || string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var allowedSchemes = configuration.GetSection("OAuth:AllowedReturnUrlSchemes").Get<string[]>() ?? [];
+        return allowedSchemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase) ? uri : null;
+    }
+
+    private static string AppendQuery(Uri target, string queryFragment)
+    {
+        // OriginalString, not ToString(): Uri normalization appends a trailing slash to
+        // authority-only URIs (atldevcon://oauth-complete -> .../), and native authenticator
+        // callback matching can be exact — echo back precisely what the client registered.
+        var separator = string.IsNullOrEmpty(target.Query) ? "?" : "&";
+        return $"{target.OriginalString}{separator}{queryFragment}";
     }
 
     private ChallengeResult ChallengeProvider(string scheme, Uri? returnUrl)

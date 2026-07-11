@@ -58,3 +58,53 @@ jobs:
 
       - name: Push to GitHub Packages
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+  # MMCA.Common.UI.Maui (the 15th package) cannot build on ubuntu — its four TFMs need the MAUI
+  # workloads — so it packs on windows, versioned from the same tag so the lockstep release stays
+  # whole. Same SBOM hard gate as the main job, scoped to this project.
+  publish-maui:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Determine version from tag
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build (all four MAUI TFMs)
+        run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Pack
+        run: dotnet pack Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-build -o ./nupkgs-maui -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
+
+      - name: Generate SBOM (CycloneDX)
+        shell: bash
+        run: |
+          dotnet tool install --global CycloneDX
+          dotnet CycloneDX Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj --output ./sbom-maui --json
+          ls -la ./sbom-maui
+          test -n "$(ls -A ./sbom-maui 2>/dev/null)" || { echo "::error::SBOM generation produced no output"; exit 1; }
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-maui
+          path: ./sbom-maui
+          if-no-files-found: error
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate

@@ -466,4 +466,7 @@
   <data name="Error.Heading" xml:space="preserve">
     <value>Error.</value>
   </data>
+  <data name="Capabilities.Offline.Banner" xml:space="preserve">
+    <value>You are offline. Some content may be out of date.</value>
+  </data>
 </root>

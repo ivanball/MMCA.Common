@@ -87,6 +87,24 @@
            Text="Layer violation: MMCA.Common.UI must not reference %(_ForbiddenUIRefs.Filename). UI depends only on Shared for Blazor WASM compatibility." />
   </Target>
 
+  <!-- UI.Maui: native device-capability implementations for MAUI Blazor Hybrid heads —
+       may reference UI and Shared only. Like UI itself, it must never see Domain,
+       Application, Infrastructure, or API: capability services are pure presentation
+       concerns resolved behind the contracts defined in MMCA.Common.UI. -->
+  <Target Name="EnforceUIMauiLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.UI.Maui'">
+    <ItemGroup>
+      <_ForbiddenUIMauiRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenUIMauiRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.UI.Maui must not reference %(_ForbiddenUIMauiRefs.Filename). UI.Maui depends only on UI and Shared." />
+  </Target>
+
   <!-- UI.Web: the server-side Blazor host bridge — may reference UI, API, Aspire, and Shared,
        but never the Domain/Application/Infrastructure layers directly (those flow transitively
        through API where legitimate; a direct reference would turn a host-support package into a

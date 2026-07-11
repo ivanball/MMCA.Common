@@ -2,7 +2,7 @@
 
 This is the step-by-step guide for standing up a **brand-new application** on the MMCA.Common
 framework. MMCA.Common is a .NET 10 framework for DDD, Clean Architecture, and CQRS, shipped as
-fourteen lockstep-versioned NuGet packages. Its core promise: **build a modular monolith now, and
+fifteen lockstep-versioned NuGet packages. Its core promise: **build a modular monolith now, and
 extract a module into its own microservice later, without a rewrite.**
 
 This guide builds **monolith-first** (the fastest path to a running app), then shows the **extraction**
@@ -66,10 +66,10 @@ and pull Tickets out into a microservice.
 > Debug** before your app, or the IDE binds the stale last-built Debug reference assembly and reports
 > phantom `CS0103` errors against new members. Build MMCA.Common with `-c Debug`, then build your app.
 
-**Pick the framework version.** All fourteen packages move together. The current consumers are on
+**Pick the framework version.** All fifteen packages move together. The current consumers are on
 `1.77.0`. Choose one version and use it for every `MMCA.Common.*` entry (Phase 1). See
 [ADR-016](ADRs/016-lockstep-versioning-masstransit-pin.md): there is no phased rollout and no version
-skew across the fourteen packages.
+skew across the fifteen packages.
 
 ---
 
@@ -103,9 +103,10 @@ MMCA.Helpdesk/
 
 ### `Directory.Packages.props` (Central Package Management)
 
-Versions live here, not in individual `.csproj` files. List **all fourteen** `MMCA.Common.*` packages
-at one version, and keep **MassTransit pinned to v8** (v9 needs a commercial license, enforced by a
-build gate in MMCA.Common, see [ADR-016](ADRs/016-lockstep-versioning-masstransit-pin.md)):
+Versions live here, not in individual `.csproj` files. List **every** `MMCA.Common.*` package you
+consume at one version (the count is owned by [FACTS.md](FACTS.md)), and keep **MassTransit pinned
+to v8** (v9 needs a commercial license, enforced by a build gate in MMCA.Common, see
+[ADR-016](ADRs/016-lockstep-versioning-masstransit-pin.md)):
 
 ```xml
 <Project>
@@ -113,7 +114,7 @@ build gate in MMCA.Common, see [ADR-016](ADRs/016-lockstep-versioning-masstransi
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- MMCA Common packages: all fourteen at one version, bumped in lockstep -->
+    <!-- MMCA Common packages: all at one version, bumped in lockstep -->
     <PackageVersion Include="MMCA.Common.Shared" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.Domain" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.Application" Version="1.77.0" />
@@ -121,6 +122,9 @@ build gate in MMCA.Common, see [ADR-016](ADRs/016-lockstep-versioning-masstransi
     <PackageVersion Include="MMCA.Common.API" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.Grpc" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.UI" Version="1.77.0" />
+    <PackageVersion Include="MMCA.Common.UI.Web" Version="1.77.0" />
+    <!-- MAUI heads only: the one MAUI-TFM package (ADR-042); web-only apps skip it -->
+    <PackageVersion Include="MMCA.Common.UI.Maui" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.Aspire" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.Aspire.Hosting" Version="1.77.0" />
     <PackageVersion Include="MMCA.Common.Testing" Version="1.77.0" />

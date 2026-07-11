@@ -1,0 +1,43 @@
+@using MMCA.Common.UI.Services.Capabilities
+@inject IExternalLinkService ExternalLinks
+
+@* External-link wrapper (ADR-042). On web heads this renders a normal new-tab anchor. Inside
+   a BlazorWebView, target="_blank" silently dead-ends (WKWebView returns null from
+   window.open; Android WebView needs multi-window support), so the MAUI head's
+   IExternalLinkService intercepts the click and launches the system browser instead. Shared
+   components must use this instead of raw MudLink Target="_blank" for any external URL. *@
+
+<MudLink Href="@Href"
+         Target="_blank"
+         Class="@Class"
+         Underline="@Underline"
+         rel="noopener noreferrer"
+         OnClick="@ClickHandler">@ChildContent</MudLink>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string Href { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Parameter]
+    public Underline Underline { get; set; } = Underline.Hover;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private EventCallback<MouseEventArgs> ClickHandler =>
+        ExternalLinks.InterceptsLinks
+            ? EventCallback.Factory.Create<MouseEventArgs>(this, OpenNativelyAsync)
+            : default;
+
+    private async Task OpenNativelyAsync()
+    {
+        if (Uri.TryCreate(Href, UriKind.Absolute, out var uri))
+        {
+            await ExternalLinks.OpenAsync(uri);
+        }
+    }
+}

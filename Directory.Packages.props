@@ -66,6 +66,13 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.9" />
     <PackageVersion Include="MudBlazor" Version="9.6.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
+    <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
+         (ADC/Store pin 10.0.70); MAUI plugin/toolkit packages bind to the MAUI minor, so
+         bump them together, never independently. -->
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.70" />
+    <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
+         net10 TFM set before bumping (14.x is the net10 line). -->
+    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.117" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />

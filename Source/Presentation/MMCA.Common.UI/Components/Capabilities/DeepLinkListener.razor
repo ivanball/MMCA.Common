@@ -1,0 +1,45 @@
+@using MMCA.Common.UI.Services.Capabilities
+@inject IDeepLinkDispatcher Dispatcher
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@* Invisible component (ADR-042) — the Blazor end of the deep-link funnel. Rendered once in
+   the shared layout, it drains the route buffered by a cold-start tap after first render and
+   navigates live requests raised while the app is running. Native code never touches
+   NavigationManager directly; it publishes into IDeepLinkDispatcher and this component
+   marshals onto the renderer's sync context. *@
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        Dispatcher.RouteRequested += OnRouteRequested;
+
+        if (Dispatcher.TryConsumePending(out var pendingRoute) && pendingRoute is not null)
+        {
+            Navigation.NavigateTo(pendingRoute);
+        }
+    }
+
+    public void Dispose() => Dispatcher.RouteRequested -= OnRouteRequested;
+
+    private async void OnRouteRequested(object? sender, DeepLinkRouteEventArgs args)
+    {
+        try
+        {
+            await InvokeAsync(() => Navigation.NavigateTo(args.Route));
+        }
+        catch (ObjectDisposedException)
+        {
+            // Renderer torn down between the native event and the dispatch — drop the route.
+        }
+        catch (InvalidOperationException)
+        {
+            // Component no longer attached; same disposition.
+        }
+    }
+}
