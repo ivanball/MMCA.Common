@@ -16,6 +16,7 @@ merge gate** (firefox/webkit advisory). Scanned states:
 | Login | `LoginPageE2ETests.LoginPage_HasNoWcag21AaViolations` | real `MMCA.Common.UI` Login page |
 | Register | `RegisterPageE2ETests` | real Register page (EditForm + per-field validation) |
 | Components showcase: header, empty state, **loading state**, **error state**, card list, infinite-scroll, delete-confirmation | `ComponentsPageE2ETests.ComponentsPage_HasNoWcag21AaViolations` | broadened 2026-06-29 to include the loading (named progressbar) and error (alert) primitive states |
+| **Dark mode**: Login + Components showcase re-scanned with the dark palette active | `DarkModeE2ETests` | gated 2026-07-11 after the dark-palette tuning (dark `PrimaryContrastText`/`ErrorContrastText`); dark mode is seeded via the `mmca_theme` cookie |
 
 Component render is additionally regression-gated in the unit tier by **bUnit render-snapshot tests**
 (`PrimitivesSnapshotTests`, rubric §28), so an unintended markup change to a shared primitive fails the
@@ -45,12 +46,12 @@ walked manually. Checklist (re-run on any change to `MainLayout`, the auth pages
 
 ## Known limitations (tracked)
 
-- **Dark-mode contrast (§20, not §21).** A dark-mode axe scan was prototyped while broadening coverage and
-  flagged two WCAG AA contrast failures in the dark palette: the **filled-primary button label** and the
-  **error-alert message text** (the dark `Primary`/`Error` brand shades paired with their auto-computed
-  text). This is a dark-palette tuning concern, not a component-markup defect, so it is tracked under the
-  §20 design-system remediation rather than gated here; the dark-mode scan is not part of the blocking axe
-  gate until the palette is tuned. Light mode is fully AA-gated.
+- ~~**Dark-mode contrast (§20, not §21).**~~ **RESOLVED (2026-07-11).** The two dark-palette WCAG AA
+  contrast failures the prototype scan flagged (filled-primary button label ~2.65:1 on `#42A5F5`;
+  filled error-alert message text ~3.5:1 on `#EF5350`) are fixed by the Material dark-theme treatment:
+  `PaletteDark.PrimaryContrastText`/`ErrorContrastText` are now dark (`rgba(0,0,0,0.87)`, ~6.6:1 and
+  ~5.5:1), mirroring the existing `WarningContrastText` fix. The dark-mode axe scan is now part of the
+  blocking gate (`DarkModeE2ETests`, table above), so the dark palette can no longer regress silently.
 - **Per-component-state breadth.** The axe gate covers the gallery's representative states; deep
   consumer-specific states are scored in the consumer apps (ADC/Store).
 - **No automated focus-trap / reading-order assertion.** Covered by the manual pass above rather than a

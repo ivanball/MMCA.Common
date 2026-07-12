@@ -54,6 +54,10 @@ public static class MMCATheme
             Primary = BrandColors.PrimaryLight,
             PrimaryDarken = BrandColors.Primary,
             PrimaryLighten = "#90CAF9",
+            // Material dark-theme treatment: a lightened primary takes DARK on-color text. The default
+            // white label is ~2.65:1 on #42A5F5 and fails the WCAG 2.1 AA 4.5:1 floor on every filled
+            // primary button (caught by the gated dark-mode axe scan); dark text is ~6.6:1.
+            PrimaryContrastText = "rgba(0,0,0,0.87)",
             Secondary = "#4DB6AC",
             SecondaryDarken = "#00897B",
             SecondaryLighten = "#80CBC4",
@@ -64,6 +68,9 @@ public static class MMCATheme
             // Same fix as the light palette: white on #FFA726 is ~2.0:1; dark text is ~10.8:1.
             WarningContrastText = "rgba(0,0,0,0.87)",
             Error = "#EF5350",
+            // Same treatment as Primary: white on the lightened dark-mode error #EF5350 is ~3.5:1 and
+            // fails AA on the filled error alert's message text; dark text is ~5.5:1.
+            ErrorContrastText = "rgba(0,0,0,0.87)",
             AppbarBackground = "#1A2035",
             AppbarText = "#FFFFFF",
             Background = "#1A2027",

@@ -315,10 +315,16 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   around an anonymous progressbar (now `role="status"` + a named spinner).
 
 **Open follow-ups surfaced this wave:**
-- [ ] **#20 — dark-mode palette contrast (Implementation, NEW).** The §21 dark-mode axe prototype found the
+- [x] **#20 dark-mode palette contrast (Implementation, NEW).** The §21 dark-mode axe prototype found the
   dark palette's **filled-primary button label** and **error-alert message text** fail WCAG AA contrast
   (`PaletteDark.Primary`/`Error` paired with auto-computed text). Tracked here (documented in
   `ACCESSIBILITY.md`), deliberately NOT gated yet; tuning the dark palette is the remediation. *(§20, M.)*
+  **RESOLVED 2026-07-11 (remediation wave 1):** `PaletteDark.PrimaryContrastText`/`ErrorContrastText`
+  are now dark (`rgba(0,0,0,0.87)`, the Material dark-theme treatment, mirroring the standing
+  `WarningContrastText` fix); the dark-mode axe scan is GATED (`DarkModeE2ETests` in the blocking
+  chromium `ui-e2e` job: Login + Components re-scanned dark, reproduced both failures pre-fix, green
+  post-fix). `ACCESSIBILITY.md` known-limitations updated. This is also the recorded §21 path back to
+  Implementation 9 (re-score at the next cycle).
 - [~] **Release done, sweep noted (deliberate).** The tenth wave was **released as `v1.93.0`** (git tag at
   HEAD `3e72bfa`; `FACTS.md` records it). Sweeping all 13 packages into ADC/Store/Helpdesk is the separate,
   cross-repo step and is **not verifiable from this repo** (memory records the sweep on 2026-06-30; confirm
@@ -553,6 +559,34 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
   load-bearing for audit stamps; needs a dedicated EF-internals investigation; silent-data-loss failure
   mode) and a by-id fast path around the dynamic query pipeline (larger refactor; pressure mostly removed
   by ADR-040).
+
+## Progress - remediation wave 1 (cross-repo wave plan, 2026-07-11)
+
+> First wave of the 2026-07-11 cross-repo remediation plan (workspace plan file). Ships the shared
+> §18/§19 fitness bases the ADC/Store maturity lifts need, closes the tenth-wave #20 dark-palette item,
+> and adds a §23 measurement gate. Full Release build 0/0; 2223 tests green; gallery E2E 21/21
+> (19 prior + 2 dark-mode) plus 2 new vitals tests.
+
+- ✅ **§18/§19 shared fitness bases (the ADC/Store maturity 3→4 levers, consumed on the next sweep).**
+  `UIArchitectureConventionTestsBase` (code-behind 400-line cap + inline `@code` 120-line cap,
+  non-vacuity guard) and `StateManagementConventionTestsBase` (no mutable static state in `Layer.Ui`
+  assemblies via reflection, `AllowedStaticMembers` for recorded exceptions; plus a no-singleton
+  `*StateService`/`*StateContainer` source scan). Both subclassed in-repo (dog-food): the §19 gate
+  caught and fixed two real §18 violations (`MobileInfiniteScrollList` ~205 and `NotificationBell`
+  ~135 inline `@code` lines, both split to code-behind partials, snapshots/bUnit green) and surfaced
+  `ErrorMessages._localizer` (recorded as the one allowed static: write-once wiring seam, ADR-027).
+- ✅ **#20 dark-mode palette contrast RESOLVED + GATED (§20/§21).** Dark `PrimaryContrastText`/
+  `ErrorContrastText` now `rgba(0,0,0,0.87)`; `DarkModeE2ETests` (Login + Components, dark palette via
+  the `mmca_theme` cookie) reproduced both documented AA failures pre-fix and now gates them in the
+  blocking chromium `ui-e2e` job. §21 Implementation 8→9 candidacy recorded for the next re-score.
+- ✅ **§23 measurement gate.** `WebVitalsE2ETests` asserts LCP/TTFB/CLS budgets on the gallery Login +
+  Components pages (shipped `WebVitalsCollector`) inside the blocking `ui-e2e` job, so the shared-chrome
+  front-end performance conventions are now measured AND enforced (the two gaps the §23 maturity-3
+  recalibration named). §23 maturity 3→4 candidacy recorded for the next re-score.
+- ✅ **§34 hygiene.** `GETTING-STARTED.md` no longer restates the current consumer version (links
+  `FACTS.md`; sample version marked illustrative). *Noted for a future docs pass:* `CHANGELOG.md`'s
+  `[Unreleased]` section still accumulates content shipped in v1.86.0 through v1.114.0 without
+  per-release headings.
 
 ---
 

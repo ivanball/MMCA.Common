@@ -76,9 +76,7 @@ public sealed class ComponentsPageE2ETests : GalleryAxeTestBase
         // Broadened to also cover the loading (aria-busy / named progressbar) and error (alert) primitive
         // states added to the showcase. Adding the loading state here surfaced and fixed a real defect:
         // PageLoadingState carried a prohibited aria-label on a bare div and an anonymous progressbar.
-        // (Dark-mode contrast is NOT gated here yet: the dark palette's filled-primary button label and
-        // error-alert text currently fail WCAG AA contrast — a §20 dark-palette tuning item tracked in
-        // ACCESSIBILITY.md, not a §21 component-markup gap.)
+        // (Dark mode is scanned separately by DarkModeE2ETests, gated since the dark-palette tuning.)
         await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
     }
 }

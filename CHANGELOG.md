@@ -6,6 +6,39 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-11 remediation wave 1: §18/§19 fitness gates, dark-mode a11y gate, gallery vitals)
+- **`UIArchitectureConventionTestsBase`** (`MMCA.Common.Testing.Architecture`, rubric §18): file-scan
+  fitness base enforcing the container/presentational split mechanically: every `*.razor.cs` under
+  `Source/` stays within a 400-line cap, and every `.razor` file keeps its inline `@code` block within
+  120 lines (substantial logic belongs in the code-behind partial). Seams: `MaxCodeBehindLines`,
+  `MaxInlineCodeLines`, `MinimumCodeBehindFiles` (non-vacuity guard), `ExcludedPathFragments`.
+  Subclassed in-repo as `UIArchitectureConventionTests`.
+- **`StateManagementConventionTestsBase`** (`MMCA.Common.Testing.Architecture`, rubric §19): fitness
+  base failing the build on any mutable static field or settable static property in a repo's
+  `Layer.Ui` assemblies (the Blazor Server cross-circuit state-leak shape; compiler-generated members
+  excluded, deliberate exceptions recorded via `AllowedStaticMembers`), plus a source scan forbidding
+  singleton registration of stateful UI services (`*StateService`/`*StateContainer`). Subclassed
+  in-repo as `StateManagementConventionTests` (one recorded exception: the `ErrorMessages._localizer`
+  write-once wiring seam).
+- **Dark-mode axe gate** (`DarkModeE2ETests`, rubric §20/§21): the gallery Login + Components pages are
+  re-scanned with the dark palette active (seeded via the `mmca_theme` cookie) inside the blocking
+  chromium `ui-e2e` job, closing the tracked dark-palette contrast item.
+- **Gallery Core Web Vitals budgets** (`WebVitalsE2ETests`, rubric §23): LCP/TTFB/CLS measured on the
+  gallery Login + Components pages with the shipped `WebVitalsCollector` and asserted against budgets
+  in the blocking chromium `ui-e2e` job, so shared-chrome front-end performance is measured and
+  enforced, not assumed.
+
+### Changed (2026-07-11 remediation wave 1)
+- **Dark palette WCAG AA contrast fix** (`MMCATheme.PaletteDark`): `PrimaryContrastText` and
+  `ErrorContrastText` are now dark (`rgba(0,0,0,0.87)`), the Material dark-theme treatment for the
+  lightened `Primary` (#42A5F5) and `Error` (#EF5350) shades. The filled-primary button label
+  (was ~2.65:1) and the filled error-alert message text (was ~3.5:1) now pass the 4.5:1 floor. Filled
+  primary/error surfaces render dark-on-color instead of white-on-color in dark mode.
+- **`MobileInfiniteScrollList` and `NotificationBell` split to code-behind partials** (§18 conformance;
+  markup and behavior unchanged, render-snapshot and bUnit suites green). `NotificationBell`'s event
+  handlers dropped `async void` for explicit fire-and-forget discards and its `Dispose` adopted the
+  standard `Dispose(bool)` pattern.
+
 ### Added (2026-07-11 move-to-Common extraction wave, E1-E12 of `Docs/Planning/DriftAnalysis-plan.md` 2026-07-11)
 - **`RouteAuthorizationTestsBase`** (`MMCA.Common.Testing.Architecture`): reflection fitness base
   asserting every governed routable Blazor page carries the required role, with seams
