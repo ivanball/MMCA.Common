@@ -57,7 +57,7 @@
          a commercial license key at build time (enforced by DependencyVersionTests, mirrored in
          the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
     <PackageVersion Include="Azure.Identity" Version="1.16.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.1" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.31.1" />
