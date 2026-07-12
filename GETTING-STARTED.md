@@ -66,8 +66,9 @@ and pull Tickets out into a microservice.
 > Debug** before your app, or the IDE binds the stale last-built Debug reference assembly and reports
 > phantom `CS0103` errors against new members. Build MMCA.Common with `-c Debug`, then build your app.
 
-**Pick the framework version.** All fifteen packages move together. The current consumers are on
-`1.77.0`. Choose one version and use it for every `MMCA.Common.*` entry (Phase 1). See
+**Pick the framework version.** All fifteen packages move together. Use the latest released tag
+(see [FACTS.md](FACTS.md) for the current version; the `1.77.0` in the samples below is
+illustrative only). Choose one version and use it for every `MMCA.Common.*` entry (Phase 1). See
 [ADR-016](ADRs/016-lockstep-versioning-masstransit-pin.md): there is no phased rollout and no version
 skew across the fifteen packages.
 
