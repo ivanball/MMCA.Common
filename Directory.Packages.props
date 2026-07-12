@@ -53,7 +53,9 @@
     <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- Managed file storage + avatar image normalization (ADR-045). ImageSharp is under the
          Six Labors Split License: Apache 2.0 terms apply to open-source / small-revenue use,
-         which covers this project; revisit if that changes. -->
+         which covers this project; revisit if that changes. PINNED to v3 by policy: v4 requires
+         a commercial license key at build time (enforced by DependencyVersionTests, mirrored in
+         the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
     <PackageVersion Include="Azure.Identity" Version="1.16.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />

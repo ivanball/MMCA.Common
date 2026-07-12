@@ -35,4 +35,27 @@ public abstract class DependencyVersionTestsBase
                     + "green. Configure a license before bumping past v8.");
         }
     }
+
+    /// <summary>
+    /// Same trap, different package: ImageSharp v4 requires a Six Labors license key at BUILD time
+    /// (the v4 MSBuild targets fail without <c>$(SixLaborsLicenseKey)</c>), so a blanket bump breaks
+    /// every build. v3.x remains under the Split License whose Apache 2.0 terms cover this project.
+    /// Repos that don't pin ImageSharp override <see cref="ImageSharpPackageIds"/> with an empty list.
+    /// </summary>
+    protected virtual IReadOnlyList<string> ImageSharpPackageIds => ["SixLabors.ImageSharp"];
+
+    [Fact]
+    public void ImageSharp_MustNotExceed_MajorVersion3()
+    {
+        foreach (var packageId in ImageSharpPackageIds)
+        {
+            ArchitectureRules.PinnedPackageMajorBelow(
+                packageId,
+                exclusiveMajorCeiling: 4,
+                reason: "SixLabors.ImageSharp v4 requires a commercial license key at build time (its "
+                    + "MSBuild targets fail without SixLaborsLicenseKey), so a blanket package update "
+                    + "breaks every build (dependabot PR run 29174852917). v3.x stays under the Split "
+                    + "License's Apache 2.0 terms. Obtain a license before bumping past v3.");
+        }
+    }
 }

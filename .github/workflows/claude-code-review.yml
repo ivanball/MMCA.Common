@@ -12,6 +12,11 @@ on:
 
 jobs:
   claude-review:
+    # Dependabot-triggered workflows read the DEPENDABOT secrets store, where
+    # CLAUDE_CODE_OAUTH_TOKEN is not configured, so the action fails immediately on every
+    # dependabot PR (e.g. run 29174893302). Mechanical version bumps do not need an AI review;
+    # CI still validates them.
+    if: github.actor != 'dependabot[bot]'
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
