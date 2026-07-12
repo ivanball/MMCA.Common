@@ -109,9 +109,10 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
-    # chromium is the required merge gate. firefox/webkit are advisory (continue-on-error) until the
-    # matrix is proven reliably green, then drop the override to make them blocking too.
-    continue-on-error: ${{ matrix.browser != 'chromium' }}
+    # chromium AND firefox are required merge gates (§22; firefox promoted 2026-07-12 after a clean
+    # observed streak). webkit stays advisory (continue-on-error): 2 flaky reds in its last 10 main
+    # runs (2026-07-11 09:59, 2026-07-12 00:45); promote it too once it holds a comparable streak.
+    continue-on-error: ${{ matrix.browser == 'webkit' }}
     steps:
       - uses: actions/checkout@v5
         with:

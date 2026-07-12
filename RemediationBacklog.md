@@ -405,8 +405,13 @@ Implemented in MMCA.Common — ✅ **verified 2026-06-09**: `dotnet build -c Rel
   in-repo one. *(§31 holds M2/I7; see `COST.md` and the §31 scorecard row.)*
 
 **Deferred follow-up (recorded, not done this wave):**
-- [ ] **#22: promote firefox (then webkit) from advisory to a blocking cross-browser gate** once observed
+- [~] **#22: promote firefox (then webkit) from advisory to a blocking cross-browser gate** once observed
   reliably green, to lift §22 Maturity 3→4. *(`ci.yml:89`; effort S, gated on a green streak.)*
+  **FIREFOX PROMOTED 2026-07-12 (remediation wave 5):** `ui-e2e`'s `continue-on-error` now exempts only
+  webkit; firefox is a required merge gate alongside chromium (observed clean over the recent main-run
+  streak). **Webkit stays advisory** (2 flaky reds in its last 10 main runs, 2026-07-11 09:59 and
+  2026-07-12 00:45); promote it once it holds a comparable streak. §22 Maturity 3→4 candidacy recorded
+  for the next re-score (the recorded lever named the firefox promotion as the move, with webkit staged).
 
 ---
 
