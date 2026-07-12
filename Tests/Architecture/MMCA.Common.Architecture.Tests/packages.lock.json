@@ -1132,7 +1132,7 @@
           "Microsoft.AspNetCore.OpenApi": "[10.0.9, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.6.0, )",
           "Microsoft.OpenApi": "[2.7.5, )",
-          "Scalar.AspNetCore": "[2.16.7, )"
+          "Scalar.AspNetCore": "[2.16.11, )"
         }
       },
       "mmca.common.application": {
@@ -1649,9 +1649,9 @@
       },
       "Scalar.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.16.7, )",
-        "resolved": "2.16.7",
-        "contentHash": "wpP+7mleQ/jffcV0GlGMcO4T6Dd/LqlYhzTSeq/8EqiJ000onHILNlVyfngOBcyiP1gTwxU4iOGgmso7T60ZPg=="
+        "requested": "[2.16.11, )",
+        "resolved": "2.16.11",
+        "contentHash": "Sa7aHHX3x6qJo/nCOf0MPTi+Nl8tihiEDqWw7mRMajFn6KKElZyM4CP4C6ptUBPFfBWN61dvYcuMe8yWJaeYsA=="
       },
       "Scrutor": {
         "type": "CentralTransitive",
