@@ -111,8 +111,8 @@
       },
       "MassTransit.Abstractions": {
         "type": "Transitive",
-        "resolved": "8.5.5",
-        "contentHash": "0mn2Ay17dD6z5tgSLjbVRlldSbL9iowzFEfVgVfBXVG5ttz9dSWeR4TrdD6pqH93GWXp4CvSmF8i1HqxLX7DZw=="
+        "resolved": "8.5.10",
+        "contentHash": "nZnm2YNH+NcVwY6yC114sJy8J9LtKdFjfKUm/A5HfmzOlZ8ksjgHaPBg5XCG1VAqKDRDFnaudIcesVultKJD7g=="
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
@@ -556,11 +556,11 @@
       "mmca.common.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Azure.Identity": "[1.16.0, )",
+          "Azure.Identity": "[1.21.0, )",
           "Azure.Storage.Blobs": "[12.24.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
-          "MassTransit": "[8.5.5, )",
-          "MassTransit.Azure.ServiceBus.Core": "[8.5.5, )",
+          "MassTransit": "[8.5.10, )",
+          "MassTransit.Azure.ServiceBus.Core": "[8.5.10, )",
           "MassTransit.RabbitMQ": "[8.5.5, )",
           "MessagePack": "[2.5.302, )",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.9, )",
@@ -633,13 +633,11 @@
       },
       "Azure.Identity": {
         "type": "CentralTransitive",
-        "requested": "[1.16.0, )",
-        "resolved": "1.16.0",
-        "contentHash": "ZTtJt9N1hW9S7JRt05aBy894mp9uK4KbfcVcg2OndKbph/6RCcDEisdBV9iNHiNDSXXQRR52SAYy8RhknQ1xEA==",
+        "requested": "[1.21.0, )",
+        "resolved": "1.21.0",
+        "contentHash": "GeFv8sGwRKvDKwI2WFy8r0mhmlxEVZg24Sit2NogTjiSO8RVjllWM65OT6e1sKjOvG8V74y7hAbaELUUPjZQSw==",
         "dependencies": {
-          "Azure.Core": "1.47.3",
-          "Microsoft.Identity.Client": "4.76.0",
-          "Microsoft.Identity.Client.Extensions.Msal": "4.76.0"
+          "Azure.Core": "1.53.0"
         }
       },
       "Azure.Monitor.OpenTelemetry.AspNetCore": {
@@ -675,22 +673,22 @@
       },
       "MassTransit": {
         "type": "CentralTransitive",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "bSg8k5q+rP1s+dIGXLLbctqDGdIkfDjdxwNWtCUH7xNCN9ZuM7mqSPQPIFgaYIi34e81m4FqAqo4CAHuWPkhRA==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "TGi34UA8RftBIpYCHEdoIP5uSu2/pLWZRen4RUcg4CV1nr8MmCZMuFYjzvXXUyFcj0ZuRQxZZNhG7fB5/raSOg==",
         "dependencies": {
-          "MassTransit.Abstractions": "8.5.5"
+          "MassTransit.Abstractions": "8.5.10"
         }
       },
       "MassTransit.Azure.ServiceBus.Core": {
         "type": "CentralTransitive",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "/9wmsURLh0CtRpDnI9WLE0NNYHqst7O1t5B7OyF0iUiy5zNy+mq1x9UrsWTz8j63yU4aD23HmMWHLdC+08kaow==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "pXA+Vk/VB+s/0PeL4iht3q3VzxirbLNuSWnDDvEIFBfQdZpY28ZD/l2+6PTcVj6KvJH9nkqzlI7mnMw2pEYKPQ==",
         "dependencies": {
-          "Azure.Identity": "1.16.0",
+          "Azure.Identity": "1.21.0",
           "Azure.Messaging.ServiceBus": "7.20.1",
-          "MassTransit": "8.5.5"
+          "MassTransit": "8.5.10"
         }
       },
       "MassTransit.RabbitMQ": {

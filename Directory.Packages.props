@@ -46,9 +46,9 @@
          or by setting the MT_LICENSE/MT_LICENSE_PATH environment variables") and every broker-
          enabled service host crashes. A blanket package-update bumped this to 9.1.2 once before
          and reintroduced the crash — do NOT bump past v8 without configuring a license. -->
-    <PackageVersion Include="MassTransit" Version="8.5.5" />
+    <PackageVersion Include="MassTransit" Version="8.5.10" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.5" />
-    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.5" />
+    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.10" />
     <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- Managed file storage + avatar image normalization (ADR-045). ImageSharp is under the
@@ -56,7 +56,7 @@
          which covers this project; revisit if that changes. PINNED to v3 by policy: v4 requires
          a commercial license key at build time (enforced by DependencyVersionTests, mirrored in
          the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
-    <PackageVersion Include="Azure.Identity" Version="1.16.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.11" />
     <!-- gRPC -->
