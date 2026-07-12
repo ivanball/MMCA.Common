@@ -35,9 +35,9 @@
       },
       "MudBlazor": {
         "type": "Direct",
-        "requested": "[9.6.0, )",
-        "resolved": "9.6.0",
-        "contentHash": "2bziL5wy8axn82R3hPB0WBlK7o+dKYOOje0Jw7E0oqxAhFll/uqZkvVdFR/rfyA5I7sldyPs6eWO6smkMJbDZQ=="
+        "requested": "[9.7.0, )",
+        "resolved": "9.7.0",
+        "contentHash": "uWOgNn9B556J/TL8KFoSqpA3YD2heqOpK5etcofwlj1RiEX1IDy0NmwYE9urlTUQ8zProEK5GqwTBnoObFPN3g=="
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
@@ -174,7 +174,7 @@
           "MMCA.Common.Shared": "[1.0.0, )",
           "Microsoft.AspNetCore.SignalR.Client": "[10.0.9, )",
           "Microsoft.FeatureManagement": "[4.6.0, )",
-          "MudBlazor": "[9.6.0, )",
+          "MudBlazor": "[9.7.0, )",
           "Polly": "[8.7.0, )",
           "Scrutor": "[7.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.19.1, )"
