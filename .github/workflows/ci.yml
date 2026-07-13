@@ -250,3 +250,48 @@ jobs:
           line=$(sed -n 's/.*Line coverage:[[:space:]]*\([0-9.]*\)%.*/\1/p' coverage-unit-report/Summary.txt | head -1)
           test -n "$line" || { echo "::error::could not parse unit line coverage"; exit 1; }
           awk -v l="$line" -v m="68.3" 'BEGIN{ if (l+0 < m+0) { printf("::error::Unit line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Unit line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
+
+  # Cross-repo pre-merge canary: build a real consumer (MMCA.Helpdesk) against THIS PR's framework
+  # source, so a breaking public-API change fails here instead of surfacing only after a release +
+  # lockstep sweep. Helpdesk is the ideal canary: minimal single-module app, no database and no
+  # GitHub Packages token to build (it ships a committed local.props that swaps the MMCA.Common.*
+  # PackageReferences for ProjectReferences into ../MMCA.Common/Source via UseLocalMMCA). The two
+  # repos are checked out as siblings so Helpdesk's local.props path (..\MMCA.Common\Source)
+  # resolves to this PR's checkout. Advisory (continue-on-error) until it holds a green streak;
+  # then promote it to a required merge gate (add its context to the branch ruleset).
+  consumer-source-build:
+    name: Consumer source build (Helpdesk)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+    steps:
+      - name: Checkout MMCA.Common (this PR)
+        uses: actions/checkout@v5
+        with:
+          path: MMCA.Common
+          fetch-depth: 0 # MinVer needs full history
+
+      - name: Checkout MMCA.Helpdesk (consumer canary)
+        uses: actions/checkout@v5
+        with:
+          repository: ivanball/MMCA.Helpdesk
+          ref: main
+          path: MMCA.Helpdesk
+          fetch-depth: 0
+          # Public repo builds with the default token; if Helpdesk is private, set a
+          # CONSUMER_CANARY_PAT secret with contents:read on it.
+          token: ${{ secrets.CONSUMER_CANARY_PAT || github.token }}
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build Helpdesk against Common source (UseLocalMMCA)
+        working-directory: MMCA.Helpdesk
+        # Helpdesk's committed local.props already sets UseLocalMMCA=true and points at the sibling
+        # ../MMCA.Common/Source, so this compiles the reference app against the PR's framework source.
+        run: dotnet build MMCA.Helpdesk.slnx -c Release
+
+      - name: Test Helpdesk (domain + architecture, no DB)
+        working-directory: MMCA.Helpdesk
+        run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1
