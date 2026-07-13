@@ -6,6 +6,17 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+### Added (2026-07-13 FinOps §31: metric-family cost knobs)
+- **`Telemetry:DisableHttpClientMetrics` / `Telemetry:DisableRuntimeMetrics`** (`MMCA.Common.Aspire`,
+  `ConfigureOpenTelemetry`, rubric §31): two opt-in boolean knobs that drop the two highest-volume,
+  lowest-value OpenTelemetry metric families from export (HttpClient connection/request metrics and the
+  .NET runtime `dotnet.*` metrics). On a low-traffic multi-service deployment these are ~85% of the
+  `AppMetrics` data points and carry no end-user-visible signal; dropping them cut total Log Analytics
+  ingestion ~70% on the MMCA apps. Unset (default) keeps both, so there is no behavior change for a host
+  that does not opt in, and anything but a boolean `true` keeps the family (a typo cannot silently blind
+  it). Server-side RED metrics (`http.server.*` / `aspnetcore.*` / `kestrel.*`) and `AppDependencies`
+  traces are untouched. See `COST.md`.
+
 ### Added (2026-07-11 remediation wave 1: §18/§19 fitness gates, dark-mode a11y gate, gallery vitals)
 - **`UIArchitectureConventionTestsBase`** (`MMCA.Common.Testing.Architecture`, rubric §18): file-scan
   fitness base enforcing the container/presentational split mechanically: every `*.razor.cs` under
