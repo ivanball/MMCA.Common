@@ -1,0 +1,19 @@
+# Code owners for MMCA.Common.
+# https://docs.github.com/en/repositories/managing-your-repos-settings-and-features/customizing-your-repository/about-code-owners
+#
+# MMCA.Common is the shared framework: a change here breaks every consumer
+# (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) on the next release, so review matters most here.
+#
+# Today the main ruleset requires 0 approving reviews (transitional), so this file only
+# auto-requests review from the owners below. When a second reviewer joins, ratchet the
+# ruleset to require 1 approval and CODEOWNERS review, and add per-area owners.
+
+# Default owner for everything in the repo.
+*                           @ivanball
+
+# Per-layer owners (uncomment / reassign as the team grows):
+# /Source/Core/             @ivanball
+# /Source/Presentation/     @ivanball
+# /Source/Hosting/          @ivanball
+# /ADRs/                    @ivanball
+# /.github/                 @ivanball
