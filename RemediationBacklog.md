@@ -1,11 +1,11 @@
 # MMCA.Common — Architecture Remediation Backlog
 
-Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 94.4% / Implementation 83.7%**, framework v1.108.0; the 2026-07-09 seventeenth-wave two-pass re-score at a clean tree, HEAD `6c3b3bc`, recalibrated §21 Accessibility Implementation 9→8 (the shipped dark theme's two un-gated WCAG AA contrast failures are an unmet §21 color-and-contrast criterion, incompatible with the Exemplary band; the remediation is the open §20 dark-palette item), re-confirmed all 33 other categories at their prior scores, declined two adversarial first-pass lifts (§8 and §22 hold at Implementation 8), and refreshed the ADR range to 001-039).
+Derived from `ArchitectureScorecard.md` (canonical two-axis scoring: **Maturity 95.1% / Implementation 84.3%**, framework v1.115.0; the 2026-07-12 eighteenth-wave two-pass re-score at a clean tree, HEAD `37d0a3b`, moved three front-end scores: §20 Design System Implementation 8→9 and §21 Accessibility Implementation 8→9 (the two dark-theme WCAG AA contrast failures are fixed and locked by a blocking dark-mode axe gate) and §23 Front-End Performance Maturity 3→4 (the Web Vitals budget gate now runs in the required chromium `ui-e2e` job); re-confirmed all other categories at their prior scores, held five adversarially-refuted first-pass proposals (§7, §10, §25, §26, §34), and refreshed the ADR range to 001-045).
 The wave-by-wave priority ranking below is the **historical single-axis review** (index 80%, 218/272, 2026-06-08/09); it is retained for provenance and is **superseded by the in-repo two-axis scorecard**, which is the live source of scores.
 Tasks are every applicable category scoring **< 4**, ranked by **priority = (4 − score) × weight**.
 Higher priority = bigger weighted gap = more index points per unit of effort.
 
-**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **26 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 24, 26, 27, 28, 29, 32, 34; **#27 joined 2026-07-03** on the fifteenth-wave i18n completion train, M4/I9); the open work is the **8 categories still below Maturity 4**. Ranked by two-axis priority = (4 − maturity) × weight: **#31** FinOps (Maturity 2, weight 2, computed priority 4) is the highest weighted gap but a documented accepted cap (see *Deliberate / accepted* below), not scheduled work; then the weight-2 Maturity-3 pack at **priority 2** (#9, #17, #22, #23, #25, #30, #33).
+**Scope:** the single-axis item counts below are historical (the wave-by-wave ranking is superseded by the two-axis scorecard, per the note above). Under the live two-axis scorecard there are **no N/A categories** (§27 i18n is now scored after ADR-027) and **27 categories sit at Maturity 4** (#1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 32, 34; **#23 joined 2026-07-12** on the eighteenth-wave Web Vitals budget gate, M4/I8; **#27 joined 2026-07-03** on the fifteenth-wave i18n completion train, M4/I9); the open work is the **7 categories still below Maturity 4**. Ranked by two-axis priority = (4 − maturity) × weight: **#31** FinOps (Maturity 2, weight 2, computed priority 4) is the highest weighted gap but a documented accepted cap (see *Deliberate / accepted* below), not scheduled work; then the weight-2 Maturity-3 pack at **priority 2** (#9, #17, #22, #25, #30, #33).
 
 > **Two fixes each clear multiple items — do them once:**
 > - **MassTransit v8 guard** closes the medium red flags in **#32** *and* **#16**.
@@ -593,6 +593,50 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
   `[Unreleased]` section still accumulates content shipped in v1.86.0 through v1.114.0 without
   per-release headings.
 
+## Progress - eighteenth wave (evidence re-score at v1.115.0, 2026-07-12)
+
+> A full 34-category, two-pass evidence re-score (per-category scorer plus adversarial verifier) at framework
+> **v1.115.0** (HEAD `37d0a3b`, working tree **clean**, at the release tag). **Three front-end scores move.**
+> Canonical scoring is now **Maturity 95.1% (308/324) / Implementation 84.3% (683/810)** per the in-repo
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md) (was 94.4% / 83.7%). The three candidacies the
+> remediation-wave-1 entry recorded are now score-confirmed.
+
+- ✅ **#21 · Accessibility: Implementation 8→9 (CLOSED, stays on the protect / consumer-assessed list).** The
+  two documented, deliberately un-gated dark-theme WCAG AA contrast failures that capped §21 at 8 in the
+  seventeenth wave (filled-primary button label + error-alert message text) are fixed: dark
+  `PrimaryContrastText`/`ErrorContrastText` = `rgba(0,0,0,0.87)` (`Source/Presentation/MMCA.Common.UI/Theme/MMCATheme.cs:60,73`),
+  and the dark-mode axe scan is now a blocking gate (`DarkModeE2ETests` in the required chromium `ui-e2e`
+  job, `.github/workflows/ci.yml:114`). This is exactly the "tune the dark palette and gate the dark-mode
+  axe scan is the path back to 9" the prior §21 row named, and it closes the remediation-wave-1 candidacy
+  above. +3 index points (weight 3). Maturity holds at 4.
+- ✅ **#20 · Design System & UI Consistency: Implementation 8→9.** The same dark-palette fix, gated by the
+  same blocking dark-mode axe scan, closes the WCAG AA contrast half of §20's I8 deduction. +2 index points
+  (weight 2). **Not a full clear:** the Bootstrap-chrome→MudBlazor migration (Priority-2 #20 below) and the
+  residual `!important`/raw-hex in `wwwroot/app.css:122` remain OPEN (the re-score judged them minor enough
+  for I9, so that Priority-2 item stays unchecked). Maturity holds at 4.
+- ✅ **#23 · Front-End Performance: Maturity 3→4 (CLOSED, moved to the level-4 protect list).** The
+  front-end performance conventions the thirteenth wave recalibrated to review-enforced are now measured AND
+  automatically enforced: `WebVitalsE2ETests` asserts LCP/TTFB/CLS budgets on the gallery Login + Components
+  pages inside the required chromium `ui-e2e` merge gate
+  (`Tests/Presentation/MMCA.Common.UI.E2E.Tests/WebVitalsE2ETests.cs:43`, `.github/workflows/ci.yml:114,145`,
+  measurement via `Source/Hosting/MMCA.Common.Testing.E2E/Infrastructure/WebVitalsCollector.cs:17`), meeting
+  the rubric M4 "enforced automatically (CI)" bar. This closes the remediation-wave-1 candidacy above.
+  §23 leaves the priority-2 band, becomes the 27th Maturity-4 category, and joins the protect list.
+  Implementation held at 8: desktop `MudDataGrid` still uses server paging rather than row virtualization.
+- ◐ **Five adversarially-refuted first-pass proposals, no score move (recorded for the next cycle to
+  re-adjudicate).** §7 Microservices Readiness (proposed Implementation 9→8, an unforced band recalibration
+  re-litigating a fourteenth-wave decline; holds M4/I9), §10 Cross-Cutting Concerns (proposed 8→9 rejected,
+  the three documented hold-reasons still in source; holds M4/I8), §25 Navigation (proposed M2/I6 downgrade
+  not supported, every mechanism present on a clean tree; holds M3/I8), §26 Front-End Security (proposed 8→9
+  rejected, the CSP `script-src`/`style-src` gap unclosed; holds M4/I8), and §34 Governance (proposed 8→7 on
+  a transient stale-prose basis this refresh cures; holds M4/I8).
+- ✅ **Evidence enrichment, no score move (ADRs 040-045, since v1.108.0).** ADR-040 authenticated output
+  caching, ADR-041 observability/telemetry, ADR-042 MAUI device-capability abstraction (the fifteenth
+  package `MMCA.Common.UI.Maui`), ADR-043 mobile deep links + native OAuth callback, ADR-044 native push
+  delivery, ADR-045 managed file storage + avatars, all in categories already scored 8-9 (§18/§6/§8/§11/§30).
+  The source-generated, CI-gated `FACTS.md` reports **15 packages / ADR set 001-045 / 85 fitness methods
+  across 28 bases (Common runs 46)** and the scorecard rows are synced to match.
+
 ---
 
 ## 🔴 Priority 6 — highest leverage
@@ -702,9 +746,8 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 - **(low)** Bootstrap chrome (NavMenu top bar/hamburger) coexists with MudBlazor in the shared package.
 - [ ] Migrate remaining **Bootstrap chrome → MudBlazor**, drop the bundled Bootstrap CSS; source the brand hex from one token.
 
-### [ ] #23 · Front-End Performance
-- **(low)** `MobileInfiniteScrollList` appends every page into one `MudStack` with **no virtualization/cap**.
-- [ ] Add **`Virtualize`** windowing or a rendered-item cap.
+### [x] #23 · Front-End Performance · Maturity 3→4 DONE (eighteenth wave, 2026-07-12) · moved to the level-4 protect list
+- [x] **Web Vitals now measured AND gated.** `WebVitalsE2ETests` asserts LCP/TTFB/CLS budgets on the gallery Login + Components pages (`WebVitalsCollector`) inside the required chromium `ui-e2e` merge gate (`.github/workflows/ci.yml:114,145`), meeting the M4 "enforced automatically (CI)" bar. The old single-axis note ("`MobileInfiniteScrollList` no virtualization/cap") is drifted: a `MaxRenderedItems` cap ships (`Source/Presentation/MMCA.Common.UI/Components/MobileInfiniteScrollList.razor.cs:41`). Implementation holds at 8 (desktop `MudDataGrid` still uses server paging rather than row virtualization).
 
 ### [ ] #33 · Developer Experience & Inner Loop
 - **(low)** The 11-package local-dev swap list is hand-maintained three times in each consumer's `Directory.Build.targets` and can silently drift.
@@ -730,8 +773,8 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 ---
 
 ## ✅ Already at level 4 — protect, don't regress
-#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#24 Forms, Validation & UX Safety (maturity 3→4 on the CI-gated auth-form tests, fourteenth wave)** · **#27 i18n (maturity 3→4 on the fifteenth-wave completion train, 2026-07-03)** · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
-*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 26 categories, see the Scope note at the top.)*
+#1 SOLID · #2 Design Patterns · #3 Clean Architecture · **#5 Vertical Slice (maturity 3→4 on the slice-cohesion fitness function)** · #7 Microservices Readiness · #8 Data Architecture · #10 Cross-Cutting Concerns · **#12 Performance & Scalability (maturity 3→4 on the build-gating `performance-smoke` CI job, 2026-07-02)** · #14 Testability · #15 Best Practices & Code Quality · **#23 Front-End Performance (maturity 3→4 on the eighteenth-wave Web Vitals budget gate, 2026-07-12)** · **#24 Forms, Validation & UX Safety (maturity 3→4 on the CI-gated auth-form tests, fourteenth wave)** · **#27 i18n (maturity 3→4 on the fifteenth-wave completion train, 2026-07-03)** · **#29 Resilience (maturity 3→4 on the build-gated restore drill, tenth wave)**
+*(All backed by fitness functions: the regression guard is keeping those tests green. This lists the categories that reached Maturity 4 through tracked remediation; under the live two-axis scorecard the full Maturity-4 set is 27 categories, see the Scope note at the top.)*
 
 ## 🔒 Deliberate / accepted (documented caps, not scheduled work)
 ### [accepted] #31 · Cost Efficiency / FinOps: held at Maturity 2 / Implementation 7 by documented acceptance
@@ -740,6 +783,7 @@ Moved out of the active priority queue on 2026-07-02 (user-approved). Its comput
 ## ⚪ Mostly consumer-assessed (the shared Common.UI surface is scored here)
 #21 Accessibility · #22 Responsive · #26 Front-End Security
 *(Assessable mainly in consumer apps; #26 shared surface is covered under #11.)*
+- **#21 Accessibility: Implementation 8→9 (eighteenth wave, 2026-07-12).** The two dark-theme WCAG AA contrast failures are fixed (dark `PrimaryContrastText`/`ErrorContrastText` = `rgba(0,0,0,0.87)`) and locked by a blocking dark-mode axe gate (`DarkModeE2ETests`, chromium `ui-e2e`); §21 stays M4 and consumer-assessed but now sits at Implementation 9. §20 Design System took the same lift 8→9 (the shared-chrome half; its Bootstrap-chrome→MudBlazor migration stays open under Priority-2 #20).
 - **#27 i18n: CLOSED at Maturity 4 / Implementation 9 (fifteenth-wave completion train, 2026-07-03).** No longer consumer-assessed/N/A: it became an active in-repo category after ADR-027 shipped en-US + Spanish (superseding the single-locale ADR-011), and the ADR-027 Decision 9 train closed every stated hold: the pseudo-localization pass is a REQUIRED chromium CI gate (`PseudoLocalizationE2ETests`: `[!!` sentinel round-trip + overflow guard + `en-US` leak guard), the hard-coded-literal gate (`LocalizedTextConventionTests`) and the translation-coverage gate fail the build, and MudBlazor's built-in chrome localizes via `ResxMudLocalizer` (145 keys en+es). Held below 10 only by two locales / no RTL; on the protect list above.
 - **#24 Forms/UX Safety: DONE for the shared surface (eighth wave, impl 7→8).** Register/Login are now `EditForm` + DataAnnotations + per-field `ValidationMessage` (typed models + `PasswordComplexity` attr + tests). Consumer module forms remain consumer-scored. **Maturity reached 4 on the fourteenth-wave re-score** (the CI-gated `AuthModelValidationTests` + `RegisterFormTests` meet the automatic-enforcement bar); the category is closed and on the protect list above.
 - **#25 Navigation — DONE for the shared surface (eighth wave, impl 7→8):** an in-shell `Forbidden` (403) page + `NavigationFlow.md` for the Common UI surface. Per-actor module flows remain consumer-scored.
