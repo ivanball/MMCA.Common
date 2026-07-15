@@ -17,7 +17,7 @@ never recovered. Erasure (ADR-005) **removes or anonymizes** personal data on a 
 Neither covers the case of a field that must stay **retrievable in plaintext to the application** yet
 be **unreadable in the database itself**: an at-rest, reversible, column-level confidentiality control.
 ADR-005 already names this converter as the mechanism for erasure fields "that must remain retrievable"
-(`ADRs/005-soft-delete-vs-erasure.md:17`), and `SECURITY.md:25` lists it in the security model, so the
+(`ADRs/005-soft-delete-vs-erasure.md:17`), and `SECURITY.md:26` lists it in the security model, so the
 capability is referenced across the docs but was never recorded as a decision.
 
 The framework ships the plumbing for this, an EF Core value converter that encrypts and decrypts string
@@ -142,4 +142,4 @@ mechanism for erasure fields that must stay retrievable, `ADRs/005-soft-delete-v
 (password hashing: the one-way credential counterpart in the same Infrastructure layer, which already calls
 this converter "the at-rest counterpart to hashing credentials"), ADR-018 (polyglot persistence: the
 shipped, tested, but unadopted precedent this record mirrors). This ADR backs the one-line "Field encryption"
-entry in the security model (`SECURITY.md:25`), which stays as the reader-facing pointer.
+entry in the security model (`SECURITY.md:26`), which stays as the reader-facing pointer.

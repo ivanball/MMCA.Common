@@ -7,7 +7,7 @@ using MMCA.Common.UI.Services.Capabilities;
 namespace MMCA.Common.UI.Maui.Capabilities;
 
 /// <summary>
-/// MAUI <see cref="IExternalAuthBroker"/> (ADR-043/044): runs the provider flow in the system
+/// MAUI <see cref="IExternalAuthBroker"/> (ADR-043): runs the provider flow in the system
 /// browser via <c>WebAuthenticator</c> (providers reject embedded WebViews), captures the
 /// single-use completion code from the app's custom-scheme callback, and hands it to the
 /// shared <c>/auth/oauth-complete</c> page, which already owns the exchange, token storage,

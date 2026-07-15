@@ -1,7 +1,7 @@
 # ADR-028: Day/Dark Theme Mode
 
 ## Status
-Accepted (2026-06-27).
+Accepted (2026-06-27; revised 2026-07-15).
 
 ## Context
 `MMCATheme` (`MMCA.Common.UI/Theme/MMCATheme.cs`) has always defined a complete, brand-tuned `PaletteDark`
@@ -16,9 +16,13 @@ intended end state but is not yet wired for theme (see Decision 3).
 
 ## Decision
 
-1. **Bind the existing theme.** `MainLayout` binds `MudThemeProvider` with `@bind-IsDarkMode` against the
-   already-complete `MMCATheme.Instance` (a two-way binding to the layout's `_isDarkMode` field; no `@ref`
-   is used). No new palette work.
+1. **Bind the existing theme.** The shared `MainLayout` renders a single `<MmcaThemeProviders />`
+   component (`MMCA.Common.UI/Layout/MainLayout.razor:14`), which owns the four Mud providers plus the
+   Day/Dark lifecycle in one place. Inside that component `MudThemeProvider` is bound with
+   `@bind-IsDarkMode` against the already-complete `MMCATheme.Instance`
+   (`MMCA.Common.UI/Components/MmcaThemeProviders.razor:11`), a two-way binding to that component's own
+   `_isDarkMode` field (`MmcaThemeProviders.razor:17`); no `@ref` is used. The layout no longer holds the
+   provider markup or the `_isDarkMode` field itself. No new palette work.
 
 2. **A `ThemeService` (`MMCA.Common.UI`) owns the preference**, registered in `AddUIShared`. It holds the
    current mode, reads/writes a **non-HttpOnly cookie + localStorage**, and raises a change event so the
