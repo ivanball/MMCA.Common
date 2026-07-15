@@ -255,3 +255,7 @@ These docs live **in this repo** (committable, unlike the workspace-level `Docs/
 - `RESPONSIVE.md` covers responsive design & cross-browser support (rubric §22): the supported-device/breakpoint matrix (C# `BreakpointConstants` ↔ CSS media queries), the shared `.mmca-touch-target` 48px affordance, the `DataGridListPageBase` density option, and the Playwright browser matrix (chromium required; firefox/webkit advisory).
 
 **Commit-message convention:** remediation work is tagged by **scorecard category** `§<m>: <summary>` (e.g. `§30: ...`), where `§<m>` is the rubric/scorecard category. When continuing remediation work, match this format and update `RemediationBacklog.md`. _(Older commits used an `R<n> §<m>` form; the parallel `R<n>` numbering in the workspace roll-up is retired — track by category now.)_
+
+## Contribution Flow (PR-based)
+
+`main` is server-protected: no direct pushes, and no modifications committed directly on `main`, documentation-only changes included (ADRs, `ArchitectureScorecard.md`, `RemediationBacklog.md`, `FACTS.md`, this file). For any modification, branch off an up-to-date `main` first, commit there, push the branch, open a PR, let the required checks go green (see `CONTRIBUTING.md`), then squash-merge. Merges here are not deploys. Releases are cut with the workspace `/push-release` flow: the `vX.Y.Z` tag on merged `main` is the only ref pushed directly.
