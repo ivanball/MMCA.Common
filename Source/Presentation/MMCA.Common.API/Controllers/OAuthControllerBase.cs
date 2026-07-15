@@ -63,7 +63,7 @@ public abstract class OAuthControllerBase(
     /// Reads external claims from the <c>ExternalLogin</c> cookie, finds or creates a local
     /// user account, issues a JWT token pair, and redirects to the UI.
     /// <para>
-    /// Native heads (ADR-044): when the stashed <c>returnUrl</c> uses a custom scheme listed in
+    /// Native heads (ADR-043): when the stashed <c>returnUrl</c> uses a custom scheme listed in
     /// <c>OAuth:AllowedReturnUrlSchemes</c> (e.g. <c>atldevcon://oauth-complete</c>), the redirect
     /// targets that URL instead of <c>OAuth:UIBaseUrl</c>, so the system-browser
     /// <c>WebAuthenticator</c> window captures the single-use code and closes. An empty allowlist
@@ -225,7 +225,7 @@ public abstract class OAuthControllerBase(
 
     /// <summary>
     /// Returns the stashed return URL as the redirect target when it is an absolute URI whose
-    /// custom scheme appears in <c>OAuth:AllowedReturnUrlSchemes</c> (ADR-044); otherwise
+    /// custom scheme appears in <c>OAuth:AllowedReturnUrlSchemes</c> (ADR-043); otherwise
     /// <see langword="null"/>, which keeps the config-pinned <c>OAuth:UIBaseUrl</c> redirect.
     /// http/https URLs never match — web destinations always flow through the pinned base URL,
     /// so the allowlist cannot become an open redirect.
