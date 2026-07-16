@@ -18,12 +18,10 @@ public static class MMCATheme
             Primary = BrandColors.Primary,
             PrimaryDarken = BrandColors.PrimaryDark,
             PrimaryLighten = BrandColors.PrimaryLight,
-            // Teal 700 (was Teal 600 #00897B). Color.Secondary is used for muted helper text
-            // (mud-secondary-text); on light surfaces #00897B is ~4.0:1, just under the WCAG 2.1 AA
-            // 4.5:1 floor for normal text. #00796B is ~5.3:1 and keeps the brand teal aesthetic.
-            Secondary = "#00796B",
-            SecondaryDarken = "#00695C",
-            SecondaryLighten = "#4DB6AC",
+            // Contrast rationale lives on BrandColors.Secondary (Teal 700, WCAG AA on light surfaces).
+            Secondary = BrandColors.Secondary,
+            SecondaryDarken = BrandColors.SecondaryDark,
+            SecondaryLighten = BrandColors.SecondaryLight,
             Tertiary = "#7B1FA2",
             Info = "#1976D2",
             Success = "#2E7D32",
@@ -58,7 +56,7 @@ public static class MMCATheme
             // white label is ~2.65:1 on #42A5F5 and fails the WCAG 2.1 AA 4.5:1 floor on every filled
             // primary button (caught by the gated dark-mode axe scan); dark text is ~6.6:1.
             PrimaryContrastText = "rgba(0,0,0,0.87)",
-            Secondary = "#4DB6AC",
+            Secondary = BrandColors.SecondaryLight,
             SecondaryDarken = "#00897B",
             SecondaryLighten = "#80CBC4",
             Tertiary = "#CE93D8",
