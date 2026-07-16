@@ -1,6 +1,8 @@
 @page "/notifications"
+@using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.Shared.Notifications.PushNotifications
 @using MMCA.Common.UI.Common
+@attribute [Authorize]
 
 <PageTitle>@Title</PageTitle>
 
