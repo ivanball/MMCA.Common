@@ -6,6 +6,12 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.116.0] - 2026-07-15
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.115.0] - 2026-07-11
+
 ### Added (2026-07-11 remediation wave 1: §18/§19 fitness gates, dark-mode a11y gate, gallery vitals)
 - **`UIArchitectureConventionTestsBase`** (`MMCA.Common.Testing.Architecture`, rubric §18): file-scan
   fitness base enforcing the container/presentational split mechanically: every `*.razor.cs` under
@@ -38,6 +44,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   markup and behavior unchanged, render-snapshot and bUnit suites green). `NotificationBell`'s event
   handlers dropped `async void` for explicit fire-and-forget discards and its `Dispose` adopted the
   standard `Dispose(bool)` pattern.
+
+## [1.114.0] - 2026-07-11
 
 ### Added (2026-07-11 move-to-Common extraction wave, E1-E12 of `Docs/Planning/DriftAnalysis-plan.md` 2026-07-11)
 - **`RouteAuthorizationTestsBase`** (`MMCA.Common.Testing.Architecture`): reflection fitness base
@@ -77,6 +85,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 - **`MmcaThemeProviders`** (`MMCA.Common.UI`): the four Mud providers + the ADR-028 Day/Dark
   lifecycle in one component; `MainLayout` now renders it instead of carrying the inline block.
 
+## [1.113.0] - 2026-07-11
+
 ### Added (2026-07-11 managed file storage + avatars, [ADR-045](ADRs/045-managed-file-storage-and-avatars.md))
 - **`IFileStorageService`** with unconfigured Null default and `AzureBlobFileStorageService`
   swapped in by `AddAzureBlobFileStorage(configuration)` when the `FileStorage` section is
@@ -110,12 +120,16 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   tokens (`AuthUIService` gains a constructor parameter; DI-resolved). Everything stays inert
   until the app registers a credentialed token provider (Firebase / APNs).
 
+## [1.112.1] - 2026-07-10
+
 ### Fixed (2026-07-10 v1.112.1 OAuth allowlist null-section regression)
 - **`OAuthControllerBase` no longer throws when `IConfiguration.GetSection` returns null**
   (loose configuration test doubles in consumer suites; surfaced by ADC's
   `OAuthControllerTests` failing the v1.112.0 sweep CI). A null/missing
   `OAuth:AllowedReturnUrlSchemes` section now means "empty allowlist" (the exact pre-ADR-043
   behavior); pinned by a Common-side regression test using a mocked configuration.
+
+## [1.112.0] - 2026-07-10
 
 ### Added (2026-07-10 device-capability layer, [ADR-042](ADRs/042-device-capability-abstraction.md) / [ADR-043](ADRs/043-mobile-deep-links-and-native-oauth-callback.md))
 - **`MMCA.Common.UI.Maui` (NEW, fifteenth package)**: native device-capability implementations for
@@ -144,6 +158,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   multi-byte character, deterministic via caller-supplied DTSTAMP) for the upcoming
   add-to-calendar endpoints.
 
+## [1.111.0] - 2026-07-10
+
 ### Fixed (2026-07-10 output-cache policy regressions, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
 - **`PublicEndpointOutputCachePolicy` now varies the cache key by every query-string parameter**
   (`CacheVaryByRules.QueryKeys = "*"`, the same rule as the built-in default policy). The v1.110.0
@@ -160,6 +176,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   for `[AllowAnonymous]` endpoints whose payload is identical for every caller EXCEPT a privileged
   role receiving an elevated payload (e.g. ADC organizers see unpublished events per BR-108).
   Without this, an elevated response could be cached and served verbatim to anonymous callers.
+
+## [1.110.0] - 2026-07-10
 
 ### Changed (2026-07-10 notification inbox live refresh)
 - **`NotificationInbox` reloads on real-time push**: the inbox page now subscribes to
@@ -230,6 +248,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 - **Gzip response compression level moved from `SmallestSize` to `Fastest`** (Brotli already
   `Fastest`): dynamic API payloads on fractional vCPUs.
 
+## [1.109.0] - 2026-07-10
+
 ### Changed (2026-07-09 domain rejection messages in error toasts, [ADR-027](ADRs/027-multi-locale-i18n.md) Decision 9 carve-out)
 - **`ErrorMessages.LoadError/SaveError/DeleteError` surface a `DomainInvariantViolationException`
   message verbatim** in place of the generic "Error loading/saving/deleting {0}." template, and the
@@ -241,6 +261,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   ("This action is only available while the event is live.") instead of a generic failure toast.
   Behavior change, not a breaking one: no signatures moved, and every other exception type still
   gets the generic localized message (raw exception text is still never shown, ADR-027 Decision 9).
+
+## [1.108.0] - 2026-07-09
 
 ### Added (2026-07-09 live channels, [ADR-039](ADRs/039-live-channel-push.md))
 - **Ephemeral live channel events over the existing notification hub**: `NotificationHub` gains its
@@ -256,6 +278,12 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   automatically after an automatic reconnect (SignalR group membership does not survive one).
   Fully additive: the `IPushNotificationSettings` interface and all existing notification
   behavior are unchanged.
+
+## [1.107.0] - 2026-07-07
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.106.0] - 2026-07-05
 
 ### Fixed (2026-07-05 defect-fix wave C-1..C-5)
 - **`LoginProtectionService` lockout backoff no longer overflows on deep failure counts** (C-1,
@@ -288,6 +316,16 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   (C-7) instead of `DateTime.UtcNow`; no constructor change (set `options.TimeProvider` in tests
   for a deterministic clock).
 
+## [1.105.2] - 2026-07-04
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.105.1] - 2026-07-04
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.105.0] - 2026-07-04
+
 ### Added (2026-07-04 user-preferences E2E base, §14/§27/§28)
 - **`UserPreferencesTestsBase`** (`MMCA.Common.Testing.E2E`, `Workflows.Preferences`): three
   self-contained facts consumers inherit with a one-line subclass: Spanish culture switch with
@@ -295,6 +333,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   toggle asserting the emitted `--mud-palette-background` variable flips to the PaletteDark value
   and persists across reload, and a 390px-viewport fact pinning the v1.103.0 mobile top-row
   controls in real apps (not just the gallery). No app-specific overrides needed.
+
+## [1.104.2] - 2026-07-04
 
 ### Fixed (2026-07-04 logout-then-login race, remaining site)
 - **`ProfileManagementTestsBase.ChangePassword_WithValidCurrentPassword_ShouldSucceed` is now
@@ -304,6 +344,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   Store's v1.104.1 e2e-gate). Now waits for the `/login` URL, the same fix v1.103.1 applied to
   `UserLoginTestsBase`; this was the one remaining sign-out-then-login site on the racy pattern.
 
+## [1.104.1] - 2026-07-04
+
 ### Fixed (2026-07-04 warning-chip contrast, §20/§22)
 - **Filled Warning components now meet WCAG 2.1 AA in both palettes** (`MMCATheme`): MudBlazor's
   default white contrast text is ~2.65:1 on the light palette's `#F57F17` (and ~2.0:1 on the dark
@@ -311,6 +353,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   standard Material treatment on amber). Latent until Store's new Buy Now E2E put a "Pending
   Payment" chip on the gated admin-order-list axe scan. Visual change: warning chips/buttons
   render dark-on-amber instead of white-on-amber.
+
+## [1.104.0] - 2026-07-04
 
 ### Added (2026-07-04 E2E authorization depth, §14)
 - **`AuthorizationTestsBase.AdminPaths` + `RegisteredUser_AdminPages_ShouldBeForbidden`**
@@ -326,6 +370,12 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   that opts in gets a loud failure when the email field goes missing. No consumer opts in today, so
   observed behavior is unchanged: the test's silence is now declared instead of accidental.
 
+## [1.103.1] - 2026-07-04
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.103.0] - 2026-07-04
+
 ### Fixed (2026-07-04 mobile parity)
 - **Culture + theme controls are now reachable on phones (§22 / ADR-027/028).** The shared layout
   hides the whole `MudAppBar` below 1024px, and the `CultureSwitcher`/`ThemeToggle` lived only there,
@@ -334,6 +384,8 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   stay auth-gated); existing top-row CSS handles compact sizing, white icons, and the desktop hide,
   so nothing renders twice. Pinned by `MobileTopRowE2ETests` (phone + desktop viewports) in the
   required chromium `ui-e2e` job.
+
+## [1.102.0] - 2026-07-04
 
 i18n completion train (ADR-027 amended 2026-07-03, §27): every remaining user-visible literal in the
 shared UI is externalized, MudBlazor chrome localizes, and two new gates keep it that way.
@@ -380,6 +432,68 @@ sweep to whole-sentence page resource keys per ADR-016's lockstep rule.
 - **`ErrorMessages.Success(entity, action)`**: composed sentences cannot be translated (Spanish gender
   agreement breaks). Use a whole-sentence key in the page's own resource pair, e.g.
   `Snackbar.Add(L["Snackbar.Created"], ...)`.
+
+## [1.101.0] - 2026-07-03
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.100.0] - 2026-07-02
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.99.0] - 2026-07-02
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.98.0] - 2026-07-01
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.97.0] - 2026-07-01
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.96.0] - 2026-07-01
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.95.0] - 2026-07-01
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.94.0] - 2026-06-30
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.93.0] - 2026-06-30
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.92.0] - 2026-06-29
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.91.0] - 2026-06-29
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.90.0] - 2026-06-28
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.89.0] - 2026-06-28
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.88.0] - 2026-06-28
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.87.0] - 2026-06-28
+
+_No entries were recorded at release time; see the git tag for this release's changes._
+
+## [1.86.0] - 2026-06-27
 
 Internationalization (ADR-027) + Day/Dark theme mode (ADR-028), plus maturity-axis remediation (§29, §30)
 and DDD fitness hardening (§4). No breaking changes (the static `ErrorMessages` signatures are preserved).
