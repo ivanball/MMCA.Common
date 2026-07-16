@@ -109,10 +109,9 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
-    # chromium AND firefox are required merge gates (§22; firefox promoted 2026-07-12 after a clean
-    # observed streak). webkit stays advisory (continue-on-error): 2 flaky reds in its last 10 main
-    # runs (2026-07-11 09:59, 2026-07-12 00:45); promote it too once it holds a comparable streak.
-    continue-on-error: ${{ matrix.browser == 'webkit' }}
+    # All three engines are required merge gates (§22): firefox promoted 2026-07-12 after a clean
+    # observed streak, webkit promoted 2026-07-16 after 11 consecutive green main runs since its
+    # last flake (2026-07-12 00:45). Add the webkit check to branch protection alongside the others.
     steps:
       - uses: actions/checkout@v5
         with:
