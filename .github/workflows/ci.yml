@@ -264,12 +264,11 @@ jobs:
   # GitHub Packages token to build (it ships a committed local.props that swaps the MMCA.Common.*
   # PackageReferences for ProjectReferences into ../MMCA.Common/Source via UseLocalMMCA). The two
   # repos are checked out as siblings so Helpdesk's local.props path (..\MMCA.Common\Source)
-  # resolves to this PR's checkout. Advisory (continue-on-error) until it holds a green streak;
-  # then promote it to a required merge gate (add its context to the branch ruleset).
+  # resolves to this PR's checkout. Promoted to a required merge gate 2026-07-16 after 9
+  # consecutive green runs since introduction (2026-07-14); its context is in branch protection.
   consumer-source-build:
     name: Consumer source build (Helpdesk)
     runs-on: ubuntu-latest
-    continue-on-error: true
     timeout-minutes: 20
     steps:
       - name: Checkout MMCA.Common (this PR)
