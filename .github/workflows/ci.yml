@@ -173,7 +173,7 @@ jobs:
   # latency-regression gate (full timing runs stay on-demand; see CLAUDE.md / COST.md). Kept OUT of
   # MMCA.Common.slnx (like ui-e2e) so the unit `dotnet test --solution` run stays fast.
   performance-smoke:
-    name: Performance smoke (BenchmarkDotNet --job Dry)
+    name: Performance gate (BenchmarkDotNet Short + baseline verify)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -185,12 +185,20 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Run benchmark smoke (Dry job)
+      - name: Run hot-path benchmarks (Short job, JSON export)
         # The Benchmarks project references MMCA.Common source directly (no GitHub Packages token needed),
         # like the UI E2E project. --filter "*" selects every benchmark non-interactively (without it BDN
-        # prompts for a selection and would hang in CI); --job Dry runs each exactly once for correctness
-        # in seconds. --no-launch-profile keeps it deterministic on hosted runners.
-        run: dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks --no-launch-profile -- --filter "*" --job Dry
+        # prompts for a selection and would hang in CI); --job Short (3 warmup + 3 iterations) gives real
+        # measurements in under a minute. --no-launch-profile keeps it deterministic on hosted runners.
+        run: dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks --no-launch-profile -- --filter "*" --job Short --exporters json
+
+      - name: Verify against committed perf baseline (rubric section 12)
+        # Latency-regression gate, not just runs-clean: build/perfgate compares the BDN results against
+        # Tests/Performance/perf-baseline.json (deterministic allocation ceilings + machine-independent
+        # ratio floors such as the compiled-expression cache staying >= 1000x ahead of the recompile
+        # anti-pattern) and fails the job on any violation. Moving the numbers deliberately means
+        # updating the baseline file in the same PR.
+        run: dotnet run --project build/perfgate -- BenchmarkDotNet.Artifacts/results Tests/Performance/perf-baseline.json
 
   # Merge the unit/architecture/bUnit + E2E coverage tiers into one report, publish it to the run
   # summary, and enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor").
