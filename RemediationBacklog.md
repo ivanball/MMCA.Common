@@ -727,6 +727,7 @@ Soft-delete is the only deletion model — no lawful erasure path. *(All three f
 
 ### [x] #17 · DevOps & Deployment: **DONE (eighth wave, impl 7→8)**
 - [x] In-repo reference deployment sample added: `samples/deployment/{foundation,main}.bicep` (lint clean via `az bicep build`) + `DEPLOYMENT.md` (OIDC federated-credential + UAMI bootstrap + smoke-gate/auto-rollback). (Deeper CD-to-Azure lives in consumer repos.)
+- [x] **Sample kept continuously valid in CI (2026-07-16):** the new `sample-deployment-validate` job compiles both templates with `az bicep build` on every push/PR, so the §17 reference cannot rot silently (the former lint-clean claim was a point-in-time check). A credentialed what-if/deploy stays consumer-side by design. §17 impl 8→9 candidacy recorded for the next re-score.
 
 ### [x] #29 · Resilience & Business Continuity — **DONE (eighth wave, impl 7→8)**
 - [x] Warm-up subsystem unit-tested (gate/hosted-service/health-check); `RESILIENCE.md` adds an in-repo SLO/error-budget template + restore-drill runbook reference. (The drill itself executes in consumer IaC — ADC's `dr-restore-drill.ps1`.)
