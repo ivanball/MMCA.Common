@@ -10,7 +10,7 @@ namespace MMCA.Common.Domain.Entities;
 /// <c>entry.Property(...).CurrentValue</c> reflection — the domain layer never sets them directly.
 /// </summary>
 /// <typeparam name="TIdentifierType">The entity's identifier type.</typeparam>
-public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentifierType>, IAuditableEntity
+public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentifierType>, IAuditableEntity, IRowVersioned
         where TIdentifierType : notnull
 {
     /// <summary>

@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 
@@ -75,6 +76,18 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
             return;
 
         _context.Entry(entity)
+            .Property(nameof(AuditableBaseEntity<>.RowVersion))
+            .OriginalValue = rowVersion;
+    }
+
+    /// <inheritdoc />
+    public void SetOriginalRowVersion(IRowVersioned childEntity, byte[]? rowVersion)
+    {
+        ArgumentNullException.ThrowIfNull(childEntity);
+        if (rowVersion is not { Length: > 0 })
+            return;
+
+        _context.Entry((object)childEntity)
             .Property(nameof(AuditableBaseEntity<>.RowVersion))
             .OriginalValue = rowVersion;
     }
