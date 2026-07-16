@@ -6,6 +6,48 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.117.0] - 2026-07-16
+
+Scorecard-uplift wave release: four new CI enforcement gates, the child-entity optimistic-concurrency
+overload (ADR-035 amendment), and the Secondary brand-token single-sourcing. No breaking changes;
+one behavior change consumers should note (the notification routes now carry `[Authorize]`).
+
+### Added
+- **Child-entity `SetOriginalRowVersion` overload (ADR-035 amendment, rubric §8).** New
+  `MMCA.Common.Domain.Interfaces.IRowVersioned` (implemented by `AuditableBaseEntity<TId>`) lets
+  `IWriteRepository.SetOriginalRowVersion(IRowVersioned childEntity, byte[]? rowVersion)` stamp a
+  tracked CHILD entity's original concurrency token (e.g. a `ProductVariant` under a `Product`),
+  with the same null-or-empty no-op contract as the aggregate-typed overload. Update handlers that
+  mutate children through the aggregate's repository call it per child after loading.
+- **Secondary brand tokens (rubric §20).** `BrandColors` gains `Secondary`/`SecondaryDark`/
+  `SecondaryLight` (values unchanged: the palette previously hard-coded the same hex), `app.css`
+  gains `--mmca-secondary`/`--mmca-secondary-dark`, both `MMCATheme` palettes source from the
+  constants, and `BrandColorTokenTests` guards the new tokens plus palette sourcing.
+- **`NavigationContractTests` (rubric §25).** Arch-tier drift gate asserting `NavigationFlow.md`'s
+  routes/auth table matches the `RouteAttribute`/`AuthorizeAttribute` reality of `MMCA.Common.UI`
+  (set-equality both ways, auth-posture consistency, non-vacuity floor).
+- **Latency-regression gate (rubric §12).** The `performance-smoke` CI job now measures
+  (`--job Short`, JSON export) and a new dependency-free `build/perfgate` verifier fails it against
+  the committed `Tests/Performance/perf-baseline.json` (deterministic allocation ceilings + a
+  1000x compiled-expression-cache ratio floor).
+- **`sample-deployment-validate` CI job (rubric §17).** Compiles both `samples/deployment` Bicep
+  templates on every push/PR so the reference IaC cannot rot silently.
+
+### Changed
+- **The notification routes are now guarded (rubric §25).** `/notifications`,
+  `/notifications/inbox`, and `/notifications/send` carry `@attribute [Authorize]`, matching the
+  documented contract (previously the routes were open and only the APIs enforced auth); an
+  anonymous visit now redirects to `/login`. The send page's role/claim gate remains
+  consumer-declared (NavItem filter) plus server-side API authorization.
+- **The `/counter` template-leftover page was removed** (routable but unreferenced and
+  undocumented), along with its orphaned resx pairs.
+- **CI gates promoted to required (rubric §22/§33):** the webkit `ui-e2e` leg (11 consecutive green
+  main runs) and the `consumer-source-build` Helpdesk canary (9 consecutive green runs) lost their
+  `continue-on-error` and joined branch protection.
+- **The Store-specific `.cart-drawer` responsive width tiers left `app.css`** (consumer CSS does
+  not belong in the framework stylesheet); MMCA.Store carries the identical rules in its own CSS
+  from this version's pin sweep.
+
 ## [1.116.0] - 2026-07-15
 
 _No entries were recorded at release time; see the git tag for this release's changes._
