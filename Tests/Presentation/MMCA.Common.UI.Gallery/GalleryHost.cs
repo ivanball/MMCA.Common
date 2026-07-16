@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using MMCA.Common.Shared.Globalization;
@@ -52,13 +53,24 @@ public static class GalleryHost
         builder.Services.AddMudServices();
 
         // Stub the consumer seams BEFORE AddUIShared so its TryAdd* registrations defer to these.
-        // The gallery never performs auth or token I/O — the auth pages render in their signed-out
-        // state purely so axe can scan the shared markup.
+        // The gallery never performs real auth or token I/O. The auth pages render in their
+        // signed-out state so axe scans the anonymous markup; the [Authorize]-guarded notification
+        // pages (rubric §25) are scanned signed-in via the cookie-toggled fake scheme below.
         builder.Services.AddScoped<IAuthUIService, NoOpAuthUIService>();
         builder.Services.AddScoped<ITokenStorageService, NullTokenStorageService>();
         builder.Services.AddScoped<ITokenRefresher, NullTokenRefresher>();
-        builder.Services.AddScoped<AuthenticationStateProvider, AnonymousAuthenticationStateProvider>();
-        builder.Services.AddAuthorizationCore();
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<AuthenticationStateProvider, GalleryAuthenticationStateProvider>();
+
+        // The notification pages carry a real [Authorize], which MapRazorComponents surfaces as
+        // endpoint metadata, so the host needs a genuine authentication scheme and the full
+        // authorization stack. GalleryFakeAuthenticationHandler authenticates only requests carrying
+        // the gallery_auth=1 cookie (the notification E2E scans); everything else stays anonymous.
+        builder.Services
+            .AddAuthentication(GalleryFakeAuthenticationHandler.SchemeName)
+            .AddScheme<AuthenticationSchemeOptions, GalleryFakeAuthenticationHandler>(
+                GalleryFakeAuthenticationHandler.SchemeName, configureOptions: null);
+        builder.Services.AddAuthorization();
 
         // Canned notification seams so NotificationBell and the notification pages
         // (/notifications, /notifications/inbox, /notifications/send — discovered from the
@@ -89,6 +101,11 @@ public static class GalleryHost
             .SetDefaultCulture(SupportedCultures.Default)
             .AddSupportedCultures(galleryCultures)
             .AddSupportedUICultures(galleryCultures));
+
+        // The fake scheme + authorization middleware enforce the notification pages' [Authorize]
+        // endpoint metadata (WebApplication inserts UseRouting ahead of these automatically).
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         // Razor Component endpoints carry anti-forgery metadata — the middleware must be present even
         // though the gallery's interactive forms never POST over HTTP.

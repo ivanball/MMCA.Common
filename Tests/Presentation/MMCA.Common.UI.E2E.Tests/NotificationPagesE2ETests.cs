@@ -20,6 +20,7 @@ public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
     [Fact]
     public async Task NotificationHistory_Renders_AndHasNoWcag21AaViolations()
     {
+        await SeedSignedInCookieAsync();
         await Page.GotoAndWaitForBlazorAsync("/notifications");
 
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Send New Notification" })).ToBeVisibleAsync();
@@ -34,6 +35,7 @@ public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
     [Fact]
     public async Task NotificationInbox_Renders_AndHasNoWcag21AaViolations()
     {
+        await SeedSignedInCookieAsync();
         await Page.GotoAndWaitForBlazorAsync("/notifications/inbox");
 
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Mark All as Read" })).ToBeVisibleAsync();
@@ -45,6 +47,7 @@ public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
     [Fact]
     public async Task NotificationCompose_Renders_AndHasNoWcag21AaViolations()
     {
+        await SeedSignedInCookieAsync();
         await Page.GotoAndWaitForBlazorAsync("/notifications/send");
 
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Send to All Recipients" })).ToBeVisibleAsync();
@@ -52,4 +55,18 @@ public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
 
         await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
     }
+
+    // The notification pages carry a real [Authorize] (rubric §25); the gallery's cookie-toggled
+    // fake scheme (GalleryFakeAuthenticationHandler) signs these scans in so the guarded pages
+    // render, while the login/register/components scans stay deliberately anonymous.
+    private async Task SeedSignedInCookieAsync() =>
+        await Page.Context.AddCookiesAsync(
+        [
+            new Cookie
+            {
+                Name = "gallery_auth",
+                Value = "1",
+                Url = BaseUrl,
+            },
+        ]);
 }
