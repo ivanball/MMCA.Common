@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Dependency-free verifier for the BenchmarkDotNet latency/allocation baseline (rubric section 12).
+    No PackageReferences (BCL + System.Text.Json only) so it carries no NuGet/audit/lock-file surface
+    and needs no restore token in CI. Isolated from the framework's strict build via
+    build/Directory.Build.props. Run: dotnet run (project build/perfgate) with args: bdnResultsDir baselineJson
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <RunAnalyzers>false</RunAnalyzers>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <NuGetAudit>false</NuGetAudit>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>
