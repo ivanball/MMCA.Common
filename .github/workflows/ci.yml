@@ -295,3 +295,22 @@ jobs:
       - name: Test Helpdesk (domain + architecture, no DB)
         working-directory: MMCA.Helpdesk
         run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1
+
+  # Reference-deployment validation gate (§17): the samples/deployment Bicep is the framework's
+  # distilled IaC/OIDC reference (a library cannot deploy itself; DEPLOYMENT.md), so keep it
+  # continuously compilable instead of trusting it not to rot. `az bicep build` type-checks both
+  # templates (declarations, resource API versions, param wiring) with no cloud credentials and
+  # fails the job on any error; warnings surface in the log. A real what-if/deploy stays a
+  # consumer-side concern (ADC/Store deploy.yml are the production-proven versions).
+  sample-deployment-validate:
+    name: Validate samples/deployment Bicep
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Compile foundation.bicep
+        run: az bicep build --file samples/deployment/foundation.bicep --stdout > /dev/null
+
+      - name: Compile main.bicep
+        run: az bicep build --file samples/deployment/main.bicep --stdout > /dev/null
