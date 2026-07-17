@@ -18,9 +18,9 @@ public static class DependencyInjection
     {
         /// <summary>
         /// Registers the MAUI implementations for every capability the framework currently
-        /// backs natively. Contracts without a native implementation yet (biometrics,
-        /// speech-to-text, external-auth broker) keep their null defaults until their
-        /// feature wave lands.
+        /// backs natively, including biometrics, speech-to-text, and the external-auth
+        /// broker (the broker stays inert until the head configures
+        /// OAuth:MobileRedirectScheme; see the registration below).
         /// </summary>
         public IServiceCollection AddMauiDeviceCapabilities()
         {

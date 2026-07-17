@@ -1,7 +1,7 @@
 # ADR-036: External OAuth Login (Federated Google/GitHub) with Local-JWT Exchange
 
 ## Status
-Accepted (2026-07-02, migration attribution corrected 2026-07-06).
+Accepted (2026-07-02, migration attribution corrected 2026-07-06, native-callback redirect branch added 2026-07-17 per ADR-043).
 
 ## Context
 The framework's Identity story so far is entirely first-party: a user registers with an email and
@@ -44,8 +44,13 @@ a local `User`.
   `IAuthenticationService.ExternalLoginAsync`. On success it signs the external cookie out immediately,
   so the external principal lives no longer than the exchange.
 - **Tokens never ride the redirect URL.** `CompleteAsync` mints a single-use opaque code, stashes the
-  minted token pair server-side in the cache under a short TTL, and redirects to the UI carrying only
-  that code. The UI calls `ExchangeAsync` (`POST`) out of band to swap the code for the tokens; the
+  minted token pair server-side in the cache under a short TTL, and redirects carrying only that code.
+  The redirect target defaults to `OAuth:UIBaseUrl`, but when the stashed `returnUrl` is an absolute URI
+  whose custom scheme is allow-listed in `OAuth:AllowedReturnUrlSchemes` it targets that native-app URL
+  instead, so a system-browser `WebAuthenticator` window captures the code and closes (ADR-043); an
+  empty allowlist (the default) keeps the web-only behavior exactly, and http/https `returnUrl`s never
+  match, so the allowlist cannot become an open redirect. Completion errors follow the same branch. The
+  UI calls `ExchangeAsync` (`POST`) out of band to swap the code for the tokens; the
   code is burned on first use, and a missing, replayed, or expired code yields HTTP 400. Access and
   refresh tokens therefore never land in the address bar, browser history, the `Referer` header, or
   upstream access logs.
@@ -131,4 +136,6 @@ ADR-004 (the RS256/JWKS token this flow exchanges the external identity *for*, a
 everywhere after), ADR-022 (the browser cookies that carry the resulting session), ADR-029 (the
 brute-force protection on the first-party credential surface this flow sits beside), ADR-032 (the
 password hashing external accounts deliberately skip), ADR-020 (the inert-until-configured opt-in
-posture this mirrors), ADR-005 (`User.Anonymize` clears the provider fields on erasure).
+posture this mirrors), ADR-005 (`User.Anonymize` clears the provider fields on erasure), ADR-043 (the
+native-app callback that adds the allow-listed custom-scheme redirect branch to this flow's
+`CompleteAsync`).

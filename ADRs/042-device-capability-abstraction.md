@@ -1,7 +1,7 @@
 # ADR-042: Device Capability Abstraction (MAUI Blazor Hybrid)
 
 ## Status
-Accepted (2026-07-10).
+Accepted (2026-07-10, amended 2026-07-17).
 
 ## Context
 The consumer apps ship the same Blazor component set through three heads: MAUI Blazor Hybrid
@@ -93,6 +93,10 @@ Add a per-capability contract layer to `MMCA.Common.UI` and a fifteenth package,
   `UseMauiDeviceCapabilities()` silently loses haptics rather than failing fast). Accepted for
   decoration-grade capabilities; feature waves that depend on a capability assert `IsSupported` in
   their UI and surface the gap visibly.
-- Biometrics, speech-to-text, and the external-auth broker ship contracts (and web/null fallbacks)
-  before their native implementations, which land with their feature waves. Until then the MAUI
-  head resolves their null defaults.
+- Biometrics, speech-to-text, and the external-auth broker now ship native MAUI implementations,
+  all three registered by `AddMauiDeviceCapabilities()`
+  (`Source/Presentation/MMCA.Common.UI.Maui/DependencyInjection.cs:44`, `:45`, `:59`). The residual
+  trade-off is configuration, not code: `MauiExternalAuthBroker` registers unconditionally but
+  reports `IsAvailable == false` (`Source/Presentation/MMCA.Common.UI.Maui/Capabilities/MauiExternalAuthBroker.cs:39`)
+  until the head supplies `OAuth:MobileRedirectScheme`, so a misconfigured head quietly keeps the web
+  anchor flow rather than failing fast.
