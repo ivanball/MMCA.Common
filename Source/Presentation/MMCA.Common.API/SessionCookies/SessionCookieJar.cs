@@ -27,6 +27,7 @@ internal static class SessionCookieJar
         context.Response.Cookies.Delete(SessionCookieEndpoints.RefreshTokenCookieName, options);
     }
 
+#pragma warning disable S2092 // Secure is conditional on the hosting environment (false only in Development, so http://localhost dev still works); it is true for every non-Development environment
     private static CookieOptions BuildOptions(IWebHostEnvironment environment, TimeSpan lifetime) => new()
     {
         HttpOnly = true,
@@ -35,4 +36,5 @@ internal static class SessionCookieJar
         Path = "/",
         MaxAge = lifetime > TimeSpan.Zero ? lifetime : null,
     };
+#pragma warning restore S2092
 }

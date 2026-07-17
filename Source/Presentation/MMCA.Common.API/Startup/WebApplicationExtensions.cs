@@ -161,6 +161,7 @@ public static class WebApplicationExtensions
             {
                 if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
                 {
+#pragma warning disable S3330, S2092 // S3330: non-HttpOnly by design (ADR-027), the WASM client reads this cookie directly on startup (MmcaCultureBootstrap.SetBrowserCultureAsync); S2092: Secure is conditional on the hosting environment (false only in Development), same pattern as SessionCookieJar.BuildOptions
                     context.Response.Cookies.Append(
                         CookieRequestCultureProvider.DefaultCookieName,
                         CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
@@ -170,8 +171,10 @@ public static class WebApplicationExtensions
                             Expires = DateTimeOffset.UtcNow.AddYears(1),
                             IsEssential = true,
                             HttpOnly = false,
+                            Secure = !app.Environment.IsDevelopment(),
                             SameSite = SameSiteMode.Lax,
                         });
+#pragma warning restore S3330, S2092
                 }
 
                 var target = string.IsNullOrWhiteSpace(redirectUri) ? "/" : redirectUri;

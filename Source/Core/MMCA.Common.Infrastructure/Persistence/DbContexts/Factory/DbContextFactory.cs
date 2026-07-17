@@ -153,6 +153,7 @@ public sealed class DbContextFactory(
             foreach (var (entry, _) in savedStates)
                 entry.State = EntityState.Unchanged;
 
+#pragma warning disable S2077 // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and SET IDENTITY_INSERT cannot take a parameterized identifier
             await context.Database.ExecuteSqlRawAsync(
                 string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] ON"),
                 cancellationToken).ConfigureAwait(false);
@@ -162,6 +163,7 @@ public sealed class DbContextFactory(
             await context.Database.ExecuteSqlRawAsync(
                 string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] OFF"),
                 cancellationToken).ConfigureAwait(false);
+#pragma warning restore S2077
 
             foreach (var (entry, originalState) in savedStates)
                 entry.State = originalState;

@@ -447,9 +447,11 @@ public static class DependencyInjection
             services.AddHttpContextAccessor();
             services.TryAddTransient<JwtForwardingDelegatingHandler>();
 
+#pragma warning disable S5332 // Deliberate h2c-style cleartext service-discovery address for in-cluster HTTP calls, same design as MMCA.Common.Grpc.AddTypedGrpcClient
             var builder = services.AddHttpClient<TInterface, TImplementation>(client =>
                     client.BaseAddress = new Uri($"http://{serviceName}"))
                 .AddHttpMessageHandler<JwtForwardingDelegatingHandler>();
+#pragma warning restore S5332
 
             builder.AddStandardResilienceHandler();
             return builder;
