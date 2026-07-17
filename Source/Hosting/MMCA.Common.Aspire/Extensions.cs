@@ -144,14 +144,35 @@ public static class Extensions
 
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
-                metrics.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation()
+            {
+                metrics.AddAspNetCoreInstrumentation();
 
-                    // MMCA.Common meters (literal names — Aspire has no reference to the defining
-                    // assemblies): outbox dead-letter counter and CQRS RED histograms.
-                    .AddMeter("MMCA.Common.Outbox")
-                    .AddMeter("MMCA.Common.Cqrs"))
+                // Cost control (rubric §31): HttpClient connection/request metrics
+                // (http.client.open_connections / active_requests / request.duration) are the single
+                // highest-volume AppMetrics contributor on a low-traffic multi-service deployment — the
+                // pooled gRPC / service-discovery channels emit a high-frequency connection-gauge stream.
+                // A deployed host sets Telemetry:DisableHttpClientMetrics=true to drop them; outbound
+                // dependency latency is still captured as AppDependencies traces. Unset (default) keeps
+                // them, so no behavior change for a host that does not opt in.
+                if (!IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableHttpClientMetrics"))
+                {
+                    metrics.AddHttpClientInstrumentation();
+                }
+
+                // Cost control (rubric §31): .NET runtime metrics (dotnet.gc.* / jit.* / thread_pool.* —
+                // ~17 instruments emitted every collection interval regardless of traffic) are the second
+                // highest-volume contributor and are rarely consulted operationally for these apps. A
+                // deployed host sets Telemetry:DisableRuntimeMetrics=true to drop them. Unset keeps them.
+                if (!IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableRuntimeMetrics"))
+                {
+                    metrics.AddRuntimeInstrumentation();
+                }
+
+                // MMCA.Common meters (literal names — Aspire has no reference to the defining
+                // assemblies): outbox dead-letter counter and CQRS RED histograms.
+                metrics.AddMeter("MMCA.Common.Outbox")
+                    .AddMeter("MMCA.Common.Cqrs");
+            })
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
@@ -200,6 +221,17 @@ public static class Extensions
         ratio = parsed;
         return true;
     }
+
+    /// <summary>
+    /// Reads an optional boolean metrics cost knob (rubric §31) at the given configuration key, e.g.
+    /// <c>Telemetry:DisableRuntimeMetrics</c> or <c>Telemetry:DisableHttpClientMetrics</c>. Returns true
+    /// (drop that instrumentation) only when the value parses as boolean <see langword="true"/>; absent, blank, or
+    /// unparseable falls back to false (keep the instrumentation) so a typo can never silently blind a
+    /// whole metric family. These two families are the dominant AppMetrics ingestion volume on a
+    /// low-traffic multi-service deployment and carry no end-user-visible signal.
+    /// </summary>
+    internal static bool IsInstrumentationDisabled(IConfiguration configuration, string configKey)
+        => bool.TryParse(configuration[configKey], out var disabled) && disabled;
 
     /// <summary>
     /// Adds a baseline "self" health check tagged with "live". The /alive endpoint filters
