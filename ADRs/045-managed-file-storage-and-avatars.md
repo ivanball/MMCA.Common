@@ -34,8 +34,9 @@ directly against the Azure SDK inside a module, unusable by the next consumer an
   degraded path.
 - **Avatar contract (BR-116a, applied per consumer)**: one avatar per user; accept jpeg/png/webp
   up to 2 MB; server re-encodes to 256x256 JPEG via `IImageProcessor` (client-declared content
-  types are advisory only); blob name `avatars/{userId}-{random8}.jpg` in a public-read
-  container; upload deletes the previous blob; the URL lives on the user entity as `[Pii]`,
+  types are advisory only); blob name `{userId}-{random8}.jpg` in the infrastructure-provisioned
+  public-read `avatars` container (so the URL path reads `avatars/{userId}-{random8}.jpg`);
+  upload deletes the previous blob; the URL lives on the user entity as `[Pii]`,
   nulled on anonymize with the blob deleted; exported in the GDPR data export.
 
 ## Consequences
