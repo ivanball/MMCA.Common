@@ -61,9 +61,11 @@ Cache in two tiers, each with its own substrate.
   cache only anonymous traffic: they register their public-read policies through
   `OutputCacheOptions.AddPublicEndpointPolicy(name, expiration, tags)`
   (`MMCA.Common.API/Caching/OutputCacheOptionsExtensions.cs:20`), backed by
-  `PublicEndpointOutputCachePolicy` (`MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:25`),
-  which caches GET/HEAD regardless of the caller's auth state
-  (`MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:45-50`). ADC Conference and Store Catalog
+  `PublicEndpointOutputCachePolicy` (`MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:35`),
+  whose `CacheRequestAsync` caches GET/HEAD regardless of the caller's auth state
+  (`MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:71-75`, via the private helpers
+  `IsCacheableRequest` / `IsBypassedCaller` at
+  `MMCA.Common.API/Caching/PublicEndpointOutputCachePolicy.cs:109-113`). ADC Conference and Store Catalog
   register these policies on their public read controllers; ADR-040 records that the built-in default
   policy served 0% of logged-in (bearer-carrying) traffic on conference day.
 

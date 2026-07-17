@@ -423,6 +423,39 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         found!.Name.Should().Be("Second");
     }
 
+    // ── SetOriginalRowVersion (child-entity overload, ADR-035) ──
+    // The aggregate-typed overload cannot reach child entities (the repository's TEntity is the
+    // root), so the IRowVersioned overload must set the token on any OTHER tracked entity type.
+    [Fact]
+    public async Task SetOriginalRowVersion_OnChildEntity_SetsTheTrackedOriginalToken()
+    {
+        var child = new TestChildEntity { Id = 10, Label = "variant" };
+        _context.Add(child);
+        await _context.SaveChangesAsync();
+        var clientToken = new byte[] { 1, 2, 3, 4 };
+
+        _sut.SetOriginalRowVersion(child, clientToken);
+
+        _context.Entry(child).Property(nameof(TestChildEntity.RowVersion)).OriginalValue
+            .Should().BeEquivalentTo(clientToken,
+                because: "the child overload must stamp the client's last-observed token as the tracked ORIGINAL value, so a mismatching database row raises DbUpdateConcurrencyException (409) on save");
+    }
+
+    [Fact]
+    public async Task SetOriginalRowVersion_OnChildEntity_NullOrEmptyToken_IsANoOp()
+    {
+        var child = new TestChildEntity { Id = 11, Label = "variant" };
+        _context.Add(child);
+        await _context.SaveChangesAsync();
+        var original = _context.Entry(child).Property(nameof(TestChildEntity.RowVersion)).OriginalValue;
+
+        _sut.SetOriginalRowVersion(child, null);
+        _sut.SetOriginalRowVersion(child, []);
+
+        _context.Entry(child).Property(nameof(TestChildEntity.RowVersion)).OriginalValue
+            .Should().BeSameAs(original, because: "legacy clients that send no token skip the concurrency check, matching the aggregate-typed overload's contract");
+    }
+
     // ── Test entity & context ──
     public sealed class TestEntity : AuditableAggregateRootEntity<int>
     {
@@ -432,16 +465,32 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
             new() { Id = id, Name = name };
     }
 
+    /// <summary>A NON-aggregate child entity (a different CLR type than the repository's TEntity).</summary>
+    public sealed class TestChildEntity : AuditableBaseEntity<int>
+    {
+        public string Label { get; set; } = string.Empty;
+    }
+
     public sealed class TestDbContext(DbContextOptions options) : DbContext(options)
     {
         public DbSet<TestEntity> TestEntities => Set<TestEntity>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        public DbSet<TestChildEntity> TestChildEntities => Set<TestChildEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<TestEntity>(b =>
             {
                 b.HasKey(e => e.Id);
                 b.Property(e => e.Id).ValueGeneratedNever();
                 b.Property(e => e.Name);
             });
+            modelBuilder.Entity<TestChildEntity>(b =>
+            {
+                b.HasKey(e => e.Id);
+                b.Property(e => e.Id).ValueGeneratedNever();
+                b.Property(e => e.Label);
+            });
+        }
     }
 }

@@ -1,8 +1,26 @@
 # ADR-043: Mobile Deep Links, App Association, and the Native OAuth Callback
 
 ## Status
-Accepted (2026-07-10). The framework leg (the OAuth custom-scheme allowlist) is implemented; the
-per-app association files and platform intent filters land with each consumer's deep-link wave.
+Accepted (2026-07-15). The framework leg is fully implemented in MMCA.Common: the OAuth
+custom-scheme returnUrl allowlist in `CompleteAsync`, the app-association endpoint helper
+`MapAppAssociationEndpoints`
+(`Source/Presentation/MMCA.Common.API/Startup/AppAssociationEndpointExtensions.cs:35`, with
+`AppAssociationOptions` alongside), and the MAUI `MauiExternalAuthBroker`
+(`Source/Presentation/MMCA.Common.UI.Maui/Capabilities/MauiExternalAuthBroker.cs:19`). The ADC
+consumer's deep-link wave has shipped: `MMCA.ADC.UI.Web` serves the two well-known association
+documents through the shared helper
+(`MMCA.ADC/Source/Hosts/UI/MMCA.ADC.UI.Web/Program.cs:162`), the Identity service allow-lists the
+`atldevcon` scheme (`MMCA.ADC/Source/Services/MMCA.ADC.Identity.Service/appsettings.json:37`), and
+the native heads register the callback: iOS carries both the custom-scheme URL type
+(`MMCA.ADC/Source/Hosts/UI/MMCA.ADC.UI/Platforms/iOS/Info.plist:16`) and the associated-domains
+entitlement (`MMCA.ADC/Source/Hosts/UI/MMCA.ADC.UI/Platforms/iOS/Entitlements.plist:11`), while
+Android registers the custom-scheme `WebAuthenticatorCallbackActivity`
+(`MMCA.ADC/Source/Hosts/UI/MMCA.ADC.UI/Platforms/Android/WebAuthenticatorCallbackActivity.cs:14`).
+Android's AutoVerify https App Links intent filter is not yet in
+`MMCA.ADC/Source/Hosts/UI/MMCA.ADC.UI/Platforms/Android/AndroidManifest.xml` (which today carries
+only package-visibility queries), so the Android https app-link leg is still outstanding. MMCA.Store
+has not adopted the wave: no association endpoints, allowlist config, or platform callback
+registrations exist there yet.
 
 ## Context
 Three mobile flows all need a URL to leave the web world and land inside the MAUI app:

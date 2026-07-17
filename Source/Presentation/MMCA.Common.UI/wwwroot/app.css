@@ -12,6 +12,8 @@
        BrandColorTokenTests enforces that these stay in sync. */
     --mmca-primary: #1565C0;
     --mmca-primary-dark: #0D47A1;
+    --mmca-secondary: #00796B;
+    --mmca-secondary-dark: #00695C;
 
     /* Spacing scale */
     --mmca-space-xs: 0.25rem;
@@ -120,22 +122,6 @@ h1:focus {
 @media (max-width: 1023.98px) {
     .mud-snackbar-location-top-center {
         z-index: var(--mmca-z-snackbar-mobile, 10000) !important;
-    }
-}
-
-/* ── CartDrawer: responsive width tiers ──
-   Override the CSS variable so MudBlazor calculates both the open width
-   AND the closed-state offset (right: calc(-1 * var(--mud-drawer-width)))
-   from the same value. Overriding `width` directly would desync these. */
-@media (max-width: 599px) {
-    .cart-drawer {
-        --mud-drawer-width: 100vw !important;
-    }
-}
-
-@media (min-width: 1920px) {
-    .cart-drawer {
-        --mud-drawer-width: 440px !important;
     }
 }
 

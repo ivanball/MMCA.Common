@@ -35,6 +35,8 @@ public sealed class BrandColorTokenTests
     [Theory]
     [InlineData("--mmca-primary", nameof(BrandColors.Primary))]
     [InlineData("--mmca-primary-dark", nameof(BrandColors.PrimaryDark))]
+    [InlineData("--mmca-secondary", nameof(BrandColors.Secondary))]
+    [InlineData("--mmca-secondary-dark", nameof(BrandColors.SecondaryDark))]
     public void CssBrandToken_MatchesBrandColorsConstant(string cssVariable, string brandConstantName)
     {
         var cssValue = ReadCssVariable(ReadAppCss(), cssVariable);
@@ -52,6 +54,17 @@ public sealed class BrandColorTokenTests
     {
         ToHex(MMCATheme.Instance.PaletteLight.Primary).Should().BeEquivalentTo(BrandColors.Primary);
         ToHex(MMCATheme.Instance.PaletteLight.PrimaryDarken).Should().BeEquivalentTo(BrandColors.PrimaryDark);
+    }
+
+    [Fact]
+    public void ThemeSecondary_IsSourcedFromBrandColors()
+    {
+        // The Secondary family previously hard-coded its hex in the palette (the drift the guard
+        // missed, rubric §20); both palettes must now source it from BrandColors.
+        ToHex(MMCATheme.Instance.PaletteLight.Secondary).Should().BeEquivalentTo(BrandColors.Secondary);
+        ToHex(MMCATheme.Instance.PaletteLight.SecondaryDarken).Should().BeEquivalentTo(BrandColors.SecondaryDark);
+        ToHex(MMCATheme.Instance.PaletteLight.SecondaryLighten).Should().BeEquivalentTo(BrandColors.SecondaryLight);
+        ToHex(MMCATheme.Instance.PaletteDark.Secondary).Should().BeEquivalentTo(BrandColors.SecondaryLight);
     }
 
     [Fact]

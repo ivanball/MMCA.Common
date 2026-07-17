@@ -1,5 +1,7 @@
 @page "/notifications/inbox"
+@using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.Shared.Notifications.UserNotifications
+@attribute [Authorize]
 
 <PageTitle>@Title</PageTitle>
 

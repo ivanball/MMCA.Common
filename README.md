@@ -13,6 +13,8 @@ A .NET 10.0 framework for building modular monolith applications using DDD, Clea
 | `MMCA.Common.API` | Base controllers, middleware, idempotency, error-to-HTTP mapping, JWKS endpoint |
 | `MMCA.Common.Grpc` | gRPC server defaults, Result→RpcException mapping, JWT-forwarding client interceptor, typed gRPC clients |
 | `MMCA.Common.UI` | Blazor shared components, auth state, MudBlazor theme |
+| `MMCA.Common.UI.Web` | Blazor Web (Server + WASM) UI host helpers built on `MMCA.Common.UI` |
+| `MMCA.Common.UI.Maui` | .NET MAUI UI head (the one MAUI-TFM package; built/packed by dedicated windows jobs, outside `MMCA.Common.slnx`, ADR-042) |
 | `MMCA.Common.Aspire` | Service defaults, OpenTelemetry, health checks, Polly resilience |
 | `MMCA.Common.Aspire.Hosting` | Aspire AppHost extensions: RabbitMQ broker, JWKS service discovery, gRPC project wiring |
 | `MMCA.Common.Testing` | Integration test base, JWT generator, fixtures |

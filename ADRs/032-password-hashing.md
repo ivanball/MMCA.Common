@@ -101,5 +101,5 @@ ADR-005 (soft-delete vs erasure: the same Infrastructure layer's `EncryptedStrin
 sensitive columns, the at-rest counterpart to hashing credentials),
 ADR-029 (authentication brute-force protection: lockout and throttling wrap the same login path whose
 final credential check is this hasher).
-This ADR supersedes the one-line "Password hashing" note in `SECURITY.md:24` with a governance record;
+This ADR supersedes the one-line "Password hashing" note in `SECURITY.md:25` with a governance record;
 the security model summary there stays as the reader-facing pointer.
