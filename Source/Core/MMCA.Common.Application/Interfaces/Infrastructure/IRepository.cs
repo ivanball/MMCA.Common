@@ -173,6 +173,18 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion);
 
     /// <summary>
+    /// Applies a client-supplied optimistic-concurrency token to a tracked CHILD entity of this
+    /// aggregate (e.g. a <c>ProductVariant</c> under a <c>Product</c>), so a child-level edit gets
+    /// the same stale-token 409 protection as the aggregate root (ADR-035). The aggregate-typed
+    /// overload above cannot reach children because the repository's <c>TEntity</c> is the root;
+    /// this overload accepts any <see cref="Domain.Interfaces.IRowVersioned"/> entity instead.
+    /// No-op when <paramref name="rowVersion"/> is null or empty (legacy clients / first write).
+    /// </summary>
+    /// <param name="childEntity">The tracked child entity whose original concurrency token should be set.</param>
+    /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>, or null to skip the check.</param>
+    void SetOriginalRowVersion(Domain.Interfaces.IRowVersioned childEntity, byte[]? rowVersion);
+
+    /// <summary>
     /// Executes a bulk delete directly in the database, bypassing change tracking.
     /// WARNING: Does NOT trigger domain events, audit stamps, or soft-delete behavior.
     /// Use only for maintenance scenarios where domain events are not needed.

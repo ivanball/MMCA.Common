@@ -1,7 +1,7 @@
 # ADR-035: Optimistic Concurrency via RowVersion Round-Trip
 
 ## Status
-Accepted (2026-07-02).
+Accepted (2026-07-02). Amended 2026-07-16: a child-entity overload of `SetOriginalRowVersion` was added (see Decision).
 
 ## Context
 Every mutable aggregate in the framework is edited through a load-modify-save handler: the update use
@@ -41,6 +41,14 @@ update fails as a conflict.
   and no-ops when the value is null or empty. The update handler calls it right after loading the
   entity (before applying the request), so EF compares the client's token against the row's current
   token inside the UPDATE statement, atomically, with no read-then-check race.
+- **Child entities get the same protection through the `IRowVersioned` overload (2026-07-16
+  amendment).** The original method is typed to the repository's aggregate root (`TEntity`), so a
+  child edit (e.g. a `ProductVariant` under a `Product`) could not receive the token. A second
+  overload, `SetOriginalRowVersion(IRowVersioned childEntity, byte[]? rowVersion)`, accepts any
+  tracked auditable entity (`AuditableBaseEntity<TId>` implements the new
+  `MMCA.Common.Domain.Interfaces.IRowVersioned`), stamping the child's original token with the same
+  null-or-empty no-op contract. Update handlers that mutate children through the aggregate's
+  repository call it per child after loading.
 - **A conflict maps to `409 Conflict` at the edge.** `DbUpdateConcurrencyException` is a
   `DbUpdateException`, and `DbUpdateExceptionHandler` translates any `DbUpdateException` into a
   `409 Conflict` RFC 9457 ProblemDetails, with a generic detail message so the database schema is not

@@ -1,257 +1,142 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides framework-specific guidance to Claude Code (claude.ai/code). Cross-repo conventions (.NET 10 with `LangVersion: preview`, `TreatWarningsAsErrors`, the five error-severity analyzers, Central Package Management, code style and naming, PR-based contribution flow, Microsoft Testing Platform usage) are defined once in the workspace `../CLAUDE.md`: do not re-derive them here.
 
 ## Project Overview
 
-MMCA.Common is a .NET 10.0 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS patterns. It publishes fifteen NuGet packages to GitHub Packages; it is not a runnable app itself. (`MMCA.Common.UI.Maui` is the one MAUI-TFM package: outside `MMCA.Common.slnx`, built/packed by dedicated windows jobs in `ci.yml`/`release.yml`, ADR-042.)
+MMCA.Common is a .NET 10 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS. It publishes its packages to GitHub Packages, versioned in lockstep (authoritative package list and count: `FACTS.md`); it is not a runnable app. `MMCA.Common.UI.Maui` is the one MAUI-TFM package: it lives outside `MMCA.Common.slnx` and is built/packed by dedicated windows jobs (ADR-042). The framework also provides the extraction path for lifting modules into standalone microservices (gRPC transport, transport-agnostic message bus, cross-service JWKS auth, Aspire hosting extensions): see "Microservices Extraction Boundaries" below.
 
-The framework also provides the seams for **extracting modules into standalone microservices** (gRPC transport, a transport-agnostic message bus, cross-service JWKS auth, and Aspire hosting extensions). See "Microservices Extraction Seams" below — much of the recent work targets this path.
-
-## Build & Test Commands
+## Build & Test
 
 ```bash
-# Build
 dotnet build MMCA.Common.slnx -c Release
-
-# Test (all projects — uses Microsoft Testing Platform via global.json)
-dotnet test --solution MMCA.Common.slnx -c Release
-
-# Test a single project
-dotnet test --project Tests/Presentation/MMCA.Common.API.Tests
-
-# Test a specific test class or method (Microsoft Testing Platform filters, after `--`)
-dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"
-dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -class  "*IdempotencyFilterTests*"
-
-# Architecture tests only (NetArchTest layer/purity rules — fast, no DB)
-dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests
-
-# UI accessibility + render smoke (Playwright/axe — NOT in the .slnx; needs `playwright install chromium` once)
-dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj
-
-# Performance smoke benchmarks (BenchmarkDotNet — NOT in the .slnx; run in Release, on demand)
-dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks
-# Fast correctness smoke (seconds): append the Dry job —  ... Benchmarks -- --job Dry
-
-# Pack NuGet packages
+dotnet test --solution MMCA.Common.slnx -c Release                                # all tests
+dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"   # single test (MTP filter; -class works too)
+dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests           # NetArchTest layer/purity rules (fast, no DB)
+dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj      # UI a11y + render smoke (NOT in slnx; needs `playwright install chromium` once)
+dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks          # BenchmarkDotNet smoke; append `-- --job Dry` for a fast correctness pass
 dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs/
-
-# Regenerate FACTS.md from source (CI gates the build on `--check` drift)
-dotnet run --project build/facts -- .
+dotnet run --project build/facts -- .                                             # regenerate FACTS.md (CI gates on `--check` drift)
 ```
 
-CI (`.github/workflows/ci.yml`) runs three jobs on every push/PR to `main`:
-- **`build-and-test`** — `verify FACTS.md → restore → build -c Release → vuln-audit → test (with coverage)`. The **Verify FACTS.md** step runs `dotnet run --project build/facts -- . --check` — a fast, dependency-free drift gate that fails the build if the committed `FACTS.md` no longer matches what `build/facts` computes from source (version/packages/ADR range/fitness counts). Tests run under `dotnet-coverage collect -f cobertura` (which wraps the MTP run and returns its exit code, so a test failure still gates) with `--minimum-expected-tests 1` — that guard fails the run if any test project discovers zero tests (Microsoft Testing Platform otherwise exits 8). The **vuln-audit** step runs `dotnet list package --vulnerable --include-transitive` and fails on any vulnerable-package row **except** advisories suppressed via `NuGetAuditSuppress` in `Directory.Build.props` (the single source of truth — `dotnet list --vulnerable` ignores `NuGetAuditSuppress`, so the step re-applies that accepted-advisory list itself, e.g. the accepted unpatched SQLite advisory).
-- **`ui-e2e`** (*UI a11y + render smoke*) — a **cross-browser matrix** (`chromium`, `firefox`, `webkit`; `fail-fast: false`). It builds `Tests/Presentation/MMCA.Common.UI.E2E.Tests` directly (it and `MMCA.Common.UI.Gallery` are **deliberately outside `MMCA.Common.slnx`** so the unit-test job stays fast), installs Playwright for the matrix browser via `E2E_BROWSER`, then runs the suite headless. **chromium is the required merge gate; firefox/webkit are advisory** (`continue-on-error`) until proven reliably green. It self-hosts the backend-less gallery and scans the real Login/Register pages + primitives showcase with **axe-core (WCAG 2.1 AA)** plus a render smoke. To reproduce locally, build/test those csproj paths directly — `dotnet test --solution` will not touch them.
-- **`coverage`** (`needs: [build-and-test, ui-e2e]`, `if: always()`) — merges the unit/arch/bUnit + E2E cobertura tiers (ReportGenerator, `+MMCA.*;-*.Tests`, generated `*.generated.cs`/`*.g.cs` filtered out), publishes the summary to the run, and **enforces a coverage floor** as a regression backstop: the **unit tier must stay ≥ 53% line coverage** (gated on the unit tier alone, not the gallery-diluted merged report; ratchet up as it grows).
+CI (`.github/workflows/ci.yml`) jobs on every push/PR to `main`:
+- **build-and-test**: FACTS drift gate (`build/facts -- . --check`) -> restore -> Release build -> vuln audit -> tests under `dotnet-coverage` with `--minimum-expected-tests 1`. The vuln audit re-applies the `NuGetAuditSuppress` list from `Directory.Build.props` itself (`dotnet list --vulnerable` ignores suppressions).
+- **ui-e2e**: cross-browser matrix (chromium required gate; firefox/webkit advisory). Builds the out-of-slnx `MMCA.Common.UI.Gallery` + `MMCA.Common.UI.E2E.Tests` directly by csproj path (deliberately excluded from the slnx to keep unit runs fast) and runs axe-core WCAG 2.1 AA scans + a render smoke against the backend-less gallery.
+- **coverage**: merges the tiers (ReportGenerator) and enforces the floor: the unit tier must stay >= 53% line coverage.
 
-Versioning uses MinVer (derived from git tags). CI requires `fetch-depth: 0` for full git history. The release workflow (`.github/workflows/release.yml`) triggers on `v*` tags, extracts the version, builds/tests/packs, generates a CycloneDX **SBOM as a hard gate** (a failed or empty SBOM fails the release), and pushes to GitHub Packages.
+Windows jobs build/pack `MMCA.Common.UI.Maui`. Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` tags: build/test/pack, CycloneDX SBOM as a hard gate, push to GitHub Packages.
 
-Central package management is enabled — all package versions live in `Directory.Packages.props`. When adding or updating a NuGet package, update the version there (not in individual `.csproj` files). NuGet **lock files** are committed (`RestorePackagesWithLockFile`) for reproducible restores, and `nuget.config` pins `packageSourceMapping` to nuget.org — MMCA.Common restores entirely from nuget.org (no `GITHUB_TOKEN` needed to build/test). **`MassTransit` is pinned to v8 by policy** (v9 requires a commercial license); `DependencyVersionTests` parses `Directory.Packages.props` and fails the build if the MassTransit major reaches 9 — bumping it is not a "just update the version" change. The pin is enforced only here, in MMCA.Common, where MassTransit is actually pinned; ADC and Store inherit it transitively through `MMCA.Common.Infrastructure` and deliberately do **not** subclass `DependencyVersionTestsBase` (the default rule would fail parsing a `Directory.Packages.props` pin they do not declare).
-
-CI runs on **Ubuntu** — file paths are case-sensitive. Match casing exactly in file/folder references. Every test project must contain at least one test or Microsoft Testing Platform will fail the build (exit code 8).
+Gotchas:
+- CI runs on Ubuntu: file paths are case-sensitive; match casing exactly.
+- Every test project must contain at least one test or MTP fails the build (exit code 8).
+- NuGet lock files are committed (`--force-evaluate` to regenerate); `nuget.config` maps everything to nuget.org, so building/testing Common needs NO GitHub token.
+- **MassTransit is pinned to v8 by policy** (v9 requires a commercial license); `DependencyVersionTests` fails the build if the major reaches 9. Consumers inherit the pin transitively and deliberately do not subclass `DependencyVersionTestsBase`.
 
 ## Source Layout
 
 ```
 Source/
-├── Build/
-│   └── MMCA.Common.LayerEnforcement.targets  # Compile-time layer guard (see Architecture Enforcement)
-├── Core/
-│   ├── MMCA.Common.Shared           # Result pattern, errors, DTOs, value objects
-│   ├── MMCA.Common.Domain           # Entities, aggregates, domain events, specifications
-│   ├── MMCA.Common.Application      # CQRS handlers, decorators, module system, validation, IMessageBus
-│   └── MMCA.Common.Infrastructure   # EF Core, repositories, UoW, caching, outbox, JWT, JWKS, message bus, SignalR
-├── Presentation/
-│   ├── MMCA.Common.API              # Controllers, middleware, idempotency, error mapping, JWKS endpoint
-│   ├── MMCA.Common.Grpc             # gRPC server defaults, Result↔RpcException, JWT-forwarding client interceptor
-│   └── MMCA.Common.UI               # Blazor components, MudBlazor theme, HTTP resilience
-└── Hosting/
-    ├── MMCA.Common.Aspire           # Service defaults, OpenTelemetry, health checks
-    ├── MMCA.Common.Aspire.Hosting   # AppHost extensions: RabbitMQ, JWKS discovery, gRPC project wiring
-    ├── MMCA.Common.Testing          # Integration test base, JWT generator, fixtures
-    ├── MMCA.Common.Testing.E2E      # Playwright E2E fixtures, Blazor nav helpers, page objects
-    ├── MMCA.Common.Testing.UI       # bUnit component-test base, MudBlazor provider harness, interaction helpers
-    └── MMCA.Common.Testing.Architecture  # IArchitectureMap + reusable NetArchTest rule library + abstract test bases (consumed by each repo's *.Architecture.Tests)
+├── Build/MMCA.Common.LayerEnforcement.targets   # compile-time layer guard
+├── Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}
+├── Presentation/  MMCA.Common.{API,Grpc,UI}     (+ UI.Maui, outside the slnx)
+└── Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Testing,Testing.E2E,Testing.UI,Testing.Architecture}
 
-Tests/                               # Mirrors Source/ structure
-├── Core/           (Shared.Tests, Domain.Tests, Application.Tests, Infrastructure.Tests)
-├── Presentation/   (API.Tests, Grpc.Tests, UI.Tests — all in the .slnx)
-│                   (UI.Gallery + UI.E2E.Tests — NOT in the .slnx; see below)
-├── Hosting/        (Aspire.Tests)
-└── Architecture/   (Architecture.Tests — NetArchTest layer/purity/extraction rules)
+Tests/             # mirrors Source/; plus Architecture/ (NetArchTest) and the out-of-slnx
+                   # Presentation/UI.Gallery + UI.E2E.Tests (CI ui-e2e job only)
 ```
 
-`Tests/Presentation/MMCA.Common.UI.Gallery` (a backend-less Blazor host rendering the real Login/Register pages + a primitives showcase) and `MMCA.Common.UI.E2E.Tests` (Playwright axe/render-smoke) are **intentionally excluded from `MMCA.Common.slnx`** so `dotnet build`/`dotnet test --solution` stay fast. They reference MMCA.Common source projects directly (no GitHub Packages token needed) and only run in CI's `ui-e2e` job. Build/test them by csproj path.
-
-All fifteen `Source/` projects are packable (each has a `PackageId`); NuGet metadata is applied in bulk via `Directory.Build.props` to any project under `Source/`. Versions come from MinVer (a `MinVer` `PackageReference` is present in each packable project). `Source/Presentation/MMCA.Common.UI.Maui` is the exception to the slnx rule: it is packable but lives OUTSIDE `MMCA.Common.slnx` (its four MAUI TFMs cannot build on the ubuntu CI runner) and is built/packed by the `build-maui`/`publish-maui` windows jobs.
+All `Source/` projects are packable (bulk NuGet metadata via `Directory.Build.props`, versions from MinVer).
 
 ## Architecture
 
-Strict layered dependency flow — each layer only references layers below it:
+Strict layered dependency flow (each layer references only layers below): `API/Grpc -> Infrastructure -> Application -> Domain -> Shared`. Exceptions: `UI` and `Grpc` depend on **Shared only** (`UI` for Blazor WASM compatibility, `Grpc` because it is pure transport).
 
-```
-API / Grpc       (presentation/transport)
-     ↓
-Infrastructure   (EF Core, caching, JWT, JWKS, outbox, message bus, SignalR)
-     ↓
-Application      (CQRS handlers, decorators, module system, IMessageBus)
-     ↓
-Domain           (entities, aggregates, domain events, specifications)
-     ↓
-Shared           (Result pattern, errors, DTOs, value objects)
-```
+### Architecture Enforcement (two gates)
 
-`UI` and `Grpc` are exceptions: both depend on **`Shared` only** — `UI` for Blazor WASM compatibility, `Grpc` because it is pure transport infrastructure that must not couple to Domain/Application/Infrastructure.
+1. **Compile-time**: `Source/Build/MMCA.Common.LayerEnforcement.targets` (imported for every `Source/` project) fails the build on a forbidden `ProjectReference`.
+2. **Runtime**: `Tests/Architecture/MMCA.Common.Architecture.Tests` (NetArchTest) asserts the same rules against compiled assemblies. The rule bodies live once in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` parameterized by `IArchitectureMap`); Store and ADC subclass the same bases with their own maps, so rules stay identical across repos.
 
-### Architecture Enforcement (two layers)
-
-The dependency rules above are not just convention — they are enforced twice:
-
-1. **Compile-time** — `Source/Build/MMCA.Common.LayerEnforcement.targets` (imported from `Directory.Build.props` for every `MMCA.Common.*` project under `Source/`). It inspects `ProjectReference`s in a `BeforeTargets="ResolveProjectReferences"` step and **fails the build** with a descriptive error if a layer references a forbidden upstream layer.
-2. **Runtime** — `Tests/Architecture/MMCA.Common.Architecture.Tests` (NetArchTest.eNhancedEdition) asserts the same rules against compiled assembly dependencies. The rule bodies live **once** in the `MMCA.Common.Testing.Architecture` package (`ArchitectureRules` + abstract `*TestsBase` classes parameterized by `IArchitectureMap`); each test class is a sealed subclass supplying `CommonArchitectureMap` (one anchor type per package). MMCA.Store and MMCA.ADC consume the same package and supply their own maps, so the rules stay identical across all three repos. (`FrameworkSanityTests` holds the few Common-only checks — the `MMCA.Common.Grpc` boundary and `IMessageBus`/`IJwksProvider` placement.)
-
-When changing project references or moving a type between packages, expect both gates to react. Add new layer rules in **both** places.
+When moving a type between packages or changing project references, expect both gates to react; add new layer rules in **both** places.
 
 ### DI Registration Sequence
 
-Downstream apps register `AddApplicationDecorators()` **last** — Scrutor `TryDecorate` can only wrap handlers that are already registered, so every module's handler scan must run first. Only that ordering is load-bearing; the relative position of `AddInfrastructure`/`AddAPI` is not. The reference service hosts do the module scan via `ModuleLoader.DiscoverAndRegister`; the fluent equivalent is:
-
-```csharp
-services.AddApplication()                                    // Core services, event dispatcher
-    .AddInfrastructure(configuration)                        // Repos, UoW, DbContexts, caching, outbox
-    .AddAPI(modulesSettings)                                 // Controllers, idempotency, exception handlers
-    .ScanModuleApplicationServices<ModuleAClassRef>()        // Module A handlers, validators, mappers
-    .ScanModuleApplicationServices<ModuleBClassRef>()        // Module B handlers, validators, mappers
-    .AddApplicationDecorators();                             // MUST be last — wraps every scanned handler
-```
-
-### Result Pattern
-
-`Result<T>` with `Error`/`ErrorType` instead of exceptions for flow control. Supports `Match()`, `Map()`, `BindAsync()` combinators. `ApiControllerBase.HandleFailure()` maps `ErrorType` to HTTP status codes via `FrozenDictionary`.
+Downstream apps register `AddApplicationDecorators()` **last**: Scrutor `TryDecorate` can only wrap handlers already registered, so every module's handler scan must run first. Only that ordering is load-bearing. Reference hosts use `ModuleLoader.DiscoverAndRegister`; the fluent equivalent is `AddApplication() -> AddInfrastructure(config) -> AddAPI(modulesSettings) -> ScanModuleApplicationServices<TModuleRef>() per module -> AddApplicationDecorators()`.
 
 ### CQRS Decorator Pipeline
 
-`ICommandHandler<TCmd, TResult>` and `IQueryHandler<TQuery, TResult>` with decorator pipeline. Decorators are registered in `AddApplicationDecorators()` and applied by Scrutor `TryDecorate` in reverse registration order (last registered = outermost), giving this execution order (outermost → innermost):
+`ICommandHandler<TCmd, TResult>` / `IQueryHandler<TQuery, TResult>` with decorators registered in `AddApplicationDecorators()` and applied by Scrutor `TryDecorate` in reverse registration order (last registered = outermost). Execution order, outermost to innermost (ADR-014):
 
 ```
-Commands: FeatureGate → Logging → Caching → Validating → Transactional → Concrete Handler
-Queries:  FeatureGate → Logging → Caching → Concrete Handler
+Commands: FeatureGate -> Logging -> Caching -> Validating -> Transactional -> Handler
+Queries:  FeatureGate -> Logging -> Caching -> Handler
 ```
 
-Key behaviors:
-- **FeatureGate**: outermost; short-circuits the call when the feature flag for that command/query is disabled.
-- **Logging**: Logs full pipeline duration via `ICorrelationContext`.
-- **Caching**: Commands implementing `ICacheInvalidating` invalidate cache on success (outside transaction boundary). Queries implementing `IQueryCacheable` (exposing `CacheKey` + `CacheDuration`) cache their results.
-- **Validating**: Commands are validated (FluentValidation) before the transaction opens; queries have no validating or transactional decorator.
-- **Transactional**: Commands implementing `ITransactional` get a DB transaction. Exceptions trigger rollback.
-- Business failures (`Result.Failure`) commit the transaction but skip cache invalidation.
+- **FeatureGate**: short-circuits when the command/query's feature flag is off.
+- **Logging**: full pipeline duration via `ICorrelationContext`.
+- **Caching**: `ICacheInvalidating` commands invalidate on success (outside the transaction); `IQueryCacheable` queries (with `CacheKey` + `CacheDuration`) cache results.
+- **Validating**: FluentValidation before the transaction opens; queries have no Validating or Transactional decorator.
+- **Transactional**: `ITransactional` commands get a DB transaction; exceptions roll back, business failures (`Result.Failure`) commit but skip cache invalidation.
+
+An optional `Profiling` decorator pair is registered by a separate opt-in `AddApplicationProfiling()` call and is not wired by any host today.
 
 ### Module System
 
-`IModule` implementations are auto-discovered and registered in **topological order** (Kahn's algorithm) based on declared `Dependencies`. Modules declare a `Name` and optionally `RequiresDependencies`. `ModulesSettings` (config section `"Modules"`) can disable modules — disabled modules receive stub registrations so cross-module interfaces remain resolvable.
-
-Convention scanning via `ScanModuleApplicationServices<TAssemblyMarker>()` auto-registers domain event handlers (singleton), DTO/request mappers (scoped), command/query handlers (scoped), and FluentValidation validators.
+`IModule` implementations (with `Name`, `Dependencies`, `RequiresDependencies`, `Register()`, `SeedAsync()`, disabled-stub registration) are discovered via reflection and registered in topological order (Kahn's algorithm) by `ModuleLoader`. `ModulesSettings` (config section `Modules`) can disable modules; disabled modules receive stub registrations so cross-module interfaces stay resolvable. `ScanModuleApplicationServices<TAssemblyMarker>()` auto-registers domain event handlers (singleton), DTO/request mappers (scoped), command/query handlers (scoped), and validators. DI registration methods use C# preview extension types (`extension(IServiceCollection services)` blocks in `DependencyInjection.cs`).
 
 ### Entity Model
 
-```
-BaseEntity<TId> → AuditableBaseEntity<TId> → AuditableAggregateRootEntity<TId>
-```
+`BaseEntity<TId>` (required init `Id`) -> `AuditableBaseEntity<TId>` (adds `CreatedOn/By`, `LastModifiedOn/By`, `IsDeleted`) -> `AuditableAggregateRootEntity<TId>` (adds domain events, `GetChildOrNotFound<T>()`, `SetItems<T>()`). Aggregates use static `Create(...)` factories returning `Result<T>`; invariants live in static classes composed with `Result.Combine()`. Domain events are collected via `AddDomainEvent()` and dispatched by `DomainEventDispatcher` after `SaveChangesAsync()` within the same transaction (compiled expression delegates, cached per event type; handlers auto-discovered via Scrutor).
 
-- `BaseEntity<TId>`: `required init Id` property, EF materializes via parameterless constructor
-- `AuditableBaseEntity<TId>`: adds `CreatedOn/By`, `LastModifiedOn/By` (stamped automatically by `ApplicationDbContext.SaveChangesAsync`)
-- `AuditableAggregateRootEntity<TId>`: adds domain events collection, `GetChildOrNotFound<T>()`, `SetItems<T>()` with `ValidateSetItems()` hook
-- **Soft-delete**: `IsDeleted` flag with EF global query filters — entities are never hard-deleted
-
-### Entity Identifier Convention
-
-A shared `global using UserIdentifierType = int;` in `Source/Core/MMCA.Common.Domain/GlobalUsings.IdentifierType.cs` is linked into all MMCA.Common projects via `Directory.Build.props`. A second alias file, `GlobalUsings.NotificationIdentifierType.cs` (in `MMCA.Common.Shared`), is linked the same way. To add a solution-wide identifier alias, create the `GlobalUsings.*.cs` file and add a matching `<Compile Include ... Link=... />` block in `Directory.Build.props`.
+Identifier aliases: `GlobalUsings.IdentifierType.cs` (Domain) and `GlobalUsings.NotificationIdentifierType.cs` (Shared) are linked into all projects via `Directory.Build.props`; to add a solution-wide alias, create the `GlobalUsings.*.cs` file and a matching `<Compile Include ... Link=... />` block there.
 
 ### Multi-Database Strategy (database per microservice)
 
-Every entity resolves to a **physical data source** — a `DataSourceKey(Engine, Name)` pair, where the engine comes from the configuration base class (`EntityTypeConfigurationSQLServer/Cosmos/Sqlite`, via `[UseDataSource]`) and the database name resolves as: `[UseDatabase("X")]` attribute on the concrete configuration → module name derived from the entity namespace (segment before `Domain`, same rule as SQL schema derivation) → `"Default"`.
+Every entity resolves to a physical data source: a `DataSourceKey(Engine, Name)` pair. Engine comes from the configuration base class (`EntityTypeConfigurationSQLServer/Cosmos/Sqlite`); the database name resolves `[UseDatabase("X")]` -> module name from the entity namespace -> `"Default"`.
 
-- **Logical → physical collapse** (`DataSourceResolver`, singleton): the `DataSources` appsettings section maps logical names to connection strings (`DataSources:Conference:SQLServerConnectionString`, optional per-source `SQLServerMigrationsAssembly`, `CosmosDatabaseName`). Logical names without an entry, or whose connection string equals the top-level `ConnectionStrings` value, collapse onto the `Default` source — so a host with no `DataSources` config behaves exactly like a single-database monolith (one context, one change tracker, FK constraints intact). Names sharing a connection string collapse to one physical source. Conflicting `SQLServerMigrationsAssembly` declarations on a collapsed source fail at startup.
-- **Eager entity registry** (`EntityDataSourceRegistry`, singleton): scans configuration assemblies up front and maps every entity to its physical source — routing no longer depends on a model having been built. `DataSourceService` is a facade over it.
-- **One context class per engine, one instance per database**: `PhysicalDbContextFactory` (singleton, NEVER pooled — per-instance `PhysicalDataSource` state) creates raw contexts; `DbContextFactory` (scoped) caches one per `DataSourceKey` and coordinates saves/transactions/disposal. `DataSourceModelCacheKeyFactory` keys EF's model cache by (context type, source name) so each database gets its own model containing only its own entities.
-- **Cross-source relationships auto-degrade** (`CrossDataSourceDegradeConvention`, model-finalizing): when a relationship's ends live in different physical sources, the FK constraint and navigations are removed from the model (scalar FK columns + a compensating index survive, foreign entity types are dropped). Runtime navigation flows through `INavigationPopulator` batch loading; consistency across sources is the outbox's job.
-- **Transactions are per-source, best-effort sequential** — there is no two-phase commit. The outbox pattern is the cross-source consistency mechanism.
-- **Design time**: `DesignTimeDbContextHelper.CreateSqlServer(args, options => ...)` builds a per-source context for `dotnet ef ... -- --datasource <Name>`, enabling one migrations project per database.
+- **Logical -> physical collapse** (`DataSourceResolver`, singleton): the `DataSources` config section maps logical names to connection strings (plus optional `SQLServerMigrationsAssembly`, `CosmosDatabaseName`). Names without an entry, or matching the top-level `ConnectionStrings` value, collapse onto `Default`; a host with no `DataSources` config behaves exactly like a single-database monolith (one context, FK constraints intact).
+- **Eager entity registry** (`EntityDataSourceRegistry`, singleton): maps every entity to its source up front; `DataSourceService` is a facade over it.
+- **One context class per engine, one instance per database**: `PhysicalDbContextFactory` (singleton, NEVER pooled) creates raw contexts; `DbContextFactory` (scoped) caches one per `DataSourceKey` and coordinates saves/transactions/disposal. `DataSourceModelCacheKeyFactory` keys EF's model cache by (context type, source name).
+- **Cross-source relationships auto-degrade** (`CrossDataSourceDegradeConvention`): FK constraints and navigations are removed when a relationship spans physical sources (scalar FK columns + compensating index survive). Runtime navigation flows through `INavigationPopulator` batch loading; cross-source consistency is the outbox's job. Transactions are per-source, best-effort sequential (no two-phase commit).
+- **Design time**: `DesignTimeDbContextHelper.CreateSqlServer(args, ...)` builds a per-source context for `dotnet ef ... -- --datasource <Name>`, enabling one migrations project per database.
 
-**SaveChanges flow**: stamp audit fields → capture domain events from aggregates → serialize to `OutboxMessage` entries → `base.SaveChangesAsync()` (data + outbox in same transaction) → dispatch events in-process → mark outbox processed.
+**SaveChanges flow**: stamp audit fields -> capture domain events -> serialize to `OutboxMessage` entries -> `base.SaveChangesAsync()` (data + outbox in one transaction) -> dispatch events in-process -> mark outbox processed.
 
 ### Outbox Pattern
 
-`OutboxMessage` entries are persisted atomically with aggregate changes, in the **same database as the aggregate** (every relational physical source has its own `OutboxMessages` table). `OutboxProcessor` (background service) drains the outbox of every relational source the host uses — a host never races for another service's outbox rows. Wakes on signal (new entries written) or a **smart wait**: when a cycle sees pending-but-not-yet-eligible rows it sleeps only until the earliest becomes eligible (messages are eligible `Outbox:ProcessingDelaySeconds` after creation, default 5s), otherwise it sleeps the full fallback interval (`Outbox:PollingIntervalSeconds`, default 2s — deployed environments set it high, e.g. 300s, to cut idle polling without adding latency). Processes in batches of 50, retries up to 5 times; a full batch that made progress re-polls immediately. Failed-message retries pace at the polling interval. Integration events published via `IEventBus` target the source named by `Outbox:DataSource` + `Outbox:DatabaseName` (default: SQL Server / Default). Provides at-least-once delivery guarantee with OpenTelemetry metrics for dead-letter tracking. The poll query runs inside an `OutboxPoll` activity that `OutboxPollFilterProcessor` (Aspire package) suppresses from telemetry export.
+`OutboxMessage` entries persist atomically with aggregate changes, in the same database as the aggregate (every relational source has its own `OutboxMessages` table; a host drains only its own sources). `OutboxProcessor` wakes on signal or a smart wait (sleeps until the earliest pending row becomes eligible: `Outbox:ProcessingDelaySeconds`, default 5s), falling back to `Outbox:PollingIntervalSeconds` (default 2s; deployed environments set 300s to cut idle polling without adding latency). Batches of 50, up to 5 retries, at-least-once delivery, OpenTelemetry metrics. The poll query runs inside an `OutboxPoll` activity that `OutboxPollFilterProcessor` (Aspire package) suppresses from telemetry export.
 
-### Microservices Extraction Seams
+### Microservices Extraction Boundaries
 
-The framework is designed so a module can be lifted out of the monolith into its own service without rewriting application code. The invariant: **application/domain code talks to abstractions; transport choices live at the edges.**
+A module can be lifted out of the monolith without rewriting application code. The invariant: **application/domain code talks to abstractions; transport choices live at the edges.**
 
-- **Message bus** — `IMessageBus` is defined in `MMCA.Common.Application` (`Messaging/`). Infrastructure supplies two implementations: `InProcessMessageBus` (in-monolith) and `BrokerMessageBus` (RabbitMQ via MassTransit, with `IntegrationEventConsumer`). `MessageBusSettings` selects the mode. **`Application`, `Domain`, and `Shared` must never reference `MassTransit` directly** — `MicroserviceExtractionTests` enforces this; depend on `IMessageBus` instead.
-- **gRPC transport** (`MMCA.Common.Grpc`) — `AddGrpcServiceDefaults()` registers server-side defaults (`GrpcResultExceptionInterceptor` maps `Result` failures → `RpcException`, plus server reflection). `AddTypedGrpcClient<TClient>(serviceName)` wires a generated gRPC client to Aspire service discovery over **HTTP/2 cleartext (h2c)** with a `JwtForwardingClientInterceptor` and the standard Polly pipeline. Note the deliberate `SocketsHttpHandler` override and h2c rationale documented in `DependencyInjection.cs` — target services must serve HTTP/2 on their cleartext endpoint.
-- **Cross-service auth (JWKS)** — `IJwksProvider` (Infrastructure, `RsaJwksProvider`) exposes signing keys; `JwksEndpointExtensions` in API serves `/.well-known/jwks.json` so extracted services validate tokens against the issuer's public keys. JWKS discovery is routed through the gateway.
-- **Aspire hosting** (`MMCA.Common.Aspire.Hosting`) — AppHost extension methods to wire the cross-cutting infrastructure for extracted deployments: RabbitMQ broker, JWKS service discovery, and gRPC project references.
-- **`.Contracts` convention** — any project whose name ends in `.Contracts` automatically pulls in `Grpc.Tools`/`Google.Protobuf` and compiles every `Protos/**/*.proto` with `GrpcServices="Both"` (server + client stubs), so a shared contract package serves both producer and consumer. Configured in `Directory.Build.props`.
+- **Message bus**: `IMessageBus` lives in `MMCA.Common.Application`; Infrastructure supplies `InProcessMessageBus` and `BrokerMessageBus` (MassTransit), selected by `MessageBusSettings`. `Application`/`Domain`/`Shared` must never reference MassTransit directly (`MicroserviceExtractionTests` enforces this).
+- **gRPC transport** (`MMCA.Common.Grpc`): `AddGrpcServiceDefaults()` registers server defaults (`GrpcResultExceptionInterceptor` maps `Result` failures to `RpcException`, plus reflection). `AddTypedGrpcClient<TClient>(serviceName)` wires a client to Aspire service discovery over HTTP/2 cleartext (h2c) with a `JwtForwardingClientInterceptor` and the standard Polly pipeline; target services must serve HTTP/2 on their cleartext endpoint (rationale documented in `DependencyInjection.cs`).
+- **Cross-service auth (JWKS)**: `IJwksProvider` (`RsaJwksProvider`) exposes signing keys; `JwksEndpointExtensions` serves `/.well-known/jwks.json`; discovery is routed through the gateway.
+- **Aspire hosting** (`MMCA.Common.Aspire.Hosting`): AppHost extensions for RabbitMQ broker, JWKS service discovery, gRPC project references.
+- **`.Contracts` convention**: any project named `*.Contracts` automatically gets `Grpc.Tools`/`Google.Protobuf` and compiles `Protos/**/*.proto` with `GrpcServices="Both"` (configured in `Directory.Build.props`).
 
-### Push Notifications
+### Other Framework Pieces
 
-`MMCA.Common.Infrastructure` ships a SignalR-based push pipeline: `NotificationHub`, `SignalRPushNotificationSender` (real-time delivery), and `NullPushNotificationSender` (no-op fallback). Notification identifier type aliases live in `Source/Core/MMCA.Common.Shared/GlobalUsings.NotificationIdentifierType.cs` and are linked into every `MMCA.Common.*` project via `Directory.Build.props` (same mechanism as `UserIdentifierType`).
-
-### Idempotency
-
-`[Idempotent]` attribute on controller actions. Client provides `Idempotency-Key` header; first response cached 24 hours. Duplicate requests return cached response with `X-Idempotent-Replay: true`. Uses per-key `SemaphoreSlim` for double-check locking.
-
-### Aspire Package
-
-`AddServiceDefaults()` configures OpenTelemetry (logging, metrics, tracing), service discovery, and Polly resilience handlers (30s attempt timeout, 60s circuit breaker window, 90s total timeout). `MapDefaultEndpoints()` adds `/health` (readiness) and `/alive` (liveness) endpoints. The tracing pipeline registers `OutboxPollFilterProcessor`, which drops recurring outbox poll spans (and their SqlClient children from the Azure Monitor distro) from export so idle polling does not dominate telemetry ingestion cost.
-
-### Testing Package
-
-`IntegrationTestBase<TFixture>` provides HTTP client setup, bearer token management, typed `GetAsync<T>`/`PostAsync<T>`/`PutAsync<T>`/`DeleteAsync` helpers, per-test database reset, and thread-safe ID generation. `JwtTokenGenerator` creates test JWT tokens with configurable claims.
-
-## Extension Types (C# Preview)
-
-This project uses C# extension types (`extension(T)` syntax) — requires `LangVersion: preview`. DI registration classes (`DependencyInjection.cs` in each project) use this feature to add methods directly to `IServiceCollection`, `WebApplication`, `ValidationResult`, etc.
-
-## Code Style
-
-The `.editorconfig` enforces strict rules at **error** severity with 5 analyzers (Meziantou, SonarAnalyzer, StyleCop, Roslynator, Microsoft.VisualStudio.Threading). Key conventions:
-
-- File-scoped namespaces (error)
-- Braces always required (error)
-- `var` only when type is apparent; explicit types for built-ins and non-obvious types (error)
-- Private fields: `_camelCase`; constants/static readonly: `PascalCase`
-- Expression-bodied members preferred (error)
-- `readonly` fields required where possible (error)
-- All accessibility modifiers required (error)
-- No `this.` qualification (error)
-- `TreatWarningsAsErrors` is enabled globally
+- **Push notifications**: SignalR pipeline in Infrastructure (`NotificationHub`, `SignalRPushNotificationSender`, `NullPushNotificationSender` fallback).
+- **Idempotency**: `[Idempotent]` attribute; `Idempotency-Key` header; first response cached 24h; duplicates return `X-Idempotent-Replay: true`; per-key `SemaphoreSlim` double-check locking.
+- **Aspire package**: `AddServiceDefaults()` configures OpenTelemetry, service discovery, Polly resilience (30s attempt / 60s breaker window / 90s total); `MapDefaultEndpoints()` adds `/health` + `/alive`. The tracing pipeline registers `OutboxPollFilterProcessor`.
+- **Testing package**: `IntegrationTestBase<TFixture>` (HTTP client + bearer token + typed helpers + per-test DB reset), `JwtTokenGenerator`. `MMCA.Common.Testing.E2E` is a shipped Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects); its Login/Register/Profile workflow bases assert WCAG 2.1 AA via axe-core, and `PlaywrightFixture` selects the engine from `E2E_BROWSER`.
 
 ## Testing
 
-- **Framework:** xUnit v3 + AwesomeAssertions + Moq + coverlet
-- **Test runner:** Microsoft Testing Platform (configured in `global.json`)
-- **Architecture tests:** NetArchTest.eNhancedEdition (`Tests/Architecture`) — verifies layer/purity/extraction rules at the assembly level
-- **E2E:** `MMCA.Common.Testing.E2E` is a *shipped* Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects), consumed by downstream apps — not a test project in this solution. The Login/Register/Profile workflow bases assert **WCAG 2.1 AA** via axe-core (`Page.AssertNoAccessibilityViolationsAsync()`), and `PlaywrightFixture` selects the engine from `E2E_BROWSER` (`chromium`/`firefox`/`webkit`, default `chromium`) so consumers can run a cross-browser matrix.
-- Test projects mirror Source structure under `Tests/`
-- Test files relax naming rules (underscores in method names allowed) and complexity metrics via `.editorconfig` `[Tests/**/*.cs]` section
+xUnit v3 + AwesomeAssertions + Moq + coverlet under Microsoft Testing Platform. Test projects mirror `Source/` under `Tests/`. Test files relax naming and complexity rules via the `.editorconfig` `[Tests/**/*.cs]` section.
 
 ## Repository Governance Docs & Commit Convention
 
-These docs live **in this repo** (committable, unlike the workspace-level `Docs/Architecture/ArchitecturalAnalysis.md`, `Docs/Architecture/ArchitectureRemediation.md`, etc. described in the parent `CLAUDE.md`):
+- `GETTING-STARTED.md`: step-by-step framework-adoption guide; MMCA.Helpdesk is its runnable companion. Read it before answering "how do I build an app on this framework?".
+- `ADRs/`: the canonical, version-controlled ADRs; `ADRs/README.md` owns the count/range and summaries. Read the relevant ADR before changing a pattern it describes; add new ADRs here.
+- `ArchitectureEvaluationCriteria.md`: the canonical 34-category two-axis rubric shared by all three repos' scorecards.
+- `FACTS.md`: single source of truth for framework-wide facts (version, package list, ADR range, fitness counts). Generated and CI-gated by `build/facts`; never hand-edit computed values. Link to it; do not restate the numbers.
+- `ArchitectureScorecard.md` / `RemediationBacklog.md`: the canonical scores and the wave-by-wave remediation log for this repo.
+- `VERSIONING.md` (SemVer + lockstep release policy), `CHANGELOG.md`, `SECURITY.md`, `COST.md` (FinOps defaults, rubric §31), `RESPONSIVE.md` (breakpoint/browser matrix, rubric §22).
 
-- `GETTING-STARTED.md` — the step-by-step framework-adoption guide (solution plumbing → a module vertical slice → Aspire host → architecture-fitness map → a worked module-extraction). MMCA.Helpdesk is its runnable companion (every step maps to real code there). Read this before answering "how do I build an app on this framework?"
-- `ADRs/`: the accepted architecture decision records + index (`ADRs/README.md` owns the count/range and one-line summaries; per `FACTS.md`, don't restate them here), explaining *why* the core cross-cutting patterns exist (read the relevant one before changing a pattern it describes). These are the **version-controlled canonical** copies (R23 §34); the workspace-root `Docs/ADRs/` is now a **pointer** (no copies, since the workspace root can't be versioned); add new ADRs here.
-- `ArchitectureEvaluationCriteria.md` — the **canonical** 34-category two-axis rubric (Maturity 0-4 + Implementation 0-10), shared by all three repos' scorecards. Moved here (mirroring the ADRs); the workspace `Docs/Architecture/ArchitectureEvaluationCriteria.md` is now a pointer.
-- `FACTS.md` — the **single source of truth** for framework-wide facts (version, the package list, ADR range, fitness-method/base counts). Link here / to `ADRs/README.md`; do not restate these numbers inline. **Generated from source and CI-gated** by `build/facts` (a dependency-free tool) — regenerate with `dotnet run --project build/facts -- .`; the `build-and-test` CI job runs it with `--check` and fails on drift, so don't hand-edit the computed values. (The workspace `Tools/invtool -- facts ./MMCA.Common` shares the same generator.)
-- `ArchitectureScorecard.md` — the **canonical, two-axis** architecture scorecard for this repo (per-category Maturity+Implementation + indices + evidence). This is the single source of truth for Common's scores (it replaced the former single-axis snapshot; the old workspace `ArchitectureEvaluation-MMCA.Common.md` is now a pointer). Category numbers (`#1`–`#34`) are referenced as `§NN` in commits.
-- `RemediationBacklog.md` — the dated, wave-by-wave remediation log derived from the scorecard; tracks what's done vs. remaining per category. The workspace `Docs/Architecture/ArchitectureRemediation.md` is a thin cross-repo `[C→A]` roll-up that links here (no status restated).
-- `VERSIONING.md`: SemVer + breaking-change policy; the fifteen packages release in lockstep, versions come from MinVer git tags (`vX.Y.Z`), consumers are swept in one pass (no phased rollout).
-- `CHANGELOG.md`, `SECURITY.md` — release notes (behavior changes called out) and the security model / consumer responsibilities.
-- `COST.md` — FinOps notes (rubric §31): the framework's cost-relevant defaults (telemetry-span filtering, outbox poll/retention tuning) and the right-sizing / attribution / surge-revert levers consumers set downstream.
-- `RESPONSIVE.md` covers responsive design & cross-browser support (rubric §22): the supported-device/breakpoint matrix (C# `BreakpointConstants` ↔ CSS media queries), the shared `.mmca-touch-target` 48px affordance, the `DataGridListPageBase` density option, and the Playwright browser matrix (chromium required; firefox/webkit advisory).
+**Commit-message convention**: remediation work is tagged by scorecard category, `§<m>: <summary>` (e.g. `§30: ...`); update `RemediationBacklog.md` when continuing remediation work.
 
-**Commit-message convention:** remediation work is tagged by **scorecard category** `§<m>: <summary>` (e.g. `§30: ...`), where `§<m>` is the rubric/scorecard category. When continuing remediation work, match this format and update `RemediationBacklog.md`. _(Older commits used an `R<n> §<m>` form; the parallel `R<n>` numbering in the workspace roll-up is retired — track by category now.)_
+## Contribution Flow
+
+`main` is server-protected: every change, documentation-only included, lands via branch -> PR -> required checks green (see `CONTRIBUTING.md`) -> squash-merge. Merges here are not deploys. Releases are cut with the workspace `/push-release` flow; the `vX.Y.Z` tag on merged `main` is the only ref pushed directly.

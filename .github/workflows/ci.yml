@@ -109,10 +109,9 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
-    # chromium AND firefox are required merge gates (§22; firefox promoted 2026-07-12 after a clean
-    # observed streak). webkit stays advisory (continue-on-error): 2 flaky reds in its last 10 main
-    # runs (2026-07-11 09:59, 2026-07-12 00:45); promote it too once it holds a comparable streak.
-    continue-on-error: ${{ matrix.browser == 'webkit' }}
+    # All three engines are required merge gates (§22): firefox promoted 2026-07-12 after a clean
+    # observed streak, webkit promoted 2026-07-16 after 11 consecutive green main runs since its
+    # last flake (2026-07-12 00:45). Add the webkit check to branch protection alongside the others.
     steps:
       - uses: actions/checkout@v5
         with:
@@ -173,7 +172,7 @@ jobs:
   # latency-regression gate (full timing runs stay on-demand; see CLAUDE.md / COST.md). Kept OUT of
   # MMCA.Common.slnx (like ui-e2e) so the unit `dotnet test --solution` run stays fast.
   performance-smoke:
-    name: Performance smoke (BenchmarkDotNet --job Dry)
+    name: Performance gate (BenchmarkDotNet Short + baseline verify)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -185,12 +184,20 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Run benchmark smoke (Dry job)
+      - name: Run hot-path benchmarks (Short job, JSON export)
         # The Benchmarks project references MMCA.Common source directly (no GitHub Packages token needed),
         # like the UI E2E project. --filter "*" selects every benchmark non-interactively (without it BDN
-        # prompts for a selection and would hang in CI); --job Dry runs each exactly once for correctness
-        # in seconds. --no-launch-profile keeps it deterministic on hosted runners.
-        run: dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks --no-launch-profile -- --filter "*" --job Dry
+        # prompts for a selection and would hang in CI); --job Short (3 warmup + 3 iterations) gives real
+        # measurements in under a minute. --no-launch-profile keeps it deterministic on hosted runners.
+        run: dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks --no-launch-profile -- --filter "*" --job Short --exporters json
+
+      - name: Verify against committed perf baseline (rubric section 12)
+        # Latency-regression gate, not just runs-clean: build/perfgate compares the BDN results against
+        # Tests/Performance/perf-baseline.json (deterministic allocation ceilings + machine-independent
+        # ratio floors such as the compiled-expression cache staying >= 1000x ahead of the recompile
+        # anti-pattern) and fails the job on any violation. Moving the numbers deliberately means
+        # updating the baseline file in the same PR.
+        run: dotnet run --project build/perfgate -- BenchmarkDotNet.Artifacts/results Tests/Performance/perf-baseline.json
 
   # Merge the unit/architecture/bUnit + E2E coverage tiers into one report, publish it to the run
   # summary, and enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor").
@@ -250,3 +257,66 @@ jobs:
           line=$(sed -n 's/.*Line coverage:[[:space:]]*\([0-9.]*\)%.*/\1/p' coverage-unit-report/Summary.txt | head -1)
           test -n "$line" || { echo "::error::could not parse unit line coverage"; exit 1; }
           awk -v l="$line" -v m="68.3" 'BEGIN{ if (l+0 < m+0) { printf("::error::Unit line coverage %.1f%% is below the %.1f%% floor\n", l, m); exit 1 } printf("Unit line coverage %.1f%% meets the %.1f%% floor\n", l, m) }'
+
+  # Cross-repo pre-merge canary: build a real consumer (MMCA.Helpdesk) against THIS PR's framework
+  # source, so a breaking public-API change fails here instead of surfacing only after a release +
+  # lockstep sweep. Helpdesk is the ideal canary: minimal single-module app, no database and no
+  # GitHub Packages token to build (it ships a committed local.props that swaps the MMCA.Common.*
+  # PackageReferences for ProjectReferences into ../MMCA.Common/Source via UseLocalMMCA). The two
+  # repos are checked out as siblings so Helpdesk's local.props path (..\MMCA.Common\Source)
+  # resolves to this PR's checkout. Promoted to a required merge gate 2026-07-16 after 9
+  # consecutive green runs since introduction (2026-07-14); its context is in branch protection.
+  consumer-source-build:
+    name: Consumer source build (Helpdesk)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout MMCA.Common (this PR)
+        uses: actions/checkout@v5
+        with:
+          path: MMCA.Common
+          fetch-depth: 0 # MinVer needs full history
+
+      - name: Checkout MMCA.Helpdesk (consumer canary)
+        uses: actions/checkout@v5
+        with:
+          repository: ivanball/MMCA.Helpdesk
+          ref: main
+          path: MMCA.Helpdesk
+          fetch-depth: 0
+          # Public repo builds with the default token; if Helpdesk is private, set a
+          # CONSUMER_CANARY_PAT secret with contents:read on it.
+          token: ${{ secrets.CONSUMER_CANARY_PAT || github.token }}
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build Helpdesk against Common source (UseLocalMMCA)
+        working-directory: MMCA.Helpdesk
+        # Helpdesk's committed local.props already sets UseLocalMMCA=true and points at the sibling
+        # ../MMCA.Common/Source, so this compiles the reference app against the PR's framework source.
+        run: dotnet build MMCA.Helpdesk.slnx -c Release
+
+      - name: Test Helpdesk (domain + architecture, no DB)
+        working-directory: MMCA.Helpdesk
+        run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1
+
+  # Reference-deployment validation gate (§17): the samples/deployment Bicep is the framework's
+  # distilled IaC/OIDC reference (a library cannot deploy itself; DEPLOYMENT.md), so keep it
+  # continuously compilable instead of trusting it not to rot. `az bicep build` type-checks both
+  # templates (declarations, resource API versions, param wiring) with no cloud credentials and
+  # fails the job on any error; warnings surface in the log. A real what-if/deploy stays a
+  # consumer-side concern (ADC/Store deploy.yml are the production-proven versions).
+  sample-deployment-validate:
+    name: Validate samples/deployment Bicep
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Compile foundation.bicep
+        run: az bicep build --file samples/deployment/foundation.bicep --stdout > /dev/null
+
+      - name: Compile main.bicep
+        run: az bicep build --file samples/deployment/main.bicep --stdout > /dev/null

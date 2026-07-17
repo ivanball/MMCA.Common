@@ -295,9 +295,6 @@
   <data name="Notif.List.Title" xml:space="preserve">
     <value>Notificaciones push</value>
   </data>
-  <data name="Page.Counter.ClickMe" xml:space="preserve">
-    <value>Haga clic</value>
-  </data>
   <data name="Nav.Home" xml:space="preserve">
     <value>Inicio</value>
   </data>
@@ -343,9 +340,6 @@
   <data name="Page.Home.Welcome" xml:space="preserve">
     <value>Bienvenido</value>
   </data>
-  <data name="Page.Counter.CurrentCount" xml:space="preserve">
-    <value>Recuento actual: {0}</value>
-  </data>
   <data name="Notif.Breadcrumb.Send" xml:space="preserve">
     <value>Enviar</value>
   </data>
@@ -363,9 +357,6 @@
   </data>
   <data name="Entity.Notification" xml:space="preserve">
     <value>la notificación</value>
-  </data>
-  <data name="Page.Counter.Title" xml:space="preserve">
-    <value>Contador</value>
   </data>
   <data name="Auth.Register.AddressOptional" xml:space="preserve">
     <value>Dirección (opcional)</value>

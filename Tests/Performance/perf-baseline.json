@@ -1,0 +1,15 @@
+{
+  "_comment": "Latency/allocation regression baseline for the BenchmarkDotNet hot-path suite (rubric section 12). Verified in CI by build/perfgate after the Short-job run. Allocation ceilings are per-operation managed bytes (deterministic across machines; measured 0 / 5588 / 3040 on 2026-07-16). Ratio floors are machine-independent effectiveness invariants: the compiled-expression cache must keep IsSatisfiedBy at least 1000x faster than the recompile-each-call anti-pattern (measured ~120,000x); if the cache breaks, the ratio collapses toward 1 and the gate fails. Update this file deliberately, in the same PR as the change that moves the numbers.",
+  "allocationCeilingsBytes": {
+    "IsSatisfiedBy_CachedCompile": 0,
+    "IsSatisfiedBy_RecompileEachCall": 8000,
+    "BuildComposedCriteria": 4500
+  },
+  "ratioFloors": [
+    {
+      "slowBenchmark": "IsSatisfiedBy_RecompileEachCall",
+      "fastBenchmark": "IsSatisfiedBy_CachedCompile",
+      "minRatio": 1000
+    }
+  ]
+}

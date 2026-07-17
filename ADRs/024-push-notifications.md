@@ -1,7 +1,7 @@
 # ADR-024: Two-Channel User Notifications (Transient SignalR Push + Durable Inbox)
 
 ## Status
-Accepted (2026-06-27).
+Accepted (2026-06-27, amended 2026-07-15).
 
 ## Context
 The framework needs to deliver user-facing notifications (an organizer broadcasting a schedule change,
@@ -31,7 +31,11 @@ recipient policy both behind abstractions.
   (`MMCA.Common.Infrastructure`) swaps in `SignalRPushNotificationSender`, which fans messages out
   through `IHubContext<NotificationHub>` to a user, a batched list of users (100 per batch), or all
   clients. The hub (`NotificationHub`) is `[Authorize]` and is mapped with `MapNotificationHub()`
-  (`MMCA.Common.API`); the Blazor client wraps it in `NotificationHubService` (`MMCA.Common.UI`).
+  (`MMCA.Common.API`); the Blazor client wraps it in `NotificationHubService` (`MMCA.Common.UI`). The
+  hub is no longer notification-only: it also carries an ephemeral live-channel role, exposing
+  `JoinChannel` / `LeaveChannel` group management (`NotificationHub.cs:43-59`) and a `ReceiveChannelEvent`
+  push that backs `ILiveChannelPublisher` / `SignalRLiveChannelPublisher` for transient live-channel
+  events, a path distinct from the durable notification delivery this ADR governs.
 - **Recipient selection is the consumer's policy.** `INotificationRecipientProvider`
   (`MMCA.Common.Application`) defaults to `NullNotificationRecipientProvider` (returns no recipients);
   each app registers its own provider that knows its domain's audience. The framework ships the delivery
@@ -39,6 +43,15 @@ recipient policy both behind abstractions.
 - **Delivery failure is non-fatal.** If the live push throws, the handler records `MarkAsFailed` on the
   `PushNotification` and returns success: the inbox row is already committed, so the recipient still gets
   the notification on next load. A send is never rolled back because the WebSocket fan-out failed.
+- **An optional third, native-push leg (ADR-044).** After the inbox write and the SignalR push,
+  `SendPushNotificationHandler` also dispatches through `INativePushSender`
+  (`SendPushNotificationHandler.cs:88-105`), an OS-level native-push channel that reaches devices the
+  SignalR hub cannot (the app backgrounded or killed). It is best-effort by the same logic as the live
+  push (a throw is logged, never fatal, and the SignalR leg has already decided the audit status), and it
+  defaults to `NullNativePushSender` (`MMCA.Common.Infrastructure`, `DependencyInjection.cs:203`), so it
+  stays inert until a native hub is configured. The design of that channel is ADR-044's scope; this ADR
+  keeps its own on the inbox and SignalR channels, so the "Two-Channel" title names the durable and
+  transient channels this record governs, not a hard cap on the number of delivery legs.
 - **Horizontal scale-out is configuration, not code.** When a Redis connection string is present,
   `AddPushNotifications` adds a Redis backplane to SignalR (`AddStackExchangeRedis`) so a push reaches a
   user whose WebSocket is pinned to a different replica. The feature is gated by
@@ -81,4 +94,5 @@ the hub relies on), ADR-008 (extraction: ADC runs a dedicated `MMCA.ADC.Notifica
 these seams), ADR-012 (that Notification service is now a mixed-endpoint host: its default endpoint
 stays Profile-B `Http1AndHttp2` for the SignalR WebSocket/HTTP/1.1 path, and since 2026-07-09 it also
 serves an inbound `Http2`-only h2c gRPC edge on a dedicated named endpoint per ADR-039), ADR-022 (the
-browser-edge auth context the UI client runs in).
+browser-edge auth context the UI client runs in), ADR-044 (the optional OS-level native-push channel
+`SendPushNotificationHandler` fires after the inbox and SignalR legs, defaulting to `NullNativePushSender`).
