@@ -595,6 +595,50 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
   `[Unreleased]` section still accumulates content shipped in v1.86.0 through v1.114.0 without
   per-release headings.
 
+## Progress - eighteenth wave (evidence re-score at v1.115.0, 2026-07-12)
+
+> A full 34-category, two-pass evidence re-score (per-category scorer plus adversarial verifier) at framework
+> **v1.115.0** (HEAD `37d0a3b`, working tree **clean**, at the release tag). **Three front-end scores move.**
+> Canonical scoring is now **Maturity 95.1% (308/324) / Implementation 84.3% (683/810)** per the in-repo
+> [`ArchitectureScorecard.md`](ArchitectureScorecard.md) (was 94.4% / 83.7%). The three candidacies the
+> remediation-wave-1 entry recorded are now score-confirmed.
+
+- ✅ **#21 · Accessibility: Implementation 8→9 (CLOSED, stays on the protect / consumer-assessed list).** The
+  two documented, deliberately un-gated dark-theme WCAG AA contrast failures that capped §21 at 8 in the
+  seventeenth wave (filled-primary button label + error-alert message text) are fixed: dark
+  `PrimaryContrastText`/`ErrorContrastText` = `rgba(0,0,0,0.87)` (`Source/Presentation/MMCA.Common.UI/Theme/MMCATheme.cs:60,73`),
+  and the dark-mode axe scan is now a blocking gate (`DarkModeE2ETests` in the required chromium `ui-e2e`
+  job, `.github/workflows/ci.yml:114`). This is exactly the "tune the dark palette and gate the dark-mode
+  axe scan is the path back to 9" the prior §21 row named, and it closes the remediation-wave-1 candidacy
+  above. +3 index points (weight 3). Maturity holds at 4.
+- ✅ **#20 · Design System & UI Consistency: Implementation 8→9.** The same dark-palette fix, gated by the
+  same blocking dark-mode axe scan, closes the WCAG AA contrast half of §20's I8 deduction. +2 index points
+  (weight 2). **Not a full clear:** the Bootstrap-chrome→MudBlazor migration (Priority-2 #20 below) and the
+  residual `!important`/raw-hex in `wwwroot/app.css:122` remain OPEN (the re-score judged them minor enough
+  for I9, so that Priority-2 item stays unchecked). Maturity holds at 4.
+- ✅ **#23 · Front-End Performance: Maturity 3→4 (CLOSED, moved to the level-4 protect list).** The
+  front-end performance conventions the thirteenth wave recalibrated to review-enforced are now measured AND
+  automatically enforced: `WebVitalsE2ETests` asserts LCP/TTFB/CLS budgets on the gallery Login + Components
+  pages inside the required chromium `ui-e2e` merge gate
+  (`Tests/Presentation/MMCA.Common.UI.E2E.Tests/WebVitalsE2ETests.cs:43`, `.github/workflows/ci.yml:114,145`,
+  measurement via `Source/Hosting/MMCA.Common.Testing.E2E/Infrastructure/WebVitalsCollector.cs:17`), meeting
+  the rubric M4 "enforced automatically (CI)" bar. This closes the remediation-wave-1 candidacy above.
+  §23 leaves the priority-2 band, becomes the 27th Maturity-4 category, and joins the protect list.
+  Implementation held at 8: desktop `MudDataGrid` still uses server paging rather than row virtualization.
+- ◐ **Five adversarially-refuted first-pass proposals, no score move (recorded for the next cycle to
+  re-adjudicate).** §7 Microservices Readiness (proposed Implementation 9→8, an unforced band recalibration
+  re-litigating a fourteenth-wave decline; holds M4/I9), §10 Cross-Cutting Concerns (proposed 8→9 rejected,
+  the three documented hold-reasons still in source; holds M4/I8), §25 Navigation (proposed M2/I6 downgrade
+  not supported, every mechanism present on a clean tree; holds M3/I8), §26 Front-End Security (proposed 8→9
+  rejected, the CSP `script-src`/`style-src` gap unclosed; holds M4/I8), and §34 Governance (proposed 8→7 on
+  a transient stale-prose basis this refresh cures; holds M4/I8).
+- ✅ **Evidence enrichment, no score move (ADRs 040-045, since v1.108.0).** ADR-040 authenticated output
+  caching, ADR-041 observability/telemetry, ADR-042 MAUI device-capability abstraction (the fifteenth
+  package `MMCA.Common.UI.Maui`), ADR-043 mobile deep links + native OAuth callback, ADR-044 native push
+  delivery, ADR-045 managed file storage + avatars, all in categories already scored 8-9 (§18/§6/§8/§11/§30).
+  The source-generated, CI-gated `FACTS.md` reports **15 packages / ADR set 001-045 / 85 fitness methods
+  across 28 bases (Common runs 46)** and the scorecard rows are synced to match.
+
 ---
 
 ## 🔴 Priority 6 — highest leverage
