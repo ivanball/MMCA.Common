@@ -32,10 +32,12 @@ public static class GatewayCorsExtensions
         {
             if (environment.IsDevelopment())
             {
+#pragma warning disable S5122 // Allow-any-origin is scoped to Development only; production restricts origins to Cors:AllowedOrigins below
                 options.AddDefaultPolicy(p => p
                     .AllowAnyOrigin()
                     .AllowAnyHeader()
                     .AllowAnyMethod());
+#pragma warning restore S5122
             }
             else
             {

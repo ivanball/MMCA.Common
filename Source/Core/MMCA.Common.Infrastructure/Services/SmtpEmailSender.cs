@@ -26,11 +26,13 @@ public sealed class SmtpEmailSender(ISmtpSettings smtpSettings) : IEmailSender
         ArgumentException.ThrowIfNullOrEmpty(subject);
         ArgumentException.ThrowIfNullOrEmpty(body);
 
+#pragma warning disable S5332 // EnableSsl is driven by ISmtpSettings.EnableSsl (config); local dev targets MailDev, which does not offer TLS
         using var smtpClient = new SmtpClient(_host, _port)
         {
             Credentials = new NetworkCredential(_username, _password),
             EnableSsl = _enableSsl
         };
+#pragma warning restore S5332
 
         using var message = new MailMessage(_fromAddress, to, subject, body)
         {

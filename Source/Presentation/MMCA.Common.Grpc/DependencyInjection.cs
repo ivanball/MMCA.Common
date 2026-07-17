@@ -72,9 +72,11 @@ public static class DependencyInjection
             services.AddHttpContextAccessor();
             services.TryAddTransient<JwtForwardingClientInterceptor>();
 
+#pragma warning disable S5332 // Deliberate h2c (HTTP/2 cleartext) gRPC transport for in-cluster service-to-service calls; see the class-level extraction boundary remarks
             var builder = services.AddGrpcClient<TClient>(options =>
                     options.Address = new Uri($"http://{serviceName}"))
                 .AddInterceptor<JwtForwardingClientInterceptor>(InterceptorScope.Client);
+#pragma warning restore S5332
 
             // Force the primary handler to a SocketsHttpHandler that explicitly opts into
             // HTTP/2. The global ConfigureHttpClientDefaults from MMCA.Common.Aspire applies
