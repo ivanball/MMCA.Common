@@ -18,6 +18,18 @@ that previously lived only in code comments.
   its whole trace intact across services. Unset (the default) samples everything; an out-of-range or
   unparseable value also falls back to sample-everything, so a typo can never silently blind you. This
   is the single biggest lever on trace-ingestion cost once traffic grows.
+- **High-volume metric families are drop-able knobs.** On a low-traffic multi-service deployment the
+  `AppMetrics` table dominates ingestion, and two instrumentation families are ~85% of its data points:
+  HttpClient connection/request metrics (`http.client.open_connections` / `active_requests` /
+  `request.duration`: a high-frequency gauge stream from the pooled gRPC / service-discovery channels)
+  and the .NET runtime metrics (`dotnet.gc.*` / `jit.*` / `thread_pool.*`: ~17 instruments emitted every
+  collection interval regardless of traffic). Neither carries an end-user-visible signal. Set
+  `Telemetry:DisableHttpClientMetrics=true` and/or `Telemetry:DisableRuntimeMetrics=true` and
+  `ConfigureOpenTelemetry` skips that instrumentation; outbound-dependency latency is still captured as
+  `AppDependencies` traces, and server-side RED metrics (`http.server.*` / `aspnetcore.*` / `kestrel.*`)
+  are untouched. Unset (default) keeps them, so a host that does not opt in sees no change. Anything but
+  a boolean `true` keeps the family, so a typo cannot silently blind it. On the MMCA apps this cut total
+  Log Analytics ingestion ~70% (AppMetrics is ~80% of the workspace bill).
 - **Per-message logs are kept off the `Information` channel.** The outbox's per-message
   "dispatched successfully" line is `Debug` (it is the single highest-volume log line in steady
   state); failures stay loud (dead-letter = `Error`, retry = `Warning`). So a busy outbox does not
