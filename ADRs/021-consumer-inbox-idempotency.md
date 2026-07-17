@@ -1,7 +1,7 @@
 # ADR-021: Consumer-Side Inbox for Integration-Event Idempotency
 
 ## Status
-Accepted (2026-06-09).
+Accepted (2026-06-09; adoption reviewed 2026-07-15).
 
 ## Context
 ADR-003 makes integration-event delivery **at-least-once**: the outbox guarantees a published event
@@ -47,9 +47,22 @@ handler's commit and the inbox write reprocesses the event exactly once more, so
 still be idempotent** for that narrow window. The inbox removes the routine-duplicate burden; it does
 not make handlers free to be non-idempotent.
 
-In production the inbox is enabled on the services that consume integration events: ADC's Identity
-and Conference services and Store's Sales service set `EnableInbox: true`, each with an
-`AddInboxMessages` migration on its own database.
+In production `EnableInbox: true` is set on all four ADC service hosts
+(`MMCA.ADC/Source/Services/MMCA.ADC.Identity.Service/appsettings.json:28`,
+`MMCA.ADC.Conference.Service/appsettings.json:31`, `MMCA.ADC.Engagement.Service/appsettings.json:36`,
+`MMCA.ADC.Notification.Service/appsettings.json:50`) and on Store's Sales service
+(`MMCA.Store/Source/Services/MMCA.Store.Sales.Service/appsettings.json:33`). Where the `InboxMessages`
+table comes from differs by repo: each of the four ADC per-service migration projects carries a
+dedicated `AddInboxMessages` migration, whereas Store Sales creates the table and its unique
+`IX_InboxMessages_MessageId` index inside its single `InitialCreate` migration
+(`MMCA.Store/Source/Hosting/MMCA.Store.Migrations.SqlServer.Sales/Migrations/20260621192808_InitialCreate.cs:21,179`),
+because that per-service project postdates the frozen combined-archive lineage that added the ADC
+migration. Of the services carrying the flag, only ADC Identity and ADC Conference register a broker
+consumer today (`MMCA.ADC/Source/Services/MMCA.ADC.Identity.Service/Program.cs:222-223`,
+`MMCA.ADC.Conference.Service/Program.cs:272`), and Store Sales consumes `ProductVariantChanged`
+(`MMCA.Store/Source/Services/MMCA.Store.Sales.Service/Program.cs:188`); ADC Engagement and Notification
+carry `EnableInbox: true` and the table but register no consumer today, so their inbox is provisioned
+and unused (functionally harmless).
 
 ## Rationale
 - **Dedup once, not in every handler.** A single consume-edge check turns "every handler author must

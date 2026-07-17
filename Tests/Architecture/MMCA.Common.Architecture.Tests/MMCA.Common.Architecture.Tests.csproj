@@ -6,6 +6,14 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Navigation contract drift gate (rubric section 25): embed the routes/auth table so
+         NavigationContractTests can assert it stays in lockstep with the routable pages'
+         RouteAttribute/AuthorizeAttribute reality in MMCA.Common.UI. -->
+    <EmbeddedResource Include="..\..\..\NavigationFlow.md">
+      <LogicalName>NavigationFlow.md</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="NetArchTest.eNhancedEdition" />

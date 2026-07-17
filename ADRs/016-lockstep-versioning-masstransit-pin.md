@@ -1,12 +1,13 @@
 # ADR-016: Lockstep Package Versioning and the MassTransit-v8 Pin
 
 ## Status
-Accepted
+Accepted (2026-07-15).
 
 ## Context
-MMCA.Common publishes fourteen NuGet packages consumed by three downstream repos — the two
+MMCA.Common publishes its `MMCA.Common.*` NuGet package set (see `../FACTS.md` for the authoritative
+list and count) consumed by three downstream repos: the two
 production apps (Store, ADC) and the reference seed Helpdesk (which defaults to local-source mode but
-declares the same fourteen `MMCA.Common.*` package versions in its own `Directory.Packages.props`).
+declares the same `MMCA.Common.*` package versions in its own `Directory.Packages.props`).
 Two related governance questions had no recorded answer:
 
 1. **How do the packages version and roll out?** Independent per-package versions invite a
@@ -18,8 +19,9 @@ Two related governance questions had no recorded answer:
    broker-enabled service at startup.
 
 ## Decision
-1. **Version the fourteen packages in lockstep.** All packages share one version (MinVer, derived from
-   a single `vX.Y.Z` git tag); a release tags all fourteen at the same version. SemVer and the
+1. **Version the whole `MMCA.Common.*` package set in lockstep.** All packages share one version (MinVer, derived from
+   a single `vX.Y.Z` git tag); a release tags every package (see `../FACTS.md` for the authoritative list and count)
+   at the same version. SemVer and the
    breaking-change policy live in `VERSIONING.md`.
 2. **Sweep every consumer in one pass, with no phased rollout.** A framework change ships and all
    consumers bump every `MMCA.Common.*` entry in their `Directory.Packages.props` together.

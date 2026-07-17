@@ -14,11 +14,11 @@
 | `/login` | `Auth/Login` | Anonymous | Accepts `?returnUrl=` (sanitized via `ReturnUrlProtector`). |
 | `/register` | `Auth/Register` | Anonymous | Client + server validation parity (EditForm). |
 | `/auth/oauth-complete` | `Auth/OAuthComplete` | Anonymous | External-login callback landing. |
-| `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. |
-| `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). |
-| `/notifications/send` | `Notifications/NotificationSend` | Role/claim-gated | Admin/sender surface. |
+| `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. Route carries `[Authorize]`. |
+| `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). Route carries `[Authorize]`. |
+| `/notifications/send` | `Notifications/NotificationSend` | Authenticated | Admin/sender surface. Route carries `[Authorize]`; the sender role/claim gate is consumer-declared (NavItem filter) and enforced server-side by the send API. |
 | `/not-found` | `NotFound` | Any | 404 within the app shell (`Router.NotFoundPage`). |
-| `/forbidden` | `Forbidden` | Authenticated | 403 within the app shell (see below). |
+| `/forbidden` | `Forbidden` | Any | 403 within the app shell (see below); rendered for authenticated-but-unauthorized hits via `AuthorizeRouteView`, but the route itself is open (a direct anonymous visit just shows the 403 page). |
 
 ## Guards & wayfinding (the §25 contract)
 

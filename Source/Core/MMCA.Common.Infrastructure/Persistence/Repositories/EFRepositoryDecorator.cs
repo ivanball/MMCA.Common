@@ -1,5 +1,6 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 
@@ -39,6 +40,10 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
 
     public void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion) =>
         _inner.SetOriginalRowVersion(entity, rowVersion);
+
+    /// <inheritdoc />
+    public void SetOriginalRowVersion(IRowVersioned childEntity, byte[]? rowVersion) =>
+        _inner.SetOriginalRowVersion(childEntity, rowVersion);
 
     public Task<int> ExecuteDeleteAsync(
         System.Linq.Expressions.Expression<Func<TEntity, bool>> where,
