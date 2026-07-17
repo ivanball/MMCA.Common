@@ -61,9 +61,9 @@ The shared UI is tested against three Playwright engines in CI (`.github/workflo
 |--------|------------|-----------|
 | Chromium | Chrome, Edge (Chromium) | **Required merge gate** |
 | Firefox | Firefox | **Required merge gate** (promoted from advisory 2026-07-12) |
-| WebKit | Safari | Advisory (`continue-on-error`) until proven reliably green |
+| WebKit | Safari | **Required merge gate** (promoted from advisory 2026-07-16) |
 
-WebKit runs on every CI pass and surfaces its results independently
-(`fail-fast: false`); it is promoted to a blocking gate once observed reliably green
-(Firefox completed that promotion on 2026-07-12).
+All three engines run on every CI pass and surface their results independently
+(`fail-fast: false`); each was promoted to a blocking gate once observed reliably green
+(Firefox on 2026-07-12, WebKit on 2026-07-16 after 11 consecutive green main runs).
 The framework targets current evergreen versions of these browsers; no legacy/IE support.
