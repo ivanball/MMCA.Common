@@ -22,6 +22,12 @@ changes; the two new telemetry knobs are opt-in (unset preserves current behavio
   it). Server-side RED metrics (`http.server.*` / `aspnetcore.*` / `kestrel.*`) and `AppDependencies`
   traces are untouched. See `COST.md`.
 
+### Security
+- **AngleSharp pinned to 1.5.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg).** bUnit floors the transitive
+  AngleSharp at 1.4.0, which carries a Moderate mXSS advisory (MathML `annotation-xml` handling). The two
+  bUnit-referencing projects (`MMCA.Common.Testing.UI`, `MMCA.Common.UI.Tests`) now take a direct
+  reference to the patched 1.5.0. Test-tier only; no production runtime surface.
+
 ### Changed
 - **Dependency and analyzer refresh.** SixLabors.ImageSharp 3.1.11 -> 3.1.12, Meziantou.Analyzer
   and SonarAnalyzer.CSharp, OpenTelemetry.Api and OpenTelemetry.Instrumentation.Runtime, plus the CI

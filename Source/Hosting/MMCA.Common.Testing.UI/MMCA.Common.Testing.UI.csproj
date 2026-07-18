@@ -10,6 +10,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="bunit" />
+    <!-- Direct pin so the transitive AngleSharp resolves to the patched 1.5.0 (CVE-2026-54570). -->
+    <PackageReference Include="AngleSharp" />
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
