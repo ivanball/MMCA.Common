@@ -6,6 +6,11 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.118.0] - 2026-07-17
+
+FinOps cost-knob release plus a dependency and analyzer refresh. No breaking changes and no API
+changes; the two new telemetry knobs are opt-in (unset preserves current behavior).
+
 ### Added (2026-07-13 FinOps §31: metric-family cost knobs)
 - **`Telemetry:DisableHttpClientMetrics` / `Telemetry:DisableRuntimeMetrics`** (`MMCA.Common.Aspire`,
   `ConfigureOpenTelemetry`, rubric §31): two opt-in boolean knobs that drop the two highest-volume,
@@ -16,6 +21,19 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
   that does not opt in, and anything but a boolean `true` keeps the family (a typo cannot silently blind
   it). Server-side RED metrics (`http.server.*` / `aspnetcore.*` / `kestrel.*`) and `AppDependencies`
   traces are untouched. See `COST.md`.
+
+### Security
+- **AngleSharp pinned to 1.5.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg).** bUnit floors the transitive
+  AngleSharp at 1.4.0, which carries a Moderate mXSS advisory (MathML `annotation-xml` handling). The two
+  bUnit-referencing projects (`MMCA.Common.Testing.UI`, `MMCA.Common.UI.Tests`) now take a direct
+  reference to the patched 1.5.0. Test-tier only; no production runtime surface.
+
+### Changed
+- **Dependency and analyzer refresh.** SixLabors.ImageSharp 3.1.11 -> 3.1.12, Meziantou.Analyzer
+  and SonarAnalyzer.CSharp, OpenTelemetry.Api and OpenTelemetry.Instrumentation.Runtime, plus the CI
+  action pins (checkout, upload-artifact, download-artifact). No public API changes.
+- **ADR and scorecard refresh.** update-adrs drift fixes (ADR-036, ADR-041, ADR-042, ADR-045) and the
+  twentieth-wave ArchitectureScorecard re-score with backlog reconciliation.
 
 ## [1.117.0] - 2026-07-16
 

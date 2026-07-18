@@ -2,6 +2,12 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "AngleSharp": {
+        "type": "Direct",
+        "requested": "[1.5.0, )",
+        "resolved": "1.5.0",
+        "contentHash": "REAdFOAlTxr6yqmxWFFLLMB/+uvIS3N6tXXUAWjoexA0LsQB/CfZYadg+z+DkcpAwJk8gF1VF4YLsq4U1Gficg=="
+      },
       "AwesomeAssertions": {
         "type": "Direct",
         "requested": "[9.4.0, )",
@@ -84,11 +90,6 @@
         "dependencies": {
           "xunit.v3.mtp-v1": "[3.2.2]"
         }
-      },
-      "AngleSharp": {
-        "type": "Transitive",
-        "resolved": "1.4.0",
-        "contentHash": "6ph8mpaQx0KL0COYRt0kI8MB9gSp1PtKijKMhJU//+aVFgKAJLKDesG/+26JSaVCOrHNgPf12wpfoyRcMYOeXg=="
       },
       "AngleSharp.Css": {
         "type": "Transitive",
@@ -737,6 +738,7 @@
       "mmca.common.testing.ui": {
         "type": "Project",
         "dependencies": {
+          "AngleSharp": "[1.5.0, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "MudBlazor": "[9.6.0, )",
           "bunit": "[2.7.2, )"
