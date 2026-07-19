@@ -139,6 +139,52 @@ public sealed class EntityQueryServiceTests
         result.Should().BeTrue();
     }
 
+    // ── By-id fast path ──
+    [Fact]
+    public async Task GetEntityByIdAsync_PlainKeyLookup_UsesKeyedRepositoryFastPath()
+    {
+        var entity = new FakeEntity { Id = 5, Name = "Five" };
+        var (sut, repo) = CreateSutWithReadRepo();
+        repo.Setup(r => r.GetByIdAsync(5, It.IsAny<IEnumerable<string>>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+
+        // The pipeline is left unmocked: a success here can ONLY come from the keyed fast path,
+        // since the pipeline mock returns nothing.
+        var result = await sut.GetEntityByIdAsync("5");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeSameAs(entity);
+        repo.Verify(r => r.GetByIdAsync(5, It.IsAny<IEnumerable<string>>(), false, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetEntityByIdAsync_PlainKeyLookup_WhenMissing_ReturnsNotFound()
+    {
+        var (sut, repo) = CreateSutWithReadRepo();
+        repo.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<IEnumerable<string>>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FakeEntity?)null);
+
+        var result = await sut.GetEntityByIdAsync("5");
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    private static (EntityQueryService<FakeEntity, FakeEntityDTO, int> Sut, Mock<IReadRepository<FakeEntity, int>> Repo) CreateSutWithReadRepo()
+    {
+        var repo = new Mock<IReadRepository<FakeEntity, int>>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork.Setup(x => x.GetReadRepository<FakeEntity, int>()).Returns(repo.Object);
+
+        var sut = new EntityQueryService<FakeEntity, FakeEntityDTO, int>(
+            unitOfWork.Object,
+            Mock.Of<INavigationMetadataProvider>(),
+            Mock.Of<IEntityQueryPipeline>(),
+            Mock.Of<IEntityDTOMapper<FakeEntity, FakeEntityDTO, int>>(),
+            Mock.Of<INavigationPopulator<FakeEntity>>());
+
+        return (sut, repo);
+    }
+
     // ── DTOToEntityPropertyMap defaults to empty ──
     [Fact]
     public void DTOToEntityPropertyMap_DefaultsToEmptyDictionary()
