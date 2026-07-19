@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.ComponentModel;
+using System.Globalization;
 using System.Linq.Expressions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -58,6 +61,88 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     protected virtual IReadOnlyDictionary<string, string> DTOToEntityPropertyMap { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     private const string IdField = "Id";
+
+    // Cached TypeConverter per identifier type: the by-id fast path parses the string id into the
+    // typed key without per-call reflection. A type with no usable string converter simply misses
+    // the fast path and uses the pipeline.
+    private static readonly ConcurrentDictionary<Type, TypeConverter?> IdConverterCache = new();
+
+    /// <summary>
+    /// Attempts the keyed by-id fast path: for a plain primary-key lookup (no field projection, no
+    /// includes, no specification, default id field) it issues a single <c>TOP 1 WHERE Id = @id</c>
+    /// via the repository's include overload, skipping the dynamic-filter pipeline (which parses a
+    /// string predicate and emits <c>TOP 1000</c> + a client-side <c>FirstOrDefault</c>). That
+    /// overload runs on the filtered <c>TableNoTracking</c>, so soft-delete query filters still
+    /// apply (unlike <c>FindAsync</c>, which bypasses them). Returns <see langword="null"/> when the
+    /// request is not a plain key lookup or the id is not convertible, so the caller uses the
+    /// pipeline.
+    /// </summary>
+    private async Task<Result<TEntity>?> TryGetByIdFastPathAsync(
+        string idValue,
+        string? idField,
+        bool includeFKs,
+        bool includeChildren,
+        Specification<TEntity, TIdentifierType>? specification,
+        string? fields,
+        bool asTracking,
+        CancellationToken cancellationToken)
+    {
+        if (!IsPrimaryKeyOnlyLookup(idField, includeFKs, includeChildren, specification, fields)
+            || !TryConvertId(idValue, out var typedId))
+        {
+            return null;
+        }
+
+        var entity = await Repository.GetByIdAsync(typedId, [], asTracking, cancellationToken).ConfigureAwait(false);
+        return entity is null
+            ? Result.Failure<TEntity>(Error.NotFound.WithSource(nameof(GetByIdAsync)).WithTarget(typeof(TEntity).Name))
+            : Result.Success(entity);
+    }
+
+    private static bool IsPrimaryKeyOnlyLookup(
+        string? idField,
+        bool includeFKs,
+        bool includeChildren,
+        Specification<TEntity, TIdentifierType>? specification,
+        string? fields)
+        => fields is null
+            && !includeFKs
+            && !includeChildren
+            && specification is null
+            && (idField is null || string.Equals(idField, IdField, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Converts the string id to <typeparamref name="TIdentifierType"/> for the keyed fast path.
+    /// Returns <see langword="false"/> (so the caller falls back to the pipeline) when the value is
+    /// not convertible, preserving the pipeline's tolerance of malformed ids.
+    /// </summary>
+    private static bool TryConvertId(string idValue, out TIdentifierType id)
+    {
+        id = default!;
+        var converter = IdConverterCache.GetOrAdd(typeof(TIdentifierType), static t =>
+        {
+            var c = TypeDescriptor.GetConverter(t);
+            return c.CanConvertFrom(typeof(string)) ? c : null;
+        });
+
+        if (converter is null)
+            return false;
+
+        try
+        {
+            if (converter.ConvertFromString(null, CultureInfo.InvariantCulture, idValue) is TIdentifierType converted)
+            {
+                id = converted;
+                return true;
+            }
+        }
+        catch (Exception ex) when (ex is FormatException or NotSupportedException or ArgumentException)
+        {
+            // Malformed id for this key type: fall back to the pipeline path.
+        }
+
+        return false;
+    }
 
     /// <inheritdoc />
     public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
@@ -201,6 +286,14 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
 
             return Result.Failure<TEntity>(errors);
         }
+
+        // Fast path: a plain primary-key lookup skips the dynamic-filter pipeline (see
+        // TryGetByIdFastPathAsync). Any other shape falls through to the full pipeline unchanged.
+        Result<TEntity>? fastPath = await TryGetByIdFastPathAsync(
+            idValue, idField, includeFKs, includeChildren, specification, fields, asTracking, cancellationToken)
+            .ConfigureAwait(false);
+        if (fastPath is not null)
+            return fastPath;
 
         var filters = new Dictionary<string, (string Operator, string Value)>(StringComparer.OrdinalIgnoreCase)
         {
