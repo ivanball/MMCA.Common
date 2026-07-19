@@ -14,7 +14,7 @@ internal sealed class StringFilterStrategy : IFilterStrategy
     public IReadOnlySet<string> SupportedOperators { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         "CONTAINS", "NOT CONTAINS", "EQUALS", "NOT EQUALS",
-        "STARTS WITH", "ENDS WITH", "IS EMPTY", "IS NOT EMPTY"
+        "STARTS WITH", "ENDS WITH", "IS EMPTY", "IS NOT EMPTY", "IN"
     }.ToFrozenSet(StringComparer.Ordinal);
 
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
@@ -26,8 +26,23 @@ internal sealed class StringFilterStrategy : IFilterStrategy
             "NOT EQUALS" => query.Where($"{property} != @0", value),
             "STARTS WITH" => query.Where($"{property}.StartsWith(@0)", value),
             "ENDS WITH" => query.Where($"{property}.EndsWith(@0)", value),
+            _ => ApplyPresenceOrSet(query, property, op, value),
+        };
+
+    // Presence checks (value-independent) and the comma-separated IN set, split out of the main
+    // switch to keep each method under the cyclomatic-complexity ceiling.
+    private static IQueryable<T> ApplyPresenceOrSet<T>(IQueryable<T> query, string property, string op, string value)
+        => op switch
+        {
             "IS EMPTY" => query.Where($"string.IsNullOrEmpty({property})"),
             "IS NOT EMPTY" => query.Where($"!string.IsNullOrEmpty({property})"),
+            "IN" => ApplyIn(query, property, value),
             _ => query
         };
+
+    private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
+    {
+        var values = FilterValueParser.ParseStringList(value);
+        return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
+    }
 }

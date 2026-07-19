@@ -12,11 +12,14 @@ internal sealed class GuidFilterStrategy : IFilterStrategy
 {
     public IReadOnlySet<string> SupportedOperators { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        "EQUALS", "NOT EQUALS"
+        "EQUALS", "NOT EQUALS", "IN"
     }.ToFrozenSet(StringComparer.Ordinal);
 
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
     {
+        if (op == "IN")
+            return ApplyIn(query, property, value);
+
         if (!Guid.TryParse(value, out var guidValue))
             return query;
 
@@ -26,5 +29,11 @@ internal sealed class GuidFilterStrategy : IFilterStrategy
             "NOT EQUALS" => query.Where($"{property} != @0", guidValue),
             _ => query
         };
+    }
+
+    private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
+    {
+        var values = FilterValueParser.ParseList(value, static s => Guid.TryParse(s, out var g) ? g : (Guid?)null);
+        return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
     }
 }

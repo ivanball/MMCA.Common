@@ -66,4 +66,25 @@ public sealed class IntFilterStrategyTests
     [Fact]
     public void UnknownOperator_ReturnsAll() =>
         Filter("CONTAINS", "10").Should().HaveCount(4);
+
+    // ── IN ──
+    [Fact]
+    public void In_ReturnsItemsMatchingAnyListedValue() =>
+        Filter("IN", "5,15").Select(i => i.Count).Should().BeEquivalentTo([5, 15]);
+
+    [Fact]
+    public void In_TrimsWhitespaceAroundValues() =>
+        Filter("IN", " 10 , 20 ").Should().HaveCount(2);
+
+    [Fact]
+    public void In_SkipsUnparseableValues() =>
+        Filter("IN", "5,not-a-number,20").Select(i => i.Count).Should().BeEquivalentTo([5, 20]);
+
+    [Fact]
+    public void In_WithNoParseableValues_ReturnsAll() =>
+        Filter("IN", "a,b,c").Should().HaveCount(4);
+
+    [Fact]
+    public void In_WithEmptyValue_ReturnsAll() =>
+        Filter("IN", string.Empty).Should().HaveCount(4);
 }
