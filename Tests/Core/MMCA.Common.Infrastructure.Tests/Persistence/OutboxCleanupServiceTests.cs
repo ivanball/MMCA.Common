@@ -36,6 +36,7 @@ public sealed class OutboxCleanupServiceTests
     // LoggerMessage event names (the source generator names the EventId after the logging method);
     // the sweep tests use them both to assert specific log entries and as completion signals.
     private const string PurgedEvent = "LogPurged";
+    private const string DeadLetterPurgedEvent = "LogDeadLetterPurged";
     private const string InboxPurgedEvent = "LogInboxPurged";
     private const string SourceErrorEvent = "LogSourcePurgeError";
 
@@ -263,6 +264,43 @@ public sealed class OutboxCleanupServiceTests
         remaining.Should().BeEquivalentTo(
             [recentProcessed.Id, pending.Id],
             "only PROCESSED rows older than the retention cutoff are purged; newer processed rows and pending rows survive");
+    }
+
+    // ── Purge sweep: dead-lettered rows (retries exhausted) older than retention are purged ──
+    [Fact]
+    public async Task PurgeSweep_DeletesDeadLetteredRowsOlderThanRetention_KeepsRecentAndStillRetrying()
+    {
+        var timeProvider = new FakeTimeProvider(SweepStart);
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync(CancellationToken.None);
+        await using var context = CleanupTestContext.Create(connection);
+
+        // MaxRetries 3: RetryCount >= 3 is dead-lettered; RetryCount 1 is still eligible to retry.
+        var oldDeadLettered = DeadLetteredOutboxMessage(SweepStart.UtcDateTime.AddDays(-8), retryCount: 3);
+        var recentDeadLettered = DeadLetteredOutboxMessage(SweepStart.UtcDateTime.AddDays(-1), retryCount: 3);
+        var oldStillRetrying = PendingWithRetries(SweepStart.UtcDateTime.AddDays(-30), retryCount: 1);
+        context.AddRange(oldDeadLettered, recentDeadLettered, oldStillRetrying);
+        await context.SaveChangesAsync(CancellationToken.None);
+
+        var (sut, sweepObserved, _, scopeServices) = CreateSweepSut(
+            timeProvider,
+            _ => context,
+            [DataSourceKey.Default(DataSource.Sqlite)],
+            new OutboxSettings { RetentionDays = 7, CleanupIntervalHours = 1, MaxRetries = 3, DataSource = DataSource.Sqlite },
+            observedLogEvent: DeadLetterPurgedEvent);
+        await using var scope = scopeServices;
+        using var service = sut;
+
+        await service.StartAsync(CancellationToken.None);
+        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await service.StopAsync(CancellationToken.None);
+
+        List<Guid> remaining = await context.Set<OutboxMessage>().AsNoTracking()
+            .Select(m => m.Id)
+            .ToListAsync(CancellationToken.None);
+        remaining.Should().BeEquivalentTo(
+            [recentDeadLettered.Id, oldStillRetrying.Id],
+            "only dead-lettered rows older than retention are purged; recent dead rows and still-retrying rows survive");
     }
 
     // ── Purge sweep: one unreachable source must not stop the others from being purged ──
@@ -498,6 +536,23 @@ public sealed class OutboxCleanupServiceTests
         EventType = "Test.Event",
         Payload = "{}",
         OccurredOn = occurredOn,
+    };
+
+    private static OutboxMessage DeadLetteredOutboxMessage(DateTime occurredOn, int retryCount) => new()
+    {
+        EventType = "Test.Event",
+        Payload = "{}",
+        OccurredOn = occurredOn,
+        RetryCount = retryCount,
+        LastError = "boom",
+    };
+
+    private static OutboxMessage PendingWithRetries(DateTime occurredOn, int retryCount) => new()
+    {
+        EventType = "Test.Event",
+        Payload = "{}",
+        OccurredOn = occurredOn,
+        RetryCount = retryCount,
     };
 
     private static InboxMessage InboxMessageProcessedOn(DateTime processedOn) => new()
