@@ -49,4 +49,17 @@ public sealed class GuidFilterStrategyTests
     [Fact]
     public void UnknownOperator_ReturnsAll() =>
         Filter("CONTAINS", Guid1String).Should().HaveCount(4);
+
+    // ── IN ──
+    [Fact]
+    public void In_ReturnsItemsMatchingAnyListedValue() =>
+        Filter("IN", $"{Guid1String},{Guid2String}").Should().HaveCount(2);
+
+    [Fact]
+    public void In_SkipsUnparseableValues() =>
+        Filter("IN", $"{Guid1String},not-a-guid").Should().ContainSingle();
+
+    [Fact]
+    public void In_WithNoParseableValues_ReturnsAll() =>
+        Filter("IN", "nope").Should().HaveCount(4);
 }

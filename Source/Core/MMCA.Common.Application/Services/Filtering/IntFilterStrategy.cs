@@ -13,11 +13,15 @@ internal sealed class IntFilterStrategy : IFilterStrategy
     public IReadOnlySet<string> SupportedOperators { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         "EQUALS", "NOT EQUALS", "GREATER THAN", "LESS THAN",
-        "GREATER THAN OR EQUAL", "LESS THAN OR EQUAL"
+        "GREATER THAN OR EQUAL", "LESS THAN OR EQUAL", "IN"
     }.ToFrozenSet(StringComparer.Ordinal);
 
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
     {
+        // IN takes a comma-separated set; every other operator takes a single value.
+        if (op == "IN")
+            return ApplyIn(query, property, value);
+
         if (!int.TryParse(value, out var intValue))
             return query;
 
@@ -31,5 +35,11 @@ internal sealed class IntFilterStrategy : IFilterStrategy
             "LESS THAN OR EQUAL" => query.Where($"{property} <= @0", intValue),
             _ => query
         };
+    }
+
+    private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
+    {
+        var values = FilterValueParser.ParseList(value, static s => int.TryParse(s, out var v) ? v : (int?)null);
+        return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
     }
 }

@@ -72,4 +72,18 @@ public sealed class StringFilterStrategyTests
     [Fact]
     public void UnknownOperator_ReturnsAll() =>
         Filter("BETWEEN", "Alice").Should().HaveCount(5);
+
+    // ── IN ──
+    [Fact]
+    public void In_ReturnsItemsMatchingAnyListedValue() =>
+        Filter("IN", "Alice,David").Select(i => i.Name).Should()
+            .HaveCount(2).And.Contain("Alice").And.Contain("David");
+
+    [Fact]
+    public void In_TrimsWhitespaceAroundValues() =>
+        Filter("IN", " Bob , Charlie ").Should().HaveCount(2);
+
+    [Fact]
+    public void In_WithEmptyValue_ReturnsAll() =>
+        Filter("IN", string.Empty).Should().HaveCount(5);
 }
