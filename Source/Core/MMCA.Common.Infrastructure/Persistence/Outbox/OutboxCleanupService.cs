@@ -12,13 +12,16 @@ using MMCA.Common.Infrastructure.Settings;
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 
 /// <summary>
-/// Background service that periodically purges <b>processed</b> <see cref="OutboxMessage"/> rows
-/// older than <see cref="OutboxSettings.RetentionDays"/> from every relational data source in use.
+/// Background service that periodically purges spent <see cref="OutboxMessage"/> rows older than
+/// <see cref="OutboxSettings.RetentionDays"/> from every relational data source in use: both
+/// <b>processed</b> rows and <b>dead-lettered</b> rows (retries exhausted, never delivered).
 /// <para>
-/// The <see cref="OutboxProcessor"/> only ever sets <c>ProcessedOn</c>; without this sweep the
-/// outbox table — which stores serialized event payloads that may contain personal data — grows
-/// without bound (ADR-003 / ADR-005). Set <see cref="OutboxSettings.RetentionDays"/> to <c>0</c>
-/// to disable purging.
+/// The <see cref="OutboxProcessor"/> only ever sets <c>ProcessedOn</c>; a message that exhausts
+/// <see cref="OutboxSettings.MaxRetries"/> keeps <c>ProcessedOn</c> null forever, so without this
+/// sweep the outbox table — which stores serialized event payloads that may contain personal data —
+/// grows without bound (ADR-003 / ADR-005), and dead rows also linger in the pending index where
+/// every poll re-scans them. Set <see cref="OutboxSettings.RetentionDays"/> to <c>0</c> to disable
+/// purging.
 /// </para>
 /// </summary>
 /// <param name="scopeFactory">Factory for creating a DI scope per sweep.</param>
@@ -96,6 +99,25 @@ public sealed partial class OutboxCleanupService(
                     LogPurged(logger, deleted, sourceName);
                 }
 
+                // Dead-lettered rows (retries exhausted) keep ProcessedOn null forever, so the
+                // OutboxProcessor's poll excludes them (RetryCount < MaxRetries) but the processed
+                // sweep above never reaches them: they accumulate without bound AND stay in the
+                // ProcessedOn-IS-NULL pending index, re-scanned by every poll cycle. Purge them on
+                // the same retention window, keyed on OccurredOn since they have no ProcessedOn.
+                // This permanently abandons an undelivered event after RetentionDays; the failure is
+                // already recorded on the row (LastError) and logged by the processor before then.
+                var deadLettered = await context.Set<OutboxMessage>()
+                    .Where(m => m.ProcessedOn == null
+                        && m.RetryCount >= _settings.MaxRetries
+                        && m.OccurredOn < cutoff)
+                    .ExecuteDeleteAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (deadLettered > 0)
+                {
+                    LogDeadLetterPurged(logger, deadLettered, sourceName);
+                }
+
                 if (_inboxEnabled)
                 {
                     await PurgeInboxAsync(context, cutoff, sourceName, cancellationToken).ConfigureAwait(false);
@@ -153,6 +175,9 @@ public sealed partial class OutboxCleanupService(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Purged {Count} processed outbox messages older than retention from {DataSourceName}")]
     private static partial void LogPurged(ILogger logger, int count, string dataSourceName);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Purged {Count} dead-lettered (retries exhausted) outbox messages older than retention from {DataSourceName}")]
+    private static partial void LogDeadLetterPurged(ILogger logger, int count, string dataSourceName);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Purged {Count} processed inbox messages older than retention from {DataSourceName}")]
     private static partial void LogInboxPurged(ILogger logger, int count, string dataSourceName);
