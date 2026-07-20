@@ -28,7 +28,9 @@ migration (no `sqlcmd` / `dotnet ef database update` apply in `deploy.yml`).
   and `MMCA.ADC/infra/main.bicep:831,972,1067,1184` (Identity/Conference/Engagement/Notification) all set
   `DatabaseInitStrategy = 'Migrate'`.
 - **One applier per revision.** Each service runs `minReplicas: 1`, so the startup `MigrateAsync` is not
-  racing sibling replicas of the same revision.
+  racing sibling replicas of the same revision. (Since the 2026-07-19 outbox lease revision, ADR-003,
+  this migration serialization is the only correctness reason left for `minReplicas: 1`; the outbox
+  is scale-out safe by construction, so above one replica the setting is a cost/migration choice.)
 - **No deploy-step backstop, on purpose.** Both `deploy.yml` files carry an explicit comment that there
   is *no external `sqlcmd` migration backstop* and that each service is the **sole migrator**
   (`MMCA.Store/.github/workflows/deploy.yml:642`, `MMCA.ADC/.github/workflows/deploy.yml:658`). The

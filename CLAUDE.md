@@ -20,9 +20,10 @@ dotnet run --project build/facts -- .                                           
 ```
 
 CI (`.github/workflows/ci.yml`) jobs on every push/PR to `main`:
-- **build-and-test**: FACTS drift gate (`build/facts -- . --check`) -> restore -> Release build -> vuln audit -> tests under `dotnet-coverage` with `--minimum-expected-tests 1`. The vuln audit re-applies the `NuGetAuditSuppress` list from `Directory.Build.props` itself (`dotnet list --vulnerable` ignores suppressions).
-- **ui-e2e**: cross-browser matrix (chromium required gate; firefox/webkit advisory). Builds the out-of-slnx `MMCA.Common.UI.Gallery` + `MMCA.Common.UI.E2E.Tests` directly by csproj path (deliberately excluded from the slnx to keep unit runs fast) and runs axe-core WCAG 2.1 AA scans + a render smoke against the backend-less gallery.
-- **coverage**: merges the tiers (ReportGenerator) and enforces the floor: the unit tier must stay >= 53% line coverage.
+- **build-and-test**: FACTS drift gate (`build/facts -- . --check`) -> restore -> Release build -> vuln audit -> tests under `dotnet-coverage` with `--minimum-expected-tests 2000` (a discovery regression that drops thousands of tests must fail). The vuln audit re-applies the `NuGetAuditSuppress` list from `Directory.Build.props` itself (`dotnet list --vulnerable` ignores suppressions).
+- **ui-e2e**: cross-browser matrix (chromium, firefox, and webkit are all required merge gates). Builds the out-of-slnx `MMCA.Common.UI.Gallery` + `MMCA.Common.UI.E2E.Tests` directly by csproj path (deliberately excluded from the slnx to keep unit runs fast) and runs axe-core WCAG 2.1 AA scans + a render smoke against the backend-less gallery.
+- **package-consumption**: packs every slnx package into a local folder feed, then restores + builds a throwaway consumer (outside the repo checkout) against those nupkgs, catching pack breaks (NU5xxx) and package-mode-only restore/analyzer failures before a release (source-mode builds mask them).
+- **coverage**: merges the tiers (ReportGenerator) and enforces the floor: the unit tier must stay >= 68.3% line coverage.
 
 Windows jobs build/pack `MMCA.Common.UI.Maui`. Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` tags: build/test/pack, CycloneDX SBOM as a hard gate, push to GitHub Packages.
 
@@ -75,7 +76,7 @@ Queries:  FeatureGate -> Logging -> Caching -> Handler
 - **Logging**: full pipeline duration via `ICorrelationContext`.
 - **Caching**: `ICacheInvalidating` commands invalidate on success (outside the transaction); `IQueryCacheable` queries (with `CacheKey` + `CacheDuration`) cache results.
 - **Validating**: FluentValidation before the transaction opens; queries have no Validating or Transactional decorator.
-- **Transactional**: `ITransactional` commands get a DB transaction; exceptions roll back, business failures (`Result.Failure`) commit but skip cache invalidation.
+- **Transactional**: `ITransactional` commands get a DB transaction; exceptions AND business failures (`Result.Failure`) roll back (atomicity over partial persistence). In-process domain event dispatch is deferred until after a successful commit (`DbContextFactory.ExecuteInTransactionAsync` flushes it post-commit and drops it on rollback), so handlers never act on state that could still roll back; cache invalidation still runs only on success, outside the transaction.
 
 An optional `Profiling` decorator pair is registered by a separate opt-in `AddApplicationProfiling()` call and is not wired by any host today.
 
@@ -85,7 +86,7 @@ An optional `Profiling` decorator pair is registered by a separate opt-in `AddAp
 
 ### Entity Model
 
-`BaseEntity<TId>` (required init `Id`) -> `AuditableBaseEntity<TId>` (adds `CreatedOn/By`, `LastModifiedOn/By`, `IsDeleted`) -> `AuditableAggregateRootEntity<TId>` (adds domain events, `GetChildOrNotFound<T>()`, `SetItems<T>()`). Aggregates use static `Create(...)` factories returning `Result<T>`; invariants live in static classes composed with `Result.Combine()`. Domain events are collected via `AddDomainEvent()` and dispatched by `DomainEventDispatcher` after `SaveChangesAsync()` within the same transaction (compiled expression delegates, cached per event type; handlers auto-discovered via Scrutor).
+`BaseEntity<TId>` (required init `Id`) -> `AuditableBaseEntity<TId>` (adds `CreatedOn/By`, `LastModifiedOn/By`, `IsDeleted`) -> `AuditableAggregateRootEntity<TId>` (adds domain events, `GetChildOrNotFound<T>()`, `SetItems<T>()`). Aggregates use static `Create(...)` factories returning `Result<T>`; invariants live in static classes composed with `Result.Combine()`. Domain events are collected via `AddDomainEvent()` and dispatched by `DomainEventDispatcher` after `SaveChangesAsync()` (deferred until after commit when a transaction is active; compiled expression delegates, cached per event type; handlers auto-discovered via Scrutor).
 
 Identifier aliases: `GlobalUsings.IdentifierType.cs` (Domain) and `GlobalUsings.NotificationIdentifierType.cs` (Shared) are linked into all projects via `Directory.Build.props`; to add a solution-wide alias, create the `GlobalUsings.*.cs` file and a matching `<Compile Include ... Link=... />` block there.
 
@@ -99,7 +100,7 @@ Every entity resolves to a physical data source: a `DataSourceKey(Engine, Name)`
 - **Cross-source relationships auto-degrade** (`CrossDataSourceDegradeConvention`): FK constraints and navigations are removed when a relationship spans physical sources (scalar FK columns + compensating index survive). Runtime navigation flows through `INavigationPopulator` batch loading; cross-source consistency is the outbox's job. Transactions are per-source, best-effort sequential (no two-phase commit).
 - **Design time**: `DesignTimeDbContextHelper.CreateSqlServer(args, ...)` builds a per-source context for `dotnet ef ... -- --datasource <Name>`, enabling one migrations project per database.
 
-**SaveChanges flow**: stamp audit fields -> capture domain events -> serialize to `OutboxMessage` entries -> `base.SaveChangesAsync()` (data + outbox in one transaction) -> dispatch events in-process -> mark outbox processed.
+**SaveChanges flow**: stamp audit fields -> capture domain events -> serialize to `OutboxMessage` entries -> `base.SaveChangesAsync()` (data + outbox in one transaction) -> dispatch local domain events in-process -> mark their outbox rows processed. Integration events (`IIntegrationEvent`) are NOT dispatched in-process: their outbox rows stay unprocessed and the `OutboxProcessor` publishes them via `IMessageBus`, so the registered transport (in-process or broker) determines delivery. Inside a Transactional command all post-save dispatch is deferred until after commit.
 
 ### Outbox Pattern
 

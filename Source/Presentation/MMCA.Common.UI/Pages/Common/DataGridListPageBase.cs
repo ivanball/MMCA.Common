@@ -29,6 +29,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     [Inject] private PersistentComponentState ApplicationState { get; set; } = default!;
 
     protected bool IsLoading { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the most recent grid/mobile fetch failed. On failure the
+    /// grid renders with zero rows, which is visually identical to a genuinely empty list once
+    /// the error snackbar expires — pages should therefore branch on this flag in
+    /// <c>NoRecordsContent</c> (or above the mobile list) to show an inline
+    /// error-with-retry instead of the "no records" empty state. Reset by the next fetch.
+    /// </summary>
+    protected bool LoadFailed { get; private set; }
     protected abstract string Title { get; }
 
     /// <summary>True when the viewport is below the sidebar-collapse threshold (phone or tablet, &lt; 960 px).</summary>
@@ -450,6 +459,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
 
         IsLoading = true;
+        LoadFailed = false;
         StateHasChanged();
 
         var filters = ExtractGridFilters(state);
@@ -491,6 +501,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         catch (Exception ex)
         {
             Snackbar.Add(ErrorMessages.LoadError(Title, ex), Severity.Error);
+            LoadFailed = true;
             return new GridData<TDto> { Items = [], TotalItems = 0 };
         }
         finally
@@ -528,6 +539,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         await ResetCancellationTokenAsync();
 
         IsLoading = true;
+        LoadFailed = false;
         StateHasChanged();
 
         var filters = new Dictionary<string, (string Operator, string Value)>();
@@ -547,6 +559,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         catch (Exception ex)
         {
             Snackbar.Add(ErrorMessages.LoadError(Title, ex), Severity.Error);
+            LoadFailed = true;
             MobileItems = [];
             MobileTotalItems = 0;
         }

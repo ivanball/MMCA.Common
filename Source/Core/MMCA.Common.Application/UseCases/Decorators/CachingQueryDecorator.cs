@@ -56,9 +56,11 @@ public sealed class CachingQueryDecorator<TQuery, TResult>(
         {
             keyLock.Release();
 
-            // Eagerly remove the semaphore when no other requests are waiting on it
-            if (keyLock.CurrentCount == 1)
-                QueryCacheKeyLocks.Locks.TryRemove(cacheable.CacheKey, out _);
+            // No eager removal: a remove between another request's GetOrAdd and WaitAsync
+            // would leave that request holding a semaphore no longer in the table, so a third
+            // request would create a fresh one and both would execute concurrently. Entries
+            // are bounded by the set of distinct cache keys and SemaphoreSlim holds no OS
+            // handle here, so the table's steady-state footprint is negligible.
         }
     }
 }
@@ -68,8 +70,15 @@ public sealed class CachingQueryDecorator<TQuery, TResult>(
 /// Kept in a non-generic holder so every closed generic decorator shares one table
 /// (statics on a generic type would be per closed type).
 /// </summary>
+/// <remarks>
+/// The lock is per-process: with multiple app instances over a shared distributed cache
+/// (e.g. Redis), stampede protection is best-effort — at most one handler execution per
+/// instance, not one cluster-wide. That duplication is harmless (last write wins with equal
+/// content); a cluster-wide guarantee would need a distributed lock and is deliberately
+/// not attempted here.
+/// </remarks>
 internal static class QueryCacheKeyLocks
 {
-    /// <summary>Per-key semaphores; entries are removed when no waiters remain.</summary>
+    /// <summary>Per-key semaphores, one per distinct cache key for the process lifetime.</summary>
     internal static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.Ordinal);
 }

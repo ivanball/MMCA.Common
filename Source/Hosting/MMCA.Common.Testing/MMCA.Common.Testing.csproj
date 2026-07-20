@@ -2,8 +2,9 @@
   <PropertyGroup>
     <PackageId>MMCA.Common.Testing</PackageId>
     <Description>MMCA framework — shared integration test infrastructure: base classes, JWT token generator, HTTP helpers</Description>
-    <!-- Relax analyzer rules for test infrastructure (same as Tests/**/*.cs in .editorconfig) -->
-    <NoWarn>$(NoWarn);CA1054;CA2234;S2743;S4457;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0004;MA0051;MA0076;RCS1046;S6966</NoWarn>
+    <!-- Relax the documentation analyzers for test infrastructure (same as Tests/**/*.cs in
+         .editorconfig), plus only the rules the code still triggers (kept minimal on purpose). -->
+    <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA2234;S2743</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -17,9 +18,16 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.FeatureManagement" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="Respawn" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- HandlerTestBase mocks the framework's IUnitOfWork/IRepository contracts and
+         DecoratorPipelineOrderTestsBase resolves ICommandHandler/IQueryHandler pipelines, so this
+         package depends on MMCA.Common.Application (same lockstep version when packed). -->
+    <ProjectReference Include="..\..\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

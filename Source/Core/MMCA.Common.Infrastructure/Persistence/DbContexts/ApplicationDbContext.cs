@@ -80,7 +80,37 @@ public abstract class ApplicationDbContext(
     {
         using var step = MiniProfiler.Current?.Step("MMCA.Common.Infrastructure.ApplicationDbContext: SaveChangesAsync");
         CurrentSaveUserId = userId;
-        return await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Reset so a later plain base.SaveChangesAsync on this instance (e.g. an internal
+            // outbox write) cannot silently reuse the previous caller's identity for its stamps.
+            CurrentSaveUserId = null;
+        }
+    }
+
+    /// <summary>
+    /// Synchronous counterpart of <see cref="SaveChangesAsync(UserIdentifierType?, CancellationToken)"/>:
+    /// stamps audit fields with <paramref name="userId"/> through the same interceptor pipeline.
+    /// The sync path cannot dispatch events in-process; captured events are delivered by the
+    /// outbox processor instead (see <see cref="DomainEventSaveChangesInterceptor"/>).
+    /// </summary>
+    /// <param name="userId">The current user's ID for audit stamps, or <see langword="null"/> for system operations.</param>
+    /// <returns>The number of state entries written to the database.</returns>
+    public int SaveChanges(UserIdentifierType? userId)
+    {
+        CurrentSaveUserId = userId;
+        try
+        {
+            return base.SaveChanges();
+        }
+        finally
+        {
+            CurrentSaveUserId = null;
+        }
     }
 
     /// <inheritdoc />
@@ -114,6 +144,11 @@ public abstract class ApplicationDbContext(
         // collapses onto one database (the monolith case).
         var registry = serviceProvider.GetRequiredService<IEntityDataSourceRegistry>();
         configurationBuilder.Conventions.Add(_ => new CrossDataSourceDegradeConvention(DataSourceKey, registry));
+
+        // Unique indexes on soft-deletable entities exclude deleted rows (runs at finalization,
+        // after module configurations have declared their indexes), so a soft-deleted row does
+        // not block re-creating the "same" record. Hand-authored index filters are respected.
+        configurationBuilder.Conventions.Add(_ => new SoftDeleteUniqueIndexConvention(DataSourceKey.Engine));
     }
 
     public override DbSet<TEntity> Set<TEntity>()

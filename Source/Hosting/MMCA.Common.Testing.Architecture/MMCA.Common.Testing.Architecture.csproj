@@ -4,11 +4,11 @@
     <Description>MMCA framework — shared architecture fitness-function infrastructure: IArchitectureMap abstraction, reusable NetArchTest rule library, and abstract xUnit test bases consumed by each repo's *.Architecture.Tests project</Description>
     <!--
       This package ships abstract xUnit [Fact] bases, so it carries test-style member names
-      (underscores) and broad reflection. Relax the naming/doc/reflection analyzers exactly as the
-      sibling MMCA.Common.Testing package does for test infrastructure, plus CA1707 (underscores in
-      the inherited [Fact] method names) and CA2263 (NetArchTest generic-overload guidance).
+      (underscores). Relax the documentation analyzers exactly as the sibling MMCA.Common.Testing
+      package does for test infrastructure, plus CA1707 (underscores in the inherited [Fact]
+      method names) and only the rules the code still triggers (kept minimal on purpose).
     -->
-    <NoWarn>$(NoWarn);CA1707;CA2263;CA1054;CA2234;S2743;S4457;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0004;MA0051;MA0076;MA0127;RCS1046;RCS1112;S6966</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0076;MA0127;RCS1112</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MinVer">

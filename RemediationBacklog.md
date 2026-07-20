@@ -696,6 +696,55 @@ package: `Microsoft.Extensions.TimeProvider.Testing` 10.7.0.
 
 ---
 
+## Deferred - 2026-07-19 full review (recorded, not scheduled)
+
+> The 2026-07-19 full framework review shipped its accepted fixes on the review branch (rollback on
+> business failure + post-commit dispatch, outbox leases + dead-letter visibility, integration-event
+> routing via `IMessageBus`; ADR-003/014/030 revisions record them). The items below were reviewed
+> and **deliberately deferred**: each is real, none is scheduled, and each records why it did not
+> ship with the wave. IDs follow the C-1..C-7 precedent (FR = full review).
+
+- [ ] **FR-1 (§32/§16) - Re-split `MMCA.Common.Infrastructure` into opt-in provider packages
+  (Cosmos / AzureMessaging / Media).** The single Infrastructure package drags all three EF
+  providers (SQL Server, Cosmos, SQLite), three messaging stacks (in-process, RabbitMQ, Azure
+  Service Bus via MassTransit), and ImageSharp into every consumer's dependency graph, SBOM, and
+  vulnerability surface, whether or not the consumer uses them (the suppressed SQLite advisory
+  GHSA-2m69-gcr7-jv3q is a live example: every consumer inherits it for an engine most never
+  enable). Deferred: a package split is a breaking, lockstep-wide re-shape (ADR-016) that needs its
+  own design pass and consumer sweep. *(Effort L.)*
+- [ ] **FR-2 (§15) - `Result<T>.Value` throw-on-failure guard.** Reading `.Value` on a failed
+  result silently returns `null`/default today; a guard that throws would convert the silent-null
+  trap into a loud contract violation. Deferred as a breaking behavioral change (consumers may
+  depend on the lenient read); the trap is documented in the `Result<T>` doc-comments for now.
+  *(Effort M, breaking.)*
+- [ ] **FR-3 (§6) - `TResult : Result` compile-time constraint on handler signatures.** The
+  decorator pipeline assumes handler results are `Result`-shaped (the Transactional decorator
+  pattern-matches `Result { IsFailure: true }`); a generic constraint would make that assumption
+  compile-time instead of runtime. Deferred as a breaking generic-signature change; covered in the
+  interim by a new architecture rule asserting command/query result types derive from `Result`.
+  *(Effort M, breaking.)*
+- [ ] **FR-4 (§33) - Reconsider the C# preview extension-type DI surface.** DI registration methods
+  use `extension(IServiceCollection)` blocks (`LangVersion: preview`). As the public registration
+  surface of a published framework this is an adoption risk: consumers must also build with a
+  preview language version until the feature GAs. Revisit when .NET ships the feature as stable;
+  reverting to classic extension methods is mechanical but wide. *(Effort M, watch item.)*
+- [ ] **FR-5 (§8) - Cascade soft-delete semantics.** Soft-deleting an aggregate root leaves its
+  children active: global query filters hide the root but child rows (and anything reached through
+  them) stay live. Correct behavior is per-aggregate (some children should follow the root, some
+  must survive it), so this needs a per-aggregate design pass, not a blanket cascade helper.
+  *(Effort M-L, design first.)*
+- [ ] **FR-6 (§14) - `MMCA.Common.UI.Maui` has zero automated tests.** The one MAUI-TFM package is
+  built and packed by the dedicated windows CI jobs (ADR-042) but nothing exercises it: the
+  capability contracts and fallbacks are tested in `MMCA.Common.UI.Tests`, while the thin
+  Essentials wrappers themselves are verified only on-device. Options: a windows-job unit tier for
+  the wrapper logic, or a documented on-device smoke checklist. *(Effort M.)*
+- [ ] **FR-7 (§34) - CS1591 ratchet.** XML doc coverage is enforced by convention, not the
+  compiler: `CS1591` sits in `NoWarn` (`Directory.Build.props:16`), so a public member can ship
+  undocumented without a build break. Ratchet per-project (remove the suppression where already
+  clean, then expand) rather than repo-wide at once. *(Effort S per project, long tail.)*
+
+---
+
 ## 🔴 Priority 6 — highest leverage
 
 ### [x] #28 · Front-End Testing & Quality — score 2 → 4 (weight 3) · *RESOLVED 2026-06-27*

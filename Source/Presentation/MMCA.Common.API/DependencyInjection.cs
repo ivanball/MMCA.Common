@@ -163,7 +163,7 @@ public static class DependencyInjection
         /// </summary>
         /// <param name="moduleLoader">
         /// The module loader containing discovered enabled and disabled modules.
-        /// Must be called after <see cref="ModuleLoader.DiscoverAndRegister"/>.
+        /// Must be called after <see cref="ModuleLoader.DiscoverAndRegister(Microsoft.Extensions.DependencyInjection.IServiceCollection, Microsoft.Extensions.Configuration.IConfigurationBuilder, MMCA.Common.Application.Settings.ApplicationSettings, MMCA.Common.Application.Settings.ModulesSettings, string?)"/>.
         /// </param>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddModuleHealthChecks(ModuleLoader moduleLoader)

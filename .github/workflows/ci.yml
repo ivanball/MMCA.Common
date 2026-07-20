@@ -40,7 +40,9 @@ jobs:
           # `dotnet list --vulnerable` ignores NuGetAuditSuppress, so honor the same accepted-advisory
           # list here (single source of truth: Directory.Build.props). Fail only on a vulnerable-package
           # row (">") whose advisory is NOT suppressed — e.g. the unpatched SQLite advisory is accepted.
-          suppressed=$(grep -oE 'GHSA-[a-z0-9-]+' Directory.Build.props | sort -u | paste -sd'|' -)
+          # Scoped to actual <NuGetAuditSuppress> lines: a GHSA id mentioned in a comment about a
+          # NON-accepted advisory must not silently suppress it here.
+          suppressed=$(grep -E '<NuGetAuditSuppress\b' Directory.Build.props | grep -oE 'GHSA-[a-z0-9-]+' | sort -u | paste -sd'|' -)
           echo "Accepted (suppressed) advisories: ${suppressed:-<none>}"
           vulns=$(grep -E '^[[:space:]]*>[[:space:]]' audit.log || true)
           if [ -n "$suppressed" ]; then
@@ -59,8 +61,10 @@ jobs:
         # test failure still gates. Coverage is report-only (see the `coverage` job).
         run: |
           export PATH="$PATH:$HOME/.dotnet/tools"
+          # Floor at 2000 (suite is ~2,254): a discovery/filter regression that silently drops
+          # thousands of tests must fail the job, not pass green with a handful discovered.
           dotnet-coverage collect -f cobertura -o coverage.unit.cobertura.xml \
-            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 1"
+            "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 2000"
 
       - name: Upload coverage (unit + architecture + bUnit)
         if: always()
@@ -300,7 +304,90 @@ jobs:
 
       - name: Test Helpdesk (domain + architecture, no DB)
         working-directory: MMCA.Helpdesk
-        run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 1
+        # Helpdesk's suite is ~44 tests; floor at 40 so a discovery/filter regression fails
+        # instead of passing green with near-zero tests discovered.
+        run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 40
+
+  # Package-mode consumption canary: pack every slnx package into a local folder feed, then
+  # restore + build a minimal throwaway consumer against those nupkgs. Catches pack breaks (NU5xxx)
+  # and package-mode-only restore/analyzer/reference failures BEFORE a release: source-mode builds
+  # (local.props, and the consumer-source-build job above) bind ProjectReferences, so this failure
+  # mode has shipped twice without CI seeing it. MinVer is skipped with an explicit CI-only version
+  # (the same mechanism release.yml uses), so the consumer can pin the packed version exactly; its
+  # nuget.config maps MMCA.Common.* to the local feed and everything else to nuget.org. The
+  # throwaway consumer lives in RUNNER_TEMP, outside the repo checkout, so it does NOT inherit
+  # Directory.Build.props/Directory.Packages.props — it consumes the packages the way a real
+  # downstream app does. Runs parallel to build-and-test, not behind it.
+  package-consumption:
+    name: Package-mode consumer (pack + local feed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PACK_VERSION: 0.0.1-ci.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # MinVer needs full history (MinVerSkip pins the version, but keep parity)
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Pack all packages to a local folder feed
+        run: dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs -p:MinVerSkip=true -p:Version=$PACK_VERSION -p:PackageVersion=$PACK_VERSION
+
+      - name: Scaffold throwaway package consumer
+        # A classlib referencing the meta set (API + Infrastructure + Testing.Architecture) pulls
+        # the full package graph transitively; the smoke type proves the refs actually bind.
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkg-consumer"
+          cd "$RUNNER_TEMP/pkg-consumer"
+          cat > nuget.config <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local-nupkgs" value="$GITHUB_WORKSPACE/nupkgs" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="local-nupkgs">
+                <package pattern="MMCA.Common.*" />
+              </packageSource>
+              <packageSource key="nuget.org">
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          cat > Consumer.csproj <<EOF
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <TargetFramework>net10.0</TargetFramework>
+              <Nullable>enable</Nullable>
+              <ImplicitUsings>enable</ImplicitUsings>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="MMCA.Common.API" Version="$PACK_VERSION" />
+              <PackageReference Include="MMCA.Common.Infrastructure" Version="$PACK_VERSION" />
+              <PackageReference Include="MMCA.Common.Testing.Architecture" Version="$PACK_VERSION" />
+            </ItemGroup>
+          </Project>
+          EOF
+          cat > Smoke.cs <<'EOF'
+          using MMCA.Common.Shared.Abstractions;
+
+          namespace PackageConsumer;
+
+          public static class Smoke
+          {
+              public static Result Ok() => Result.Success();
+          }
+          EOF
+
+      - name: Restore and build consumer against the packed nupkgs
+        working-directory: ${{ runner.temp }}/pkg-consumer
+        run: dotnet build Consumer.csproj -c Release
 
   # Reference-deployment validation gate (§17): the samples/deployment Bicep is the framework's
   # distilled IaC/OIDC reference (a library cannot deploy itself; DEPLOYMENT.md), so keep it

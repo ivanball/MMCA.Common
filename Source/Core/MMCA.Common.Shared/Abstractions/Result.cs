@@ -55,12 +55,17 @@ public class Result
     public static Result<T> Failure<T>(IEnumerable<Error> errors) => new(errors);
 
     /// <summary>Creates a failed non-generic result from multiple errors.</summary>
-    /// <param name="errors">The errors describing what went wrong.</param>
+    /// <param name="errors">The errors describing what went wrong. Must contain at least one error.</param>
     /// <returns>A failure <see cref="Result"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="errors"/> is empty:
+    /// with <see cref="IsSuccess"/> derived from the error count, an accidentally-empty
+    /// collection would otherwise produce a <em>success</em> from a call that explicitly
+    /// asked for a failure.</exception>
     public static Result Failure(IEnumerable<Error> errors)
     {
         var result = new Result();
         result.AddErrors(errors);
+        ThrowIfNoErrors(result);
         return result;
     }
 
@@ -76,6 +81,19 @@ public class Result
     /// <returns>A failure <see cref="Result{T}"/>.</returns>
     public static Result<T> Failure<T>(Error error) =>
         Failure<T>([error]);
+
+    /// <summary>Guards the failure factories against empty error collections.</summary>
+    /// <param name="result">The result that was just built from a caller-supplied error collection.</param>
+    /// <exception cref="ArgumentException">Thrown when the built result carries no errors.</exception>
+    private protected static void ThrowIfNoErrors(Result result)
+    {
+        if (result.IsSuccess)
+        {
+            throw new ArgumentException(
+                "A failure Result requires at least one error; an empty error collection would silently produce a success.",
+                nameof(result));
+        }
+    }
 
     /// <summary>
     /// Merges multiple results into one. If all results are successful, returns success.
@@ -126,8 +144,14 @@ public sealed class Result<T> : Result
     internal Result(T value) => Value = value;
 
     /// <summary>Initializes a new failure result with the specified errors.</summary>
-    /// <param name="errors">One or more errors.</param>
-    internal Result(IEnumerable<Error> errors) => AddErrors(errors);
+    /// <param name="errors">One or more errors. Must contain at least one error.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="errors"/> is empty
+    /// (an empty collection would silently produce a success carrying a null value).</exception>
+    internal Result(IEnumerable<Error> errors)
+    {
+        AddErrors(errors);
+        ThrowIfNoErrors(this);
+    }
 
     /// <summary>
     /// Pattern-matches on the result, invoking <paramref name="onSuccess"/> with the value

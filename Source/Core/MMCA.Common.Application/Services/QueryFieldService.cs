@@ -104,13 +104,18 @@ public sealed class QueryFieldService
     /// <summary>
     /// Applies dynamic sorting via LINQ Dynamic. Resolves DTO property names through
     /// <paramref name="dtoToEntityPropertyMap"/> before building the sort expression.
+    /// A sort column with no map entry is accepted only when it names a real public property
+    /// of <typeparamref name="TEntity"/> (the same contract filter validation applies);
+    /// anything else falls back to <paramref name="defaultSort"/> instead of reaching Dynamic
+    /// LINQ, so a client-supplied string can never order by nested paths or expressions the
+    /// DTO does not expose (hidden-column data inference, unindexed-sort load, parse-error 500s).
     /// </summary>
     /// <typeparam name="TEntity">The entity type.</typeparam>
     /// <param name="query">The queryable to sort.</param>
     /// <param name="sortColumn">The property name to sort by.</param>
     /// <param name="sortDirection">"asc" or "desc".</param>
-    /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping.</param>
-    /// <param name="defaultSort">Fallback sort expression when no sort column is specified.</param>
+    /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored; entries may be navigation paths or expressions).</param>
+    /// <param name="defaultSort">Fallback sort expression when no valid sort column is specified.</param>
     /// <returns>The sorted queryable.</returns>
     public static IQueryable<TEntity> ApplySorting<TEntity>(
         IQueryable<TEntity> query,
@@ -121,10 +126,19 @@ public sealed class QueryFieldService
     {
         if (!string.IsNullOrWhiteSpace(sortColumn))
         {
-            var sortExpr = dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped) ? mapped : sortColumn;
-            var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-            return query.OrderBy($"{sortExpr} {(descending ? "descending" : "ascending")}");
+            var sortExpr = dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped)
+                ? mapped
+                : typeof(TEntity).GetProperty(
+                    sortColumn,
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name;
+
+            if (sortExpr is not null)
+            {
+                var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+                return query.OrderBy($"{sortExpr} {(descending ? "descending" : "ascending")}");
+            }
         }
+
         return defaultSort is not null ? query.OrderBy(defaultSort) : query;
     }
 

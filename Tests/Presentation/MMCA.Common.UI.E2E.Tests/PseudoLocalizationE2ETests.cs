@@ -30,14 +30,30 @@ public sealed class PseudoLocalizationE2ETests : GalleryAxeTestBase
 
     public static TheoryData<string> ScannedPaths => new("/login", "/register", "/components");
 
+    /// <summary>
+    /// Bounded attempts for the sentinel render only. The <c>[!!</c> assertion flakes on webkit
+    /// (the required-check reds of 2026-07-11/12 that historically needed a manual
+    /// <c>rerun --failed</c>); chromium and firefox have never flaked here. The retry reloads the
+    /// page fresh each attempt, so a real localization regression still fails all three attempts;
+    /// the overflow assertion below is NOT retried (it has never flaked).
+    /// </summary>
+    private const int SentinelRenderAttempts = 3;
+
     [Theory]
     [MemberData(nameof(ScannedPaths))]
     public async Task PseudoLocale_RendersSentinel_AndDoesNotOverflowHorizontally(string path)
     {
-        await Page.GotoAsync(WithPseudoCulture(path));
-        await Page.WaitForLoadStateAsync();
+        var content = string.Empty;
+        for (var attempt = 1; attempt <= SentinelRenderAttempts; attempt++)
+        {
+            await Page.GotoAsync(WithPseudoCulture(path));
+            await Page.WaitForLoadStateAsync();
 
-        var content = await Page.ContentAsync();
+            content = await Page.ContentAsync();
+            if (content.Contains("[!!", StringComparison.Ordinal))
+                break;
+        }
+
         Assert.Contains("[!!", content, StringComparison.Ordinal);
 
         var overflow = await HorizontalOverflowPixelsAsync();

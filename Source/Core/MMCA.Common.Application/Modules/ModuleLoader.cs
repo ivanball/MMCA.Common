@@ -17,6 +17,8 @@ public sealed partial class ModuleLoader
     private readonly List<IModule> _enabledModules = [];
     private readonly List<IModuleSeeder> _seeders = [];
     private readonly List<string> _disabledModuleNames = [];
+    private readonly Dictionary<string, List<ServiceDescriptor>> _stubRegistrations = [with(StringComparer.OrdinalIgnoreCase)];
+    private ModulesSettings? _modulesSettings;
 
     /// <summary>Gets the modules that were successfully registered.</summary>
     public IReadOnlyList<IModule> EnabledModules => _enabledModules;
@@ -53,11 +55,35 @@ public sealed partial class ModuleLoader
         ApplicationSettings applicationSettings,
         ModulesSettings modulesSettings,
         string? environmentName = null)
+        => DiscoverAndRegister(
+            services, configurationBuilder, applicationSettings, modulesSettings, environmentName, moduleAssemblies: null);
+
+    /// <summary>
+    /// Overload taking the assemblies to scan explicitly. Prefer this in hosts: the parameterless
+    /// AppDomain scan only sees assemblies already loaded into the AppDomain, so a module assembly
+    /// that is referenced but not yet touched by any code path is silently absent from discovery.
+    /// </summary>
+    /// <param name="services">The service collection to register module services into.</param>
+    /// <param name="configurationBuilder">Allows modules to add their own configuration sources.</param>
+    /// <param name="applicationSettings">Global application settings shared across modules.</param>
+    /// <param name="modulesSettings">Per-module enabled/disabled configuration.</param>
+    /// <param name="environmentName">Optional hosting environment name (e.g. "Development").</param>
+    /// <param name="moduleAssemblies">The assemblies to scan for <see cref="IModule"/> and
+    /// <see cref="IModuleSeeder"/> implementations; <see langword="null"/> scans the AppDomain.</param>
+    public void DiscoverAndRegister(
+        IServiceCollection services,
+        IConfigurationBuilder configurationBuilder,
+        ApplicationSettings applicationSettings,
+        ModulesSettings modulesSettings,
+        string? environmentName,
+        IEnumerable<System.Reflection.Assembly>? moduleAssemblies)
     {
-        // Scan all loaded assemblies for concrete IModule implementations.
+        _modulesSettings = modulesSettings;
+
+        // Scan the given (or all loaded) assemblies for concrete IModule implementations.
         // The try-catch guards against assemblies that throw on GetTypes()
         // (e.g. ReflectionTypeLoadException from missing transitive references).
-        var allTypes = AppDomain.CurrentDomain.GetAssemblies()
+        var allTypes = (moduleAssemblies ?? AppDomain.CurrentDomain.GetAssemblies())
             .SelectMany(a =>
             {
                 try
@@ -90,7 +116,13 @@ public sealed partial class ModuleLoader
             if (!modulesSettings.IsModuleEnabled(module.Name))
             {
                 LogModuleDisabled(Logger, module.Name);
+
+                // Record what the stub registration added so ValidateRemoteDependencies can
+                // later check that remote-declared dependencies were actually re-wired.
+                var countBefore = services.Count;
                 module.RegisterDisabledStubs(services);
+                _stubRegistrations[module.Name] = [.. services.Skip(countBefore)];
+
                 _disabledModuleNames.Add(module.Name);
                 continue;
             }
@@ -165,6 +197,67 @@ public sealed partial class ModuleLoader
         sw.Stop();
         LogModuleRegistered(Logger, module.Name, sw.ElapsedMilliseconds);
         _enabledModules.Add(module);
+    }
+
+    /// <summary>
+    /// Validates, against the built container, that every dependency a module declared as
+    /// remote (<c>Modules:{Module}:RemoteDependencies</c>) is actually satisfied: each service
+    /// type the disabled dependency's stub registration added must resolve, and should no
+    /// longer resolve to the stub implementation itself. Config trust alone is not enough — a
+    /// typo'd or forgotten <c>AddTypedGrpcClient</c> otherwise surfaces as a resolution failure
+    /// (or a silent stub no-op) at the first request instead of at startup.
+    /// </summary>
+    /// <param name="serviceProvider">The built root service provider.</param>
+    /// <exception cref="InvalidOperationException">Thrown when a remote-declared dependency's
+    /// service type cannot be resolved at all.</exception>
+    /// <remarks>Call after the host has wired its cross-process replacements (typed gRPC
+    /// clients), typically right after <c>builder.Build()</c>. A service that intentionally
+    /// keeps a stub (best-effort dependency) triggers a warning, not a failure.</remarks>
+    public void ValidateRemoteDependencies(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        if (_modulesSettings is null)
+            return;
+
+        using var scope = serviceProvider.CreateScope();
+
+        foreach (var module in _enabledModules)
+        {
+            var remoteDeps = module.Dependencies
+                .Where(d => _modulesSettings.IsDependencyRemote(module.Name, d));
+
+            foreach (var dependency in remoteDeps)
+            {
+                if (!_stubRegistrations.TryGetValue(dependency, out var stubs))
+                    continue;
+
+                ValidateRemoteDependencyStubs(scope.ServiceProvider, module.Name, dependency, stubs);
+            }
+        }
+    }
+
+    private void ValidateRemoteDependencyStubs(
+        IServiceProvider scopedProvider,
+        string moduleName,
+        string dependencyName,
+        List<ServiceDescriptor> stubs)
+    {
+        foreach (var stub in stubs.Where(s => !s.ServiceType.IsGenericTypeDefinition))
+        {
+            var resolved = scopedProvider.GetService(stub.ServiceType)
+                ?? throw new InvalidOperationException(
+                    $"Module '{moduleName}' declares dependency '{dependencyName}' as remote, but " +
+                    $"'{stub.ServiceType.FullName}' does not resolve from the container. The host must " +
+                    "register the cross-process replacement (e.g. AddTypedGrpcClient) after " +
+                    "ModuleLoader.DiscoverAndRegister, or remove the RemoteDependencies declaration.");
+
+            if (stub.ImplementationType is not null && resolved.GetType() == stub.ImplementationType)
+            {
+                LogRemoteDependencyStillStub(
+                    Logger, moduleName, dependencyName, stub.ServiceType.Name, stub.ImplementationType.Name);
+            }
+        }
     }
 
     /// <summary>
@@ -259,4 +352,7 @@ public sealed partial class ModuleLoader
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to scan assembly '{AssemblyName}' for modules: {Error}")]
     private static partial void LogAssemblyScanFailed(ILogger logger, string assemblyName, string error);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Module '{ModuleName}' declares dependency '{DependencyName}' as remote, but {ServiceType} still resolves to the disabled stub {StubType} — did the host forget to wire the gRPC client? (Intentional for best-effort dependencies.)")]
+    private static partial void LogRemoteDependencyStillStub(ILogger logger, string moduleName, string dependencyName, string serviceType, string stubType);
 }

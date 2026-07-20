@@ -11,13 +11,30 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 
 /// <summary>
 /// EF Core interceptor that captures domain events from aggregate roots before persistence,
-/// serializes them to the outbox table atomically, and dispatches them in-process after
-/// successful persistence. The <see cref="OutboxProcessor"/> acts as a safety net for any
-/// events that fail in-process dispatch.
+/// serializes them to the outbox table atomically, and routes them after successful persistence:
+/// <list type="bullet">
+///   <item><b>Local domain events</b> are dispatched in-process via
+///   <see cref="IDomainEventDispatcher"/> and their outbox rows marked processed; the
+///   <see cref="OutboxProcessor"/> acts as a safety net if that dispatch fails.</item>
+///   <item><b>Integration events</b> (<see cref="IIntegrationEvent"/>) are NOT dispatched
+///   in-process: their outbox rows stay unprocessed and the <see cref="OutboxProcessor"/>
+///   publishes them via <c>IMessageBus</c>, so the registered transport (in-process for the
+///   monolith, broker for extracted services) determines delivery. This makes
+///   <c>AddDomainEvent(integrationEvent)</c> broker-correct: before this routing, such events
+///   were dispatched locally and marked processed, silently never reaching the wire.</item>
+/// </list>
+/// <para>
+/// When the save runs inside an active transaction (the Transactional decorator path), all
+/// post-save work is <b>deferred until after commit</b>: <see cref="MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory"/>
+/// calls <see cref="FlushDeferredAsync"/> after a successful commit and
+/// <see cref="DropDeferred"/> on rollback. This keeps handler side effects (email, cache
+/// writes, pushes) from acting on state that never commits, and keeps execution-strategy
+/// retries from dispatching the same events once per attempt.
+/// </para>
 /// </summary>
 /// <param name="domainEventDispatcher">Dispatches domain events to in-process handlers.</param>
 /// <param name="logger">Logger for error diagnostics.</param>
-/// <param name="outboxSignal">Signal to wake the outbox processor when in-process dispatch fails.</param>
+/// <param name="outboxSignal">Signal to wake the outbox processor for pending rows.</param>
 public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<DomainEventSaveChangesInterceptor> logger,
@@ -29,6 +46,13 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// cleaned up when the context is disposed, without leaking memory.
     /// </summary>
     private static readonly ConditionalWeakTable<DbContext, CapturedState> StateTable = [];
+
+    /// <summary>
+    /// Post-save work deferred until the surrounding transaction commits, keyed by context.
+    /// Entries carry the owning interceptor instance so the factory can flush through a
+    /// static entry point without a DI edge back to this type.
+    /// </summary>
+    private static readonly ConditionalWeakTable<DbContext, List<DeferredDispatch>> DeferredTable = [];
 
     /// <inheritdoc />
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -67,10 +91,50 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Domain events are only captured during the async path, so the synchronous hook is a no-op.
+    /// The synchronous path cannot await the in-process dispatcher, so it relies entirely on
+    /// the outbox: captured events are cleared from their aggregates (preventing the duplicate
+    /// re-capture a later async save used to produce) and their rows stay unprocessed for the
+    /// <see cref="OutboxProcessor"/> to deliver. Contexts without outbox support keep the
+    /// legacy no-op so a later async save can still deliver their events.
     /// </remarks>
-    public override int SavedChanges(SaveChangesCompletedEventData eventData, int result) =>
-        base.SavedChanges(eventData, result);
+    public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+    {
+        if (eventData.Context is ApplicationDbContext { SupportsOutbox: true } context
+            && StateTable.TryGetValue(context, out var state))
+        {
+            StateTable.Remove(context);
+            ClearDomainEvents(state);
+
+            if (state.LocalOutboxEntries.Count > 0 || state.HasIntegrationEvents)
+                outboxSignal.Signal();
+        }
+
+        return base.SavedChanges(eventData, result);
+    }
+
+    /// <summary>
+    /// Flushes any post-save work that was deferred while <paramref name="context"/> had an
+    /// active transaction. Called by <see cref="MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory"/> after a successful
+    /// commit; a missed flush is safe (rows stay unprocessed and the outbox delivers them).
+    /// </summary>
+    internal static async Task FlushDeferredAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
+        if (!DeferredTable.TryGetValue(context, out var deferred))
+            return;
+
+        DeferredTable.Remove(context);
+
+        foreach (var dispatch in deferred)
+            await dispatch.Owner.FlushStateAsync(context, dispatch.State, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Discards post-save work deferred for <paramref name="context"/>. Called by
+    /// <see cref="MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory"/> on rollback: the aggregate changes and their
+    /// outbox rows rolled back with the transaction, so there is nothing to deliver — and an
+    /// execution-strategy retry must not flush the aborted attempt's events.
+    /// </summary>
+    internal static void DropDeferred(DbContext context) => DeferredTable.Remove(context);
 
     /// <summary>
     /// Captures domain events from aggregate roots and serializes them to the outbox table
@@ -89,27 +153,50 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             .SelectMany(e => e.Entity.DomainEvents)
             .ToArray();
 
-        var outboxEntries = new List<OutboxMessage>(domainEvents.Length);
+        IDomainEvent[] localEvents;
+        var hasIntegrationEvents = false;
+        var localOutboxEntries = new List<OutboxMessage>(domainEvents.Length);
 
         if (context.SupportsOutbox)
         {
+            // Integration events get outbox rows but no in-process dispatch: the rows stay
+            // unprocessed and the OutboxProcessor publishes them via IMessageBus. Local events
+            // get rows AND fast-path in-process dispatch (rows marked processed on success).
+            var locals = new List<IDomainEvent>(domainEvents.Length);
             foreach (var domainEvent in domainEvents)
             {
                 var entry = OutboxMessage.FromDomainEvent(domainEvent);
-                outboxEntries.Add(entry);
 #pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
                 context.Set<OutboxMessage>().Add(entry);
 #pragma warning restore VSTHRD103
+
+                if (domainEvent is IIntegrationEvent)
+                {
+                    hasIntegrationEvents = true;
+                }
+                else
+                {
+                    locals.Add(domainEvent);
+                    localOutboxEntries.Add(entry);
+                }
             }
+
+            localEvents = [.. locals];
+        }
+        else
+        {
+            // No outbox table (e.g. Cosmos): nothing can carry integration events to the bus,
+            // so keep the legacy behavior of dispatching everything in-process.
+            localEvents = domainEvents;
         }
 
-        var state = new CapturedState(aggregateRootEntities, domainEvents, outboxEntries);
+        var state = new CapturedState(aggregateRootEntities, localEvents, localOutboxEntries, hasIntegrationEvents);
         StateTable.AddOrUpdate(context, state);
     }
 
     /// <summary>
-    /// Dispatches captured domain events in-process, marks outbox entries as processed,
-    /// and clears events from aggregate roots.
+    /// Consumes the captured state after a successful save: defers when a transaction is
+    /// active (delivery must not precede commit), otherwise flushes immediately.
     /// </summary>
     private async Task DispatchAndFinalizeAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {
@@ -118,13 +205,35 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
         StateTable.Remove(context);
 
+        if (context.Database.CurrentTransaction is not null)
+        {
+            // Events are cleared NOW so a second save inside the same transaction cannot
+            // re-capture them; the captured copies carry everything the flush needs.
+            ClearDomainEvents(state);
+            DeferredTable.GetOrCreateValue(context).Add(new DeferredDispatch(this, state));
+            return;
+        }
+
+        await FlushStateAsync(context, state, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Dispatches local events in-process, marks their outbox entries processed, and signals
+    /// the outbox processor for integration events (whose rows deliberately stay unprocessed).
+    /// </summary>
+    private async Task FlushStateAsync(ApplicationDbContext context, CapturedState state, CancellationToken cancellationToken)
+    {
         try
         {
-            await domainEventDispatcher.DispatchAsync(state.DomainEvents, cancellationToken).ConfigureAwait(false);
+            if (state.LocalEvents.Length > 0)
+                await domainEventDispatcher.DispatchAsync(state.LocalEvents, cancellationToken).ConfigureAwait(false);
 
             ClearDomainEvents(state);
 
-            await OutboxFinalizer.MarkProcessedAsync(context, state.OutboxEntries, cancellationToken).ConfigureAwait(false);
+            await OutboxFinalizer.MarkProcessedAsync(context, state.LocalOutboxEntries, cancellationToken).ConfigureAwait(false);
+
+            if (state.HasIntegrationEvents)
+                outboxSignal.Signal();
         }
         catch (Exception ex)
         {
@@ -132,7 +241,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
             // In-process dispatch failed — signal the outbox processor to pick up
             // the unprocessed entries once the processing delay has elapsed.
-            if (state.OutboxEntries.Count > 0)
+            if (state.LocalOutboxEntries.Count > 0 || state.HasIntegrationEvents)
                 outboxSignal.Signal();
         }
         finally
@@ -152,8 +261,16 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     private static partial void LogDispatchError(ILogger logger, Exception exception);
 
     /// <summary>Holds state captured before save that is consumed after save.</summary>
+    /// <param name="AggregateRootEntities">The tracked aggregate roots whose events were captured.</param>
+    /// <param name="LocalEvents">Events to dispatch in-process (excludes integration events on outbox-enabled contexts).</param>
+    /// <param name="LocalOutboxEntries">Outbox rows backing <paramref name="LocalEvents"/>, marked processed after successful dispatch.</param>
+    /// <param name="HasIntegrationEvents">Whether any captured event routes through the outbox to <c>IMessageBus</c>.</param>
     private sealed record CapturedState(
         Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<IAggregateRoot>[] AggregateRootEntities,
-        IDomainEvent[] DomainEvents,
-        List<OutboxMessage> OutboxEntries);
+        IDomainEvent[] LocalEvents,
+        List<OutboxMessage> LocalOutboxEntries,
+        bool HasIntegrationEvents);
+
+    /// <summary>A unit of post-commit work: the interceptor that captured it plus its state.</summary>
+    private sealed record DeferredDispatch(DomainEventSaveChangesInterceptor Owner, CapturedState State);
 }

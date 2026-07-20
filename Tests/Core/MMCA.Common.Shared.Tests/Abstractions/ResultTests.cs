@@ -61,6 +61,25 @@ public class ResultTests
         result.Value.Should().Be(default);
     }
 
+    // ── Failure guards: an empty error collection must not produce a "failure" that IsSuccess ──
+    [Fact]
+    public void Failure_EmptyErrors_ThrowsArgumentException()
+    {
+        var act = () => Result.Failure(Enumerable.Empty<Error>());
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*at least one error*");
+    }
+
+    [Fact]
+    public void Failure_Generic_EmptyErrors_ThrowsArgumentException()
+    {
+        var act = () => Result.Failure<int>(Enumerable.Empty<Error>());
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*at least one error*");
+    }
+
     // ── Combine ──
     [Fact]
     public void Combine_AllSuccess_ReturnsSuccess()
@@ -84,6 +103,80 @@ public class ResultTests
         result.Errors.Should().HaveCount(2);
         result.Errors.Should().Contain(e => e.Code == "err1");
         result.Errors.Should().Contain(e => e.Code == "err2");
+    }
+
+    [Fact]
+    public void Combine_NoArguments_ThrowsArgumentException()
+    {
+        var act = () => Result.Combine();
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*At least one result*");
+    }
+
+    // ── Map ──
+    [Fact]
+    public void Map_OnSuccess_TransformsValue()
+    {
+        var result = Result.Success(21).Map(v => v * 2);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void Map_OnFailure_PropagatesErrorsWithoutInvokingMapper()
+    {
+        var mapperInvoked = false;
+        var failure = Result.Failure<int>(Error.Validation("err1", "first"));
+
+        var result = failure.Map(v =>
+        {
+            mapperInvoked = true;
+            return v * 2;
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("err1");
+        mapperInvoked.Should().BeFalse("a failed result must never run the mapping function");
+    }
+
+    // ── BindAsync ──
+    [Fact]
+    public async Task BindAsync_OnSuccess_ChainsToBoundOperation()
+    {
+        var result = await Result.Success(21)
+            .BindAsync(v => Task.FromResult(Result.Success(v * 2)));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task BindAsync_OnSuccess_PropagatesBoundFailure()
+    {
+        var result = await Result.Success(21)
+            .BindAsync(_ => Task.FromResult(Result.Failure<int>(Error.Validation("bound", "bound failed"))));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("bound");
+    }
+
+    [Fact]
+    public async Task BindAsync_OnFailure_ShortCircuitsWithoutInvokingBinder()
+    {
+        var binderInvoked = false;
+        var failure = Result.Failure<int>(Error.Validation("err1", "first"));
+
+        var result = await failure.BindAsync(v =>
+        {
+            binderInvoked = true;
+            return Task.FromResult(Result.Success(v * 2));
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("err1");
+        binderInvoked.Should().BeFalse("a failed result must short-circuit the bound operation");
     }
 
     // ── Match ──
