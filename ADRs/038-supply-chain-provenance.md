@@ -46,12 +46,14 @@ posture ADR-015 applies to architecture rules. Four controls, each a hard gate:
    exception, and their single source of truth is the `NuGetAuditSuppress` list in
    `Directory.Build.props`. Because `dotnet list --vulnerable` ignores `NuGetAuditSuppress`, the step
    re-derives that accept-list itself by reading the `GHSA-*` ids out of `Directory.Build.props`
-   (ci.yml:40-48). Today the one accepted advisory is the unpatched SQLite advisory
-   GHSA-2m69-gcr7-jv3q (CVE-2025-6965), suppressed at Directory.Build.props:26-27 with the rationale
-   recorded inline (Directory.Build.props:19-25): SQLitePCLRaw ships no patched build, SQLite is a
-   non-production alternate engine (production is SQL Server), no untrusted raw SQL runs, so the
-   memory-corruption vector is unreachable; the suppression is to be removed once a fix ships. This
-   complements the build-time audit: `NuGetAudit` with `NuGetAuditMode=all` (Directory.Build.props:9-10)
+   (ci.yml:40-48). The accepted-advisory list is currently empty: the one prior entry, the SQLite
+   advisory GHSA-2m69-gcr7-jv3q (CVE-2025-6965), was suppressed from 2026-06-19 while SQLitePCLRaw
+   shipped no patched build. SQLitePCLRaw 2.1.12 (published 2026-07-14) fixed it, so the suppression
+   was removed on 2026-07-20 and replaced with a direct fix: a `SQLitePCLRaw.bundle_e_sqlite3` pin at
+   2.1.12 in `Directory.Packages.props`, referenced directly by `MMCA.Common.Infrastructure` so the
+   patched version flows to consumers through the published package graph, the same pattern used for
+   the MessagePack pin. This complements the build-time audit: `NuGetAudit` with `NuGetAuditMode=all`
+   (Directory.Build.props:9-10)
    under repo-wide `TreatWarningsAsErrors` (Directory.Build.props:7) already promotes an advisory to a
    build failure, and the CI step adds a solution-wide, transitive check carrying an auditable
    accept-list.

@@ -16,17 +16,6 @@
     <NoWarn>$(NoWarn);CS1591;RMG020</NoWarn>
   </PropertyGroup>
 
-  <!-- Transitive advisory with NO published fix: CVE-2025-6965 / GHSA-2m69-gcr7-jv3q. The SQLite
-       native lib bundled by SQLitePCLRaw (<= 2.1.11, pulled transitively by
-       Microsoft.EntityFrameworkCore.Sqlite) embeds SQLite < 3.50.2. SQLitePCLRaw has not shipped a
-       patched build, so there is no version to bump to. SQLite is a non-production alternate engine
-       here (prod is SQL Server) and the apps execute no untrusted raw SQL, so the memory-corruption
-       vector is not reachable. Suppress so releases proceed; REMOVE once SQLitePCLRaw ships a fix
-       (added 2026-06-19 — re-check periodically). -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-  </ItemGroup>
-
   <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>
