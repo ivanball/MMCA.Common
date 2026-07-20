@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Infrastructure;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 

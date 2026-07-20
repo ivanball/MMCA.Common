@@ -6,7 +6,6 @@ using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Tests;
 

@@ -36,6 +36,6 @@ public sealed class GlobalExceptionHandler(
                 Title = "Internal Server Error",
                 Detail = "An error occurred while processing your request. Please try again"
             }
-        });
+        }).ConfigureAwait(false);
     }
 }

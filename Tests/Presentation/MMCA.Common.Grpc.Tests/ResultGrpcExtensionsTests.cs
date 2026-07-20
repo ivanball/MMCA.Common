@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using Grpc.Core;
-using MMCA.Common.Grpc;
 using MMCA.Common.Grpc.Exceptions;
 using MMCA.Common.Shared.Abstractions;
 using Xunit;

@@ -64,7 +64,7 @@ public abstract class AggregateRootEntityControllerBase<
         [FromBody, Required] TCreateRequest request,
         CancellationToken cancellationToken = default)
     {
-        var result = await CreateHandler.HandleAsync(request, cancellationToken);
+        var result = await CreateHandler.HandleAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Route name follows the convention "Get{EntityName}ById" established by derived controllers
         return result.IsFailure
@@ -90,7 +90,7 @@ public abstract class AggregateRootEntityControllerBase<
         TIdentifierType id,
         CancellationToken cancellationToken = default)
     {
-        var result = await deleteHandler.HandleAsync(new DeleteEntityCommand<TEntity, TIdentifierType>(id), cancellationToken: cancellationToken);
+        var result = await deleteHandler.HandleAsync(new DeleteEntityCommand<TEntity, TIdentifierType>(id), cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)

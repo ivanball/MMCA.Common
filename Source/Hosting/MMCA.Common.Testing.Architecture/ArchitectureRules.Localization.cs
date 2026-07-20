@@ -66,8 +66,9 @@ public static partial class ArchitectureRules
             .Select(key => $"  - {Relativize(sourceRoot, siblingPath)} is missing a non-empty '{culture}' translation for key '{key}'");
     }
 
-    // "<stem>.<culture>.resx" still has an extension once ".resx" is stripped (e.g. "ErrorResources.es");
-    // a base "<stem>.resx" does not. Base resx stems are kept dot-free by convention.
+    // The name "<stem>.<culture>.resx" still has an extension once ".resx" is stripped (for
+    // example, "ErrorResources.es"), while a base "<stem>.resx" does not. Base resx stems are
+    // kept dot-free by convention.
     private static bool IsCultureSpecificResx(string path) =>
         Path.HasExtension(Path.GetFileNameWithoutExtension(path));
 

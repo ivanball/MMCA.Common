@@ -24,8 +24,8 @@ public abstract class EntityTypeConfigurationBase<TEntity, TIdentifierType>
     /// <inheritdoc />
     public virtual void Configure(EntityTypeBuilder<TEntity> builder)
     {
-        // DomainEvents is an in-memory-only collection used for event dispatch;
-        // it has no database column and must be excluded from EF mapping.
+        // DomainEvents is an in-memory-only collection used for event dispatch.
+        // It has no database column and must be excluded from EF mapping.
         if (typeof(IAggregateRoot).IsAssignableFrom(typeof(TEntity)))
         {
             builder.Ignore(nameof(AuditableAggregateRootEntity<>.DomainEvents));

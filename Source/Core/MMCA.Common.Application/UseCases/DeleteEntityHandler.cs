@@ -23,7 +23,7 @@ public class DeleteEntityHandler<TEntity, TIdentifierType>(
         CancellationToken cancellationToken = default)
     {
         var repository = unitOfWork.GetRepository<TEntity, TIdentifierType>();
-        var entity = await repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await repository.GetByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
         if (entity is null)
             return Result.Failure(Error.NotFound.WithSource(nameof(DeleteEntityHandler<,>)).WithTarget(typeof(TEntity).Name));
 

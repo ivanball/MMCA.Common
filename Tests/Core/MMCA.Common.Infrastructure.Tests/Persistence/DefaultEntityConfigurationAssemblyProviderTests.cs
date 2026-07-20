@@ -2,7 +2,6 @@ using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Persistence;
-using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
 

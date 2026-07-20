@@ -1,6 +1,5 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
-using MMCA.Common.Infrastructure;
 
 namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 

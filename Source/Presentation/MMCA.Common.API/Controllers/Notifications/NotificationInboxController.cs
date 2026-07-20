@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.FeatureManagement.Mvc;
 using MMCA.Common.API.Authorization;
-using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount;
@@ -13,7 +12,6 @@ using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRe
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 

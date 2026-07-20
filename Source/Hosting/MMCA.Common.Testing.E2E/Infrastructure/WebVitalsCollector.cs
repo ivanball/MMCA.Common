@@ -48,7 +48,7 @@ public static class WebVitalsCollector
         var json = await page.EvaluateAsync<string>(
             "() => { const nav = performance.getEntriesByType('navigation')[0];" +
             " window.__vitals.ttfb = nav ? nav.responseStart : 0;" +
-            " return JSON.stringify(window.__vitals); }");
+            " return JSON.stringify(window.__vitals); }").ConfigureAwait(false);
 
         return JsonSerializer.Deserialize<WebVitalsSample>(json) ?? new WebVitalsSample();
     }
@@ -65,7 +65,7 @@ public static class WebVitalsCollector
 
         var payload = new WebVitalsArtifact(label, path, sample);
         var file = Path.Combine(dir, $"web-vitals-{label}.json");
-        await File.WriteAllTextAsync(file, JsonSerializer.Serialize(payload, WriteOptions));
+        await File.WriteAllTextAsync(file, JsonSerializer.Serialize(payload, WriteOptions)).ConfigureAwait(false);
     }
 }
 

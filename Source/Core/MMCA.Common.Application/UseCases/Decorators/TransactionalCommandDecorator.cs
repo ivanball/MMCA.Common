@@ -24,10 +24,10 @@ public sealed class TransactionalCommandDecorator<TCommand, TResult>(
     {
         // Only wrap in a transaction if the command opts in via the ITransactional marker
         if (command is not ITransactional)
-            return await inner.HandleAsync(command, cancellationToken);
+            return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
         return await unitOfWork.ExecuteInTransactionAsync(
             ct => inner.HandleAsync(command, ct),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 }

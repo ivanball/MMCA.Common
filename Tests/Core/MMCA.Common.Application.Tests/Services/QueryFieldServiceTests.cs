@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using MMCA.Common.Application.Services;
-using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application.Tests.Services;
 

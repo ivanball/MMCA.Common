@@ -13,7 +13,7 @@ public static class MMCATheme
         PaletteLight = new PaletteLight
         {
             // Brand palette sourced from BrandColors (the single C# source of truth). The CSS
-            // tokens --mmca-primary / --mmca-primary-dark in wwwroot/app.css must mirror these;
+            // tokens --mmca-primary / --mmca-primary-dark in wwwroot/app.css must mirror these.
             // BrandColorTokenTests asserts the two stay in sync.
             Primary = BrandColors.Primary,
             PrimaryDarken = BrandColors.PrimaryDark,

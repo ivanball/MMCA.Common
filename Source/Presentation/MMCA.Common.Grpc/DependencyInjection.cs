@@ -1,7 +1,6 @@
 using Grpc.Net.ClientFactory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.Grpc.Interceptors;
 using MMCA.Common.Shared.Resilience;
 

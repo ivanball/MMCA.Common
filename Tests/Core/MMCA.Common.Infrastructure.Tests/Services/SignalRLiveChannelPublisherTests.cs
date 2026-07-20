@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using Microsoft.AspNetCore.SignalR;
 using MMCA.Common.Infrastructure.Hubs;
 using MMCA.Common.Infrastructure.Services;

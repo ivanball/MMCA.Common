@@ -1,6 +1,3 @@
-#pragma warning disable CA2000 // Dispose objects before losing scope — test doubles do not hold real resources
-#pragma warning disable CA2025 // Task captures IDisposable — response is awaited inline in tests
-
 using System.Net;
 using System.Text;
 using AwesomeAssertions;

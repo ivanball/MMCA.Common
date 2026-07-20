@@ -1,5 +1,13 @@
 root = true
 
+# =============================================================================
+# SHARED ANALYZER BASELINE
+# Everything above the "REPO-SPECIFIC DELTAS" marker near the bottom of this
+# file is byte-identical across MMCA.Common, MMCA.Store, MMCA.ADC and
+# MMCA.Helpdesk. Edit it in all four repos in the same pass and verify with
+# the workspace script: Tools\Scripts\compare-analyzer-config.ps1
+# =============================================================================
+
 ###############################################################################
 # All files
 ###############################################################################
@@ -311,8 +319,11 @@ dotnet_analyzer_diagnostic.severity = error
 dotnet_diagnostic.CA1002.severity = none
 # CA1019: Define accessors for attribute arguments
 dotnet_diagnostic.CA1019.severity = none
-# CA1031: Do not catch general exception types — allowed in top-level handlers
-dotnet_diagnostic.CA1031.severity = none
+# CA1031: Do not catch general exception types: allowed at best-effort boundaries
+# (top-level handlers, background services that must never crash the host). Kept
+# at suggestion so new catch-alls stay visible in the IDE; justified sites carry
+# a documented #pragma.
+dotnet_diagnostic.CA1031.severity = suggestion
 # CA1034: Do not nest types — DDD uses nested domain events/value objects
 dotnet_diagnostic.CA1034.severity = none
 # CA1040: Avoid empty interfaces — marker interfaces are intentional
@@ -344,8 +355,10 @@ dotnet_diagnostic.CA2227.severity = none
 # IDE rules — overrides
 # ─────────────────────────────────────────────────────────────────────────────
 
-# IDE0005: Remove unnecessary usings — suggestion to avoid false positives with global using type aliases
-dotnet_diagnostic.IDE0005.severity = suggestion
+# IDE0005: Remove unnecessary usings. Enforced; the solution-linked GlobalUsings
+# identifier-alias files (flagged in projects that do not use the alias) are
+# excluded via the [*GlobalUsings*.cs] section below.
+dotnet_diagnostic.IDE0005.severity = warning
 # IDE0008: Use explicit type — conflicts with var preferences already configured
 dotnet_diagnostic.IDE0008.severity = none
 # IDE0011: Add braces — handled by csharp_prefer_braces
@@ -469,8 +482,8 @@ dotnet_diagnostic.S109.severity = none
 dotnet_diagnostic.S113.severity = none
 # S121: Add curly braces — handled by csharp_prefer_braces
 dotnet_diagnostic.S121.severity = none
-# S125: Commented-out code — should be cleaned but don't block
-dotnet_diagnostic.S125.severity = suggestion
+# S125: Commented-out code must be removed (warning = build error via TreatWarningsAsErrors)
+dotnet_diagnostic.S125.severity = warning
 # S134: Too deeply nested control flow — enforced to limit nesting depth
 dotnet_diagnostic.S134.severity = warning
 # S1118: Add protected constructor or static keyword — DI instantiation patterns
@@ -593,6 +606,9 @@ dotnet_diagnostic.MA0179.severity = suggestion
 dotnet_diagnostic.MA0184.severity = suggestion
 # MA0182: Avoid mutable struct
 dotnet_diagnostic.MA0182.severity = suggestion
+# MA0206: Remove unnecessary braces in type declaration: the codebase intentionally
+# uses braces on primary-constructor types
+dotnet_diagnostic.MA0206.severity = none
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Roslynator Analyzers (RCS rules) — overrides
@@ -696,6 +712,26 @@ dotnet_diagnostic.VSTHRD110.severity = suggestion
 dotnet_diagnostic.VSTHRD200.severity = suggestion
 
 ###############################################################################
+# Wire contracts (DTOs, requests, commands, queries)
+###############################################################################
+[*{DTO,Request,Command,Query}.cs]
+
+# CA1819: Properties should not return arrays: byte[] on wire contracts is the
+# EF rowversion concurrency token (or a raw image payload) round-tripping the
+# wire; the rule stays at error everywhere else
+dotnet_diagnostic.CA1819.severity = none
+
+###############################################################################
+# Solution-linked global-using identifier-alias files
+###############################################################################
+[*GlobalUsings*.cs]
+
+# IDE0005: these files are linked into every project via Directory.Build.props;
+# projects that do not use the alias flag the using as unnecessary, but removing
+# it would break the projects that do
+dotnet_diagnostic.IDE0005.severity = none
+
+###############################################################################
 # Test files — relaxed rules for test projects
 ###############################################################################
 [Tests/**/*.cs]
@@ -735,6 +771,20 @@ dotnet_diagnostic.MA0025.severity = none
 dotnet_diagnostic.MA0001.severity = none
 dotnet_diagnostic.MA0006.severity = none
 
+# Test infrastructure patterns: fakes and doubles do not hold real resources
+# (CA2000, CA2025); [Collection] names are idiomatic public consts (S2339);
+# Moq ILogger setups misfire the log-argument heuristic (CA1873); fixture SQL
+# is built from compile-time constants (CA2100); test DTOs and builders may
+# expose arrays and string URLs (CA1819, CA1054, CA1056)
+dotnet_diagnostic.CA2000.severity = none
+dotnet_diagnostic.CA2025.severity = none
+dotnet_diagnostic.S2339.severity = none
+dotnet_diagnostic.CA1873.severity = none
+dotnet_diagnostic.CA2100.severity = none
+dotnet_diagnostic.CA1819.severity = none
+dotnet_diagnostic.CA1054.severity = none
+dotnet_diagnostic.CA1056.severity = none
+
 # Collection-expression style suggestions are noise in test setup (explicit
 # constructors read more clearly in arrange blocks) and the analyzer flags them
 # inconsistently across SDK/analyzer versions — e.g. it reports IDE0028 on one
@@ -762,3 +812,21 @@ indent_size = 4
 
 [*.cshtml]
 indent_size = 4
+
+###############################################################################
+# REPO-SPECIFIC DELTAS
+# Documented deviations from the shared baseline only. Everything above this
+# marker must stay byte-identical across the four repos
+# (verify: Tools\Scripts\compare-analyzer-config.ps1).
+###############################################################################
+
+# CA2007: MMCA.Common ships as NuGet libraries; packaged non-UI code must not
+# capture the caller's synchronization context (ADR-049), so every await takes
+# ConfigureAwait(false). UI component packages are excluded: Blazor and MAUI
+# components must resume on the renderer context. Apps (Store/ADC/Helpdesk)
+# keep the baseline (CA2007 off): ASP.NET Core has no synchronization context.
+[Source/**.cs]
+dotnet_diagnostic.CA2007.severity = warning
+
+[Source/Presentation/MMCA.Common.UI*/**.cs]
+dotnet_diagnostic.CA2007.severity = none

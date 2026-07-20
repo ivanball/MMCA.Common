@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.DomainEvents;
-using MMCA.Common.Domain.Interfaces;
 
 namespace MMCA.Common.Application.Tests;
 

@@ -47,8 +47,8 @@ public static class Extensions
             //   - 30s per-attempt timeout
             //   - Circuit breaker sampled over 60s
             //   - 90s total request timeout (including retries)
-            //   - ONE retry per hop: the UI service base classes own user-facing retries;
-            //     stacking full retry budgets at every hop multiplies load during a backend
+            //   - ONE retry per hop: the UI service base classes own user-facing retries.
+            //     Stacking full retry budgets at every hop multiplies load during a backend
             //     brownout (previously up to 4 outer x 4 inner = 16 gateway hits per action).
             http.AddStandardResilienceHandler(options =>
             {

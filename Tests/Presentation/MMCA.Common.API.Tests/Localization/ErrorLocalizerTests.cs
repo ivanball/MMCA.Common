@@ -1,7 +1,6 @@
 using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.API;
 using MMCA.Common.API.Localization;
 
 namespace MMCA.Common.API.Tests.Localization;

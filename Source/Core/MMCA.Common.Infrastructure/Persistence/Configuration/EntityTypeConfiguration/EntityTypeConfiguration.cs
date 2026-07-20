@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Extensions;
-using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.ValueGenerators;
 
 namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;

@@ -87,7 +87,7 @@ public abstract class EntityControllerBase<
             pageNumber: 1,
             pageSize: MaxPageSize,
             asTracking: false,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
@@ -137,7 +137,7 @@ public abstract class EntityControllerBase<
             pageNumber: pageNumber,
             pageSize: pageSize,
             asTracking: false,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
             return HandleFailure(result.Errors);
 
@@ -161,7 +161,7 @@ public abstract class EntityControllerBase<
         var result = await QueryService.GetAllForLookupAsync(
             nameProperty,
             asTracking: false,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
@@ -200,7 +200,7 @@ public abstract class EntityControllerBase<
             specification: null,
             fields: fields,
             asTracking: false,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)

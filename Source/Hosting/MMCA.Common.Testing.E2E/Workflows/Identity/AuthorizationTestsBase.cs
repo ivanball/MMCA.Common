@@ -51,9 +51,9 @@ public abstract class AuthorizationTestsBase : E2ETestBase
 
         foreach (var path in ProtectedPaths)
         {
-            await Page.GotoAndWaitForBlazorAsync(path);
-            await Page.WaitForLoadStateAsync(LoadState.Load);
-            await Expect(Page).ToHaveURLAsync(new Regex("/login"), new() { Timeout = 15_000 });
+            await Page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
+            await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+            await Expect(Page).ToHaveURLAsync(new Regex("/login"), new() { Timeout = 15_000 }).ConfigureAwait(false);
         }
     }
 
@@ -65,9 +65,9 @@ public abstract class AuthorizationTestsBase : E2ETestBase
 
         foreach (var path in PublicPaths)
         {
-            await Page.GotoAndWaitForBlazorAsync(path);
-            await Page.WaitForLoadStateAsync(LoadState.Load);
-            await Expect(Page).ToHaveURLAsync(new Regex(Regex.Escape(path)), new() { Timeout = 15_000 });
+            await Page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
+            await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+            await Expect(Page).ToHaveURLAsync(new Regex(Regex.Escape(path)), new() { Timeout = 15_000 }).ConfigureAwait(false);
         }
     }
 
@@ -82,14 +82,14 @@ public abstract class AuthorizationTestsBase : E2ETestBase
         }
 
         // Arrange — register as a regular (non-admin) user.
-        await RegisterNewUserAsync();
+        await RegisterNewUserAsync().ConfigureAwait(false);
 
         // Act — navigate client-side: SSR cannot read the JWT from browser storage, so a full page
         // load to an [Authorize] page would bounce to /login even when logged in.
-        await Page.GotoProtectedAsync(authenticatedPath);
+        await Page.GotoProtectedAsync(authenticatedPath).ConfigureAwait(false);
 
         // Assert — the page loads (even if it shows an empty-state alert).
-        await Expect(Page).ToHaveURLAsync(new Regex(Regex.Escape(authenticatedPath)), new() { Timeout = 15_000 });
+        await Expect(Page).ToHaveURLAsync(new Regex(Regex.Escape(authenticatedPath)), new() { Timeout = 15_000 }).ConfigureAwait(false);
     }
 
     [Fact]
@@ -103,19 +103,19 @@ public abstract class AuthorizationTestsBase : E2ETestBase
         }
 
         // Arrange — register as a regular (non-admin) user.
-        await RegisterNewUserAsync();
+        await RegisterNewUserAsync().ConfigureAwait(false);
 
         foreach (var path in AdminPaths)
         {
             // Act — navigate client-side: SSR cannot read the JWT from browser storage, so a full page
             // load would bounce to /login and never exercise the ROLE check this test exists for.
-            await Page.GotoProtectedAsync(path);
+            await Page.GotoProtectedAsync(path).ConfigureAwait(false);
 
             // Assert — the shared Forbidden page renders (its h1 carries role="alert" and the localized
             // "Access Denied" title). Role denial is not a redirect: the URL stays on the requested
             // path, so the page CONTENT is the only reliable denial signal.
             await Expect(Page.Locator("h1[role='alert']"))
-                .ToContainTextAsync("Access Denied", new() { Timeout = 15_000 });
+                .ToContainTextAsync("Access Denied", new() { Timeout = 15_000 }).ConfigureAwait(false);
         }
     }
 }

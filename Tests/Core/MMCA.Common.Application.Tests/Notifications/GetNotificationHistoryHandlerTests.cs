@@ -5,7 +5,6 @@ using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using Moq;
 

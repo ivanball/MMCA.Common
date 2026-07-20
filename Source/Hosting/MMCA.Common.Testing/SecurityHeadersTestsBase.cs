@@ -24,7 +24,7 @@ public abstract class SecurityHeadersTestsBase
         using var client = CreateClient();
 
         using var response = await client.GetAsync(
-            new Uri(ProbePath, UriKind.Relative), TestContext.Current.CancellationToken);
+            new Uri(ProbePath, UriKind.Relative), TestContext.Current.CancellationToken).ConfigureAwait(false);
 
         Header(response, "X-Content-Type-Options").Should().Be("nosniff");
         Header(response, "X-Frame-Options").Should().Be("DENY");

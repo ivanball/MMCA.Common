@@ -24,13 +24,13 @@ public static class PageExtensions
         // may vary across .NET versions, so we check for any truthy _internal object.
         await page.WaitForFunctionAsync(
             "() => !!window.Blazor?._internal",
-            new PageWaitForFunctionOptions { Timeout = timeout });
+            new PageWaitForFunctionOptions { Timeout = timeout }).ConfigureAwait(false);
 
         // Blazor's component rendering is asynchronous — it happens AFTER the runtime
         // reports as ready. Wait for two animation frames + a short delay to let the
         // render pipeline flush, event handlers get attached, and DOM settle.
         await page.EvaluateAsync(
-            "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))");
+            "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))").ConfigureAwait(false);
     }
 
     /// <summary>
@@ -39,11 +39,11 @@ public static class PageExtensions
     /// </summary>
     public static async Task GotoAndWaitForBlazorAsync(this IPage page, string path)
     {
-        await page.GotoAsync(path);
+        await page.GotoAsync(path).ConfigureAwait(false);
         // Use Load instead of NetworkIdle — Blazor InteractiveAuto keeps a persistent
         // SignalR WebSocket open, so NetworkIdle is never reached.
-        await page.WaitForLoadStateAsync(LoadState.Load);
-        await page.WaitForBlazorAsync();
+        await page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+        await page.WaitForBlazorAsync().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public static class PageExtensions
         // synchronously, so tolerate the evaluate racing with that reload.
         try
         {
-            await page.EvaluateAsync($"() => Blazor.navigateTo('{path}')");
+            await page.EvaluateAsync($"() => Blazor.navigateTo('{path}')").ConfigureAwait(false);
         }
         catch (PlaywrightException)
         {
@@ -72,18 +72,18 @@ public static class PageExtensions
         // a full reload too, so it settles on the target pathname either way.
         await page.WaitForFunctionAsync(
             $"() => window.location.pathname === '{path}'",
-            new PageWaitForFunctionOptions { Timeout = 15_000 });
+            new PageWaitForFunctionOptions { Timeout = 15_000 }).ConfigureAwait(false);
 
         // Re-assert Blazor interactivity (fast no-op after a pure SPA nav; waits for re-init after a
         // full reload) and flush the render pipeline. Guard against a context-destroyed race from an
         // in-flight reload, then re-assert on the fresh context.
         try
         {
-            await page.WaitForBlazorAsync();
+            await page.WaitForBlazorAsync().ConfigureAwait(false);
         }
         catch (PlaywrightException)
         {
-            await page.WaitForBlazorAsync();
+            await page.WaitForBlazorAsync().ConfigureAwait(false);
         }
     }
 
@@ -101,7 +101,7 @@ public static class PageExtensions
         bool blazorReady;
         try
         {
-            blazorReady = await page.EvaluateAsync<bool>("() => !!window.Blazor?._internal");
+            blazorReady = await page.EvaluateAsync<bool>("() => !!window.Blazor?._internal").ConfigureAwait(false);
         }
         catch (PlaywrightException)
         {
@@ -111,20 +111,20 @@ public static class PageExtensions
         if (!blazorReady)
         {
             // External page (e.g., Stripe) or Blazor not initialized — load a public page first.
-            await page.GotoAndWaitForBlazorAsync("/");
+            await page.GotoAndWaitForBlazorAsync("/").ConfigureAwait(false);
         }
         else
         {
             // Ensure we're on a different route so navigating to the target path
             // always triggers a fresh component lifecycle (OnInitializedAsync, ServerData, etc.).
-            var currentPath = await page.EvaluateAsync<string>("() => window.location.pathname");
+            var currentPath = await page.EvaluateAsync<string>("() => window.location.pathname").ConfigureAwait(false);
             if (!string.Equals(currentPath, "/", StringComparison.Ordinal))
             {
-                await page.BlazorNavigateAsync("/");
+                await page.BlazorNavigateAsync("/").ConfigureAwait(false);
             }
         }
 
-        await page.BlazorNavigateAsync(path);
+        await page.BlazorNavigateAsync(path).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -135,10 +135,10 @@ public static class PageExtensions
     {
         // For full page navigations, wait for the load event. For Blazor enhanced
         // navigation (SPA-style), this resolves immediately — harmless.
-        await page.WaitForLoadStateAsync(LoadState.Load);
+        await page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
         // Wait for Blazor render cycle — covers both full-page and enhanced navigation.
         await page.EvaluateAsync(
-            "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))");
+            "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))").ConfigureAwait(false);
     }
 
     /// <summary>
@@ -156,19 +156,19 @@ public static class PageExtensions
         ArgumentNullException.ThrowIfNull(field);
 
         // FillAsync is fast and dispatches input+change events in one shot.
-        await field.FillAsync(value);
+        await field.FillAsync(value).ConfigureAwait(false);
         try
         {
-            await Assertions.Expect(field).ToHaveValueAsync(value, new() { Timeout = timeout });
+            await Assertions.Expect(field).ToHaveValueAsync(value, new() { Timeout = timeout }).ConfigureAwait(false);
         }
         catch (PlaywrightException)
         {
             // The pre-render value was wiped by Blazor re-hydration before it stuck. Re-type
             // character-by-character (individual key events the Blazor event system reliably
             // handles after enhanced navigation), then assert it persists.
-            await field.ClearAsync();
-            await field.PressSequentiallyAsync(value, new() { Delay = 20 });
-            await Assertions.Expect(field).ToHaveValueAsync(value, new() { Timeout = timeout });
+            await field.ClearAsync().ConfigureAwait(false);
+            await field.PressSequentiallyAsync(value, new() { Delay = 20 }).ConfigureAwait(false);
+            await Assertions.Expect(field).ToHaveValueAsync(value, new() { Timeout = timeout }).ConfigureAwait(false);
         }
     }
 
@@ -191,30 +191,30 @@ public static class PageExtensions
 
         var page = button.Page;
         // The handler must be wired before the first click counts; without this the click is a no-op.
-        await page.WaitForBlazorAsync();
+        await page.WaitForBlazorAsync().ConfigureAwait(false);
 
         const int maxAttempts = 3;
         var perAttempt = timeout / maxAttempts;
         for (var attempt = 1; attempt < maxAttempts; attempt++)
         {
-            await button.ClickAsync();
+            await button.ClickAsync().ConfigureAwait(false);
             try
             {
-                await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt });
+                await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt }).ConfigureAwait(false);
                 return;
             }
             catch (PlaywrightException)
             {
                 // The click most likely did not register (handler not yet attached on this fast host).
                 // Re-assert interactivity, then click again on the next loop turn.
-                await page.WaitForBlazorAsync();
+                await page.WaitForBlazorAsync().ConfigureAwait(false);
             }
         }
 
         // Final attempt: click once more and let the assertion throw with full diagnostics if it still
         // has not taken effect (a real failure, not a hydration race).
-        await button.ClickAsync();
-        await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt });
+        await button.ClickAsync().ConfigureAwait(false);
+        await Assertions.Expect(expected).ToBeVisibleAsync(new() { Timeout = perAttempt }).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -234,11 +234,11 @@ public static class PageExtensions
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
-            await clickable.ClickAsync();
+            await clickable.ClickAsync().ConfigureAwait(false);
             try
             {
-                await page.WaitForURLAsync(new Regex(urlPattern), new() { Timeout = 5_000 });
-                await page.WaitForPageAndBlazorAsync();
+                await page.WaitForURLAsync(new Regex(urlPattern), new() { Timeout = 5_000 }).ConfigureAwait(false);
+                await page.WaitForPageAndBlazorAsync().ConfigureAwait(false);
                 return;
             }
             catch (Exception ex) when (ex is TimeoutException or PlaywrightException)
@@ -247,9 +247,9 @@ public static class PageExtensions
             }
         }
 
-        await clickable.ClickAsync();
-        await page.WaitForURLAsync(new Regex(urlPattern), new() { Timeout = 15_000 });
-        await page.WaitForPageAndBlazorAsync();
+        await clickable.ClickAsync().ConfigureAwait(false);
+        await page.WaitForURLAsync(new Regex(urlPattern), new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await page.WaitForPageAndBlazorAsync().ConfigureAwait(false);
     }
 
     /// <summary>

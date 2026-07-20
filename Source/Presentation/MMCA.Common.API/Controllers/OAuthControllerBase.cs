@@ -75,7 +75,7 @@ public abstract class OAuthControllerBase(
     public async Task<IActionResult> CompleteAsync()
     {
         var uiBaseUrl = configuration["OAuth:UIBaseUrl"]?.TrimEnd('/') ?? string.Empty;
-        var authenticateResult = await HttpContext.AuthenticateAsync(ExternalLoginScheme);
+        var authenticateResult = await HttpContext.AuthenticateAsync(ExternalLoginScheme).ConfigureAwait(false);
 
         if (!authenticateResult.Succeeded || authenticateResult.Principal is null)
         {
@@ -98,7 +98,7 @@ public abstract class OAuthControllerBase(
         }
 
         var result = await authenticationService.ExternalLoginAsync(
-            providerName, providerKey, email, firstName, lastName);
+            providerName, providerKey, email, firstName, lastName).ConfigureAwait(false);
 
         if (result.IsFailure)
         {
@@ -108,14 +108,14 @@ public abstract class OAuthControllerBase(
         var response = result.Value;
 
         // Clear the temporary external login cookie
-        await HttpContext.SignOutAsync(ExternalLoginScheme);
+        await HttpContext.SignOutAsync(ExternalLoginScheme).ConfigureAwait(false);
 
         // Mint a single-use code and stash the token pair server-side; the redirect carries only
         // the opaque code, so access/refresh tokens never land in the address bar, browser history,
         // the Referer header, or upstream access logs. The UI exchanges the code via POST below.
         var exchangeCode = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         await cacheService.SetAsync(
-            OAuthExchangeCodePrefix + exchangeCode, response, OAuthExchangeCodeLifetime, HttpContext.RequestAborted);
+            OAuthExchangeCodePrefix + exchangeCode, response, OAuthExchangeCodeLifetime, HttpContext.RequestAborted).ConfigureAwait(false);
 
         return Redirect(BuildSuccessRedirectUrl(uiBaseUrl, mobileReturnUrl, exchangeCode, returnUrl));
     }
@@ -148,14 +148,14 @@ public abstract class OAuthControllerBase(
 
         // AuthenticationResponse is a struct, so a cache miss yields default(AuthenticationResponse)
         // (null AccessToken) rather than null — detect the miss via the token, matching AuthUIService.
-        var response = await cacheService.GetAsync<AuthenticationResponse>(cacheKey, cancellationToken);
+        var response = await cacheService.GetAsync<AuthenticationResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrEmpty(response.AccessToken))
         {
             return InvalidCode();
         }
 
         // Single-use: burn the code so a leaked or replayed code can't mint a second token pair.
-        await cacheService.RemoveAsync(cacheKey, cancellationToken);
+        await cacheService.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
 
         return Ok(response);
     }

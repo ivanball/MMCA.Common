@@ -52,7 +52,7 @@ public abstract class OpenApiContractTestsBase<TFixture> : IntegrationTestBase<T
     [Fact]
     public async Task OpenApiDocument_IsServed_AsWellFormedOpenApiDescribingTheApiSurface()
     {
-        using var doc = JsonDocument.Parse(await GetOpenApiJsonAsync());
+        using var doc = JsonDocument.Parse(await GetOpenApiJsonAsync().ConfigureAwait(false));
 
         doc.RootElement.GetProperty("openapi").GetString()
             .Should().StartWith("3.", "the document must be OpenAPI 3.x");
@@ -70,7 +70,7 @@ public abstract class OpenApiContractTestsBase<TFixture> : IntegrationTestBase<T
         CorePublicResources.Should().NotBeEmpty(
             "the subclass must pin at least one core public resource path (otherwise this guard passes vacuously)");
 
-        using var doc = JsonDocument.Parse(await GetOpenApiJsonAsync());
+        using var doc = JsonDocument.Parse(await GetOpenApiJsonAsync().ConfigureAwait(false));
         var paths = doc.RootElement.GetProperty("paths");
 
         // Presence (not exact casing) is the contract: a removed or renamed public resource must fail here.
@@ -91,11 +91,11 @@ public abstract class OpenApiContractTestsBase<TFixture> : IntegrationTestBase<T
     protected async Task<string> GetOpenApiJsonAsync()
     {
         ClearAuthentication();
-        using var response = await Client.GetAsync(OpenApiDocumentPath);
+        using var response = await Client.GetAsync(OpenApiDocumentPath).ConfigureAwait(false);
         response.StatusCode.Should().Be(
             HttpStatusCode.OK,
             "the service must serve its OpenAPI document at {0} outside Production",
             OpenApiDocumentPath);
-        return await response.Content.ReadAsStringAsync();
+        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
     }
 }

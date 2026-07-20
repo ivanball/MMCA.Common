@@ -1,9 +1,7 @@
 using System.Linq.Expressions;
-using AwesomeAssertions;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Testing.Architecture;
-using Xunit;
 
 namespace MMCA.Common.Architecture.Tests;
 

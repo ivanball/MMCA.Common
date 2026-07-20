@@ -1,5 +1,3 @@
-using AspNet.Security.OAuth.GitHub;
-using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

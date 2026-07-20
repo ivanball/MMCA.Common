@@ -5,7 +5,6 @@ using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 using Moq;
 

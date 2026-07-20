@@ -535,11 +535,9 @@ public sealed class AuthenticationServiceBaseTests
 /// </summary>
 public sealed class TestAuthUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser
 {
-#pragma warning disable CA1819 // Properties should not return arrays: mirrors IAuthUser's byte[] password material (ADR-032).
     public byte[] PasswordHash { get; set; } = [1, 2, 3];
 
     public byte[] PasswordSalt { get; set; } = [4, 5, 6];
-#pragma warning restore CA1819
 
     public string? RefreshToken { get; private set; }
 

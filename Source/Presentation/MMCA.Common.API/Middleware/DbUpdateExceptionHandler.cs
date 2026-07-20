@@ -48,6 +48,6 @@ public sealed class DbUpdateExceptionHandler(
             }
         };
 
-        return await problemDetailsService.TryWriteAsync(context);
+        return await problemDetailsService.TryWriteAsync(context).ConfigureAwait(false);
     }
 }

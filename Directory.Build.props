@@ -21,6 +21,12 @@
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
 
+  <!-- CA2263 (prefer generic overload): the NetArchTest-based architecture tests deliberately use
+       the non-generic reflection overloads -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Architecture.Tests'))">
+    <NoWarn>$(NoWarn);CA2263</NoWarn>
+  </PropertyGroup>
+
   <!-- NuGet package metadata (applied to all Source projects) -->
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
     <Authors>Ivan Ball</Authors>

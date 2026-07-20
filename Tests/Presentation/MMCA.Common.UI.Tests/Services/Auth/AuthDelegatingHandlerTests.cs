@@ -1,5 +1,3 @@
-#pragma warning disable CA2000 // Dispose objects before losing scope - test doubles do not hold real resources
-
 using System.Net;
 using AwesomeAssertions;
 using MMCA.Common.UI.Services.Auth;

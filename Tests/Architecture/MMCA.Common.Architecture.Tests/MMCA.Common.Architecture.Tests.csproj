@@ -2,7 +2,6 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <NoWarn>$(NoWarn);xUnit1051;CA2263</NoWarn>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>

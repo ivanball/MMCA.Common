@@ -42,6 +42,6 @@ public sealed class OperationCanceledExceptionHandler(
             }
         };
 
-        return await problemDetailsService.TryWriteAsync(context);
+        return await problemDetailsService.TryWriteAsync(context).ConfigureAwait(false);
     }
 }

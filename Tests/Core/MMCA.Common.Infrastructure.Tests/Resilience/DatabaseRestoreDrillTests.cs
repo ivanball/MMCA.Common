@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
-using Xunit;
 
 namespace MMCA.Common.Infrastructure.Tests.Resilience;
 
