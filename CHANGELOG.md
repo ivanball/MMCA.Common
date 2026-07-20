@@ -6,6 +6,73 @@ and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
 
 ## [Unreleased]
 
+## [1.120.0] - 2026-07-19
+
+Correctness release from the 2026-07-19 full review: the event/transaction core, outbox
+scale-out safety, and the previously-untested guarantees. Behavior changes below are
+deliberate fixes; consumers must add one EF migration (two new nullable outbox columns and
+filtered unique indexes) when adopting.
+
+### Changed (behavior)
+- **Transactional commands roll back on business failure** (`ITransactional` + a returned
+  failed `Result`): previously the transaction committed, leaving partial writes when a
+  handler saved and then failed a later invariant (ADR-014 revision).
+- **In-process domain event dispatch is deferred until after commit** and dropped on
+  rollback, so handler side effects never act on state that can still roll back and
+  execution-strategy retries cannot double-dispatch.
+- **Integration events raised via `AddDomainEvent` now route through the outbox to
+  `IMessageBus`** (broker-correct); previously they were dispatched in-process and marked
+  processed, silently never reaching the wire in extracted deployments (ADR-003 revision).
+- **Sync `SaveChanges` is now symmetric**: captured events are cleared (previously a later
+  async save re-captured them into duplicate outbox rows) and the audit user id is stamped.
+- **Unique indexes on soft-deletable entities exclude deleted rows** via a new
+  model-finalizing convention, so a soft-deleted row no longer blocks re-creating the same
+  record; hand-authored index filters win. Consumers get index-altering migrations.
+- **`QueryFieldService.ApplySorting` treats the DTO map plus real entity properties as a
+  strict allowlist**: client-supplied sort strings can no longer reach Dynamic LINQ as
+  nested paths or expressions.
+- **`Result.Failure` with an empty error collection now throws `ArgumentException`**
+  instead of fabricating a success carrying a null value.
+
+### Added
+- **Outbox lease/claim** (`OutboxMessage.LockedUntil` and `LockToken`, `Outbox:LeaseSeconds`):
+  concurrent processor replicas can never double-dispatch; `minReplicas: 1` is now a cost
+  choice, not a correctness requirement (ADR-030 note). Retry exhaustion emits an Error log
+  and the `outbox.dead_letter.count` metric with `reason=retries_exhausted`;
+  `Outbox:DeadLetterRetentionDays` keeps failed payloads longer than processed rows.
+  `OutboxProcessor` accepts an injectable `TimeProvider`.
+- **`ModuleLoader`**: explicit-assemblies `DiscoverAndRegister` overload (the AppDomain scan
+  misses not-yet-loaded assemblies) and `ValidateRemoteDependencies(IServiceProvider)`, a
+  startup check that every `RemoteDependencies` declaration actually resolves.
+- **`MMCA.Common.Testing`**: `HandlerTestBase<THandler>` (the UnitOfWork/repository mock
+  scaffold consumers copy-pasted per handler test) and `DecoratorPipelineOrderTestsBase`
+  (asserts the ADR-014 nesting from a real built container). The package now depends on
+  `MMCA.Common.Application` and Moq.
+- **`MMCA.Common.Testing.Architecture`**: layer-map completeness facts on
+  `LayerDependencyTestsBase` (a repo whose map omits a layer no longer passes vacuously);
+  governance interfaces matched by full name; opt-in `HandlerResultConventionTestsBase`
+  (handlers' `TResult` must be a `Result`) and `RawQueryableConventionTestsBase`
+  (ban `IRepository.Table*` in Application code, with an allowlist ratchet).
+- **`DataGridListPageBase.LoadFailed`**: pages can render a real inline error state instead
+  of the indistinguishable "no records" empty state after a failed fetch.
+
+### Fixed
+- `SET IDENTITY_INSERT` is wrapped in try/finally: a failed save can no longer leave the
+  flag on the pooled connection or strand hidden entities in the Unchanged state.
+- Audit `CurrentSaveUserId` resets after every save, so an internal follow-up save cannot
+  stamp rows with the previous caller's identity.
+- Cache-stampede per-key lock no longer eagerly removes semaphores (a race could let two
+  concurrent executions through); cross-instance protection documented as best-effort.
+
+### CI
+- New `package-consumption` job packs every package to a local feed and builds a throwaway
+  consumer against the nupkgs, catching pack breaks and package-mode-only failures before a
+  release. `--minimum-expected-tests` raised 1 to 2000; the GHSA suppression grep is scoped
+  to actual `NuGetAuditSuppress` lines; the webkit pseudo-locale sentinel has a bounded
+  in-test retry. Four Testing packages had their blanket NoWarn lists pruned (dead-code
+  detectors re-enabled). Outbox tests run on `FakeTimeProvider` (Infrastructure test tier
+  ~11s to ~3s).
+
 ## [1.118.0] - 2026-07-17
 
 FinOps cost-knob release plus a dependency and analyzer refresh. No breaking changes and no API
