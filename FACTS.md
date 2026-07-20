@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-07-19 (framework v1.119.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-07-20 (framework v1.119.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A bare `(001-NNN)` ADR
@@ -39,10 +39,10 @@ The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the ra
 summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
 
 ## Architecture fitness functions
-- **85 test methods across 28 abstract `*TestsBase` classes**, shipped once in the
+- **91 test methods across 30 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **49** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **55** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

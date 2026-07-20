@@ -1,7 +1,8 @@
 # ADR-014: CQRS Handlers with a Decorator Pipeline
 
 ## Status
-Accepted
+Accepted. Revised 2026-07-19 (Transactional semantics: rollback on business failure + post-commit
+event dispatch; see Revision below).
 
 ## Context
 Commands and queries share cross-cutting concerns: validation, transactions, cache invalidation,
@@ -57,6 +58,25 @@ Use single-responsibility handlers behind a Scrutor-composed decorator pipeline.
 - A new cross-cutting concern means a new decorator inserted at the correct depth; placing it wrong can
   silently change semantics (for example, validating *inside* the transaction).
 
+## Revision (2026-07-19)
+Two Transactional-decorator semantics changed with the 2026-07-19 full review:
+
+- **A returned business failure now rolls the transaction back.** Previously a handler returning
+  `Result.Failure` committed whatever it had already saved (only exceptions rolled back), so a
+  handler that saved and then failed a later invariant left the partial mutation committed. In a
+  framework that mandates Result-over-exceptions (ADR-013), failure values must get the same
+  atomicity as thrown exceptions: `DbContextFactory.ExecuteInTransactionAsync` inspects the
+  returned `Result` and calls `RollbackTransaction()` when `IsFailure` is true. Cache invalidation
+  was already skipped on failure; that is unchanged.
+- **In-process domain event dispatch is deferred until after commit.** Post-save dispatch captured
+  during an active transaction is queued (`DomainEventSaveChangesInterceptor` deferred table) and
+  flushed only after a successful commit; rollback (including the new business-failure rollback)
+  drops it. Handlers therefore never act on state that could still roll back, and a retrying
+  execution strategy cannot dispatch the same events once per attempt. The events' outbox rows roll
+  back with the data, so nothing is delivered on either failure path.
+
+The pipeline order and the "cache invalidation outside the transaction" rule are unchanged.
+
 ## Related
 ADR-013 (Result, the short-circuit currency of the pipeline), ADR-003 (handlers raise domain events
-that the outbox drains after `SaveChanges`).
+that the outbox drains after `SaveChanges`; its 2026-07-19 revision pairs with this one).

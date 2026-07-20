@@ -71,4 +71,22 @@ public sealed class OutboxSettings
     /// </summary>
     [Range(1, 168)]
     public int CleanupIntervalHours { get; init; } = 6;
+
+    /// <summary>
+    /// Gets how long, in seconds, a processor replica's claim on a batch of outbox rows lasts.
+    /// Other replicas skip rows with an unexpired lease, so concurrent replicas never
+    /// double-dispatch; if a replica dies mid-batch, its rows become claimable again once the
+    /// lease expires. Must comfortably exceed the time to dispatch one batch. Defaults to <c>300</c>.
+    /// </summary>
+    [Range(10, 3600)]
+    public int LeaseSeconds { get; init; } = 300;
+
+    /// <summary>
+    /// Gets the number of days a <b>dead-lettered</b> outbox message (retries exhausted, never
+    /// delivered) is retained before <c>OutboxCleanupService</c> purges it. <c>0</c> (the default)
+    /// falls back to <see cref="RetentionDays"/>. Set it higher than <see cref="RetentionDays"/>
+    /// to keep failed payloads around longer for diagnosis and manual replay.
+    /// </summary>
+    [Range(0, 3650)]
+    public int DeadLetterRetentionDays { get; init; }
 }

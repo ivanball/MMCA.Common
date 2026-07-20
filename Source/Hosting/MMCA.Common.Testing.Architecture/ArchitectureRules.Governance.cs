@@ -2,14 +2,19 @@ namespace MMCA.Common.Testing.Architecture;
 
 public static partial class ArchitectureRules
 {
+    // Full (namespace-qualified) names of the real framework governance contracts. Matching on the
+    // full name (not the simple name) prevents a same-named local interface from satisfying the rule.
+    private const string AnonymizableFullName = "MMCA.Common.Domain.Interfaces.IAnonymizable";
+    private const string ConcurrencyAwareFullName = "MMCA.Common.Shared.DTOs.IConcurrencyAware";
+
     /// <summary>Any domain entity with a <c>[Pii]</c>-marked property must implement <c>IAnonymizable</c> (ADR-005).</summary>
     public static void EntitiesWithPiiImplementAnonymizable(IArchitectureMap map)
     {
         var violations = map.OfLayer(Layer.Domain)
             .SelectMany(a => a.GetLoadableTypes())
             .Where(HasPiiProperty)
-            .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.Name, "IAnonymizable", StringComparison.Ordinal)))
-            .Select(t => $"  - {t.FullName} declares [Pii] properties and must implement IAnonymizable (ADR-005)");
+            .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.FullName, AnonymizableFullName, StringComparison.Ordinal)))
+            .Select(t => $"  - {t.FullName} declares [Pii] properties and must implement {AnonymizableFullName} (ADR-005)");
 
         ArchitectureAssert.NoViolations(violations,
             "entities with [Pii]-marked properties must implement IAnonymizable to satisfy the GDPR/CCPA erasure path (ADR-005)");
@@ -22,8 +27,8 @@ public static partial class ArchitectureRules
             .SelectMany(a => a.GetLoadableTypes())
             .Where(t => t is { IsClass: true } or { IsValueType: true }
                 && t.SimpleName().EndsWith("UpdateRequest", StringComparison.Ordinal))
-            .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.Name, "IConcurrencyAware", StringComparison.Ordinal)))
-            .Select(t => $"  - {t.FullName} must implement IConcurrencyAware (RowVersion) so concurrent edits surface as 409 Conflict");
+            .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.FullName, ConcurrencyAwareFullName, StringComparison.Ordinal)))
+            .Select(t => $"  - {t.FullName} must implement {ConcurrencyAwareFullName} (RowVersion) so concurrent edits surface as 409 Conflict");
 
         ArchitectureAssert.NoViolations(violations,
             "*UpdateRequest types must implement IConcurrencyAware so optimistic-concurrency conflicts surface as 409 rather than last-write-wins");

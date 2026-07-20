@@ -42,6 +42,21 @@ public sealed class OutboxMessage
     /// <summary>Gets or sets the number of dispatch attempts by the outbox processor.</summary>
     public int RetryCount { get; set; }
 
+    /// <summary>
+    /// Gets or sets the UTC timestamp until which this row is leased to one processor replica.
+    /// Rows with an unexpired lease are skipped by other replicas' polls, making scale-out safe
+    /// by construction (before the lease, two replicas could drain the same rows and
+    /// double-dispatch every event). Null or expired means unclaimed.
+    /// </summary>
+    public DateTime? LockedUntil { get; set; }
+
+    /// <summary>
+    /// Gets or sets the claim token written together with <see cref="LockedUntil"/>; the claiming
+    /// replica processes only rows carrying its own token, so a race between two claim updates
+    /// cannot hand the same row to both.
+    /// </summary>
+    public Guid? LockToken { get; set; }
+
     /// <summary>Gets or sets the last error message from a failed dispatch attempt.</summary>
     public string? LastError { get; set; }
 

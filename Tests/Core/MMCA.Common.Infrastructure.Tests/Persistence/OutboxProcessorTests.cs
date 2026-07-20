@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Messaging;
@@ -98,16 +100,21 @@ public sealed class OutboxProcessorTests : IDisposable
 
     /// <summary>
     /// Builds a processor over the shared SQLite fixture with the given settings — lets
-    /// individual tests vary <see cref="OutboxSettings.BatchSize"/> etc.
+    /// individual tests vary <see cref="OutboxSettings.BatchSize"/>, drive the clock via a
+    /// <see cref="FakeTimeProvider"/>, or observe logging.
     /// </summary>
-    private OutboxProcessor CreateProcessor(OutboxSettings settings) =>
+    private OutboxProcessor CreateProcessor(
+        OutboxSettings settings,
+        TimeProvider? timeProvider = null,
+        ILogger<OutboxProcessor>? logger = null) =>
         new(
             _scopeFactory,
-            NullLogger<OutboxProcessor>.Instance,
+            logger ?? NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>(),
             _registry,
-            _resolver);
+            _resolver,
+            timeProvider);
 
     public void Dispose()
     {
@@ -439,6 +446,117 @@ public sealed class OutboxProcessorTests : IDisposable
         retried.ProcessedOn.Should().BeNull("a broker failure must not mark the event delivered");
         retried.RetryCount.Should().Be(1);
         retried.LastError.Should().Be("Broker unreachable");
+    }
+
+    // ── Lease: rows under an unexpired lock are skipped; expired locks are claimable ──
+    [Fact]
+    public async Task LockedRow_SkippedWhileLeaseUnexpired_ClaimedAndProcessedAfterExpiry()
+    {
+        // Arrange: a row "claimed" by another replica whose lease has 60s left.
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings(), timeProvider);
+
+        var otherReplicaToken = Guid.NewGuid();
+        OutboxMessage locked = CreateEligibleMessage(occurredOn: now.AddMinutes(-10));
+        locked.LockedUntil = now.AddSeconds(60);
+        locked.LockToken = otherReplicaToken;
+        _dbContext.Set<OutboxMessage>().Add(locked);
+        await _dbContext.SaveChangesAsync();
+
+        // Act 1: the unexpired lease hides the row from this replica entirely.
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        OutboxMessage stillLocked = await _dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync();
+        stillLocked.ProcessedOn.Should().BeNull("a row under another replica's unexpired lease must be skipped");
+        stillLocked.LockToken.Should().Be(otherReplicaToken, "a skipped row's claim must not be overwritten");
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Act 2: once the lease expires, the row is claimable again (dead-replica recovery).
+        timeProvider.Advance(TimeSpan.FromSeconds(120));
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        // Assert: claimed under a fresh token and dispatched.
+        OutboxMessage processed = await _dbContext.Set<OutboxMessage>().AsNoTracking().SingleAsync();
+        processed.ProcessedOn.Should().NotBeNull("an expired lease releases the row to the next replica");
+        processed.LockToken.Should().NotBe(otherReplicaToken, "the claim step must stamp the claiming replica's own token");
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ── Retry exhaustion: Error log + dead-letter metric with reason=retries_exhausted ──
+    [Fact]
+    public async Task RetryExhaustion_LogsErrorAndIncrementsDeadLetterMetric()
+    {
+        // Arrange: MaxRetries 1, so the first failure exhausts the message.
+        var mockLogger = new Mock<ILogger<OutboxProcessor>>();
+        mockLogger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        using OutboxProcessor processor = CreateProcessor(
+            new OutboxSettings { MaxRetries = 1 }, logger: mockLogger.Object);
+
+        _dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("permanently failing handler"));
+
+        var measurements = new List<(long Value, string? Reason)>();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Meter.Name == "MMCA.Common.Outbox" && instrument.Name == "outbox.dead_letter.count")
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            string? reason = null;
+            foreach (var tag in tags)
+            {
+                if (string.Equals(tag.Key, "reason", StringComparison.Ordinal))
+                {
+                    reason = tag.Value as string;
+                }
+            }
+
+            lock (measurements)
+            {
+                measurements.Add((value, reason));
+            }
+        });
+        listener.Start();
+
+        OutboxMessage message = CreateEligibleMessage();
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        // Assert: the row leaves the poll via the RetryCount filter, never marked processed.
+        OutboxMessage exhausted = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        exhausted.RetryCount.Should().Be(1);
+        exhausted.ProcessedOn.Should().BeNull("an undelivered message must never be marked processed");
+        exhausted.LastError.Should().Be("permanently failing handler");
+
+        mockLogger.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.Is<EventId>(e => e.Name == "LogRetriesExhausted"),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once,
+            "exhaustion is the operator's last loud signal and must log at Error");
+
+        lock (measurements)
+        {
+            measurements.Should().Contain(
+                m => m.Value == 1 && m.Reason == "retries_exhausted",
+                "the dead-letter metric must record the exhaustion with its reason tag");
+        }
     }
 
     // ── Test doubles ──

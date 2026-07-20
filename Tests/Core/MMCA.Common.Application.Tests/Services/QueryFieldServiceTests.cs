@@ -140,6 +140,72 @@ public class QueryFieldServiceTests
         sorted.First().Id.Should().Be(2);
     }
 
+    // ── ApplySorting: allowlist behavior ──
+    [Fact]
+    public void ApplySorting_UnmappedRealProperty_IsCaseInsensitive()
+    {
+        var query = new List<ProductDto>
+        {
+            new() { Id = 2, Name = "B" },
+            new() { Id = 1, Name = "A" },
+        }.AsQueryable();
+
+        var sorted = QueryFieldService.ApplySorting(query, "name", "asc", new Dictionary<string, string>());
+
+        sorted.First().Name.Should().Be("A");
+    }
+
+    [Fact]
+    public void ApplySorting_UnmappedNonProperty_FallsBackToDefaultSort()
+    {
+        var query = new List<ProductDto>
+        {
+            new() { Id = 2, Name = "B" },
+            new() { Id = 1, Name = "A" },
+        }.AsQueryable();
+
+        // "Category.Name" is a navigation path the DTO does not expose: it must never reach
+        // Dynamic LINQ; the default sort applies instead.
+        var sorted = QueryFieldService.ApplySorting(
+            query, "Category.Name", "asc", new Dictionary<string, string>(), defaultSort: p => p.Id);
+
+        sorted.Select(p => p.Id).Should().Equal(1, 2);
+    }
+
+    [Fact]
+    public void ApplySorting_ExpressionString_DoesNotThrow_ReturnsUnsortedWithoutDefault()
+    {
+        var query = new List<ProductDto>
+        {
+            new() { Id = 2, Name = "B" },
+            new() { Id = 1, Name = "A" },
+        }.AsQueryable();
+
+        // A client-supplied expression must not reach Dynamic LINQ (no parse-error 500s).
+        var act = () => QueryFieldService.ApplySorting(
+            query, "(Id + Price)", "asc", new Dictionary<string, string>()).ToList();
+
+        act.Should().NotThrow().Which.Select(p => p.Id).Should().Equal(2, 1);
+    }
+
+    [Fact]
+    public void ApplySorting_MappedName_WinsOverPropertyLookup()
+    {
+        var query = new List<ProductDto>
+        {
+            new() { Id = 1, Name = "C", Price = 3m },
+            new() { Id = 2, Name = "A", Price = 1m },
+        }.AsQueryable();
+
+        // The map redirects the DTO's "Name" to the entity's Price: the mapped target must be
+        // used even though "Name" also names a real property.
+        var map = new Dictionary<string, string> { ["Name"] = "Price" };
+
+        var sorted = QueryFieldService.ApplySorting(query, "Name", "desc", map);
+
+        sorted.First().Price.Should().Be(3m);
+    }
+
     // ── Validate ──
     [Fact]
     public void Validate_NullFields_ReturnsSuccess() =>

@@ -103,13 +103,21 @@ public sealed partial class OutboxCleanupService(
                 // OutboxProcessor's poll excludes them (RetryCount < MaxRetries) but the processed
                 // sweep above never reaches them: they accumulate without bound AND stay in the
                 // ProcessedOn-IS-NULL pending index, re-scanned by every poll cycle. Purge them on
-                // the same retention window, keyed on OccurredOn since they have no ProcessedOn.
-                // This permanently abandons an undelivered event after RetentionDays; the failure is
-                // already recorded on the row (LastError) and logged by the processor before then.
+                // their own retention window (Outbox:DeadLetterRetentionDays, falling back to
+                // RetentionDays), keyed on OccurredOn since they have no ProcessedOn.
+                // This permanently abandons an undelivered event after that window; the failure is
+                // recorded on the row (LastError), counted on the dead-letter metric, and logged at
+                // Error by the processor at the moment of exhaustion.
+                var deadLetterRetentionDays = _settings.DeadLetterRetentionDays > 0
+                    ? _settings.DeadLetterRetentionDays
+                    : _settings.RetentionDays;
+                var deadLetterCutoff = _timeProvider.GetUtcNow().UtcDateTime
+                    .Subtract(TimeSpan.FromDays(deadLetterRetentionDays));
+
                 var deadLettered = await context.Set<OutboxMessage>()
                     .Where(m => m.ProcessedOn == null
                         && m.RetryCount >= _settings.MaxRetries
-                        && m.OccurredOn < cutoff)
+                        && m.OccurredOn < deadLetterCutoff)
                     .ExecuteDeleteAsync(cancellationToken)
                     .ConfigureAwait(false);
 

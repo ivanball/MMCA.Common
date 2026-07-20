@@ -40,6 +40,7 @@
   </Folder>
   <Folder Name="/Tests/Hosting/">
     <Project Path="Tests/Hosting/MMCA.Common.Aspire.Tests/MMCA.Common.Aspire.Tests.csproj" />
+    <Project Path="Tests/Hosting/MMCA.Common.Testing.Tests/MMCA.Common.Testing.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Architecture/">
     <Project Path="Tests/Architecture/MMCA.Common.Architecture.Tests/MMCA.Common.Architecture.Tests.csproj" />

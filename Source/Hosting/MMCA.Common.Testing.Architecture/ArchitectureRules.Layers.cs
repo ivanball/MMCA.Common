@@ -61,6 +61,43 @@ public static partial class ArchitectureRules
         LayerNotDependOnLayer(map, Layer.Ui, Layer.Infrastructure,
             "UI must not depend on Infrastructure");
 
+    /// <summary>
+    /// The architecture map declares at least one assembly for every layer in
+    /// <paramref name="required"/>. The per-layer dependency rules iterate
+    /// <c>map.Layers.Where(l => l.Layer == from)</c>, so a map that silently omits a layer gets
+    /// vacuously green layer tests; this completeness check turns that omission into a failure.
+    /// </summary>
+    /// <param name="map">The repo's architecture map.</param>
+    /// <param name="required">The layers the map must declare (framework or per-module).</param>
+    public static void LayerMapDeclaresLayers(IArchitectureMap map, IEnumerable<Layer> required)
+    {
+        var missing = required
+            .Where(layer => !map.Layers.Any(l => l.Layer == layer))
+            .Select(layer => $"  - no assembly is registered under Layer.{layer}");
+
+        ArchitectureAssert.NoViolations(missing,
+            "the architecture map must declare every expected layer — a missing layer makes its dependency rules vacuously green");
+    }
+
+    /// <summary>
+    /// Every module the map declares registers an assembly for each layer in
+    /// <paramref name="required"/>, so no per-module layer rule can pass vacuously because a
+    /// module's assembly was forgotten in the map.
+    /// </summary>
+    /// <param name="map">The repo's architecture map.</param>
+    /// <param name="required">The layers every declared module must register.</param>
+    public static void ModulesDeclareLayers(IArchitectureMap map, IEnumerable<Layer> required)
+    {
+        var requiredList = required.ToList();
+        var missing = map.ModuleNames
+            .SelectMany(module => requiredList
+                .Where(layer => map.For(module, layer) is null)
+                .Select(layer => $"  - module '{module}' declares no Layer.{layer} assembly"));
+
+        ArchitectureAssert.NoViolations(missing,
+            "every declared module must register its expected layer assemblies so the per-module layer rules run non-vacuously");
+    }
+
     private static void LayerNotDependOnLayer(IArchitectureMap map, Layer from, Layer to, string reason)
     {
         foreach (var layerRef in map.Layers.Where(l => l.Layer == from))

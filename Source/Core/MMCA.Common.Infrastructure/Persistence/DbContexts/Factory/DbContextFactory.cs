@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 
@@ -153,20 +155,33 @@ public sealed class DbContextFactory(
             foreach (var (entry, _) in savedStates)
                 entry.State = EntityState.Unchanged;
 
+            // try/finally: a failed save must not leave IDENTITY_INSERT ON on the pooled
+            // connection, nor leave the hidden entries stuck in the Unchanged state (they
+            // would be silently dropped from any retried save).
+            try
+            {
 #pragma warning disable S2077 // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and SET IDENTITY_INSERT cannot take a parameterized identifier
-            await context.Database.ExecuteSqlRawAsync(
-                string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] ON"),
-                cancellationToken).ConfigureAwait(false);
+                await context.Database.ExecuteSqlRawAsync(
+                    string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] ON"),
+                    cancellationToken).ConfigureAwait(false);
 
-            result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
-
-            await context.Database.ExecuteSqlRawAsync(
-                string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] OFF"),
-                cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await context.Database.ExecuteSqlRawAsync(
+                        string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] OFF"),
+                        CancellationToken.None).ConfigureAwait(false);
+                }
 #pragma warning restore S2077
-
-            foreach (var (entry, originalState) in savedStates)
-                entry.State = originalState;
+            }
+            finally
+            {
+                foreach (var (entry, originalState) in savedStates)
+                    entry.State = originalState;
+            }
         }
 
         // Final save for any remaining changes (non-identity entities, updates, etc.)
@@ -232,7 +247,7 @@ public sealed class DbContextFactory(
     {
         var result = 0;
         foreach (var context in _dbContexts.Values)
-            result += context.SaveChanges();
+            result += context.SaveChanges(_currentUserService.UserId);
         return result;
     }
 
@@ -255,12 +270,31 @@ public sealed class DbContextFactory(
         _transactionActive = false;
         foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction))
             context.Database.RollbackTransaction();
+
+        // The aggregate changes and their outbox rows just rolled back; any event dispatch
+        // deferred for this transaction must never run (and must not survive into an
+        // execution-strategy retry of the same operation).
+        foreach (var context in _dbContexts.Values)
+            DomainEventSaveChangesInterceptor.DropDeferred(context);
     }
 
     /// <inheritdoc />
     /// <remarks>
+    /// <para>
     /// With multiple physical sources, each gets its own transaction; commits are sequential and
     /// best-effort (no two-phase commit). The outbox is the cross-source consistency mechanism.
+    /// </para>
+    /// <para>
+    /// A returned failed <see cref="Result"/> rolls the transaction back, exactly like an
+    /// exception: in a framework that mandates Result-over-exceptions (ADR-013), a handler that
+    /// saves and then fails a later invariant must not leave the partial mutation committed.
+    /// </para>
+    /// <para>
+    /// In-process domain event dispatch deferred during the transaction is flushed only after a
+    /// successful commit. This also means a retrying execution strategy — which re-runs
+    /// <paramref name="operation"/> wholesale on transient failures — cannot dispatch the same
+    /// events once per attempt: rollback drops the aborted attempt's deferred work.
+    /// </para>
     /// </remarks>
     public async Task<TResult> ExecuteInTransactionAsync<TResult>(
         Func<CancellationToken, Task<TResult>> operation,
@@ -279,7 +313,26 @@ public sealed class DbContextFactory(
             try
             {
                 var result = await operation(ct).ConfigureAwait(false);
+
+                if (result is Result { IsFailure: true })
+                {
+                    // Business failure: atomicity over partial persistence. RollbackTransaction
+                    // also drops any deferred event dispatch (the events' outbox rows roll back
+                    // with the data, so nothing may be delivered).
+                    RollbackTransaction();
+                    return result;
+                }
+
                 CommitTransaction();
+
+                // Deliver events only now that the data is durable: in-process handlers must
+                // never act on state that could still roll back.
+                foreach (var committedContext in _dbContexts.Values)
+                {
+                    await DomainEventSaveChangesInterceptor.FlushDeferredAsync(committedContext, ct)
+                        .ConfigureAwait(false);
+                }
+
                 return result;
             }
             catch (OperationCanceledException)
@@ -293,6 +346,8 @@ public sealed class DbContextFactory(
                 catch
                 {
                     _transactionActive = false;
+                    foreach (var abortedContext in _dbContexts.Values)
+                        DomainEventSaveChangesInterceptor.DropDeferred(abortedContext);
                 }
 
                 throw;

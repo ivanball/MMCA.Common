@@ -34,15 +34,19 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <param name="outboxSignal">Signal to wait on between polling cycles for immediate wakeup.</param>
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
+/// <param name="timeProvider">Clock abstraction for the startup delay and lease/eligibility timestamps;
+/// defaults to <see cref="TimeProvider.System"/> so tests can drive the loop deterministically.</param>
 public sealed partial class OutboxProcessor(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxProcessor> logger,
     IOptions<OutboxSettings> outboxOptions,
     IOutboxSignal outboxSignal,
     IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver) : BackgroundService
+    IDataSourceResolver dataSourceResolver,
+    TimeProvider? timeProvider = null) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>
     /// Name of the per-cycle poll activity wrapping the outbox fetch query. Must stay in sync
@@ -66,7 +70,7 @@ public sealed partial class OutboxProcessor(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Brief startup delay so the application finishes initializing before we start polling.
-        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken).ConfigureAwait(false);
+        await _timeProvider.Delay(TimeSpan.FromSeconds(5), stoppingToken).ConfigureAwait(false);
 
         if (GetOutboxSources().Count == 0)
         {
@@ -102,7 +106,7 @@ public sealed partial class OutboxProcessor(
             // whichever comes first.
             var wait = ComputeWaitTime(
                 cycle.EarliestPendingOccurredOn,
-                DateTime.UtcNow,
+                _timeProvider.GetUtcNow().UtcDateTime,
                 TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds),
                 TimeSpan.FromSeconds(_settings.PollingIntervalSeconds));
             await outboxSignal.WaitAsync(wait, stoppingToken).ConfigureAwait(false);
@@ -201,29 +205,10 @@ public sealed partial class OutboxProcessor(
         var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
         var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
-        var cutoff = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var cutoff = now.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
 
-        // The fetch query runs inside its own activity (explicit using block, not using var)
-        // so OutboxPollFilterProcessor in MMCA.Common.Aspire can suppress it and its SqlClient
-        // child span from export — an idle fleet polling around the clock would otherwise
-        // dominate telemetry ingestion. Everything after the block (per-message dispatch,
-        // the final SaveChangesAsync) stays outside the wrapper and is exported normally.
-        List<OutboxMessage> messages;
-        using (var pollActivity = OutboxActivitySource.StartActivity(PollActivityName))
-        {
-            pollActivity?.SetTag("messaging.outbox.data_source", sourceName);
-
-            // No OccurredOn cutoff in SQL: rows younger than the processing delay are fetched
-            // too, so the caller can smart-wait until the earliest becomes eligible. Ordering
-            // by OccurredOn guarantees eligible rows sort before pending ones, so a full batch
-            // can never starve eligible work behind pending rows.
-            messages = await context.Set<OutboxMessage>()
-                .Where(m => m.ProcessedOn == null && m.RetryCount < _settings.MaxRetries)
-                .OrderBy(m => m.OccurredOn)
-                .Take(_settings.BatchSize)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-        }
+        var messages = await FetchCandidatesAsync(context, sourceName, now, cancellationToken).ConfigureAwait(false);
 
         // Split the ordered batch: the eligible prefix is processed now; the pending remainder
         // only informs how long to wait before the next cycle.
@@ -240,10 +225,19 @@ public sealed partial class OutboxProcessor(
             return new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending);
         }
 
-        LogProcessingBatch(logger, eligibleCount, sourceName);
+        var toProcess = await ClaimEligibleAsync(context, messages, eligibleCount, now, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (toProcess.Count == 0)
+        {
+            // Another replica claimed the whole prefix between fetch and claim.
+            return new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending);
+        }
+
+        LogProcessingBatch(logger, toProcess.Count, sourceName);
 
         var processedAny = await DispatchMessagesAsync(
-            messages.Take(eligibleCount), source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
+            toProcess, source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
 
         // Use the base DbContext.SaveChangesAsync to bypass audit stamping and event dispatch.
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -253,6 +247,79 @@ public sealed partial class OutboxProcessor(
         return new OutboxCycleResult(
             HasMoreEligibleWork: eligibleCount == _settings.BatchSize && processedAny,
             earliestPending);
+    }
+
+    /// <summary>
+    /// Fetches the oldest pending rows for one source. The query runs inside its own activity
+    /// (explicit using block) so OutboxPollFilterProcessor in MMCA.Common.Aspire can suppress it
+    /// and its SqlClient child span from export — an idle fleet polling around the clock would
+    /// otherwise dominate telemetry ingestion. No OccurredOn cutoff in SQL: rows younger than
+    /// the processing delay are fetched too, so the caller can smart-wait until the earliest
+    /// becomes eligible; ordering by OccurredOn guarantees eligible rows sort before pending
+    /// ones. Rows under another replica's unexpired lease are skipped entirely.
+    /// </summary>
+    private async Task<List<OutboxMessage>> FetchCandidatesAsync(
+        ApplicationDbContext context,
+        string sourceName,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        using var pollActivity = OutboxActivitySource.StartActivity(PollActivityName);
+        pollActivity?.SetTag("messaging.outbox.data_source", sourceName);
+
+        return await context.Set<OutboxMessage>()
+            .Where(m => m.ProcessedOn == null
+                && m.RetryCount < _settings.MaxRetries
+                && (m.LockedUntil == null || m.LockedUntil < now))
+            .OrderBy(m => m.OccurredOn)
+            .Take(_settings.BatchSize)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Claims the eligible prefix of the fetched batch with a lease before dispatching: a
+    /// concurrent replica's claim update wins or loses per row atomically, so two replicas can
+    /// never dispatch the same message (scale-out safety by construction rather than by the
+    /// minReplicas:1 deployment convention). A replica that dies mid-batch releases its rows
+    /// implicitly when the lease expires. Returns the claimed tracked messages (empty when
+    /// another replica claimed the whole prefix between fetch and claim).
+    /// </summary>
+    private async Task<List<OutboxMessage>> ClaimEligibleAsync(
+        ApplicationDbContext context,
+        List<OutboxMessage> messages,
+        int eligibleCount,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var lockToken = Guid.NewGuid();
+        var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
+        var eligibleIds = messages.Take(eligibleCount).Select(m => m.Id).ToArray();
+
+        var claimedCount = await context.Set<OutboxMessage>()
+            .Where(m => eligibleIds.Contains(m.Id)
+                && m.ProcessedOn == null
+                && (m.LockedUntil == null || m.LockedUntil < now))
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(m => m.LockedUntil, leaseUntil).SetProperty(m => m.LockToken, lockToken),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (claimedCount == 0)
+            return [];
+
+        if (claimedCount == eligibleIds.Length)
+            return [.. messages.Take(eligibleCount)];
+
+        // Partial claim: process only the rows carrying this replica's token.
+        var claimedIds = await context.Set<OutboxMessage>().AsNoTracking()
+            .Where(m => eligibleIds.Contains(m.Id) && m.LockToken == lockToken)
+            .Select(m => m.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var claimedSet = claimedIds.ToHashSet();
+        return [.. messages.Take(eligibleCount).Where(m => claimedSet.Contains(m.Id))];
     }
 
     /// <summary>
@@ -277,9 +344,12 @@ public sealed partial class OutboxProcessor(
                 if (domainEvent is null)
                 {
                     message.LastError = $"Cannot resolve type: {message.EventType}";
-                    message.ProcessedOn = DateTime.UtcNow;
+                    message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
                     processedAny = true;
-                    DeadLetterCounter.Add(1, new KeyValuePair<string, object?>("event_type", message.EventType));
+                    DeadLetterCounter.Add(
+                        1,
+                        new KeyValuePair<string, object?>("event_type", message.EventType),
+                        new KeyValuePair<string, object?>("reason", "type_unresolvable"));
                     LogDeadLetter(logger, message.Id, message.EventType);
                     continue;
                 }
@@ -296,7 +366,7 @@ public sealed partial class OutboxProcessor(
                     await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
                 }
 
-                message.ProcessedOn = DateTime.UtcNow;
+                message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
                 processedAny = true;
                 LogMessageProcessed(logger, message.Id, message.EventType);
             }
@@ -305,7 +375,22 @@ public sealed partial class OutboxProcessor(
                 message.RetryCount++;
                 message.LastError = ex.Message;
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-                LogMessageRetry(logger, message.Id, message.RetryCount, ex);
+
+                if (message.RetryCount >= _settings.MaxRetries)
+                {
+                    // The moment of exhaustion is the operator's last loud signal: from here the
+                    // row leaves the poll (RetryCount filter) and is eventually purged by
+                    // OutboxCleanupService after the dead-letter retention window.
+                    DeadLetterCounter.Add(
+                        1,
+                        new KeyValuePair<string, object?>("event_type", message.EventType),
+                        new KeyValuePair<string, object?>("reason", "retries_exhausted"));
+                    LogRetriesExhausted(logger, message.Id, message.EventType, message.RetryCount, ex);
+                }
+                else
+                {
+                    LogMessageRetry(logger, message.Id, message.RetryCount, ex);
+                }
             }
         }
 
@@ -364,4 +449,7 @@ public sealed partial class OutboxProcessor(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} failed (attempt {RetryCount})")]
     private static partial void LogMessageRetry(ILogger logger, Guid messageId, int retryCount, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} ({EventType}) dead-lettered: retries exhausted after {RetryCount} attempts — the event was never delivered")]
+    private static partial void LogRetriesExhausted(ILogger logger, Guid messageId, string eventType, int retryCount, Exception exception);
 }
