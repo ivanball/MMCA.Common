@@ -6,9 +6,9 @@ public static partial class ArchitectureRules
     public static void HandlersAreSealedWithHandlerSuffix(IArchitectureMap map)
     {
         var offenders = map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsHandler)
-            .Where(t => !t.SimpleName().EndsWith("Handler", StringComparison.Ordinal) || !t.IsSealed)
+            .Where(t => !t.SimpleName.EndsWith("Handler", StringComparison.Ordinal) || !t.IsSealed)
             .Select(t => $"  - {t.FullName} (handlers must end in 'Handler' and be sealed)");
 
         ArchitectureAssert.NoViolations(offenders, "command/query handlers must end in 'Handler' and be sealed");
@@ -26,10 +26,10 @@ public static partial class ArchitectureRules
     public static void ValidatorsHaveValidatorOrRulesSuffix(IArchitectureMap map)
     {
         var offenders = map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith("FluentValidation.AbstractValidator"))
-            .Where(t => !t.SimpleName().EndsWith("Validator", StringComparison.Ordinal)
-                && !t.SimpleName().EndsWith("Rules", StringComparison.Ordinal))
+            .Where(t => !t.SimpleName.EndsWith("Validator", StringComparison.Ordinal)
+                && !t.SimpleName.EndsWith("Rules", StringComparison.Ordinal))
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(offenders, "validators must end in 'Validator' or 'Rules'");
@@ -39,10 +39,10 @@ public static partial class ArchitectureRules
     public static void SharedDtosHaveDtoOrLookupSuffix(IArchitectureMap map)
     {
         var offenders = map.ModuleShared()
-            .SelectMany(a => a.GetLoadableTypes())
+            .SelectMany(a => a.LoadableTypes)
             .Where(ImplementsBaseDto)
-            .Where(t => !t.SimpleName().EndsWith("DTO", StringComparison.Ordinal)
-                && !t.SimpleName().EndsWith("Lookup", StringComparison.Ordinal))
+            .Where(t => !t.SimpleName.EndsWith("DTO", StringComparison.Ordinal)
+                && !t.SimpleName.EndsWith("Lookup", StringComparison.Ordinal))
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(offenders, "shared DTO contracts must end in 'DTO' or 'Lookup'");
@@ -52,7 +52,7 @@ public static partial class ArchitectureRules
     public static void DomainEventsAreSealedInDomainEventsNamespace(IArchitectureMap map)
     {
         var offenders = map.ModuleDomain()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith("MMCA.Common.Domain.DomainEvents.BaseDomainEvent"))
             .Where(t => !t.IsSealed || t.Namespace?.Contains(".DomainEvents", StringComparison.Ordinal) != true)
             .Select(t => $"  - {t.FullName} (domain events must be sealed and in a *.DomainEvents namespace)");
@@ -64,8 +64,8 @@ public static partial class ArchitectureRules
     public static void InvariantClassesAreStatic(IArchitectureMap map)
     {
         var offenders = map.ModuleDomain()
-            .SelectMany(a => a.GetLoadableTypes())
-            .Where(t => t.IsClass && t.SimpleName().EndsWith("Invariants", StringComparison.Ordinal))
+            .SelectMany(a => a.LoadableTypes)
+            .Where(t => t.IsClass && t.SimpleName.EndsWith("Invariants", StringComparison.Ordinal))
             .Where(t => !(t.IsAbstract && t.IsSealed))
             .Select(t => $"  - {t.FullName}");
 
@@ -76,9 +76,9 @@ public static partial class ArchitectureRules
     public static void EfConfigurationsAreSealedWithConfigurationSuffix(IArchitectureMap map)
     {
         var offenders = map.Infrastructure()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType && i.Name == "IEntityTypeConfiguration`1"))
-            .Where(t => !t.SimpleName().EndsWith("Configuration", StringComparison.Ordinal) || !t.IsSealed)
+            .Where(t => !t.SimpleName.EndsWith("Configuration", StringComparison.Ordinal) || !t.IsSealed)
             .Select(t => $"  - {t.FullName} (EF configurations must end in 'Configuration' and be sealed)");
 
         ArchitectureAssert.NoViolations(offenders, "EF entity configurations must end in 'Configuration' and be sealed");
@@ -89,9 +89,9 @@ public static partial class ArchitectureRules
     {
         var offenders = map.Layers
             .Where(l => l.Layer is Layer.Domain or Layer.Application)
-            .SelectMany(l => l.Assembly.ConcreteClasses())
+            .SelectMany(l => l.Assembly.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith("MMCA.Common.Domain.Specifications.Specification"))
-            .Where(t => !t.SimpleName().EndsWith("Specification", StringComparison.Ordinal) || !t.IsSealed)
+            .Where(t => !t.SimpleName.EndsWith("Specification", StringComparison.Ordinal) || !t.IsSealed)
             .Select(t => $"  - {t.FullName} (specifications must end in 'Specification' and be sealed)");
 
         ArchitectureAssert.NoViolations(offenders, "specifications must end in 'Specification' and be sealed");
@@ -101,11 +101,11 @@ public static partial class ArchitectureRules
     public static void RepositoriesHaveRepositorySuffix(IArchitectureMap map)
     {
         var offenders = map.Infrastructure()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.GetInterfaces().Any(i => i.IsGenericType
                 && i.Name is "IRepository`2" or "IReadRepository`2" or "IWriteRepository`2"))
-            .Where(t => !t.SimpleName().EndsWith("Repository", StringComparison.Ordinal)
-                && !t.SimpleName().EndsWith("Decorator", StringComparison.Ordinal))
+            .Where(t => !t.SimpleName.EndsWith("Repository", StringComparison.Ordinal)
+                && !t.SimpleName.EndsWith("Decorator", StringComparison.Ordinal))
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(offenders,
@@ -116,13 +116,13 @@ public static partial class ArchitectureRules
     {
         var offenders = new List<string>();
 
-        foreach (var handler in map.ModuleApplication().SelectMany(a => a.ConcreteClasses()))
+        foreach (var handler in map.ModuleApplication().SelectMany(a => a.ConcreteClasses))
         {
             foreach (var handlerInterface in handler.GetInterfaces()
                 .Where(i => i.IsGenericType && i.Name == handlerInterfaceName))
             {
                 var messageType = handlerInterface.GetGenericArguments()[0];
-                if (!suffixes.Any(s => messageType.SimpleName().EndsWith(s, StringComparison.Ordinal)))
+                if (!suffixes.Any(s => messageType.SimpleName.EndsWith(s, StringComparison.Ordinal)))
                 {
                     offenders.Add($"  - {messageType.FullName} (handled by {handler.Name})");
                 }

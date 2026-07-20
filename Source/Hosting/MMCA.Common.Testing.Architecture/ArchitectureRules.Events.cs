@@ -59,7 +59,7 @@ public static partial class ArchitectureRules
 
     private static IEnumerable<Type> IntegrationEvents(IArchitectureMap map) =>
         map.Layers.Select(l => l.Assembly).Distinct()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsIntegrationEvent);
 
     private static bool IsIntegrationEvent(Type type) =>

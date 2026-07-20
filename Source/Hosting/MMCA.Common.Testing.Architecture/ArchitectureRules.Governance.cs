@@ -11,7 +11,7 @@ public static partial class ArchitectureRules
     public static void EntitiesWithPiiImplementAnonymizable(IArchitectureMap map)
     {
         var violations = map.OfLayer(Layer.Domain)
-            .SelectMany(a => a.GetLoadableTypes())
+            .SelectMany(a => a.LoadableTypes)
             .Where(HasPiiProperty)
             .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.FullName, AnonymizableFullName, StringComparison.Ordinal)))
             .Select(t => $"  - {t.FullName} declares [Pii] properties and must implement {AnonymizableFullName} (ADR-005)");
@@ -24,9 +24,9 @@ public static partial class ArchitectureRules
     public static void UpdateRequestsAreConcurrencyAware(IArchitectureMap map)
     {
         var violations = map.ModuleApplication()
-            .SelectMany(a => a.GetLoadableTypes())
+            .SelectMany(a => a.LoadableTypes)
             .Where(t => t is { IsClass: true } or { IsValueType: true }
-                && t.SimpleName().EndsWith("UpdateRequest", StringComparison.Ordinal))
+                && t.SimpleName.EndsWith("UpdateRequest", StringComparison.Ordinal))
             .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.FullName, ConcurrencyAwareFullName, StringComparison.Ordinal)))
             .Select(t => $"  - {t.FullName} must implement {ConcurrencyAwareFullName} (RowVersion) so concurrent edits surface as 409 Conflict");
 

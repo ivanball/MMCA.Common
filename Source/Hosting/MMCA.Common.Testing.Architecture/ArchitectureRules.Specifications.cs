@@ -29,7 +29,7 @@ public static partial class ArchitectureRules
 
         var specTypes = map.OfLayer(Layer.Application)
             .Concat(map.OfLayer(Layer.Domain))
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith(SpecificationBaseFullNamePrefix));
 
         foreach (var specType in specTypes)
@@ -120,7 +120,7 @@ public static partial class ArchitectureRules
 
         private static Type? EntityTypeOf(Type propertyType)
         {
-            if (propertyType.InheritsAuditableEntity())
+            if (propertyType.InheritsAuditableEntity)
             {
                 return propertyType;
             }
@@ -129,7 +129,7 @@ public static partial class ArchitectureRules
             if (propertyType.IsGenericType)
             {
                 var elementType = propertyType.GetGenericArguments().FirstOrDefault();
-                if (elementType is not null && elementType.InheritsAuditableEntity())
+                if (elementType is not null && elementType.InheritsAuditableEntity)
                 {
                     return elementType;
                 }

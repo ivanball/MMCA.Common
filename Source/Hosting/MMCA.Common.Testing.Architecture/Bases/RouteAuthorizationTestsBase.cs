@@ -49,7 +49,7 @@ public abstract class RouteAuthorizationTestsBase
     [Fact]
     public void GovernedPages_RequireDeclaredRole()
     {
-        var offenders = TargetAssembly.GetLoadableTypes()
+        var offenders = TargetAssembly.LoadableTypes
             .Where(t => IsRoutablePage(t) && IsGovernedPage(t) && !RequiresRole(t, RequiredRole))
             .Select(t => $"{t.FullName} [{Routes(t)}]")
             .ToList();
@@ -65,7 +65,7 @@ public abstract class RouteAuthorizationTestsBase
     {
         // Guard the guard: if a refactor moves the governed namespaces or renames the pinned pages,
         // IsGovernedPage would match nothing and the assertion above would pass vacuously.
-        var count = TargetAssembly.GetLoadableTypes().Count(t => IsRoutablePage(t) && IsGovernedPage(t));
+        var count = TargetAssembly.LoadableTypes.Count(t => IsRoutablePage(t) && IsGovernedPage(t));
 
         count.Should().BeGreaterThanOrEqualTo(
             MinimumGovernedPages,

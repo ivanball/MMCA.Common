@@ -16,75 +16,76 @@ namespace MMCA.Common.API.Startup;
 /// </summary>
 public static class DatabaseInitializationExtensions
 {
-    /// <summary>
-    /// Initializes databases by creating contexts, applying schema changes based on
-    /// <see cref="ApplicationSettings.DatabaseInitStrategy"/>, and running module seeders.
-    /// </summary>
-    /// <param name="services">The service provider (typically from <c>app.Services</c>).</param>
-    /// <param name="applicationSettings">Application settings containing the database init strategy.</param>
-    /// <param name="moduleLoader">The module loader to seed enabled modules.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    public static async Task InitializeDatabaseAsync(
-        this IServiceProvider services,
-        ApplicationSettings applicationSettings,
-        ModuleLoader moduleLoader,
-        CancellationToken cancellationToken = default)
+    extension(IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(applicationSettings);
-        ArgumentNullException.ThrowIfNull(moduleLoader);
-
-        using var scope = services.CreateScope();
-
-        // Warm the entity data-source registry: this scans configuration assemblies once and makes
-        // entity-to-database routing deterministic before the first repository call (replacing the
-        // legacy model-building side effect that populated the lazy DataSourceService cache).
-        var registry = scope.ServiceProvider.GetRequiredService<IEntityDataSourceRegistry>();
-        var resolver = scope.ServiceProvider.GetRequiredService<IDataSourceResolver>();
-        var sourcesInUse = registry.GetPhysicalSourcesInUse();
-
-        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
-
-        // Cosmos and SQLite sources are optional — integration tests may omit their connection
-        // strings. Neither engine has EF Core schema migrations, so both are always created via
-        // EnsureCreated up front, independent of the SQL-Server-oriented DatabaseInitStrategy
-        // below. This is the ONLY path that creates SQLite sources under the "Migrate" and "None"
-        // strategies (which act on SQL Server alone) — without it a SQLite source in use is never
-        // created and the first repository call fails.
-        foreach (var migrationlessKey in sourcesInUse
-            .Where(k => k.Engine is DataSource.CosmosDB or DataSource.Sqlite))
+        /// <summary>
+        /// Initializes databases by creating contexts, applying schema changes based on
+        /// <see cref="ApplicationSettings.DatabaseInitStrategy"/>, and running module seeders.
+        /// </summary>
+        /// <param name="applicationSettings">Application settings containing the database init strategy.</param>
+        /// <param name="moduleLoader">The module loader to seed enabled modules.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        public async Task InitializeDatabaseAsync(
+            ApplicationSettings applicationSettings,
+            ModuleLoader moduleLoader,
+            CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrEmpty(resolver.GetPhysical(migrationlessKey).ConnectionString))
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(applicationSettings);
+            ArgumentNullException.ThrowIfNull(moduleLoader);
+
+            using var scope = services.CreateScope();
+
+            // Warm the entity data-source registry: this scans configuration assemblies once and makes
+            // entity-to-database routing deterministic before the first repository call (replacing the
+            // legacy model-building side effect that populated the lazy DataSourceService cache).
+            var registry = scope.ServiceProvider.GetRequiredService<IEntityDataSourceRegistry>();
+            var resolver = scope.ServiceProvider.GetRequiredService<IDataSourceResolver>();
+            var sourcesInUse = registry.GetPhysicalSourcesInUse();
+
+            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
+
+            // Cosmos and SQLite sources are optional — integration tests may omit their connection
+            // strings. Neither engine has EF Core schema migrations, so both are always created via
+            // EnsureCreated up front, independent of the SQL-Server-oriented DatabaseInitStrategy
+            // below. This is the ONLY path that creates SQLite sources under the "Migrate" and "None"
+            // strategies (which act on SQL Server alone) — without it a SQLite source in use is never
+            // created and the first repository call fails.
+            foreach (var migrationlessKey in sourcesInUse
+                .Where(k => k.Engine is DataSource.CosmosDB or DataSource.Sqlite))
             {
-                continue;
+                if (string.IsNullOrEmpty(resolver.GetPhysical(migrationlessKey).ConnectionString))
+                {
+                    continue;
+                }
+
+                await dbContextFactory.GetDbContext(migrationlessKey).Database
+                    .EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            await dbContextFactory.GetDbContext(migrationlessKey).Database
-                .EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
-        }
+            // Apply schema initialisation based on the configured strategy:
+            //   "Migrate"       — auto-apply pending EF Core migrations per SQL Server source (development/testing).
+            //   "EnsureCreated" — legacy EnsureCreated behavior for every source in use.
+            //   "None"          — production: validate no pending migrations on any source, throw if behind.
+            switch (applicationSettings.DatabaseInitStrategy)
+            {
+                case "Migrate":
+                    await dbContextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                case "EnsureCreated":
+                    await dbContextFactory.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                case "None":
+                    await ThrowIfPendingMigrationsAsync(dbContextFactory, sourcesInUse, cancellationToken).ConfigureAwait(false);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Unknown DatabaseInitStrategy: '{applicationSettings.DatabaseInitStrategy}'. " +
+                        "Valid values are: Migrate, EnsureCreated, None.");
+            }
 
-        // Apply schema initialisation based on the configured strategy:
-        //   "Migrate"       — auto-apply pending EF Core migrations per SQL Server source (development/testing).
-        //   "EnsureCreated" — legacy EnsureCreated behavior for every source in use.
-        //   "None"          — production: validate no pending migrations on any source, throw if behind.
-        switch (applicationSettings.DatabaseInitStrategy)
-        {
-            case "Migrate":
-                await dbContextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
-                break;
-            case "EnsureCreated":
-                await dbContextFactory.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
-                break;
-            case "None":
-                await ThrowIfPendingMigrationsAsync(dbContextFactory, sourcesInUse, cancellationToken).ConfigureAwait(false);
-                break;
-            default:
-                throw new InvalidOperationException(
-                    $"Unknown DatabaseInitStrategy: '{applicationSettings.DatabaseInitStrategy}'. " +
-                    "Valid values are: Migrate, EnsureCreated, None.");
+            await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
         }
-
-        await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
