@@ -23,9 +23,13 @@ CI (`.github/workflows/ci.yml`) jobs on every push/PR to `main`:
 - **build-and-test**: FACTS drift gate (`build/facts -- . --check`) -> restore -> Release build -> vuln audit -> tests under `dotnet-coverage` with `--minimum-expected-tests 2000` (a discovery regression that drops thousands of tests must fail). The vuln audit re-applies the `NuGetAuditSuppress` list from `Directory.Build.props` itself (`dotnet list --vulnerable` ignores suppressions).
 - **ui-e2e**: cross-browser matrix (chromium, firefox, and webkit are all required merge gates). Builds the out-of-slnx `MMCA.Common.UI.Gallery` + `MMCA.Common.UI.E2E.Tests` directly by csproj path (deliberately excluded from the slnx to keep unit runs fast) and runs axe-core WCAG 2.1 AA scans + a render smoke against the backend-less gallery.
 - **package-consumption**: packs every slnx package into a local folder feed, then restores + builds a throwaway consumer (outside the repo checkout) against those nupkgs, catching pack breaks (NU5xxx) and package-mode-only restore/analyzer failures before a release (source-mode builds mask them).
-- **coverage**: merges the tiers (ReportGenerator) and enforces the floor: the unit tier must stay >= 68.3% line coverage.
+- **consumer-source-build**: cross-repo canary; checks out MMCA.Helpdesk as a sibling and builds/tests it against THIS PR's framework source via its committed `local.props`, so a breaking public-API change fails pre-merge instead of after a release. Required merge gate.
+- **performance-smoke**: runs the BenchmarkDotNet suite (`--job Short`), then `build/perfgate` compares the results against the committed `Tests/Performance/perf-baseline.json` (allocation ceilings + machine-independent ratio floors) and fails on any violation. Moving a number deliberately means updating the baseline file in the same PR.
+- **coverage**: merges the tiers (ReportGenerator) and enforces the floor: the unit tier must stay >= 68.3% line coverage (generated `*.g.cs`/`*.generated.cs` excluded).
+- **build-maui** (windows runner): builds/packs `MMCA.Common.UI.Maui` (the out-of-slnx MAUI package, ADR-042).
+- **sample-deployment-validate**: compiles the `samples/deployment` Bicep templates (`az bicep build`).
 
-Windows jobs build/pack `MMCA.Common.UI.Maui`. Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` tags: build/test/pack, CycloneDX SBOM as a hard gate, push to GitHub Packages.
+Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` tags: build/test/pack, CycloneDX SBOM as a hard gate, push to GitHub Packages.
 
 Gotchas:
 - CI runs on Ubuntu: file paths are case-sensitive; match casing exactly.
@@ -39,18 +43,20 @@ Gotchas:
 Source/
 ├── Build/MMCA.Common.LayerEnforcement.targets   # compile-time layer guard
 ├── Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}
-├── Presentation/  MMCA.Common.{API,Grpc,UI}     (+ UI.Maui, outside the slnx)
+├── Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web}     (+ UI.Maui, outside the slnx)
 └── Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Testing,Testing.E2E,Testing.UI,Testing.Architecture}
 
-Tests/             # mirrors Source/; plus Architecture/ (NetArchTest) and the out-of-slnx
-                   # Presentation/UI.Gallery + UI.E2E.Tests (CI ui-e2e job only)
+Tests/             # mirrors Source/; plus Architecture/ (NetArchTest), Performance/ (Benchmarks +
+                   # perf-baseline.json), and the out-of-slnx Presentation/UI.Gallery + UI.E2E.Tests
+                   # (CI ui-e2e job only)
+build/             # facts (FACTS.md generator, CI drift gate) and perfgate (benchmark baseline gate)
 ```
 
 All `Source/` projects are packable (bulk NuGet metadata via `Directory.Build.props`, versions from MinVer).
 
 ## Architecture
 
-Strict layered dependency flow (each layer references only layers below): `API/Grpc -> Infrastructure -> Application -> Domain -> Shared`. Exceptions: `UI` and `Grpc` depend on **Shared only** (`UI` for Blazor WASM compatibility, `Grpc` because it is pure transport).
+Strict layered dependency flow (each layer references only layers below): `API/Grpc -> Infrastructure -> Application -> Domain -> Shared`. Exceptions: `UI` and `Grpc` depend on **Shared only** (`UI` for Blazor WASM compatibility, `Grpc` because it is pure transport); `UI.Web` is the Blazor Web host layer above both, referencing `UI`, `API`, and `Aspire` directly (transitive `ProjectReference`s disabled, guarded by its own layer-boundary check).
 
 ### Architecture Enforcement (two gates)
 
