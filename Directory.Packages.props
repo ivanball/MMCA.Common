@@ -14,7 +14,7 @@
     <!-- Direct pin to bump the transitive Microsoft.OpenApi off 2.0.0 (pulled by AspNetCore.OpenApi)
          to the first patched version for GHSA-v5pm-xwqc-g5wc (circular-schema-reference DoS in OpenAPI
          parsing); referenced directly in MMCA.Common.API so the pin takes effect (no transitive pinning). -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="3.9.0" />
     <!-- Application -->
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
