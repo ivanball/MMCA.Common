@@ -54,15 +54,24 @@ dotnet test --solution MMCA.Common.slnx -c Release
 
 1. Branch from an up-to-date `main` (e.g. `feature/<short-name>` or `fix/<short-name>`).
 2. Commit your work (Scoped Commits, above), push the branch, and open a PR against `main`.
-3. CI runs automatically. The required merge gates are:
+3. CI runs automatically. The eight required merge gates are:
    - `build-and-test` (includes the FACTS drift gate, the vuln audit, and the tests)
    - `Build MMCA.Common.UI.Maui (windows, 4 TFMs)`
-   - `UI a11y + render smoke (chromium)` and `UI a11y + render smoke (firefox)`
+   - `UI a11y + render smoke (chromium)`, `UI a11y + render smoke (firefox)`, and
+     `UI a11y + render smoke (webkit)` - all three engines block (webkit was promoted from
+     advisory to required on 2026-07-16)
    - `coverage` (the unit-tier line-coverage floor)
    - `Consumer source build (Helpdesk)` - the cross-repo canary (see below)
+   - `Performance gate (BenchmarkDotNet Short + baseline verify)` - `build/perfgate` checks the
+     benchmark results against the committed `Tests/Performance/perf-baseline.json` (allocation
+     ceilings + ratio floors). Moving a number deliberately means updating the baseline in the
+     same PR; raising a ceiling to silence a red gate defeats it.
 
-   `UI a11y + render smoke (webkit)` is advisory (not required). The automated Claude review
-   also comments on every PR.
+   The automated Claude review also comments on every PR (advisory, not a gate).
+
+   This list is a convenience copy. The live ruleset is authoritative: read it with
+   `gh api repos/ivanball/MMCA.Common/branches/main/protection --jq '.required_status_checks.contexts[]'`,
+   and prefer that output over this file whenever the two disagree.
 4. Merge once the required checks are green. The ruleset requires **0 approving reviews today**
    (transitional, while the team is small); a maintainer may self-merge a green PR. This will
    ratchet to 1 required approval once a second reviewer is available.
@@ -108,7 +117,10 @@ gh api -X PUT repos/ivanball/MMCA.Common/branches/main/protection \
       {"context": "Build MMCA.Common.UI.Maui (windows, 4 TFMs)"},
       {"context": "UI a11y + render smoke (chromium)"},
       {"context": "UI a11y + render smoke (firefox)"},
-      {"context": "coverage"}
+      {"context": "UI a11y + render smoke (webkit)"},
+      {"context": "coverage"},
+      {"context": "Consumer source build (Helpdesk)"},
+      {"context": "Performance gate (BenchmarkDotNet Short + baseline verify)"}
     ]
   },
   "enforce_admins": false,
@@ -121,9 +133,10 @@ gh api -X PUT repos/ivanball/MMCA.Common/branches/main/protection \
 JSON
 ```
 
-Add `{"context": "Consumer source build (Helpdesk)"}` to the checks list once that canary job has a
-green streak and is promoted from advisory to required. Do not add a `v*` tag protection rule:
-release tags must keep triggering `release.yml`.
+All eight contexts above are live today; a context is added here only after its job has a green
+streak and is promoted from advisory to required (the path webkit, the Helpdesk canary, and the
+performance gate each took). Do not add a `v*` tag protection rule: release tags must keep
+triggering `release.yml`.
 
 ## License
 
