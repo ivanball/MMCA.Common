@@ -6,6 +6,44 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.121.0] - 2026-07-21
+
+Maintenance release: the C# 14 extension-block migration, the shared analyzer baseline with the
+ConfigureAwait gate (ADR-049), and the 2026-07-20 NuGet audit sweep (SQLite advisory resolved, so
+consumers can drop their matching suppressions at this pin sweep). No breaking changes and no
+public API changes (the extension-block migration preserves the lowered static surface).
+
+### Security
+- **SQLite advisory GHSA-2m69-gcr7-jv3q (CVE-2025-6965) resolved.** `SQLitePCLRaw.bundle_e_sqlite3`
+  now ships the patched native SQLite (pinned at 2.1.12, then bumped to 3.0.4) and is referenced
+  directly by `MMCA.Common.Infrastructure` (same pattern as the MessagePack pin) so the fix flows
+  to consumers through the published package graph. The `NuGetAuditSuppress` entry was removed and
+  the accepted-advisory list is now empty (ADR-038 updated);
+  `dotnet list --vulnerable --include-transitive` reports zero rows. Consumers can drop their own
+  suppressions for this advisory when they take this version.
+
+### Changed
+- **C# 14 extension-block migration complete.** The 15 remaining classic `this T` extension classes
+  (~40 methods) moved to `extension(T)` blocks, finishing the adoption started in the DI
+  registration files. Methods stay methods, so the lowered static surface and binary compatibility
+  with consumers are unchanged; internal `RuleHelpers` parameterless helpers became extension
+  properties.
+- **Shared analyzer baseline + ConfigureAwait gate (ADR-049).** `.editorconfig` restructured into a
+  SHARED ANALYZER BASELINE region plus repo-specific deltas (workspace drift guard:
+  `Tools/Scripts/compare-analyzer-config.ps1`); IDE0005 and S125 promoted to warning, CA1031 to
+  suggestion; scoped per-glob rules replace repeated inline suppressions. CA2007 is now enforced
+  for `Source/**` (UI component packages excluded): packaged non-UI code awaits with
+  `ConfigureAwait(false)` (324-site sweep).
+- **Dependency refresh (2026-07-20 audit + dependabot).** EF Core 10.0.10, OpenTelemetry 1.17,
+  Azure.Identity 1.21, BenchmarkDotNet 0.15.8, MudBlazor 9.7, Microsoft.OpenApi 2.11.0,
+  SQLitePCLRaw 3.0.4, Scalar.AspNetCore 2.16.16, Meziantou.Analyzer 3.0.124, plus other approved
+  servicing bumps; MassTransit stays pinned to v8 by policy. CI: actions/setup-dotnet 5 -> 6;
+  dependabot no longer rebases open PRs and ignores Microsoft.OpenApi majors.
+- **Documentation library centralized in the Website repo.** ADRs, the rubric, scorecards,
+  backlogs, and the narrative guides are canonical under `Website/docs-src/` (published at
+  `https://ivanball.github.io/docs/`); `FACTS.md`, `CHANGELOG.md`, `SECURITY.md`,
+  `NavigationFlow.md`, `CONTRIBUTING.md`, and the deployment sample doc stay in this repo.
+
 ## [1.120.0] - 2026-07-19
 
 Correctness release from the 2026-07-19 full review: the event/transaction core, outbox
