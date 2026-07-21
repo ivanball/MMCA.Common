@@ -15,43 +15,45 @@ namespace MMCA.Common.Aspire;
 /// </summary>
 public static class GatewayCorsExtensions
 {
-    /// <summary>
-    /// Registers the default gateway CORS policy: allow-any in Development; in other environments,
-    /// origins from <c>Cors:AllowedOrigins</c> with any header/method and credentials allowed.
-    /// </summary>
-    public static IServiceCollection AddCommonGatewayCors(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        IHostEnvironment environment)
+    extension(IServiceCollection services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configuration);
-        ArgumentNullException.ThrowIfNull(environment);
-
-        services.AddCors(options =>
+        /// <summary>
+        /// Registers the default gateway CORS policy: allow-any in Development; in other environments,
+        /// origins from <c>Cors:AllowedOrigins</c> with any header/method and credentials allowed.
+        /// </summary>
+        public IServiceCollection AddCommonGatewayCors(
+            IConfiguration configuration,
+            IHostEnvironment environment)
         {
-            if (environment.IsDevelopment())
-            {
-#pragma warning disable S5122 // Allow-any-origin is scoped to Development only; production restricts origins to Cors:AllowedOrigins below
-                options.AddDefaultPolicy(p => p
-                    .AllowAnyOrigin()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod());
-#pragma warning restore S5122
-            }
-            else
-            {
-                var origins = configuration
-                    .GetSection("Cors:AllowedOrigins")
-                    .Get<string[]>() ?? [];
-                options.AddDefaultPolicy(p => p
-                    .WithOrigins(origins)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials());
-            }
-        });
+            ArgumentNullException.ThrowIfNull(services);
+            ArgumentNullException.ThrowIfNull(configuration);
+            ArgumentNullException.ThrowIfNull(environment);
 
-        return services;
+            services.AddCors(options =>
+            {
+                if (environment.IsDevelopment())
+                {
+#pragma warning disable S5122 // Allow-any-origin is scoped to Development only; production restricts origins to Cors:AllowedOrigins below
+                    options.AddDefaultPolicy(p => p
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod());
+#pragma warning restore S5122
+                }
+                else
+                {
+                    var origins = configuration
+                        .GetSection("Cors:AllowedOrigins")
+                        .Get<string[]>() ?? [];
+                    options.AddDefaultPolicy(p => p
+                        .WithOrigins(origins)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials());
+                }
+            });
+
+            return services;
+        }
     }
 }

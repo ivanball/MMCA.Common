@@ -64,8 +64,8 @@ public static partial class ArchitectureRules
     /// </summary>
     private static IEnumerable<(Type Handler, Type ClosedInterface)> HandlerInterfaces(IArchitectureMap map, string interfaceFullName) =>
         map.OfLayer(Layer.Application)
-            .SelectMany(a => a.ConcreteClasses())
-            .Where(t => !t.SimpleName().EndsWith("Decorator", StringComparison.Ordinal))
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => !t.SimpleName.EndsWith("Decorator", StringComparison.Ordinal))
             .SelectMany(t => t.GetInterfaces()
                 .Where(i => i.IsGenericType
                     && string.Equals(i.GetGenericTypeDefinition().FullName, interfaceFullName, StringComparison.Ordinal))

@@ -37,7 +37,7 @@ public static partial class ArchitectureRules
     public static void ControllersAreSealed(IArchitectureMap map)
     {
         var offenders = map.Api()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsController)
             .Where(t => !t.IsSealed)
             .Select(t => $"  - {t.FullName}");
@@ -56,7 +56,7 @@ public static partial class ArchitectureRules
         var exempt = exemptFullNames is null ? [] : exemptFullNames.ToHashSet(StringComparer.Ordinal);
         var offenders = map.Layers
             .Where(l => l.Layer == Layer.Api && l.Module.Length > 0)
-            .SelectMany(l => l.Assembly.ConcreteClasses())
+            .SelectMany(l => l.Assembly.ConcreteClasses)
             .Where(IsController)
             .Where(t => !exempt.Contains(t.FullName ?? t.Name))
             .Where(t => !t.HasBaseTypeStartingWith("MMCA.Common.API.Controllers.ApiControllerBase")
@@ -68,7 +68,7 @@ public static partial class ArchitectureRules
     }
 
     private static bool IsController(Type type) =>
-        type.SimpleName().EndsWith("Controller", StringComparison.Ordinal)
+        type.SimpleName.EndsWith("Controller", StringComparison.Ordinal)
         || type.HasBaseTypeStartingWith("Microsoft.AspNetCore.Mvc.ControllerBase")
         || type.HasBaseTypeStartingWith("Microsoft.AspNetCore.Mvc.Controller");
 }

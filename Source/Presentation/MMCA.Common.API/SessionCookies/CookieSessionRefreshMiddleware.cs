@@ -34,13 +34,16 @@ public sealed class CookieSessionRefreshMiddleware(RequestDelegate next, ICookie
 /// <summary>Pipeline extension for <see cref="CookieSessionRefreshMiddleware"/>.</summary>
 public static class CookieSessionRefreshMiddlewareExtensions
 {
-    /// <summary>
-    /// Adds the SSR validate-or-refresh middleware. Register it immediately <b>before</b>
-    /// <c>UseAuthentication()</c> on the Blazor Server (UI.Web) host.
-    /// </summary>
-    public static IApplicationBuilder UseCookieSessionRefresh(this IApplicationBuilder app)
+    extension(IApplicationBuilder app)
     {
-        ArgumentNullException.ThrowIfNull(app);
-        return app.UseMiddleware<CookieSessionRefreshMiddleware>();
+        /// <summary>
+        /// Adds the SSR validate-or-refresh middleware. Register it immediately <b>before</b>
+        /// <c>UseAuthentication()</c> on the Blazor Server (UI.Web) host.
+        /// </summary>
+        public IApplicationBuilder UseCookieSessionRefresh()
+        {
+            ArgumentNullException.ThrowIfNull(app);
+            return app.UseMiddleware<CookieSessionRefreshMiddleware>();
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -146,40 +147,49 @@ public sealed class SecurityHeadersMiddleware
 }
 
 /// <summary>Registration + pipeline extensions for the common security-headers middleware.</summary>
+[SuppressMessage(
+    "Naming",
+    "CA1708:Identifiers should differ by more than case",
+    Justification = "False positive: with multiple extension(T) blocks in one static class, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
 public static class SecurityHeadersExtensions
 {
-    /// <summary>
-    /// Registers <see cref="SecurityHeadersSettings"/> (bound from the <c>"SecurityHeaders"</c> section
-    /// when <paramref name="configuration"/> is supplied) and the default static
-    /// <see cref="ICspPolicyProvider"/>. Register a custom <see cref="ICspPolicyProvider"/> before calling
-    /// this to supply a dynamic policy.
-    /// </summary>
-    public static IServiceCollection AddCommonSecurityHeaders(
-        this IServiceCollection services,
-        IConfiguration? configuration = null,
-        Action<SecurityHeadersSettings>? configure = null)
+    extension(IServiceCollection services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-
-        var optionsBuilder = services.AddOptions<SecurityHeadersSettings>();
-        if (configuration is not null)
+        /// <summary>
+        /// Registers <see cref="SecurityHeadersSettings"/> (bound from the <c>"SecurityHeaders"</c> section
+        /// when <paramref name="configuration"/> is supplied) and the default static
+        /// <see cref="ICspPolicyProvider"/>. Register a custom <see cref="ICspPolicyProvider"/> before calling
+        /// this to supply a dynamic policy.
+        /// </summary>
+        public IServiceCollection AddCommonSecurityHeaders(
+            IConfiguration? configuration = null,
+            Action<SecurityHeadersSettings>? configure = null)
         {
-            optionsBuilder.Bind(configuration.GetSection(SecurityHeadersSettings.SectionName));
-        }
+            ArgumentNullException.ThrowIfNull(services);
 
-        if (configure is not null)
-        {
-            optionsBuilder.Configure(configure);
-        }
+            var optionsBuilder = services.AddOptions<SecurityHeadersSettings>();
+            if (configuration is not null)
+            {
+                optionsBuilder.Bind(configuration.GetSection(SecurityHeadersSettings.SectionName));
+            }
 
-        services.TryAddSingleton<ICspPolicyProvider, StaticCspPolicyProvider>();
-        return services;
+            if (configure is not null)
+            {
+                optionsBuilder.Configure(configure);
+            }
+
+            services.TryAddSingleton<ICspPolicyProvider, StaticCspPolicyProvider>();
+            return services;
+        }
     }
 
-    /// <summary>Adds <see cref="SecurityHeadersMiddleware"/> to the request pipeline (call early).</summary>
-    public static IApplicationBuilder UseCommonSecurityHeaders(this IApplicationBuilder app)
+    extension(IApplicationBuilder app)
     {
-        ArgumentNullException.ThrowIfNull(app);
-        return app.UseMiddleware<SecurityHeadersMiddleware>();
+        /// <summary>Adds <see cref="SecurityHeadersMiddleware"/> to the request pipeline (call early).</summary>
+        public IApplicationBuilder UseCommonSecurityHeaders()
+        {
+            ArgumentNullException.ThrowIfNull(app);
+            return app.UseMiddleware<SecurityHeadersMiddleware>();
+        }
     }
 }

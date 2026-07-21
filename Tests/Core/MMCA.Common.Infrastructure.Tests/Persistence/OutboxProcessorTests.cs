@@ -501,6 +501,7 @@ public sealed class OutboxProcessorTests : IDisposable
             .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("permanently failing handler"));
 
+        var gate = new System.Threading.Lock();
         var measurements = new List<(long Value, string? Reason)>();
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>
@@ -521,7 +522,7 @@ public sealed class OutboxProcessorTests : IDisposable
                 }
             }
 
-            lock (measurements)
+            lock (gate)
             {
                 measurements.Add((value, reason));
             }
@@ -551,7 +552,7 @@ public sealed class OutboxProcessorTests : IDisposable
             Times.Once,
             "exhaustion is the operator's last loud signal and must log at Error");
 
-        lock (measurements)
+        lock (gate)
         {
             measurements.Should().Contain(
                 m => m.Value == 1 && m.Reason == "retries_exhausted",
