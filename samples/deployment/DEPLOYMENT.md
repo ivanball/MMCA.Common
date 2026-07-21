@@ -93,5 +93,5 @@ az containerapp revision copy -g $RG -n myapp-prod-api --from-revision <last-goo
   Azure-managed SQL/Service Bus/Redis via config, not code.
 - **Cost (§31):** every resource carries the `commonTags` set (attribution), a monthly budget alerts
   at 80%/100%, and a scheduled read-only cost-guard can fail if a temporary surge wasn't reverted
-  (sample in [`../../COST.md`](../../COST.md); worked example: MMCA.ADC `cost-guard.yml`).
-- **Resilience (§29):** define RTO/RPO and drill restores — see [`../../RESILIENCE.md`](../../RESILIENCE.md).
+  (sample in [the published COST guide](https://ivanball.github.io/docs/guides/common-COST.html); worked example: MMCA.ADC `cost-guard.yml`).
+- **Resilience (§29):** define RTO/RPO and drill restores — see [the published RESILIENCE guide](https://ivanball.github.io/docs/guides/common-RESILIENCE.html).

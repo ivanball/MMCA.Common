@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -89,7 +89,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -121,7 +121,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -173,7 +173,7 @@ jobs:
   # benchmark — seconds, not the full multi-iteration timing run) on every push, so the benchmarked hot
   # paths (Specification compiled-expression cache + criteria composition) are exercised by CI. This is a
   # *runs-clean* gate — it fails the build if a benchmarked code path throws or no longer compiles, NOT a
-  # latency-regression gate (full timing runs stay on-demand; see CLAUDE.md / COST.md). Kept OUT of
+  # latency-regression gate (full timing runs stay on-demand; see CLAUDE.md and the published COST guide). Kept OUT of
   # MMCA.Common.slnx (like ui-e2e) so the unit `dotnet test --solution` run stays fast.
   performance-smoke:
     name: Performance gate (BenchmarkDotNet Short + baseline verify)
@@ -184,7 +184,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer (on the referenced Source projects) needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -211,7 +211,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -292,7 +292,7 @@ jobs:
           # CONSUMER_CANARY_PAT secret with contents:read on it.
           token: ${{ secrets.CONSUMER_CANARY_PAT || github.token }}
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -329,7 +329,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history (MinVerSkip pins the version, but keep parity)
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 

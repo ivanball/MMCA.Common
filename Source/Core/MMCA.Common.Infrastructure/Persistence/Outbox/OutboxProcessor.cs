@@ -438,7 +438,7 @@ public sealed partial class OutboxProcessor(
     private static partial void LogProcessingBatch(ILogger logger, int count, string dataSourceName);
 
     // Debug, not Information: this fires once per dispatched message and would otherwise be the
-    // single noisiest log line in steady state — a real telemetry-ingestion cost (rubric §31, COST.md).
+    // single noisiest log line in steady state — a real telemetry-ingestion cost (rubric §31, the published COST guide).
     // Failures stay loud (dead-letter = Error, retry = Warning); success detail is Debug.
     [LoggerMessage(Level = LogLevel.Debug, Message = "Outbox message {MessageId} ({EventType}) dispatched successfully")]
     private static partial void LogMessageProcessed(ILogger logger, Guid messageId, string eventType);

@@ -4,10 +4,11 @@
 _As of: 2026-07-21 (framework v1.120.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
-> campaigns) must **reference** these facts rather than copy the numbers inline. A bare `(001-NNN)` ADR
-> range, a "thirteen packages" count, or a "~68 fitness methods" figure typed into another file is drift
-> waiting to happen — point at this file (and at `ADRs/README.md` for the ADR table). Per-repo facts (each
-> repo's own test totals and scorecard indices) live in that repo's `ArchitectureScorecard.md`, **not** here.
+> campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
+> count or a "~68 fitness methods" figure typed into another file is drift waiting to happen — point at
+> this file. The ADR table and its count/range are owned by the published ADR index
+> (<https://ivanball.github.io/docs/adr/>, source `docs-src/adr/README.md` in the Website repo). Per-repo
+> facts (test totals, scorecard indices) live in that repo's published scorecard, **not** here.
 
 ## Framework version
 - **Current: `v1.120.0`** (MinVer-derived from the git tag at `main` HEAD).
@@ -34,9 +35,10 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 14. `MMCA.Common.Testing.E2E`
 15. `MMCA.Common.Testing.UI`
 
-## Architecture Decision Records — **49 (001-049)**
-The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the range/count and the one-line
-summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
+## Architecture Decision Records
+The ADRs live in the Website repo (`docs-src/adr/`), published at
+<https://ivanball.github.io/docs/adr/>. The **canonical index is that repo's `docs-src/adr/README.md`**:
+it owns the range/count and the one-line summaries. Do not restate the `(001-NNN)` range elsewhere.
 
 ## Architecture fitness functions
 - **91 test methods across 30 abstract `*TestsBase` classes**, shipped once in the
@@ -46,15 +48,17 @@ summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric
-- The 34-category evaluation rubric is **[`ArchitectureEvaluationCriteria.md`](ArchitectureEvaluationCriteria.md)**
-  (canonical, in this repo). Each repo's `ArchitectureScorecard.md` is scored against it.
+- The 34-category evaluation rubric is canonical in the Website repo
+  (`docs-src/governance/ArchitectureEvaluationCriteria.md`, published at
+  <https://ivanball.github.io/docs/governance/>). Each repo's published scorecard is scored against it.
 
 ## Where the rest lives (don't duplicate)
-- Per-repo scores/indices and test counts → that repo's `ArchitectureScorecard.md`.
-- Remediation status → that repo's `RemediationBacklog.md` (+ ADC `TECHDEBT.md`); cross-repo themes →
+- Per-repo scores/indices and test counts → that repo's published scorecard
+  (<https://ivanball.github.io/docs/governance/>).
+- Remediation status → that repo's published backlog (same location); cross-repo themes →
   workspace `Docs/Architecture/ArchitectureRemediation.md` (rollup, links only).
-- Release notes / versioning policy / security model / FinOps → `CHANGELOG.md` / `VERSIONING.md` /
-  `SECURITY.md` / `COST.md` (this repo).
+- Release notes / security model → `CHANGELOG.md` / `SECURITY.md` (this repo); versioning policy /
+  FinOps → the published guides (<https://ivanball.github.io/docs/guides/>).
 
 ## Keeping this current
 This file is **generated from source** and **gated in CI** (the `facts` job runs `--check` and fails the
@@ -65,5 +69,5 @@ dotnet run --project build/facts -- .
 ```
 
 The figures are computed directly: version from the git tag, package count from packable `Source/*`
-projects, ADR count/range from `ADRs/`, and the fitness counts from `MMCA.Common.Testing.Architecture`.
+projects, and the fitness counts from `MMCA.Common.Testing.Architecture`.
 The workspace `Tools/invtool -- facts ./MMCA.Common` shares this same generator and produces an identical file.
