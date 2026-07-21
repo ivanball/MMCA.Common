@@ -32,5 +32,5 @@ public sealed class ProfilePage
     public ILocator ErrorAlert => _page.GetByRole(AriaRole.Alert);
 
     public async Task GotoAsync() =>
-        await _page.BlazorNavigateAsync("/profile");
+        await _page.BlazorNavigateAsync("/profile").ConfigureAwait(false);
 }

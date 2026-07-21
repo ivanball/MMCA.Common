@@ -83,13 +83,16 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
         Client = _factory.CreateClient();
         _databaseCreated = true;
 
-        await using var connection = new SqlConnection(ConnectionString);
-        await connection.OpenAsync();
-        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        var connection = new SqlConnection(ConnectionString);
+        await using (connection.ConfigureAwait(false))
         {
-            DbAdapter = DbAdapter.SqlServer,
-            TablesToIgnore = ["__EFMigrationsHistory"],
-        });
+            await connection.OpenAsync().ConfigureAwait(false);
+            _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+            {
+                DbAdapter = DbAdapter.SqlServer,
+                TablesToIgnore = ["__EFMigrationsHistory"],
+            }).ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc />
@@ -100,9 +103,12 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
             return;
         }
 
-        await using var connection = new SqlConnection(ConnectionString);
-        await connection.OpenAsync();
-        await _respawner.ResetAsync(connection);
+        var connection = new SqlConnection(ConnectionString);
+        await using (connection.ConfigureAwait(false))
+        {
+            await connection.OpenAsync().ConfigureAwait(false);
+            await _respawner.ResetAsync(connection).ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc />
@@ -113,12 +119,12 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
         Client?.Dispose();
         if (_factory is not null)
         {
-            await _factory.DisposeAsync();
+            await _factory.DisposeAsync().ConfigureAwait(false);
         }
 
         if (_databaseCreated)
         {
-            await DropDatabaseAsync();
+            await DropDatabaseAsync().ConfigureAwait(false);
         }
 
         RestoreEnvironment();
@@ -163,15 +169,21 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
         // Release pooled connections so the database is free to drop.
         SqlConnection.ClearAllPools();
 
-        await using var connection = new SqlConnection($"{_serverBase}Database=master;");
-        await connection.OpenAsync();
-        await using var command = connection.CreateCommand();
+        var connection = new SqlConnection($"{_serverBase}Database=master;");
+        await using (connection.ConfigureAwait(false))
+        {
+            await connection.OpenAsync().ConfigureAwait(false);
+            var command = connection.CreateCommand();
+            await using (command.ConfigureAwait(false))
+            {
 #pragma warning disable CA2100 // _databaseName is a server-generated GUID (Guid.NewGuid), never user input; DB names can't be parameterized.
-        command.CommandText =
-            $"IF DB_ID(N'{_databaseName}') IS NOT NULL BEGIN " +
-            $"ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
-            $"DROP DATABASE [{_databaseName}]; END";
+                command.CommandText =
+                    $"IF DB_ID(N'{_databaseName}') IS NOT NULL BEGIN " +
+                    $"ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
+                    $"DROP DATABASE [{_databaseName}]; END";
 #pragma warning restore CA2100
-        await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+            }
+        }
     }
 }

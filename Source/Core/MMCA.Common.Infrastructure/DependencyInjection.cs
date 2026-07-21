@@ -7,16 +7,13 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Messaging;
-using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Http;
-using MMCA.Common.Infrastructure.Hubs;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -406,8 +403,8 @@ public static class DependencyInjection
             // OutboxProcessor's broker-publish path becomes the only delivery channel.
             services.Replace(ServiceDescriptor.Scoped<IEventBus, BrokerEventBus>());
 
-            // Consumer-side idempotency. EfInboxStore is opt-in (requires the InboxMessages table);
-            // when disabled the no-op store keeps consumer behavior unchanged.
+            // Consumer-side idempotency: EfInboxStore is opt-in and requires the InboxMessages
+            // table. When disabled, the no-op store keeps consumer behavior unchanged.
             if (settings.EnableInbox)
             {
                 services.TryAddScoped<Persistence.Inbox.IInboxStore, Persistence.Inbox.EfInboxStore>();

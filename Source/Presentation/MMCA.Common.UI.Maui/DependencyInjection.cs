@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Maui.Capabilities;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Capabilities;

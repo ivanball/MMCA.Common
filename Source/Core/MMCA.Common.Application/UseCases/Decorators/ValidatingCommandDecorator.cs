@@ -40,13 +40,13 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     {
         if (_validator is null)
         {
-            return await inner.HandleAsync(command, cancellationToken);
+            return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
         }
 
-        var validationResult = await _validator.ValidateAsync(command, cancellationToken);
+        var validationResult = await _validator.ValidateAsync(command, cancellationToken).ConfigureAwait(false);
         if (validationResult.IsValid)
         {
-            return await inner.HandleAsync(command, cancellationToken);
+            return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
         }
 
         var errors = validationResult.ToErrors(typeof(TCommand).Name).ToList();

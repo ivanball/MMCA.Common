@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;

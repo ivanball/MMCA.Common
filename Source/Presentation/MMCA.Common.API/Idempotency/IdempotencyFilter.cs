@@ -58,7 +58,7 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
         if (!context.HttpContext.Request.Headers.TryGetValue(IdempotencyKeyHeader, out var keyValues)
             || string.IsNullOrWhiteSpace(keyValues.ToString()))
         {
-            await next();
+            await next().ConfigureAwait(false);
             return;
         }
 
@@ -67,7 +67,7 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
         var cache = context.HttpContext.RequestServices.GetRequiredService<ICacheService>();
 
         // Fast path: return cached response without acquiring a lock
-        var cached = await cache.GetAsync<IdempotencyRecord>(cacheKey);
+        var cached = await cache.GetAsync<IdempotencyRecord>(cacheKey).ConfigureAwait(false);
         if (cached is not null)
         {
             context.HttpContext.Response.Headers.Append("X-Idempotent-Replay", "true");
@@ -82,11 +82,11 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
 
         // Slow path: acquire per-key lock to serialize concurrent duplicates
         var keyLock = KeyLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
-        await keyLock.WaitAsync(context.HttpContext.RequestAborted);
+        await keyLock.WaitAsync(context.HttpContext.RequestAborted).ConfigureAwait(false);
         try
         {
             // Double-check: another request may have completed and cached while we waited
-            cached = await cache.GetAsync<IdempotencyRecord>(cacheKey);
+            cached = await cache.GetAsync<IdempotencyRecord>(cacheKey).ConfigureAwait(false);
             if (cached is not null)
             {
                 context.HttpContext.Response.Headers.Append("X-Idempotent-Replay", "true");
@@ -99,7 +99,7 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
                 return;
             }
 
-            var executedContext = await next();
+            var executedContext = await next().ConfigureAwait(false);
 
             // Only cache ObjectResult responses (not redirects, file results, etc.)
             if (executedContext.Result is ObjectResult objectResult)
@@ -116,7 +116,7 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
                     ? TimeSpan.FromHours(idempotencySettings.Value.CacheExpirationHours)
                     : DefaultExpiration;
 
-                await cache.SetAsync(cacheKey, record, expiration);
+                await cache.SetAsync(cacheKey, record, expiration).ConfigureAwait(false);
             }
         }
         finally

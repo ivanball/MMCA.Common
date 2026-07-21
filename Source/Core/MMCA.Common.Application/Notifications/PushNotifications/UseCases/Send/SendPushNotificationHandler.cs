@@ -29,7 +29,7 @@ public sealed partial class SendPushNotificationHandler(
     {
         // Query all recipient user IDs via the app-specific provider
         IReadOnlyList<UserIdentifierType> recipientIds = await recipientProvider
-            .GetRecipientUserIdsAsync(cancellationToken);
+            .GetRecipientUserIdsAsync(cancellationToken).ConfigureAwait(false);
 
         if (recipientIds.Count == 0)
         {
@@ -52,7 +52,7 @@ public sealed partial class SendPushNotificationHandler(
 
         PushNotification notification = createResult.Value!;
         var repository = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
-        await repository.AddAsync(notification, cancellationToken);
+        await repository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Create per-user inbox records so recipients can retrieve missed notifications

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Services.Capabilities;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.EventArgs;

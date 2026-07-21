@@ -20,7 +20,7 @@ public sealed class CachingCommandDecorator<TCommand, TResult>(
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
-        var result = await inner.HandleAsync(command, cancellationToken);
+        var result = await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
         // Only invalidate cache on success — failed commands should not evict valid cache entries
         if (command is ICacheInvalidating cacheInvalidating && !IsFailure(result))

@@ -10,7 +10,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
+        Playwright = await Microsoft.Playwright.Playwright.CreateAsync().ConfigureAwait(false);
 
         // Cross-browser matrix (rubric §22): the engine is env-selected so CI can run the same
         // suite against Chromium, Firefox, and WebKit. Unknown values fall back to Chromium.
@@ -25,13 +25,13 @@ public sealed class PlaywrightFixture : IAsyncLifetime
         {
             Headless = E2ETestConfiguration.Headless,
             SlowMo = E2ETestConfiguration.SlowMo,
-        });
+        }).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        await Browser.DisposeAsync();
+        await Browser.DisposeAsync().ConfigureAwait(false);
         Playwright.Dispose();
     }
 }

@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using MMCA.Common.UI.Theme;
 using MudBlazor.Utilities;
-using Xunit;
 
 namespace MMCA.Common.UI.Tests.Theme;
 

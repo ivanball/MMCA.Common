@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Services.Navigation;

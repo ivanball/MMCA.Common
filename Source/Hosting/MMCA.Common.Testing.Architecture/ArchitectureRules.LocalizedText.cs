@@ -9,7 +9,8 @@ public static partial class ArchitectureRules
     [GeneratedRegex(@"Snackbar\.Add\(\s*\$?""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex LiteralSnackbar { get; }
 
-    // Matches a literal-titled page property: private (static) string Title => "Create Event";
+    // Matches a literal-titled page property, for example a Title property that returns the
+    // string "Create Event" directly instead of routing it through localization.
     [GeneratedRegex(@"string\s+Title\s*=>\s*\$?""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex LiteralTitleProperty { get; }
 

@@ -1,5 +1,3 @@
-#pragma warning disable CA2000 // Dispose objects before losing scope — test doubles do not hold real resources
-
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;

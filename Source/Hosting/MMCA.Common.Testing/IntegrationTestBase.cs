@@ -28,7 +28,7 @@ public abstract class IntegrationTestBase<TFixture> : IAsyncLifetime
     }
 
     /// <summary>Resets the database before each test.</summary>
-    public async ValueTask InitializeAsync() => await Fixture.ResetDatabaseAsync();
+    public async ValueTask InitializeAsync() => await Fixture.ResetDatabaseAsync().ConfigureAwait(false);
 
     /// <summary>Disposes the HTTP client after each test.</summary>
     public ValueTask DisposeAsync()
@@ -50,26 +50,26 @@ public abstract class IntegrationTestBase<TFixture> : IAsyncLifetime
     /// <summary>Sends a GET request and deserializes the response.</summary>
     protected async Task<T?> GetAsync<T>(string url)
     {
-        var response = await Client.GetAsync(url);
+        var response = await Client.GetAsync(url).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<T>();
+        return await response.Content.ReadFromJsonAsync<T>().ConfigureAwait(false);
     }
 
     /// <summary>Sends a POST request with a JSON body.</summary>
     protected async Task<HttpResponseMessage> PostAsync<T>(string url, T body) =>
-        await Client.PostAsJsonAsync(url, body);
+        await Client.PostAsJsonAsync(url, body).ConfigureAwait(false);
 
     /// <summary>Sends a PUT request with a JSON body.</summary>
     protected async Task<HttpResponseMessage> PutAsync<T>(string url, T body) =>
-        await Client.PutAsJsonAsync(url, body);
+        await Client.PutAsJsonAsync(url, body).ConfigureAwait(false);
 
     /// <summary>Sends a PUT request with no body.</summary>
     protected async Task<HttpResponseMessage> PutAsync(string url) =>
-        await Client.PutAsync(url, null);
+        await Client.PutAsync(url, null).ConfigureAwait(false);
 
     /// <summary>Sends a DELETE request.</summary>
     protected async Task<HttpResponseMessage> DeleteAsync(string url) =>
-        await Client.DeleteAsync(url);
+        await Client.DeleteAsync(url).ConfigureAwait(false);
 
     /// <summary>Thread-safe counter for generating unique test IDs.</summary>
     protected static int NextId() => Interlocked.Increment(ref _nextId);

@@ -85,8 +85,8 @@ public static class GalleryHost
         builder.Services.AddSingleton<IUIModule, GalleryUIModule>();
 
         // Registers ApiSettings/LayoutSettings binding, the "APIClient" HttpClient, and the remaining
-        // shared UI services. The in-memory Api:ApiEndpoint (appsettings.json) satisfies validation;
-        // the client is never actually invoked because IAuthUIService is stubbed.
+        // shared UI services. The in-memory Api:ApiEndpoint (appsettings.json) satisfies validation.
+        // The client is never actually invoked because IAuthUIService is stubbed.
         builder.Services.AddUIShared(builder.Configuration);
 
         var app = builder.Build();
@@ -94,8 +94,8 @@ public static class GalleryHost
         // Request localization mirrors the real hosts' allowlist (ADR-027) and additionally enables the
         // qps-Ploc pseudo-locale UNCONDITIONALLY: this host is unpackaged test infrastructure (never
         // deployed), and the pseudo pass here is a required CI gate (PseudoLocalizationE2ETests, the
-        // rubric §27 resource-round-trip + text-expansion evidence). Do not copy this into a real host;
-        // production keeps qps-Ploc Development-only via UseCommonRequestLocalization.
+        // rubric §27 resource-round-trip + text-expansion evidence). Do not copy this into a real host.
+        // Production keeps qps-Ploc Development-only via UseCommonRequestLocalization.
         string[] galleryCultures = [.. SupportedCultures.All, SupportedCultures.PseudoLocale];
         app.UseRequestLocalization(options => options
             .SetDefaultCulture(SupportedCultures.Default)
@@ -111,7 +111,7 @@ public static class GalleryHost
         // though the gallery's interactive forms never POST over HTTP.
         app.UseAntiforgery();
 
-        // MapStaticAssets() likewise defaults the endpoints manifest filename to the entry assembly;
+        // MapStaticAssets likewise defaults the endpoints manifest filename to the entry assembly, so
         // resolve the gallery's own manifest explicitly for the same in-process self-host reason.
         app.MapStaticAssets(
             Path.Combine(baseDir, $"{galleryAssemblyName}.staticwebassets.endpoints.json"));

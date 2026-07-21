@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Plugin.LocalNotification;
 
 namespace MMCA.Common.UI.Maui;

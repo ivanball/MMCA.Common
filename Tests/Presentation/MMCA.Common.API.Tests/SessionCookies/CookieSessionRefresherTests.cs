@@ -41,8 +41,8 @@ public sealed class CookieSessionRefresherTests
     [Fact]
     public async Task GetOrRefreshAsync_WhenTokenExpiresWithinClockSkew_TreatsItAsExpired()
     {
-        // Valid for 10 more seconds, but the 30-second skew makes it count as expired;
-        // with no refresh cookie the session is gone.
+        // Valid for 10 more seconds, but the 30-second skew makes it count as expired.
+        // With no refresh cookie the session is gone.
         string token = CreateJwt(DateTime.UtcNow.AddSeconds(10));
         using var harness = CreateSut(RespondWith(HttpStatusCode.InternalServerError));
         var context = CreateContext(accessToken: token, refreshToken: null);

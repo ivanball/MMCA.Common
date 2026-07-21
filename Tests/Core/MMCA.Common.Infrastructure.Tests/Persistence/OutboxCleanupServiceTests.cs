@@ -1,6 +1,3 @@
-#pragma warning disable CA2000 // Dispose objects before losing scope: BackgroundService lifecycle managed by test
-#pragma warning disable CA1873 // Log-argument evaluation warning misfires inside the Moq ILogger.Log verify expression; nothing is logged there.
-
 using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
@@ -33,8 +30,8 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 /// </summary>
 public sealed class OutboxCleanupServiceTests
 {
-    // LoggerMessage event names (the source generator names the EventId after the logging method);
-    // the sweep tests use them both to assert specific log entries and as completion signals.
+    // LoggerMessage event names (the source generator names the EventId after the logging method).
+    // The sweep tests use them both to assert specific log entries and as completion signals.
     private const string PurgedEvent = "LogPurged";
     private const string DeadLetterPurgedEvent = "LogDeadLetterPurged";
     private const string InboxPurgedEvent = "LogInboxPurged";

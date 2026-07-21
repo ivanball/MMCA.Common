@@ -53,6 +53,6 @@ public sealed class ValidationExceptionHandler(
             );
         context.ProblemDetails.Extensions.Add("errors", errors);
 
-        return await problemDetailsService.TryWriteAsync(context);
+        return await problemDetailsService.TryWriteAsync(context).ConfigureAwait(false);
     }
 }

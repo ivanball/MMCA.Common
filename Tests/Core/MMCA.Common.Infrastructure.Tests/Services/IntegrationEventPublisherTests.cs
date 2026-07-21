@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Services;

@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using MMCA.Common.Domain.DomainEvents;
-using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;

@@ -18,7 +18,7 @@ internal sealed class DistributedCacheService(
     /// <inheritdoc />
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        byte[]? bytes = await cache.GetAsync(key, cancellationToken);
+        byte[]? bytes = await cache.GetAsync(key, cancellationToken).ConfigureAwait(false);
 
         return bytes is null ? default : Deserialize<T>(bytes);
     }

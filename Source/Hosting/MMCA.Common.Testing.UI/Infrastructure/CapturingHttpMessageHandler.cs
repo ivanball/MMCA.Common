@@ -65,7 +65,7 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        _requests.Add(await CaptureAsync(request, cancellationToken));
+        _requests.Add(await CaptureAsync(request, cancellationToken).ConfigureAwait(false));
         return Respond(request);
     }
 
@@ -74,7 +74,7 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
         string? body = null;
         if (request.Content is not null)
         {
-            body = await request.Content.ReadAsStringAsync(cancellationToken);
+            body = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         }
 
         var uri = request.RequestUri;

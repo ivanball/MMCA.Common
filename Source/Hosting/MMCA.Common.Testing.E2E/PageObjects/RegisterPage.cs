@@ -29,16 +29,16 @@ public sealed class RegisterPage
     public ILocator CountryField => _page.GetByLabel("Country");
 
     public async Task GotoAsync() =>
-        await _page.GotoAndWaitForBlazorAsync("/register");
+        await _page.GotoAndWaitForBlazorAsync("/register").ConfigureAwait(false);
 
     public async Task RegisterAsync(string firstName, string lastName, string email, string password)
     {
-        await FillFieldAsync(FirstNameField, firstName);
-        await FillFieldAsync(LastNameField, lastName);
-        await FillFieldAsync(EmailField, email);
-        await FillFieldAsync(PasswordField, password);
-        await FillFieldAsync(ConfirmPasswordField, password);
-        await RegisterButton.ClickAsync();
+        await FillFieldAsync(FirstNameField, firstName).ConfigureAwait(false);
+        await FillFieldAsync(LastNameField, lastName).ConfigureAwait(false);
+        await FillFieldAsync(EmailField, email).ConfigureAwait(false);
+        await FillFieldAsync(PasswordField, password).ConfigureAwait(false);
+        await FillFieldAsync(ConfirmPasswordField, password).ConfigureAwait(false);
+        await RegisterButton.ClickAsync().ConfigureAwait(false);
     }
 
     /// <summary>

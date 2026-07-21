@@ -1,5 +1,3 @@
-using MMCA.Common.UI.Services.Auth;
-
 namespace MMCA.Common.Testing.UI;
 
 /// <summary>

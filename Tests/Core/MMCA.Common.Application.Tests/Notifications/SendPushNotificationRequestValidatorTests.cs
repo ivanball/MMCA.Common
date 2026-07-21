@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 using MMCA.Common.Domain.Notifications.PushNotifications.Invariants;

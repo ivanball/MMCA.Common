@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.API.Localization;
 using MMCA.Common.Shared.Abstractions;
 

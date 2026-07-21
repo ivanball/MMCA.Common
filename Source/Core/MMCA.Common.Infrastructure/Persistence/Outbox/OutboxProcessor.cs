@@ -11,7 +11,6 @@ using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
-using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;

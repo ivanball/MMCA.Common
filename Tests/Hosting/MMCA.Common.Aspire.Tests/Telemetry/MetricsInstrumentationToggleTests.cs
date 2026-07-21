@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
-using MMCA.Common.Aspire;
 
 namespace MMCA.Common.Aspire.Tests.Telemetry;
 

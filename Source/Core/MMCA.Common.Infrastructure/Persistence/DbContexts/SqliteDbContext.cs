@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;

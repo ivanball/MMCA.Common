@@ -27,10 +27,10 @@ public abstract class ServiceInfoVersioningContractTestsBase<TFixture> : Integra
     [Fact]
     public async Task ServiceInfo_V1_ReturnsMinimalShape_AndIsReportedDeprecated()
     {
-        using HttpResponseMessage response = await GetServiceInfoAsync("1.0");
+        using HttpResponseMessage response = await GetServiceInfoAsync("1.0").ConfigureAwait(false);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         doc.RootElement.GetProperty("apiVersion").GetString().Should().Be("1.0");
         doc.RootElement.TryGetProperty("supportedVersions", out _)
             .Should().BeFalse("the v1.0 shape does not carry the evolved version lists");
@@ -43,10 +43,10 @@ public abstract class ServiceInfoVersioningContractTestsBase<TFixture> : Integra
     [Fact]
     public async Task ServiceInfo_V2_ReturnsEvolvedShape_AndIsReportedSupported()
     {
-        using HttpResponseMessage response = await GetServiceInfoAsync("2.0");
+        using HttpResponseMessage response = await GetServiceInfoAsync("2.0").ConfigureAwait(false);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
         doc.RootElement.GetProperty("apiVersion").GetString().Should().Be("2.0");
         doc.RootElement.GetProperty("supportedVersions").EnumerateArray()
             .Select(e => e.GetString()).Should().Contain("2.0");
@@ -61,6 +61,6 @@ public abstract class ServiceInfoVersioningContractTestsBase<TFixture> : Integra
         ClearAuthentication();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/ServiceInfo");
         request.Headers.Add("api-version", apiVersion);
-        return await Client.SendAsync(request);
+        return await Client.SendAsync(request).ConfigureAwait(false);
     }
 }

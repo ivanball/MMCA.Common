@@ -1,5 +1,3 @@
-#pragma warning disable CA2000 // Dispose objects before losing scope - the idempotent-dispose test disposes explicitly
-
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

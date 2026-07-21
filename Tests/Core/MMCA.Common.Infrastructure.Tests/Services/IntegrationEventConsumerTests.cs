@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;

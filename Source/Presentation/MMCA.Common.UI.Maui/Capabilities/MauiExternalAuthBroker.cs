@@ -75,8 +75,8 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
                 return false;
             }
 
-            // The shared completion page owns the exchange + token storage + auth-state refresh;
-            // reusing it keeps the single-use-code contract in exactly one place.
+            // The shared completion page owns the exchange + token storage + auth-state refresh.
+            // Reusing it keeps the single-use-code contract in exactly one place.
             _navigationManager.NavigateTo($"/auth/oauth-complete?code={Uri.EscapeDataString(code)}");
             return true;
         }

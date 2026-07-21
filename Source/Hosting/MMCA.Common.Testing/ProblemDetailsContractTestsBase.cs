@@ -29,9 +29,9 @@ public abstract class ProblemDetailsContractTestsBase<TFixture> : IntegrationTes
     [Fact]
     public async Task Validation_400_HasProblemDetailsShape()
     {
-        using var response = await SendValidationErrorProbeAsync();
+        using var response = await SendValidationErrorProbeAsync().ConfigureAwait(false);
 
-        var body = await AssertProblemDetailsShapeAsync(response, HttpStatusCode.BadRequest);
+        var body = await AssertProblemDetailsShapeAsync(response, HttpStatusCode.BadRequest).ConfigureAwait(false);
         response.Content.Headers.ContentType!.MediaType.Should().Contain("problem+json");
         body.TryGetProperty("type", out _).Should().BeTrue("model-validation problem details include a type URI");
         body.TryGetProperty("traceId", out _).Should().BeTrue("model-validation problem details include a traceId");
@@ -41,9 +41,9 @@ public abstract class ProblemDetailsContractTestsBase<TFixture> : IntegrationTes
     [Fact]
     public async Task NotFound_404_HasProblemDetailsShape()
     {
-        using var response = await SendNotFoundProbeAsync();
+        using var response = await SendNotFoundProbeAsync().ConfigureAwait(false);
 
-        await AssertProblemDetailsShapeAsync(response, HttpStatusCode.NotFound);
+        await AssertProblemDetailsShapeAsync(response, HttpStatusCode.NotFound).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public abstract class ProblemDetailsContractTestsBase<TFixture> : IntegrationTes
         response.StatusCode.Should().Be(expected);
         response.Content.Headers.ContentType!.MediaType.Should().Contain("json");
 
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>().ConfigureAwait(false);
         body.GetProperty("status").GetInt32().Should().Be((int)expected, "RFC 9457 problem details echo the HTTP status");
         body.GetProperty("title").GetString().Should().NotBeNullOrWhiteSpace("RFC 9457 problem details carry a title");
 

@@ -90,7 +90,7 @@ public static class DependencyInjection
             // or replace after by calling AddSingleton<IOAuthUISettings, ConcreteSettings>()
             services.TryAddSingleton<IOAuthUISettings, DefaultOAuthUISettings>();
 
-            // Device-capability defaults (ADR-042): every contract resolves on every head;
+            // Device-capability defaults (ADR-042): every contract resolves on every head.
             // MAUI/browser hosts override AFTER this call (last registration wins).
             services.AddDeviceCapabilityDefaults();
 

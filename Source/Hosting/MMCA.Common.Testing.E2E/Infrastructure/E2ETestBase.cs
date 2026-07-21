@@ -1,7 +1,5 @@
-using System.IO;
 using Microsoft.Playwright;
 using Xunit;
-using Xunit.Sdk;
 using static Microsoft.Playwright.Assertions;
 
 namespace MMCA.Common.Testing.E2E.Infrastructure;
@@ -24,7 +22,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         {
             IgnoreHTTPSErrors = true,
             BaseURL = BaseUrl,
-        });
+        }).ConfigureAwait(false);
 
         _context.SetDefaultTimeout(E2ETestConfiguration.DefaultTimeout);
 
@@ -32,10 +30,10 @@ public abstract class E2ETestBase : IAsyncLifetime
         // inspection of timing-sensitive failures that DevTools/slow-mo would mask.
         if (E2ETestConfiguration.TracePath is not null)
         {
-            await _context.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true, Sources = true });
+            await _context.Tracing.StartAsync(new() { Screenshots = true, Snapshots = true, Sources = true }).ConfigureAwait(false);
         }
 
-        Page = await _context.NewPageAsync();
+        Page = await _context.NewPageAsync().ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
@@ -43,11 +41,11 @@ public abstract class E2ETestBase : IAsyncLifetime
         GC.SuppressFinalize(this);
         if (E2ETestConfiguration.TracePath is not null)
         {
-            await StopTracingAsync(E2ETestConfiguration.TracePath);
+            await StopTracingAsync(E2ETestConfiguration.TracePath).ConfigureAwait(false);
         }
 
-        await Page.CloseAsync();
-        await _context.DisposeAsync();
+        await Page.CloseAsync().ConfigureAwait(false);
+        await _context.DisposeAsync().ConfigureAwait(false);
     }
 
     // Stops the Playwright trace. When E2E_TRACE names a DIRECTORY (per-test mode), a trace is written
@@ -61,7 +59,7 @@ public abstract class E2ETestBase : IAsyncLifetime
             || tracePath.EndsWith('\\');
         if (!isDirectory)
         {
-            await _context.Tracing.StopAsync(new() { Path = tracePath });
+            await _context.Tracing.StopAsync(new() { Path = tracePath }).ConfigureAwait(false);
             return;
         }
 
@@ -70,19 +68,19 @@ public abstract class E2ETestBase : IAsyncLifetime
             Directory.CreateDirectory(tracePath);
             var raw = TestContext.Current.Test?.TestDisplayName ?? "unknown";
             var safe = string.Concat(raw.Split(Path.GetInvalidFileNameChars()));
-            await _context.Tracing.StopAsync(new() { Path = Path.Combine(tracePath, safe + ".zip") });
+            await _context.Tracing.StopAsync(new() { Path = Path.Combine(tracePath, safe + ".zip") }).ConfigureAwait(false);
         }
         else
         {
-            await _context.Tracing.StopAsync();
+            await _context.Tracing.StopAsync().ConfigureAwait(false);
         }
     }
 
     protected async Task LoginAsAdminAsync() =>
-        await LoginAsync(E2ETestConfiguration.AdminCredentials.Email, E2ETestConfiguration.AdminCredentials.Password);
+        await LoginAsync(E2ETestConfiguration.AdminCredentials.Email, E2ETestConfiguration.AdminCredentials.Password).ConfigureAwait(false);
 
     protected async Task LoginAsUserAsync() =>
-        await LoginAsync(E2ETestConfiguration.UserCredentials.Email, E2ETestConfiguration.UserCredentials.Password);
+        await LoginAsync(E2ETestConfiguration.UserCredentials.Email, E2ETestConfiguration.UserCredentials.Password).ConfigureAwait(false);
 
     protected async Task LoginAsync(string email, string password)
     {
@@ -95,11 +93,11 @@ public abstract class E2ETestBase : IAsyncLifetime
         try
         {
             var logoutVisible = Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" });
-            if (await logoutVisible.IsVisibleAsync())
+            if (await logoutVisible.IsVisibleAsync().ConfigureAwait(false))
             {
                 await Page.EvaluateAsync(
                     "async () => { localStorage.removeItem('auth_access_token'); localStorage.removeItem('auth_refresh_token');" +
-                    " try { await fetch('/auth/session-cookie', { method: 'DELETE', credentials: 'same-origin' }); } catch (e) { } }");
+                    " try { await fetch('/auth/session-cookie', { method: 'DELETE', credentials: 'same-origin' }); } catch (e) { } }").ConfigureAwait(false);
             }
         }
         catch (PlaywrightException)
@@ -110,19 +108,19 @@ public abstract class E2ETestBase : IAsyncLifetime
             // cleanup's goal is met either way — don't fail the test over the race.
         }
 
-        await Page.GotoAndWaitForBlazorAsync("/login");
+        await Page.GotoAndWaitForBlazorAsync("/login").ConfigureAwait(false);
 
         // MudBlazor renders proper <label> elements — GetByLabel works.
         // Use FillFieldAsync to guard against Blazor re-hydration clearing values.
-        await FillFieldAsync(Page.GetByLabel("Email"), email);
-        await FillFieldAsync(Page.GetByLabel("Password"), password);
+        await FillFieldAsync(Page.GetByLabel("Email"), email).ConfigureAwait(false);
+        await FillFieldAsync(Page.GetByLabel("Password"), password).ConfigureAwait(false);
 
         // MudBlazor applies text-transform: uppercase — visible text is "LOGIN"
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign in to your account" }).ClickAsync().ConfigureAwait(false);
 
         // On success, the Login page calls NavigateTo("/", forceLoad: true) — a full page reload away
         // from /login. On failure it stays at /login and shows an error alert.
-        await WaitForAuthResultAsync("/login", "Login");
+        await WaitForAuthResultAsync("/login", "Login").ConfigureAwait(false);
 
         // Wait for the post-login "/" page to become interactive before returning (symmetric with
         // RegisterNewUserAsync). The forceLoad reload re-boots the runtime, and under WebAssembly the
@@ -130,7 +128,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         // finishes; a caller that immediately client-side-navigates to an [Authorize] page (the
         // LoginAsAdmin -> protected create/list flows) would otherwise race a not-yet-authorized,
         // not-yet-rendered page.
-        await WaitForInteractiveOrReloadAsync();
+        await WaitForInteractiveOrReloadAsync().ConfigureAwait(false);
     }
 
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
@@ -143,27 +141,27 @@ public abstract class E2ETestBase : IAsyncLifetime
         firstName ??= $"E2E{uniqueId[..4]}";
         lastName ??= $"User{uniqueId[4..]}";
 
-        await Page.GotoAndWaitForBlazorAsync("/register");
+        await Page.GotoAndWaitForBlazorAsync("/register").ConfigureAwait(false);
 
-        await FillFieldAsync(Page.GetByLabel("First Name"), firstName);
-        await FillFieldAsync(Page.GetByLabel("Last Name"), lastName);
-        await FillFieldAsync(Page.GetByLabel("Email"), email);
-        await FillFieldAsync(Page.GetByLabel("Password", new() { Exact = true }), password);
-        await FillFieldAsync(Page.GetByLabel("Confirm Password"), password);
+        await FillFieldAsync(Page.GetByLabel("First Name"), firstName).ConfigureAwait(false);
+        await FillFieldAsync(Page.GetByLabel("Last Name"), lastName).ConfigureAwait(false);
+        await FillFieldAsync(Page.GetByLabel("Email"), email).ConfigureAwait(false);
+        await FillFieldAsync(Page.GetByLabel("Password", new() { Exact = true }), password).ConfigureAwait(false);
+        await FillFieldAsync(Page.GetByLabel("Confirm Password"), password).ConfigureAwait(false);
 
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Create your account" }).ClickAsync();
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Create your account" }).ClickAsync().ConfigureAwait(false);
 
         // Registration does NavigateTo("/", forceLoad: true) on success: a full page reload away from
         // /register. On failure it stays on /register and shows an error alert. Do NOT call
         // WaitForBlazorAsync before the result settles: the forceLoad navigation destroys the JS context.
-        await WaitForAuthResultAsync("/register", "Registration");
+        await WaitForAuthResultAsync("/register", "Registration").ConfigureAwait(false);
 
         // The forceLoad reload lands on a freshly served "/" whose interactive runtime is still starting
         // (under WebAssembly that is a full CLR boot, slower than a Server circuit). Wait for interactivity
         // HERE so every caller gets an interactive page back, instead of each test having to remember it
         // (the post-register sign-out click / protected-page open would otherwise hit a non-interactive
         // DOM).
-        await WaitForInteractiveOrReloadAsync();
+        await WaitForInteractiveOrReloadAsync().ConfigureAwait(false);
 
         return (email, password);
     }
@@ -183,12 +181,12 @@ public abstract class E2ETestBase : IAsyncLifetime
     {
         try
         {
-            await Page.WaitForBlazorAsync();
+            await Page.WaitForBlazorAsync().ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
         {
-            await Page.ReloadAsync(new() { WaitUntil = WaitUntilState.Load });
-            await Page.WaitForBlazorAsync();
+            await Page.ReloadAsync(new() { WaitUntil = WaitUntilState.Load }).ConfigureAwait(false);
+            await Page.WaitForBlazorAsync().ConfigureAwait(false);
         }
     }
 
@@ -212,15 +210,15 @@ public abstract class E2ETestBase : IAsyncLifetime
         await Task.WhenAny(
             leftAuthPage,
             logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
-            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }));
+            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout })).ConfigureAwait(false);
 
         // Success is unambiguous once the forceLoad has navigated away from the auth page. Only treat an
         // error alert STILL on the auth page (after the grace window, with no navigation) as a failure.
-        if (await errorAlert.IsVisibleAsync()
+        if (await errorAlert.IsVisibleAsync().ConfigureAwait(false)
             && Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase)
-            && !await AuthSucceededWithinGraceAsync(authPagePath, logoutButton))
+            && !await AuthSucceededWithinGraceAsync(authPagePath, logoutButton).ConfigureAwait(false))
         {
-            var errorText = await errorAlert.TextContentAsync();
+            var errorText = await errorAlert.TextContentAsync().ConfigureAwait(false);
             throw new InvalidOperationException($"{operation} failed: {errorText}");
         }
     }
@@ -234,7 +232,7 @@ public abstract class E2ETestBase : IAsyncLifetime
         {
             await Page.WaitForURLAsync(
                 url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
-                new() { Timeout = E2ETestConfiguration.AuthGraceTimeout });
+                new() { Timeout = E2ETestConfiguration.AuthGraceTimeout }).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
@@ -244,12 +242,12 @@ public abstract class E2ETestBase : IAsyncLifetime
             // both. Fall back to the interactive logout-button signal: the failed-login path (e.g. the
             // deleted-account relogin) has neither navigation nor a logout button, so the caller then
             // raises the InvalidOperationException it expects instead of leaking this timeout.
-            return await logoutButton.IsVisibleAsync();
+            return await logoutButton.IsVisibleAsync().ConfigureAwait(false);
         }
     }
 
     protected async Task NavigateAndWaitAsync(string path) =>
-        await Page.GotoAndWaitForBlazorAsync(path);
+        await Page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
 
     /// <summary>
     /// Fills a form field and waits for the value to persist, guarding against the Blazor
@@ -273,16 +271,16 @@ public abstract class E2ETestBase : IAsyncLifetime
     protected async Task ScanGridAsync()
     {
         await Expect(Page.Locator(".mud-table-body .mud-table-row").First)
-            .ToBeVisibleAsync(new() { Timeout = 15_000 });
-        await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 });
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21AaExceptMudPagerCombobox);
+            .ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21AaExceptMudPagerCombobox).ConfigureAwait(false);
     }
 
     // Scan the current (settled) page for WCAG 2.1 AA violations. Guards against any residual loading
     // bar so axe sees the stable DOM, not a transient loading state.
     protected async Task ScanAsync()
     {
-        await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 });
-        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
+        await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa).ConfigureAwait(false);
     }
 }

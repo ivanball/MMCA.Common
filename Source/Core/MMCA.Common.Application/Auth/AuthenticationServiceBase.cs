@@ -64,14 +64,14 @@ public abstract class AuthenticationServiceBase<TUser>(
         LoginRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = await validators.Login.ValidateAsync(request, cancellationToken);
+        var validationResult = await validators.Login.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             return Result.Failure<AuthenticationResponse>(validationResult.ToErrors(nameof(LoginAsync)));
         }
 
         // ADR-029 / BR-212: exponential-backoff lockout.
-        var lockoutResult = await loginProtection.CheckLockoutAsync(request.Email, cancellationToken);
+        var lockoutResult = await loginProtection.CheckLockoutAsync(request.Email, cancellationToken).ConfigureAwait(false);
         if (lockoutResult.IsFailure)
         {
             return Result.Failure<AuthenticationResponse>(lockoutResult.Errors);
@@ -83,17 +83,17 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         // Step 1: Untracked fetch — validate credentials without change-tracker overhead.
         // Soft-deleted accounts are excluded by EF query filters, returning the generic 401.
-        var untracked = await FindUntrackedByEmailAsync(loginEmail, cancellationToken);
+        var untracked = await FindUntrackedByEmailAsync(loginEmail, cancellationToken).ConfigureAwait(false);
         if (untracked is null)
         {
-            await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken);
+            await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
             return Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
         }
 
         // App gate (e.g. deactivated-account rejection) — before password verification, no
         // failed-attempt increment (matches the pre-hoist behavior).
-        var candidateResult = await ValidateLoginCandidateAsync(untracked, cancellationToken);
+        var candidateResult = await ValidateLoginCandidateAsync(untracked, cancellationToken).ConfigureAwait(false);
         if (candidateResult.IsFailure)
         {
             return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
@@ -101,13 +101,13 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         if (!passwordHasher.VerifyPassword(request.Password, untracked.PasswordHash, untracked.PasswordSalt))
         {
-            await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken);
+            await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
             return Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
         }
 
         // Step 2: Tracked re-fetch — needed to persist the new refresh token via SaveChangesAsync.
-        var user = await Repository.GetByIdAsync(untracked.Id, cancellationToken);
+        var user = await Repository.GetByIdAsync(untracked.Id, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
             return Result.Failure<AuthenticationResponse>(
@@ -115,9 +115,9 @@ public abstract class AuthenticationServiceBase<TUser>(
         }
 
         // Reset failed attempts and lockout on successful login.
-        await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken);
+        await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
-        return await IssueTokensAsync(user, cancellationToken);
+        return await IssueTokensAsync(user, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -126,21 +126,21 @@ public abstract class AuthenticationServiceBase<TUser>(
         string? ipAddress = null,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = await validators.Register.ValidateAsync(request, cancellationToken);
+        var validationResult = await validators.Register.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             return Result.Failure<AuthenticationResponse>(validationResult.ToErrors(nameof(RegisterAsync)));
         }
 
         // ADR-029 / BR-213: IP-based registration rate limiting.
-        var rateLimitResult = await loginProtection.CheckRegistrationRateLimitAsync(ipAddress, cancellationToken);
+        var rateLimitResult = await loginProtection.CheckRegistrationRateLimitAsync(ipAddress, cancellationToken).ConfigureAwait(false);
         if (rateLimitResult.IsFailure)
         {
             return Result.Failure<AuthenticationResponse>(rateLimitResult.Errors);
         }
 
         var registerEmail = Email.Create(request.Email).Value;
-        var emailExists = await EmailExistsAsync(registerEmail, cancellationToken);
+        var emailExists = await EmailExistsAsync(registerEmail, cancellationToken).ConfigureAwait(false);
         if (emailExists)
         {
             return Result.Failure<AuthenticationResponse>(
@@ -158,15 +158,15 @@ public abstract class AuthenticationServiceBase<TUser>(
         var refreshToken = tokenService.GenerateRefreshToken();
         user.UpdateRefreshToken(refreshToken, timeProvider.GetUtcNow().UtcDateTime.Add(RefreshTokenLifetime));
 
-        await Repository.AddAsync(user, cancellationToken);
+        await Repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Post-commit hook: publish the app's registration side-effect (integration event) and/or
         // re-fetch so the first token can carry an id written post-commit by a domain-event handler.
-        var tokenUser = await OnUserRegisteredAsync(user, cancellationToken);
+        var tokenUser = await OnUserRegisteredAsync(user, cancellationToken).ConfigureAwait(false);
 
         // BR-213: count this registration against the caller's IP.
-        await loginProtection.IncrementRegistrationCountAsync(ipAddress, cancellationToken);
+        await loginProtection.IncrementRegistrationCountAsync(ipAddress, cancellationToken).ConfigureAwait(false);
 
         var accessToken = CreateAccessToken(tokenUser);
 
@@ -181,7 +181,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         RefreshTokenRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = await validators.Refresh.ValidateAsync(request, cancellationToken);
+        var validationResult = await validators.Refresh.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
         if (!validationResult.IsValid)
         {
             return Result.Failure<AuthenticationResponse>(validationResult.ToErrors(nameof(RefreshTokenAsync)));
@@ -203,14 +203,14 @@ public abstract class AuthenticationServiceBase<TUser>(
                 Error.Unauthorized("Auth.InvalidToken", "Invalid access token claims.", nameof(RefreshTokenAsync)));
         }
 
-        var user = await Repository.GetByIdAsync(userId, cancellationToken);
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
             return Result.Failure<AuthenticationResponse>(CreateRefreshUserMissingError());
         }
 
         // App gate (e.g. deactivated-account rejection).
-        var candidateResult = await ValidateRefreshCandidateAsync(user, cancellationToken);
+        var candidateResult = await ValidateRefreshCandidateAsync(user, cancellationToken).ConfigureAwait(false);
         if (candidateResult.IsFailure)
         {
             return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
@@ -227,7 +227,7 @@ public abstract class AuthenticationServiceBase<TUser>(
                 Error.Unauthorized("Auth.InvalidRefreshToken", "Invalid or expired refresh token.", nameof(RefreshTokenAsync)));
         }
 
-        return await IssueTokensAsync(user, cancellationToken);
+        return await IssueTokensAsync(user, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -235,7 +235,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default)
     {
-        var user = await Repository.GetByIdAsync(userId, cancellationToken);
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
             return Result.Failure(Error.NotFound.WithSource(nameof(RevokeTokenAsync)).WithTarget(typeof(TUser).Name));

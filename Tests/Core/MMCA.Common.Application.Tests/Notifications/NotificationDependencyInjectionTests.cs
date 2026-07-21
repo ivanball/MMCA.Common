@@ -13,7 +13,6 @@ using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 

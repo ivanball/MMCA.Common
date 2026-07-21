@@ -1,6 +1,3 @@
-#pragma warning disable CA2000 // Dispose objects before losing scope — BackgroundService lifecycle managed by test
-#pragma warning disable CA1873 // Log-argument evaluation warning misfires inside the Moq ILogger.Log setup expression; nothing is logged there.
-
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

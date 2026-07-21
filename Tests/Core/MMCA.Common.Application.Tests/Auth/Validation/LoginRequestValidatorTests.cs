@@ -1,4 +1,3 @@
-using AwesomeAssertions;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Auth.Validation;
 using MMCA.Common.Shared.Auth;

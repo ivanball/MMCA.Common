@@ -18,13 +18,13 @@ public sealed class LoginPage
     public ILocator CreateAccountLink => _page.GetByRole(AriaRole.Link, new() { Name = "Create Account" });
 
     public async Task GotoAsync() =>
-        await _page.GotoAndWaitForBlazorAsync("/login");
+        await _page.GotoAndWaitForBlazorAsync("/login").ConfigureAwait(false);
 
     public async Task LoginAsync(string email, string password)
     {
-        await FillFieldAsync(EmailField, email);
-        await FillFieldAsync(PasswordField, password);
-        await LoginButton.ClickAsync();
+        await FillFieldAsync(EmailField, email).ConfigureAwait(false);
+        await FillFieldAsync(PasswordField, password).ConfigureAwait(false);
+        await LoginButton.ClickAsync().ConfigureAwait(false);
     }
 
     // Single shared fill helper guards against the Blazor re-hydration race (auto-waiting, no fixed delays).
