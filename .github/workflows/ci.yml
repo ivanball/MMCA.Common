@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -89,7 +89,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -121,7 +121,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -184,7 +184,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer (on the referenced Source projects) needs full history
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -211,7 +211,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -292,7 +292,7 @@ jobs:
           # CONSUMER_CANARY_PAT secret with contents:read on it.
           token: ${{ secrets.CONSUMER_CANARY_PAT || github.token }}
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -329,7 +329,7 @@ jobs:
         with:
           fetch-depth: 0 # MinVer needs full history (MinVerSkip pins the version, but keep parity)
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
