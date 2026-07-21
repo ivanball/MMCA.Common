@@ -8,7 +8,8 @@ using System.Text.RegularExpressions;
 
 /// <summary>
 /// Computes MMCA.Common/FACTS.md from source so the framework-wide facts (version, package count,
-/// ADR range, fitness-method/base counts) stop being hand-maintained and cannot drift.
+/// fitness-method/base counts) stop being hand-maintained and cannot drift. (The ADR count/range
+/// moved with the ADRs to the Website repo's docs-src/adr/README.md, 2026-07-20.)
 ///
 /// Dependency-free (BCL + regex only) so it carries no NuGet/audit/lock-file surface and needs no
 /// restore in CI. This is the canonical generator; the workspace `Tools/invtool` links this same
@@ -46,7 +47,6 @@ internal static class FactsGenerator
         // ---- compute the facts from source
         var version = GitTag(root);
         var packages = PackageList(root);                       // package ids, tier-then-name order
-        var (adrCount, adrRange) = Adrs(root);
         var baseCounts = FitnessBaseCounts(root);               // baseClassName -> [Fact]/[Theory] count
         var fitBases = baseCounts.Count;
         var fitMethods = baseCounts.Values.Sum();
@@ -60,8 +60,6 @@ internal static class FactsGenerator
             .Replace("{{VERSION}}", version)
             .Replace("{{PKG_COUNT}}", packages.Count.ToString())
             .Replace("{{PKG_LIST}}", pkgList)
-            .Replace("{{ADR_COUNT}}", adrCount.ToString())
-            .Replace("{{ADR_RANGE}}", adrRange)
             .Replace("{{FIT_METHODS}}", fitMethods.ToString())
             .Replace("{{FIT_BASES}}", fitBases.ToString())
             .Replace("{{COMMON_EXEC}}", commonExecuted.ToString());
@@ -69,7 +67,6 @@ internal static class FactsGenerator
         Console.WriteLine("FACTS computed from source:");
         Console.WriteLine($"  version           = {version}");
         Console.WriteLine($"  packages          = {packages.Count}");
-        Console.WriteLine($"  ADRs              = {adrCount} ({adrRange})");
         Console.WriteLine($"  fitness methods   = {fitMethods} across {fitBases} *TestsBase classes");
         Console.WriteLine($"  Common executes   = {commonExecuted}");
 
@@ -136,20 +133,6 @@ internal static class FactsGenerator
         return pkgs.OrderBy(p => p.tier).ThenBy(p => p.id, StringComparer.Ordinal).Select(p => p.id).ToList();
     }
 
-    // ---- ADRs: numbered files under ADRs/, count + zero-padded range
-    private static (int count, string range) Adrs(string root)
-    {
-        var adrDir = Path.Combine(root, "ADRs");
-        if (!Directory.Exists(adrDir)) return (0, "(none)");
-        var nums = Directory.EnumerateFiles(adrDir, "*.md")
-            .Select(f => Regex.Match(Path.GetFileName(f), @"^(\d{3})-"))
-            .Where(m => m.Success)
-            .Select(m => int.Parse(m.Groups[1].Value))
-            .OrderBy(x => x)
-            .ToList();
-        return nums.Count == 0 ? (0, "(none)") : (nums.Count, $"{nums.First():000}-{nums.Last():000}");
-    }
-
     // ---- fitness: each abstract *TestsBase class in MMCA.Common.Testing.Architecture -> its [Fact]/[Theory] count.
     //      Each base lives in its own file (one abstract *TestsBase per file), so a per-file count attributes cleanly.
     private static Dictionary<string, int> FitnessBaseCounts(string root)
@@ -209,10 +192,11 @@ internal static class FactsGenerator
 _As of: {{AS_OF}} (framework {{VERSION}}) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
-> campaigns) must **reference** these facts rather than copy the numbers inline. A bare `(001-NNN)` ADR
-> range, a "thirteen packages" count, or a "~68 fitness methods" figure typed into another file is drift
-> waiting to happen — point at this file (and at `ADRs/README.md` for the ADR table). Per-repo facts (each
-> repo's own test totals and scorecard indices) live in that repo's `ArchitectureScorecard.md`, **not** here.
+> campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
+> count or a "~68 fitness methods" figure typed into another file is drift waiting to happen — point at
+> this file. The ADR table and its count/range are owned by the published ADR index
+> (<https://ivanball.github.io/docs/adr/>, source `docs-src/adr/README.md` in the Website repo). Per-repo
+> facts (test totals, scorecard indices) live in that repo's published scorecard, **not** here.
 
 ## Framework version
 - **Current: `{{VERSION}}`** (MinVer-derived from the git tag at `main` HEAD).
@@ -225,9 +209,10 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 
 {{PKG_LIST}}
 
-## Architecture Decision Records — **{{ADR_COUNT}} ({{ADR_RANGE}})**
-The **canonical index is [`ADRs/README.md`](ADRs/README.md)** — it owns the range/count and the one-line
-summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
+## Architecture Decision Records
+The ADRs live in the Website repo (`docs-src/adr/`), published at
+<https://ivanball.github.io/docs/adr/>. The **canonical index is that repo's `docs-src/adr/README.md`**:
+it owns the range/count and the one-line summaries. Do not restate the `(001-NNN)` range elsewhere.
 
 ## Architecture fitness functions
 - **{{FIT_METHODS}} test methods across {{FIT_BASES}} abstract `*TestsBase` classes**, shipped once in the
@@ -237,15 +222,17 @@ summaries. Do not restate the `(001-NNN)` range elsewhere; link to that table.
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric
-- The 34-category evaluation rubric is **[`ArchitectureEvaluationCriteria.md`](ArchitectureEvaluationCriteria.md)**
-  (canonical, in this repo). Each repo's `ArchitectureScorecard.md` is scored against it.
+- The 34-category evaluation rubric is canonical in the Website repo
+  (`docs-src/governance/ArchitectureEvaluationCriteria.md`, published at
+  <https://ivanball.github.io/docs/governance/>). Each repo's published scorecard is scored against it.
 
 ## Where the rest lives (don't duplicate)
-- Per-repo scores/indices and test counts → that repo's `ArchitectureScorecard.md`.
-- Remediation status → that repo's `RemediationBacklog.md` (+ ADC `TECHDEBT.md`); cross-repo themes →
+- Per-repo scores/indices and test counts → that repo's published scorecard
+  (<https://ivanball.github.io/docs/governance/>).
+- Remediation status → that repo's published backlog (same location); cross-repo themes →
   workspace `Docs/Architecture/ArchitectureRemediation.md` (rollup, links only).
-- Release notes / versioning policy / security model / FinOps → `CHANGELOG.md` / `VERSIONING.md` /
-  `SECURITY.md` / `COST.md` (this repo).
+- Release notes / security model → `CHANGELOG.md` / `SECURITY.md` (this repo); versioning policy /
+  FinOps → the published guides (<https://ivanball.github.io/docs/guides/>).
 
 ## Keeping this current
 This file is **generated from source** and **gated in CI** (the `facts` job runs `--check` and fails the
@@ -256,7 +243,7 @@ dotnet run --project build/facts -- .
 ```
 
 The figures are computed directly: version from the git tag, package count from packable `Source/*`
-projects, ADR count/range from `ADRs/`, and the fitness counts from `MMCA.Common.Testing.Architecture`.
+projects, and the fitness counts from `MMCA.Common.Testing.Architecture`.
 The workspace `Tools/invtool -- facts ./MMCA.Common` shares this same generator and produces an identical file.
 """;
 }
