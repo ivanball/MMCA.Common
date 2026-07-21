@@ -6,7 +6,7 @@ public static partial class ArchitectureRules
     public static void DtosAreImmutable(IArchitectureMap map)
     {
         var offenders = map.ModuleShared()
-            .SelectMany(a => a.GetLoadableTypes())
+            .SelectMany(a => a.LoadableTypes)
             .Where(ImplementsBaseDto)
             .SelectMany(MutablePropertyViolations);
 
@@ -18,7 +18,7 @@ public static partial class ArchitectureRules
     public static void CommandsAndQueriesAreImmutable(IArchitectureMap map)
     {
         var messageTypes = map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .SelectMany(h => h.GetInterfaces())
             .Where(i => i.IsGenericType && i.Name is "ICommandHandler`2" or "IQueryHandler`2")
             .Select(i => i.GetGenericArguments()[0])
@@ -34,7 +34,7 @@ public static partial class ArchitectureRules
     public static void DomainEventsAreImmutable(IArchitectureMap map)
     {
         var offenders = map.ModuleDomain()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith("MMCA.Common.Domain.DomainEvents.BaseDomainEvent"))
             .SelectMany(MutablePropertyViolations);
 
@@ -45,7 +45,7 @@ public static partial class ArchitectureRules
     public static void IntegrationEventsAreImmutable(IArchitectureMap map)
     {
         var offenders = map.Layers.Select(l => l.Assembly).Distinct()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsIntegrationEvent)
             .SelectMany(MutablePropertyViolations);
 
@@ -57,7 +57,7 @@ public static partial class ArchitectureRules
     {
         var sharedAssemblies = map.OfLayer(Layer.Shared).ToHashSet();
         var valueObjects = map.Layers.Select(l => l.Assembly).Distinct()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith("MMCA.Common.Shared.ValueObjects.ValueObject"))
             .ToList();
 
@@ -74,7 +74,7 @@ public static partial class ArchitectureRules
     }
 
     private static IEnumerable<string> MutablePropertyViolations(Type type) =>
-        type.DeclaredPublicProperties()
-            .Where(p => p.HasPublicMutableSetter())
+        type.DeclaredPublicProperties
+            .Where(p => p.HasPublicMutableSetter)
             .Select(p => $"  - {type.FullName}.{p.Name} has a public mutable setter");
 }

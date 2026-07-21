@@ -14,7 +14,7 @@ public static partial class ArchitectureRules
     {
         var offenders = new List<string>();
 
-        foreach (var handler in map.OfLayer(Layer.Application).SelectMany(a => a.ConcreteClasses()).Where(IsHandler))
+        foreach (var handler in map.OfLayer(Layer.Application).SelectMany(a => a.ConcreteClasses).Where(IsHandler))
         {
             var contract = HandlerContract(handler);
             if (contract is null || !IsSameAssemblyConcreteContract(contract, handler))
@@ -24,7 +24,7 @@ public static partial class ArchitectureRules
 
             if (!NamespacesMatch(contract, handler))
             {
-                offenders.Add($"  - {handler.FullName}: handles {contract.SimpleName()} in '{contract.Namespace}' but lives in '{handler.Namespace}'");
+                offenders.Add($"  - {handler.FullName}: handles {contract.SimpleName} in '{contract.Namespace}' but lives in '{handler.Namespace}'");
             }
         }
 
@@ -42,7 +42,7 @@ public static partial class ArchitectureRules
     {
         var offenders = new List<string>();
 
-        foreach (var validator in map.OfLayer(Layer.Application).SelectMany(a => a.ConcreteClasses()))
+        foreach (var validator in map.OfLayer(Layer.Application).SelectMany(a => a.ConcreteClasses))
         {
             var validated = ValidatedType(validator);
             if (validated is null || !IsSameAssemblyConcreteContract(validated, validator))
@@ -52,7 +52,7 @@ public static partial class ArchitectureRules
 
             if (!NamespacesMatch(validated, validator))
             {
-                offenders.Add($"  - {validator.FullName}: validates {validated.SimpleName()} in '{validated.Namespace}' but lives in '{validator.Namespace}'");
+                offenders.Add($"  - {validator.FullName}: validates {validated.SimpleName} in '{validated.Namespace}' but lives in '{validator.Namespace}'");
             }
         }
 

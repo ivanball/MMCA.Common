@@ -6,7 +6,7 @@ public static partial class ArchitectureRules
     public static void HandlersResideInApplicationLayer(IArchitectureMap map)
     {
         var offenders = map.ModuleDomain().Concat(map.Infrastructure())
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsHandler)
             .Select(t => $"  - {t.FullName}");
 
@@ -18,7 +18,7 @@ public static partial class ArchitectureRules
     public static void HandlersDoNotInjectOtherHandlers(IArchitectureMap map)
     {
         var offenders = map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsHandler)
             .Where(t => t.GetConstructors().SelectMany(c => c.GetParameters()).Any(p => IsHandlerParameter(p.ParameterType)))
             .Select(t => $"  - {t.FullName}");
@@ -31,7 +31,7 @@ public static partial class ArchitectureRules
     public static void ApplicationServicesDoNotInjectHandlers(IArchitectureMap map)
     {
         var offenders = map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => !IsHandler(t))
             .Where(t => t.GetConstructors().SelectMany(c => c.GetParameters()).Any(p => IsHandlerParameter(p.ParameterType)))
             .Select(t => $"  - {t.FullName}");
@@ -46,8 +46,8 @@ public static partial class ArchitectureRules
         var offenders = new List<string>();
 
         foreach (var type in map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
-            .Where(t => t.SimpleName().EndsWith("Service", StringComparison.Ordinal)))
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => t.SimpleName.EndsWith("Service", StringComparison.Ordinal)))
         {
             var ctors = type.GetConstructors();
             if (ctors.Length == 0)
@@ -70,7 +70,7 @@ public static partial class ArchitectureRules
     public static void ValidatorsResideInApplicationLayer(IArchitectureMap map)
     {
         var offenders = map.ModuleDomain().Concat(map.Infrastructure())
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => t.HasBaseTypeStartingWith("FluentValidation.AbstractValidator"))
             .Select(t => $"  - {t.FullName}");
 
@@ -82,12 +82,12 @@ public static partial class ArchitectureRules
     public static void DomainEventHandlersResideInApplicationAndSealed(IArchitectureMap map)
     {
         var misplaced = map.ModuleDomain()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(IsEventHandler)
             .Select(t => $"  - {t.FullName} (event handler must not be in Domain)");
 
         var unsealed = map.ModuleApplication()
-            .SelectMany(a => a.ConcreteClasses())
+            .SelectMany(a => a.ConcreteClasses)
             .Where(t => IsEventHandler(t) && !t.IsSealed)
             .Select(t => $"  - {t.FullName} (event handler must be sealed)");
 

@@ -8,8 +8,8 @@ public static partial class ArchitectureRules
     public static void DomainExposesAggregateRoots(IArchitectureMap map)
     {
         var roots = map.OfLayer(Layer.Domain)
-            .SelectMany(a => a.ConcreteClasses())
-            .Where(t => t.InheritsAggregateRoot());
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => t.InheritsAggregateRoot);
 
         roots.Should().NotBeEmpty(
             because: "the aggregate-root reflection filter must find roots, or the DDD fitness suite is vacuous");
@@ -20,7 +20,7 @@ public static partial class ArchitectureRules
     {
         var violations = new List<string>();
 
-        foreach (var type in map.OfLayer(Layer.Domain).SelectMany(a => a.ConcreteClasses()).Where(t => t.InheritsAggregateRoot()))
+        foreach (var type in map.OfLayer(Layer.Domain).SelectMany(a => a.ConcreteClasses).Where(t => t.InheritsAggregateRoot))
         {
             var createMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
                 .Where(m => string.Equals(m.Name, "Create", StringComparison.Ordinal))
@@ -51,8 +51,8 @@ public static partial class ArchitectureRules
     public static void DomainAggregateRootsHaveNoPublicConstructors(IArchitectureMap map)
     {
         var violations = map.OfLayer(Layer.Domain)
-            .SelectMany(a => a.ConcreteClasses())
-            .Where(t => t.InheritsAggregateRoot()
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => t.InheritsAggregateRoot
                 && t.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Length > 0)
             .Select(t => $"  - {t.FullName}");
 
@@ -64,8 +64,8 @@ public static partial class ArchitectureRules
     public static void DomainEntitiesAreSealed(IArchitectureMap map)
     {
         var violations = map.ModuleDomain()
-            .SelectMany(a => a.ConcreteClasses())
-            .Where(t => t.InheritsAuditableEntity() && !t.IsSealed)
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => t.InheritsAuditableEntity && !t.IsSealed)
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(violations,
@@ -76,8 +76,8 @@ public static partial class ArchitectureRules
     public static void AggregateRootsHaveNoPublicConstructors(IArchitectureMap map)
     {
         var violations = map.ModuleDomain()
-            .SelectMany(a => a.ConcreteClasses())
-            .Where(t => t.InheritsAggregateRoot()
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => t.InheritsAggregateRoot
                 && t.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Length > 0)
             .Select(t => $"  - {t.FullName}");
 
@@ -91,8 +91,8 @@ public static partial class ArchitectureRules
         Layer[] nonDomain = [Layer.Application, Layer.Infrastructure];
         var violations = map.Layers
             .Where(l => nonDomain.Contains(l.Layer))
-            .SelectMany(l => l.Assembly.ConcreteClasses())
-            .Where(t => t.InheritsAuditableEntity())
+            .SelectMany(l => l.Assembly.ConcreteClasses)
+            .Where(t => t.InheritsAuditableEntity)
             .Select(t => $"  - {t.FullName}");
 
         ArchitectureAssert.NoViolations(violations,
@@ -108,17 +108,17 @@ public static partial class ArchitectureRules
     public static void DtosAndRequestsAreNotInDomainOrInfrastructure(IArchitectureMap map)
     {
         var domainViolations = map.OfLayer(Layer.Domain)
-            .SelectMany(a => a.GetLoadableTypes())
+            .SelectMany(a => a.LoadableTypes)
             .Where(t => t is { IsClass: true } or { IsValueType: true })
-            .Where(t => t.SimpleName().EndsWith("DTO", StringComparison.Ordinal)
-                || t.SimpleName().EndsWith("Request", StringComparison.Ordinal)
+            .Where(t => t.SimpleName.EndsWith("DTO", StringComparison.Ordinal)
+                || t.SimpleName.EndsWith("Request", StringComparison.Ordinal)
                 || ImplementsBaseDto(t))
             .Select(t => $"  - {t.FullName} (DTO/request in Domain)");
 
         var infrastructureViolations = map.Infrastructure()
-            .SelectMany(a => a.GetLoadableTypes())
+            .SelectMany(a => a.LoadableTypes)
             .Where(t => t is { IsClass: true } or { IsValueType: true })
-            .Where(t => t.SimpleName().EndsWith("DTO", StringComparison.Ordinal) || ImplementsBaseDto(t))
+            .Where(t => t.SimpleName.EndsWith("DTO", StringComparison.Ordinal) || ImplementsBaseDto(t))
             .Select(t => $"  - {t.FullName} (DTO in Infrastructure)");
 
         ArchitectureAssert.NoViolations(domainViolations.Concat(infrastructureViolations),
