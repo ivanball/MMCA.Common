@@ -97,6 +97,24 @@ public sealed class TokenServiceTests : IDisposable
         token1.Should().NotBe(token2);
     }
 
+    // ── Token lifetimes ──
+    [Fact]
+    public void Lifetimes_DeriveFromJwtSettings()
+    {
+        var settings = new JwtSettings
+        {
+            SecretForKey = Base64Secret,
+            Issuer = "https://test-issuer",
+            Audience = "test-audience",
+            AccessTokenExpirationMinutes = 45,
+            RefreshTokenExpirationDays = 10
+        };
+        using var service = new TokenService(settings);
+
+        service.AccessTokenLifetime.Should().Be(TimeSpan.FromMinutes(45));
+        service.RefreshTokenLifetime.Should().Be(TimeSpan.FromDays(10));
+    }
+
     // ── GetPrincipalFromExpiredToken ──
     [Fact]
     public void GetPrincipalFromExpiredToken_ValidToken_ReturnsPrincipal()

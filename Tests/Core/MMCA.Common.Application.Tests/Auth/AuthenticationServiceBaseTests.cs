@@ -156,6 +156,29 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     [Fact]
+    public async Task LoginAsync_WhenTokenServiceReportsConfiguredLifetimes_UsesThemForExpiries()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.TokenService.Setup(x => x.AccessTokenLifetime).Returns(TimeSpan.FromMinutes(30));
+        mocks.TokenService.Setup(x => x.RefreshTokenLifetime).Returns(TimeSpan.FromDays(14));
+        sut.UntrackedUser = CreateTestUser(id: 1);
+        var tracked = CreateTestUser(id: 1);
+        mocks.Repository
+            .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tracked);
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AccessTokenExpiry.Should().Be(
+            FixedNow.UtcDateTime.AddMinutes(30),
+            "Jwt:AccessTokenExpirationMinutes drives the reported expiry");
+        tracked.RefreshTokenExpiry.Should().Be(
+            FixedNow.UtcDateTime.AddDays(14),
+            "Jwt:RefreshTokenExpirationDays drives the stored refresh expiry");
+    }
+
+    [Fact]
     public async Task LoginAsync_NormalizesEmailToValueObjectBeforeLookup()
     {
         var (sut, mocks) = CreateSut();
