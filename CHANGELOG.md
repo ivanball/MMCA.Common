@@ -2,7 +2,7 @@
 
 All notable changes to the MMCA.Common packages are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
-and are derived from git tags by MinVer (see [VERSIONING.md](VERSIONING.md)).
+and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
 ## [Unreleased]
 
@@ -225,7 +225,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
 
 ## [1.113.0] - 2026-07-11
 
-### Added (2026-07-11 managed file storage + avatars, [ADR-045](ADRs/045-managed-file-storage-and-avatars.md))
+### Added (2026-07-11 managed file storage + avatars, [ADR-045](https://ivanball.github.io/docs/adr/045-managed-file-storage-and-avatars.html))
 - **`IFileStorageService`** with unconfigured Null default and `AzureBlobFileStorageService`
   swapped in by `AddAzureBlobFileStorage(configuration)` when the `FileStorage` section is
   complete (`ContainerName` + `ServiceUri` for DefaultAzureCredential auth or
@@ -239,7 +239,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
   UI.Maui (photo pick/capture, permission flow encapsulated, cancelled/denied returns null);
   web heads keep the Null default and render an `InputFile` instead.
 
-### Added (2026-07-11 native push delivery, [ADR-044](ADRs/044-native-push-delivery.md))
+### Added (2026-07-11 native push delivery, [ADR-044](https://ivanball.github.io/docs/adr/044-native-push-delivery.html))
 - **Native push pipeline (third notification channel)**: `INativePushSender` +
   `IPushDeviceRegistrar` Application abstractions with inert Null defaults, Azure Notification
   Hubs implementations (installation model, `user:{id}` tags, FCM v1 + APNs payloads, tag
@@ -269,7 +269,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
 
 ## [1.112.0] - 2026-07-10
 
-### Added (2026-07-10 device-capability layer, [ADR-042](ADRs/042-device-capability-abstraction.md) / [ADR-043](ADRs/043-mobile-deep-links-and-native-oauth-callback.md))
+### Added (2026-07-10 device-capability layer, [ADR-042](https://ivanball.github.io/docs/adr/042-device-capability-abstraction.html) / [ADR-043](https://ivanball.github.io/docs/adr/043-mobile-deep-links-and-native-oauth-callback.html))
 - **`MMCA.Common.UI.Maui` (NEW, fifteenth package)**: native device-capability implementations for
   MAUI Blazor Hybrid heads over MAUI Essentials + Plugin.LocalNotification (connectivity, battery,
   share sheet, clipboard, haptics/vibration, maps launch, geolocation, system-browser links,
@@ -298,7 +298,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
 
 ## [1.111.0] - 2026-07-10
 
-### Fixed (2026-07-10 output-cache policy regressions, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
+### Fixed (2026-07-10 output-cache policy regressions, [ADR-040](https://ivanball.github.io/docs/adr/040-authenticated-output-caching-for-public-reads.html))
 - **`PublicEndpointOutputCachePolicy` now varies the cache key by every query-string parameter**
   (`CacheVaryByRules.QueryKeys = "*"`, the same rule as the built-in default policy). The v1.110.0
   policy replaced the whole default-policy chain, so it silently dropped query variance: every
@@ -325,7 +325,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
   Overlapping refreshes coalesce (a push arriving mid-load is skipped; the next push or
   navigation reconciles).
 
-### Added (2026-07-10 runtime performance wave, [ADR-040](ADRs/040-authenticated-output-caching-for-public-reads.md))
+### Added (2026-07-10 runtime performance wave, [ADR-040](https://ivanball.github.io/docs/adr/040-authenticated-output-caching-for-public-reads.html))
 - **`PublicEndpointOutputCachePolicy` + `OutputCacheOptions.AddPublicEndpointPolicy(name, expiration, tags)`**
   (MMCA.Common.API): output-cache policy for `[AllowAnonymous]`, user-independent GET endpoints
   that caches despite an `Authorization` header. The UI attaches a Bearer token to every request,
@@ -388,7 +388,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
 
 ## [1.109.0] - 2026-07-10
 
-### Changed (2026-07-09 domain rejection messages in error toasts, [ADR-027](ADRs/027-multi-locale-i18n.md) Decision 9 carve-out)
+### Changed (2026-07-09 domain rejection messages in error toasts, [ADR-027](https://ivanball.github.io/docs/adr/027-multi-locale-i18n.html) Decision 9 carve-out)
 - **`ErrorMessages.LoadError/SaveError/DeleteError` surface a `DomainInvariantViolationException`
   message verbatim** in place of the generic "Error loading/saving/deleting {0}." template, and the
   new **`ErrorMessages.ActionError(ex, localizedFallback)`** does the same for pages whose fallback
@@ -402,7 +402,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
 
 ## [1.108.0] - 2026-07-09
 
-### Added (2026-07-09 live channels, [ADR-039](ADRs/039-live-channel-push.md))
+### Added (2026-07-09 live channels, [ADR-039](https://ivanball.github.io/docs/adr/039-live-channel-push.html))
 - **Ephemeral live channel events over the existing notification hub**: `NotificationHub` gains its
   first client-invokable methods, `JoinChannel` / `LeaveChannel` (SignalR group membership; channel
   keys validated against the new `PushNotificationSettings.ChannelKeyPattern`, default

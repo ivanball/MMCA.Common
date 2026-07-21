@@ -23,8 +23,8 @@
 - [ ] `dotnet test --solution MMCA.Common.slnx -c Release` passes (domain + architecture run headless; SQL-dependent tests run in CI).
 - [ ] If a project reference or a type moved between packages, both layer gates were updated (the compile-time `LayerEnforcement.targets` guard and the NetArchTest fitness rules).
 - [ ] `FACTS.md` regenerated if this changes the version, package list, ADR range, or fitness counts: `dotnet run --project build/facts -- .` (CI gates on `--check` drift).
-- [ ] The relevant ADR in `ADRs/` was read, and updated/added if a pattern it describes changed.
-- [ ] `ArchitectureScorecard.md` / `RemediationBacklog.md` updated if this closes or moves a remediation item.
+- [ ] The relevant ADR (published at https://ivanball.github.io/docs/adr/, source in the Website repo) was read, and updated/added there if a pattern it describes changed.
+- [ ] The published scorecard/backlog (https://ivanball.github.io/docs/governance/, source in the Website repo) updated if this closes or moves a remediation item.
 - [ ] Commit messages follow Scoped Commits (`<scope>: <description>`; `§<m>:` for scorecard work, `ADR-NNN:` for ADR work). See CONTRIBUTING.md.
 - [ ] No secrets staged (`.pem`, `.env`, `credentials`, `local.props`).
 

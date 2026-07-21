@@ -12,7 +12,7 @@ namespace MMCA.Common.Infrastructure.Tests.Resilience;
 /// SQLite database. This is the central, automated analog of a consumer's cloud restore drill (e.g.
 /// MMCA.ADC's Azure SQL point-in-time-restore <c>dr-restore-drill.ps1</c>): the framework demonstrates
 /// and verifies the restore story here, rather than only inheriting it downstream. The measured restore
-/// duration is recorded as a baseline RTO data point (see <c>RESILIENCE.md</c>); the assertion ceiling
+/// duration is recorded as a baseline RTO data point (see the published RESILIENCE guide); the assertion ceiling
 /// is a deliberately generous hang-detector, not a performance gate.
 /// </summary>
 public sealed class DatabaseRestoreDrillTests(ITestOutputHelper output)
@@ -21,7 +21,7 @@ public sealed class DatabaseRestoreDrillTests(ITestOutputHelper output)
 
     // Generous ceiling: a backup+restore of a few-hundred-row SQLite DB completes in well under a
     // second locally, so this only trips if the procedure hangs. The real RTO baseline lives in
-    // RESILIENCE.md and is reported via test output below.
+    // the published RESILIENCE guide, and is reported via test output below.
     private static readonly TimeSpan RtoCeiling = TimeSpan.FromSeconds(30);
 
     [Fact]

@@ -3,7 +3,7 @@
 ## Supported versions
 
 MMCA.Common is released as a single set of lockstep-versioned packages on one version line (the
-count is owned by [FACTS.md](FACTS.md); policy in [VERSIONING.md](VERSIONING.md)). Security fixes
+count is owned by [FACTS.md](FACTS.md); policy in [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)). Security fixes
 are applied to the latest released version; there
 is no long-term support branch — upgrade to the latest patch.
 

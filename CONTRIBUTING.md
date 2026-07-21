@@ -23,7 +23,7 @@ ADR-045: managed file storage, image normalization, media picking
 Conventions on top of that:
 
 - **Scorecard remediation** work uses the rubric category as the scope: `§<m>: <summary>`
-  (see [ArchitectureScorecard.md](ArchitectureScorecard.md) for the categories).
+  (see [the published scorecard](https://ivanball.github.io/docs/governance/common-ArchitectureScorecard.html) for the categories).
 - **ADR work** uses the record as the scope: `ADR-NNN: <summary>`.
 - Multi-scope changes use an umbrella scope, or list scopes separated by commas.
 - Merges and reverts can keep their default format.
@@ -45,7 +45,7 @@ dotnet test --solution MMCA.Common.slnx -c Release
 - `FACTS.md` is generated and CI-gated. If your change affects the version, package list, ADR
   range, or fitness counts, regenerate it: `dotnet run --project build/facts -- .`
 - Every cross-cutting pattern has an Architecture Decision Record explaining why it exists.
-  Read the relevant one in [ADRs/README.md](ADRs/README.md) before changing a pattern it
+  Read the relevant one in [the published ADR index](https://ivanball.github.io/docs/adr/) before changing a pattern it
   describes; substantive pattern changes should update or add an ADR.
 
 ## Pull request workflow
@@ -90,7 +90,7 @@ let you catch a breaking change before it ships:
 Do **not** bump versions in a feature PR. A release is cut after merge by the maintainer via the
 `/push-release` flow: tag `vX.Y.Z` on the merged `main` (publishes all 15 packages in lockstep),
 then a follow-up FACTS-regen PR and one lockstep version-bump PR per consumer. See
-[VERSIONING.md](VERSIONING.md).
+[the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html).
 
 ## Branch protection (maintainer, run once)
 
