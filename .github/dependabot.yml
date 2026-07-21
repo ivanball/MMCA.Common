@@ -6,6 +6,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Do NOT let Dependabot rebase open PRs when main moves. With the default ("auto") it
+    # re-resolves every open PR after each merge, and on 2026-07-21 that pass closed two
+    # valid PRs as "no longer updatable" (#90 and #92) and deleted their branches seconds
+    # apart; #92 was fully green and could not be reopened. Because main requires an
+    # up-to-date branch anyway, refresh stale PRs deliberately with `gh pr update-branch`.
+    rebase-strategy: "disabled"
     # Scoped Commits (scope-first, see CONTRIBUTING.md), not the conventional-commits default.
     commit-message:
       prefix: "deps"
@@ -34,6 +40,14 @@ updates:
       # VS.Threading.Analyzers v18 adds stricter rules (e.g. VSTHRD103) that error under
       # TreatWarningsAsErrors; held at v17 until the flagged call sites are reworked.
       - dependency-name: "Microsoft.VisualStudio.Threading.Analyzers"
+        update-types: ["version-update:semver-major"]
+      # Microsoft.OpenApi is held at 2.x by a build constraint, not by preference. The
+      # Microsoft.AspNetCore.OpenApi XML-comment source generator (pinned to the SDK band) is
+      # written against 2.x, where IOpenApiMediaType.Example is settable; 3.x made it read only,
+      # so the generated OpenApiXmlCommentSupport.generated.cs fails with CS0200 and takes the
+      # consumer jobs down with it. Nothing here can override generated code. Revisit when
+      # ASP.NET Core ships a generator targeting 3.x. See Directory.Packages.props.
+      - dependency-name: "Microsoft.OpenApi"
         update-types: ["version-update:semver-major"]
       # Breaking majors held back deliberately. MessagePack is also pinned to a patched 2.x to
       # override a vulnerable transitive (see Directory.Packages.props).
