@@ -108,6 +108,12 @@ public sealed class TokenService : ITokenService, IDisposable
     }
 
     /// <inheritdoc />
+    public TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(_jwtSettings.AccessTokenExpirationMinutes);
+
+    /// <inheritdoc />
+    public TimeSpan RefreshTokenLifetime => TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationDays);
+
+    /// <inheritdoc />
     /// <remarks>
     /// Validates everything except lifetime — this is intentional because the method's purpose
     /// is to extract claims from an expired access token during the refresh flow.

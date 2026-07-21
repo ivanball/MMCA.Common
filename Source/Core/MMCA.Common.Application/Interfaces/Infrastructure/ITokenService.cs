@@ -26,6 +26,20 @@ public interface ITokenService
     string GenerateRefreshToken();
 
     /// <summary>
+    /// Lifetime of issued access tokens. The concrete implementation derives it from the bound
+    /// JWT settings so the expiry reported to clients matches the token's actual <c>exp</c>;
+    /// the default keeps hand-written test doubles on the BR-205 baseline (15 minutes).
+    /// </summary>
+    TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Absolute lifetime of issued refresh tokens (BR-205). The concrete implementation derives
+    /// it from the bound JWT settings; the default keeps hand-written test doubles on the
+    /// BR-205 baseline (7 days).
+    /// </summary>
+    TimeSpan RefreshTokenLifetime => TimeSpan.FromDays(7);
+
+    /// <summary>
     /// Extracts claims from an expired access token without validating its lifetime.
     /// Used during token refresh to identify the user.
     /// </summary>

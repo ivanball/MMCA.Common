@@ -53,11 +53,21 @@ public abstract class AuthenticationServiceBase<TUser>(
     protected IRepository<TUser, UserIdentifierType> Repository =>
         unitOfWork.GetRepository<TUser, UserIdentifierType>();
 
-    /// <summary>Access-token lifetime (BR-205 default: 15 minutes).</summary>
-    protected virtual TimeSpan AccessTokenLifetime => TimeSpan.FromMinutes(15);
+    /// <summary>
+    /// Access-token lifetime, from the token service (<c>Jwt:AccessTokenExpirationMinutes</c>) so the
+    /// expiry reported to clients matches the JWT's actual <c>exp</c>. A non-positive value (a test
+    /// double or a misconfigured host) falls back to the BR-205 default of 15 minutes.
+    /// </summary>
+    protected virtual TimeSpan AccessTokenLifetime =>
+        tokenService.AccessTokenLifetime > TimeSpan.Zero ? tokenService.AccessTokenLifetime : TimeSpan.FromMinutes(15);
 
-    /// <summary>Refresh-token lifetime (BR-205 default: 7 days).</summary>
-    protected virtual TimeSpan RefreshTokenLifetime => TimeSpan.FromDays(7);
+    /// <summary>
+    /// Absolute refresh-token lifetime, from the token service (<c>Jwt:RefreshTokenExpirationDays</c>).
+    /// A non-positive value (a test double or a misconfigured host) falls back to the BR-205 default
+    /// of 7 days.
+    /// </summary>
+    protected virtual TimeSpan RefreshTokenLifetime =>
+        tokenService.RefreshTokenLifetime > TimeSpan.Zero ? tokenService.RefreshTokenLifetime : TimeSpan.FromDays(7);
 
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> LoginAsync(
