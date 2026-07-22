@@ -1,6 +1,8 @@
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Infrastructure.Caching;
 using Moq;
 using StackExchange.Redis;
@@ -9,11 +11,13 @@ namespace MMCA.Common.Infrastructure.Tests.Caching;
 
 public class DistributedCacheServiceTests
 {
+    private static readonly ILogger<DistributedCacheService> NullLog = NullLogger<DistributedCacheService>.Instance;
+
     private readonly Mock<IDistributedCache> _cacheMock = new();
     private readonly DistributedCacheService _sut;
 
     public DistributedCacheServiceTests() =>
-        _sut = new DistributedCacheService(_cacheMock.Object);
+        _sut = new DistributedCacheService(_cacheMock.Object, NullLog);
 
     // ── GetAsync ──
     [Fact]
@@ -96,6 +100,36 @@ public class DistributedCacheServiceTests
     }
 
     [Fact]
+    public async Task RemoveByPrefixAsync_WithoutRedis_LogsWarningOnceAcrossCalls()
+    {
+        // Moq cannot proxy ILogger<T> of an internal T (strong-named abstractions), so use a small fake.
+        var logger = new WarningCountingLogger();
+        var sut = new DistributedCacheService(_cacheMock.Object, logger);
+
+        // The dead no-op should be observable, but warn once (steady state) rather than on every command.
+        await sut.RemoveByPrefixAsync("prefix:");
+        await sut.RemoveByPrefixAsync("other:");
+
+        logger.WarningCount.Should().Be(1);
+    }
+
+    private sealed class WarningCountingLogger : ILogger<DistributedCacheService>
+    {
+        public int WarningCount { get; private set; }
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.Warning)
+                WarningCount++;
+        }
+    }
+
+    [Fact]
     public async Task RemoveByPrefixAsync_WithRedis_DeletesMatchingKeys()
     {
         var cacheMock = new Mock<IDistributedCache>();
@@ -119,7 +153,7 @@ public class DistributedCacheServiceTests
         dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()))
             .ReturnsAsync(2);
 
-        var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
+        var sut = new DistributedCacheService(cacheMock.Object, NullLog, connectionMock.Object);
 
         await sut.RemoveByPrefixAsync("prefix:");
 
@@ -139,7 +173,7 @@ public class DistributedCacheServiceTests
         var connectionMock = new Mock<IConnectionMultiplexer>();
         connectionMock.Setup(c => c.GetServers()).Returns([]);
 
-        var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
+        var sut = new DistributedCacheService(cacheMock.Object, NullLog, connectionMock.Object);
 
         await sut.RemoveByPrefixAsync("prefix:");
 
@@ -166,7 +200,7 @@ public class DistributedCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .Returns(AsyncEnumerable.Empty<RedisKey>());
 
-        var sut = new DistributedCacheService(cacheMock.Object, connectionMock.Object);
+        var sut = new DistributedCacheService(cacheMock.Object, NullLog, connectionMock.Object);
 
         await sut.RemoveByPrefixAsync("prefix:");
 

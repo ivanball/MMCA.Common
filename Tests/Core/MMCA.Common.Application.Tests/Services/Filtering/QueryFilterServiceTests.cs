@@ -160,7 +160,20 @@ public class QueryFilterServiceTests
 
     [Fact]
     public void DateTime_UnknownOp_ReturnsAll() =>
-        Filter("CreatedOn", "BETWEEN", "2024-01-01").Should().HaveCount(4);
+        Filter("CreatedOn", "IS WITHIN", "2024-01-01").Should().HaveCount(4);
+
+    [Fact]
+    public void DateTime_Between_ReturnsInclusiveRange() =>
+        Filter("CreatedOn", "BETWEEN", "2024-03-01,2024-06-15").Should().HaveCount(2);
+
+    // ── Nullable int strategy (IS EMPTY / BETWEEN) via ApplyFilters ──
+    [Fact]
+    public void NullableInt_IsEmpty_ReturnsNulls() =>
+        Filter("NullablePrice", "IS EMPTY", string.Empty).Should().HaveCount(2);
+
+    [Fact]
+    public void NullableInt_Between_ReturnsInclusiveRange() =>
+        Filter("NullablePrice", "BETWEEN", "10,50").Should().HaveCount(2);
 
     // ── Multiple filters ──
     [Fact]

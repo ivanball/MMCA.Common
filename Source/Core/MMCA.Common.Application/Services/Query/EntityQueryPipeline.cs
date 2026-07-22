@@ -14,9 +14,10 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
 {
     /// <summary>
     /// Framework safety ceiling (rubric §12): the maximum number of rows the pipeline will
-    /// materialize for a query that omits pagination. The per-request page size is separately
-    /// clamped to <c>ApplicationSettings.MaxPageSize</c> at the API boundary; this is the
-    /// last-resort guard so a direct service caller that forgets pagination can never trigger
+    /// materialize. A query that omits pagination is capped at this ceiling; a paginated query
+    /// has its page size clamped to this ceiling as well (defense in depth). The per-request page
+    /// size is also clamped to <c>ApplicationSettings.MaxPageSize</c> at the API boundary, but this
+    /// in-pipeline guard means a direct service caller that bypasses that boundary can never trigger
     /// an unbounded full-table load.
     /// </summary>
     public const int MaxUnboundedResultLimit = 1000;
@@ -90,8 +91,11 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         if (isPaginated)
         {
             totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
-            int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
-            query = query.Skip(skip).Take(parameters.PageSize.Value);
+            // Defense-in-depth (rubric §12): clamp the caller's page size to the framework ceiling so a
+            // direct Application-layer caller that bypasses the API boundary cannot request an unbounded page.
+            int pageSize = Math.Min(parameters.PageSize!.Value, MaxUnboundedResultLimit);
+            int skip = checked(pageSize * (parameters.PageNumber!.Value - 1));
+            query = query.Skip(skip).Take(pageSize);
         }
         else
         {
@@ -134,8 +138,11 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         {
             // Count must be taken before Skip/Take to get the total matching record count
             totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
-            int skip = checked(parameters.PageSize!.Value * (parameters.PageNumber!.Value - 1));
-            query = query.Skip(skip).Take(parameters.PageSize.Value);
+            // Defense-in-depth (rubric §12): clamp the caller's page size to the framework ceiling so a
+            // direct Application-layer caller that bypasses the API boundary cannot request an unbounded page.
+            int pageSize = Math.Min(parameters.PageSize!.Value, MaxUnboundedResultLimit);
+            int skip = checked(pageSize * (parameters.PageNumber!.Value - 1));
+            query = query.Skip(skip).Take(pageSize);
         }
         else
         {

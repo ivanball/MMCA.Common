@@ -3,22 +3,22 @@ using MMCA.Common.Application.Services.Filtering;
 
 namespace MMCA.Common.Application.Tests.Services.Filtering;
 
-public sealed class IntFilterStrategyTests
+public sealed class LongFilterStrategyTests
 {
     private sealed class Item
     {
-        public int Count { get; set; }
+        public long Count { get; set; }
 
-        public int? Score { get; set; }
+        public long? Score { get; set; }
     }
 
     private static IQueryable<Item> Items() =>
         new List<Item>
         {
-            new() { Count = 5, Score = 5 },
-            new() { Count = 10, Score = null },
-            new() { Count = 15, Score = 15 },
-            new() { Count = 20, Score = null },
+            new() { Count = 5_000_000_000L, Score = 5_000_000_000L },
+            new() { Count = 10_000_000_000L, Score = null },
+            new() { Count = 15_000_000_000L, Score = 15_000_000_000L },
+            new() { Count = 20_000_000_000L, Score = null },
         }.AsQueryable();
 
     private static readonly Dictionary<string, string> EmptyMap = [];
@@ -38,32 +38,21 @@ public sealed class IntFilterStrategyTests
     // ── EQUALS ──
     [Fact]
     public void Equals_ReturnsExactMatch() =>
-        Filter("EQUALS", "10").Should().ContainSingle(i => i.Count == 10);
+        Filter("EQUALS", "10000000000").Should().ContainSingle(i => i.Count == 10_000_000_000L);
 
     // ── NOT EQUALS ──
     [Fact]
     public void NotEquals_ExcludesMatch() =>
-        Filter("NOT EQUALS", "10").Should().HaveCount(3);
+        Filter("NOT EQUALS", "10000000000").Should().HaveCount(3);
 
-    // ── GREATER THAN ──
+    // ── Comparisons ──
     [Fact]
     public void GreaterThan_ReturnsItemsAboveValue() =>
-        Filter("GREATER THAN", "10").Should().HaveCount(2);
+        Filter("GREATER THAN", "10000000000").Should().HaveCount(2);
 
-    // ── LESS THAN ──
-    [Fact]
-    public void LessThan_ReturnsItemsBelowValue() =>
-        Filter("LESS THAN", "10").Should().ContainSingle(i => i.Count == 5);
-
-    // ── GREATER THAN OR EQUAL ──
-    [Fact]
-    public void GreaterThanOrEqual_IncludesBoundary() =>
-        Filter("GREATER THAN OR EQUAL", "10").Should().HaveCount(3);
-
-    // ── LESS THAN OR EQUAL ──
     [Fact]
     public void LessThanOrEqual_IncludesBoundary() =>
-        Filter("LESS THAN OR EQUAL", "10").Should().HaveCount(2);
+        Filter("LESS THAN OR EQUAL", "10000000000").Should().HaveCount(2);
 
     // ── Invalid value ──
     [Fact]
@@ -73,45 +62,27 @@ public sealed class IntFilterStrategyTests
     // ── Unknown operator ──
     [Fact]
     public void UnknownOperator_ReturnsAll() =>
-        Filter("CONTAINS", "10").Should().HaveCount(4);
+        Filter("CONTAINS", "10000000000").Should().HaveCount(4);
 
     // ── IN ──
     [Fact]
     public void In_ReturnsItemsMatchingAnyListedValue() =>
-        Filter("IN", "5,15").Select(i => i.Count).Should().BeEquivalentTo([5, 15]);
-
-    [Fact]
-    public void In_TrimsWhitespaceAroundValues() =>
-        Filter("IN", " 10 , 20 ").Should().HaveCount(2);
+        Filter("IN", "5000000000,15000000000").Select(i => i.Count)
+            .Should().BeEquivalentTo([5_000_000_000L, 15_000_000_000L]);
 
     [Fact]
     public void In_SkipsUnparseableValues() =>
-        Filter("IN", "5,not-a-number,20").Select(i => i.Count).Should().BeEquivalentTo([5, 20]);
-
-    [Fact]
-    public void In_WithNoParseableValues_ReturnsAll() =>
-        Filter("IN", "a,b,c").Should().HaveCount(4);
-
-    [Fact]
-    public void In_WithEmptyValue_ReturnsAll() =>
-        Filter("IN", string.Empty).Should().HaveCount(4);
+        Filter("IN", "5000000000,not-a-number,20000000000").Should().HaveCount(2);
 
     // ── BETWEEN ──
     [Fact]
     public void Between_ReturnsInclusiveRange() =>
-        Filter("BETWEEN", "10,15").Select(i => i.Count).Should().BeEquivalentTo([10, 15]);
-
-    [Fact]
-    public void Between_IncludesBothBounds() =>
-        Filter("BETWEEN", "5,20").Should().HaveCount(4);
+        Filter("BETWEEN", "10000000000,15000000000").Select(i => i.Count)
+            .Should().BeEquivalentTo([10_000_000_000L, 15_000_000_000L]);
 
     [Fact]
     public void Between_WithSingleValue_ReturnsAll() =>
-        Filter("BETWEEN", "10").Should().HaveCount(4);
-
-    [Fact]
-    public void Between_WithUnparseableBound_ReturnsAll() =>
-        Filter("BETWEEN", "10,not-a-number").Should().HaveCount(4);
+        Filter("BETWEEN", "10000000000").Should().HaveCount(4);
 
     // ── IS EMPTY / IS NOT EMPTY (nullable) ──
     [Fact]

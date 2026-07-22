@@ -31,6 +31,8 @@ public static class QueryFilterService
             [typeof(bool?)] = new BoolFilterStrategy(),
             [typeof(int)] = new IntFilterStrategy(),
             [typeof(int?)] = new IntFilterStrategy(),
+            [typeof(long)] = new LongFilterStrategy(),
+            [typeof(long?)] = new LongFilterStrategy(),
             [typeof(DateTime)] = new DateTimeFilterStrategy(),
             [typeof(DateTime?)] = new DateTimeFilterStrategy(),
             [typeof(decimal)] = new DecimalFilterStrategy(),

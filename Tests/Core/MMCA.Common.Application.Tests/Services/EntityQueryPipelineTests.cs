@@ -250,6 +250,41 @@ public sealed class EntityQueryPipelineTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WithOversizedPageSize_ClampsToUnboundedLimit()
+    {
+        // Defense in depth (rubric §12): a direct caller that bypasses the API boundary and requests an
+        // oversized page must still be capped at the framework ceiling rather than materialize the lot.
+        var entities = Enumerable.Range(1, EntityQueryPipeline.MaxUnboundedResultLimit + 50)
+            .Select(i => new TestEntity { Id = i, Name = string.Create(CultureInfo.InvariantCulture, $"E{i}") })
+            .ToList();
+        var query = entities.AsQueryable();
+
+        _executorMock
+            .Setup(e => e.CountAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entities.Count);
+        // Materialize the ACTUAL query so the pipeline's Take() is honored.
+        _executorMock
+            .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .Returns<IQueryable<TestEntity>, CancellationToken>((q, _) => Task.FromResult(q.ToList()));
+
+        var parameters = new EntityQueryParameters<TestEntity>
+        {
+            PageNumber = 1,
+            PageSize = EntityQueryPipeline.MaxUnboundedResultLimit + 500,
+            DTOToEntityPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        };
+
+        var (items, _) = await _sut.ExecuteAsync<TestEntity, int>(
+            query,
+            EmptyNavigation(),
+            parameters,
+            (_, _, _, _, _) => Task.CompletedTask,
+            CancellationToken.None);
+
+        items.Should().HaveCount(EntityQueryPipeline.MaxUnboundedResultLimit);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WithCriteria_FiltersResults()
     {
         var entities = new List<TestEntity>

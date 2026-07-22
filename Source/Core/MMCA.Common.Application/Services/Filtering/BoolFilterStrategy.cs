@@ -5,25 +5,24 @@ namespace MMCA.Common.Application.Services.Filtering;
 
 /// <summary>
 /// Filter strategy for <see cref="bool"/> and <see cref="Nullable{Boolean}"/> properties.
-/// Supports only the "IS" operator. Silently returns the unfiltered query if the value
-/// cannot be parsed as a boolean, preventing runtime exceptions from invalid input.
+/// Supports the "IS" equality operator plus the "IS EMPTY" / "IS NOT EMPTY" null checks
+/// (meaningful for <see cref="Nullable{Boolean}"/> columns). Silently returns the unfiltered
+/// query if the value cannot be parsed as a boolean, preventing runtime exceptions from invalid input.
 /// </summary>
 internal sealed class BoolFilterStrategy : IFilterStrategy
 {
     public IReadOnlySet<string> SupportedOperators { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        "IS"
+        "IS", "IS EMPTY", "IS NOT EMPTY"
     }.ToFrozenSet(StringComparer.Ordinal);
 
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
-    {
-        if (!bool.TryParse(value, out var boolValue))
-            return query;
-
-        return op switch
+        => op switch
         {
-            "IS" => query.Where($"{property} == @0", boolValue),
+            // Presence checks are value-independent, so they precede the bool parse.
+            "IS EMPTY" => query.Where($"{property} == null"),
+            "IS NOT EMPTY" => query.Where($"{property} != null"),
+            "IS" when bool.TryParse(value, out var boolValue) => query.Where($"{property} == @0", boolValue),
             _ => query
         };
-    }
 }

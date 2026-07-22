@@ -7,6 +7,8 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -154,7 +156,9 @@ public static class DependencyInjection
                 if (distributedCache is not null and not MemoryDistributedCache)
                 {
                     var multiplexer = sp.GetService<IConnectionMultiplexer>();
-                    return new DistributedCacheService(distributedCache, multiplexer);
+                    var logger = sp.GetService<ILogger<DistributedCacheService>>()
+                        ?? NullLogger<DistributedCacheService>.Instance;
+                    return new DistributedCacheService(distributedCache, logger, multiplexer);
                 }
 
                 return new MemoryCacheService(sp.GetRequiredService<IMemoryCache>());
