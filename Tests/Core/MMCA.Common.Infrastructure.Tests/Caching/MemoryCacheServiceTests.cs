@@ -38,6 +38,18 @@ public sealed class MemoryCacheServiceTests : IDisposable
         result.Should().Be(42);
     }
 
+    [Fact]
+    public async Task GetAsync_WhenKeyStoredUnderDifferentType_ReturnsCleanMissWithoutThrowing()
+    {
+        await _sut.SetAsync("reused-key", 42);
+
+        // A key reused under a mismatched T must surface as a clean miss, not an InvalidCastException.
+        var result = await FluentActions.Invoking(() => _sut.GetAsync<string>("reused-key"))
+            .Should().NotThrowAsync();
+
+        result.Subject.Should().BeNull();
+    }
+
     // ── SetAsync ──
     [Fact]
     public async Task SetAsync_WithExpiration_StoresValue()

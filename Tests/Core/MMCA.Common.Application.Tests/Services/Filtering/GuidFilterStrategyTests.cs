@@ -8,6 +8,8 @@ public sealed class GuidFilterStrategyTests
     private sealed class Item
     {
         public Guid Tag { get; set; }
+
+        public Guid? OptionalTag { get; set; }
     }
 
     private const string Guid1String = "11111111-1111-1111-1111-111111111111";
@@ -16,10 +18,10 @@ public sealed class GuidFilterStrategyTests
     private static IQueryable<Item> Items() =>
         new List<Item>
         {
-            new() { Tag = new Guid(0x11111111, 0x1111, 0x1111, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11) },
-            new() { Tag = new Guid(0x22222222, 0x2222, 0x2222, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22) },
-            new() { Tag = new Guid(0x33333333, 0x3333, 0x3333, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33) },
-            new() { Tag = new Guid(0x44444444, 0x4444, 0x4444, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44) },
+            new() { Tag = new Guid(0x11111111, 0x1111, 0x1111, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11), OptionalTag = Guid.NewGuid() },
+            new() { Tag = new Guid(0x22222222, 0x2222, 0x2222, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22), OptionalTag = null },
+            new() { Tag = new Guid(0x33333333, 0x3333, 0x3333, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33), OptionalTag = null },
+            new() { Tag = new Guid(0x44444444, 0x4444, 0x4444, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x44), OptionalTag = null },
         }.AsQueryable();
 
     private static readonly Dictionary<string, string> EmptyMap = [];
@@ -28,6 +30,12 @@ public sealed class GuidFilterStrategyTests
         QueryFilterService.ApplyFilters(
             Items(),
             new Dictionary<string, (string, string)> { ["Tag"] = (op, value) },
+            EmptyMap);
+
+    private static IQueryable<Item> FilterOptional(string op, string value) =>
+        QueryFilterService.ApplyFilters(
+            Items(),
+            new Dictionary<string, (string, string)> { ["OptionalTag"] = (op, value) },
             EmptyMap);
 
     // ── EQUALS ──
@@ -62,4 +70,13 @@ public sealed class GuidFilterStrategyTests
     [Fact]
     public void In_WithNoParseableValues_ReturnsAll() =>
         Filter("IN", "nope").Should().HaveCount(4);
+
+    // ── IS EMPTY / IS NOT EMPTY (nullable) ──
+    [Fact]
+    public void IsEmpty_ReturnsNullTags() =>
+        FilterOptional("IS EMPTY", string.Empty).Should().HaveCount(3);
+
+    [Fact]
+    public void IsNotEmpty_ReturnsNonNullTags() =>
+        FilterOptional("IS NOT EMPTY", string.Empty).Should().ContainSingle();
 }

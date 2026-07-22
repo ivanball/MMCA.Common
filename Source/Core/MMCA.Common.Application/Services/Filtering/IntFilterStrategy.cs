@@ -5,7 +5,8 @@ namespace MMCA.Common.Application.Services.Filtering;
 
 /// <summary>
 /// Filter strategy for <see cref="int"/> and <see cref="Nullable{Int32}"/> properties.
-/// Supports equality and numeric comparison operators. Silently returns the unfiltered
+/// Supports equality and numeric comparison operators, the comma-separated IN set, an inclusive
+/// BETWEEN range, and the IS EMPTY / IS NOT EMPTY null checks. Silently returns the unfiltered
 /// query if the value cannot be parsed as an integer.
 /// </summary>
 internal sealed class IntFilterStrategy : IFilterStrategy
@@ -13,33 +14,45 @@ internal sealed class IntFilterStrategy : IFilterStrategy
     public IReadOnlySet<string> SupportedOperators { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         "EQUALS", "NOT EQUALS", "GREATER THAN", "LESS THAN",
-        "GREATER THAN OR EQUAL", "LESS THAN OR EQUAL", "IN"
+        "GREATER THAN OR EQUAL", "LESS THAN OR EQUAL", "IN", "BETWEEN",
+        "IS EMPTY", "IS NOT EMPTY"
     }.ToFrozenSet(StringComparer.Ordinal);
 
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
-    {
-        // IN takes a comma-separated set; every other operator takes a single value.
-        if (op == "IN")
-            return ApplyIn(query, property, value);
-
-        if (!int.TryParse(value, out var intValue))
-            return query;
-
-        return op switch
+        => op switch
         {
-            "EQUALS" => query.Where($"{property} == @0", intValue),
-            "NOT EQUALS" => query.Where($"{property} != @0", intValue),
-            "GREATER THAN" => query.Where($"{property} > @0", intValue),
-            "LESS THAN" => query.Where($"{property} < @0", intValue),
-            "GREATER THAN OR EQUAL" => query.Where($"{property} >= @0", intValue),
-            "LESS THAN OR EQUAL" => query.Where($"{property} <= @0", intValue),
+            "EQUALS" when int.TryParse(value, out var v) => query.Where($"{property} == @0", v),
+            "NOT EQUALS" when int.TryParse(value, out var v) => query.Where($"{property} != @0", v),
+            "GREATER THAN" when int.TryParse(value, out var v) => query.Where($"{property} > @0", v),
+            "LESS THAN" when int.TryParse(value, out var v) => query.Where($"{property} < @0", v),
+            "GREATER THAN OR EQUAL" when int.TryParse(value, out var v) => query.Where($"{property} >= @0", v),
+            "LESS THAN OR EQUAL" when int.TryParse(value, out var v) => query.Where($"{property} <= @0", v),
+            "IS EMPTY" => query.Where($"{property} == null"),
+            "IS NOT EMPTY" => query.Where($"{property} != null"),
+            // IN/BETWEEN parse a list rather than a single scalar; handle them out of the main switch.
+            _ => ApplyInOrRange(query, property, op, value)
+        };
+
+    private static IQueryable<T> ApplyInOrRange<T>(IQueryable<T> query, string property, string op, string value)
+        => op switch
+        {
+            "IN" => ApplyIn(query, property, value),
+            "BETWEEN" => ApplyBetween(query, property, value),
             _ => query
         };
-    }
 
     private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
     {
         var values = FilterValueParser.ParseList(value, static s => int.TryParse(s, out var v) ? v : (int?)null);
         return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
+    }
+
+    private static IQueryable<T> ApplyBetween<T>(IQueryable<T> query, string property, string value)
+    {
+        // BETWEEN takes exactly two comma-separated bounds ("min,max"), inclusive on both ends.
+        var bounds = FilterValueParser.ParseList(value, static s => int.TryParse(s, out var v) ? v : (int?)null);
+        return bounds.Count == 2
+            ? query.Where($"{property} >= @0 && {property} <= @1", bounds[0], bounds[1])
+            : query;
     }
 }

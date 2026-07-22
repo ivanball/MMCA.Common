@@ -21,9 +21,12 @@ internal sealed class MemoryCacheService(IMemoryCache cache) : ICacheService
     /// <inheritdoc />
     public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        if (cache.TryGetValue(key, out T? value))
+        // Guard the cast: the generic TryGetValue<T> overload performs an unchecked (T)stored cast and
+        // throws InvalidCastException when a key is reused under a different T. Match on the stored object
+        // instead so a type mismatch (or a stored null) surfaces as a clean miss.
+        if (cache.TryGetValue(key, out var stored) && stored is T typed)
         {
-            return Task.FromResult(value);
+            return Task.FromResult<T?>(typed);
         }
 
         return Task.FromResult<T?>(default);
