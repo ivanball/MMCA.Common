@@ -6,6 +6,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.123.0] - 2026-07-22
+
+Maintenance release removing a redundant integration-event publish abstraction. **Breaking:** the
+`IIntegrationEventPublisher` interface and its `IntegrationEventPublisher` adapter are removed;
+callers inject `IEventBus` directly. No runtime behavior changes.
+
+### Removed
+- **`IIntegrationEventPublisher` (Application) and `IntegrationEventPublisher` (Infrastructure).** The
+  adapter delegated every call straight to `IEventBus.PublishAsync`, whose single-event overload has
+  an identical signature, so it carried no behavior the interface below it did not already provide.
+  Callers that injected `IIntegrationEventPublisher` now inject `IEventBus` directly (same
+  outbox-persist-then-dispatch in the monolith, same broker swap via `AddBrokerMessaging`). Removing
+  the adapter is the first step of the longer consolidation onto `IMessageBus` as the single outbox
+  transport (see the events/outbox onboarding chapter).
+
 ## [1.122.0] - 2026-07-22
 
 Feature release completing the dynamic-filter operator matrix, hardening pagination, and making

@@ -167,20 +167,6 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
-    public void AddServices_RegistersIntegrationEventPublisher()
-    {
-        var services = new ServiceCollection();
-        services.AddServices();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IIntegrationEventPublisher));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
-        descriptor.ImplementationType.Should().Be<IntegrationEventPublisher>();
-    }
-
-    [Fact]
     public void AddServices_RegistersEmailSender()
     {
         var services = new ServiceCollection();
