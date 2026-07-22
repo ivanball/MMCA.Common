@@ -186,7 +186,6 @@ public static class DependencyInjection
             services.TryAddSingleton<ITokenService, TokenService>();
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
             services.TryAddScoped<IEventBus, InProcessEventBus>();
-            services.TryAddScoped<IIntegrationEventPublisher, IntegrationEventPublisher>();
 
             // IMessageBus is the new abstraction used by OutboxProcessor (and, going forward, by
             // application code that publishes integration events). The default registration is
@@ -402,7 +401,7 @@ public static class DependencyInjection
             services.Replace(ServiceDescriptor.Scoped<IMessageBus, BrokerMessageBus>());
 
             // Also replace IEventBus so application code that publishes integration events
-            // (via IIntegrationEventPublisher → IEventBus.PublishAsync) writes to the outbox
+            // (via IEventBus.PublishAsync) writes to the outbox
             // and signals the OutboxProcessor — but does NOT dispatch in-process. The
             // OutboxProcessor's broker-publish path becomes the only delivery channel.
             services.Replace(ServiceDescriptor.Scoped<IEventBus, BrokerEventBus>());

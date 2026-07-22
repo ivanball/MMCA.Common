@@ -13,8 +13,7 @@ namespace MMCA.Common.Infrastructure.Services;
 /// to be invoked from the <c>OutboxProcessor</c> when draining already-persisted entries, or from
 /// application code paths that have already taken responsibility for outbox persistence elsewhere.
 /// Application code that needs the "persist + dispatch in one call" semantics should continue to
-/// use <see cref="IEventBus"/> / <see cref="MMCA.Common.Application.Interfaces.IIntegrationEventPublisher"/>
-/// directly until the migration to broker mode lands.
+/// use <see cref="IEventBus"/> directly until the migration to broker mode lands.
 /// </para>
 /// </summary>
 public sealed class InProcessMessageBus(IDomainEventDispatcher domainEventDispatcher) : IMessageBus
