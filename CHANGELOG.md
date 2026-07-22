@@ -6,6 +6,38 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.122.0] - 2026-07-22
+
+Feature release completing the dynamic-filter operator matrix, hardening pagination, and making
+distributed cache invalidation observable. No breaking changes and no public API removed; every
+existing filter, query, and cache behavior is preserved.
+
+### Added
+- **Dynamic-filter operator matrix completed.** `IS EMPTY` / `IS NOT EMPTY` null checks now work on
+  `bool?`, `int?`, `decimal?`, and `Guid?` columns (previously only `DateTime?` could be filtered
+  for null); `IN` is now supported by the decimal and DateTime strategies (parity with the existing
+  int/Guid/string `IN`); and an inclusive `BETWEEN` range (`"min,max"`) is supported by the int,
+  decimal, DateTime, and long strategies.
+- **`LongFilterStrategy`.** `long` / `long?` properties are now registered in `QueryFilterService`
+  by default (equality, comparison, `IN`, `BETWEEN`, and null checks). A `long`-keyed entity
+  previously failed filter validation with "No filter strategy registered".
+
+### Changed
+- **Pagination backstop in `EntityQueryPipeline`.** The pipeline now clamps a request's page size to
+  the framework ceiling (`MaxUnboundedResultLimit`) in both paginated paths, as defense in depth.
+  The API-boundary `ApplicationSettings.MaxPageSize` clamp is unchanged; this guard means a direct
+  Application-layer caller (a gRPC handler or cross-module call) that bypasses that boundary can no
+  longer request an unbounded page.
+
+### Fixed
+- **Silent no-op cache invalidation is now observable.** When `DistributedCacheService` has no
+  `IConnectionMultiplexer` (e.g. a SQL-Server-backed `IDistributedCache`, or Redis registered
+  without a client), prefix eviction was a silent no-op. It now logs a warning (once for the
+  steady-state missing-multiplexer case, every time for the anomalous no-server case) so a
+  TTL-only-invalidation deployment is visible rather than invisible.
+- **`MemoryCacheService.GetAsync<T>` no longer throws on a type-mismatched key.** A key reused under
+  a different `T` now returns a clean cache miss instead of an `InvalidCastException`.
+
 ## [1.121.0] - 2026-07-21
 
 Maintenance release: the C# 14 extension-block migration, the shared analyzer baseline with the
