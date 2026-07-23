@@ -41,6 +41,45 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>
+    /// The factory convention holds across the WHOLE domain model, not just aggregate roots: any concrete
+    /// type in the Domain or Shared layer that exposes a public static <c>Create(...)</c> must have at least
+    /// one <c>Create</c> overload returning <c>Result&lt;TSelf&gt;</c>. This generalizes
+    /// <see cref="AggregateRootsHaveResultFactory"/> from aggregate roots to value objects (e.g. <c>Money</c>,
+    /// <c>Email</c>, <c>DateRange</c>), locking in the "factories always return Result&lt;T&gt;" convention so a
+    /// future bare-entity/bare-value-object factory fails the build. Types that expose no <c>Create</c> are
+    /// unaffected (construction sugar such as <c>Money.Zero()</c> / arithmetic operators is out of scope: only
+    /// the <c>Create</c> factory name is governed).
+    /// </summary>
+    public static void DomainFactoriesReturnResult(IArchitectureMap map)
+    {
+        var violations = new List<string>();
+
+        var factoryTypes = map.OfLayer(Layer.Domain)
+            .Concat(map.OfLayer(Layer.Shared))
+            .SelectMany(a => a.ConcreteClasses);
+
+        foreach (var type in factoryTypes)
+        {
+            var createMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .Where(m => string.Equals(m.Name, "Create", StringComparison.Ordinal))
+                .ToList();
+
+            if (createMethods.Count == 0)
+            {
+                continue;
+            }
+
+            if (!createMethods.Exists(m => ReturnsResultOf(m.ReturnType, type)))
+            {
+                violations.Add($"  - {type.FullName}: Create(...) must return Result<{type.Name}>");
+            }
+        }
+
+        ArchitectureAssert.NoViolations(violations,
+            "every domain/value-object factory named Create must return Result<T> (factory convention normalized across the model)");
+    }
+
+    /// <summary>
     /// Aggregate roots across the WHOLE Domain layer (framework + module) expose no public constructor —
     /// construction goes through the static <c>Create(...)</c> factory. This is the minimal-base
     /// counterpart to <see cref="AggregateRootsHaveNoPublicConstructors"/>, which scopes to per-module
