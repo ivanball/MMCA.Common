@@ -6,6 +6,19 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.124.0] - 2026-07-23
+
+Maintenance release strengthening the architecture-test rule library. No breaking changes and no
+public API removed; all existing factories in Common and the consumers already comply.
+
+### Added
+- **`DomainFactoriesReturnResult` fitness function (`MMCA.Common.Testing.Architecture`).**
+  Generalizes the previously aggregate-only `Result<T>`-factory check to every `Create` factory on
+  domain entities and value objects across the Domain and Shared layers, so a future factory that
+  returns a bare value object or entity (bypassing invariant checks) fails the build. Wired into
+  both `AggregateConventionTestsBase` and `EntityConventionTestsBase`, so Store, ADC, and Helpdesk
+  inherit the rule through their existing subclasses (fitness methods 91 -> 93).
+
 ## [1.123.0] - 2026-07-22
 
 Maintenance release removing a redundant integration-event publish abstraction. **Breaking:** the
