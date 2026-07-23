@@ -144,6 +144,10 @@ Most documentation moved to its canonical home in the Website repo (`Website/doc
 
 **Commit-message convention**: remediation work is tagged by scorecard category, `§<m>: <summary>` (e.g. `§30: ...`); update the published backlog (`Website/docs-src/governance/common-RemediationBacklog.md`) when continuing remediation work.
 
+## Writing Conventions
+
+Cross-repo prose rules live in the workspace `../CLAUDE.md`. Reinforced here: never use accents, tildes, or em-dashes, and never use the words "seam" or "seams" (banned workspace-wide); prefer "boundary", "extension point", "pipeline", or "layer".
+
 ## Contribution Flow
 
 `main` is server-protected: every change, documentation-only included, lands via branch -> PR -> required checks green (see `CONTRIBUTING.md`) -> squash-merge. Merges here are not deploys. Releases are cut with the workspace `/push-release` flow; the `vX.Y.Z` tag on merged `main` is the only ref pushed directly.
