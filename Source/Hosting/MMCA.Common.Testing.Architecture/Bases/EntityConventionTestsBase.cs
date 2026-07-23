@@ -3,7 +3,8 @@ namespace MMCA.Common.Testing.Architecture;
 /// <summary>
 /// DDD entity/aggregate fitness functions: entities are sealed and live only in Domain, aggregate roots
 /// are built through a static <c>Create(...)</c> factory returning <c>Result&lt;T&gt;</c> with no public
-/// constructor, and DTOs/requests stay out of Domain and Infrastructure.
+/// constructor, every domain/value-object <c>Create</c> factory returns <c>Result&lt;T&gt;</c>, and
+/// DTOs/requests stay out of Domain and Infrastructure.
 /// </summary>
 public abstract class EntityConventionTestsBase
 {
@@ -17,6 +18,9 @@ public abstract class EntityConventionTestsBase
 
     [Fact]
     public void AggregateRoots_ShouldHave_NoPublicConstructors() => ArchitectureRules.AggregateRootsHaveNoPublicConstructors(Map);
+
+    [Fact]
+    public void DomainFactories_ShouldReturn_Result() => ArchitectureRules.DomainFactoriesReturnResult(Map);
 
     [Fact]
     public void DomainEntities_ShouldBe_Sealed() => ArchitectureRules.DomainEntitiesAreSealed(Map);

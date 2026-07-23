@@ -2,8 +2,10 @@ namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
 /// Minimal DDD aggregate fitness functions for repos that have no business modules (e.g. MMCA.Common):
-/// the Domain layer exposes aggregate roots, and each is built via a static <c>Create(...)</c> factory
-/// returning <c>Result&lt;T&gt;</c>. Module-bearing repos use the fuller <see cref="EntityConventionTestsBase"/>.
+/// the Domain layer exposes aggregate roots, each is built via a static <c>Create(...)</c> factory
+/// returning <c>Result&lt;T&gt;</c> with no public constructor, and the same Result-returning factory
+/// convention holds for every domain/value-object <c>Create</c>. Module-bearing repos use the fuller
+/// <see cref="EntityConventionTestsBase"/>.
 /// </summary>
 public abstract class AggregateConventionTestsBase
 {
@@ -17,4 +19,7 @@ public abstract class AggregateConventionTestsBase
 
     [Fact]
     public void AggregateRoots_ShouldHave_NoPublicConstructors() => ArchitectureRules.DomainAggregateRootsHaveNoPublicConstructors(Map);
+
+    [Fact]
+    public void DomainFactories_ShouldReturn_Result() => ArchitectureRules.DomainFactoriesReturnResult(Map);
 }
