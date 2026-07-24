@@ -6,6 +6,22 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.125.1] - 2026-07-24
+
+Patch fixing a regression introduced by the `ICurrentUserService.Roles` addition in 1.125.0.
+**Consumers should take this instead of 1.125.0.**
+
+### Fixed
+- **`Roles` and `IsInRole` threw on an implementation returning a null `User`.** The new `Roles`
+  default interface member dereferenced `User` unguarded. The shipped `CurrentUserService` never
+  returns null (it falls back to an empty `ClaimsPrincipal`), but a default interface member runs
+  against *every* implementation, and a mocked `ICurrentUserService` returns null for an
+  unconfigured reference property. Any consumer controller test that mocks the service and reaches
+  an `IsInRole` check therefore turned an authorization decision into a
+  `NullReferenceException` (caught by MMCA.ADC's suite on the 1.125.0 bump, 38 failures). `User` is
+  now null-guarded and both members answer "no roles", which is what the previous `Role`-based
+  implementation returned for the same input.
+
 ## [1.125.0] - 2026-07-24
 
 Correctness release from a review of the MMCA.Common and MMCA.ADC codebases, plus additive feature

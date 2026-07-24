@@ -28,14 +28,24 @@ public interface ICurrentUserService
     /// Reads all role claims rather than the first, and accepts each of the claim types the JWT
     /// middleware may produce: the standard <see cref="ClaimTypes.Role"/> URI when inbound claim
     /// mapping is on, or the raw <c>role</c> / <c>roles</c> claim when it is off.
+    /// <para>
+    /// Null-guards <see cref="User"/> even though the property is declared non-nullable. This is a
+    /// default interface member, so it runs against every implementation rather than only the one
+    /// shipped here: a test double (any Moq'd <see cref="ICurrentUserService"/> returns null for an
+    /// unconfigured reference property) would otherwise turn an authorization check into a
+    /// <see cref="NullReferenceException"/>. No roles is the right answer for a caller with no
+    /// principal, and it is the same answer the previous <see cref="Role"/>-based implementation
+    /// gave.
+    /// </para>
     /// </remarks>
     IEnumerable<string> Roles =>
-        User.Claims
+        User?.Claims
             .Where(claim =>
                 string.Equals(claim.Type, ClaimTypes.Role, StringComparison.Ordinal)
                 || string.Equals(claim.Type, "role", StringComparison.Ordinal)
                 || string.Equals(claim.Type, "roles", StringComparison.Ordinal))
-            .Select(claim => claim.Value);
+            .Select(claim => claim.Value)
+        ?? [];
 
     /// <summary>
     /// Extracts a typed claim value from the current user's claims.

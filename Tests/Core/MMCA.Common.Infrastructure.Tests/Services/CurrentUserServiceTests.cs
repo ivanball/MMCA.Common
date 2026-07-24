@@ -176,4 +176,45 @@ public sealed class CurrentUserServiceTests
 
         sut.Roles.Should().BeEmpty();
     }
+
+    // ── The default members must tolerate an implementation that returns a null principal ──
+    // Roles and IsInRole are default interface members, so they run against every implementation,
+    // not just the one shipped here. A Moq'd ICurrentUserService returns null for an unconfigured
+    // reference property, which is how consumers write controller tests; dereferencing User there
+    // turned an authorization check into a NullReferenceException. No principal means no roles,
+    // which is also what the previous Role-based implementation returned.
+    [Fact]
+    public void Roles_WhenTheImplementationReturnsANullUser_IsEmpty()
+    {
+        ICurrentUserService sut = new NullUserService();
+
+        sut.Roles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void IsInRole_WhenTheImplementationReturnsANullUser_ReturnsFalse()
+    {
+        ICurrentUserService sut = new NullUserService();
+
+        var act = () => sut.IsInRole("Organizer");
+
+        act.Should().NotThrow().Which.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Stands in for the shape a consumer's controller test produces: an <see cref="ICurrentUserService"/>
+    /// whose <c>User</c> was never configured. Written by hand rather than mocked because a mocking
+    /// library may stub the default members themselves, which would skip the very code under test.
+    /// </summary>
+    private sealed class NullUserService : ICurrentUserService
+    {
+        public ClaimsPrincipal User => null!;
+
+        public UserIdentifierType? UserId => null;
+
+        public string? Role => null;
+
+        public T? GetClaimValue<T>(string claimType)
+            where T : struct, IParsable<T> => null;
+    }
 }
