@@ -1,5 +1,5 @@
-using System.Collections.Concurrent;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Concurrency;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
 
@@ -32,9 +32,7 @@ public sealed class CachingQueryDecorator<TQuery, TResult>(
         // Slow path: per-key double-check locking (same pattern as IdempotencyFilter). On
         // expiry of a hot key only one concurrent request runs the handler; the rest wait
         // and are served the freshly cached entry.
-        var keyLock = QueryCacheKeyLocks.Locks.GetOrAdd(cacheable.CacheKey, static _ => new SemaphoreSlim(1, 1));
-        await keyLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        using (await QueryCacheKeyLocks.Locks.AcquireAsync(cacheable.CacheKey, cancellationToken).ConfigureAwait(false))
         {
             cached = await cacheService.GetAsync<TResult>(cacheable.CacheKey, cancellationToken)
                 .ConfigureAwait(false);
@@ -52,16 +50,6 @@ public sealed class CachingQueryDecorator<TQuery, TResult>(
 
             return result;
         }
-        finally
-        {
-            keyLock.Release();
-
-            // No eager removal: a remove between another request's GetOrAdd and WaitAsync
-            // would leave that request holding a semaphore no longer in the table, so a third
-            // request would create a fresh one and both would execute concurrently. Entries
-            // are bounded by the set of distinct cache keys and SemaphoreSlim holds no OS
-            // handle here, so the table's steady-state footprint is negligible.
-        }
     }
 }
 
@@ -71,14 +59,23 @@ public sealed class CachingQueryDecorator<TQuery, TResult>(
 /// (statics on a generic type would be per closed type).
 /// </summary>
 /// <remarks>
+/// <para>
+/// Striped rather than one semaphore per key. A per-key table forces a choice between two
+/// defects: removing the entry when the last holder releases opens a window where one caller
+/// waits on a semaphore no longer in the table while a second creates a fresh one (both then
+/// execute concurrently, defeating the lock), and never removing it lets a cache key that embeds
+/// request parameters, such as a user id or a filter value, grow the table without bound.
+/// </para>
+/// <para>
 /// The lock is per-process: with multiple app instances over a shared distributed cache
 /// (e.g. Redis), stampede protection is best-effort — at most one handler execution per
 /// instance, not one cluster-wide. That duplication is harmless (last write wins with equal
 /// content); a cluster-wide guarantee would need a distributed lock and is deliberately
 /// not attempted here.
+/// </para>
 /// </remarks>
 internal static class QueryCacheKeyLocks
 {
-    /// <summary>Per-key semaphores, one per distinct cache key for the process lifetime.</summary>
-    internal static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.Ordinal);
+    /// <summary>Fixed-width stripes shared by every closed generic decorator.</summary>
+    internal static readonly KeyedSemaphoreStripe Locks = new();
 }

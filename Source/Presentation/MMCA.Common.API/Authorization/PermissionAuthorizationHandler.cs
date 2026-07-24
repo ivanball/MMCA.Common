@@ -37,6 +37,8 @@ public sealed class PermissionAuthorizationHandler(IPermissionRegistry permissio
 
     // Gather roles regardless of how the JWT middleware mapped the role claim type: the standard
     // ClaimTypes.Role URI, or the raw "role"/"roles" claim when inbound-claim mapping is disabled.
+    // Same rule as ICurrentUserService.Roles; this handler has no ICurrentUserService to read from
+    // (it runs on the raw principal), so the predicate is stated once here and once there.
     private static IEnumerable<string> GetRoles(ClaimsPrincipal user) =>
         user.Claims
             .Where(claim =>

@@ -11,9 +11,23 @@ namespace MMCA.Common.Infrastructure.Persistence.Encryption;
 /// <para>
 /// <b>Usage:</b> Apply to individual properties in EF entity configurations:
 /// <code>
-/// builder.Property(e => e.Email)
+/// builder.Property(e => e.SocialSecurityNumber)
 ///     .HasConversion(new EncryptedStringConverter(encryptionKey));
 /// </code>
+/// </para>
+/// <para>
+/// <b>Constraint: the ciphertext is non-deterministic.</b> Every write uses a fresh random nonce,
+/// so the same plaintext encrypts to a different column value each time. That is the correct
+/// property for confidentiality, and it means the column cannot support:
+/// <list type="bullet">
+///   <item>equality or range predicates (<c>Where(u =&gt; u.Email == value)</c> translates to a
+///   comparison against a ciphertext that will never match, returning no rows silently);</item>
+///   <item>unique indexes or any other constraint over the stored value;</item>
+///   <item>server-side sorting or grouping.</item>
+/// </list>
+/// Only apply it to properties that are read back as part of an entity and never queried by value.
+/// A lookup key that must stay searchable needs a separate deterministic surface, such as a
+/// keyed hash stored alongside the encrypted column.
 /// </para>
 /// <para>
 /// <b>Key management:</b> The encryption key should be stored securely (e.g., Azure Key Vault,

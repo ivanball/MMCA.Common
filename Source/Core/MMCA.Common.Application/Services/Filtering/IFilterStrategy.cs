@@ -22,4 +22,24 @@ public interface IFilterStrategy
     /// Built-in strategies override this to enable upstream validation.
     /// </summary>
     IReadOnlySet<string>? SupportedOperators => null;
+
+    /// <summary>
+    /// Whether <paramref name="value"/> is usable for <paramref name="op"/> on this strategy's type.
+    /// </summary>
+    /// <param name="op">The operator, already uppercased by the caller.</param>
+    /// <param name="value">The raw filter value.</param>
+    /// <returns><see langword="true"/> when the value can be applied.</returns>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Apply{T}"/> silently returns the query unfiltered when it cannot parse a value,
+    /// which fails open: <c>?filter=id:equals:abc</c> returned the whole result set instead of no
+    /// matches. Validating up front turns that into a 400, so an unparseable value can never widen
+    /// a response.
+    /// </para>
+    /// <para>
+    /// Defaults to <see langword="true"/>, so a custom strategy keeps its existing behavior until
+    /// it opts in.
+    /// </para>
+    /// </remarks>
+    bool CanParseValue(string op, string value) => true;
 }

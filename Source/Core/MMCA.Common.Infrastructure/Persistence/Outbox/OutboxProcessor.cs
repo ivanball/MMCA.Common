@@ -238,7 +238,10 @@ public sealed partial class OutboxProcessor(
         var processedAny = await DispatchMessagesAsync(
             toProcess, source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
 
-        // Use the base DbContext.SaveChangesAsync to bypass audit stamping and event dispatch.
+        // Plain DbContext.SaveChangesAsync, without a user id: the audit interceptor stamps its
+        // system sentinel rather than a caller's identity. The EF interceptors still run (they are
+        // registered on the context, not selected per call), but there is nothing for them to do
+        // here: OutboxMessage is not an aggregate root, so no events are captured.
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // A full eligible batch with progress means more eligible rows may be waiting; the
@@ -368,6 +371,14 @@ public sealed partial class OutboxProcessor(
                 message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
                 processedAny = true;
                 LogMessageProcessed(logger, message.Id, message.EventType);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Host shutdown, not a delivery failure. Falling into the generic handler below
+                // would increment RetryCount and stamp LastError on this message and, since every
+                // later await fails the same way, on the whole remainder of the batch: a graceful
+                // restart could dead-letter messages that were never actually attempted.
+                throw;
             }
             catch (Exception ex)
             {

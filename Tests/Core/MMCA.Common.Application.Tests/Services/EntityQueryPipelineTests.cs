@@ -237,6 +237,9 @@ public sealed class EntityQueryPipelineTests
         _executorMock
             .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
             .Returns<IQueryable<TestEntity>, CancellationToken>((q, _) => Task.FromResult(q.ToList()));
+        _executorMock
+            .Setup(e => e.CountAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .Returns<IQueryable<TestEntity>, CancellationToken>((q, _) => Task.FromResult(q.Count()));
 
         var (items, totalCount) = await _sut.ExecuteAsync<TestEntity, int>(
             query,
@@ -246,7 +249,70 @@ public sealed class EntityQueryPipelineTests
             CancellationToken.None);
 
         items.Should().HaveCount(EntityQueryPipeline.MaxUnboundedResultLimit);
-        totalCount.Should().Be(EntityQueryPipeline.MaxUnboundedResultLimit);
+        totalCount.Should().Be(
+            entities.Count,
+            "the cap bounds what is materialized, not what the total is; reporting the cap told callers the set was exactly that size");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NoPagination_BelowTheCap_DoesNotIssueACountQuery()
+    {
+        // The extra round trip is only warranted when the materialized count could be truncated.
+        var entities = Enumerable.Range(1, 5)
+            .Select(i => new TestEntity { Id = i, Name = string.Create(CultureInfo.InvariantCulture, $"E{i}") })
+            .ToList();
+
+        _executorMock
+            .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .Returns<IQueryable<TestEntity>, CancellationToken>((q, _) => Task.FromResult(q.ToList()));
+
+        var (items, totalCount) = await _sut.ExecuteAsync<TestEntity, int>(
+            entities.AsQueryable(),
+            EmptyNavigation(),
+            DefaultParams(),
+            (_, _, _, _, _) => Task.CompletedTask,
+            CancellationToken.None);
+
+        items.Should().HaveCount(5);
+        totalCount.Should().Be(5);
+        _executorMock.Verify(
+            e => e.CountAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PageNumberNearIntMaxValue_ReturnsAnEmptyPageInsteadOfOverflowing()
+    {
+        // pageSize * (pageNumber - 1) overflowed a 32-bit offset and surfaced as a 500.
+        var entities = Enumerable.Range(1, 5)
+            .Select(i => new TestEntity { Id = i, Name = string.Create(CultureInfo.InvariantCulture, $"E{i}") })
+            .ToList();
+
+        _executorMock
+            .Setup(e => e.CountAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entities.Count);
+        _executorMock
+            .Setup(e => e.ToListAsync(It.IsAny<IQueryable<TestEntity>>(), It.IsAny<CancellationToken>()))
+            .Returns<IQueryable<TestEntity>, CancellationToken>((q, _) => Task.FromResult(q.ToList()));
+
+        var parameters = new EntityQueryParameters<TestEntity>
+        {
+            DTOToEntityPropertyMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            PageNumber = int.MaxValue,
+            PageSize = 10,
+        };
+
+        var act = async () => await _sut.ExecuteAsync<TestEntity, int>(
+            entities.AsQueryable(),
+            EmptyNavigation(),
+            parameters,
+            (_, _, _, _, _) => Task.CompletedTask,
+            CancellationToken.None);
+
+        var assertion = await act.Should().NotThrowAsync();
+        var (items, totalCount) = assertion.Subject;
+        items.Should().BeEmpty();
+        totalCount.Should().Be(entities.Count, "the total is unaffected by an out-of-range page");
     }
 
     [Fact]

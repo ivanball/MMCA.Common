@@ -16,6 +16,10 @@ internal sealed class BoolFilterStrategy : IFilterStrategy
         "IS", "IS EMPTY", "IS NOT EMPTY"
     }.ToFrozenSet(StringComparer.Ordinal);
 
+    /// <inheritdoc />
+    public bool CanParseValue(string op, string value) =>
+        FilterValueParser.CanParse(op, value, static s => bool.TryParse(s, out var b) ? b : (bool?)null);
+
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
