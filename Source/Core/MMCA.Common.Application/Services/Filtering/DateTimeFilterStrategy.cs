@@ -21,6 +21,10 @@ internal sealed class DateTimeFilterStrategy : IFilterStrategy
         "IN", "BETWEEN"
     }.ToFrozenSet(StringComparer.Ordinal);
 
+    /// <inheritdoc />
+    public bool CanParseValue(string op, string value) =>
+        FilterValueParser.CanParse(op, value, ParseDateTime);
+
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {

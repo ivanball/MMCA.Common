@@ -222,6 +222,33 @@ public class QueryFilterServiceTests
         FluentActions.Invoking(() => QueryFilterService.RegisterStrategy(typeof(string), null!))
             .Should().Throw<ArgumentNullException>();
 
+    // ── A mapped property must actually be applied, not silently dropped ──
+    // ApplyFilters fell back to the DTO name while ValidateFilters fell back to the mapped entity
+    // name, so a plain rename entry validated and was then skipped: the caller got an unfiltered
+    // result set with a 200.
+    [Fact]
+    public void ApplyFilters_MappedToADifferentEntityProperty_AppliesTheFilter()
+    {
+        // "Title" is the DTO-facing name; the entity calls it "Name".
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Title"] = "Name" };
+        var filters = new Dictionary<string, (string, string)> { ["Title"] = ("EQUALS", "Widget") };
+
+        var result = QueryFilterService.ApplyFilters(Products(), filters, map).ToList();
+
+        result.Should().ContainSingle().Which.Name.Should().Be("Widget");
+    }
+
+    [Fact]
+    public void ApplyFilters_MappedRename_AgreesWithValidation()
+    {
+        // The two sides must resolve the same property; anything validation accepts must apply.
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Title"] = "Name" };
+        var filters = new Dictionary<string, (string, string)> { ["Title"] = ("CONTAINS", "adget") };
+
+        QueryFilterService.ValidateFilters<Product>(filters, map).IsSuccess.Should().BeTrue();
+        QueryFilterService.ApplyFilters(Products(), filters, map).Should().ContainSingle();
+    }
+
     private sealed class TestStrategy : IFilterStrategy
     {
         public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value) => query;

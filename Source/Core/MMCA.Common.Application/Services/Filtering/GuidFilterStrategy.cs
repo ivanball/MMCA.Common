@@ -17,6 +17,10 @@ internal sealed class GuidFilterStrategy : IFilterStrategy
         "EQUALS", "NOT EQUALS", "IN", "IS EMPTY", "IS NOT EMPTY"
     }.ToFrozenSet(StringComparer.Ordinal);
 
+    /// <inheritdoc />
+    public bool CanParseValue(string op, string value) =>
+        FilterValueParser.CanParse(op, value, ParseGuid);
+
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
@@ -31,7 +35,9 @@ internal sealed class GuidFilterStrategy : IFilterStrategy
 
     private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
     {
-        var values = FilterValueParser.ParseList(value, static s => Guid.TryParse(s, out var g) ? g : (Guid?)null);
+        var values = FilterValueParser.ParseList(value, ParseGuid);
         return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
     }
+
+    private static Guid? ParseGuid(string s) => Guid.TryParse(s, out var g) ? g : null;
 }

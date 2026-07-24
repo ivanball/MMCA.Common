@@ -20,6 +20,10 @@ internal sealed class DecimalFilterStrategy : IFilterStrategy
         "IS EMPTY", "IS NOT EMPTY"
     }.ToFrozenSet(StringComparer.Ordinal);
 
+    /// <inheritdoc />
+    public bool CanParseValue(string op, string value) =>
+        FilterValueParser.CanParse(op, value, ParseDecimal);
+
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {

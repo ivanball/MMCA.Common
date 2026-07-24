@@ -17,12 +17,22 @@ namespace MMCA.Common.Infrastructure.Caching;
 internal sealed partial class DistributedCacheService(
     IDistributedCache cache,
     ILogger<DistributedCacheService> logger,
-    IConnectionMultiplexer? connectionMultiplexer = null) : ICacheService
+    IConnectionMultiplexer? connectionMultiplexer = null,
+    CacheKeyNamespace? keyNamespace = null) : ICacheService
 {
+    /// <summary>Keys per delete round trip during prefix invalidation.</summary>
+    private const int DeleteBatchSize = 512;
+
+    /// <summary>
+    /// Namespace applied to every key so services sharing one cache instance cannot collide.
+    /// Defaults to no prefix, which is correct for a host that owns its cache outright.
+    /// </summary>
+    private readonly CacheKeyNamespace _keys = keyNamespace ?? CacheKeyNamespace.None;
+
     /// <inheritdoc />
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        byte[]? bytes = await cache.GetAsync(key, cancellationToken).ConfigureAwait(false);
+        byte[]? bytes = await cache.GetAsync(_keys.Qualify(key), cancellationToken).ConfigureAwait(false);
 
         return bytes is null ? default : Deserialize<T>(bytes);
     }
@@ -36,15 +46,12 @@ internal sealed partial class DistributedCacheService(
     {
         byte[] bytes = Serialize(value);
 
-        return cache.SetAsync(key, bytes, CacheOptions.Create(expiration), cancellationToken);
+        return cache.SetAsync(_keys.Qualify(key), bytes, CacheOptions.Create(expiration), cancellationToken);
     }
 
     /// <inheritdoc />
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
-        cache.RemoveAsync(key, cancellationToken);
-
-    /// <summary>Keys per delete round trip during prefix invalidation.</summary>
-    private const int DeleteBatchSize = 512;
+        cache.RemoveAsync(_keys.Qualify(key), cancellationToken);
 
     /// <summary>Set once (via <see cref="Interlocked"/>) after the missing-multiplexer no-op is logged, so the steady state warns once rather than on every command.</summary>
     private int _noMultiplexerWarned;
@@ -74,7 +81,7 @@ internal sealed partial class DistributedCacheService(
             return;
         }
 
-        var keys = server.KeysAsync(pattern: $"{prefix}*");
+        var keys = server.KeysAsync(pattern: $"{_keys.Qualify(prefix)}*");
         var db = connectionMultiplexer.GetDatabase();
         var batch = new List<RedisKey>(DeleteBatchSize);
 
@@ -112,10 +119,10 @@ internal sealed partial class DistributedCacheService(
         }
 
         var db = connectionMultiplexer.GetDatabase();
-        var value = await db.StringIncrementAsync(key).ConfigureAwait(false);
+        var value = await db.StringIncrementAsync(_keys.Qualify(key)).ConfigureAwait(false);
 
         if (value == 1)
-            await db.KeyExpireAsync(key, expiration).ConfigureAwait(false);
+            await db.KeyExpireAsync(_keys.Qualify(key), expiration).ConfigureAwait(false);
 
         return value;
     }

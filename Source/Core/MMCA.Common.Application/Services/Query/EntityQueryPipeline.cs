@@ -88,14 +88,12 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         // Sort at the DB level before materialization
         query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
 
+        var unpagedQuery = query;
+
         if (isPaginated)
         {
             totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
-            // Defense-in-depth (rubric §12): clamp the caller's page size to the framework ceiling so a
-            // direct Application-layer caller that bypasses the API boundary cannot request an unbounded page.
-            int pageSize = Math.Min(parameters.PageSize!.Value, MaxUnboundedResultLimit);
-            int skip = checked(pageSize * (parameters.PageNumber!.Value - 1));
-            query = query.Skip(skip).Take(pageSize);
+            query = ApplyPaging(query, parameters);
         }
         else
         {
@@ -111,7 +109,9 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         }
 
         if (!isPaginated)
-            totalCount = entities.Count;
+        {
+            totalCount = await CountUnpaginatedAsync(unpagedQuery, entities.Count, cancellationToken).ConfigureAwait(false);
+        }
 
         var pagedQuery = entities.AsQueryable();
         pagedQuery = QueryFieldService.ApplyFieldSelection(pagedQuery, parameters.Fields);
@@ -133,16 +133,13 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
 
         bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
         int totalCount = 0;
+        var unpagedQuery = query;
 
         if (isPaginated)
         {
             // Count must be taken before Skip/Take to get the total matching record count
             totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
-            // Defense-in-depth (rubric §12): clamp the caller's page size to the framework ceiling so a
-            // direct Application-layer caller that bypasses the API boundary cannot request an unbounded page.
-            int pageSize = Math.Min(parameters.PageSize!.Value, MaxUnboundedResultLimit);
-            int skip = checked(pageSize * (parameters.PageNumber!.Value - 1));
-            query = query.Skip(skip).Take(pageSize);
+            query = ApplyPaging(query, parameters);
         }
         else
         {
@@ -156,8 +153,45 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         var result = await queryableExecutor.ToListAsync(query, cancellationToken).ConfigureAwait(false);
 
         if (!isPaginated)
-            totalCount = result.Count;
+        {
+            totalCount = await CountUnpaginatedAsync(unpagedQuery, result.Count, cancellationToken).ConfigureAwait(false);
+        }
 
         return (result, totalCount);
     }
+
+    /// <summary>
+    /// Applies Skip/Take for a paginated request, clamping the page size to
+    /// <see cref="MaxUnboundedResultLimit"/> (defense in depth, rubric §12: a direct
+    /// Application-layer caller that bypasses the API boundary cannot request an unbounded page).
+    /// </summary>
+    /// <remarks>
+    /// The offset is computed in 64-bit and range-checked rather than left to <see langword="checked"/>
+    /// arithmetic: a page number near <see cref="int.MaxValue"/> overflowed and surfaced as a 500
+    /// instead of the empty page that page genuinely holds.
+    /// </remarks>
+    private static IQueryable<TEntity> ApplyPaging<TEntity>(
+        IQueryable<TEntity> query,
+        EntityQueryParameters<TEntity> parameters)
+    {
+        int pageSize = Math.Min(parameters.PageSize!.Value, MaxUnboundedResultLimit);
+        long skip = (long)pageSize * (parameters.PageNumber!.Value - 1);
+
+        return skip > int.MaxValue
+            ? query.Take(0)
+            : query.Skip((int)skip).Take(pageSize);
+    }
+
+    /// <summary>
+    /// Reports the true total for an unpaginated read. The materialized count is only the truth
+    /// while it stays under <see cref="MaxUnboundedResultLimit"/>; at the ceiling it is the cap
+    /// itself, and returning it as the total told callers the set was exactly 1000 rows.
+    /// </summary>
+    private async Task<int> CountUnpaginatedAsync<TEntity>(
+        IQueryable<TEntity> unpagedQuery,
+        int materializedCount,
+        CancellationToken cancellationToken)
+        => materializedCount < MaxUnboundedResultLimit
+            ? materializedCount
+            : await queryableExecutor.CountAsync(unpagedQuery, cancellationToken).ConfigureAwait(false);
 }

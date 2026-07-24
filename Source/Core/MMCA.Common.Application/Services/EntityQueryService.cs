@@ -99,17 +99,41 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             : Result.Success(entity);
     }
 
-    private static bool IsPrimaryKeyOnlyLookup(
+    /// <summary>
+    /// Whether the request is a plain primary-key lookup the fast path can serve.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="includeFKs"/> and <paramref name="includeChildren"/> only disqualify the
+    /// request when the entity actually has navigations to include. Treating the flags themselves
+    /// as disqualifying made the fast path unreachable from the REST layer, whose by-id action
+    /// defaults <c>includeFKs</c> to true: every by-id read fell back to the dynamic-filter
+    /// pipeline, which parses a string predicate and emits <c>TOP 1000</c> plus a client-side
+    /// <c>FirstOrDefault</c> where a keyed <c>TOP 1 WHERE Id = @id</c> would do.
+    /// </remarks>
+    private bool IsPrimaryKeyOnlyLookup(
         string? idField,
         bool includeFKs,
         bool includeChildren,
         Specification<TEntity, TIdentifierType>? specification,
         string? fields)
-        => fields is null
-            && !includeFKs
-            && !includeChildren
-            && specification is null
-            && (idField is null || string.Equals(idField, IdField, StringComparison.OrdinalIgnoreCase));
+    {
+        if (fields is not null
+            || specification is not null
+            || idField is not null && !string.Equals(idField, IdField, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!includeFKs && !includeChildren)
+        {
+            return true;
+        }
+
+        // Asking for includes on an entity that declares none is the same request as asking for
+        // none, so it stays on the fast path.
+        var metadata = NavigationMetadataProvider.BuildIncludes<TEntity>(includeFKs, includeChildren);
+        return metadata.SupportedIncludes.Count == 0 && metadata.UnsupportedIncludes.Count == 0;
+    }
 
     /// <summary>
     /// Converts the string id to <typeparamref name="TIdentifierType"/> for the keyed fast path.
@@ -419,7 +443,10 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         return new PaginationMetadata
         {
             TotalItemCount = totalItemCount,
-            PageSize = pageSize.Value,
+            // Report the page size the pipeline actually applied, not the one requested: the
+            // pipeline clamps to the framework ceiling, so an over-large request previously
+            // advertised a page size the response never contained.
+            PageSize = Math.Min(pageSize.Value, Query.EntityQueryPipeline.MaxUnboundedResultLimit),
             CurrentPage = pageNumber.Value
         };
     }

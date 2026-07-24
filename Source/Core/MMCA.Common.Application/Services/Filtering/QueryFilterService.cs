@@ -82,17 +82,7 @@ public static class QueryFilterService
                 ? mapped
                 : property;
 
-            // For nested paths like "Category.Name", resolve the root property to validate existence
-            var rootPropertyName = entityProperty.Contains('.', StringComparison.Ordinal)
-                ? entityProperty.Split('.')[0]
-                : property;
-
-            var propertyInfo = PropertyCache.GetOrAdd(
-                (typeof(TEntity), property),
-                static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance))
-                ?? PropertyCache.GetOrAdd(
-                    (typeof(TEntity), rootPropertyName),
-                    static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance));
+            var propertyInfo = ResolvePropertyInfo<TEntity>(property, entityProperty);
 
             if (propertyInfo is null)
                 continue;
@@ -132,8 +122,8 @@ public static class QueryFilterService
 
         List<Error> errors = [];
 
-        foreach (var (property, (op, _)) in filters)
-            ValidateSingleFilter<TEntity>(property, op, dtoToEntityPropertyMap, errors);
+        foreach (var (property, (op, value)) in filters)
+            ValidateSingleFilter<TEntity>(property, op, value, dtoToEntityPropertyMap, errors);
 
         return errors.Count == 0
             ? Result.Success()
@@ -143,6 +133,7 @@ public static class QueryFilterService
     private static void ValidateSingleFilter<TEntity>(
         string property,
         string op,
+        string value,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
         List<Error> errors)
     {
@@ -168,6 +159,7 @@ public static class QueryFilterService
         if (entityProperty.Contains('.', StringComparison.Ordinal))
         {
             ValidateOperatorSupported(StringStrategy, opUpper, op, property, "string", errors);
+            ValidateValueParseable(StringStrategy, opUpper, value, property, "string", errors);
             return;
         }
 
@@ -184,8 +176,48 @@ public static class QueryFilterService
         }
 
         ValidateOperatorSupported(strategy, opUpper, op, property, propertyInfo.PropertyType.Name, errors);
+        ValidateValueParseable(strategy, opUpper, value, property, propertyInfo.PropertyType.Name, errors);
     }
 
+    /// <summary>
+    /// Rejects a filter whose value the strategy cannot apply. Without this the strategy returns the
+    /// query unfiltered, so a malformed value widened the response to the full result set instead of
+    /// narrowing it to no matches.
+    /// </summary>
+    private static void ValidateValueParseable(
+        IFilterStrategy strategy,
+        string opUpper,
+        string value,
+        string property,
+        string typeName,
+        List<Error> errors)
+    {
+        // Only complain about the value once the operator itself is valid, so one bad filter does
+        // not produce two errors describing the same mistake.
+        if (strategy.SupportedOperators is not null && !strategy.SupportedOperators.Contains(opUpper))
+            return;
+
+        if (!strategy.CanParseValue(opUpper, value))
+        {
+            errors.Add(Error.Validation(
+                "Filter.Value.Invalid",
+                $"Filter value '{value}' is not valid for property '{property}' (type: {typeName}) with operator '{opUpper}'.",
+                source: nameof(ValidateFilters),
+                target: property));
+        }
+    }
+
+    /// <summary>
+    /// Resolves the <see cref="PropertyInfo"/> backing a filter: the DTO-facing name first, then the
+    /// mapped entity name (its root segment for a nested path like <c>"Category.Name"</c>).
+    /// <para>
+    /// Shared by <see cref="ApplyFilters"/> and <see cref="ValidateFilters"/> so both agree on what
+    /// resolves. They used to disagree on the fallback: validation tried the mapped entity name
+    /// while application retried the DTO name, so a plain rename entry (for example
+    /// <c>["Name"] = "Title"</c>) passed validation and was then silently dropped, returning an
+    /// unfiltered result set with a 200.
+    /// </para>
+    /// </summary>
     private static PropertyInfo? ResolvePropertyInfo<TEntity>(string property, string entityProperty)
     {
         var propertyName = entityProperty.Contains('.', StringComparison.Ordinal)

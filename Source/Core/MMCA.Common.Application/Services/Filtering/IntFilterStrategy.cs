@@ -18,6 +18,10 @@ internal sealed class IntFilterStrategy : IFilterStrategy
         "IS EMPTY", "IS NOT EMPTY"
     }.ToFrozenSet(StringComparer.Ordinal);
 
+    /// <inheritdoc />
+    public bool CanParseValue(string op, string value) =>
+        FilterValueParser.CanParse(op, value, ParseInt);
+
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
@@ -43,16 +47,18 @@ internal sealed class IntFilterStrategy : IFilterStrategy
 
     private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
     {
-        var values = FilterValueParser.ParseList(value, static s => int.TryParse(s, out var v) ? v : (int?)null);
+        var values = FilterValueParser.ParseList(value, ParseInt);
         return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
     }
 
     private static IQueryable<T> ApplyBetween<T>(IQueryable<T> query, string property, string value)
     {
         // BETWEEN takes exactly two comma-separated bounds ("min,max"), inclusive on both ends.
-        var bounds = FilterValueParser.ParseList(value, static s => int.TryParse(s, out var v) ? v : (int?)null);
+        var bounds = FilterValueParser.ParseList(value, ParseInt);
         return bounds.Count == 2
             ? query.Where($"{property} >= @0 && {property} <= @1", bounds[0], bounds[1])
             : query;
     }
+
+    private static int? ParseInt(string s) => int.TryParse(s, out var v) ? v : null;
 }

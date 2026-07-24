@@ -108,7 +108,7 @@ public static class DependencyInjection
                 .AsImplementedInterfaces()
                 .WithScopedLifetime());
 
-            services.AddCaching();
+            services.AddCaching(configuration);
 
             services.AddOptions<OutboxSettings>()
                 .Bind(configuration.GetSection(OutboxSettings.SectionName))
@@ -146,9 +146,16 @@ public static class DependencyInjection
         /// when available; otherwise falls back to in-memory cache.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
-        public IServiceCollection AddCaching()
+        public IServiceCollection AddCaching(IConfiguration? configuration = null)
         {
             services.AddMemoryCache();
+
+            // Optional key namespace so services sharing one cache instance cannot collide
+            // (Cache:KeyPrefix). Absent configuration leaves keys exactly as callers write them.
+            if (configuration is not null)
+            {
+                services.Configure<CacheKeyPrefixOptions>(configuration.GetSection(CacheKeyPrefixOptions.SectionName));
+            }
 
             services.TryAddSingleton<ICacheService>(sp =>
             {
@@ -158,9 +165,11 @@ public static class DependencyInjection
                     var multiplexer = sp.GetService<IConnectionMultiplexer>();
                     var logger = sp.GetService<ILogger<DistributedCacheService>>()
                         ?? NullLogger<DistributedCacheService>.Instance;
-                    return new DistributedCacheService(distributedCache, logger, multiplexer);
+                    var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+                    return new DistributedCacheService(distributedCache, logger, multiplexer, keyNamespace);
                 }
 
+                // In-process: the keyspace is private to this process, so no prefix is needed.
                 return new MemoryCacheService(sp.GetRequiredService<IMemoryCache>());
             });
 
