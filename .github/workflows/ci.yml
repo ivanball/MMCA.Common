@@ -1,16 +1,72 @@
 name: CI
 
+# PR-only, deliberately: there is no `push: [main]` trigger.
+#
+# main is protected with "Require branches to be up to date before merging" (strict), and a
+# pull_request check runs against refs/pull/N/merge — main already merged into the PR head. With
+# squash merge that merge result IS the tree that lands on main, so a push-triggered re-run
+# re-verified an already-verified tree. Measured 2026-07-21..24: 30 such runs, 266 wasted minutes
+# in three days, competing for the same concurrency slots as the PR runs they duplicated.
+# MMCA.ADC and MMCA.Store already work this way.
+#
+# Release verification does NOT depend on this: release.yml runs its own restore/build/test on the
+# v* tag before publishing.
 on:
   pull_request:
-    branches: [main]
-  push:
     branches: [main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Supersede an older still-running check set when a PR is pushed again; a stale run's result is
+# never actionable. Guarded on event_name so a future non-PR trigger cannot cancel itself.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Docs-only short-circuit (ported from MMCA.Store / MMCA.ADC deploy.yml). Classifies the diff and
+  # exposes `code`; every heavy STEP below is guarded on it. Guarding steps rather than jobs is
+  # deliberate: all 8 required contexts must still post green on a docs-only PR, or branch
+  # protection blocks the merge forever. Fail-safe: anything unexpected sets code=true.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: filter
+        run: |
+          set -euo pipefail
+          base="origin/${{ github.base_ref }}"
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}" >/dev/null 2>&1 || true
+          if ! git rev-parse --verify --quiet "$base" >/dev/null; then
+            echo "Cannot resolve base ref '$base' — assuming code changed."
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if ! changed=$(git diff --name-only "$base...HEAD"); then
+            echo "git diff failed — assuming code changed."
+            echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "Changed files:"; printf '%s\n' "$changed"
+          code=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              *.md) ;;
+              *) code=true; break ;;
+            esac
+          done <<< "$changed"
+          echo "code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build-and-test:
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -25,15 +81,20 @@ jobs:
       # (version from the git tag, package count, ADR range, fitness-method/base counts). Fails the
       # build if the committed FACTS.md is stale — regenerate with `dotnet run --project build/facts -- .`.
       - name: Verify FACTS.md is current
+        # NOT code-guarded: FACTS.md is markdown, so a docs-only PR is exactly the kind of change
+        # that can make it drift. This gate must run even when everything else is skipped.
         run: dotnet run --project build/facts -- . --check
 
       - name: Restore
+        if: needs.changes.outputs.code == 'true'
         run: dotnet restore MMCA.Common.slnx
 
       - name: Build
+        if: needs.changes.outputs.code == 'true'
         run: dotnet build MMCA.Common.slnx -c Release --no-restore
 
       - name: Audit dependencies (fail on known vulnerabilities)
+        if: needs.changes.outputs.code == 'true'
         run: |
           dotnet list MMCA.Common.slnx package --vulnerable --include-transitive > audit.log 2>&1 || true
           cat audit.log
@@ -54,9 +115,11 @@ jobs:
           echo "No non-suppressed vulnerable packages."
 
       - name: Install coverage tool
+        if: needs.changes.outputs.code == 'true'
         run: dotnet tool install --global dotnet-coverage
 
       - name: Test (with coverage)
+        if: needs.changes.outputs.code == 'true'
         # dotnet-coverage wraps the MTP run and emits cobertura; it returns the test exit code so a
         # test failure still gates. Coverage is report-only (see the `coverage` job).
         run: |
@@ -67,7 +130,7 @@ jobs:
             "dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 2000"
 
       - name: Upload coverage (unit + architecture + bUnit)
-        if: always()
+        if: always() && needs.changes.outputs.code == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
@@ -82,6 +145,7 @@ jobs:
   # on ubuntu; the MAUI implementations are thin Essentials wrappers exercised on-device.)
   build-maui:
     name: Build MMCA.Common.UI.Maui (windows, 4 TFMs)
+    needs: changes
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -94,9 +158,11 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Install MAUI workload
+        if: needs.changes.outputs.code == 'true'
         run: dotnet workload install maui
 
       - name: Build (android + ios + maccatalyst + windows)
+        if: needs.changes.outputs.code == 'true'
         run: dotnet build Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release
 
   # Real-browser axe (WCAG 2.1 AA) + render-smoke gate for the shared MMCA.Common.UI. A backend-less
@@ -106,6 +172,7 @@ jobs:
   # `dotnet test --solution` above stays fast.
   ui-e2e:
     name: UI a11y + render smoke (${{ matrix.browser }})
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -126,20 +193,23 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Build UI E2E project
+        if: needs.changes.outputs.code == 'true'
         # The gallery + E2E projects are intentionally outside the .slnx, so build this graph directly
         # (restore included). They reference MMCA.Common source projects — no GitHub Packages token needed.
         run: dotnet build Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj -c Release
 
       - name: Install Playwright (${{ matrix.browser }})
+        if: needs.changes.outputs.code == 'true'
         run: |
           script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
           pwsh "$script" install --with-deps ${{ matrix.browser }}
 
       - name: Install coverage tool
-        if: matrix.browser == 'chromium'
+        if: needs.changes.outputs.code == 'true' && matrix.browser == 'chromium'
         run: dotnet tool install --global dotnet-coverage
 
       - name: Run UI E2E (axe + render smoke)
+        if: needs.changes.outputs.code == 'true'
         # Collect coverage on the canonical chromium leg only (report-only); other engines run plain.
         env:
           E2E_HEADLESS: "true"
@@ -154,7 +224,7 @@ jobs:
           fi
 
       - name: Upload coverage (E2E)
-        if: ${{ always() && matrix.browser == 'chromium' }}
+        if: ${{ always() && needs.changes.outputs.code == 'true' && matrix.browser == 'chromium' }}
         uses: actions/upload-artifact@v7
         with:
           name: coverage-e2e
@@ -177,6 +247,7 @@ jobs:
   # MMCA.Common.slnx (like ui-e2e) so the unit `dotnet test --solution` run stays fast.
   performance-smoke:
     name: Performance gate (BenchmarkDotNet Short + baseline verify)
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -189,6 +260,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Run hot-path benchmarks (Short job, JSON export)
+        if: needs.changes.outputs.code == 'true'
         # The Benchmarks project references MMCA.Common source directly (no GitHub Packages token needed),
         # like the UI E2E project. --filter "*" selects every benchmark non-interactively (without it BDN
         # prompts for a selection and would hang in CI); --job Short (3 warmup + 3 iterations) gives real
@@ -196,6 +268,7 @@ jobs:
         run: dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks --no-launch-profile -- --filter "*" --job Short --exporters json
 
       - name: Verify against committed perf baseline (rubric section 12)
+        if: needs.changes.outputs.code == 'true'
         # Latency-regression gate, not just runs-clean: build/perfgate compares the BDN results against
         # Tests/Performance/perf-baseline.json (deterministic allocation ceilings + machine-independent
         # ratio floors such as the compiled-expression cache staying >= 1000x ahead of the recompile
@@ -207,7 +280,7 @@ jobs:
   # summary, and enforce a coverage FLOOR as a regression backstop (see "Enforce coverage floor").
   # Runs after both test jobs regardless of their outcome.
   coverage:
-    needs: [build-and-test, ui-e2e]
+    needs: [changes, build-and-test, ui-e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -216,6 +289,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Download coverage artifacts
+        if: needs.changes.outputs.code == 'true'
         uses: actions/download-artifact@v8
         with:
           pattern: coverage-*
@@ -223,6 +297,7 @@ jobs:
           merge-multiple: true
 
       - name: Generate merged coverage report
+        if: needs.changes.outputs.code == 'true'
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
           export PATH="$PATH:$HOME/.dotnet/tools"
@@ -237,6 +312,7 @@ jobs:
           cat coverage-report/Summary.txt
 
       - name: Upload HTML coverage report
+        if: needs.changes.outputs.code == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-html
@@ -252,7 +328,7 @@ jobs:
       - name: Enforce coverage floor (unit/arch/bUnit tier, generated code excluded)
         # Only enforce when build-and-test succeeded (so the unit coverage artifact exists); an upstream
         # failure shouldn't add a confusing secondary coverage failure.
-        if: success() && needs.build-and-test.result == 'success'
+        if: success() && needs.changes.outputs.code == 'true' && needs.build-and-test.result == 'success'
         run: |
           unit="coverage/coverage.unit.cobertura.xml"
           test -f "$unit" || { echo "::error::unit coverage report not found ($unit)"; exit 1; }
@@ -272,6 +348,7 @@ jobs:
   # consecutive green runs since introduction (2026-07-14); its context is in branch protection.
   consumer-source-build:
     name: Consumer source build (Helpdesk)
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -297,12 +374,14 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Build Helpdesk against Common source (UseLocalMMCA)
+        if: needs.changes.outputs.code == 'true'
         working-directory: MMCA.Helpdesk
         # Helpdesk's committed local.props already sets UseLocalMMCA=true and points at the sibling
         # ../MMCA.Common/Source, so this compiles the reference app against the PR's framework source.
         run: dotnet build MMCA.Helpdesk.slnx -c Release
 
       - name: Test Helpdesk (domain + architecture, no DB)
+        if: needs.changes.outputs.code == 'true'
         working-directory: MMCA.Helpdesk
         # Helpdesk's suite is ~44 tests; floor at 40 so a discovery/filter regression fails
         # instead of passing green with near-zero tests discovered.
@@ -320,6 +399,7 @@ jobs:
   # downstream app does. Runs parallel to build-and-test, not behind it.
   package-consumption:
     name: Package-mode consumer (pack + local feed)
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -334,9 +414,11 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Pack all packages to a local folder feed
+        if: needs.changes.outputs.code == 'true'
         run: dotnet pack MMCA.Common.slnx -c Release -o ./nupkgs -p:MinVerSkip=true -p:Version=$PACK_VERSION -p:PackageVersion=$PACK_VERSION
 
       - name: Scaffold throwaway package consumer
+        if: needs.changes.outputs.code == 'true'
         # A classlib referencing the meta set (API + Infrastructure + Testing.Architecture) pulls
         # the full package graph transitively; the smoke type proves the refs actually bind.
         run: |
@@ -386,6 +468,7 @@ jobs:
           EOF
 
       - name: Restore and build consumer against the packed nupkgs
+        if: needs.changes.outputs.code == 'true'
         working-directory: ${{ runner.temp }}/pkg-consumer
         run: dotnet build Consumer.csproj -c Release
 
@@ -397,13 +480,16 @@ jobs:
   # consumer-side concern (ADC/Store deploy.yml are the production-proven versions).
   sample-deployment-validate:
     name: Validate samples/deployment Bicep
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
       - name: Compile foundation.bicep
+        if: needs.changes.outputs.code == 'true'
         run: az bicep build --file samples/deployment/foundation.bicep --stdout > /dev/null
 
       - name: Compile main.bicep
+        if: needs.changes.outputs.code == 'true'
         run: az bicep build --file samples/deployment/main.bicep --stdout > /dev/null
