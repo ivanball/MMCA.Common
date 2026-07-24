@@ -12,8 +12,15 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
+/// <remarks>
+/// The optional <paramref name="timeProvider"/> and <paramref name="currentUserService"/> are
+/// used only by <see cref="ExecuteUpdateAsync"/> for automatic audit stamping; when absent
+/// (direct construction in tests) the system clock is used and the user stamp is skipped.
+/// </remarks>
 internal sealed class EFRepository<TEntity, TIdentifierType>(
-    DbContext context
+    DbContext context,
+    TimeProvider? timeProvider = null,
+    ICurrentUserService? currentUserService = null
 ) : EFReadRepository<TEntity, TIdentifierType>(context), IRepository<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
@@ -99,6 +106,36 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(where);
         return await Entities.Where(where).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> ExecuteUpdateAsync(
+        Expression<Func<TEntity, bool>> where,
+        Action<IUpdatePropertySetter<TEntity>> setProperties,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(where);
+        ArgumentNullException.ThrowIfNull(setProperties);
+
+        var builder = new UpdatePropertySetterBuilder<TEntity>();
+        setProperties(builder);
+        if (builder.IsEmpty)
+            throw new ArgumentException("At least one property assignment is required.", nameof(setProperties));
+
+        // ExecuteUpdate bypasses the save pipeline's audit interceptor, so stamp the
+        // modification audit fields here unless the caller assigned them explicitly.
+        if (!builder.SetsProperty(nameof(IAuditableEntity.LastModifiedOn)))
+        {
+            var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+            builder.Set(e => e.LastModifiedOn, (DateTime?)now);
+        }
+
+        if (currentUserService?.UserId is { } userId && !builder.SetsProperty(nameof(IAuditableEntity.LastModifiedBy)))
+        {
+            builder.Set(e => e.LastModifiedBy, userId);
+        }
+
+        return await Entities.Where(where).ExecuteUpdateAsync(builder.Apply, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -6,6 +6,29 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+Additive feature work extracted from the MMCA.Store Sales consistency-guards PR (Store #39). No
+breaking changes and no public API removed.
+
+### Added
+- **`IWriteRepository.ExecuteUpdateAsync` set-based conditional update (Application + Infrastructure).**
+  Symmetric counterpart to `ExecuteDeleteAsync`: one atomic `UPDATE ... SET ... WHERE ...` through the
+  repository abstraction, intended for contention-proof conditional updates (stock decrements, quota
+  claims) where zero rows affected means the guard did not hold and the database arbitrates races. The
+  SET clause is described through the new EF-free `IUpdatePropertySetter<TEntity>` builder (fixed
+  values or expressions over the current row), translated to EF Core `SetPropertyCalls` by the new
+  `UpdatePropertySetterBuilder`. Global query filters (soft delete) apply to the WHERE; domain events
+  are bypassed (as with `ExecuteDeleteAsync`); `LastModifiedOn`/`LastModifiedBy` are stamped
+  automatically (TimeProvider clock + `ICurrentUserService` when available) unless set explicitly.
+- **`ConcurrencyTokenRequest` (Shared).** Reusable request body for lifecycle/state-transition
+  endpoints whose only payload is the ADR-035 optimistic-concurrency token: bind as an optional body
+  (`EmptyBodyBehavior.Allow`) so body-less callers skip the stale-view check. Replaces per-app copies
+  (Store's `OrderTransitionRequest`, ADC's lifecycle equivalents) at the next consumer sweep.
+- **`PeriodicBackgroundService` (Infrastructure).** Base class for fixed-interval background sweeps:
+  enablement gate, TimeProvider-driven startup delay + interval waits (deterministic in tests via
+  `FakeTimeProvider`), and a failing cycle that is logged without killing the loop. For reconciliation
+  and cleanup work (e.g. Store's stuck-payment sweep); deliberately not used by the signal-driven
+  outbox processor.
+
 ## [1.124.0] - 2026-07-23
 
 Maintenance release strengthening the architecture-test rule library. No breaking changes and no
