@@ -1,4 +1,5 @@
-using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Concurrency;
 
 namespace MMCA.Common.API.Idempotency;
 
@@ -30,6 +32,13 @@ namespace MMCA.Common.API.Idempotency;
 /// Replayed responses include the <c>X-Idempotent-Replay: true</c> header so clients can
 /// distinguish cached responses from original executions.
 /// </para>
+/// <para>
+/// SECURITY: the cache key is derived from the caller's identity, the HTTP method and the route
+/// template in addition to the client-supplied key, so a key value is only ever replayed to the
+/// caller that produced it, on the same endpoint. Keying on the bare client value would let two
+/// callers who happen to choose the same key share an entry, replaying one user's serialized
+/// response body to another.
+/// </para>
 /// </remarks>
 public sealed class IdempotencyFilter : IAsyncActionFilter
 {
@@ -40,16 +49,22 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
 
     private static string CacheKeyPrefix => "idempotency:";
 
+    /// <summary>Claim carrying the caller's identity, matching the one <c>TokenService</c> emits.</summary>
+    private const string UserIdClaimType = "user_id";
+
     /// <summary>
     /// Default cache expiration when <see cref="IdempotencySettings"/> is not registered.
     /// </summary>
     private static readonly TimeSpan DefaultExpiration = TimeSpan.FromHours(24);
 
     /// <summary>
-    /// Per-key semaphores prevent concurrent duplicate execution. Keys are cleaned up when
-    /// no waiters remain, preventing unbounded memory growth.
+    /// Serializes concurrent requests that map to the same cache key. Striped rather than
+    /// one-semaphore-per-key: the key embeds a caller-supplied value, so a per-key table would
+    /// either grow without bound or need an eager removal that races (a removal between another
+    /// request's lookup and its wait lets a third request create a fresh semaphore, and both
+    /// then execute concurrently, which is exactly what this lock exists to prevent).
     /// </summary>
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> KeyLocks = new();
+    private static readonly KeyedSemaphoreStripe KeyLocks = new();
 
     /// <inheritdoc />
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -62,70 +77,104 @@ public sealed class IdempotencyFilter : IAsyncActionFilter
             return;
         }
 
-        var idempotencyKey = keyValues.ToString();
-        var cacheKey = $"{CacheKeyPrefix}{idempotencyKey}";
+        var cacheKey = BuildCacheKey(context, keyValues.ToString());
         var cache = context.HttpContext.RequestServices.GetRequiredService<ICacheService>();
 
         // Fast path: return cached response without acquiring a lock
-        var cached = await cache.GetAsync<IdempotencyRecord>(cacheKey).ConfigureAwait(false);
-        if (cached is not null)
-        {
-            context.HttpContext.Response.Headers.Append("X-Idempotent-Replay", "true");
-            context.Result = new ContentResult
-            {
-                StatusCode = cached.StatusCode,
-                Content = cached.ResponseBody,
-                ContentType = "application/json"
-            };
+        if (await TryReplayAsync(context, cache, cacheKey).ConfigureAwait(false))
             return;
-        }
 
-        // Slow path: acquire per-key lock to serialize concurrent duplicates
-        var keyLock = KeyLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
-        await keyLock.WaitAsync(context.HttpContext.RequestAborted).ConfigureAwait(false);
-        try
+        // Slow path: acquire the key's stripe to serialize concurrent duplicates
+        using (await KeyLocks.AcquireAsync(cacheKey, context.HttpContext.RequestAborted).ConfigureAwait(false))
         {
             // Double-check: another request may have completed and cached while we waited
-            cached = await cache.GetAsync<IdempotencyRecord>(cacheKey).ConfigureAwait(false);
-            if (cached is not null)
-            {
-                context.HttpContext.Response.Headers.Append("X-Idempotent-Replay", "true");
-                context.Result = new ContentResult
-                {
-                    StatusCode = cached.StatusCode,
-                    Content = cached.ResponseBody,
-                    ContentType = "application/json"
-                };
+            if (await TryReplayAsync(context, cache, cacheKey).ConfigureAwait(false))
                 return;
-            }
 
             var executedContext = await next().ConfigureAwait(false);
+            await TryStoreAsync(context, cache, cacheKey, executedContext).ConfigureAwait(false);
+        }
+    }
 
-            // Only cache ObjectResult responses (not redirects, file results, etc.)
-            if (executedContext.Result is ObjectResult objectResult)
-            {
+    /// <summary>
+    /// Serves the cached response for <paramref name="cacheKey"/> when one exists, returning
+    /// whether the request was short-circuited.
+    /// </summary>
+    private static async Task<bool> TryReplayAsync(
+        ActionExecutingContext context,
+        ICacheService cache,
+        string cacheKey)
+    {
+        var cached = await cache.GetAsync<IdempotencyRecord>(cacheKey).ConfigureAwait(false);
+        if (cached is null)
+            return false;
+
+        context.HttpContext.Response.Headers.Append("X-Idempotent-Replay", "true");
+        context.Result = new ContentResult
+        {
+            StatusCode = cached.StatusCode,
+            Content = cached.ResponseBody,
+            ContentType = "application/json"
+        };
+
+        return true;
+    }
+
+    /// <summary>
+    /// Caches the executed response when it is a successful <see cref="ObjectResult"/>.
+    /// Non-2xx results are deliberately not stored: replaying a failure for the whole retention
+    /// window would mean a client retrying the same key after a transient 500 keeps receiving that
+    /// 500 for 24 hours instead of the retry actually executing. Redirects and file results are
+    /// skipped because the record carries only a status code and a JSON body.
+    /// </summary>
+    private static async Task TryStoreAsync(
+        ActionExecutingContext context,
+        ICacheService cache,
+        string cacheKey,
+        ActionExecutedContext executedContext)
+    {
+        if (executedContext.Result is not ObjectResult objectResult)
+            return;
+
+        var statusCode = objectResult.StatusCode ?? StatusCodes.Status200OK;
+        if (statusCode is < 200 or >= 300)
+            return;
+
 #pragma warning disable VSTHRD103 // JsonSerializer.Serialize to a string is correctly synchronous; SerializeAsync is only for writing to a stream.
-                var record = new IdempotencyRecord(
-                    objectResult.StatusCode ?? StatusCodes.Status200OK,
-                    JsonSerializer.Serialize(objectResult.Value, JsonSerializerOptions.Web));
+        var record = new IdempotencyRecord(
+            statusCode,
+            JsonSerializer.Serialize(objectResult.Value, JsonSerializerOptions.Web));
 #pragma warning restore VSTHRD103
 
-                var idempotencySettings = context.HttpContext.RequestServices
-                    .GetService<IOptions<IdempotencySettings>>();
-                var expiration = idempotencySettings is not null
-                    ? TimeSpan.FromHours(idempotencySettings.Value.CacheExpirationHours)
-                    : DefaultExpiration;
+        var idempotencySettings = context.HttpContext.RequestServices
+            .GetService<IOptions<IdempotencySettings>>();
+        var expiration = idempotencySettings is not null
+            ? TimeSpan.FromHours(idempotencySettings.Value.CacheExpirationHours)
+            : DefaultExpiration;
 
-                await cache.SetAsync(cacheKey, record, expiration).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
-            keyLock.Release();
+        await cache.SetAsync(cacheKey, record, expiration).ConfigureAwait(false);
+    }
 
-            // Eagerly remove the semaphore when no other requests are waiting on it
-            if (keyLock.CurrentCount == 1)
-                KeyLocks.TryRemove(cacheKey, out _);
-        }
+    /// <summary>
+    /// Derives the cache key from the caller's identity, the HTTP method, the route template and
+    /// the client-supplied key, hashed so the key length stays bounded regardless of what the
+    /// client sends. Scoping to the caller stops one user's cached response from being replayed to
+    /// another; scoping to method plus route stops the same key from colliding across endpoints
+    /// (which, with services sharing one cache instance, would otherwise reach across services).
+    /// </summary>
+    private static string BuildCacheKey(ActionExecutingContext context, string idempotencyKey)
+    {
+        var subject = context.HttpContext.User?.FindFirst(UserIdClaimType)?.Value
+            ?? string.Concat("anon:", context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+        var route = context.ActionDescriptor.AttributeRouteInfo?.Template
+            ?? context.HttpContext.Request.Path.Value
+            ?? string.Empty;
+
+        // \n is not valid in any component, so it cannot be used to forge a different tuple.
+        var material = string.Join('\n', subject, context.HttpContext.Request.Method, route, idempotencyKey);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(material));
+
+        return string.Concat(CacheKeyPrefix, Convert.ToHexStringLower(hash));
     }
 }
