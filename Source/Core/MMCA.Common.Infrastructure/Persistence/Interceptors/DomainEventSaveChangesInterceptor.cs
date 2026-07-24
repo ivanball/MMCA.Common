@@ -142,16 +142,23 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// </summary>
     private static void CaptureEventsAndPersistToOutbox(ApplicationDbContext context)
     {
-        var aggregateRootEntities = context.ChangeTracker.Entries<IAggregateRoot>()
+        // A previous SavingChanges that never reached SavedChanges (a failed save, then an
+        // execution-strategy retry of the same operation) left its outbox rows tracked as Added
+        // and its events still on the aggregates. Re-capturing on top of that would write a
+        // second row per event, so the retry would publish every integration event twice.
+        DiscardAbandonedCapture(context);
+
+        // Snapshot each aggregate's events now: the flush removes exactly these, so anything a
+        // handler raises during dispatch survives instead of being cleared along with them.
+        var captures = context.ChangeTracker.Entries<IAggregateRoot>()
             .Where(e => e.Entity.DomainEvents is { Count: > 0 })
+            .Select(e => new AggregateCapture(e, [.. e.Entity.DomainEvents]))
             .ToArray();
 
-        if (aggregateRootEntities.Length == 0)
+        if (captures.Length == 0)
             return;
 
-        var domainEvents = aggregateRootEntities
-            .SelectMany(e => e.Entity.DomainEvents)
-            .ToArray();
+        var domainEvents = captures.SelectMany(c => c.Events).ToArray();
 
         IDomainEvent[] localEvents;
         var hasIntegrationEvents = false;
@@ -190,8 +197,32 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             localEvents = domainEvents;
         }
 
-        var state = new CapturedState(aggregateRootEntities, localEvents, localOutboxEntries, hasIntegrationEvents);
+        var state = new CapturedState(captures, localEvents, localOutboxEntries, hasIntegrationEvents);
         StateTable.AddOrUpdate(context, state);
+    }
+
+    /// <summary>
+    /// Detaches the outbox rows written by a capture whose save never completed, so the next
+    /// capture starts clean. Without this a retried operation accumulates one outbox row per
+    /// attempt for every event it raises.
+    /// </summary>
+    private static void DiscardAbandonedCapture(ApplicationDbContext context)
+    {
+        if (!StateTable.TryGetValue(context, out _))
+            return;
+
+        StateTable.Remove(context);
+
+        // Every Added OutboxMessage on this context came from that abandoned capture: this
+        // interceptor is the only writer of outbox rows, and a completed save leaves none Added.
+        // Detaching covers integration-event rows too, which the state does not list because they
+        // are deliberately never dispatched in-process.
+        foreach (var entry in context.ChangeTracker.Entries<OutboxMessage>()
+            .Where(e => e.State == EntityState.Added)
+            .ToArray())
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 
     /// <summary>
@@ -251,22 +282,35 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         }
     }
 
+    /// <summary>
+    /// Removes exactly the events this save captured. Clearing the aggregates wholesale would also
+    /// discard anything a handler raised on the same aggregate during in-process dispatch: those
+    /// events arrive after the capture and would be wiped before any later capture could see them,
+    /// so they would never dispatch and never reach the outbox.
+    /// </summary>
     private static void ClearDomainEvents(CapturedState state)
     {
-        foreach (var aggregateRootEntity in state.AggregateRootEntities)
-            aggregateRootEntity.Entity.ClearDomainEvents();
+        foreach (var capture in state.Captures)
+            capture.Entry.Entity.RemoveDomainEvents(capture.Events);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "In-process domain event dispatch failed; the outbox processor will retry")]
     private static partial void LogDispatchError(ILogger logger, Exception exception);
 
+    /// <summary>One tracked aggregate root and the exact events captured from it for this save.</summary>
+    /// <param name="Entry">The tracked aggregate root.</param>
+    /// <param name="Events">The events snapshotted at capture time, removed again after dispatch.</param>
+    private sealed record AggregateCapture(
+        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<IAggregateRoot> Entry,
+        IDomainEvent[] Events);
+
     /// <summary>Holds state captured before save that is consumed after save.</summary>
-    /// <param name="AggregateRootEntities">The tracked aggregate roots whose events were captured.</param>
+    /// <param name="Captures">The aggregate roots whose events were captured, each with its snapshot.</param>
     /// <param name="LocalEvents">Events to dispatch in-process (excludes integration events on outbox-enabled contexts).</param>
     /// <param name="LocalOutboxEntries">Outbox rows backing <paramref name="LocalEvents"/>, marked processed after successful dispatch.</param>
     /// <param name="HasIntegrationEvents">Whether any captured event routes through the outbox to <c>IMessageBus</c>.</param>
     private sealed record CapturedState(
-        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<IAggregateRoot>[] AggregateRootEntities,
+        AggregateCapture[] Captures,
         IDomainEvent[] LocalEvents,
         List<OutboxMessage> LocalOutboxEntries,
         bool HasIntegrationEvents);

@@ -33,6 +33,22 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
     /// </summary>
     public void ClearDomainEvents() => _domainEvents.Clear();
 
+    /// <inheritdoc />
+    public void RemoveDomainEvents(IEnumerable<IDomainEvent> domainEvents)
+    {
+        ArgumentNullException.ThrowIfNull(domainEvents);
+
+        // Reference equality: two structurally equal events raised separately are still two
+        // distinct occurrences, and only the captured instances have been delivered.
+        var captured = new HashSet<IDomainEvent>(domainEvents, ReferenceEqualityComparer.Instance);
+        if (captured.Count == 0)
+        {
+            return;
+        }
+
+        _domainEvents.RemoveAll(captured.Contains);
+    }
+
     /// <summary>
     /// Replaces a child entity collection with a new set of items, invoking
     /// <see cref="ValidateSetItems{TChildEntity}"/> before mutation so aggregates can

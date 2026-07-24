@@ -17,4 +17,17 @@ public interface IAggregateRoot
 
     /// <summary>Clears all pending domain events after they have been dispatched.</summary>
     void ClearDomainEvents();
+
+    /// <summary>
+    /// Removes only the specified events, leaving any raised since they were captured.
+    /// </summary>
+    /// <param name="domainEvents">The events to remove.</param>
+    /// <remarks>
+    /// The persistence pipeline captures an aggregate's events before saving and clears them
+    /// afterwards. Clearing wholesale discards anything a handler raised on the same aggregate
+    /// during in-process dispatch, because those events arrive after the capture and are wiped
+    /// before any later capture can see them: they never dispatch and never reach the outbox.
+    /// Removing exactly what was captured leaves them pending for the next save instead.
+    /// </remarks>
+    void RemoveDomainEvents(IEnumerable<IDomainEvent> domainEvents);
 }
