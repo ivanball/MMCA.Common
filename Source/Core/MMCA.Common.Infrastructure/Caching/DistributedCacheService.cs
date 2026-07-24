@@ -92,6 +92,34 @@ internal sealed partial class DistributedCacheService(
             await db.KeyDeleteAsync([.. batch]).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Uses Redis <c>INCR</c> when a multiplexer is available, so concurrent increments cannot
+    /// overwrite each other (the interface default is a read-modify-write and undercounts under
+    /// load, which for a brute-force counter means attempts that never reach the lockout
+    /// threshold). The TTL is applied only when the counter is created, so the window stays
+    /// anchored to the first attempt rather than sliding on every increment. Without a
+    /// multiplexer, falls back to the interface default.
+    /// </remarks>
+    public async Task<long> IncrementAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
+    {
+        if (connectionMultiplexer is null)
+        {
+            var current = await GetAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
+            var fallback = current + 1;
+            await SetAsync(key, fallback, expiration, cancellationToken).ConfigureAwait(false);
+            return fallback;
+        }
+
+        var db = connectionMultiplexer.GetDatabase();
+        var value = await db.StringIncrementAsync(key).ConfigureAwait(false);
+
+        if (value == 1)
+            await db.KeyExpireAsync(key, expiration).ConfigureAwait(false);
+
+        return value;
+    }
+
     private static T Deserialize<T>(byte[] bytes)
         => JsonSerializer.Deserialize<T>(bytes)!;
 
