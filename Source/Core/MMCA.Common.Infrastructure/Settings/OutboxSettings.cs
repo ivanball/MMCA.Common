@@ -82,6 +82,22 @@ public sealed class OutboxSettings
     public int LeaseSeconds { get; init; } = 300;
 
     /// <summary>
+    /// Gets the base, in seconds, of the exponential backoff applied to a FAILED message before it
+    /// is retried (attempt <c>n</c> waits <c>RetryBackoffBaseSeconds * 2^(n-1)</c>, capped at
+    /// <see cref="LeaseSeconds"/>). Defaults to <c>10</c>.
+    /// </summary>
+    /// <remarks>
+    /// A failed message keeps its claim until this backoff elapses. Before this setting existed the
+    /// claim was simply never cleared, so a failure was retried only after the FULL
+    /// <see cref="LeaseSeconds"/> (300s by default) regardless of <see cref="PollingIntervalSeconds"/>
+    /// or an explicit signal: the real retry cadence was an accident of the lease rather than a
+    /// decision. Making it explicit both shortens the first retries and keeps a permanently failing
+    /// message from spinning.
+    /// </remarks>
+    [Range(1, 3600)]
+    public int RetryBackoffBaseSeconds { get; init; } = 10;
+
+    /// <summary>
     /// Gets the number of days a <b>dead-lettered</b> outbox message (retries exhausted, never
     /// delivered) is retained before <c>OutboxCleanupService</c> purges it. <c>0</c> (the default)
     /// falls back to <see cref="RetentionDays"/>. Set it higher than <see cref="RetentionDays"/>

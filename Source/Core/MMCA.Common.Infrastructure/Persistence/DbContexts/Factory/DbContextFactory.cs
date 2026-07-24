@@ -271,7 +271,12 @@ public sealed class DbContextFactory(
     public void BeginTransaction()
     {
         _transactionActive = true;
-        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).ToArray())
+
+        // Skip contexts that already carry a transaction, symmetrically with Commit/Rollback below.
+        // EF throws InvalidOperationException on a second BeginTransaction for the same connection,
+        // and GetDbContext already enlists late-created contexts, so a context can legitimately be
+        // mid-transaction by the time this runs.
+        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(c => !HasActiveTransaction(c)).ToArray())
             context.Database.BeginTransaction();
     }
 
@@ -302,6 +307,11 @@ public sealed class DbContextFactory(
     /// best-effort (no two-phase commit). The outbox is the cross-source consistency mechanism.
     /// </para>
     /// <para>
+    /// Re-entrant: a nested call joins the ambient transaction and returns the operation's result
+    /// directly. Begin, commit, rollback and the deferred-event flush belong to the outermost call
+    /// alone, so the whole nest commits or rolls back as one unit.
+    /// </para>
+    /// <para>
     /// A returned failed <see cref="Result"/> rolls the transaction back, exactly like an
     /// exception: in a framework that mandates Result-over-exceptions (ADR-013), a handler that
     /// saves and then fails a later invariant must not leave the partial mutation committed.
@@ -324,6 +334,16 @@ public sealed class DbContextFactory(
         Func<CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken = default)
     {
+        // Re-entrant call: join the transaction the outer call already opened instead of starting a
+        // second one. Only the OUTERMOST call may begin, commit, roll back, or flush deferred events;
+        // an inner commit would make the outer scope's earlier work durable ahead of its own
+        // decision, turning a nested call into a silent partial commit. Without this, an
+        // ITransactional command whose handler also opens a transaction (the shape Store's
+        // CheckOutHandler and VerifyPaymentHandler avoid only by convention, with a comment on each
+        // command saying so) hit an InvalidOperationException from EF instead.
+        if (_transactionActive)
+            return await operation(cancellationToken).ConfigureAwait(false);
+
         // Use the execution strategy from the first active transactional context
         // (typically SQL Server). If none exists yet, create the default context so
         // the strategy is available before the handler's first repository call.

@@ -63,8 +63,15 @@ public sealed class LoginProtectionService(
     /// <inheritdoc />
     public async Task IncrementFailedAttemptsAsync(string email, CancellationToken cancellationToken = default)
     {
-        // Atomic: a read-modify-write lets parallel attempts overwrite each other's increments, so
-        // a burst of concurrent guesses could stay below MaxFailedAttempts indefinitely.
+        // NOT atomic on the distributed cache today: DistributedCacheService.IncrementAsync is a
+        // read-modify-write, because the Redis INCR it used to issue wrote a plain string key while
+        // IDistributedCache reads entries back as hashes, and the mismatch made the counter
+        // unreadable (WRONGTYPE). Readability was the right thing to buy first, but the cost is the
+        // known one: parallel attempts can overwrite each other's increments, so a burst of
+        // genuinely concurrent guesses can stay below MaxFailedAttempts. Sequential guessing, which
+        // is what a credential-stuffing run against one account looks like, still trips the lockout.
+        // Closing the gap needs the increment made atomic again WITHIN the hash layout (a Lua
+        // script) or counters moved off IDistributedCache so both sides speak Redis strings.
         var newCount = await cacheService.IncrementAsync(
             AttemptsKey(email),
             TimeSpan.FromMinutes(_settings.FailedAttemptWindowMinutes),
@@ -117,10 +124,9 @@ public sealed class LoginProtectionService(
             return;
         }
 
-        // Atomic. On a store with a native counter (Redis) the TTL is also anchored to the first
-        // registration in the window; the read-modify-write fallback keeps the previous
-        // refresh-on-every-write behavior, which makes the window slide but only ever tightens
-        // the limit.
+        // Read-modify-write (see IncrementFailedAttemptsAsync for why the native-counter path was
+        // removed), so the TTL is refreshed on every write. That makes the window slide rather than
+        // stay anchored to the first registration, which only ever tightens the limit.
         await cacheService.IncrementAsync(
             RegistrationKey(ipAddress),
             TimeSpan.FromMinutes(_settings.RegistrationRateLimitWindowMinutes),

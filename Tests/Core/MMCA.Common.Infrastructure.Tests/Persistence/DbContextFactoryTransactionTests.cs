@@ -117,6 +117,69 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
         (await _dbContext.Set<TestAggregate>().AsNoTracking().CountAsync()).Should().Be(1);
     }
 
+    // ── Re-entrancy: a nested call joins the ambient transaction ──
+    [Fact]
+    public async Task ExecuteInTransactionAsync_Nested_DoesNotThrowAndCommitsOnce()
+    {
+        // The shape an ITransactional command whose handler ALSO opens a transaction produces.
+        // Before this was re-entrant, the inner BeginTransaction threw InvalidOperationException
+        // from EF ("already in a transaction"), which is why Store's CheckOutCommand and
+        // VerifyPaymentCommand carry comments explaining they are deliberately not ITransactional.
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async outerCt =>
+            {
+                var context = _sut.GetDbContext(DataSource.SQLServer);
+                context.Set<TestAggregate>().Add(CreateAggregateWithEvent());
+
+                return await _sut.ExecuteInTransactionAsync<Result>(
+                    async innerCt =>
+                    {
+                        await _sut.SaveChangesAsync(innerCt);
+                        return Result.Success();
+                    },
+                    outerCt);
+            });
+
+        result.IsSuccess.Should().BeTrue();
+        (await _dbContext.Set<TestAggregate>().AsNoTracking().CountAsync()).Should().Be(1);
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the deferred flush belongs to the outermost call alone, so it must not run per nesting level");
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_NestedInnerSucceedsButOuterFails_RollsBackEverything()
+    {
+        // The reason an inner call must not commit: it would make the nest's earlier work durable
+        // ahead of the outer scope's own decision, turning nesting into a silent partial commit.
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async outerCt =>
+            {
+                var context = _sut.GetDbContext(DataSource.SQLServer);
+                context.Set<TestAggregate>().Add(CreateAggregateWithEvent());
+
+                var inner = await _sut.ExecuteInTransactionAsync<Result>(
+                    async innerCt =>
+                    {
+                        await _sut.SaveChangesAsync(innerCt);
+                        return Result.Success();
+                    },
+                    outerCt);
+
+                inner.IsSuccess.Should().BeTrue();
+                return Result.Failure(Error.Validation("Invariant.Failed", "outer scope rejected it"));
+            });
+
+        result.IsFailure.Should().BeTrue();
+        (await _dbContext.Set<TestAggregate>().AsNoTracking().CountAsync()).Should().Be(
+            0,
+            "the inner call must not have committed the outer scope's work");
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ── Failure/rollback drops the deferred dispatch: nothing is ever delivered in-process ──
     [Fact]
     public async Task ExecuteInTransactionAsync_OperationReturnsFailure_NeverDispatchesDeferredEvents()

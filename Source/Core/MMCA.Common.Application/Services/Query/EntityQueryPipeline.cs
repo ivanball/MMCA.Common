@@ -166,20 +166,19 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
     /// Application-layer caller that bypasses the API boundary cannot request an unbounded page).
     /// </summary>
     /// <remarks>
-    /// The offset is computed in 64-bit and range-checked rather than left to <see langword="checked"/>
-    /// arithmetic: a page number near <see cref="int.MaxValue"/> overflowed and surfaced as a 500
-    /// instead of the empty page that page genuinely holds.
+    /// The 64-bit, range-checked offset arithmetic lives in <see cref="PagingMath"/> so every
+    /// paginating caller shares it; see that type for why a 32-bit multiply is not safe here.
     /// </remarks>
     private static IQueryable<TEntity> ApplyPaging<TEntity>(
         IQueryable<TEntity> query,
         EntityQueryParameters<TEntity> parameters)
     {
-        int pageSize = Math.Min(parameters.PageSize!.Value, MaxUnboundedResultLimit);
-        long skip = (long)pageSize * (parameters.PageNumber!.Value - 1);
+        var (skip, take) = PagingMath.Clamp(
+            parameters.PageNumber!.Value,
+            parameters.PageSize!.Value,
+            MaxUnboundedResultLimit);
 
-        return skip > int.MaxValue
-            ? query.Take(0)
-            : query.Skip((int)skip).Take(pageSize);
+        return query.Skip(skip).Take(take);
     }
 
     /// <summary>

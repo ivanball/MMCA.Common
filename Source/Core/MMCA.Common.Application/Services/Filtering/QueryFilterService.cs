@@ -19,9 +19,12 @@ namespace MMCA.Common.Application.Services.Filtering;
 public static class QueryFilterService
 {
     /// <summary>
-    /// Caches PropertyInfo lookups per (entity type, property name) to avoid per-request reflection overhead.
+    /// Caches RESOLVED PropertyInfo lookups per (entity type, property name) to avoid per-request
+    /// reflection overhead. Misses are deliberately not cached: the names probed come from the
+    /// client's query string, so a negative cache is an unbounded, never-evicted static dictionary
+    /// any caller can grow at will. See <see cref="LookupProperty{TEntity}"/>.
     /// </summary>
-    private static readonly ConcurrentDictionary<(Type EntityType, string PropertyName), PropertyInfo?> PropertyCache = new();
+    private static readonly ConcurrentDictionary<(Type EntityType, string PropertyName), PropertyInfo> PropertyCache = new();
 
     private static readonly ConcurrentDictionary<Type, IFilterStrategy> Strategies = new(
         new Dictionary<Type, IFilterStrategy>
@@ -89,16 +92,8 @@ public static class QueryFilterService
 
             var opUpper = op.ToUpperInvariant();
 
-            // Nested properties (e.g. "Category.Name") always use string filtering because
-            // the LINQ Dynamic expression path traverses the property chain as a string
-            if (propertyInfo.PropertyType == typeof(string) ||
-                entityProperty.Contains('.', StringComparison.OrdinalIgnoreCase))
-            {
-                query = StringStrategy.Apply(query, entityProperty, opUpper, value);
-                continue;
-            }
-
-            if (Strategies.TryGetValue(propertyInfo.PropertyType, out var strategy))
+            var strategy = ResolveStrategy(ResolveFilterValueType<TEntity>(entityProperty, propertyInfo));
+            if (strategy is not null)
                 query = strategy.Apply(query, entityProperty, opUpper, value);
         }
 
@@ -155,28 +150,27 @@ public static class QueryFilterService
 
         var opUpper = op.ToUpperInvariant();
 
-        // Nested properties use string filtering
-        if (entityProperty.Contains('.', StringComparison.Ordinal))
-        {
-            ValidateOperatorSupported(StringStrategy, opUpper, op, property, "string", errors);
-            ValidateValueParseable(StringStrategy, opUpper, value, property, "string", errors);
-            return;
-        }
-
-        var strategy = ResolveStrategy(propertyInfo.PropertyType);
+        // Resolve the type the filter VALUE is compared against, walking a nested path to its leaf.
+        // Validation and application must agree on this: routing every dotted path to the string
+        // strategy let a nested non-string leaf pass validation for a string-only operator (say
+        // IS EMPTY on "Category.Id") and then fail inside Dynamic LINQ at query-build time, which is
+        // a 500 for what is really a bad request.
+        var valueType = ResolveFilterValueType<TEntity>(entityProperty, propertyInfo);
+        var strategy = ResolveStrategy(valueType);
 
         if (strategy is null)
         {
             errors.Add(Error.Validation(
                 "Filter.Type.NotSupported",
-                $"No filter strategy registered for type '{propertyInfo.PropertyType.Name}' (property '{property}').",
+                $"No filter strategy registered for type '{(valueType ?? propertyInfo.PropertyType).Name}' (property '{property}').",
                 source: nameof(ValidateFilters),
                 target: property));
             return;
         }
 
-        ValidateOperatorSupported(strategy, opUpper, op, property, propertyInfo.PropertyType.Name, errors);
-        ValidateValueParseable(strategy, opUpper, value, property, propertyInfo.PropertyType.Name, errors);
+        var typeName = (valueType ?? propertyInfo.PropertyType).Name;
+        ValidateOperatorSupported(strategy, opUpper, op, property, typeName, errors);
+        ValidateValueParseable(strategy, opUpper, value, property, typeName, errors);
     }
 
     /// <summary>
@@ -217,6 +211,14 @@ public static class QueryFilterService
     /// <c>["Name"] = "Title"</c>) passed validation and was then silently dropped, returning an
     /// unfiltered result set with a 200.
     /// </para>
+    /// <para>
+    /// Only SUCCESSFUL lookups are cached. Both names probed here are client-influenced (the filter
+    /// key arrives in the query string), so caching misses too let any caller grow a process-lifetime
+    /// static dictionary without bound simply by filtering on names that do not exist: the request
+    /// gets a clean 400 back, which makes the growth invisible in error metrics. A miss now costs a
+    /// reflection lookup instead, which the per-request filter cap in <c>QueryFilterModelBinder</c>
+    /// bounds.
+    /// </para>
     /// </summary>
     private static PropertyInfo? ResolvePropertyInfo<TEntity>(string property, string entityProperty)
     {
@@ -224,16 +226,59 @@ public static class QueryFilterService
             ? entityProperty.Split('.')[0]
             : entityProperty;
 
-        return PropertyCache.GetOrAdd(
-            (typeof(TEntity), property),
-            static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance))
-            ?? PropertyCache.GetOrAdd(
-                (typeof(TEntity), propertyName),
-                static key => key.EntityType.GetProperty(key.PropertyName, BindingFlags.Public | BindingFlags.Instance));
+        return LookupProperty<TEntity>(property) ?? LookupProperty<TEntity>(propertyName);
     }
 
-    private static IFilterStrategy? ResolveStrategy(Type propertyType) =>
-        propertyType == typeof(string)
+    /// <summary>
+    /// Resolves one property name against <typeparamref name="TEntity"/>, memoizing hits only.
+    /// </summary>
+    private static PropertyInfo? LookupProperty<TEntity>(string propertyName)
+    {
+        var key = (typeof(TEntity), propertyName);
+        if (PropertyCache.TryGetValue(key, out var cached))
+            return cached;
+
+        var resolved = typeof(TEntity).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        if (resolved is not null)
+            PropertyCache[key] = resolved;
+
+        return resolved;
+    }
+
+    /// <summary>
+    /// Resolves the type a filter value is compared against: for a flat property that is the
+    /// property's own type, and for a dotted path (<c>"Category.Name"</c>) it is the LEAF's type,
+    /// reached by walking each segment.
+    /// </summary>
+    /// <remarks>
+    /// Returns <see langword="null"/> when the path cannot be walked (an intermediate segment is not
+    /// a public instance property). Callers fall back to the string strategy in that case, which is
+    /// the behavior every dotted path used to get unconditionally, so an unresolvable path keeps
+    /// working exactly as before rather than newly failing validation.
+    /// </remarks>
+    private static Type? ResolveFilterValueType<TEntity>(string entityProperty, PropertyInfo resolvedRoot)
+    {
+        if (!entityProperty.Contains('.', StringComparison.Ordinal))
+            return resolvedRoot.PropertyType;
+
+        var segments = entityProperty.Split('.');
+
+        // Walk from the path's own root segment rather than from resolvedRoot: the latter may have
+        // matched the DTO-facing name instead, and for a nested path the two need not agree.
+        var current = LookupProperty<TEntity>(segments[0])?.PropertyType;
+
+        for (var i = 1; i < segments.Length && current is not null; i++)
+        {
+            current = current
+                .GetProperty(segments[i], BindingFlags.Public | BindingFlags.Instance)
+                ?.PropertyType;
+        }
+
+        return current;
+    }
+
+    private static IFilterStrategy? ResolveStrategy(Type? propertyType) =>
+        propertyType is null || propertyType == typeof(string)
             ? StringStrategy
             : Strategies.GetValueOrDefault(propertyType);
 

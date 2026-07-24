@@ -1,5 +1,6 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Shared.Abstractions;
@@ -16,12 +17,17 @@ public sealed class GetNotificationHistoryHandler(
     IQueryableExecutor queryableExecutor,
     PushNotificationDTOMapper dtoMapper) : IQueryHandler<GetNotificationHistoryQuery, Result<PagedCollectionResult<PushNotificationDTO>>>
 {
+    /// <summary>Ceiling on the history page size, matching the documented "max 500" on the query.</summary>
+    private const int MaxPageSize = 500;
+
     /// <inheritdoc />
     public async Task<Result<PagedCollectionResult<PushNotificationDTO>>> HandleAsync(
         GetNotificationHistoryQuery query,
         CancellationToken cancellationToken = default)
     {
-        var pageSize = Math.Min(query.PageSize, 500);
+        // Shared 64-bit clamp: see PagingMath. A 32-bit (PageNumber - 1) * PageSize wraps negative
+        // near int.MaxValue, and SQL Server rejects a negative OFFSET outright.
+        var (skip, take) = PagingMath.Clamp(query.PageNumber, query.PageSize, MaxPageSize);
         var repository = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
 
         int totalCount = await repository.CountAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -29,12 +35,12 @@ public sealed class GetNotificationHistoryHandler(
         IReadOnlyCollection<PushNotification> paged = await queryableExecutor.ToListAsync(
             repository.TableNoTracking
                 .OrderByDescending(n => n.CreatedOn)
-                .Skip((query.PageNumber - 1) * pageSize)
-                .Take(pageSize),
+                .Skip(skip)
+                .Take(take),
             cancellationToken).ConfigureAwait(false);
 
         IReadOnlyCollection<PushNotificationDTO> dtos = dtoMapper.MapToDTOs(paged);
-        var metadata = new PaginationMetadata(totalCount, pageSize, query.PageNumber);
+        var metadata = new PaginationMetadata(totalCount, take, query.PageNumber);
 
         return Result.Success(new PagedCollectionResult<PushNotificationDTO>(dtos, metadata));
     }

@@ -1,4 +1,5 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
@@ -16,12 +17,19 @@ public sealed class GetMyNotificationsHandler(
     IUnitOfWork unitOfWork,
     IQueryableExecutor queryableExecutor) : IQueryHandler<GetMyNotificationsQuery, Result<PagedCollectionResult<UserNotificationDTO>>>
 {
+    /// <summary>Ceiling on the inbox page size, matching the documented "max 500" on the query.</summary>
+    private const int MaxPageSize = 500;
+
     /// <inheritdoc />
     public async Task<Result<PagedCollectionResult<UserNotificationDTO>>> HandleAsync(
         GetMyNotificationsQuery query,
         CancellationToken cancellationToken = default)
     {
-        var pageSize = Math.Min(query.PageSize, 500);
+        // Shared 64-bit clamp: Skip/Take must not be derived from a 32-bit
+        // (PageNumber - 1) * PageSize, which wraps negative near int.MaxValue and makes SQL Server
+        // reject the negative OFFSET. It also floors the page size, which the [Range] attribute at
+        // the API boundary enforces but a direct handler caller does not inherit.
+        var (skip, take) = PagingMath.Clamp(query.PageNumber, query.PageSize, MaxPageSize);
         var userNotificationRepo = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
         var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
 
@@ -43,10 +51,10 @@ public sealed class GetMyNotificationsHandler(
         int totalCount = await queryableExecutor.CountAsync(joined, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyCollection<UserNotificationDTO> paged = await queryableExecutor.ToListAsync(
-            joined.Skip((query.PageNumber - 1) * pageSize).Take(pageSize),
+            joined.Skip(skip).Take(take),
             cancellationToken).ConfigureAwait(false);
 
-        var metadata = new PaginationMetadata(totalCount, pageSize, query.PageNumber);
+        var metadata = new PaginationMetadata(totalCount, take, query.PageNumber);
         return Result.Success(new PagedCollectionResult<UserNotificationDTO>(paged, metadata));
     }
 }

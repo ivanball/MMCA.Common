@@ -23,6 +23,16 @@ namespace MMCA.Common.API.ModelBinders;
 /// </remarks>
 public sealed class QueryFilterModelBinder : IModelBinder
 {
+    /// <summary>
+    /// Maximum number of distinct filter properties honored on one request. Well past any real
+    /// grid (the widest DTO in either app is nowhere near this), and it bounds the per-request
+    /// reflection work a caller can demand from <c>QueryFilterService</c>, which resolves each
+    /// unknown name by reflection rather than memoizing misses. Surplus entries are dropped rather
+    /// than rejected: they were never valid filters to begin with, and a 400 here would be a
+    /// breaking change for any client that happens to send junk alongside real filters.
+    /// </summary>
+    public const int MaxFilters = 50;
+
     /// <inheritdoc />
     public Task BindModelAsync(ModelBindingContext bindingContext)
     {
@@ -47,7 +57,12 @@ public sealed class QueryFilterModelBinder : IModelBinder
                 continue;
 
             if (!filters.TryGetValue(property, out var tuple))
+            {
+                if (filters.Count >= MaxFilters)
+                    continue;
+
                 tuple = (string.Empty, string.Empty);
+            }
 
             var value = query[key].ToString();
             filters[property] = suffix == "operator"
