@@ -51,7 +51,7 @@ public sealed class LoginProtectionServiceTests
 
         await sut.IncrementFailedAttemptsAsync(TestEmail);
 
-        cache.Values[AttemptsKey].Should().Be(1);
+        cache.Values[AttemptsKey].Should().Be(1L);
         cache.Ttls[AttemptsKey].Should().Be(TimeSpan.FromMinutes(30));
         cache.Values.Should().NotContainKey(LockoutKey, "below the threshold no lockout is applied");
     }
@@ -60,11 +60,11 @@ public sealed class LoginProtectionServiceTests
     public async Task IncrementFailedAttemptsAsync_BelowThreshold_DoesNotApplyLockout()
     {
         var (sut, cache) = CreateSut(maxFailedAttempts: 5);
-        cache.Seed(AttemptsKey, 3);
+        cache.Seed(AttemptsKey, 3L);
 
         await sut.IncrementFailedAttemptsAsync(TestEmail);
 
-        cache.Values[AttemptsKey].Should().Be(4);
+        cache.Values[AttemptsKey].Should().Be(4L);
         cache.Values.Should().NotContainKey(LockoutKey);
     }
 
@@ -73,7 +73,7 @@ public sealed class LoginProtectionServiceTests
     {
         // newCount == MaxFailedAttempts means zero excess attempts: min(1 << 0, cap) == 1 second.
         var (sut, cache) = CreateSut(maxFailedAttempts: 5, maxLockoutSeconds: 300);
-        cache.Seed(AttemptsKey, 4);
+        cache.Seed(AttemptsKey, 4L);
 
         await sut.IncrementFailedAttemptsAsync(TestEmail);
 
@@ -97,7 +97,7 @@ public sealed class LoginProtectionServiceTests
         int expectedLockoutSeconds)
     {
         var (sut, cache) = CreateSut(maxFailedAttempts: 5, maxLockoutSeconds: 300);
-        cache.Seed(AttemptsKey, previousAttempts);
+        cache.Seed(AttemptsKey, (long)previousAttempts);
 
         await sut.IncrementFailedAttemptsAsync(TestEmail);
 
@@ -109,11 +109,11 @@ public sealed class LoginProtectionServiceTests
     public async Task IncrementFailedAttemptsAsync_EveryAttempt_RefreshesAttemptWindowTtl()
     {
         var (sut, cache) = CreateSut(maxFailedAttempts: 5, failedAttemptWindowMinutes: 15);
-        cache.Seed(AttemptsKey, 7);
+        cache.Seed(AttemptsKey, 7L);
 
         await sut.IncrementFailedAttemptsAsync(TestEmail);
 
-        cache.Values[AttemptsKey].Should().Be(8);
+        cache.Values[AttemptsKey].Should().Be(8L);
         cache.Ttls[AttemptsKey].Should().Be(TimeSpan.FromMinutes(15));
     }
 
@@ -122,7 +122,7 @@ public sealed class LoginProtectionServiceTests
     public async Task ResetFailedAttemptsAsync_RemovesAttemptCounterAndLockout()
     {
         var (sut, cache) = CreateSut();
-        cache.Seed(AttemptsKey, 6);
+        cache.Seed(AttemptsKey, 6L);
         cache.Seed(LockoutKey, true);
 
         await sut.ResetFailedAttemptsAsync(TestEmail);
@@ -148,7 +148,7 @@ public sealed class LoginProtectionServiceTests
     public async Task CheckRegistrationRateLimitAsync_BelowLimit_ReturnsSuccess()
     {
         var (sut, cache) = CreateSut(maxRegistrationsPerIpPerHour: 10);
-        cache.Seed(RegistrationKey, 9);
+        cache.Seed(RegistrationKey, 9L);
 
         Result result = await sut.CheckRegistrationRateLimitAsync(TestIp);
 
@@ -159,7 +159,7 @@ public sealed class LoginProtectionServiceTests
     public async Task CheckRegistrationRateLimitAsync_AtLimit_ReturnsUnauthorizedFailure()
     {
         var (sut, cache) = CreateSut(maxRegistrationsPerIpPerHour: 10);
-        cache.Seed(RegistrationKey, 10);
+        cache.Seed(RegistrationKey, 10L);
 
         Result result = await sut.CheckRegistrationRateLimitAsync(TestIp);
 
@@ -188,7 +188,7 @@ public sealed class LoginProtectionServiceTests
 
         await sut.IncrementRegistrationCountAsync(TestIp);
 
-        cache.Values[RegistrationKey].Should().Be(1);
+        cache.Values[RegistrationKey].Should().Be(1L);
         cache.Ttls[RegistrationKey].Should().Be(TimeSpan.FromMinutes(60));
     }
 
@@ -196,12 +196,73 @@ public sealed class LoginProtectionServiceTests
     public async Task IncrementRegistrationCountAsync_ExistingCount_IncrementsAndRefreshesWindow()
     {
         var (sut, cache) = CreateSut(registrationRateLimitWindowMinutes: 45);
-        cache.Seed(RegistrationKey, 2);
+        cache.Seed(RegistrationKey, 2L);
 
         await sut.IncrementRegistrationCountAsync(TestIp);
 
-        cache.Values[RegistrationKey].Should().Be(3);
+        cache.Values[RegistrationKey].Should().Be(3L);
         cache.Ttls[RegistrationKey].Should().Be(TimeSpan.FromMinutes(45));
+    }
+
+    // ── Identity normalization ──
+    // The counters must key off the same normalized address the user lookup resolves against.
+    // Keying off raw request input let an attacker reset the ADR-029 backoff by varying case or
+    // padding the address with whitespace: every variant got its own counter and lockout while
+    // still targeting one account.
+    [Theory]
+    [InlineData("User@Example.com")]
+    [InlineData("USER@EXAMPLE.COM")]
+    [InlineData("  user@example.com  ")]
+    public async Task IncrementFailedAttemptsAsync_EmailVariants_ShareOneAttemptCounter(string variant)
+    {
+        var (sut, cache) = CreateSut(maxFailedAttempts: 5);
+        cache.Seed(AttemptsKey, 3L);
+
+        await sut.IncrementFailedAttemptsAsync(variant);
+
+        cache.Values[AttemptsKey].Should().Be(4L, "the variant must not get its own counter");
+        cache.Values.Should().HaveCount(1);
+    }
+
+    [Theory]
+    [InlineData("User@Example.com")]
+    [InlineData("USER@EXAMPLE.COM")]
+    [InlineData("  user@example.com  ")]
+    public async Task CheckLockoutAsync_EmailVariants_SeeTheSameLockout(string variant)
+    {
+        var (sut, cache) = CreateSut();
+        cache.Seed(LockoutKey, true);
+
+        Result result = await sut.CheckLockoutAsync(variant);
+
+        result.IsFailure.Should().BeTrue("a lockout recorded for the normalized address applies to every variant");
+    }
+
+    [Fact]
+    public async Task ResetFailedAttemptsAsync_EmailVariant_ClearsTheNormalizedKeys()
+    {
+        var (sut, cache) = CreateSut();
+        cache.Seed(AttemptsKey, 6L);
+        cache.Seed(LockoutKey, true);
+
+        await sut.ResetFailedAttemptsAsync("User@Example.COM");
+
+        cache.Values.Should().NotContainKey(AttemptsKey);
+        cache.Values.Should().NotContainKey(LockoutKey);
+    }
+
+    [Fact]
+    public async Task IncrementFailedAttemptsAsync_MalformedEmail_StillCollapsesVariantsOntoOneKey()
+    {
+        // A malformed address never matches a user, but it still increments a counter; the
+        // trim-and-lowercase fallback keeps its variants on one key rather than one key each.
+        var (sut, cache) = CreateSut();
+
+        await sut.IncrementFailedAttemptsAsync("Not-An-Email");
+        await sut.IncrementFailedAttemptsAsync("  not-an-email  ");
+
+        cache.Values["login:attempts:not-an-email"].Should().Be(2L);
+        cache.Values.Should().HaveCount(1);
     }
 
     // ── Helpers ──
