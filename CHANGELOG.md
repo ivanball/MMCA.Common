@@ -6,8 +6,135 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
-Additive feature work extracted from the MMCA.Store Sales consistency-guards PR (Store #39). No
-breaking changes and no public API removed.
+## [1.125.0] - 2026-07-24
+
+Correctness release from a review of the MMCA.Common and MMCA.ADC codebases, plus additive feature
+work extracted from the MMCA.Store Sales consistency-guards PR (Store #39). No public API is removed,
+but **three fixes change behavior at the API edge** and are called out under Changed below: the
+ownership filter now denies by default, unparseable filter values are rejected instead of ignored,
+and only successful responses are cached for idempotent replay.
+
+### Security
+- **Login lockout could be bypassed by changing an email's capitalization (ADR-029).**
+  `LoginProtectionService` built its `login:lockout:` and `login:attempts:` keys from the raw request
+  string while the user lookup resolved through the `Email` value object (trim + lowercase), so
+  `User@x.com`, `user@x.com`, and a padded variant targeted one account but got three independent
+  counters and lockouts: cycling capitalization reset the exponential backoff indefinitely. Keys now
+  route through the same normalization, with a trim-and-lowercase fallback for malformed addresses
+  (which never match a user but still increment a counter).
+- **Idempotency keys were global, so one caller's response could be replayed to another (ADR-017).**
+  The cache key was `idempotency:{client-supplied header}` and nothing else, so two callers choosing
+  the same value shared an entry and one user's serialized response body was served to the other;
+  with services sharing a cache instance the collision also crossed endpoints and services. The key
+  is now `SHA-256(subject | method | route template | client key)`, where subject is the `user_id`
+  claim or `anon:{remote address}`.
+- **The ownership filter failed open (ADR-033).** `OwnerOrAdminFilter` called `next()` whenever the
+  owner parameter could not be resolved (absent, non-int, or inside a bound model), so it silently
+  stopped guarding any action whose parameter was optional or non-integer. It now denies by default;
+  see Changed.
+
+### Fixed
+- **Domain events raised by an in-process handler were silently discarded (ADR-003).** The post-dispatch
+  cleanup cleared each aggregate's event list wholesale, which also wiped anything a handler raised on
+  that same aggregate during dispatch: those events arrived after the capture and were removed before
+  any later capture could see them, so they never dispatched and never reached the outbox. Capture now
+  snapshots each aggregate's events and removes exactly those, via the new
+  `IAggregateRoot.RemoveDomainEvents`.
+- **An execution-strategy retry duplicated inserts and outbox rows (ADR-003).**
+  `ExecuteInTransactionAsync` re-runs its delegate against the same cached `DbContext` instances, so
+  entities added by a failed attempt were still `Added` and were inserted again, and because capture
+  runs on every `SavingChanges` pass while events are cleared only after a successful save, each
+  attempt appended another outbox row per event: one transient SQL failure published every integration
+  event twice. Retries now reset the change tracker, and an abandoned capture's staged rows are
+  discarded.
+- **A save could throw "Collection was modified".** `DbContextFactory` enumerated its context
+  dictionary while each save dispatched domain events in-process; a handler reaching a
+  not-yet-materialized data source calls `GetDbContext`, which writes into that dictionary mid-loop.
+  Every enumeration now works from a snapshot, and `SaveChangesAsync` re-loops (bounded) so a context
+  materialized during the save is still saved rather than skipped.
+- **Prefix cache invalidation could miss a live entry (ADR-026).** `MemoryCacheService` removed a key
+  from its tracking table on *every* eviction reason, but `IMemoryCache` queues post-eviction callbacks
+  to the thread pool, so overwriting a live key could delete the tracking record for the entry that
+  just replaced it. The entry stayed cached but invisible to `RemoveByPrefixAsync`, clearable only by
+  its TTL. The callback now skips `EvictionReason.Replaced`.
+- **A renamed filter property was validated and then silently dropped (ADR-034).** `ApplyFilters` fell
+  back to the DTO property name while `ValidateFilters` fell back to the mapped entity name, so a plain
+  `DTOToEntityPropertyMap` rename passed validation and was then skipped, returning an *unfiltered*
+  result set with a 200. Both now share one resolver.
+- **Pagination edges.** A page number near `int.MaxValue` overflowed the checked 32-bit Skip offset into
+  a 500 instead of the empty page it describes (now 64-bit and range-checked); an unpaginated read
+  reported the 1000-row safety cap as `TotalItemCount`, claiming the set was exactly that size (now
+  counts only when the materialized rows reach the cap); and `PaginationMetadata.PageSize` reported the
+  requested size rather than the clamped one the pipeline applied.
+- **`IsInRole` saw only the first role claim.** It compared against `ICurrentUserService.Role`, so a
+  principal holding several roles failed the check for all but whichever was listed first. Latent while
+  tokens carry one role, and it would have surfaced as a silent authorization denial. Added
+  `ICurrentUserService.Roles` (default interface member) and redefined `IsInRole` over it.
+- **The outbox processor burned retries on shutdown (ADR-003).** Its general `catch` also caught the
+  cancellation raised at host shutdown, incrementing `RetryCount` and stamping `LastError` on the whole
+  remainder of the batch, so a graceful restart could dead-letter messages never actually attempted.
+- **The keyed by-id fast path was unreachable (ADR-034).** `IsPrimaryKeyOnlyLookup` treated `includeFKs`
+  as disqualifying while `EntityControllerBase.GetByIdAsync` defaults it to `true`, so every REST by-id
+  read fell through to the dynamic-filter pipeline (parsed string predicate, `TOP 1000`, client-side
+  `FirstOrDefault`) where a keyed `TOP 1 WHERE Id = @id` would do.
+- **The query-cache lock table could grow without bound.** Its comment claimed it was bounded by the set
+  of distinct cache keys, which holds only for parameterless keys; any `CacheKey` embedding a user id or
+  filter value grew it indefinitely. Both it and the idempotency lock now use the new striped lock.
+
+### Added
+- **`KeyedSemaphoreStripe` (Shared).** Fixed-width per-key lock. Replaces the one-semaphore-per-key
+  dictionary, which forced a choice between two defects: removing the entry when the last holder
+  releases lets one caller wait on a semaphore no longer in the table while a second creates a fresh one
+  (both then execute, defeating the lock), and never removing it grows the table without bound.
+- **`[AllowMissingOwner]` (API).** Explicit opt-out from the ownership filter's deny-by-default, for
+  actions guarded another way (a row-scoping specification, or their own policy). The attribute is an
+  assertion, so each application site must name the guard that replaces the check.
+- **`ICacheService.IncrementAsync`.** Default interface member (no implementer breaks) with a Redis
+  `INCR` override, for counters whose read-modify-write could lose concurrent increments.
+- **`IFilterStrategy.CanParseValue`.** Default interface member returning `true`, implemented by the six
+  value-type strategies, so custom strategies are unaffected until they opt in.
+- **`Cache:KeyPrefix` (`CacheKeyPrefixOptions`).** Optional namespace for services sharing one cache
+  instance. Deliberately applied inside `DistributedCacheService` rather than through
+  `RedisCacheOptions.InstanceName`, which sits below this abstraction where `RemoveByPrefixAsync`'s SCAN
+  cannot see it and would silently evict nothing.
+- **`IWriteRepository.ExecuteUpdateAsync` set-based conditional update (Application + Infrastructure).**
+  Symmetric counterpart to `ExecuteDeleteAsync`: one atomic `UPDATE ... SET ... WHERE ...` through the
+  repository abstraction, intended for contention-proof conditional updates (stock decrements, quota
+  claims) where zero rows affected means the guard did not hold and the database arbitrates races. The
+  SET clause is described through the new EF-free `IUpdatePropertySetter<TEntity>` builder (fixed
+  values or expressions over the current row), translated to EF Core `SetPropertyCalls` by the new
+  `UpdatePropertySetterBuilder`. Global query filters (soft delete) apply to the WHERE; domain events
+  are bypassed (as with `ExecuteDeleteAsync`); `LastModifiedOn`/`LastModifiedBy` are stamped
+  automatically (TimeProvider clock + `ICurrentUserService` when available) unless set explicitly.
+- **`ConcurrencyTokenRequest` (Shared).** Reusable request body for lifecycle/state-transition
+  endpoints whose only payload is the ADR-035 optimistic-concurrency token: bind as an optional body
+  (`EmptyBodyBehavior.Allow`) so body-less callers skip the stale-view check. Replaces per-app copies
+  (Store's `OrderTransitionRequest`, ADC's lifecycle equivalents) at the next consumer sweep.
+- **`PeriodicBackgroundService` (Infrastructure).** Base class for fixed-interval background sweeps:
+  enablement gate, TimeProvider-driven startup delay + interval waits (deterministic in tests via
+  `FakeTimeProvider`), and a failing cycle that is logged without killing the loop. For reconciliation
+  and cleanup work (e.g. Store's stuck-payment sweep); deliberately not used by the signal-driven
+  outbox processor.
+
+### Changed
+Three edge-visible behavior changes. Each replaces a fail-open default; review consumer endpoints
+against them.
+
+- **The ownership filter denies by default (ADR-033).** An action guarded by
+  `[ServiceFilter(typeof(OwnerOrAdminFilter))]` whose owner parameter cannot be resolved is now
+  rejected instead of allowed through. Because the filter is usually applied at controller level, this
+  covers every action on that controller, including ones inherited from the entity controller bases.
+  Audit them and mark the ones guarded another way with `[AllowMissingOwner]`.
+- **An unparseable filter value is a 400 (ADR-034).** `?filter=id:equals:abc` previously returned the
+  whole (capped) result set because the strategy could not parse the value and silently applied no
+  predicate. Validation now rejects it with `Filter.Value.Invalid`.
+- **Only 2xx responses are cached for idempotent replay (ADR-017).** Any `ObjectResult` used to be
+  cached, including ProblemDetails failures, so a client retrying after a transient 500 kept receiving
+  that 500 for the full 24-hour window instead of the retry executing.
+
+### Notes
+`IAggregateRoot` gains `RemoveDomainEvents`. The only implementer across all four repos is
+`AuditableAggregateRootEntity`, so every aggregate inherits it and no consumer change is required.
 
 ### Added
 - **`IWriteRepository.ExecuteUpdateAsync` set-based conditional update (Application + Infrastructure).**
