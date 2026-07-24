@@ -206,4 +206,68 @@ public class DistributedCacheServiceTests
 
         dbMock.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
+
+    // ── IncrementAsync must stay inside IDistributedCache's storage format ──
+    // StackExchangeRedisCache stores every entry as a Redis HASH (absexp/sldexp/data, read with
+    // HMGET). A Redis INCR fast path writes a STRING at the same key, so the next read of that
+    // counter fails with WRONGTYPE and surfaces as a 500 on whatever endpoint owns it: registration
+    // and login, for the ADR-029 counters. The counter has to be written the same way it is read.
+    [Fact]
+    public async Task IncrementAsync_PersistsThroughTheDistributedCache_SoItCanBeReadBack()
+    {
+        var cacheMock = new Mock<IDistributedCache>();
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var sut = new DistributedCacheService(cacheMock.Object, NullLog, connectionMock.Object);
+
+        cacheMock.Setup(c => c.GetAsync("counter", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((byte[]?)null);
+
+        var value = await sut.IncrementAsync("counter", TimeSpan.FromMinutes(30));
+
+        value.Should().Be(1);
+        cacheMock.Verify(
+            c => c.SetAsync("counter", It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the counter must be written through IDistributedCache, not straight to a Redis string");
+        connectionMock.Verify(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>()), Times.Never,
+            "bypassing IDistributedCache writes a value its own reader cannot parse");
+    }
+
+    [Fact]
+    public async Task IncrementAsync_RoundTripsWithGetAsync()
+    {
+        // The real failure was a write the matching read could not consume, so assert the pair.
+        var cacheMock = new Mock<IDistributedCache>();
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var sut = new DistributedCacheService(cacheMock.Object, NullLog, connectionMock.Object);
+
+        byte[]? stored = null;
+        cacheMock.Setup(c => c.GetAsync("counter", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => stored);
+        cacheMock.Setup(c => c.SetAsync("counter", It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<string, byte[], DistributedCacheEntryOptions, CancellationToken>((_, bytes, _, _) => stored = bytes)
+            .Returns(Task.CompletedTask);
+
+        await sut.IncrementAsync("counter", TimeSpan.FromMinutes(30));
+        await sut.IncrementAsync("counter", TimeSpan.FromMinutes(30));
+
+        (await sut.GetAsync<long?>("counter")).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task IncrementAsync_AppliesTheKeyNamespaceConsistentlyWithGetAsync()
+    {
+        var cacheMock = new Mock<IDistributedCache>();
+        var sut = new DistributedCacheService(
+            cacheMock.Object, NullLog, connectionMultiplexer: null, new CacheKeyNamespace("svc:"));
+
+        cacheMock.Setup(c => c.GetAsync("svc:counter", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((byte[]?)null);
+
+        await sut.IncrementAsync("counter", TimeSpan.FromMinutes(30));
+
+        cacheMock.Verify(
+            c => c.SetAsync("svc:counter", It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

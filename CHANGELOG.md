@@ -6,6 +6,30 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.125.2] - 2026-07-24
+
+Patch fixing a regression introduced by `ICacheService.IncrementAsync` in 1.125.0.
+**Consumers must take this instead of 1.125.0 or 1.125.1.** Those two versions break registration
+and login on any host backed by Redis.
+
+### Fixed
+- **The Redis `INCR` fast path wrote a value its own reader could not parse.**
+  `DistributedCacheService.IncrementAsync` used `StringIncrementAsync`, which writes a Redis
+  **string**, while `StackExchangeRedisCache` stores every entry as a Redis **hash** (`absexp` /
+  `sldexp` / `data`, read back with `HMGET`). The first increment created a string at the counter's
+  key; the next read of that key failed with `WRONGTYPE`, which surfaced as a 500 on the endpoint
+  owning the counter. In practice that is **registration** (`CheckRegistrationRateLimitAsync` reads
+  the per-IP counter before every sign-up) and the ADR-029 **login lockout** counters. A host using
+  the in-memory cache was unaffected, which is why the framework's own tests and CI stayed green;
+  MMCA.ADC's end-to-end suite caught it, failing every registration after the first.
+
+  `IncrementAsync` now goes through `IDistributedCache` for both the read and the write, so the
+  counter is stored the same way it is read. It is therefore a read-modify-write again and can
+  undercount under genuinely concurrent increments; for a brute-force counter a rare lost increment
+  is a much smaller problem than the counter being unreadable. Restoring atomicity means either
+  running the whole update as one Lua script against the hash layout, or moving counters out of
+  `IDistributedCache` so both sides speak Redis strings.
+
 ## [1.125.1] - 2026-07-24
 
 Patch fixing a regression introduced by the `ICurrentUserService.Roles` addition in 1.125.0.
