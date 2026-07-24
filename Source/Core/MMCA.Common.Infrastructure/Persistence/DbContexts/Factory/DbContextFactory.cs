@@ -22,6 +22,13 @@ public sealed class DbContextFactory(
     ICurrentUserService currentUserService
 ) : IDbContextFactory
 {
+    /// <summary>
+    /// Bound on the save re-loop in <see cref="SaveChangesAsync"/>. Two passes cover the realistic
+    /// case (a handler touching one further source); the third is slack before giving up rather
+    /// than spinning.
+    /// </summary>
+    private const int MaxSavePasses = 3;
+
     private readonly IPhysicalDbContextFactory _physicalDbContextFactory = physicalDbContextFactory ?? throw new ArgumentNullException(nameof(physicalDbContextFactory));
     private readonly IEntityDataSourceRegistry _entityDataSourceRegistry = entityDataSourceRegistry ?? throw new ArgumentNullException(nameof(entityDataSourceRegistry));
     private readonly IDataSourceResolver _dataSourceResolver = dataSourceResolver ?? throw new ArgumentNullException(nameof(dataSourceResolver));
@@ -105,15 +112,26 @@ public sealed class DbContextFactory(
         _identityInsertRequested = false;
 
         var result = 0;
-        foreach (var context in _dbContexts.Values)
-        {
-            if (!identityInsertRequested || context is not SQLServerDbContext)
-            {
-                result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
-                continue;
-            }
+        var saved = new HashSet<ApplicationDbContext>();
 
-            result += await SaveWithIdentityInsertAsync(context, cancellationToken).ConfigureAwait(false);
+        // Snapshot before iterating: saving dispatches domain events in-process, and a handler that
+        // resolves a repository for a source not yet materialized calls GetDbContext, which adds to
+        // _dbContexts mid-enumeration. Re-loop so a context created that way is still saved; the
+        // bound stops a handler that keeps creating work from looping forever.
+        for (var pass = 0; pass < MaxSavePasses; pass++)
+        {
+            var pending = _dbContexts.Values.Where(c => !saved.Contains(c)).ToArray();
+            if (pending.Length == 0)
+                break;
+
+            foreach (var context in pending)
+            {
+                saved.Add(context);
+
+                result += !identityInsertRequested || context is not SQLServerDbContext
+                    ? await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false)
+                    : await SaveWithIdentityInsertAsync(context, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         return result;
@@ -243,7 +261,9 @@ public sealed class DbContextFactory(
     public int SaveChanges()
     {
         var result = 0;
-        foreach (var context in _dbContexts.Values)
+        // Snapshot: see the async overload. The sync path cannot dispatch in-process, but a
+        // handler is not the only thing that can materialize a context mid-loop.
+        foreach (var context in _dbContexts.Values.ToArray())
             result += context.SaveChanges(_currentUserService.UserId);
         return result;
     }
@@ -251,27 +271,27 @@ public sealed class DbContextFactory(
     public void BeginTransaction()
     {
         _transactionActive = true;
-        foreach (var context in _dbContexts.Values.Where(SupportsTransactions))
+        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).ToArray())
             context.Database.BeginTransaction();
     }
 
     public void CommitTransaction()
     {
         _transactionActive = false;
-        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction))
+        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction).ToArray())
             context.Database.CommitTransaction();
     }
 
     public void RollbackTransaction()
     {
         _transactionActive = false;
-        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction))
+        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction).ToArray())
             context.Database.RollbackTransaction();
 
         // The aggregate changes and their outbox rows just rolled back; any event dispatch
         // deferred for this transaction must never run (and must not survive into an
         // execution-strategy retry of the same operation).
-        foreach (var context in _dbContexts.Values)
+        foreach (var context in _dbContexts.Values.ToArray())
             DomainEventSaveChangesInterceptor.DropDeferred(context);
     }
 
@@ -292,6 +312,13 @@ public sealed class DbContextFactory(
     /// <paramref name="operation"/> wholesale on transient failures — cannot dispatch the same
     /// events once per attempt: rollback drops the aborted attempt's deferred work.
     /// </para>
+    /// <para>
+    /// Each retry also starts from a clean change tracker. The strategy re-runs the delegate
+    /// against the same cached context instances, so entities the failed attempt added are still
+    /// Added; without the reset the retry would add them a second time and insert duplicates
+    /// (along with a duplicate outbox row per event). Clearing is safe because the delegate
+    /// re-executes wholesale and re-reads whatever it needs.
+    /// </para>
     /// </remarks>
     public async Task<TResult> ExecuteInTransactionAsync<TResult>(
         Func<CancellationToken, Task<TResult>> operation,
@@ -303,9 +330,13 @@ public sealed class DbContextFactory(
         var context = _dbContexts.Values.FirstOrDefault(SupportsTransactions)
             ?? GetDbContext(DataSource.SQLServer);
 
+        var attempt = 0;
         var strategy = context.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async ct =>
         {
+            if (attempt++ > 0)
+                ResetForRetry();
+
             BeginTransaction();
             try
             {
@@ -323,8 +354,9 @@ public sealed class DbContextFactory(
                 CommitTransaction();
 
                 // Deliver events only now that the data is durable: in-process handlers must
-                // never act on state that could still roll back.
-                foreach (var committedContext in _dbContexts.Values)
+                // never act on state that could still roll back. Snapshot first: a handler that
+                // reaches a not-yet-materialized source adds to _dbContexts while we enumerate.
+                foreach (var committedContext in _dbContexts.Values.ToArray())
                 {
                     await DomainEventSaveChangesInterceptor.FlushDeferredAsync(committedContext, ct)
                         .ConfigureAwait(false);
@@ -343,7 +375,7 @@ public sealed class DbContextFactory(
                 catch
                 {
                     _transactionActive = false;
-                    foreach (var abortedContext in _dbContexts.Values)
+                    foreach (var abortedContext in _dbContexts.Values.ToArray())
                         DomainEventSaveChangesInterceptor.DropDeferred(abortedContext);
                 }
 
@@ -377,6 +409,20 @@ public sealed class DbContextFactory(
     }
 
     /// <summary>
+    /// Discards everything the previous, aborted attempt left behind before the execution strategy
+    /// re-runs the operation: tracked entity state (so Added entities are not inserted once per
+    /// attempt) and any deferred event dispatch.
+    /// </summary>
+    private void ResetForRetry()
+    {
+        foreach (var context in _dbContexts.Values.ToArray())
+        {
+            DomainEventSaveChangesInterceptor.DropDeferred(context);
+            context.ChangeTracker.Clear();
+        }
+    }
+
+    /// <summary>
     /// Cosmos DB does not support multi-document transactions via the EF provider;
     /// transaction operations are skipped for Cosmos contexts.
     /// </summary>
@@ -392,7 +438,7 @@ public sealed class DbContextFactory(
         {
             if (disposing)
             {
-                foreach (var context in _dbContexts.Values)
+                foreach (var context in _dbContexts.Values.ToArray())
                     context.Dispose();
                 _dbContexts.Clear();
             }
@@ -404,7 +450,7 @@ public sealed class DbContextFactory(
     {
         if (!_disposed)
         {
-            foreach (var context in _dbContexts.Values)
+            foreach (var context in _dbContexts.Values.ToArray())
                 await context.DisposeAsync().ConfigureAwait(false);
             _dbContexts.Clear();
             _disposed = true;

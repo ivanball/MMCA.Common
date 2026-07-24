@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
@@ -154,6 +155,85 @@ public sealed class DomainEventSaveChangesInterceptorOutboxRoutingTests : IDispo
             Times.Never);
     }
 
+    // ── Events raised by a handler during dispatch survive ──
+    // The flush used to clear the aggregate wholesale, which also discarded anything a handler
+    // raised on that same aggregate mid-dispatch: those events arrived after the capture and were
+    // wiped before any later capture could see them, so they never dispatched and never reached
+    // the outbox. Only the captured events are removed now.
+    [Fact]
+    public async Task SaveChangesAsync_HandlerRaisesAnotherEvent_KeepsItPendingInsteadOfDiscardingIt()
+    {
+        var entity = new TestAggregate { Id = 1, Name = "Test" };
+        var captured = new TestLocalEvent("original");
+        entity.AddDomainEvent(captured);
+        _dbContext.TestAggregates.Add(entity);
+
+        var followUp = new TestLocalEvent("raised-by-handler");
+        _mockDispatcher
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .Callback(() => entity.AddDomainEvent(followUp))
+            .Returns(Task.CompletedTask);
+
+        await _dbContext.SaveChangesAsync();
+
+        entity.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeSameAs(followUp, "the captured event is removed, the handler's is not");
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_EventRaisedDuringDispatch_ReachesTheOutboxOnTheNextSave()
+    {
+        var entity = new TestAggregate { Id = 1, Name = "Test" };
+        entity.AddDomainEvent(new TestLocalEvent("original"));
+        _dbContext.TestAggregates.Add(entity);
+
+        var raisedOnce = false;
+        _mockDispatcher
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                if (raisedOnce)
+                    return;
+                raisedOnce = true;
+                entity.AddDomainEvent(new TestIntegrationEvent());
+            })
+            .Returns(Task.CompletedTask);
+
+        await _dbContext.SaveChangesAsync();
+
+        entity.Name = "Changed";
+        await _dbContext.SaveChangesAsync();
+
+        var rows = await GetOutboxRowsAsync();
+        rows.Should().HaveCount(2, "the handler's integration event must be persisted, not silently dropped");
+        rows.Should().Contain(r => r.EventType.Contains(nameof(TestIntegrationEvent), StringComparison.Ordinal));
+    }
+
+    // ── A capture whose save never completed does not duplicate outbox rows ──
+    // The execution strategy re-runs the whole operation against the same context, so a failed
+    // attempt leaves its outbox rows tracked as Added and its events still on the aggregate.
+    // Re-capturing on top of that used to write a second row per event, so one transient failure
+    // published every integration event twice.
+    [Fact]
+    public async Task SaveChangesAsync_AfterAFailedSave_WritesOneOutboxRowPerEvent()
+    {
+        var entity = new TestAggregate { Id = 1, Name = "Test" };
+        entity.AddDomainEvent(new TestIntegrationEvent());
+        _dbContext.TestAggregates.Add(entity);
+
+        // Force the first save to fail after the interceptor captured and staged its outbox rows.
+        _dbContext.FailNextSave = true;
+        var firstAttempt = async () => await _dbContext.SaveChangesAsync();
+        await firstAttempt.Should().ThrowAsync<DbUpdateException>();
+
+        // The retry re-runs against the same context, with the previous attempt's state intact.
+        _dbContext.FailNextSave = false;
+        await _dbContext.SaveChangesAsync();
+
+        var rows = await GetOutboxRowsAsync();
+        rows.Should().ContainSingle("the abandoned attempt's row must be discarded, not duplicated");
+    }
+
     // ── Test doubles ──
     public sealed record TestLocalEvent(string Data) : BaseDomainEvent;
 
@@ -164,15 +244,45 @@ public sealed class DomainEventSaveChangesInterceptorOutboxRoutingTests : IDispo
         public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>
+    /// Aborts the save after the domain-event interceptor has captured events and staged their
+    /// outbox rows, reproducing the state an execution-strategy retry starts from: rows tracked as
+    /// Added, events still on the aggregate, and <c>SavedChanges</c> never reached.
+    /// </summary>
+    private sealed class FailingSaveInterceptor(OutboxRoutingTestDbContext owner) : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (owner.FailNextSave)
+                throw new DbUpdateException("Simulated transient save failure.");
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
     public sealed class OutboxRoutingTestDbContext : ApplicationDbContext
     {
         public DbSet<TestAggregate> TestAggregates => Set<TestAggregate>();
 
         internal override bool SupportsOutbox => true;
 
+        /// <summary>When set, the next save aborts after event capture. See <see cref="FailingSaveInterceptor"/>.</summary>
+        public bool FailNextSave { get; set; }
+
         private OutboxRoutingTestDbContext(DbContextOptions<OutboxRoutingTestDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            // base registers the audit and domain-event interceptors; appending after it means
+            // this one runs last, so the capture has already happened when it throws.
+            base.OnConfiguring(optionsBuilder);
+            optionsBuilder.AddInterceptors(new FailingSaveInterceptor(this));
         }
 
         public static OutboxRoutingTestDbContext Create(DomainEventSaveChangesInterceptor domainEventInterceptor)

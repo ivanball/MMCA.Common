@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using MMCA.Common.Infrastructure.Caching;
@@ -111,6 +112,58 @@ public sealed class MemoryCacheServiceTests : IDisposable
     {
         await _sut.SetAsync("other:1", "val");
         await FluentActions.Invoking(() => _sut.RemoveByPrefixAsync("missing:"))
+            .Should().NotThrowAsync();
+    }
+
+    // ── Overwriting a key must not lose its prefix-eviction tracking ──
+    // IMemoryCache queues post-eviction callbacks to the thread pool, so overwriting a live key
+    // fires the OLD entry's callback asynchronously. When that callback removed the key
+    // unconditionally it could land after the replacement was tracked, deleting the record for an
+    // entry that was still cached: live in the cache, invisible to RemoveByPrefixAsync, and
+    // clearable only by its TTL.
+    [Fact]
+    public async Task RemoveByPrefixAsync_AfterOverwritingAKey_StillEvictsIt()
+    {
+        await _sut.SetAsync("product:1", "first");
+        await _sut.SetAsync("product:1", "second");
+
+        // Give any queued post-eviction callback from the overwrite time to run.
+        await Task.Delay(100);
+
+        await _sut.RemoveByPrefixAsync("product:");
+
+        (await _sut.GetAsync<string>("product:1")).Should().BeNull(
+            "the replacement entry must remain tracked for prefix eviction");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_AfterRepeatedOverwrites_StillEvictsEveryKey()
+    {
+        foreach (var round in Enumerable.Range(0, 20))
+        {
+            await _sut.SetAsync("product:1", $"value-{round.ToString(CultureInfo.InvariantCulture)}");
+            await _sut.SetAsync("product:2", $"value-{round.ToString(CultureInfo.InvariantCulture)}");
+        }
+
+        await Task.Delay(100);
+
+        await _sut.RemoveByPrefixAsync("product:");
+
+        (await _sut.GetAsync<string>("product:1")).Should().BeNull();
+        (await _sut.GetAsync<string>("product:2")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_AfterExpiry_DoesNotResurrectTracking()
+    {
+        // The callback must still clean up on a genuine eviction; only Replaced is exempt.
+        await _sut.SetAsync("product:1", "value", TimeSpan.FromMilliseconds(1));
+        await Task.Delay(150);
+
+        // Touch the cache so MemoryCache processes the expiry.
+        (await _sut.GetAsync<string>("product:1")).Should().BeNull();
+
+        await FluentActions.Invoking(() => _sut.RemoveByPrefixAsync("product:"))
             .Should().NotThrowAsync();
     }
 }

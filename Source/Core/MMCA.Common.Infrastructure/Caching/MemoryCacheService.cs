@@ -46,12 +46,22 @@ internal sealed class MemoryCacheService(IMemoryCache cache) : ICacheService
             options.AbsoluteExpirationRelativeToNow = expiration;
         }
 
-        // Keep _keys in sync: remove the key when evicted (expiration, capacity pressure, or manual removal).
-        options.RegisterPostEvictionCallback((evictedKey, _, _, _) =>
-            _keys.TryRemove(evictedKey.ToString()!, out _));
+        // Keep _keys in sync: remove the key when evicted (expiration, capacity pressure, or manual
+        // removal). Replacement is deliberately excluded. IMemoryCache queues post-eviction
+        // callbacks to the thread pool, so overwriting a live key fires the OLD entry's callback
+        // asynchronously; it could land after the TryAdd below and delete the tracking record for
+        // the entry that just replaced it. The entry would then be live in the cache but invisible
+        // to RemoveByPrefixAsync, leaving a stale value that only its TTL could clear.
+        options.RegisterPostEvictionCallback((evictedKey, _, reason, _) =>
+        {
+            if (reason != EvictionReason.Replaced)
+                _keys.TryRemove(evictedKey.ToString()!, out _);
+        });
 
-        cache.Set(key, value, options);
+        // Track before writing so a concurrent RemoveByPrefixAsync cannot observe a cached entry
+        // that is not yet in the table.
         _keys.TryAdd(key, 0);
+        cache.Set(key, value, options);
 
         return Task.CompletedTask;
     }
