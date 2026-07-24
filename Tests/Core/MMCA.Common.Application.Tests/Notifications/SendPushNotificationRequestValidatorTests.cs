@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 using MMCA.Common.Domain.Notifications.PushNotifications.Invariants;
@@ -30,7 +31,7 @@ public sealed class SendPushNotificationRequestValidatorTests
         TestValidationResult<SendPushNotificationRequest> result = _validator.TestValidate(request);
 
         result.ShouldHaveValidationErrorFor(x => x.Title)
-            .WithErrorMessage($"Notification title cannot exceed {PushNotificationInvariants.TitleMaxLength} characters.");
+            .WithErrorMessage(string.Create(CultureInfo.InvariantCulture, $"Notification title cannot exceed {PushNotificationInvariants.TitleMaxLength} characters."));
     }
 
     [Fact]
@@ -65,7 +66,7 @@ public sealed class SendPushNotificationRequestValidatorTests
         TestValidationResult<SendPushNotificationRequest> result = _validator.TestValidate(request);
 
         result.ShouldHaveValidationErrorFor(x => x.Body)
-            .WithErrorMessage($"Notification body cannot exceed {PushNotificationInvariants.BodyMaxLength} characters.");
+            .WithErrorMessage(string.Create(CultureInfo.InvariantCulture, $"Notification body cannot exceed {PushNotificationInvariants.BodyMaxLength} characters."));
     }
 
     [Fact]
