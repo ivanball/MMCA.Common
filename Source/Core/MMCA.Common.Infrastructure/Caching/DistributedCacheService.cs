@@ -101,30 +101,30 @@ internal sealed partial class DistributedCacheService(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Uses Redis <c>INCR</c> when a multiplexer is available, so concurrent increments cannot
-    /// overwrite each other (the interface default is a read-modify-write and undercounts under
-    /// load, which for a brute-force counter means attempts that never reach the lockout
-    /// threshold). The TTL is applied only when the counter is created, so the window stays
-    /// anchored to the first attempt rather than sliding on every increment. Without a
-    /// multiplexer, falls back to the interface default.
+    /// Deliberately goes through <see cref="IDistributedCache"/> rather than Redis <c>INCR</c>.
+    /// <para>
+    /// <c>INCR</c> would be atomic, which is what this member was added for, but it writes a Redis
+    /// <b>string</b> while <c>StackExchangeRedisCache</c> stores every entry as a Redis <b>hash</b>
+    /// (<c>absexp</c> / <c>sldexp</c> / <c>data</c> fields, read back with <c>HMGET</c>). Mixing the
+    /// two at one key means the next read of that counter fails with <c>WRONGTYPE</c>, which
+    /// surfaces as a 500 on whatever endpoint owns the counter: registration and login in the
+    /// ADR-029 case. The counter has to live in the same storage format as the reads that consult
+    /// it.
+    /// </para>
+    /// <para>
+    /// So this is a read-modify-write and can undercount under genuinely concurrent increments. For
+    /// the brute-force and rate-limit counters this backs, an occasional lost increment is a far
+    /// smaller problem than the counter being unreadable. Making it atomic again means either
+    /// running the whole read-modify-write in one Lua script against the hash layout, or moving
+    /// counters out of <see cref="IDistributedCache"/> entirely so both sides speak Redis strings.
+    /// </para>
     /// </remarks>
     public async Task<long> IncrementAsync(string key, TimeSpan expiration, CancellationToken cancellationToken = default)
     {
-        if (connectionMultiplexer is null)
-        {
-            var current = await GetAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
-            var fallback = current + 1;
-            await SetAsync(key, fallback, expiration, cancellationToken).ConfigureAwait(false);
-            return fallback;
-        }
-
-        var db = connectionMultiplexer.GetDatabase();
-        var value = await db.StringIncrementAsync(_keys.Qualify(key)).ConfigureAwait(false);
-
-        if (value == 1)
-            await db.KeyExpireAsync(_keys.Qualify(key), expiration).ConfigureAwait(false);
-
-        return value;
+        var current = await GetAsync<long?>(key, cancellationToken).ConfigureAwait(false) ?? 0;
+        var next = current + 1;
+        await SetAsync(key, next, expiration, cancellationToken).ConfigureAwait(false);
+        return next;
     }
 
     private static T Deserialize<T>(byte[] bytes)
