@@ -196,6 +196,30 @@ public interface IWriteRepository<TEntity, TIdentifierType>
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Executes a set-based UPDATE directly in the database, bypassing change tracking:
+    /// <c>UPDATE ... SET ... WHERE ...</c> as one atomic statement. The intended use is
+    /// contention-proof conditional updates (e.g. a stock decrement guarded by
+    /// <c>AvailableQuantity &gt;= @qty</c> in <paramref name="where"/>): zero rows affected
+    /// means the condition did not hold, and two racing callers can never both win, with no
+    /// rowversion retry loop, because the database itself arbitrates.
+    /// <para>
+    /// WARNING: bypasses domain events. Global query filters (soft delete) DO apply to
+    /// <paramref name="where"/>. Audit fields are NOT bypassed: <c>LastModifiedOn</c> and
+    /// <c>LastModifiedBy</c> are stamped automatically unless the caller sets them explicitly.
+    /// Runs on the ambient transaction when one is active (see
+    /// <c>IUnitOfWork.ExecuteInTransactionAsync</c>), so decrements roll back with the caller.
+    /// </para>
+    /// </summary>
+    /// <param name="where">A predicate selecting (and guarding) the rows to update.</param>
+    /// <param name="setProperties">Builder describing the properties to set.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of rows updated (0 = the guard condition matched no row).</returns>
+    Task<int> ExecuteUpdateAsync(
+        Expression<Func<TEntity, bool>> where,
+        Action<IUpdatePropertySetter<TEntity>> setProperties,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Synchronous save. Prefer <see cref="SaveChangesAsync"/> in async code paths.</summary>
     /// <returns>The number of state entries written.</returns>
     int Save();

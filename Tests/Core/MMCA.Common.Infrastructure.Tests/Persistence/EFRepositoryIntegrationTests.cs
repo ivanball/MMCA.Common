@@ -1,8 +1,11 @@
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
+using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
+using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
 
@@ -456,13 +459,104 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
             .Should().BeSameAs(original, because: "legacy clients that send no token skip the concurrency check, matching the aggregate-typed overload's contract");
     }
 
+    // ── ExecuteUpdateAsync (set-based conditional update) ──
+    [Fact]
+    public async Task ExecuteUpdateAsync_UpdatesMatchingRows_AndAutoStampsAudit()
+    {
+        var fakeTime = new FakeTimeProvider(new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero));
+        var currentUser = new Mock<ICurrentUserService>();
+        currentUser.SetupGet(u => u.UserId).Returns(42);
+        var sut = new EFRepository<TestEntity, int>(_context, fakeTime, currentUser.Object);
+
+        _context.Add(TestEntity.Create(1, "before"));
+        _context.Add(TestEntity.Create(2, "untouched"));
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        var affected = await sut.ExecuteUpdateAsync(
+            e => e.Id == 1,
+            setters => setters.Set(e => e.Name, "after"));
+
+        affected.Should().Be(1);
+        var updated = await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1);
+        updated.Name.Should().Be("after");
+        updated.LastModifiedOn.Should().Be(fakeTime.GetUtcNow().UtcDateTime,
+            because: "ExecuteUpdate bypasses the audit interceptor, so the repository stamps LastModifiedOn itself");
+        updated.LastModifiedBy.Should().Be(42,
+            because: "the current user is stamped when an ICurrentUserService is available");
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 2)).Name.Should().Be("untouched");
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_ConditionalCounterDecrement_ZeroRowsWhenGuardFails()
+    {
+        _context.Add(TestEntity.Create(1, "stock", counter: 1));
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        // First conditional decrement wins.
+        var first = await _sut.ExecuteUpdateAsync(
+            e => e.Id == 1 && e.Counter >= 1,
+            setters => setters.Set(e => e.Counter, e => e.Counter - 1));
+
+        // Second decrement finds no row satisfying the guard: the database arbitrated the race.
+        var second = await _sut.ExecuteUpdateAsync(
+            e => e.Id == 1 && e.Counter >= 1,
+            setters => setters.Set(e => e.Counter, e => e.Counter - 1));
+
+        first.Should().Be(1);
+        second.Should().Be(0, because: "zero rows affected is the insufficient-stock signal");
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1)).Counter
+            .Should().Be(0, because: "the counter must never go below the guard");
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_ExplicitAuditValue_IsNotOverwritten()
+    {
+        var fakeTime = new FakeTimeProvider(new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero));
+        var sut = new EFRepository<TestEntity, int>(_context, fakeTime);
+        var explicitStamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        _context.Add(TestEntity.Create(1, "x"));
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        await sut.ExecuteUpdateAsync(
+            e => e.Id == 1,
+            setters => setters
+                .Set(e => e.Name, "y")
+                .Set(e => e.LastModifiedOn, (DateTime?)explicitStamp));
+
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1)).LastModifiedOn
+            .Should().Be(explicitStamp, because: "a caller-supplied audit value wins over the automatic stamp");
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_WithoutSetters_Throws()
+    {
+        var act = () => _sut.ExecuteUpdateAsync(e => e.Id == 1, _ => { });
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_NullArguments_Throw()
+    {
+        var actWhere = () => _sut.ExecuteUpdateAsync(null!, s => s.Set(e => e.Name, "x"));
+        var actSetters = () => _sut.ExecuteUpdateAsync(e => true, null!);
+
+        await actWhere.Should().ThrowAsync<ArgumentNullException>();
+        await actSetters.Should().ThrowAsync<ArgumentNullException>();
+    }
+
     // ── Test entity & context ──
     public sealed class TestEntity : AuditableAggregateRootEntity<int>
     {
         public string Name { get; set; } = string.Empty;
 
-        public static TestEntity Create(int id, string name) =>
-            new() { Id = id, Name = name };
+        public int Counter { get; set; }
+
+        public static TestEntity Create(int id, string name, int counter = 0) =>
+            new() { Id = id, Name = name, Counter = counter };
     }
 
     /// <summary>A NON-aggregate child entity (a different CLR type than the repository's TEntity).</summary>
