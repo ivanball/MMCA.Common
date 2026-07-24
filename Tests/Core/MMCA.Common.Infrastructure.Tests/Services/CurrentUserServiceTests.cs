@@ -176,4 +176,84 @@ public sealed class CurrentUserServiceTests
 
         sut.Roles.Should().BeEmpty();
     }
+
+    // ── The default members must tolerate an implementation that returns a null principal ──
+    // Roles and IsInRole are default interface members, so they run against every implementation,
+    // not just the one shipped here. A Moq'd ICurrentUserService returns null for an unconfigured
+    // reference property, which is how consumers write controller tests; dereferencing User there
+    // turned an authorization check into a NullReferenceException. No principal means no roles,
+    // which is also what the previous Role-based implementation returned.
+    [Fact]
+    public void Roles_WhenTheImplementationReturnsANullUser_IsEmpty()
+    {
+        ICurrentUserService sut = new NullUserService();
+
+        sut.Roles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void IsInRole_WhenTheImplementationReturnsANullUser_ReturnsFalse()
+    {
+        ICurrentUserService sut = new NullUserService();
+
+        var act = () => sut.IsInRole("Organizer");
+
+        act.Should().NotThrow().Which.Should().BeFalse();
+    }
+
+    // ── An implementation that populates only Role still reports that role ──
+    // Reading role claims alone would silently report no roles for such an implementation, turning
+    // an authorization check into a denial. Role is part of this interface, so the default member
+    // has to consider it; claims win when present so a multi-role principal is still read in full.
+    [Fact]
+    public void Roles_WhenOnlyRoleIsPopulated_FallsBackToIt()
+    {
+        ICurrentUserService sut = new RoleOnlyService("Organizer");
+
+        sut.Roles.Should().ContainSingle().Which.Should().Be("Organizer");
+        sut.IsInRole("Organizer").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Roles_WhenClaimsArePresent_PrefersThemOverRole()
+    {
+        // Role carries only the first claim, so the claim set is the more complete answer and the
+        // fallback must not shadow it.
+        var principal = CreatePrincipal(
+            new Claim(ClaimTypes.Role, "Attendee"),
+            new Claim(ClaimTypes.Role, "Organizer"));
+        ICurrentUserService sut = CreateSut(principal);
+
+        sut.Roles.Should().HaveCount(2).And.Contain(sut.Role!);
+    }
+
+    /// <summary>
+    /// Stands in for the shape a consumer's controller test produces: an <see cref="ICurrentUserService"/>
+    /// whose <c>User</c> was never configured. Written by hand rather than mocked because a mocking
+    /// library may stub the default members themselves, which would skip the very code under test.
+    /// </summary>
+    private sealed class NullUserService : ICurrentUserService
+    {
+        public ClaimsPrincipal User => null!;
+
+        public UserIdentifierType? UserId => null;
+
+        public string? Role => null;
+
+        public T? GetClaimValue<T>(string claimType)
+            where T : struct, IParsable<T> => null;
+    }
+
+    /// <summary>An implementation that answers <c>Role</c> but has no principal behind it.</summary>
+    private sealed class RoleOnlyService(string role) : ICurrentUserService
+    {
+        public ClaimsPrincipal User => null!;
+
+        public UserIdentifierType? UserId => null;
+
+        public string? Role => role;
+
+        public T? GetClaimValue<T>(string claimType)
+            where T : struct, IParsable<T> => null;
+    }
 }

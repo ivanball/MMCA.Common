@@ -25,17 +25,43 @@ public interface ICurrentUserService
     /// Gets every role the current user holds, empty when unauthenticated.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Reads all role claims rather than the first, and accepts each of the claim types the JWT
     /// middleware may produce: the standard <see cref="ClaimTypes.Role"/> URI when inbound claim
     /// mapping is on, or the raw <c>role</c> / <c>roles</c> claim when it is off.
+    /// </para>
+    /// <para>
+    /// Falls back to <see cref="Role"/> when the principal yields no role claims, and null-guards
+    /// <see cref="User"/> even though it is declared non-nullable. Both accommodate the fact that
+    /// this is a default interface member: it runs against <em>every</em> implementation, not only
+    /// the one shipped here. An implementation that populates <see cref="Role"/> but not a full
+    /// principal (a hand-written double, or a mock stubbing only the properties a test needs) is
+    /// common, and reading claims alone would have silently reported no roles for it, turning an
+    /// authorization check into a denial; dereferencing a null principal would have turned it into
+    /// a <see cref="NullReferenceException"/>. Claims win when present, so a multi-role principal
+    /// is still read in full.
+    /// </para>
     /// </remarks>
-    IEnumerable<string> Roles =>
-        User.Claims
-            .Where(claim =>
-                string.Equals(claim.Type, ClaimTypes.Role, StringComparison.Ordinal)
-                || string.Equals(claim.Type, "role", StringComparison.Ordinal)
-                || string.Equals(claim.Type, "roles", StringComparison.Ordinal))
-            .Select(claim => claim.Value);
+    IEnumerable<string> Roles
+    {
+        get
+        {
+            var claimed = User?.Claims
+                .Where(claim =>
+                    string.Equals(claim.Type, ClaimTypes.Role, StringComparison.Ordinal)
+                    || string.Equals(claim.Type, "role", StringComparison.Ordinal)
+                    || string.Equals(claim.Type, "roles", StringComparison.Ordinal))
+                .Select(claim => claim.Value)
+                .ToArray() ?? [];
+
+            if (claimed.Length > 0)
+            {
+                return claimed;
+            }
+
+            return Role is null ? [] : [Role];
+        }
+    }
 
     /// <summary>
     /// Extracts a typed claim value from the current user's claims.
