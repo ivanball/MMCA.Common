@@ -201,6 +201,32 @@ public sealed class CurrentUserServiceTests
         act.Should().NotThrow().Which.Should().BeFalse();
     }
 
+    // ── An implementation that populates only Role still reports that role ──
+    // Reading role claims alone would silently report no roles for such an implementation, turning
+    // an authorization check into a denial. Role is part of this interface, so the default member
+    // has to consider it; claims win when present so a multi-role principal is still read in full.
+    [Fact]
+    public void Roles_WhenOnlyRoleIsPopulated_FallsBackToIt()
+    {
+        ICurrentUserService sut = new RoleOnlyService("Organizer");
+
+        sut.Roles.Should().ContainSingle().Which.Should().Be("Organizer");
+        sut.IsInRole("Organizer").Should().BeTrue();
+    }
+
+    [Fact]
+    public void Roles_WhenClaimsArePresent_PrefersThemOverRole()
+    {
+        // Role carries only the first claim, so the claim set is the more complete answer and the
+        // fallback must not shadow it.
+        var principal = CreatePrincipal(
+            new Claim(ClaimTypes.Role, "Attendee"),
+            new Claim(ClaimTypes.Role, "Organizer"));
+        ICurrentUserService sut = CreateSut(principal);
+
+        sut.Roles.Should().HaveCount(2).And.Contain(sut.Role!);
+    }
+
     /// <summary>
     /// Stands in for the shape a consumer's controller test produces: an <see cref="ICurrentUserService"/>
     /// whose <c>User</c> was never configured. Written by hand rather than mocked because a mocking
@@ -213,6 +239,19 @@ public sealed class CurrentUserServiceTests
         public UserIdentifierType? UserId => null;
 
         public string? Role => null;
+
+        public T? GetClaimValue<T>(string claimType)
+            where T : struct, IParsable<T> => null;
+    }
+
+    /// <summary>An implementation that answers <c>Role</c> but has no principal behind it.</summary>
+    private sealed class RoleOnlyService(string role) : ICurrentUserService
+    {
+        public ClaimsPrincipal User => null!;
+
+        public UserIdentifierType? UserId => null;
+
+        public string? Role => role;
 
         public T? GetClaimValue<T>(string claimType)
             where T : struct, IParsable<T> => null;

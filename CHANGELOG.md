@@ -12,15 +12,21 @@ Patch fixing a regression introduced by the `ICurrentUserService.Roles` addition
 **Consumers should take this instead of 1.125.0.**
 
 ### Fixed
-- **`Roles` and `IsInRole` threw on an implementation returning a null `User`.** The new `Roles`
-  default interface member dereferenced `User` unguarded. The shipped `CurrentUserService` never
-  returns null (it falls back to an empty `ClaimsPrincipal`), but a default interface member runs
-  against *every* implementation, and a mocked `ICurrentUserService` returns null for an
-  unconfigured reference property. Any consumer controller test that mocks the service and reaches
-  an `IsInRole` check therefore turned an authorization decision into a
-  `NullReferenceException` (caught by MMCA.ADC's suite on the 1.125.0 bump, 38 failures). `User` is
-  now null-guarded and both members answer "no roles", which is what the previous `Role`-based
-  implementation returned for the same input.
+- **`Roles` and `IsInRole` broke against implementations that do not expose a full principal.** The
+  new `Roles` default interface member read role claims off `User` and nothing else. Two problems
+  follow from it being a *default interface member*, which runs against every implementation rather
+  than only the `CurrentUserService` shipped here:
+  - It dereferenced `User` unguarded. The shipped implementation never returns null (it falls back to
+    an empty `ClaimsPrincipal`), but a mocked `ICurrentUserService` returns null for an unconfigured
+    reference property, so an `IsInRole` check became a `NullReferenceException`.
+  - It ignored `Role`, which is also part of this interface. An implementation that populates `Role`
+    but not a full principal reported *no* roles, silently turning an authorization check into a
+    denial.
+
+  `User` is now null-guarded, and `Roles` falls back to `Role` when the principal yields no role
+  claims. Claims still win when present, so a multi-role principal is read in full. Caught by
+  MMCA.ADC's suite on the 1.125.0 bump (38 failures, then 7 after the null guard alone); with this
+  fix its 2227 tests pass with no consumer change.
 
 ## [1.125.0] - 2026-07-24
 
