@@ -20,12 +20,12 @@ internal sealed class StringFilterStrategy : IFilterStrategy
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
-            "CONTAINS" => query.Where($"{property}.Contains(@0)", value),
-            "NOT CONTAINS" => query.Where($"!{property}.Contains(@0)", value),
-            "EQUALS" => query.Where($"{property} == @0", value),
-            "NOT EQUALS" => query.Where($"{property} != @0", value),
-            "STARTS WITH" => query.Where($"{property}.StartsWith(@0)", value),
-            "ENDS WITH" => query.Where($"{property}.EndsWith(@0)", value),
+            "CONTAINS" => query.Where(DynamicQueryConfig.Parameterized, $"{property}.Contains(@0)", value),
+            "NOT CONTAINS" => query.Where(DynamicQueryConfig.Parameterized, $"!{property}.Contains(@0)", value),
+            "EQUALS" => query.Where(DynamicQueryConfig.Parameterized, $"{property} == @0", value),
+            "NOT EQUALS" => query.Where(DynamicQueryConfig.Parameterized, $"{property} != @0", value),
+            "STARTS WITH" => query.Where(DynamicQueryConfig.Parameterized, $"{property}.StartsWith(@0)", value),
+            "ENDS WITH" => query.Where(DynamicQueryConfig.Parameterized, $"{property}.EndsWith(@0)", value),
             _ => ApplyPresenceOrSet(query, property, op, value),
         };
 
@@ -34,8 +34,8 @@ internal sealed class StringFilterStrategy : IFilterStrategy
     private static IQueryable<T> ApplyPresenceOrSet<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
-            "IS EMPTY" => query.Where($"string.IsNullOrEmpty({property})"),
-            "IS NOT EMPTY" => query.Where($"!string.IsNullOrEmpty({property})"),
+            "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"string.IsNullOrEmpty({property})"),
+            "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"!string.IsNullOrEmpty({property})"),
             "IN" => ApplyIn(query, property, value),
             _ => query
         };
@@ -43,6 +43,6 @@ internal sealed class StringFilterStrategy : IFilterStrategy
     private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
     {
         var values = FilterValueParser.ParseStringList(value);
-        return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
+        return values.Count == 0 ? query : query.Where(DynamicQueryConfig.Parameterized, $"@0.Contains({property})", values);
     }
 }

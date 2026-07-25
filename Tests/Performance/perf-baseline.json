@@ -1,9 +1,14 @@
 {
-  "_comment": "Latency/allocation regression baseline for the BenchmarkDotNet hot-path suite (rubric section 12). Verified in CI by build/perfgate after the Short-job run. Allocation ceilings are per-operation managed bytes (deterministic across machines; measured 0 / 5588 / 3040 on 2026-07-16). Ratio floors are machine-independent effectiveness invariants: the compiled-expression cache must keep IsSatisfiedBy at least 1000x faster than the recompile-each-call anti-pattern (measured ~120,000x); if the cache breaks, the ratio collapses toward 1 and the gate fails. Update this file deliberately, in the same PR as the change that moves the numbers.",
+  "_comment": "Latency/allocation regression baseline for the BenchmarkDotNet hot-path suite (rubric section 12). Verified in CI by build/perfgate after the Short-job run. Allocation ceilings are per-operation managed bytes (deterministic across machines) and carry roughly 25% headroom over the measured value. Specification ceilings measured 0 / 5588 / 3040 on 2026-07-16. Query-pipeline ceilings measured 31703 / 69755 / 18688 / 51896 / 35891 on 2026-07-25, after dynamic-LINQ parameterization; ApplyFilters allocates tens of KB per call because System.Linq.Dynamic.Core re-parses the predicate string on every request, which is exactly the cost this gate exists to keep from growing. Ratio floors are machine-independent effectiveness invariants: the compiled-expression cache must keep IsSatisfiedBy at least 1000x faster than the recompile-each-call anti-pattern (measured ~120,000x); if the cache breaks, the ratio collapses toward 1 and the gate fails. Update this file deliberately, in the same PR as the change that moves the numbers.",
   "allocationCeilingsBytes": {
     "IsSatisfiedBy_CachedCompile": 0,
     "IsSatisfiedBy_RecompileEachCall": 8000,
-    "BuildComposedCriteria": 4500
+    "BuildComposedCriteria": 4500,
+    "ApplyFilters_SingleStringContains": 40000,
+    "ApplyFilters_ThreeMixedOperators": 87000,
+    "ApplySorting_Descending": 23500,
+    "ShapeCollectionData_AllFields_100Rows": 65000,
+    "ShapeCollectionData_ThreeFields_100Rows": 45000
   },
   "ratioFloors": [
     {
