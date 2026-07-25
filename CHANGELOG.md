@@ -6,6 +6,89 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.127.0] - 2026-07-25
+
+Performance release from a second evidence-led pass over the framework's read, save and background
+paths. No breaking changes and no public API changes: every item is a cost reduction or a fix to
+something that was measurably doing more work than it needed to. Two items change what reaches the
+database (emitted SQL, and two new indexes), so read the migration note below before sweeping.
+
+**Consumer action required:** the two new outbox/inbox indexes need one EF migration per consumer
+service database. Nothing else in this release touches a consumer.
+
+### Fixed
+
+- **Dynamic-LINQ filter values were inlined into SQL as literals instead of parameters.**
+  Every filter strategy and the dynamic sort called System.Linq.Dynamic.Core with the default
+  `ParsingConfig`, which leaves `UseParameterizedNamesInDynamicQuery` off, so each `@0` argument
+  became a `ConstantExpression` and EF inlined it. A filtered read emitted
+  `WHERE [Name] = 'Widget'` rather than `WHERE [Name] = @p`. Every distinct filter value therefore
+  produced distinct SQL text: a SQL Server plan-cache entry per value, no plan reuse across them,
+  and a miss in EF's compiled-query cache on every request, on the hottest read path in every
+  consumer. A single shared parameterizing config is now threaded through all 58 dynamic-LINQ call
+  sites. Two requests filtering the same property with different values now produce byte-identical
+  SQL. New `ToQueryString` assertions pin this; nothing in the suite inspected emitted SQL before,
+  which is why it went unnoticed.
+
+- **The outbox signal accumulated one wake-up per save instead of one per batch.**
+  `OutboxSignal` used `new SemaphoreSlim(0)`, whose maxCount is `int.MaxValue`, so the
+  `SemaphoreFullException` catch at the release site was unreachable and permits piled up. After a
+  burst of N event-raising saves the processor woke N times, and each surplus cycle issued a
+  candidate-fetch query per relational data source that returned nothing. Capped at one permit,
+  which the existing catch already anticipated: one batch drains everything.
+
+- **Both retention sweeps ran unindexed.**
+  `IX_OutboxMessages_Pending` is filtered `WHERE [ProcessedOn] IS NULL`, which excludes exactly the
+  rows `OutboxCleanupService` looks for, so the six-hourly processed sweep scanned the largest
+  partition of the table; the inbox purge filtered `ProcessedOn` against a table indexed only on
+  `MessageId`. Adds `IX_OutboxMessages_Processed` (filtered `IS NOT NULL`) and
+  `IX_InboxMessages_ProcessedOn`. The pending index also gains `RetryCount` and `LockedUntil` as
+  included columns, since the poll filters on both and every candidate row was costing a key lookup.
+
+- **Change detection ran three times per save.**
+  `ChangeTracker.Entries<T>()` triggers a full `DetectChanges` on every call and memoizes nothing.
+  The audit interceptor and the domain-event interceptor each scan the tracker from `SavingChanges`,
+  and EF detects again before building the save, so a save paid three O(tracked entities x
+  properties) snapshot comparisons where one suffices. `ApplicationDbContext` now detects once up
+  front and suppresses automatic detection for the rest of the save, restoring the caller's setting
+  afterwards. Safe because the interceptors write through `entry.Property(...).CurrentValue` and
+  `Add`, both of which take effect without detection.
+
+- **The by-id fast path was unreachable for any entity declaring a navigation.**
+  Introduced in v1.119.0, it required zero includes, but the REST by-id action defaults
+  `includeFKs` to true. Those reads fell back to the dynamic-filter pipeline and emitted
+  `SELECT TOP(1000) ... WHERE Id = @p` with a client-side `FirstOrDefault`, where a keyed `TOP 1`
+  would do. Supported includes are now passed into the repository's include overload, which applies
+  the same `Include` calls and auto-applies `AsSplitQuery` for child collections. Cross-source
+  ("unsupported") includes still take the pipeline, since only its navigation populator can
+  batch-load across physical sources.
+
+### Changed
+
+- **Per-request allocations on the query pipeline and the decorator pipeline.**
+  `LoggingQueryDecorator` allocated a dictionary and boxed scope state on every query at every log
+  level, including when logging was disabled; it now uses `LoggerMessage.DefineScope` like the
+  command decorator already did, and both time with `Stopwatch.GetTimestamp` rather than allocating
+  a `Stopwatch`. `QueryFieldService` rebuilt its `MemberInit` projection tree per request; the
+  projection and the shaping-accessor subset are now cached per entity type and normalized field
+  set. `RepositoryFactory` reflected over constructors on every repository resolution and now caches
+  a compiled `ObjectFactory` per closed type. `EntityDataSourceRegistry.GetPhysicalSourcesInUse`
+  re-projected over every registered entity on each call (both background services call it every
+  poll) and is now precomputed on the snapshot.
+
+- **`ExistsAsync` no longer applies the Cosmos `COUNT` workaround to every provider.**
+  It branches on provider, so everything except Cosmos gets `AnyAsync` and short-circuits at the
+  first match instead of reading every matching row.
+
+### Added
+
+- **Regression coverage for the paths this release touches.** `QueryParameterizationTests`
+  (emitted-SQL assertions, including the plan-reuse invariant stated directly),
+  `SaveChangeDetectionTests` (exactly one detection pass per save, plus that suppression costs no
+  behaviour), `OutboxSignalTests`, and five `[MemoryDiagnoser]` benchmarks over `ApplyFilters`,
+  `ApplySorting` and `ShapeCollectionData` with allocation ceilings committed to
+  `perf-baseline.json`, so the per-request parse and shaping cost cannot grow unnoticed.
+
 ## [1.126.0] - 2026-07-25
 
 Hardening release from a read of the framework's request and background paths. No breaking changes:
