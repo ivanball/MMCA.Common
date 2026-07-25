@@ -26,39 +26,35 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
         {
             LogCommandStarted(logger, commandName, correlationId);
 
-            var stopwatch = Stopwatch.StartNew();
-            var outcome = "completed";
+            // Timestamp rather than a Stopwatch instance: same resolution, one fewer allocation per
+            // command. Elapsed is captured before logging, so the recorded duration stays the
+            // handler's (matching the previous stopwatch.Stop()-then-log ordering).
+            var startTimestamp = Stopwatch.GetTimestamp();
             try
             {
                 var result = await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
-                stopwatch.Stop();
+                var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
 
                 if (result is Shared.Abstractions.Result { IsFailure: true } failureResult)
                 {
-                    outcome = "failed";
                     var errorSummary = string.Join("; ", failureResult.Errors.Select(e => $"{e.Code}: {e.Message}"));
-                    LogCommandFailed(logger, commandName, stopwatch.ElapsedMilliseconds, correlationId, errorSummary);
+                    LogCommandFailed(logger, commandName, (long)elapsed.TotalMilliseconds, correlationId, errorSummary);
+                    RecordDuration(commandName, elapsed, "failed");
                 }
                 else
                 {
-                    LogCommandCompleted(logger, commandName, stopwatch.ElapsedMilliseconds, correlationId);
+                    LogCommandCompleted(logger, commandName, (long)elapsed.TotalMilliseconds, correlationId);
+                    RecordDuration(commandName, elapsed, "completed");
                 }
 
                 return result;
             }
             catch (Exception ex)
             {
-                stopwatch.Stop();
-                outcome = "exception";
-                LogCommandException(logger, commandName, stopwatch.ElapsedMilliseconds, correlationId, ex);
+                var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+                LogCommandException(logger, commandName, (long)elapsed.TotalMilliseconds, correlationId, ex);
+                RecordDuration(commandName, elapsed, "exception");
                 throw;
-            }
-            finally
-            {
-                CqrsMetrics.CommandDuration.Record(
-                    stopwatch.Elapsed.TotalMilliseconds,
-                    new KeyValuePair<string, object?>("command", commandName),
-                    new KeyValuePair<string, object?>("outcome", outcome));
             }
         }
     }
@@ -69,6 +65,12 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
     /// </summary>
     private static readonly Func<ILogger, string, string, IDisposable?> BeginCommandScope =
         LoggerMessage.DefineScope<string, string>("Command {CommandName} [CorrelationId: {CorrelationId}]");
+
+    private static void RecordDuration(string commandName, TimeSpan elapsed, string outcome) =>
+        CqrsMetrics.CommandDuration.Record(
+            elapsed.TotalMilliseconds,
+            new KeyValuePair<string, object?>("command", commandName),
+            new KeyValuePair<string, object?>("outcome", outcome));
 
     // Started is Debug: the completion line already carries the name and duration, and two
     // Information rows per command doubles ingestion cost for no diagnostic gain.
