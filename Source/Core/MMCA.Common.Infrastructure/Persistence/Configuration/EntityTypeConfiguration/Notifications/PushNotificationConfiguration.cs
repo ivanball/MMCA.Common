@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Domain.Notifications.PushNotifications;
+using MMCA.Common.Domain.Notifications.PushNotifications.Invariants;
 
 namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.Notifications;
 
@@ -25,11 +26,11 @@ internal sealed class PushNotificationConfiguration
 
         builder.Property(p => p.Title)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(PushNotificationInvariants.TitleMaxLength);
 
         builder.Property(p => p.Body)
             .IsRequired()
-            .HasMaxLength(2000);
+            .HasMaxLength(PushNotificationInvariants.BodyMaxLength);
 
         builder.Property(p => p.SentByUserId)
             .IsRequired();

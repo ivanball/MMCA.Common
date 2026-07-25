@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using MMCA.Common.Domain.Notifications.PushNotifications.Invariants;
 using MMCA.Common.Shared.Notifications.PushNotifications;
@@ -14,11 +15,11 @@ public sealed class SendPushNotificationRequestValidator : AbstractValidator<Sen
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Notification title is required.")
             .MaximumLength(PushNotificationInvariants.TitleMaxLength)
-            .WithMessage($"Notification title cannot exceed {PushNotificationInvariants.TitleMaxLength} characters.");
+            .WithMessage(string.Create(CultureInfo.InvariantCulture, $"Notification title cannot exceed {PushNotificationInvariants.TitleMaxLength} characters."));
 
         RuleFor(x => x.Body)
             .NotEmpty().WithMessage("Notification body is required.")
             .MaximumLength(PushNotificationInvariants.BodyMaxLength)
-            .WithMessage($"Notification body cannot exceed {PushNotificationInvariants.BodyMaxLength} characters.");
+            .WithMessage(string.Create(CultureInfo.InvariantCulture, $"Notification body cannot exceed {PushNotificationInvariants.BodyMaxLength} characters."));
     }
 }
