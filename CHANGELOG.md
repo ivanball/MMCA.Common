@@ -6,6 +6,51 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.128.0] - 2026-07-25
+
+Distribution release. **No source changes: the compiled assemblies are identical to 1.127.0.** What
+changes is where the packages are published, how the release authenticates, and what the package
+listing looks like. **No consumer action is required**, and bumping to this version is optional for
+anyone already on 1.127.0.
+
+### Added
+
+- **The packages are published to nuget.org.** Until now they went only to GitHub Packages, whose
+  NuGet registry requires a personal access token with `read:packages` **even for public packages**
+  (only its Container registry allows anonymous pulls). The consequence was that
+  `dotnet add package MMCA.Common.API`, the line printed in the README, in the getting-started
+  guide, and throughout the article series, failed for everyone outside the owning account: a 401,
+  not a package. A nuget.org search for `MMCA.Common` returned no hits at all. Both registries now
+  receive every release from the same tag and the same pack step, so they cannot drift in content.
+  GitHub Packages is retained as a mirror, not deprecated. See ADR-053.
+
+- **Package listing metadata**, which is the entire first impression for anyone arriving from search
+  rather than from the docs: `PackageProjectUrl`, `PackageIcon` (a new 128px brand mark packed once
+  for all packages), and `PackageTags`, all set once in `Directory.Build.props`. The repository
+  README was already packed into every package and now serves as the listing page.
+
+### Changed
+
+- **Release authentication is keyless.** Both publishing jobs request a GitHub OIDC token
+  (`permissions: id-token: write`) and exchange it through `NuGet/login@v1` for an API key valid for
+  one hour, immediately before the push. No long-lived credential exists in the repository, so there
+  is nothing to leak and nothing to rotate; a stored key would have carried a 365-day maximum
+  lifetime and failed the release on expiry. The exchange is authorized by a policy on nuget.org
+  pinned to the permanent GitHub ids of the owner, the repository, and **this workflow file**, which
+  is what defeats a delete-and-recreate resurrection attack. The trade-off is that the workflow file
+  name is now load-bearing: renaming or splitting `release.yml` breaks publishing until the policy
+  is updated. nuget.org itself now marks API keys "Not recommended" for automated publishing.
+
+- **The README is rewritten as the package listing page it actually is.** It ships inside every
+  package, so it now leads with what the framework is and why it exists, the install line, the
+  fifteen-minute path through MMCA.Helpdesk, and links to the reference library, the ADR index, the
+  scorecard, and the article series. Relative links became absolute, because relative links do not
+  resolve on nuget.org. Drops a stale ADR range and a path that has not existed since the ADRs moved
+  to the Website repository.
+
+- **The em dashes are gone from all fifteen package `Description` values.** That text is the listing
+  copy on nuget.org, and em dashes are banned across this workspace.
+
 ## [1.127.0] - 2026-07-25
 
 Performance release from a second evidence-led pass over the framework's read, save and background
