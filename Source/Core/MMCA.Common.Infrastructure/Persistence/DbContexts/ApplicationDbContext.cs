@@ -304,9 +304,20 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.LastError).HasMaxLength(4000);
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
+            // Poll path (OutboxProcessor): pending rows, oldest first. The processor also filters on
+            // RetryCount and LockedUntil, so both ride along as included columns; without them every
+            // candidate row the index returns costs a key lookup back into the table.
             entity.HasIndex(e => new { e.ProcessedOn, e.OccurredOn })
+                  .IncludeProperties(e => new { e.RetryCount, e.LockedUntil })
                   .HasFilter("[ProcessedOn] IS NULL")
                   .HasDatabaseName("IX_OutboxMessages_Pending");
+
+            // Retention path (OutboxCleanupService): processed rows older than the cutoff. The pending
+            // index above deliberately excludes exactly these rows, so without this one the six-hourly
+            // sweep scans the largest partition of the table.
+            entity.HasIndex(e => e.ProcessedOn)
+                  .HasFilter("[ProcessedOn] IS NOT NULL")
+                  .HasDatabaseName("IX_OutboxMessages_Processed");
         });
 
     /// <summary>
@@ -323,6 +334,11 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.MessageId)
                   .IsUnique()
                   .HasDatabaseName("IX_InboxMessages_MessageId");
+
+            // Retention path (OutboxCleanupService.PurgeInbox): the unique index above is on MessageId,
+            // so the age-based purge had nothing to seek and scanned the table.
+            entity.HasIndex(e => e.ProcessedOn)
+                  .HasDatabaseName("IX_InboxMessages_ProcessedOn");
         });
 
     /// <summary>
