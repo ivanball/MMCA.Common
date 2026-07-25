@@ -135,7 +135,7 @@ public sealed class QueryFieldService
             if (sortExpr is not null)
             {
                 var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-                return query.OrderBy($"{sortExpr} {(descending ? "descending" : "ascending")}");
+                return query.OrderBy(Filtering.DynamicQueryConfig.Parameterized, $"{sortExpr} {(descending ? "descending" : "ascending")}");
             }
         }
 

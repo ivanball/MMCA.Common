@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Domain\MMCA.Common.Domain.csproj" />
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
