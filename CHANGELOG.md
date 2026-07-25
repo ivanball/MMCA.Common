@@ -6,6 +6,105 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.126.0] - 2026-07-25
+
+Hardening release from a read of the framework's request and background paths. No breaking changes:
+every item is a behavioural fix or a bound on something previously unbounded. The two settings
+additions have defaults that preserve existing behaviour except where that behaviour was the bug.
+
+### Fixed
+- **The dynamic-filter property cache grew without bound from the query string.**
+  `QueryFilterService` memoized failed lookups as well as successful ones in a `static`,
+  never-evicted dictionary keyed by names taken straight from `?filters[X].operator=...`. Any caller
+  could grow it for the life of the process, one nonexistent filter name at a time, while each
+  request came back as a well-formed 400 that showed nothing in error metrics. Only resolved lookups
+  are cached now; a miss costs a reflection lookup instead. `QueryFilterModelBinder` gained a
+  per-request cap of 50 distinct filters to bound that cost (surplus entries are dropped, not
+  rejected, since they were never valid filters).
+
+- **Paginating the notification inbox and history overflowed to a negative `OFFSET`.**
+  Both handlers derived `(PageNumber - 1) * PageSize` in 32-bit, which wraps negative for page
+  numbers near `int.MaxValue`. SQL Server rejects a negative `OFFSET` outright rather than treating
+  it as zero, so the request became a 500 instead of the empty page that page genuinely holds.
+  `EntityQueryPipeline` had already solved this in 64-bit; the arithmetic now lives once in
+  `PagingMath.Clamp` and all three call sites use it. It also floors the page size, which the
+  `[Range]` attributes at the API boundary enforce but a direct handler caller does not inherit.
+
+- **A nested transaction threw instead of joining the ambient one.**
+  `DbContextFactory.BeginTransaction` began a transaction on every cached context unconditionally,
+  while `CommitTransaction` and `RollbackTransaction` both skipped contexts without one. An
+  `ITransactional` command whose handler also called `ExecuteInTransactionAsync` therefore hit
+  `InvalidOperationException` from EF. `ExecuteInTransactionAsync` is now re-entrant: an inner call
+  joins the ambient transaction and returns directly, and begin, commit, rollback and the
+  deferred-event flush belong to the outermost call alone. Note that simply skipping the second
+  begin would have been worse than the exception: the inner commit would then make the outer scope's
+  earlier work durable ahead of its own decision, turning nesting into a silent partial commit.
+
+- **A failed outbox message was retried on the lease, not on a schedule.**
+  `OutboxProcessor` incremented `RetryCount` on failure but left the row's claim in place, and the
+  poll skips leased rows, so a failure was retried only after the full `Outbox:LeaseSeconds` (300s by
+  default) regardless of `PollingIntervalSeconds` or an explicit signal. The retry cadence was an
+  accident of the lease rather than a decision. Failures now re-lease for an explicit exponential
+  backoff, `Outbox:RetryBackoffBaseSeconds` (default 10) doubling per attempt, capped at the lease.
+
+- **Nested filter paths ignored the type they pointed at.**
+  Every dotted path (`Category.Name`) was routed to the string strategy regardless of its leaf type,
+  so a nested non-string leaf passed validation for a string-only operator such as `IS EMPTY` and
+  then failed inside Dynamic LINQ at query-build time: a 500 for what is really a bad request. The
+  leaf type is now resolved by walking the path, identically in `ApplyFilters` and `ValidateFilters`.
+  A path that cannot be walked keeps the previous string behaviour, so nothing that works today
+  starts failing.
+
+- **The `async void` capability listeners could take the host down.**
+  `DeepLinkListener`, `PushRegistrationListener` and `OfflineBanner` caught only
+  `ObjectDisposedException` and `InvalidOperationException`. Anything else escaped onto the thread
+  pool with no caller to observe it: process termination under MAUI, an unobserved exception outside
+  the circuit's error handling under Blazor Server. `PushRegistrationService.RegisterAsync` reaches
+  the network and a platform token provider, so it was the likeliest to throw something else. All
+  three now log exhaustively.
+
+### Added
+- `Outbox:RetryBackoffBaseSeconds` (default 10, capped at `LeaseSeconds`): the base of the
+  exponential backoff applied to a failed outbox message before it is retried.
+- A Docker-gated Redis integration tier (`Tests/Core/MMCA.Common.Infrastructure.Redis.Tests`, outside
+  the `.slnx`, its own CI job) exercising `DistributedCacheService` against a real Redis. This is the
+  tier that would have caught the 1.125.0 counter regression fixed in 1.125.2: the unit tests mock
+  `IDistributedCache`, so they assert the calls made and never the storage format Redis ends up
+  holding, and a counter written as a string and read back as a hash round-trips perfectly against a
+  mock. It covers the counter round-trip, TTL application, concurrent increments, and prefix
+  eviction over a live `SCAN`.
+
+### Changed
+- The `LoginProtectionService` comments no longer claim the attempt counters are incremented
+  atomically. They have not been since 1.125.2 traded atomicity for readability, and they now name
+  the residual weakness plainly: concurrent guesses can undercount, so a burst can stay under
+  `MaxFailedAttempts`, while sequential guessing still trips the lockout. Closing that gap needs
+  either a Lua script against the hash layout or moving counters off `IDistributedCache`.
+
+## [1.125.2] - 2026-07-24
+
+Patch fixing a regression introduced by `ICacheService.IncrementAsync` in 1.125.0.
+**Consumers must take this instead of 1.125.0 or 1.125.1.** Those two versions break registration
+and login on any host backed by Redis.
+
+### Fixed
+- **The Redis `INCR` fast path wrote a value its own reader could not parse.**
+  `DistributedCacheService.IncrementAsync` used `StringIncrementAsync`, which writes a Redis
+  **string**, while `StackExchangeRedisCache` stores every entry as a Redis **hash** (`absexp` /
+  `sldexp` / `data`, read back with `HMGET`). The first increment created a string at the counter's
+  key; the next read of that key failed with `WRONGTYPE`, which surfaced as a 500 on the endpoint
+  owning the counter. In practice that is **registration** (`CheckRegistrationRateLimitAsync` reads
+  the per-IP counter before every sign-up) and the ADR-029 **login lockout** counters. A host using
+  the in-memory cache was unaffected, which is why the framework's own tests and CI stayed green;
+  MMCA.ADC's end-to-end suite caught it, failing every registration after the first.
+
+  `IncrementAsync` now goes through `IDistributedCache` for both the read and the write, so the
+  counter is stored the same way it is read. It is therefore a read-modify-write again and can
+  undercount under genuinely concurrent increments; for a brute-force counter a rare lost increment
+  is a much smaller problem than the counter being unreadable. Restoring atomicity means either
+  running the whole update as one Lua script against the hash layout, or moving counters out of
+  `IDistributedCache` so both sides speak Redis strings.
+
 ## [1.125.1] - 2026-07-24
 
 Patch fixing a regression introduced by the `ICurrentUserService.Roles` addition in 1.125.0.
