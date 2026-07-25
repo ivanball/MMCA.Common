@@ -21,6 +21,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Restore
         run: dotnet restore MMCA.Common.slnx
@@ -76,6 +83,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Install MAUI workload
         run: dotnet workload install maui
