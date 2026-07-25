@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Grpc</PackageId>
-    <Description>MMCA framework — gRPC server defaults, Result→RpcException mapping, JWT-forwarding client interceptor, typed gRPC client conventions for cross-service communication</Description>
+    <Description>MMCA framework: gRPC server defaults, Result→RpcException mapping, JWT-forwarding client interceptor, typed gRPC client conventions for cross-service communication</Description>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

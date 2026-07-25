@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
     <PackageId>MMCA.Common.UI</PackageId>
-    <Description>MMCA framework — Blazor shared components, auth state, MudBlazor theme, HTTP resilience</Description>
+    <Description>MMCA framework: Blazor shared components, auth state, MudBlazor theme, HTTP resilience</Description>
   </PropertyGroup>
 
   <ItemGroup>

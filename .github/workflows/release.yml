@@ -13,6 +13,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
     steps:
       - uses: actions/checkout@v7
         with:
@@ -66,6 +67,26 @@ jobs:
       - name: Push to GitHub Packages
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
+      # nuget.org is the public install path (ADR-053). GitHub Packages' NuGet registry requires a
+      # PAT with read:packages even for public packages, so a stranger following the README could
+      # not restore. Both registries get every release.
+      #
+      # Auth is trusted publishing, not a stored API key: this job's OIDC token is exchanged for a
+      # key that lives one hour, so there is no long-lived secret to leak or rotate. The exchange is
+      # bound to a policy on nuget.org pinned to this owner, this repository, and THIS workflow file
+      # by their permanent GitHub ids, so renaming the file or forking breaks the exchange by design.
+      # Request the key immediately before the push: it expires in an hour and is single-use.
+      - name: NuGet login (OIDC to short-lived key)
+        if: github.repository_owner == 'ivanball'
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ivanball # nuget.org profile name, not an email; public, so not a secret
+
+      - name: Push to nuget.org
+        if: github.repository_owner == 'ivanball'
+        run: dotnet nuget push ./nupkgs/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
+
   # MMCA.Common.UI.Maui (the 15th package) cannot build on ubuntu — its four TFMs need the MAUI
   # workloads — so it packs on windows, versioned from the same tag so the lockstep release stays
   # whole. Same SBOM hard gate as the main job, scoped to this project.
@@ -75,6 +96,7 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
     steps:
       - uses: actions/checkout@v7
         with:
@@ -125,3 +147,19 @@ jobs:
         # dotnet nuget push then fails with "File does not exist" on the un-globbed pattern.
         shell: bash
         run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+      # Same dual-registry policy and same trusted-publishing exchange as the main job (ADR-053);
+      # same bash-not-pwsh globbing caveat. One nuget.org policy covers both jobs because it is
+      # keyed on the workflow FILE, but each job needs its own id-token permission and its own
+      # exchange: a short-lived key is single-use and cannot cross a job boundary.
+      - name: NuGet login (OIDC to short-lived key)
+        if: github.repository_owner == 'ivanball'
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ivanball # nuget.org profile name, not an email; public, so not a secret
+
+      - name: Push to nuget.org
+        if: github.repository_owner == 'ivanball'
+        shell: bash
+        run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate

@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Infrastructure</PackageId>
-    <Description>MMCA framework — EF Core multi-DB, repositories, UoW, caching, JWT, outbox</Description>
+    <Description>MMCA framework: EF Core multi-DB, repositories, UoW, caching, JWT, outbox</Description>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.Tests" />

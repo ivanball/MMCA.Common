@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Testing.E2E</PackageId>
-    <Description>MMCA framework — shared Playwright E2E test infrastructure: browser fixtures, Blazor navigation helpers, Identity page objects, and test base classes</Description>
+    <Description>MMCA framework Playwright E2E test infrastructure: browser fixtures, Blazor navigation helpers, Identity page objects, and test base classes</Description>
     <!-- Relax the documentation analyzers for test infrastructure (same as Tests/**/*.cs in
          .editorconfig), plus only the rules the code still triggers (kept minimal on purpose). -->
     <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA1056;MA0009;MA0110;SYSLIB1045</NoWarn>
