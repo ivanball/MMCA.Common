@@ -17,6 +17,10 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Redirect Playwright's browser install out of ~/.cache/ms-playwright and into the workspace so
+  # actions/cache can carry it between runs (see the ui-e2e "Cache Playwright browsers" step). Both
+  # the install and the test run read this, so it must be workflow-level, not step-level.
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.ms-playwright
 
 # Supersede an older still-running check set when a PR is pushed again; a stale run's result is
 # never actionable. Guarded on event_name so a future non-PR trigger cannot cancel itself.
@@ -76,6 +80,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       # Fast, dependency-free drift gate: FACTS.md must match what `build/facts` computes from source
       # (version from the git tag, package count, ADR range, fitness-method/base counts). Fails the
@@ -156,9 +167,47 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      # This job is the critical path of the whole CI run (measured 7.1-8.2 min, and the only
+      # windows runner), and `dotnet workload install maui` re-downloaded the android/ios/
+      # maccatalyst packs on every single run. Cache the SDK's workload directories, keyed on the
+      # resolved SDK version so an SDK feature-band bump busts it.
+      - name: Resolve SDK version and root (workload cache key)
+        if: needs.changes.outputs.code == 'true'
+        id: sdk
+        shell: bash
+        run: |
+          echo "version=$(dotnet --version)" >> "$GITHUB_OUTPUT"
+          # Resolve the root from dotnet itself rather than trusting $DOTNET_ROOT to be exported:
+          # an empty value here would silently turn the cache paths into garbage and always miss.
+          root=$(dirname "$(command -v dotnet)")
+          echo "root=$root" >> "$GITHUB_OUTPUT"
+          echo "sdk=$(dotnet --version)  root=$root"
+
+      - name: Cache MAUI workload packs
+        if: needs.changes.outputs.code == 'true'
+        id: maui-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.sdk.outputs.root }}/sdk-manifests
+            ${{ steps.sdk.outputs.root }}/packs
+            ${{ steps.sdk.outputs.root }}/metadata
+            ${{ steps.sdk.outputs.root }}/library-packs
+            ${{ steps.sdk.outputs.root }}/template-packs
+          key: maui-workload-${{ runner.os }}-${{ steps.sdk.outputs.version }}
 
       - name: Install MAUI workload
         if: needs.changes.outputs.code == 'true'
+        # Still run on a cache hit: it is a no-op that reconciles the manifest, and it is the only
+        # thing that makes a partially-restored cache self-heal rather than fail the build below.
         run: dotnet workload install maui
 
       - name: Build (android + ios + maccatalyst + windows)
@@ -191,6 +240,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Build UI E2E project
         if: needs.changes.outputs.code == 'true'
@@ -198,11 +254,28 @@ jobs:
         # (restore included). They reference MMCA.Common source projects — no GitHub Packages token needed.
         run: dotnet build Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj -c Release
 
+      # Browser binaries are ~100-300 MB per engine and were re-downloaded on all three legs of every
+      # run. PLAYWRIGHT_BROWSERS_PATH (workflow env) redirects the install into the workspace so
+      # actions/cache can carry it; the key includes the engine, since each leg installs only its own.
+      - name: Cache Playwright browsers (${{ matrix.browser }})
+        if: needs.changes.outputs.code == 'true'
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('Tests/Presentation/MMCA.Common.UI.E2E.Tests/packages.lock.json', 'Directory.Packages.props') }}
+
       - name: Install Playwright (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
         run: |
           script=$(find Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release -name playwright.ps1 | head -1)
-          pwsh "$script" install --with-deps ${{ matrix.browser }}
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            # Binaries restored from cache; only the OS-level shared libraries still need installing,
+            # which is the cheap half of --with-deps.
+            pwsh "$script" install-deps ${{ matrix.browser }}
+          else
+            pwsh "$script" install --with-deps ${{ matrix.browser }}
+          fi
 
       - name: Install coverage tool
         if: needs.changes.outputs.code == 'true' && matrix.browser == 'chromium'
@@ -258,6 +331,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Run hot-path benchmarks (Short job, JSON export)
         if: needs.changes.outputs.code == 'true'
@@ -372,6 +452,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Build Helpdesk against Common source (UseLocalMMCA)
         if: needs.changes.outputs.code == 'true'
@@ -412,6 +499,13 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Pack all packages to a local folder feed
         if: needs.changes.outputs.code == 'true'
