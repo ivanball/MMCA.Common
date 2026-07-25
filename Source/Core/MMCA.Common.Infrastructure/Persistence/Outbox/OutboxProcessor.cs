@@ -384,6 +384,16 @@ public sealed partial class OutboxProcessor(
             {
                 message.RetryCount++;
                 message.LastError = ex.Message;
+
+                // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on
+                // it. The claim is not cleared outright: the fetch skips leased rows, so a failure
+                // that kept the original lease was retried only after the full LeaseSeconds (300s by
+                // default) no matter what the polling interval or a signal said. That made the retry
+                // cadence an accident of the lease. Capping at the lease keeps a permanently failing
+                // message from becoming unclaimable for longer than a dead replica's rows would.
+                message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime
+                    .AddSeconds(ComputeRetryBackoffSeconds(message.RetryCount));
+
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 
                 if (message.RetryCount >= _settings.MaxRetries)
@@ -405,6 +415,21 @@ public sealed partial class OutboxProcessor(
         }
 
         return processedAny;
+    }
+
+    /// <summary>
+    /// Exponential backoff for a failed message: <c>base * 2^(retryCount - 1)</c>, capped at the
+    /// lease so a failing row never holds its claim longer than a dead replica's rows would.
+    /// </summary>
+    internal double ComputeRetryBackoffSeconds(int retryCount)
+    {
+        // Clamp the shift exponent before it reaches Math.Pow: MaxRetries is bounded at 20 today,
+        // but the cap below is what actually decides the wait, so there is no reason to let a
+        // future settings change turn this into an overflow.
+        var exponent = Math.Min(Math.Max(retryCount - 1, 0), 16);
+        var backoff = _settings.RetryBackoffBaseSeconds * Math.Pow(2, exponent);
+
+        return Math.Min(backoff, _settings.LeaseSeconds);
     }
 
     /// <summary>

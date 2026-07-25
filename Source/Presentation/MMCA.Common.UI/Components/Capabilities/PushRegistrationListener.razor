@@ -1,7 +1,9 @@
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging
 @using MMCA.Common.UI.Services.Capabilities
 @inject IPushRegistrationService PushRegistration
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<PushRegistrationListener> Logger
 @implements IDisposable
 
 @* Invisible component (ADR-044) — keeps this device's push installation in sync with the
@@ -57,6 +59,15 @@
         catch (InvalidOperationException)
         {
             // Component no longer attached; same disposition.
+        }
+        catch (Exception ex)
+        {
+            // Exhaustive by necessity: this is an async void event handler, so anything escaping
+            // here has no caller to observe it. On MAUI that terminates the process; on Server it
+            // is an unobserved exception outside the circuit's error handling. RegisterAsync reaches
+            // the network and a platform token provider, so this is the likeliest of the three
+            // capability listeners to throw something other than a lifetime exception.
+            Logger.LogError(ex, "Push registration failed after an authentication state change.");
         }
     }
 }

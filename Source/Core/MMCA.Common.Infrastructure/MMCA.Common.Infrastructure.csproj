@@ -5,6 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.Tests" />
+    <!-- Docker-gated Redis tier (outside the .slnx): asserts the storage format against a real
+         server, which the mocked-IDistributedCache unit tier cannot see. -->
+    <InternalsVisibleTo Include="MMCA.Common.Infrastructure.Redis.Tests" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

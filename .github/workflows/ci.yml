@@ -587,3 +587,38 @@ jobs:
       - name: Compile main.bicep
         if: needs.changes.outputs.code == 'true'
         run: az bicep build --file samples/deployment/main.bicep --stdout > /dev/null
+
+  redis-integration:
+    name: Redis integration (Testcontainers)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # DistributedCacheService is the one place where the STORAGE FORMAT matters, and a
+    # Mock<IDistributedCache> cannot express it: Redis keys are typed, so a counter written as a
+    # string and read back as a hash round-trips perfectly against a mock and answers WRONGTYPE
+    # against a server. This tier runs the shipped cache against a real Redis. Ubuntu runners ship a
+    # Docker daemon, so Testcontainers works with no extra setup.
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+          # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
+          # because build/facts and build/perfgate have no lock file and this repo does not pass
+          # --locked-mode, so the props file is what actually pins their versions.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Run Redis integration tests
+        # Code-guarded like every other heavy job: a docs-only PR must not pull a Redis image and
+        # start a container. The JOB still runs (and posts its context green) so adding this check to
+        # branch protection stays safe on docs-only PRs, matching the pattern the other jobs use.
+        if: needs.changes.outputs.code == 'true'
+        # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
+        # loop must not require), so build/run this project directly by path, like ui-e2e does.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release
