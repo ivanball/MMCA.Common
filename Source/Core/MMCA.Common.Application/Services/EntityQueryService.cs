@@ -69,13 +69,13 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
 
     /// <summary>
     /// Attempts the keyed by-id fast path: for a plain primary-key lookup (no field projection, no
-    /// includes, no specification, default id field) it issues a single <c>TOP 1 WHERE Id = @id</c>
-    /// via the repository's include overload, skipping the dynamic-filter pipeline (which parses a
-    /// string predicate and emits <c>TOP 1000</c> + a client-side <c>FirstOrDefault</c>). That
-    /// overload runs on the filtered <c>TableNoTracking</c>, so soft-delete query filters still
-    /// apply (unlike <c>FindAsync</c>, which bypasses them). Returns <see langword="null"/> when the
-    /// request is not a plain key lookup or the id is not convertible, so the caller uses the
-    /// pipeline.
+    /// specification, default id field, no cross-source navigations) it issues a single
+    /// <c>TOP 1 WHERE Id = @id</c> via the repository's include overload, skipping the
+    /// dynamic-filter pipeline (which parses a string predicate and emits <c>TOP 1000</c> + a
+    /// client-side <c>FirstOrDefault</c>). That overload runs on the filtered
+    /// <c>TableNoTracking</c>, so soft-delete query filters still apply (unlike <c>FindAsync</c>,
+    /// which bypasses them). Returns <see langword="null"/> when the request is not a plain key
+    /// lookup or the id is not convertible, so the caller uses the pipeline.
     /// </summary>
     private async Task<Result<TEntity>?> TryGetByIdFastPathAsync(
         string idValue,
@@ -87,36 +87,48 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         bool asTracking,
         CancellationToken cancellationToken)
     {
-        if (!IsPrimaryKeyOnlyLookup(idField, includeFKs, includeChildren, specification, fields)
+        if (!TryGetFastPathIncludes(idField, includeFKs, includeChildren, specification, fields, out var includes)
             || !TryConvertId(idValue, out var typedId))
         {
             return null;
         }
 
-        var entity = await Repository.GetByIdAsync(typedId, [], asTracking, cancellationToken).ConfigureAwait(false);
+        var entity = await Repository.GetByIdAsync(typedId, includes, asTracking, cancellationToken).ConfigureAwait(false);
         return entity is null
             ? Result.Failure<TEntity>(Error.NotFound.WithSource(nameof(GetByIdAsync)).WithTarget(typeof(TEntity).Name))
             : Result.Success(entity);
     }
 
     /// <summary>
-    /// Whether the request is a plain primary-key lookup the fast path can serve.
+    /// Whether the request is a primary-key lookup the fast path can serve, and if so which
+    /// navigations it must eager-load.
     /// </summary>
     /// <remarks>
-    /// <paramref name="includeFKs"/> and <paramref name="includeChildren"/> only disqualify the
-    /// request when the entity actually has navigations to include. Treating the flags themselves
-    /// as disqualifying made the fast path unreachable from the REST layer, whose by-id action
-    /// defaults <c>includeFKs</c> to true: every by-id read fell back to the dynamic-filter
-    /// pipeline, which parses a string predicate and emits <c>TOP 1000</c> plus a client-side
+    /// <para>
+    /// Requested includes do not disqualify the request. The repository's include overload applies
+    /// the same <c>Include</c> calls the pipeline would, and auto-applies <c>AsSplitQuery</c> when
+    /// any of them is a child collection, so the two produce the same result for a keyed read.
+    /// Disqualifying on includes left the fast path unreachable for every entity that declares a
+    /// navigation, because the REST by-id action defaults <c>includeFKs</c> to true: those reads
+    /// fell back to the dynamic-filter pipeline and emitted <c>TOP 1000</c> plus a client-side
     /// <c>FirstOrDefault</c> where a keyed <c>TOP 1 WHERE Id = @id</c> would do.
+    /// </para>
+    /// <para>
+    /// Unsupported includes still do disqualify: those are cross-source navigations that only the
+    /// pipeline's <c>INavigationPopulator</c> can batch-load, since no single query spans the
+    /// physical sources.
+    /// </para>
     /// </remarks>
-    private bool IsPrimaryKeyOnlyLookup(
+    private bool TryGetFastPathIncludes(
         string? idField,
         bool includeFKs,
         bool includeChildren,
         Specification<TEntity, TIdentifierType>? specification,
-        string? fields)
+        string? fields,
+        out IReadOnlyList<string> includes)
     {
+        includes = [];
+
         if (fields is not null
             || specification is not null
             || idField is not null && !string.Equals(idField, IdField, StringComparison.OrdinalIgnoreCase))
@@ -129,10 +141,14 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             return true;
         }
 
-        // Asking for includes on an entity that declares none is the same request as asking for
-        // none, so it stays on the fast path.
         var metadata = NavigationMetadataProvider.BuildIncludes<TEntity>(includeFKs, includeChildren);
-        return metadata.SupportedIncludes.Count == 0 && metadata.UnsupportedIncludes.Count == 0;
+        if (metadata.UnsupportedIncludes.Count != 0)
+        {
+            return false;
+        }
+
+        includes = [.. metadata.SupportedIncludes.Select(nav => nav.PropertyName)];
+        return true;
     }
 
     /// <summary>

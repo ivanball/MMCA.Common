@@ -51,11 +51,7 @@ public sealed class QueryFieldService
     /// <returns>A dynamic object containing the selected properties.</returns>
     public static ExpandoObject ShapeData<TEntity>(TEntity entity, string? fields)
     {
-        var fieldsSet = ParseFields(fields);
-        var accessors = GetAccessors<TEntity>();
-
-        if (fieldsSet.Count != 0)
-            accessors = FilterAccessorsByFields(accessors, fieldsSet);
+        var accessors = GetShapedAccessors<TEntity>(fields);
 
         IDictionary<string, object?> shapedObject = new ExpandoObject();
 
@@ -78,11 +74,7 @@ public sealed class QueryFieldService
         IEnumerable<TEntity> entities,
         string? fields)
     {
-        var fieldsSet = ParseFields(fields);
-        var accessors = GetAccessors<TEntity>();
-
-        if (fieldsSet.Count != 0)
-            accessors = FilterAccessorsByFields(accessors, fieldsSet);
+        var accessors = GetShapedAccessors<TEntity>(fields);
 
         List<ExpandoObject> shapedObjects = [];
 
@@ -159,16 +151,38 @@ public sealed class QueryFieldService
             return query;
 
         var fieldsSet = ParseFields(fields);
-        var propertyInfos = GetProperties<TEntity>();
+        var selectExpression = ProjectionCache.GetOrAdd(
+            (typeof(TEntity), NormalizeFieldsKey(fieldsSet)),
+            static (_, set) => BuildProjection<TEntity>(set),
+            fieldsSet);
 
+        return selectExpression is null
+            ? query
+            : query.Select((Expression<Func<TEntity, TEntity>>)selectExpression);
+    }
+
+    /// <summary>
+    /// Compiled projection lambdas, keyed by entity type and normalized field set.
+    /// </summary>
+    /// <remarks>
+    /// Rebuilding the <c>MemberInit</c> tree per request meant reflecting over the entity's
+    /// properties and allocating a binding array on every field-projected read, unlike the sibling
+    /// lookup-selector cache in <c>EFReadRepository</c>. A <see langword="null"/> value is cached
+    /// deliberately: it records "this field set projects nothing writable", so the miss is not
+    /// recomputed on every subsequent request.
+    /// </remarks>
+    private static readonly ConcurrentDictionary<(Type EntityType, string Fields), LambdaExpression?> ProjectionCache = new();
+
+    private static Expression<Func<TEntity, TEntity>>? BuildProjection<TEntity>(HashSet<string> fieldsSet)
+    {
         PropertyInfo[] selectedProperties =
         [
-            .. propertyInfos
+            .. GetProperties<TEntity>()
                 .Where(p => p.CanWrite && fieldsSet.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
         ];
 
         if (selectedProperties.Length == 0)
-            return query;
+            return null;
 
         ParameterExpression parameter = Expression.Parameter(typeof(TEntity), "e");
 
@@ -180,9 +194,7 @@ public sealed class QueryFieldService
 
         NewExpression newExpression = Expression.New(typeof(TEntity));
         MemberInitExpression body = Expression.MemberInit(newExpression, bindings);
-        var selectExpression = Expression.Lambda<Func<TEntity, TEntity>>(body, parameter);
-
-        return query.Select(selectExpression);
+        return Expression.Lambda<Func<TEntity, TEntity>>(body, parameter);
     }
 
     /// <summary>
@@ -279,4 +291,34 @@ public sealed class QueryFieldService
             .. accessors
                 .Where(a => fieldsSet.Contains(a.PropertyName, StringComparer.OrdinalIgnoreCase))
         ];
+
+    /// <summary>
+    /// Shaping accessors filtered to a field set, keyed by entity type and normalized field set,
+    /// so a repeated <c>fields=</c> request reuses the array instead of re-filtering per call.
+    /// </summary>
+    private static readonly ConcurrentDictionary<(Type EntityType, string Fields), PropertyAccessor[]> ShapedAccessorCache = new();
+
+    /// <summary>
+    /// Resolves the accessors to shape with: all of them when no field list was given, otherwise
+    /// the cached subset for that field set.
+    /// </summary>
+    private static PropertyAccessor[] GetShapedAccessors<TEntity>(string? fields)
+    {
+        var accessors = GetAccessors<TEntity>();
+        var fieldsSet = ParseFields(fields);
+
+        return fieldsSet.Count == 0
+            ? accessors
+            : ShapedAccessorCache.GetOrAdd(
+                (typeof(TEntity), NormalizeFieldsKey(fieldsSet)),
+                static (_, arg) => FilterAccessorsByFields(arg.Accessors, arg.FieldsSet),
+                (Accessors: accessors, FieldsSet: fieldsSet));
+    }
+
+    /// <summary>
+    /// Order- and case-insensitive cache key, so "name,id" and "Id, Name" share one entry rather
+    /// than multiplying the cache by however many spellings callers happen to send.
+    /// </summary>
+    private static string NormalizeFieldsKey(HashSet<string> fieldsSet) =>
+        string.Join(',', fieldsSet.Select(f => f.ToUpperInvariant()).Order(StringComparer.Ordinal));
 }

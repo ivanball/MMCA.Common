@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -92,6 +93,18 @@ public abstract class ApplicationDbContext(
         }
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Overridden purely to run change detection once per save. See <see cref="DetectChangesOnce"/>.
+    /// </remarks>
+    public override async Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        using var detection = DetectChangesOnce();
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Synchronous counterpart of <see cref="SaveChangesAsync(UserIdentifierType?, CancellationToken)"/>:
     /// stamps audit fields with <paramref name="userId"/> through the same interceptor pipeline.
@@ -111,6 +124,52 @@ public abstract class ApplicationDbContext(
         {
             CurrentSaveUserId = null;
         }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Overridden purely to run change detection once per save. See <see cref="DetectChangesOnce"/>.
+    /// </remarks>
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        using var detection = DetectChangesOnce();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// Runs change detection once, then suppresses automatic detection for the rest of the save.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>ChangeTracker.Entries&lt;T&gt;()</c> triggers a full <c>DetectChanges</c> on every call and
+    /// memoizes nothing. Two interceptors scan the tracker from <c>SavingChanges</c>
+    /// (<see cref="Interceptors.AuditSaveChangesInterceptor"/> over <c>IAuditableEntity</c>, and
+    /// <see cref="Interceptors.DomainEventSaveChangesInterceptor"/> over <c>IAggregateRoot</c>), and
+    /// EF then detects again on its own before building the save. A save therefore paid three
+    /// O(tracked entities x properties) snapshot comparisons where one suffices.
+    /// </para>
+    /// <para>
+    /// Detecting up front and suppressing the rest is safe because everything the interceptors do
+    /// afterwards bypasses detection anyway: the audit interceptor writes through
+    /// <c>entry.Property(...).CurrentValue</c>, and the domain-event interceptor adds outbox rows
+    /// through <c>Add</c>. Both take effect immediately on the entry. The previous setting is
+    /// restored on the way out, so a caller that had already disabled auto-detect keeps its choice
+    /// and never gets an unexpected detection pass.
+    /// </para>
+    /// </remarks>
+    private DetectChangesScope DetectChangesOnce()
+    {
+        var previous = ChangeTracker.AutoDetectChangesEnabled;
+        if (previous)
+            ChangeTracker.DetectChanges();
+
+        ChangeTracker.AutoDetectChangesEnabled = false;
+        return new DetectChangesScope(ChangeTracker, previous);
+    }
+
+    private readonly struct DetectChangesScope(ChangeTracker changeTracker, bool previousSetting) : IDisposable
+    {
+        public void Dispose() => changeTracker.AutoDetectChangesEnabled = previousSetting;
     }
 
     /// <inheritdoc />
