@@ -83,7 +83,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
@@ -170,7 +173,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
@@ -243,7 +249,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
@@ -334,7 +343,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
@@ -455,7 +467,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
@@ -502,7 +517,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
@@ -609,7 +627,10 @@ jobs:
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
           # because build/facts and build/perfgate have no lock file and this repo does not pass
           # --locked-mode, so the props file is what actually pins their versions.
-          cache: true
+          # Gated on the code flag: on a docs-only PR every restore step is skipped, so
+          # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
+          # job with "Cache folder path ... doesn't exist on disk".
+          cache: ${{ needs.changes.outputs.code == 'true' }}
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
