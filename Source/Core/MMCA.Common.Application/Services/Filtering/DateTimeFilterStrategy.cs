@@ -29,19 +29,19 @@ internal sealed class DateTimeFilterStrategy : IFilterStrategy
         => op switch
         {
             "IS" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
-                => query.Where($"{property} == @0", dt),
+                => query.Where(DynamicQueryConfig.Parameterized, $"{property} == @0", dt),
             "IS NOT" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
-                => query.Where($"{property} != @0", dt),
+                => query.Where(DynamicQueryConfig.Parameterized, $"{property} != @0", dt),
             "IS AFTER" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
-                => query.Where($"{property} > @0", dt),
+                => query.Where(DynamicQueryConfig.Parameterized, $"{property} > @0", dt),
             "IS ON OR AFTER" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
-                => query.Where($"{property} >= @0", dt),
+                => query.Where(DynamicQueryConfig.Parameterized, $"{property} >= @0", dt),
             "IS BEFORE" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
-                => query.Where($"{property} < @0", dt),
+                => query.Where(DynamicQueryConfig.Parameterized, $"{property} < @0", dt),
             "IS ON OR BEFORE" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
-                => query.Where($"{property} <= @0", dt),
-            "IS EMPTY" => query.Where($"{property} == null"),
-            "IS NOT EMPTY" => query.Where($"{property} != null"),
+                => query.Where(DynamicQueryConfig.Parameterized, $"{property} <= @0", dt),
+            "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} == null"),
+            "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} != null"),
             // IN/BETWEEN parse a list rather than a single scalar; handle them out of the main switch.
             _ => ApplyInOrRange(query, property, op, value)
         };
@@ -57,7 +57,7 @@ internal sealed class DateTimeFilterStrategy : IFilterStrategy
     private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
     {
         var values = FilterValueParser.ParseList(value, ParseDateTime);
-        return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
+        return values.Count == 0 ? query : query.Where(DynamicQueryConfig.Parameterized, $"@0.Contains({property})", values);
     }
 
     private static IQueryable<T> ApplyBetween<T>(IQueryable<T> query, string property, string value)
@@ -65,7 +65,7 @@ internal sealed class DateTimeFilterStrategy : IFilterStrategy
         // BETWEEN takes exactly two comma-separated bounds ("min,max"), inclusive on both ends.
         var bounds = FilterValueParser.ParseList(value, ParseDateTime);
         return bounds.Count == 2
-            ? query.Where($"{property} >= @0 && {property} <= @1", bounds[0], bounds[1])
+            ? query.Where(DynamicQueryConfig.Parameterized, $"{property} >= @0 && {property} <= @1", bounds[0], bounds[1])
             : query;
     }
 
