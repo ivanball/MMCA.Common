@@ -24,10 +24,10 @@ internal sealed class GuidFilterStrategy : IFilterStrategy
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
-            "EQUALS" when Guid.TryParse(value, out var g) => query.Where($"{property} == @0", g),
-            "NOT EQUALS" when Guid.TryParse(value, out var g) => query.Where($"{property} != @0", g),
-            "IS EMPTY" => query.Where($"{property} == null"),
-            "IS NOT EMPTY" => query.Where($"{property} != null"),
+            "EQUALS" when Guid.TryParse(value, out var g) => query.Where(DynamicQueryConfig.Parameterized, $"{property} == @0", g),
+            "NOT EQUALS" when Guid.TryParse(value, out var g) => query.Where(DynamicQueryConfig.Parameterized, $"{property} != @0", g),
+            "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} == null"),
+            "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} != null"),
             // IN parses a comma-separated set rather than a single scalar.
             "IN" => ApplyIn(query, property, value),
             _ => query
@@ -36,7 +36,7 @@ internal sealed class GuidFilterStrategy : IFilterStrategy
     private static IQueryable<T> ApplyIn<T>(IQueryable<T> query, string property, string value)
     {
         var values = FilterValueParser.ParseList(value, ParseGuid);
-        return values.Count == 0 ? query : query.Where($"@0.Contains({property})", values);
+        return values.Count == 0 ? query : query.Where(DynamicQueryConfig.Parameterized, $"@0.Contains({property})", values);
     }
 
     private static Guid? ParseGuid(string s) => Guid.TryParse(s, out var g) ? g : null;

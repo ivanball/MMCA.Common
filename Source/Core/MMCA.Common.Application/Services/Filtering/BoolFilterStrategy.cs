@@ -24,9 +24,9 @@ internal sealed class BoolFilterStrategy : IFilterStrategy
         => op switch
         {
             // Presence checks are value-independent, so they precede the bool parse.
-            "IS EMPTY" => query.Where($"{property} == null"),
-            "IS NOT EMPTY" => query.Where($"{property} != null"),
-            "IS" when bool.TryParse(value, out var boolValue) => query.Where($"{property} == @0", boolValue),
+            "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} == null"),
+            "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} != null"),
+            "IS" when bool.TryParse(value, out var boolValue) => query.Where(DynamicQueryConfig.Parameterized, $"{property} == @0", boolValue),
             _ => query
         };
 }
