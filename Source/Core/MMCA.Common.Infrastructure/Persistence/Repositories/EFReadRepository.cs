@@ -193,11 +193,6 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// <summary>
     /// Checks whether an entity with the given ID exists.
     /// </summary>
-    /// <remarks>
-    /// Uses <c>CountAsync</c> instead of <c>AnyAsync</c> as a workaround for a Cosmos DB provider bug
-    /// that generates invalid SQL (unresolved 'root' identifier) when translating <c>AnyAsync</c>
-    /// with a predicate into a subquery.
-    /// </remarks>
     public virtual async Task<bool> ExistsAsync(
         TIdentifierType id,
         bool ignoreQueryFilters = false,
@@ -205,15 +200,10 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(id);
 
-        if (ignoreQueryFilters)
-        {
-            return await Entities
-                .IgnoreQueryFilters()
-                .CountAsync(e => e.Id.Equals(id), cancellationToken)
-                .ConfigureAwait(false) > 0;
-        }
-
-        return await Entities.CountAsync(e => e.Id.Equals(id), cancellationToken).ConfigureAwait(false) > 0;
+        return await AnyAsync(
+            ignoreQueryFilters ? Entities.IgnoreQueryFilters() : Entities,
+            e => e.Id.Equals(id),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -224,16 +214,32 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(where);
 
-        if (ignoreQueryFilters)
-        {
-            return await Entities
-                .IgnoreQueryFilters()
-                .CountAsync(where, cancellationToken)
-                .ConfigureAwait(false) > 0;
-        }
-
-        return await Entities.CountAsync(where, cancellationToken).ConfigureAwait(false) > 0;
+        return await AnyAsync(
+            ignoreQueryFilters ? Entities.IgnoreQueryFilters() : Entities,
+            where,
+            cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Existence check, provider-aware.
+    /// </summary>
+    /// <remarks>
+    /// Cosmos DB needs <c>CountAsync</c>: its provider generates invalid SQL (unresolved 'root'
+    /// identifier) when translating a predicated <c>AnyAsync</c> into a subquery. Every other
+    /// provider gets <c>AnyAsync</c>, which short-circuits at the first match; <c>CountAsync</c>
+    /// reads every matching row, so on a predicate that matches a wide set the workaround cost
+    /// O(matches) on providers that never needed it.
+    /// </remarks>
+    private async Task<bool> AnyAsync(
+        IQueryable<TEntity> query,
+        Expression<Func<TEntity, bool>> where,
+        CancellationToken cancellationToken)
+        => IsCosmosProvider
+            ? await query.CountAsync(where, cancellationToken).ConfigureAwait(false) > 0
+            : await query.AnyAsync(where, cancellationToken).ConfigureAwait(false);
+
+    private bool IsCosmosProvider =>
+        _context.Database.ProviderName?.Contains("Cosmos", StringComparison.Ordinal) == true;
 
     /// <summary>Gets a tracked queryable over the entity set.</summary>
     public virtual IQueryable<TEntity> Table => Entities;

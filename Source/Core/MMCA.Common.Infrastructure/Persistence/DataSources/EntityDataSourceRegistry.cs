@@ -24,7 +24,8 @@ public sealed class EntityDataSourceRegistry(
 {
     private sealed record Snapshot(
         FrozenDictionary<string, (DataSourceKey Key, Type ConfigurationType)> Entities,
-        FrozenSet<Assembly> ScannedAssemblies);
+        FrozenSet<Assembly> ScannedAssemblies,
+        IReadOnlyCollection<DataSourceKey> PhysicalSources);
 
     private readonly Lock _rebuildLock = new();
     private volatile Snapshot? _snapshot;
@@ -71,8 +72,14 @@ public sealed class EntityDataSourceRegistry(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Precomputed on the snapshot rather than projected per call: the outbox processor and the
+    /// outbox cleanup service both call this on every poll cycle, and re-running
+    /// <c>Select().Distinct()</c> over every registered entity allocated a fresh list each time,
+    /// forever, on a loop that usually finds nothing to do.
+    /// </remarks>
     public IReadOnlyCollection<DataSourceKey> GetPhysicalSourcesInUse() =>
-        [.. GetOrBuildSnapshot().Entities.Values.Select(r => r.Key).Distinct()];
+        GetOrBuildSnapshot().PhysicalSources;
 
     private Snapshot GetOrBuildSnapshot()
     {
@@ -149,7 +156,8 @@ public sealed class EntityDataSourceRegistry(
 
         return new Snapshot(
             entities.ToFrozenDictionary(StringComparer.Ordinal),
-            assemblies.ToFrozenSet());
+            assemblies.ToFrozenSet(),
+            [.. entities.Values.Select(r => r.Key).Distinct()]);
     }
 
     /// <summary>

@@ -21,48 +21,54 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
         var queryName = typeof(TQuery).Name;
         var correlationId = correlationContext.CorrelationId;
 
-        using (logger.BeginScope(new Dictionary<string, object>
+        using (BeginQueryScope(logger, queryName, correlationId))
         {
-            ["CorrelationId"] = correlationId,
-            ["QueryName"] = queryName,
-        }))
-        {
-            var stopwatch = Stopwatch.StartNew();
-            var outcome = "completed";
+            // Timestamp rather than a Stopwatch instance: same resolution, one fewer allocation per
+            // query. Elapsed is captured before logging, so the recorded duration stays the handler's
+            // (matching the previous stopwatch.Stop()-then-log ordering).
+            var startTimestamp = Stopwatch.GetTimestamp();
             try
             {
                 var result = await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
-                stopwatch.Stop();
+                var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
 
                 if (result is Shared.Abstractions.Result { IsFailure: true } failureResult)
                 {
-                    outcome = "failed";
                     var errorSummary = string.Join("; ", failureResult.Errors.Select(e => $"{e.Code}: {e.Message}"));
-                    LogQueryFailed(logger, queryName, stopwatch.ElapsedMilliseconds, correlationId, errorSummary);
+                    LogQueryFailed(logger, queryName, (long)elapsed.TotalMilliseconds, correlationId, errorSummary);
+                    RecordDuration(queryName, elapsed, "failed");
                 }
                 else
                 {
-                    LogQueryCompleted(logger, queryName, stopwatch.ElapsedMilliseconds, correlationId);
+                    LogQueryCompleted(logger, queryName, (long)elapsed.TotalMilliseconds, correlationId);
+                    RecordDuration(queryName, elapsed, "completed");
                 }
 
                 return result;
             }
             catch (Exception ex)
             {
-                stopwatch.Stop();
-                outcome = "exception";
-                LogQueryException(logger, queryName, stopwatch.ElapsedMilliseconds, correlationId, ex);
+                var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+                LogQueryException(logger, queryName, (long)elapsed.TotalMilliseconds, correlationId, ex);
+                RecordDuration(queryName, elapsed, "exception");
                 throw;
-            }
-            finally
-            {
-                CqrsMetrics.QueryDuration.Record(
-                    stopwatch.Elapsed.TotalMilliseconds,
-                    new KeyValuePair<string, object?>("query", queryName),
-                    new KeyValuePair<string, object?>("outcome", outcome));
             }
         }
     }
+
+    /// <summary>
+    /// Source-generated scope, matching <c>LoggingCommandDecorator</c>: the previous
+    /// <c>BeginScope(new Dictionary&lt;string, object&gt;)</c> allocated a dictionary and boxed the
+    /// scope state on every query, at every log level, including when logging was disabled entirely.
+    /// </summary>
+    private static readonly Func<ILogger, string, string, IDisposable?> BeginQueryScope =
+        LoggerMessage.DefineScope<string, string>("Query {QueryName} [CorrelationId: {CorrelationId}]");
+
+    private static void RecordDuration(string queryName, TimeSpan elapsed, string outcome) =>
+        CqrsMetrics.QueryDuration.Record(
+            elapsed.TotalMilliseconds,
+            new KeyValuePair<string, object?>("query", queryName),
+            new KeyValuePair<string, object?>("outcome", outcome));
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Query {QueryName} completed in {ElapsedMs}ms [CorrelationId: {CorrelationId}]")]
     private static partial void LogQueryCompleted(ILogger logger, string queryName, long elapsedMs, string correlationId);

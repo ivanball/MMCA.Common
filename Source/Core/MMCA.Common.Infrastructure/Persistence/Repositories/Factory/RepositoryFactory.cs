@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -26,14 +27,14 @@ public sealed class RepositoryFactory(IServiceProvider serviceProvider, IApplica
         where TEntity : AuditableAggregateRootEntity<TIdentifierType>
         where TIdentifierType : notnull
     {
-        IRepository<TEntity, TIdentifierType> repositoryInstance;
-        repositoryInstance = ActivatorUtilities.CreateInstance<EFRepository<TEntity, TIdentifierType>>(
-            _serviceProvider, dbContext);
+        var repositoryInstance = (IRepository<TEntity, TIdentifierType>)Factory(
+            typeof(EFRepository<TEntity, TIdentifierType>), DbContextArg)(_serviceProvider, [dbContext]);
 
         if (_applicationSettings.UseMiniProfiler)
         {
-            repositoryInstance = ActivatorUtilities.CreateInstance<EFRepositoryDecorator<TEntity, TIdentifierType>>(
-                _serviceProvider, repositoryInstance);
+            repositoryInstance = (IRepository<TEntity, TIdentifierType>)Factory(
+                typeof(EFRepositoryDecorator<TEntity, TIdentifierType>),
+                [typeof(IRepository<TEntity, TIdentifierType>)])(_serviceProvider, [repositoryInstance]);
         }
 
         return repositoryInstance;
@@ -50,16 +51,35 @@ public sealed class RepositoryFactory(IServiceProvider serviceProvider, IApplica
         where TEntity : AuditableBaseEntity<TIdentifierType>
         where TIdentifierType : notnull
     {
-        IReadRepository<TEntity, TIdentifierType> repositoryInstance;
-        repositoryInstance = ActivatorUtilities.CreateInstance<EFReadRepository<TEntity, TIdentifierType>>(
-            _serviceProvider, dbContext);
+        var repositoryInstance = (IReadRepository<TEntity, TIdentifierType>)Factory(
+            typeof(EFReadRepository<TEntity, TIdentifierType>), DbContextArg)(_serviceProvider, [dbContext]);
 
         if (_applicationSettings.UseMiniProfiler)
         {
-            repositoryInstance = ActivatorUtilities.CreateInstance<EFReadRepositoryDecorator<TEntity, TIdentifierType>>(
-                _serviceProvider, repositoryInstance);
+            repositoryInstance = (IReadRepository<TEntity, TIdentifierType>)Factory(
+                typeof(EFReadRepositoryDecorator<TEntity, TIdentifierType>),
+                [typeof(IReadRepository<TEntity, TIdentifierType>)])(_serviceProvider, [repositoryInstance]);
         }
 
         return repositoryInstance;
     }
+
+    private static readonly Type[] DbContextArg = [typeof(DbContext)];
+
+    private static readonly ConcurrentDictionary<Type, ObjectFactory> FactoryCache = new();
+
+    /// <summary>
+    /// Returns the cached compiled constructor for a closed repository type.
+    /// <para>
+    /// <see cref="ActivatorUtilities.CreateInstance{T}(IServiceProvider, object[])"/> matches the
+    /// constructor by reflection on every call and caches nothing, so a request touching four
+    /// aggregates paid four reflective activations. Each closed type here always takes the same
+    /// argument shape, so the compiled <see cref="ObjectFactory"/> can be keyed by type alone.
+    /// </para>
+    /// </summary>
+    private static ObjectFactory Factory(Type implementationType, Type[] argumentTypes) =>
+        FactoryCache.GetOrAdd(
+            implementationType,
+            static (type, args) => ActivatorUtilities.CreateFactory(type, args),
+            argumentTypes);
 }
