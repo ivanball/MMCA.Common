@@ -13,6 +13,8 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -66,6 +68,16 @@ jobs:
       - name: Push to GitHub Packages
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
+      # nuget.org is the public install path (ADR-053). GitHub Packages' NuGet registry requires a
+      # PAT with read:packages even for public packages, so a stranger following the README could
+      # not restore. Both registries get every release; nuget.org is skipped (not failed) when the
+      # NUGET_API_KEY secret is absent, so the release still completes on a fork or before the
+      # secret is provisioned. The secret is surfaced through the job-level env block because the
+      # `secrets` context is not available in a step `if`.
+      - name: Push to nuget.org
+        if: env.NUGET_API_KEY != ''
+        run: dotnet nuget push ./nupkgs/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key "$NUGET_API_KEY" --skip-duplicate
+
   # MMCA.Common.UI.Maui (the 15th package) cannot build on ubuntu — its four TFMs need the MAUI
   # workloads — so it packs on windows, versioned from the same tag so the lockstep release stays
   # whole. Same SBOM hard gate as the main job, scoped to this project.
@@ -75,6 +87,8 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -125,3 +139,9 @@ jobs:
         # dotnet nuget push then fails with "File does not exist" on the un-globbed pattern.
         shell: bash
         run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://nuget.pkg.github.com/ivanball/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+      # Same dual-registry policy as the main job (ADR-053); same bash-not-pwsh globbing caveat.
+      - name: Push to nuget.org
+        if: env.NUGET_API_KEY != ''
+        shell: bash
+        run: dotnet nuget push ./nupkgs-maui/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key "$NUGET_API_KEY" --skip-duplicate

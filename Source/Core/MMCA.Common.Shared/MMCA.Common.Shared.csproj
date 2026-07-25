@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.Shared</PackageId>
-    <Description>MMCA framework — shared types: Result pattern, value objects, error handling, DTOs</Description>
+    <Description>MMCA framework shared types: Result pattern, value objects, error handling, DTOs</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MinVer">

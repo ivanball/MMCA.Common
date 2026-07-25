@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.API</PackageId>
-    <Description>MMCA framework — base controllers, middleware, idempotency, error-to-HTTP mapping</Description>
+    <Description>MMCA framework: base controllers, middleware, idempotency, error-to-HTTP mapping</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" />

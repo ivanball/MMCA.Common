@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
   <PropertyGroup>
     <PackageId>MMCA.Common.UI.Web</PackageId>
-    <Description>MMCA framework — server-side Blazor Web host support: cookie-backed token storage, dynamic CSP provider, SSR error page, and host registration extensions</Description>
+    <Description>MMCA framework server-side Blazor Web host support: cookie-backed token storage, dynamic CSP provider, SSR error page, and host registration extensions</Description>
     <!-- Compile only against the three declared bridge references (UI, API, Aspire). Without this,
          NuGet injects API's transitive ProjectReferences (Infrastructure -> Application -> ...) into
          @(ProjectReference) and the EnforceUIWebLayerBoundary guard cannot tell a deliberate direct

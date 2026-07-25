@@ -35,6 +35,11 @@
     <RepositoryUrl>https://github.com/ivanball/MMCA.Common</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- The nuget.org listing surface: project URL, icon, and tags are the entire first
+         impression for anyone who finds a package through search rather than the docs site. -->
+    <PackageProjectUrl>https://ivanball.github.io/platform.html</PackageProjectUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>modular-monolith;clean-architecture;ddd;cqrs;microservices;dotnet;aspnetcore;aspire;efcore;blazor;outbox;result-pattern</PackageTags>
     <!-- GitHub Packages has no symbol server, so a standalone .snupkg cannot be consumed.
          Embed the PDB into the shipped DLL instead (with repo + untracked-source info), so the
          debug symbols actually reach consumers via the .nupkg. -->
@@ -42,6 +47,12 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
+
+  <!-- The icon referenced by PackageIcon above must itself be packed. Done once here rather than
+       in fifteen csproj files (each of which still packs README.md individually). -->
+  <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
+    <None Include="$(MSBuildThisFileDirectory)assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
     <PackageReference Include="Meziantou.Analyzer">
