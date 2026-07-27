@@ -485,7 +485,7 @@ jobs:
       - name: Test Helpdesk (domain + architecture, no DB)
         if: needs.changes.outputs.code == 'true'
         working-directory: MMCA.Helpdesk
-        # Helpdesk's suite is ~44 tests; floor at 40 so a discovery/filter regression fails
+        # Helpdesk's suite is ~91 tests; floor at 40 so a discovery/filter regression fails
         # instead of passing green with near-zero tests discovered.
         run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 40
 
