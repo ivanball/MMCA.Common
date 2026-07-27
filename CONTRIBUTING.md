@@ -3,6 +3,9 @@
 Thanks for taking an interest in the framework. This is a short guide; the full contributor
 reference (package layout, layer rules, build/test commands) is [CLAUDE.md](CLAUDE.md).
 
+Participation here is governed by the [Code of Conduct](CODE_OF_CONDUCT.md) (Contributor Covenant
+2.1). By taking part you agree to uphold it.
+
 ## Commit messages: Scoped Commits
 
 This repo uses [Scoped Commits](https://scopedcommits.com/), not Conventional Commits. The scope
