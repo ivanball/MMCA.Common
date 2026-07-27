@@ -78,8 +78,8 @@ public static class DependencyInjection
         /// a database transaction — saving resources on malformed requests.</item>
         /// <item>Cache invalidation sits outside validation so cache is only cleared after a valid,
         /// committed mutation — a rollback or validation failure leaves cache intact.</item>
-        /// <item>On business failure (<see cref="Result"/>.<c>IsFailure</c>), the transaction still commits
-        /// (no data was mutated) but cache invalidation is skipped.</item>
+        /// <item>On business failure (<see cref="Result"/>.<c>IsFailure</c>), the transaction is rolled
+        /// back (atomicity over partial persistence) and cache invalidation is skipped.</item>
         /// <item>On exception, the transaction rolls back and the exception propagates through all decorators.</item>
         /// </list>
         /// </para>
