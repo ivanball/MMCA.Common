@@ -3,6 +3,9 @@
 Thanks for taking an interest in the framework. This is a short guide; the full contributor
 reference (package layout, layer rules, build/test commands) is [CLAUDE.md](CLAUDE.md).
 
+Participation here is governed by the [Code of Conduct](CODE_OF_CONDUCT.md) (Contributor Covenant
+2.1). By taking part you agree to uphold it.
+
 ## Commit messages: Scoped Commits
 
 This repo uses [Scoped Commits](https://scopedcommits.com/), not Conventional Commits. The scope
@@ -88,11 +91,64 @@ let you catch a breaking change before it ships:
 
 - **The Helpdesk source-build canary** (CI) builds MMCA.Helpdesk against this branch's framework
   *source* (`UseLocalMMCA`), so an API break in your PR fails the PR instead of the next release.
-- **Local source mode** lets you iterate a consumer against your Common branch with no token:
-  in a consumer repo, `cp local.props.template local.props` (it sets `UseLocalMMCA=true` and points
-  at `../MMCA.Common/Source/`). Rebuild Common in Debug first (`dotnet build <Common proj> -c Debug`)
-  before rebuilding the consumer, or the IDE binds a stale ref assembly and reports phantom `CS0103`.
-  A green local source-mode build is not proof CI package-mode is green; expect a CI round-trip.
+- **Local source mode** lets you iterate a consumer against your Common branch with no token. It has
+  two traps that look like code bugs; both are covered in the next section.
+
+## Local source-mode development
+
+Normally a consumer (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) resolves `MMCA.Common.*` as released
+NuGet packages, so a framework change only reaches it after a release. **Local source mode** swaps
+those `PackageReference`s for `ProjectReference`s pointing at your working copy of the framework, so
+a consumer builds against the code you are editing right now, with no GitHub Packages token.
+
+### Turning it on
+
+Clone the consumer as a **sibling** of this repo (the relative path is what makes it work):
+
+```
+C:\Projects\MMCA\
+  MMCA.Common\
+  MMCA.Helpdesk\
+```
+
+Then, in the consumer repo:
+
+```bash
+cp local.props.template local.props
+```
+
+That sets `UseLocalMMCA=true` and points at `../MMCA.Common/Source/`. `local.props` is gitignored,
+so the switch stays local to your machine. MMCA.Helpdesk is the exception: it ships `local.props`
+checked in and is in source mode by default, which is what lets the CI canary build it against a PR.
+
+To go back to package mode, delete (or rename) `local.props` and restore.
+
+### Rebuild Common in Debug first
+
+**Symptom:** you add a member to a framework type, rebuild only the consumer, and the compiler
+reports `CS0103: The name 'X' does not exist in the current context` (or `CS0117` / `CS1061`) against
+the member you just added. The code is correct and the file is right there on disk.
+
+**Cause:** the `ProjectReference` points outside the consumer's solution, so the build binds the
+framework's **last-built Debug reference assembly** rather than recompiling your edit.
+
+**Fix:** build the framework project in Debug before rebuilding the consumer.
+
+```bash
+dotnet build <path to the MMCA.Common project you changed> -c Debug
+```
+
+This is not a code bug and no amount of cleaning the consumer fixes it. Note the configuration: a
+`-c Release` build of the framework does not refresh the **Debug** ref assembly the consumer binds.
+
+### A green source-mode build is not proof CI is green
+
+Source mode and package mode do not fail identically. A local source-mode build can pass (even in
+Release) while CI fails in package mode on an analyzer or a restore rule that only applies to a
+packaged reference: analyzers flowing from a package, `NU1605` downgrades, lock-file drift, and pack
+errors (`NU5xxx`) are all invisible to a source-mode build. The `package-consumption` CI job exists
+precisely to catch these, so expect the occasional CI-only round-trip and do not treat a clean local
+build as the final word.
 
 ## Releases are separate
 

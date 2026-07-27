@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/ivanball/MMCA.Common/discussions
+    about: >-
+      How do I do X, is this the intended pattern, does this belong in the framework. Ask in
+      Discussions: it stays findable and does not need a triage decision.
+  - name: Security vulnerability (private)
+    url: https://github.com/ivanball/MMCA.Common/security/advisories/new
+    about: >-
+      Report suspected vulnerabilities privately through a security advisory, never a public issue.
+      See SECURITY.md.
+  - name: Documentation library
+    url: https://ivanball.github.io/docs/
+    about: >-
+      ADRs, the getting-started guide, the evaluation rubric, and the onboarding chapters. Worth a
+      look before filing: most "why is it like this" answers have a record.

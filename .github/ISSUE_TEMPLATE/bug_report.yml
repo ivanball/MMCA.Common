@@ -1,0 +1,116 @@
+name: Bug report
+description: Something in the framework behaves differently from what it documents.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. A few fields up front save a round trip: the packages ship in
+        lockstep, so the version is one answer, but which package and which host type are not,
+        and both change how this gets triaged.
+
+        Please do not report suspected **security vulnerabilities** here. Use a private
+        [security advisory](https://github.com/ivanball/MMCA.Common/security/advisories/new)
+        instead (see [SECURITY.md](https://github.com/ivanball/MMCA.Common/blob/main/SECURITY.md)).
+
+  - type: input
+    id: version
+    attributes:
+      label: Framework version
+      description: >-
+        The `MMCA.Common.*` version from your `Directory.Packages.props`, or the `Framework version`
+        line in `FACTS.md`. If you are building against framework source with `local.props`
+        (`UseLocalMMCA=true`), say so and give the commit SHA instead.
+      placeholder: "1.128.0 (or: source mode, commit abc1234)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package
+      description: The package the problem surfaces in. Pick more than one only if it genuinely spans them.
+      multiple: true
+      options:
+        - MMCA.Common.Shared
+        - MMCA.Common.Domain
+        - MMCA.Common.Application
+        - MMCA.Common.Infrastructure
+        - MMCA.Common.API
+        - MMCA.Common.Grpc
+        - MMCA.Common.UI
+        - MMCA.Common.UI.Web
+        - MMCA.Common.UI.Maui
+        - MMCA.Common.Aspire
+        - MMCA.Common.Aspire.Hosting
+        - MMCA.Common.Testing
+        - MMCA.Common.Testing.Architecture
+        - MMCA.Common.Testing.E2E
+        - MMCA.Common.Testing.UI
+        - Not sure / spans several
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host type
+      description: >-
+        How the code runs. Extraction changes the transport (in-process bus vs broker, direct call
+        vs gRPC), so the same symptom often has a different cause in each.
+      options:
+        - Modular monolith (single host)
+        - Extracted service (behind the YARP gateway)
+        - MAUI head
+        - Test host / integration tests
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: sdk
+    attributes:
+      label: .NET SDK version
+      description: Output of `dotnet --version`.
+      placeholder: "10.0.100"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected, and where that expectation came from (an ADR, an XML doc comment, a guide).
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: >-
+        What happened instead. Paste the full exception, analyzer id, or build error rather than
+        summarizing it: the identifier is usually what makes this searchable later.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal repro
+      description: >-
+        The smallest thing that shows the problem: a failing test, a handler plus its registration,
+        or the relevant configuration section. A link to a branch works too.
+      render: csharp
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Workarounds you tried, related ADRs, whether it reproduces on a clean clone.
+    validations:
+      required: false
