@@ -1,0 +1,80 @@
+name: Feature request
+description: Propose a capability or an extension point for the framework.
+title: "[feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The framework earns its keep by being the thing every consumer needs, so the useful case
+        is usually made from a real problem in a consuming app rather than from the abstraction
+        you have in mind. Lead with the problem.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >-
+        What are you unable to do today, and what does the workaround cost? Concrete beats general:
+        the app, the use case, and what you write now instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Which layer does this belong in
+      description: >-
+        Dependencies flow one way (`API`/`Grpc` -> `Infrastructure` -> `Application` -> `Domain` ->
+        `Shared`) and both a compile-time guard and fitness tests enforce it. If the answer is
+        "Domain, but it needs a database", the proposal probably splits into an abstraction plus
+        an implementation in different layers.
+      options:
+        - Shared
+        - Domain
+        - Application
+        - Infrastructure
+        - API
+        - Grpc
+        - UI / UI.Web / UI.Maui
+        - Aspire / Aspire.Hosting
+        - Testing packages
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: Proposed shape
+      description: >-
+        The API as you would use it: the interface, the registration call, the attribute. A rough
+        sketch is fine. Say whether existing consumers keep compiling.
+      render: csharp
+    validations:
+      required: false
+
+  - type: dropdown
+    id: adr
+    attributes:
+      label: Would this need an ADR?
+      description: >-
+        Every cross-cutting pattern has an Architecture Decision Record. A new pattern, a new
+        extension point, or a change to an existing pattern needs one; a self-contained helper
+        does not. See the [ADR index](https://ivanball.github.io/docs/adr/).
+      options:
+        - "Yes: it introduces or changes a cross-cutting pattern"
+        - "No: it is self-contained inside one layer"
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: >-
+        Including "the consuming app keeps owning this". Not everything belongs in the framework,
+        and saying why this one does is the strongest part of the case.
+    validations:
+      required: false
