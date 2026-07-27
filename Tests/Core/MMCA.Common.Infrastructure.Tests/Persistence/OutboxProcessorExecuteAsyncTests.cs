@@ -14,7 +14,7 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 /// <summary>
 /// Tests for <see cref="OutboxProcessor.ExecuteAsync"/> edge cases that are not covered
 /// by the ProcessPendingMessagesAsync tests in OutboxProcessorTests. The processor's
-/// <see cref="TimeProvider"/> seam is driven with a <see cref="FakeTimeProvider"/> so the
+/// <see cref="TimeProvider"/> extension point is driven with a <see cref="FakeTimeProvider"/> so the
 /// 5-second startup delay elapses instantly — no test sleeps real seconds.
 /// </summary>
 public sealed class OutboxProcessorExecuteAsyncTests

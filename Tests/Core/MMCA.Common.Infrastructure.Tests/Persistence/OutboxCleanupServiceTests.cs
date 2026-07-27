@@ -25,7 +25,7 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 /// immediate-shutdown behavior, the private relational-source selection helper (via
 /// reflection, mirroring the existing non-public-member test pattern in this project),
 /// and the purge sweep itself, driven deterministically through the service's
-/// <see cref="TimeProvider"/> seam with a <see cref="FakeTimeProvider"/> over an in-memory
+/// <see cref="TimeProvider"/> extension point with a <see cref="FakeTimeProvider"/> over an in-memory
 /// SQLite <see cref="ApplicationDbContext"/> (the BrokerEventBusTests harness pattern).
 /// </summary>
 public sealed class OutboxCleanupServiceTests
@@ -437,7 +437,7 @@ public sealed class OutboxCleanupServiceTests
     /// Builds an <see cref="OutboxCleanupService"/> wired for a real sweep: a real
     /// <see cref="IServiceScopeFactory"/> resolving a mocked <see cref="IDbContextFactory"/>
     /// (routing each <see cref="DataSourceKey"/> through <paramref name="contextForSource"/>),
-    /// the <see cref="FakeTimeProvider"/> seam, and a logger whose <paramref name="observedLogEvent"/>
+    /// the <see cref="FakeTimeProvider"/> extension point, and a logger whose <paramref name="observedLogEvent"/>
     /// completes the returned task so tests can await the sweep deterministically.
     /// </summary>
     private static (OutboxCleanupService Sut,

@@ -15,7 +15,7 @@ namespace MMCA.Common.UI.Gallery;
 /// <summary>
 /// Builds the backend-less Blazor gallery host. It renders the real <c>MMCA.Common.UI</c> auth pages
 /// (<c>/login</c>, <c>/register</c>) and a primitives showcase (<c>/components</c>) with stub
-/// implementations of the consumer seams (no-op auth, anonymous auth state, null token storage), so a
+/// implementations of the consumer extension points (no-op auth, anonymous auth state, null token storage), so a
 /// real-browser axe accessibility scan can run against the shared UI inside <c>MMCA.Common</c>'s own CI.
 /// </summary>
 public static class GalleryHost
@@ -52,7 +52,7 @@ public static class GalleryHost
 
         builder.Services.AddMudServices();
 
-        // Stub the consumer seams BEFORE AddUIShared so its TryAdd* registrations defer to these.
+        // Stub the consumer extension points BEFORE AddUIShared so its TryAdd* registrations defer to these.
         // The gallery never performs real auth or token I/O. The auth pages render in their
         // signed-out state so axe scans the anonymous markup; the [Authorize]-guarded notification
         // pages (rubric §25) are scanned signed-in via the cookie-toggled fake scheme below.
@@ -72,7 +72,7 @@ public static class GalleryHost
                 GalleryFakeAuthenticationHandler.SchemeName, configureOptions: null);
         builder.Services.AddAuthorization();
 
-        // Canned notification seams so NotificationBell and the notification pages
+        // Canned notification extension points so NotificationBell and the notification pages
         // (/notifications, /notifications/inbox, /notifications/send — discovered from the
         // MMCA.Common.UI assembly) render populated markup for the render/axe E2E scan.
         builder.Services.AddScoped<NotificationState>();

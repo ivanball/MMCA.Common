@@ -14,7 +14,7 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// the channel API's argument validation, subscription registry, and disconnected no-op paths.
 /// PARTIAL BY DESIGN: <c>StartAsync</c>, the retry/backoff loop, the ReceiveNotification and
 /// ReceiveChannelEvent wiring, and the join/re-join invocations build a real SignalR
-/// <c>HubConnection</c> internally via <c>HubConnectionBuilder</c> with no injectable seam, so
+/// <c>HubConnection</c> internally via <c>HubConnectionBuilder</c> with no injectable extension point, so
 /// exercising them would attempt real network connections with multi-second backoff. Left
 /// uncovered rather than changing Source (covered end to end by the consuming apps' E2E suites).
 /// </summary>

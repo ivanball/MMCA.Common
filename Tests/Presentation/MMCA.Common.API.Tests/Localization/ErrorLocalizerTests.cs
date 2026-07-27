@@ -6,7 +6,7 @@ using MMCA.Common.API.Localization;
 namespace MMCA.Common.API.Tests.Localization;
 
 /// <summary>
-/// Verifies the edge error-localization seam (ADR-027): codes resolve to the current UI culture from the
+/// Verifies the edge error-localization extension point (ADR-027): codes resolve to the current UI culture from the
 /// framework's <c>ErrorResources</c> resx (including the Spanish satellite), and unknown/empty codes fall
 /// back to the caller's English message.
 /// </summary>

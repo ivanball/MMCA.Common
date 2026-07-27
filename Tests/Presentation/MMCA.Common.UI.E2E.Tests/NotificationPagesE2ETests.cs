@@ -8,7 +8,7 @@ namespace MMCA.Common.UI.E2E.Tests;
 
 /// <summary>
 /// Render-smoke + WCAG 2.1 AA accessibility scans for the shared Notification pages, rendered against
-/// the gallery's stubbed notification seams (the pages are discovered from the MMCA.Common.UI assembly).
+/// the gallery's stubbed notification extension points (the pages are discovered from the MMCA.Common.UI assembly).
 /// </summary>
 public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
 {

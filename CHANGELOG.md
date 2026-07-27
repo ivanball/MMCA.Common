@@ -651,7 +651,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
 - **`UIArchitectureConventionTestsBase`** (`MMCA.Common.Testing.Architecture`, rubric §18): file-scan
   fitness base enforcing the container/presentational split mechanically: every `*.razor.cs` under
   `Source/` stays within a 400-line cap, and every `.razor` file keeps its inline `@code` block within
-  120 lines (substantial logic belongs in the code-behind partial). Seams: `MaxCodeBehindLines`,
+  120 lines (substantial logic belongs in the code-behind partial). Extension points: `MaxCodeBehindLines`,
   `MaxInlineCodeLines`, `MinimumCodeBehindFiles` (non-vacuity guard), `ExcludedPathFragments`.
   Subclassed in-repo as `UIArchitectureConventionTests`.
 - **`StateManagementConventionTestsBase`** (`MMCA.Common.Testing.Architecture`, rubric §19): fitness
@@ -660,7 +660,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
   excluded, deliberate exceptions recorded via `AllowedStaticMembers`), plus a source scan forbidding
   singleton registration of stateful UI services (`*StateService`/`*StateContainer`). Subclassed
   in-repo as `StateManagementConventionTests` (one recorded exception: the `ErrorMessages._localizer`
-  write-once wiring seam).
+  write-once wiring extension point).
 - **Dark-mode axe gate** (`DarkModeE2ETests`, rubric §20/§21): the gallery Login + Components pages are
   re-scanned with the dark palette active (seeded via the `mmca_theme` cookie) inside the blocking
   chromium `ui-e2e` job, closing the tracked dark-palette contrast item.
@@ -684,13 +684,13 @@ _No entries were recorded at release time; see the git tag for this release's ch
 
 ### Added (2026-07-11 move-to-Common extraction wave, E1-E12 of `Docs/Planning/DriftAnalysis-plan.md` 2026-07-11)
 - **`RouteAuthorizationTestsBase`** (`MMCA.Common.Testing.Architecture`): reflection fitness base
-  asserting every governed routable Blazor page carries the required role, with seams
+  asserting every governed routable Blazor page carries the required role, with extension points
   `TargetAssembly` / `RequiredRole` / `IsGovernedPage(Type)` / `MinimumGovernedPages` and a
   non-vacuity guard; replaces five hand-rolled per-repo copies. Attribute detection is
   full-name-based, preserving the package's zero-ASP.NET-reference design.
 - **Contract-test bases** (`MMCA.Common.Testing`): `ServiceInfoVersioningContractTestsBase<T>`
   (the whole /ServiceInfo v1/v2 + version-headers body), `OpenApiContractTestsBase<T>`
-  (document served + well-formed 3.x, seams `MinimumPathCount` / `CorePublicResources`), and
+  (document served + well-formed 3.x, extension points `MinimumPathCount` / `CorePublicResources`), and
   `ProblemDetailsContractTestsBase<T>` (RFC 9457 shape probes + the shared
   `AssertProblemDetailsShapeAsync` helper); app-specific 409 facts stay app-side.
 - **UI HTTP-service test harness** (`MMCA.Common.Testing.UI`): `CapturingHttpMessageHandler`
@@ -942,7 +942,7 @@ _No entries were recorded at release time; see the git tag for this release's ch
   other reserved character in the lookup property name is now percent-encoded (the same treatment
   the paged path gives its sort/filter parameters) instead of corrupting the query string.
 
-### Changed (2026-07-05 TimeProvider seams C-6/C-7)
+### Changed (2026-07-05 TimeProvider extension points C-6/C-7)
 - **`OutboxCleanupService` gains an optional trailing `TimeProvider` constructor parameter** (C-6,
   non-breaking, defaults to `TimeProvider.System`): the hour-scale sweep interval and the retention
   cutoff run on the injectable clock, making the purge sweep deterministically unit-testable with
@@ -1205,7 +1205,7 @@ PII log/telemetry redaction (§30). No breaking changes.
 - **`PiiRedactor` (§30).** `Domain/Privacy/PiiRedactor.cs` masks every `[Pii]`-marked member (shallow,
   value-erasing `[REDACTED]` token, per-type reflection cache) before an entity carrying personal data
   reaches a structured log or telemetry attribute — the redaction half of the `[Pii]` contract (ADR-005),
-  complementing the `IAnonymizable` erasure seam. Covered by `PiiRedactorTests` (incl. "never emits the
+  complementing the `IAnonymizable` erasure extension point. Covered by `PiiRedactorTests` (incl. "never emits the
   clear-text PII values").
 
 ## [1.83.0] - 2026-06-26
@@ -1214,7 +1214,7 @@ Governance + front-end security hardening. No breaking changes.
 
 ### Added
 - **ADR-023 — centralized security-response headers (§26).** Documents the hardened security-headers
-  middleware + pluggable `ICspPolicyProvider` CSP seam (`AddCommonSecurityHeaders`), replacing per-host
+  middleware + pluggable `ICspPolicyProvider` CSP extension point (`AddCommonSecurityHeaders`), replacing per-host
   hand-rolled headers.
 - **Source-generated, CI-gated `FACTS.md` (§34).** `build/facts` computes version / package-count /
   ADR-range / fitness counts from source; the `build-and-test` job runs it with `--check` and fails the
@@ -1248,7 +1248,7 @@ Governance + supply-chain + E2E-stability hardening. No breaking changes.
 ## [1.81.0] - 2026-06-26
 
 Post-v1.80.0 polish: an opt-in OpenAPI UI, FinOps documentation, and test-coverage hardening for the
-v1.80.0 rate-limiter and `TimeProvider` seams. Additive — no breaking changes and no consumer behavior
+v1.80.0 rate-limiter and `TimeProvider` extension points. Additive — no breaking changes and no consumer behavior
 change beyond the new opt-in helper.
 
 ### Added
@@ -1406,7 +1406,7 @@ build-guarded change (ADR-006).
 - **Broker retry policy.** `AddBrokerMessaging` now configures `UseMessageRetry` (exponential backoff)
   on both the RabbitMQ and Azure Service Bus transports. Tunable via new `MessageBus:RetryLimit`,
   `MessageBus:RetryMinIntervalSeconds`, and `MessageBus:RetryMaxIntervalSeconds` settings.
-- **`IAnonymizable`** erasure seam (`MMCA.Common.Domain`) for reconciling soft-delete with
+- **`IAnonymizable`** erasure extension point (`MMCA.Common.Domain`) for reconciling soft-delete with
   data-subject erasure requests. See ADR-005.
 - **`OutboxCleanupService`** background service that purges processed outbox rows. New settings
   `Outbox:RetentionDays` (default 7) and `Outbox:CleanupIntervalHours` (default 6).

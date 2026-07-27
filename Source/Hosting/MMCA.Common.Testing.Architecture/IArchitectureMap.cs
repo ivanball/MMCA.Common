@@ -31,7 +31,7 @@ public enum Layer
 public sealed record LayerRef(string Module, Layer Layer, Assembly Assembly, string RootNamespace);
 
 /// <summary>
-/// The single per-repo seam every architecture fitness function keys off. Each repo supplies one
+/// The single per-repo extension point every architecture fitness function keys off. Each repo supplies one
 /// implementation (e.g. <c>StoreArchitectureMap</c>) declaring its layer/module assemblies; the
 /// shared rule library and abstract test bases consume <em>only</em> this interface, so a rule is
 /// written once and runs identically across MMCA.Common, MMCA.Store and MMCA.ADC.
