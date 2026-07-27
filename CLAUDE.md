@@ -26,10 +26,11 @@ CI (`.github/workflows/ci.yml`) runs on **pull requests only** (no `push: main` 
 - **consumer-source-build**: cross-repo canary; checks out MMCA.Helpdesk as a sibling and builds/tests it against THIS PR's framework source via its committed `local.props`, so a breaking public-API change fails pre-merge instead of after a release. Required merge gate.
 - **performance-smoke**: runs the BenchmarkDotNet suite (`--job Short`), then `build/perfgate` compares the results against the committed `Tests/Performance/perf-baseline.json` (allocation ceilings + machine-independent ratio floors) and fails on any violation. Moving a number deliberately means updating the baseline file in the same PR.
 - **coverage**: merges the tiers (ReportGenerator) and enforces the floor: the unit tier must stay >= 68.3% line coverage (generated `*.g.cs`/`*.generated.cs` excluded).
-- **build-maui** (windows runner): builds/packs `MMCA.Common.UI.Maui` (the out-of-slnx MAUI package, ADR-042).
+- **build-maui** (windows runner): builds `MMCA.Common.UI.Maui` across its four TFMs (the out-of-slnx MAUI package, ADR-042); packing happens in `release.yml`. Critical path of the run (~7-8 min), so it caches the MAUI workload packs keyed on the resolved SDK version.
 - **sample-deployment-validate**: compiles the `samples/deployment` Bicep templates (`az bicep build`).
+- **redis-integration**: runs `MMCA.Common.Infrastructure.Redis.Tests` against a real Redis via Testcontainers (out of the slnx, so the unit loop needs no Docker). `DistributedCacheService` is the one place the storage FORMAT matters: a counter written as a string and read back as a hash round-trips fine against a `Mock<IDistributedCache>` and answers WRONGTYPE against a server.
 
-Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` tags: build/test/pack, CycloneDX SBOM as a hard gate, push to GitHub Packages.
+Versioning is MinVer from git tags (`fetch-depth: 0` required). `release.yml` triggers on `v*` tags: build/test/pack, CycloneDX SBOM as a hard gate, then push to **both** GitHub Packages and nuget.org (ADR-053). The nuget.org push is keyless: the job's OIDC token is exchanged (`NuGet/login`) for a one-hour key, under a trusted-publishing policy pinned to this owner/repo/**workflow file**, so renaming `release.yml` breaks publishing by design. `MMCA.Common.UI.Maui` packs and pushes from a separate `publish-maui` windows job off the same tag.
 
 Gotchas:
 - CI runs on Ubuntu: file paths are case-sensitive; match casing exactly.
