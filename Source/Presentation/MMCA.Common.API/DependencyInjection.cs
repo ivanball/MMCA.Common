@@ -80,7 +80,7 @@ public static class DependencyInjection
         }
 
         /// <summary>
-        /// Registers the edge error-localization seam (ADR-027): <see cref="IErrorLocalizer"/> plus the
+        /// Registers the edge error-localization extension point (ADR-027): <see cref="IErrorLocalizer"/> plus the
         /// framework's own <see cref="ErrorResources"/> source. Called automatically by <c>AddAPI</c>.
         /// Modules add their own error translations additively via <see cref="AddErrorResources{TResource}"/>.
         /// </summary>

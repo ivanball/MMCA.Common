@@ -14,7 +14,7 @@ namespace MMCA.Common.UI.Globalization;
 /// visible in one pass: <list type="bullet">
 ///   <item><description>hard-coded (non-resource) strings stay plain ASCII, unmissable beside accented text;</description></item>
 ///   <item><description>fixed-width UI truncates the padded text, exposing layouts that cannot grow;</description></item>
-///   <item><description>concatenated fragments each gain their own sentinel, revealing the seams.</description></item>
+///   <item><description>concatenated fragments each gain their own sentinel, revealing where they were joined.</description></item>
 /// </list>
 /// </remarks>
 public static class PseudoLocalizer

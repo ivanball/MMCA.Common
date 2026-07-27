@@ -7,7 +7,7 @@ using MudBlazor.Services;
 namespace MMCA.Common.UI.Tests.Globalization;
 
 /// <summary>
-/// Proves the MudBlazor built-in-text localization seam (ADR-027): <c>AddMudServices()</c> registers
+/// Proves the MudBlazor built-in-text localization extension point (ADR-027): <c>AddMudServices()</c> registers
 /// no <see cref="MudLocalizer"/> of its own, so <c>AddUIShared</c>'s <c>TryAddTransient</c> is
 /// authoritative and MudBlazor chrome resolves through the <c>MudTranslations</c> resource pair.
 /// </summary>

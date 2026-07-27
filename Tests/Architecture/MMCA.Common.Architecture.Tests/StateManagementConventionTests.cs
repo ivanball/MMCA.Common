@@ -13,7 +13,7 @@ public sealed class StateManagementConventionTests : StateManagementConventionTe
     protected override IArchitectureMap Map { get; } = new CommonArchitectureMap();
 
     /// <summary>
-    /// <c>ErrorMessages._localizer</c> is a write-once wiring seam, not per-user state: the root layout
+    /// <c>ErrorMessages._localizer</c> is a write-once wiring extension point, not per-user state: the root layout
     /// configures the shared <c>IStringLocalizer</c> exactly once (idempotent), and the localizer itself
     /// resolves against the ambient UI culture per call, so no user's state leaks to another. Keeping the
     /// static message API is deliberate (every consumer call site depends on it, ADR-027).
