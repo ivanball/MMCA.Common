@@ -4,7 +4,7 @@ This file provides framework-specific guidance to Claude Code (claude.ai/code). 
 
 ## Project Overview
 
-MMCA.Common is a .NET 10 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS. It publishes its packages to GitHub Packages, versioned in lockstep (authoritative package list and count: `FACTS.md`); it is not a runnable app. `MMCA.Common.UI.Maui` is the one MAUI-TFM package: it lives outside `MMCA.Common.slnx` and is built/packed by dedicated windows jobs (ADR-042). The framework also provides the extraction path for lifting modules into standalone microservices (gRPC transport, transport-agnostic message bus, cross-service JWKS auth, Aspire hosting extensions): see "Microservices Extraction Boundaries" below.
+MMCA.Common is a .NET 10 NuGet package framework for building modular monolith applications using DDD, Clean Architecture, and CQRS. It publishes its packages to **both nuget.org and GitHub Packages** (ADR-053; see the `release.yml` notes under Build & Test), versioned in lockstep (authoritative package list and count: `FACTS.md`); it is not a runnable app. `MMCA.Common.UI.Maui` is the one MAUI-TFM package: it lives outside `MMCA.Common.slnx` and is built/packed by dedicated windows jobs (ADR-042). The framework also provides the extraction path for lifting modules into standalone microservices (gRPC transport, transport-agnostic message bus, cross-service JWKS auth, Aspire hosting extensions): see "Microservices Extraction Boundaries" below.
 
 ## Build & Test
 
