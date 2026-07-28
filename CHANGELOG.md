@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.130.0] - 2026-07-28
+
 ### Changed
 
 - **`AuthControllerBase` now applies the anti-spray throttle by default.** `LoginAsync` and
