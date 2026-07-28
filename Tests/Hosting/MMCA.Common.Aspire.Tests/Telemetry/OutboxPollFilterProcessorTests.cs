@@ -45,9 +45,9 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         using var poll = _outboxSource.StartActivity("OutboxPoll");
         poll.Should().NotBeNull();
 
-        _sut.OnEnd(poll!);
+        _sut.OnEnd(poll);
 
-        IsRecorded(poll!).Should().BeFalse("poll spans must be suppressed from export");
+        IsRecorded(poll).Should().BeFalse("poll spans must be suppressed from export");
     }
 
     [Fact]
@@ -59,9 +59,9 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         using var sqlChild = _otherSource.StartActivity("SELECT OutboxMessages");
         sqlChild.Should().NotBeNull();
 
-        _sut.OnEnd(sqlChild!);
+        _sut.OnEnd(sqlChild);
 
-        IsRecorded(sqlChild!).Should().BeFalse("children of poll spans must be suppressed");
+        IsRecorded(sqlChild).Should().BeFalse("children of poll spans must be suppressed");
     }
 
     [Fact]
@@ -72,9 +72,9 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         using var grandchild = _otherSource.StartActivity("Leaf");
         grandchild.Should().NotBeNull();
 
-        _sut.OnEnd(grandchild!);
+        _sut.OnEnd(grandchild);
 
-        IsRecorded(grandchild!).Should().BeFalse("the full parent chain is walked");
+        IsRecorded(grandchild).Should().BeFalse("the full parent chain is walked");
     }
 
     [Fact]
@@ -83,9 +83,9 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         using var unrelated = _otherSource.StartActivity("SomeRequest");
         unrelated.Should().NotBeNull();
 
-        _sut.OnEnd(unrelated!);
+        _sut.OnEnd(unrelated);
 
-        IsRecorded(unrelated!).Should().BeTrue();
+        IsRecorded(unrelated).Should().BeTrue();
     }
 
     [Fact]
@@ -95,9 +95,9 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         using var lookalike = _otherSource.StartActivity("OutboxPoll");
         lookalike.Should().NotBeNull();
 
-        _sut.OnEnd(lookalike!);
+        _sut.OnEnd(lookalike);
 
-        IsRecorded(lookalike!).Should().BeTrue("only the MMCA.Common.Outbox source is filtered");
+        IsRecorded(lookalike).Should().BeTrue("only the MMCA.Common.Outbox source is filtered");
     }
 
     [Fact]
@@ -107,9 +107,9 @@ public sealed class OutboxPollFilterProcessorTests : IDisposable
         using var process = _outboxSource.StartActivity("OutboxProcess");
         process.Should().NotBeNull();
 
-        _sut.OnEnd(process!);
+        _sut.OnEnd(process);
 
-        IsRecorded(process!).Should().BeTrue("real outbox work spans are not poll noise");
+        IsRecorded(process).Should().BeTrue("real outbox work spans are not poll noise");
     }
 
     [Fact]

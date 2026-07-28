@@ -30,9 +30,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.124, )",
-        "resolved": "3.0.124",
-        "contentHash": "nJJak27Tqn5tQGuorOQBiSEUkiKO7NYDH80yomOVGpJ4c49dsXhvTHtif8/vrGUJeld8vuERK/F+kZRfmB8ZRA=="
+        "requested": "[3.0.133, )",
+        "resolved": "3.0.133",
+        "contentHash": "pwJq1q4BGRKATlX41YTGRBpxp0XQIxRqpxPyMzB0eaY2aGj0v7u8qg6lIJnqbM7NHBN8sk2IjsanV2Fu8GGS7w=="
       },
       "Microsoft.Playwright": {
         "type": "Direct",
@@ -64,9 +64,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.29.0.143774, )",
-        "resolved": "10.29.0.143774",
-        "contentHash": "YOBCHTjqb4ak7yjLQhQJ6S0+aTkgnuMcekjCrhWruyIIoWlB1C8W+Fgr18bWit+xx7Gd9sNl5sziOwh6D804Hg=="
+        "requested": "[10.30.0.144632, )",
+        "resolved": "10.30.0.144632",
+        "contentHash": "e4n1kWNoFAuXcYR4uEGyMi4I5vKHcjAVmIw6k6y57UWJA1o6cxkeHmcE45xfCphM4k4G0Yo8yMhOT637AmofJw=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",

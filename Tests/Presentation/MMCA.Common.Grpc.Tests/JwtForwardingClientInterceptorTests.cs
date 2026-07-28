@@ -74,9 +74,9 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        var headers = captured!.Value.Options.Headers;
+        var headers = captured.Value.Options.Headers;
         headers.Should().NotBeNull("the interceptor must attach metadata carrying the forwarded token");
-        headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+        headers.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
 
     // ── AsyncUnaryCall: no ambient HttpContext ──
@@ -96,7 +96,7 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        captured!.Value.Options.Headers.Should().BeNull(
+        captured.Value.Options.Headers.Should().BeNull(
             "background processors without an HTTP request must not gain an Authorization header");
     }
 
@@ -117,7 +117,7 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        captured!.Value.Options.Headers.Should().BeNull();
+        captured.Value.Options.Headers.Should().BeNull();
     }
 
     // ── AsyncUnaryCall: caller already set an Authorization header ──
@@ -138,10 +138,10 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        var headers = captured!.Value.Options.Headers;
+        var headers = captured.Value.Options.Headers;
         headers.Should().BeSameAs(existingHeaders, "an already-authorized call passes through untouched");
-        CountAuthorizationEntries(headers!).Should().Be(1);
-        headers!.GetValue(AuthorizationHeader).Should().Be("Bearer existing-value");
+        CountAuthorizationEntries(headers).Should().Be(1);
+        headers.GetValue(AuthorizationHeader).Should().Be("Bearer existing-value");
     }
 
     // ── AsyncUnaryCall: unrelated headers survive the forwarding ──
@@ -162,9 +162,9 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        var headers = captured!.Value.Options.Headers;
+        var headers = captured.Value.Options.Headers;
         headers.Should().NotBeNull();
-        headers!.GetValue("x-custom").Should().Be("custom-value");
+        headers.GetValue("x-custom").Should().Be("custom-value");
         headers.GetValue(AuthorizationHeader).Should().Be(BearerToken);
         CountAuthorizationEntries(headers).Should().Be(1);
     }
@@ -197,7 +197,7 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        captured!.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+        captured.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
 
     // ── AsyncServerStreamingCall ──
@@ -222,7 +222,7 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        captured!.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+        captured.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
 
     // ── AsyncClientStreamingCall ──
@@ -247,7 +247,7 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        captured!.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+        captured.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
 
     // ── AsyncDuplexStreamingCall ──
@@ -272,7 +272,7 @@ public sealed class JwtForwardingClientInterceptorTests
             });
 
         captured.Should().NotBeNull();
-        captured!.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+        captured.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
 }
 

@@ -389,7 +389,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
 
         // Same rule as the list path: only shape when a field subset was requested.
         return string.IsNullOrWhiteSpace(fields)
-            ? Result.Success<object>(dto!)
+            ? Result.Success<object>(dto)
             : Result.Success<object>(QueryFieldService.ShapeData(dto, fields));
     }
 
