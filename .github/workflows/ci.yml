@@ -200,7 +200,7 @@ jobs:
       - name: Cache MAUI workload packs
         if: needs.changes.outputs.code == 'true'
         id: maui-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ steps.sdk.outputs.root }}/sdk-manifests
@@ -269,7 +269,7 @@ jobs:
       - name: Cache Playwright browsers (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('Tests/Presentation/MMCA.Common.UI.E2E.Tests/packages.lock.json', 'Directory.Packages.props') }}
