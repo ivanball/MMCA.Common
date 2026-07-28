@@ -200,15 +200,42 @@ public static class Extensions
         }
 
         /// <summary>
-        /// Conditionally registers health checks for infrastructure dependencies (Redis, RabbitMQ)
-        /// when their connection strings are configured. These are tagged as readiness checks only —
-        /// they appear in <c>/health</c> but not <c>/alive</c>, so a transient infrastructure outage
-        /// does not kill the process.
+        /// Conditionally registers health checks for infrastructure dependencies (SQL Server, Redis,
+        /// RabbitMQ) when their connection strings are configured. These are tagged as readiness
+        /// checks only — they appear in <c>/health</c> but not <c>/alive</c>, so a transient
+        /// infrastructure outage does not kill the process.
         /// </summary>
+        /// <param name="requireSqlServer">
+        /// When <see langword="true"/>, a missing <c>SQLServerConnectionString</c> throws at startup
+        /// instead of silently skipping the check.
+        /// <para>
+        /// This asymmetry with the Redis/RabbitMQ branches is DELIBERATE, not an oversight. Redis and
+        /// RabbitMQ are optional per host, so their absence is a valid configuration. The service
+        /// database is not: a host that cannot resolve its own connection string is misconfigured,
+        /// and silently registering no check would let it report healthy and take traffic it cannot
+        /// serve. Every consumer host that hand-rolled this check used <c>?? throw</c> for exactly
+        /// that reason, so pass <see langword="true"/> when replacing one.
+        /// </para>
+        /// </param>
         /// <returns>The same builder instance for chaining.</returns>
-        public TBuilder AddInfrastructureHealthChecks()
+        /// <exception cref="InvalidOperationException">
+        /// <paramref name="requireSqlServer"/> is <see langword="true"/> and no
+        /// <c>SQLServerConnectionString</c> is configured.
+        /// </exception>
+        public TBuilder AddInfrastructureHealthChecks(bool requireSqlServer = false)
         {
             var healthChecks = builder.Services.AddHealthChecks();
+
+            var sqlConnectionString = builder.Configuration.GetConnectionString("SQLServerConnectionString");
+            if (requireSqlServer && string.IsNullOrWhiteSpace(sqlConnectionString))
+            {
+                throw new InvalidOperationException("SQLServerConnectionString is not configured.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(sqlConnectionString))
+            {
+                healthChecks.AddSqlServer(sqlConnectionString, name: "sqlserver");
+            }
 
             var redisConnectionString = builder.Configuration.GetConnectionString("redis");
             if (!string.IsNullOrWhiteSpace(redisConnectionString))
