@@ -830,3 +830,23 @@ dotnet_diagnostic.CA2007.severity = warning
 
 [Source/Presentation/MMCA.Common.UI*/**.cs]
 dotnet_diagnostic.CA2007.severity = none
+
+# S8969 / S8970 (new in SonarAnalyzer 10.30): "remove this null-forgiving operator".
+# Downgraded from the baseline error severity because both produce FALSE POSITIVES here, and
+# under TreatWarningsAsErrors a false positive is a broken build rather than a nudge. Measured
+# on the 10.29 -> 10.30 bump: 41 sites flagged, 7 of them wrong.
+#
+#   S8970 was wrong at ALL 3 of its sites (suppressed via NoWarn in Directory.Build.props, since
+#   an .editorconfig severity does not reach Razor-generated code). It claims nullable warnings are disabled and the
+#   operator is therefore pointless, but the flagged code is the deliberate `null!` / `default!`
+#   initializer pattern in .razor components, where removing the operator immediately fails with
+#   CS8625/CS8604. Disabled outright.
+#
+#   S8969 was wrong at 4 of 38. It claims the compiler already knows the expression is non-null,
+#   and at those four the compiler disagreed with CS8602/CS8629. The other 34 were genuine and
+#   have been fixed. Kept as a suggestion so real redundancies still surface without gating CI.
+#
+# Revisit when Sonar tightens these rules; the compiler is the authority on nullability, not the
+# analyzer.
+[*.{cs,razor}]
+dotnet_diagnostic.S8969.severity = suggestion

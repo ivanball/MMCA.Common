@@ -58,7 +58,7 @@ public static class DomainHelper
             return bool.TryParse(id, out var b) ? (TIdentifier)(object)b : (TIdentifier)(object)false;
 
         if (type.IsEnum)
-            return Enum.TryParse(type, id, ignoreCase: true, out var enumValue) ? (TIdentifier)enumValue! : default!;
+            return Enum.TryParse(type, id, ignoreCase: true, out var enumValue) ? (TIdentifier)enumValue : default!;
 
         throw new FormatException($"Unsupported identifier type: {type.FullName}");
     }

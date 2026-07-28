@@ -63,7 +63,7 @@ public sealed class SoftDeletedUserMiddleware(RequestDelegate next)
         var cacheKey = string.Create(CultureInfo.InvariantCulture, $"user:deleted:{userId.Value}");
 
         // Check cache first
-        var cachedResult = await cacheService.GetAsync<bool?>(cacheKey).ConfigureAwait(false);
+        var cachedResult = await cacheService.GetAsync<bool?>(cacheKey, context.RequestAborted).ConfigureAwait(false);
         if (cachedResult is true)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -73,8 +73,8 @@ public sealed class SoftDeletedUserMiddleware(RequestDelegate next)
         if (cachedResult is null)
         {
             // Cache miss — check database
-            var isDeleted = await softDeletedUserValidator.IsUserSoftDeletedAsync(userId.Value).ConfigureAwait(false);
-            await cacheService.SetAsync(cacheKey, isDeleted, CacheDuration).ConfigureAwait(false);
+            var isDeleted = await softDeletedUserValidator.IsUserSoftDeletedAsync(userId.Value, context.RequestAborted).ConfigureAwait(false);
+            await cacheService.SetAsync(cacheKey, isDeleted, CacheDuration, context.RequestAborted).ConfigureAwait(false);
 
             if (isDeleted)
             {

@@ -23,7 +23,7 @@ public class ResultJsonConverterFactoryTests
         var roundTripped = JsonSerializer.Deserialize<Result>(json);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.IsSuccess.Should().BeTrue();
+        roundTripped.IsSuccess.Should().BeTrue();
         roundTripped.Errors.Should().BeEmpty();
     }
 
@@ -36,7 +36,7 @@ public class ResultJsonConverterFactoryTests
         var roundTripped = JsonSerializer.Deserialize<Result>(json);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.IsFailure.Should().BeTrue();
+        roundTripped.IsFailure.Should().BeTrue();
         roundTripped.Errors.Should().ContainSingle()
             .Which.Should().Be(original.Errors[0]);
     }
@@ -51,7 +51,7 @@ public class ResultJsonConverterFactoryTests
         var roundTripped = JsonSerializer.Deserialize<Result<TestDTO>>(json);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.IsSuccess.Should().BeTrue();
+        roundTripped.IsSuccess.Should().BeTrue();
         roundTripped.Value.Should().Be(original.Value);
     }
 
@@ -64,7 +64,7 @@ public class ResultJsonConverterFactoryTests
         var roundTripped = JsonSerializer.Deserialize<Result<TestDTO>>(json);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.IsFailure.Should().BeTrue();
+        roundTripped.IsFailure.Should().BeTrue();
         roundTripped.Value.Should().BeNull();
         roundTripped.Errors.Should().ContainSingle()
             .Which.Type.Should().Be(ErrorType.NotFound);
@@ -83,9 +83,9 @@ public class ResultJsonConverterFactoryTests
         var roundTripped = JsonSerializer.Deserialize<Result<PagedCollectionResult<TestDTO>>>(json, WebOptions);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.IsSuccess.Should().BeTrue();
+        roundTripped.IsSuccess.Should().BeTrue();
         roundTripped.Value.Should().NotBeNull();
-        roundTripped.Value!.Items.Should().BeEquivalentTo(payload.Items);
+        roundTripped.Value.Items.Should().BeEquivalentTo(payload.Items);
         roundTripped.Value.PaginationMetadata.TotalItemCount.Should().Be(2);
         roundTripped.Value.PaginationMetadata.PageSize.Should().Be(10);
         roundTripped.Value.PaginationMetadata.CurrentPage.Should().Be(1);
@@ -112,7 +112,7 @@ public class ResultJsonConverterFactoryTests
         var roundTripped = JsonSerializer.Deserialize<Result<TestDTO>>(json, WebOptions);
 
         roundTripped.Should().NotBeNull();
-        roundTripped!.IsSuccess.Should().BeTrue();
+        roundTripped.IsSuccess.Should().BeTrue();
         roundTripped.Value.Should().Be(new TestDTO(7, "X"));
     }
 }

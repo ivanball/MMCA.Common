@@ -83,7 +83,7 @@ public sealed class KeyedSemaphoreStripeTests
         {
             var other = keys.Select(k => sut.AcquireAsync(k)).FirstOrDefault(t => t.IsCompleted);
             other.Should().NotBeNull("with more than one stripe some key must map to a free stripe");
-            (await other!).Dispose();
+            (await other).Dispose();
         }
         finally
         {
