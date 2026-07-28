@@ -27,6 +27,32 @@ updates:
         patterns:
           - "OpenTelemetry.*"
           - "Azure.Monitor.OpenTelemetry.*"
+      # The test stack moves together: bUnit renders through AngleSharp, and the xunit/Moq/
+      # assertion packages are only ever consumed by test projects. Grouping them keeps a
+      # bUnit bump and its AngleSharp dependency in ONE pull request instead of two that
+      # touch the same lock files and therefore conflict with each other.
+      testing:
+        patterns:
+          - "bunit*"
+          - "AngleSharp*"
+          - "xunit*"
+          - "Moq"
+          - "AwesomeAssertions"
+          - "coverlet.*"
+          - "NetArchTest.*"
+          - "Testcontainers*"
+          - "Respawn"
+      # Catch-all for everything the groups above do not match, so ungrouped minor/patch
+      # updates arrive as ONE weekly pull request rather than one per package. This repo's
+      # CI is expensive (13 required checks including a MAUI windows build, three browser
+      # a11y legs, a BenchmarkDotNet gate and a Testcontainers Redis tier), and "require
+      # branches to be up to date" means every merge re-BEHINDs the rest, so N separate
+      # dependency PRs cost N full re-runs. Majors stay ungrouped: those deserve their own
+      # PR and their own read.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
     ignore:
       # MassTransit is pinned to v8 by policy (v9 requires a commercial license); enforced by a
       # fitness test. Don't let Dependabot propose the major bump. See Directory.Packages.props.
