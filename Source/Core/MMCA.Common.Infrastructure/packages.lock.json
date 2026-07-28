@@ -23,32 +23,32 @@
       },
       "MassTransit": {
         "type": "Direct",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "bSg8k5q+rP1s+dIGXLLbctqDGdIkfDjdxwNWtCUH7xNCN9ZuM7mqSPQPIFgaYIi34e81m4FqAqo4CAHuWPkhRA==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "TGi34UA8RftBIpYCHEdoIP5uSu2/pLWZRen4RUcg4CV1nr8MmCZMuFYjzvXXUyFcj0ZuRQxZZNhG7fB5/raSOg==",
         "dependencies": {
-          "MassTransit.Abstractions": "8.5.5"
+          "MassTransit.Abstractions": "8.5.10"
         }
       },
       "MassTransit.Azure.ServiceBus.Core": {
         "type": "Direct",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "/9wmsURLh0CtRpDnI9WLE0NNYHqst7O1t5B7OyF0iUiy5zNy+mq1x9UrsWTz8j63yU4aD23HmMWHLdC+08kaow==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "pXA+Vk/VB+s/0PeL4iht3q3VzxirbLNuSWnDDvEIFBfQdZpY28ZD/l2+6PTcVj6KvJH9nkqzlI7mnMw2pEYKPQ==",
         "dependencies": {
-          "Azure.Identity": "1.16.0",
+          "Azure.Identity": "1.21.0",
           "Azure.Messaging.ServiceBus": "7.20.1",
-          "MassTransit": "8.5.5"
+          "MassTransit": "8.5.10"
         }
       },
       "MassTransit.RabbitMQ": {
         "type": "Direct",
-        "requested": "[8.5.5, )",
-        "resolved": "8.5.5",
-        "contentHash": "UxWn4o90YVMF9PBkJeoskOFPneh6YtnI1fLJHtvZiSAG0eoiRrWPGa+6FQCvjkQ/ljCKfjzok2eGZc/vmNZ01A==",
+        "requested": "[8.5.10, )",
+        "resolved": "8.5.10",
+        "contentHash": "5aQGpJpeqRhRv+htkXfi6MfWu0dj/4Lcf1c6h2J3tYZClupGklqB1ixlP3IRdZExrH9BI/60uYoxR+7pg3s1oQ==",
         "dependencies": {
-          "MassTransit": "8.5.5",
-          "RabbitMQ.Client": "7.1.2"
+          "MassTransit": "8.5.10",
+          "RabbitMQ.Client": "7.2.1"
         }
       },
       "MessagePack": {
@@ -63,9 +63,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.124, )",
-        "resolved": "3.0.124",
-        "contentHash": "nJJak27Tqn5tQGuorOQBiSEUkiKO7NYDH80yomOVGpJ4c49dsXhvTHtif8/vrGUJeld8vuERK/F+kZRfmB8ZRA=="
+        "requested": "[3.0.134, )",
+        "resolved": "3.0.134",
+        "contentHash": "tTYCcYKyOko3TMNxmxmA9nakbcHVUgglENmCMIhzIjl9y9FBZO/0tWSxTGC74Sp198FmWih5S5KkjQRBg5ePkQ=="
       },
       "Microsoft.AspNetCore.SignalR.StackExchangeRedis": {
         "type": "Direct",
@@ -191,9 +191,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.29.0.143774, )",
-        "resolved": "10.29.0.143774",
-        "contentHash": "YOBCHTjqb4ak7yjLQhQJ6S0+aTkgnuMcekjCrhWruyIIoWlB1C8W+Fgr18bWit+xx7Gd9sNl5sziOwh6D804Hg=="
+        "requested": "[10.30.0.144632, )",
+        "resolved": "10.30.0.144632",
+        "contentHash": "e4n1kWNoFAuXcYR4uEGyMi4I5vKHcjAVmIw6k6y57UWJA1o6cxkeHmcE45xfCphM4k4G0Yo8yMhOT637AmofJw=="
       },
       "SQLitePCLRaw.bundle_e_sqlite3": {
         "type": "Direct",
@@ -276,8 +276,8 @@
       },
       "MassTransit.Abstractions": {
         "type": "Transitive",
-        "resolved": "8.5.5",
-        "contentHash": "0mn2Ay17dD6z5tgSLjbVRlldSbL9iowzFEfVgVfBXVG5ttz9dSWeR4TrdD6pqH93GWXp4CvSmF8i1HqxLX7DZw=="
+        "resolved": "8.5.10",
+        "contentHash": "nZnm2YNH+NcVwY6yC114sJy8J9LtKdFjfKUm/A5HfmzOlZ8ksjgHaPBg5XCG1VAqKDRDFnaudIcesVultKJD7g=="
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
@@ -630,8 +630,8 @@
       },
       "RabbitMQ.Client": {
         "type": "Transitive",
-        "resolved": "7.1.2",
-        "contentHash": "y3c6ulgULScWthHw5PLM1ShHRLhxg0vCtzX/hh61gRgNecL3ZC3WoBW2HYHoXOVRqTl99Br9E7CZEytGZEsCyQ=="
+        "resolved": "7.2.1",
+        "contentHash": "YKXEfg9fVQiTKgZlvIhAfPSFaamEgi8DsQmisCH0IAsU4FYLrtoguDrDj6JtJVGUt40QPnBLRH6fTQcAC4qsOg=="
       },
       "SQLite": {
         "type": "Transitive",
@@ -784,7 +784,7 @@
       },
       "Microsoft.Data.SqlClient": {
         "type": "CentralTransitive",
-        "requested": "[6.1.1, )",
+        "requested": "[6.1.6, )",
         "resolved": "6.1.1",
         "contentHash": "syGQmIUPAYYHAHyTD8FCkTNThpQWvoA7crnIQRMfp8dyB5A2cWU3fQexlRTFkVmV7S0TjVmthi0LJEFVjHo8AQ==",
         "dependencies": {

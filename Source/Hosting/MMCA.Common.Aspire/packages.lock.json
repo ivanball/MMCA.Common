@@ -44,9 +44,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.124, )",
-        "resolved": "3.0.124",
-        "contentHash": "nJJak27Tqn5tQGuorOQBiSEUkiKO7NYDH80yomOVGpJ4c49dsXhvTHtif8/vrGUJeld8vuERK/F+kZRfmB8ZRA=="
+        "requested": "[3.0.134, )",
+        "resolved": "3.0.134",
+        "contentHash": "tTYCcYKyOko3TMNxmxmA9nakbcHVUgglENmCMIhzIjl9y9FBZO/0tWSxTGC74Sp198FmWih5S5KkjQRBg5ePkQ=="
       },
       "Microsoft.Extensions.Http.Resilience": {
         "type": "Direct",
@@ -138,9 +138,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.29.0.143774, )",
-        "resolved": "10.29.0.143774",
-        "contentHash": "YOBCHTjqb4ak7yjLQhQJ6S0+aTkgnuMcekjCrhWruyIIoWlB1C8W+Fgr18bWit+xx7Gd9sNl5sziOwh6D804Hg=="
+        "requested": "[10.30.0.144632, )",
+        "resolved": "10.30.0.144632",
+        "contentHash": "e4n1kWNoFAuXcYR4uEGyMi4I5vKHcjAVmIw6k6y57UWJA1o6cxkeHmcE45xfCphM4k4G0Yo8yMhOT637AmofJw=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",
@@ -430,7 +430,7 @@
       },
       "Microsoft.Data.SqlClient": {
         "type": "CentralTransitive",
-        "requested": "[6.1.1, )",
+        "requested": "[6.1.6, )",
         "resolved": "5.2.2",
         "contentHash": "mtoeRMh7F/OA536c/Cnh8L4H0uLSKB5kSmoi54oN7Fp0hNJDy22IqyMhaMH4PkDCqI7xL//Fvg9ldtuPHG0h5g==",
         "dependencies": {

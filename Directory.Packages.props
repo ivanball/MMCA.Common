@@ -51,9 +51,9 @@
          or by setting the MT_LICENSE/MT_LICENSE_PATH environment variables") and every broker-
          enabled service host crashes. A blanket package-update bumped this to 9.1.2 once before
          and reintroduced the crash — do NOT bump past v8 without configuring a license. -->
-    <PackageVersion Include="MassTransit" Version="8.5.5" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.5" />
-    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.5" />
+    <PackageVersion Include="MassTransit" Version="8.5.10" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
+    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.10" />
     <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- Managed file storage + avatar image normalization (ADR-045). ImageSharp is under the
@@ -97,10 +97,10 @@
          upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.124" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.134" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.29.0.143774" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.30.0.144632" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
@@ -138,7 +138,7 @@
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient matches the version EF
          Core SqlServer already resolves transitively so the pin cannot skew the graph. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.6" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <!-- Health Checks -->
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
