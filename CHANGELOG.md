@@ -6,6 +6,28 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Changed
+
+- **`AuthControllerBase` now applies the anti-spray throttle by default.** `LoginAsync` and
+  `RegisterAsync` carry `[EnableRateLimiting(RateLimitPolicyAuthIp)]`, so every consumer inheriting
+  the base gets per-IP protection on its anonymous credential endpoints without opting in.
+
+  This closes the half-measure in 1.129.0: that release lifted the *policy* into the framework but
+  left each app to *attach* it, and an app that simply inherited these actions (MMCA.Store) silently
+  had no spray protection at all. The global limiter deliberately no-ops for anonymous traffic and
+  account lockout is per-email, so a spray (one password, many emails) from one source was
+  unthrottled there.
+
+  `RefreshAsync` is deliberately NOT throttled: refresh is automatic and periodic, and Blazor Server
+  issues it server-side, so every Server-circuit user shares the UI host's IP. A per-IP window would
+  throttle ordinary token renewal for everyone behind that host. A test asserts that absence so a
+  later "consistency" change has to argue with it.
+
+  **Consumer note:** a host inheriting `AuthControllerBase` must call `AddCommonRateLimiting()`, or
+  it fails at startup on an unregistered policy. All current consumers already do. Consumers that
+  already attach the attribute on their own overrides (MMCA.ADC) are unaffected; the explicit
+  attribute is redundant but harmless.
+
 ## [1.129.0] - 2026-07-28
 
 Extraction wave from the 2026-07-27 drift analysis: reusable infrastructure that had been duplicated

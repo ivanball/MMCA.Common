@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Shared.Auth;
@@ -12,6 +14,28 @@ namespace MMCA.Common.API.Controllers;
 /// Downstream modules inherit and apply route/version attributes. Override <see cref="RegisterAsync"/>
 /// to inject additional context (e.g., client IP for rate limiting). Password change is owned by the
 /// derived controller, which dispatches the ChangePassword command handler directly.
+/// <para>
+/// <b>Anti-spray throttling is on by default.</b> <see cref="LoginAsync"/> and
+/// <see cref="RegisterAsync"/> carry
+/// <see cref="WebApplicationBuilderExtensions.RateLimitPolicyAuthIp"/>, so any consumer inheriting
+/// this base gets per-IP protection without opting in. That default exists because the alternative
+/// failed in practice: the policy shipped in the framework while each app was left to attach it,
+/// and an app that simply inherited these actions silently had no spray protection at all. The
+/// global limiter deliberately no-ops for anonymous traffic and account lockout is per-email, so a
+/// spray (one password, many emails) from one source is otherwise unthrottled.
+/// </para>
+/// <para>
+/// <b><see cref="RefreshAsync"/> is deliberately NOT throttled.</b> Refresh is automatic and
+/// periodic rather than user-initiated, and Blazor Server circuits issue it server-side, so every
+/// Server-circuit user shares the UI host's IP. A per-IP window there would throttle ordinary token
+/// renewal for everyone behind that host. Refresh tokens are also high-entropy, so brute force is
+/// not the threat password spraying is.
+/// </para>
+/// <para>
+/// Consumers must call <c>AddCommonRateLimiting()</c> (which registers the policy). A consumer that
+/// inherits this base without it fails at startup on an unregistered policy, which is the loud
+/// failure rather than the silent one.
+/// </para>
 /// </summary>
 public abstract class AuthControllerBase(
     IAuthenticationService authenticationService,
@@ -28,8 +52,10 @@ public abstract class AuthControllerBase(
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests, Type = typeof(ProblemDetails))]
     public virtual async Task<ActionResult<AuthenticationResponse>> LoginAsync(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
@@ -47,7 +73,9 @@ public abstract class AuthControllerBase(
     /// </summary>
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
     public virtual async Task<ActionResult<AuthenticationResponse>> RegisterAsync(
