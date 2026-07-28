@@ -66,6 +66,39 @@ public sealed class InfrastructureHealthChecksTests
         names.Should().NotContain("rabbitmq");
     }
 
+    // The readiness contract, and the reason it is asserted rather than assumed: /health/ready
+    // includes every check NOT tagged live or optional. If the Redis check were untagged it would
+    // gate readiness, and a Redis blip would take EVERY replica out of rotation at once, converting
+    // a graceful degradation (DistributedCacheService falls back to MemoryCacheService) into a
+    // total outage. The database is the opposite case: untagged on purpose, because a host that
+    // cannot reach its own database cannot serve correct responses.
+    [Fact]
+    public void OptionalDependencies_AreTaggedOptional_SoTheyDoNotGateReadiness()
+    {
+        var builder = BuilderWith(new()
+        {
+            ["ConnectionStrings:SQLServerConnectionString"] = "Server=(local);Database=Test;Integrated Security=true;TrustServerCertificate=true",
+            ["ConnectionStrings:redis"] = "localhost:6379",
+        });
+
+        builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+
+        var registrations = Registrations(builder);
+
+        registrations.Single(r => r.Name == "redis").Tags
+            .Should().Contain(HealthCheckTags.Optional,
+                because: "the app falls back to an in-memory cache, so a Redis outage must not pull every replica from traffic");
+
+        registrations.Single(r => r.Name == "sqlserver").Tags
+            .Should().NotContain(HealthCheckTags.Optional,
+                because: "a host that cannot reach its own database cannot serve correct responses, so SQL must gate readiness");
+    }
+
+    private static IReadOnlyList<HealthCheckRegistration> Registrations(HostApplicationBuilder builder) =>
+        [.. builder.Services.BuildServiceProvider()
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<HealthCheckServiceOptions>>()
+            .Value.Registrations];
+
     private static HostApplicationBuilder BuilderWith(Dictionary<string, string?> settings)
     {
         var builder = Host.CreateApplicationBuilder();

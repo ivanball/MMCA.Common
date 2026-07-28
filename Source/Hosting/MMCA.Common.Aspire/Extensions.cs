@@ -106,7 +106,7 @@ public static class Extensions
             builder.Services.AddSingleton<IWarmupTask, OpenIdConnectMetadataWarmupTask>();
 
             builder.Services.AddHealthChecks()
-                .AddCheck<WarmupReadinessHealthCheck>("warmup", tags: ["ready"]);
+                .AddCheck<WarmupReadinessHealthCheck>("warmup", tags: [HealthCheckTags.Ready]);
 
             return builder;
         }
@@ -194,7 +194,7 @@ public static class Extensions
         public TBuilder AddDefaultHealthChecks()
         {
             builder.Services.AddHealthChecks()
-                .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+                .AddCheck("self", () => HealthCheckResult.Healthy(), [HealthCheckTags.Live]);
 
             return builder;
         }
@@ -240,7 +240,7 @@ public static class Extensions
             var redisConnectionString = builder.Configuration.GetConnectionString("redis");
             if (!string.IsNullOrWhiteSpace(redisConnectionString))
             {
-                healthChecks.AddRedis(redisConnectionString, name: "redis");
+                healthChecks.AddRedis(redisConnectionString, name: "redis", tags: [HealthCheckTags.Optional]);
             }
 
             var rabbitConnectionString = builder.Configuration.GetConnectionString("rabbitmq")
@@ -252,7 +252,7 @@ public static class Extensions
                 {
                     var factory = new RabbitMQ.Client.ConnectionFactory { Uri = rabbitUri };
                     return await factory.CreateConnectionAsync().ConfigureAwait(false);
-                }, name: "rabbitmq");
+                }, name: "rabbitmq", tags: [HealthCheckTags.Optional]);
             }
 
             return builder;
@@ -329,16 +329,23 @@ public static class Extensions
             // process as dead when an external dependency (e.g., SQL Server) is down.
             app.MapHealthChecks("/alive", new HealthCheckOptions
             {
-                Predicate = r => r.Tags.Contains("live")
+                Predicate = r => r.Tags.Contains(HealthCheckTags.Live)
             });
 
-            // Readiness: everything except "live"-only checks. Warm-up gate is tagged "ready"
-            // and reports unhealthy until WarmupHostedService finishes; untagged dependency
-            // checks (e.g., AddSqlServer) also show up here so a failing dependency removes
-            // the replica from traffic without restarting the container.
+            // Readiness: everything except "live"-only and "optional" checks. Warm-up gate is
+            // tagged "ready" and reports unhealthy until WarmupHostedService finishes; untagged
+            // dependency checks (e.g., AddSqlServer) also show up here so a failing dependency
+            // removes the replica from traffic without restarting the container.
+            //
+            // "optional" is excluded on purpose. A dependency the app degrades gracefully without
+            // (a distributed cache behind an in-memory fallback, a broker behind a retrying outbox)
+            // must NOT gate readiness: making it readiness-fatal converts a partial degradation
+            // into a total outage, because every replica goes unready at once and the app stops
+            // serving traffic it was perfectly capable of serving. Those checks still surface on
+            // /health, so the degradation is visible without being self-inflicted.
             app.MapHealthChecks("/health/ready", new HealthCheckOptions
             {
-                Predicate = r => !r.Tags.Contains("live")
+                Predicate = r => !r.Tags.Contains(HealthCheckTags.Live) && !r.Tags.Contains(HealthCheckTags.Optional)
             });
 
             return app;
