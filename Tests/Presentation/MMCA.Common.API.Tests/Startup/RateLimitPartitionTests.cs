@@ -67,6 +67,39 @@ public sealed class RateLimitPartitionTests
                 Ctx(path: "/api/events", authenticated: true), 300)
             .PartitionKey.Should().Be("authenticated");
 
+    // ── Per-IP anonymous auth throttle (RateLimitPolicyAuthIp) ──
+    [Fact]
+    public void AuthIpRateLimitPartition_ForKnownClientIp_PartitionsByIp() =>
+        WebApplicationBuilderExtensions.AuthIpRateLimitPartition(Ctx(path: "/Auth/login", ip: "203.0.113.9"), 30)
+            .PartitionKey.Should().Be("203.0.113.9");
+
+    // Fails OPEN, not closed. Collapsing unattributable requests into one shared bucket would
+    // throttle the in-process TestServer (RemoteIpAddress is null there) and take the whole
+    // integration tier down with it, so a null IP must get no limiter at all.
+    [Fact]
+    public void AuthIpRateLimitPartition_WhenRemoteIpUnknown_UsesNoLimiterPartition() =>
+        WebApplicationBuilderExtensions.AuthIpRateLimitPartition(Ctx(path: "/Auth/login"), 30)
+            .PartitionKey.Should().Be("__unknown-ip");
+
+    // The policy is anonymous-facing by design: it must partition on IP whether or not a principal
+    // is attached, because a password spray carries no identity to partition on.
+    [Fact]
+    public void AuthIpRateLimitPartition_ForAuthenticatedRequest_StillPartitionsByIp() =>
+        WebApplicationBuilderExtensions.AuthIpRateLimitPartition(
+                Ctx(path: "/Auth/login", authenticated: true, name: "alice", ip: "198.51.100.4"), 30)
+            .PartitionKey.Should().Be("198.51.100.4");
+
+    // Two different sources must never share a bucket, or one spraying host would exhaust the
+    // window for everyone else hitting login.
+    [Fact]
+    public void AuthIpRateLimitPartition_ForDistinctIps_UsesDistinctPartitions()
+    {
+        var first = WebApplicationBuilderExtensions.AuthIpRateLimitPartition(Ctx(ip: "192.0.2.1"), 30).PartitionKey;
+        var second = WebApplicationBuilderExtensions.AuthIpRateLimitPartition(Ctx(ip: "192.0.2.2"), 30).PartitionKey;
+
+        first.Should().NotBe(second);
+    }
+
     private static DefaultHttpContext Ctx(
         string path = "/api/events",
         string? contentType = null,

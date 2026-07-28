@@ -28,6 +28,15 @@ public static class WebApplicationBuilderExtensions
     /// <summary>Default CORS policy name for development (any origin).</summary>
     public const string CorsPolicyAllowAll = "_allowAll";
 
+    /// <summary>
+    /// Named rate-limit policy throttling ANONYMOUS authentication attempts per client IP. Apply it
+    /// with <c>[EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]</c> on
+    /// login/register actions. It exists because the global limiter deliberately no-ops for
+    /// anonymous traffic and per-account lockout is per-email, which leaves a password spray (one
+    /// password, many emails) from a single source otherwise unthrottled.
+    /// </summary>
+    public const string RateLimitPolicyAuthIp = "auth-ip";
+
     /// <summary>True for traffic that must bypass rate limiting: health/liveness probes, JWKS
     /// discovery, and gRPC inter-service calls — all legitimately high-frequency.</summary>
     /// <remarks>Internal (not private) so the partition/exemption logic is unit-testable via
@@ -68,6 +77,31 @@ public static class WebApplicationBuilderExtensions
         });
     }
 
+    /// <summary>
+    /// Partition selector for <see cref="RateLimitPolicyAuthIp"/>: a fixed window keyed on the
+    /// client IP, or no limiter at all when the IP is unattributable.
+    /// </summary>
+    /// <remarks>
+    /// Internal (not private) for the same reason as <see cref="GlobalRateLimitPartition"/>: the
+    /// load-bearing decision (fail open on a null IP rather than collapsing every such request into
+    /// one shared bucket, which would throttle the in-process TestServer and the integration tier to
+    /// a standstill) is worth asserting directly rather than only through a request flood.
+    /// </remarks>
+    internal static RateLimitPartition<string> AuthIpRateLimitPartition(HttpContext httpContext, int authIpPermitLimit)
+    {
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString();
+
+        return clientIp is null
+            ? RateLimitPartition.GetNoLimiter("__unknown-ip")
+            : RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = authIpPermitLimit,
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            });
+    }
+
     extension(IServiceCollection services)
     {
         /// <summary>
@@ -103,9 +137,22 @@ public static class WebApplicationBuilderExtensions
         /// Health/liveness (<c>/health</c>, <c>/alive</c>), JWKS discovery (<c>/.well-known/*</c>) and
         /// gRPC inter-service traffic (<c>application/grpc</c>) are bypassed — they legitimately run
         /// at high frequency. The named "FixedPolicy"/"UserPolicy" limiters remain for opt-in
-        /// <c>[EnableRateLimiting]</c> use.
+        /// <c>[EnableRateLimiting]</c> use, as does <see cref="RateLimitPolicyAuthIp"/>, the per-IP
+        /// anonymous-authentication throttle described on <paramref name="authIpPermitLimit"/>.
         /// </summary>
-        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300) =>
+        /// <param name="permitLimit">Requests per minute for the opt-in "FixedPolicy" limiter.</param>
+        /// <param name="queueLimit">Queued requests allowed once "FixedPolicy"/"UserPolicy" are saturated.</param>
+        /// <param name="perUserPermitLimit">Requests per minute per user for the opt-in "UserPolicy" limiter.</param>
+        /// <param name="globalPermitLimit">Requests per minute per authenticated user for the always-on global limiter.</param>
+        /// <param name="authIpPermitLimit">
+        /// Requests per minute per client IP for the <see cref="RateLimitPolicyAuthIp"/> policy.
+        /// Default 30 rather than a tighter 10 on purpose: Blazor Server interactive circuits issue
+        /// the login HTTP call SERVER-side, so every Server-circuit user shares the UI host's IP. A
+        /// login burst (and a sequential E2E gate) must fit inside the window, while a spray still
+        /// drops from unlimited to roughly 43K attempts/day/IP with per-account lockout intact on
+        /// top. Tighten toward 10 only once real client IPs are forwarded end to end.
+        /// </param>
+        public IServiceCollection AddCommonRateLimiting(int permitLimit = 100, int queueLimit = 2, int perUserPermitLimit = 30, int globalPermitLimit = 300, int authIpPermitLimit = 30) =>
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -133,6 +180,18 @@ public static class WebApplicationBuilderExtensions
                             QueueLimit = queueLimit,
                             QueueProcessingOrder = QueueProcessingOrder.OldestFirst
                         }));
+
+                // Per-IP anonymous authentication throttle. Client IP is taken from
+                // Connection.RemoteIpAddress, which the shared pipeline has already resolved from
+                // X-Forwarded-For (UseForwardedHeaders runs before UseRateLimiter), the same
+                // canonical source the global partition uses. A null RemoteIpAddress (in-process
+                // TestServer, integration tests) is NOT limited, mirroring the global limiter's
+                // fail-open posture for unattributable traffic. Endpoints opt in with
+                // [EnableRateLimiting(RateLimitPolicyAuthIp)], so health, JWKS and gRPC are
+                // untouched.
+                options.AddPolicy(
+                    RateLimitPolicyAuthIp,
+                    httpContext => AuthIpRateLimitPartition(httpContext, authIpPermitLimit));
             });
 
         /// <summary>
