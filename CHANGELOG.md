@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.129.0] - 2026-07-28
+
 Extraction wave from the 2026-07-27 drift analysis: reusable infrastructure that had been duplicated
 across MMCA.ADC and MMCA.Store moves into the framework. Consumers adopt during the version sweep.
 
