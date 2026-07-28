@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.131.0] - 2026-07-28
+
 ### Fixed
 
 - **Optional infrastructure health checks no longer gate readiness.** The Redis and RabbitMQ checks
