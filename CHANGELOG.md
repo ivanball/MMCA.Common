@@ -6,6 +6,23 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **Optional infrastructure health checks no longer gate readiness.** The Redis and RabbitMQ checks
+  registered by `AddInfrastructureHealthChecks` are now tagged `optional` and excluded from
+  `/health/ready`; they still report on `/health`.
+
+  This made the method unsafe to adopt. `/health/ready` includes every check not tagged `live`, so a
+  host calling `AddInfrastructureHealthChecks` had its readiness gated on Redis. Both consumer apps
+  degrade gracefully without Redis (`DistributedCacheService` falls back to `MemoryCacheService`), so
+  a cache blip would have taken EVERY replica out of rotation simultaneously and converted a partial
+  degradation into a total outage. The database check stays untagged and still gates readiness, which
+  is correct: a host that cannot reach its own database cannot serve correct responses.
+
+  New public `HealthCheckTags` (`Live` / `Ready` / `Optional`) replaces the magic strings and
+  documents the distinction. Tag a check `Optional` when the app has a working fallback; leave it
+  untagged only when the app genuinely cannot serve without it.
+
 ## [1.130.0] - 2026-07-28
 
 ### Changed
