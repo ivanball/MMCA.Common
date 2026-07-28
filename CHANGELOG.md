@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+> **Consumer versions skipped deliberately.** MMCA.ADC, MMCA.Store and MMCA.Helpdesk went from
+> 1.127.0 straight to 1.131.0 on 2026-07-28. They never pinned 1.128.0, 1.129.0 or 1.130.0, and that
+> is intentional, not drift. 1.128.0 was distribution-only (assemblies byte-identical to 1.127.0), so
+> sweeping it alone would have cost two production deploys for no behavioural change; 1.129.0 and
+> 1.130.0 were superseded within the same day by 1.131.0, which the consumers took in one pass per
+> ADR-016. An audit that reports the consumers as "several versions behind" for that window is
+> reading history, not a gap.
+
 ## [1.131.0] - 2026-07-28
 
 ### Fixed
