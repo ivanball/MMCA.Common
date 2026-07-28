@@ -662,6 +662,7 @@
         "dependencies": {
           "AspNetCore.HealthChecks.Rabbitmq": "[9.0.0, )",
           "AspNetCore.HealthChecks.Redis": "[9.0.0, )",
+          "AspNetCore.HealthChecks.SqlServer": "[9.0.0, )",
           "Azure.Monitor.OpenTelemetry.AspNetCore": "[1.5.0, )",
           "MMCA.Common.Shared": "[1.0.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.8.0, )",
@@ -765,6 +766,15 @@
         "contentHash": "yNH0h8GLRbAf+PU5HNVLZ5hNeyq9mDVmRKO9xuZsme/znUYoBJlQvI0gq45gaZNlLncCHkMhR4o90MuT+gxxPw==",
         "dependencies": {
           "StackExchange.Redis": "2.7.4"
+        }
+      },
+      "AspNetCore.HealthChecks.SqlServer": {
+        "type": "CentralTransitive",
+        "requested": "[9.0.0, )",
+        "resolved": "9.0.0",
+        "contentHash": "UxCf65iCF2nU1u7AcB320abjL4CRg5swCgJECY6mKk1j5lrGMfVtskWwriGs1T29pYdRig9Vra3SPnP+4G82pA==",
+        "dependencies": {
+          "Microsoft.Data.SqlClient": "5.2.2"
         }
       },
       "Azure.Identity": {

@@ -6,6 +6,47 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+Extraction wave from the 2026-07-27 drift analysis: reusable infrastructure that had been duplicated
+across MMCA.ADC and MMCA.Store moves into the framework. Consumers adopt during the version sweep.
+
+### BREAKING
+
+- **`MMCA.Common.API`: `AddCommonRateLimiting` now registers an `"auth-ip"` policy.** A consumer that
+  already registers a policy of that name must DELETE its own registration when bumping, because
+  `RateLimiterOptions.AddPolicy` throws on a duplicate name and the host will fail at startup.
+  MMCA.ADC is the only consumer in that position today.
+
+  ```csharp
+  // Before (per-consumer, in the Identity service host):
+  var authIpPermitLimit = builder.Configuration.GetValue("RateLimiting:AuthIp:PermitLimit", 30);
+  services.AddRateLimiter(options => options.AddPolicy("auth-ip", httpContext => { /* ... */ }));
+
+  // After: delete the block above. The policy ships with AddCommonRateLimiting; tune it there.
+  services.AddCommonRateLimiting(authIpPermitLimit: 30);
+
+  // Endpoints reference the shared constant instead of the string literal:
+  [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
+  ```
+
+### Added
+
+- **`MMCA.Common.API`: per-IP anonymous authentication throttle** (`RateLimitPolicyAuthIp`,
+  `authIpPermitLimit` defaulting to 30 req/min). The global limiter deliberately no-ops for anonymous
+  traffic and account lockout is per-email, so a password spray from one source was otherwise
+  unthrottled. Fails OPEN on an unattributable client IP, so the in-process TestServer (where
+  `RemoteIpAddress` is null) is never throttled.
+- **`MMCA.Common.Aspire`: SQL Server readiness check** in `AddInfrastructureHealthChecks`, with an
+  opt-in `requireSqlServer` fail-fast. The asymmetry with the silently-skipping Redis and RabbitMQ
+  branches is deliberate: an optional cache may legitimately be absent, a service database may not.
+  Adds `AspNetCore.HealthChecks.SqlServer` 9.0.0, matching the Redis/RabbitMQ sibling version.
+- **`MMCA.Common.Testing.Architecture`: `ObservabilityConventionTestsBase`**, the SLO alert-to-runbook
+  pairing gate. Reads the embedded `infra.main.bicep` / `infra.OPERATIONS.md` from the DERIVED type's
+  assembly via a virtual `ResourceAssembly`, so a subclass needs no extra wiring.
+- **`MMCA.Common.Testing`: `GracefulShutdownTestsBase<TEntryPoint>` and
+  `ProductionHostApplicationFactory<TEntryPoint>`.** The factory pins the environment to `Production`
+  (exercising the realistic CORS/HSTS branches a default Development boot skips) and captures the
+  started `IHost` so the shutdown test can drive `StopAsync` directly.
+
 ## [1.128.0] - 2026-07-25
 
 Distribution release. **No source changes: the compiled assemblies are identical to 1.127.0.** What

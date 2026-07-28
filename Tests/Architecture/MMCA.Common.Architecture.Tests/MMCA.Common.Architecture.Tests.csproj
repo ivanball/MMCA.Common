@@ -11,6 +11,15 @@
     <EmbeddedResource Include="..\..\..\NavigationFlow.md">
       <LogicalName>NavigationFlow.md</LogicalName>
     </EmbeddedResource>
+    <!-- Fixture IaC pair for ObservabilityConventionTestsBaseTests: proves the shared base reads the
+         SUBCLASS's assembly resources across an assembly boundary, which is the one behaviour that
+         would otherwise break only in the first consumer that adopted the base. -->
+    <EmbeddedResource Include="Fixtures\observability-main.bicep">
+      <LogicalName>fixtures.observability-main.bicep</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Fixtures\observability-OPERATIONS.md">
+      <LogicalName>fixtures.observability-OPERATIONS.md</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
