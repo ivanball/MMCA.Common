@@ -1,0 +1,26 @@
+@using System.Globalization
+@inject IJSRuntime JS
+
+@* Renders nothing: it exists to keep <html lang> in step with the active UI culture (ADR-027
+   Decision 10). A Blazor Web head already emits the correct value server-side (its App.razor reads
+   CurrentCulture per request), so the call is a harmless no-op there. A MAUI Blazor Hybrid head serves
+   a STATIC index.html with a hardcoded lang and no way to template it, so this is the only place the
+   document language can follow a switch. First render is enough on every head: a culture switch always
+   costs a full reload (the endpoint redirect on web, the WebView re-boot on hybrid), so the document is
+   re-created under the new culture rather than mutated in place. *@
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // JS interop is unavailable during SSR prerender, so this waits for the first interactive render.
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await using var module = await JS.InvokeAsync<IJSObjectReference>(
+            "import", "./_content/MMCA.Common.UI/culture.js");
+        await module.InvokeVoidAsync(
+            "setDocumentLanguage", CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+    }
+}

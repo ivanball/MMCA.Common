@@ -37,10 +37,52 @@ public static class SupportedCultures
         && All.Any(c => string.Equals(c, culture, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
+    /// Resolves an arbitrary culture name to the closest supported culture: an exact
+    /// <see cref="All"/> match wins, then a language match (so <c>"es-MX"</c> resolves to <c>"es"</c>),
+    /// otherwise <see cref="Default"/>. Never returns <see cref="PseudoLocale"/>.
+    /// <para>
+    /// Web heads get this fallback for free from request localization's <c>Accept-Language</c>
+    /// matching. It exists here for heads that resolve their own culture and have no request pipeline
+    /// to lean on (MAUI Blazor Hybrid, which resolves against the device locale), so the two paths
+    /// cannot drift.
+    /// </para>
+    /// </summary>
+    /// <param name="culture">Any culture name, including a specific one not on the allowlist.</param>
+    public static string ResolveClosest(string? culture)
+    {
+        if (string.IsNullOrWhiteSpace(culture))
+        {
+            return Default;
+        }
+
+        var exact = All.FirstOrDefault(c => string.Equals(c, culture, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null)
+        {
+            return exact;
+        }
+
+        var language = LanguageOf(culture);
+        var byLanguage = All.FirstOrDefault(
+            c => string.Equals(LanguageOf(c), language, StringComparison.OrdinalIgnoreCase));
+
+        return byLanguage ?? Default;
+    }
+
+    /// <summary>
     /// Returns <see langword="true"/> when <paramref name="culture"/> is the pseudo-localization locale
     /// (<see cref="PseudoLocale"/>), matched case-insensitively.
     /// </summary>
     /// <param name="culture">The culture name to test (e.g. <c>CultureInfo.CurrentUICulture.Name</c>).</param>
     public static bool IsPseudoLocale(string? culture) =>
         string.Equals(culture, PseudoLocale, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The language subtag of a culture name (<c>"es-MX"</c> to <c>"es"</c>), without allocating for a
+    /// neutral culture that is already just its language.
+    /// </summary>
+    private static string LanguageOf(string culture)
+    {
+        var separator = culture.IndexOf('-', StringComparison.Ordinal);
+        return separator < 0 ? culture : culture[..separator];
+    }
 }

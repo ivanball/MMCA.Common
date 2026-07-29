@@ -6,6 +6,37 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **Switching language now works on MAUI Blazor Hybrid heads.** The culture switcher navigated to
+  `/culture/set`, a server endpoint mapped by `MapCultureEndpoint()`. A hybrid head hosts no ASP.NET
+  pipeline, so the Blazor `Router` resolved that path instead, matched no page, and rendered the
+  not-found page: on Android, picking Spanish answered "Page Not Found" and dropped the user off the
+  page they were on. The same call sits on the login path, so signing in with a stored `es` preference
+  on a device running in English landed on the not-found page instead of the destination.
+
+  Culture application is now behind `ICultureApplier`. `AddUIShared` keeps the web behaviour as the
+  default (`EndpointCultureApplier`, the same endpoint round trip, unchanged for web heads);
+  `MMCA.Common.UI.Maui` supplies `MauiCultureApplier`, which switches the process culture, persists the
+  choice to device preferences, and reloads the WebView so the tree re-renders under the new culture.
+  `MauiCultureInitializer` restores the persisted culture during `MauiAppBuilder.Build()`, so the
+  choice survives an app restart and the first render is already correct. Both are wired by
+  `UseMauiDeviceCapabilities()`, so hybrid heads need no code change; `UseMauiCulture()` is separately
+  callable for a head that composes its own registrations.
+
+  `<html lang>` now follows the active culture on every head. A Blazor Web head emits it server-side
+  from `CurrentCulture`, but a hybrid head serves a static `index.html` that cannot be templated, so it
+  kept declaring the hardcoded language after a switch and misreported the page language to assistive
+  technology (WCAG 3.1.1). The new non-visual `DocumentLanguage` component, rendered once by
+  `MainLayout`, sets it on first interactive render; it is a no-op on web heads, where the server
+  already emitted the same value. Note that no automated gate catches this class of defect: axe checks
+  that `lang` is present and well-formed, never that it is correct.
+
+  `SupportedCultures.ResolveClosest` is new: it resolves an arbitrary culture name to the closest
+  allowlisted one (exact match, then language, then the default), so a hybrid head starting from a
+  device locale of `es-MX` gets `es` rather than falling back to English. Web heads already got this
+  from request localization's `Accept-Language` matching; this keeps the two paths from drifting.
+
 > **Consumer versions skipped deliberately.** MMCA.ADC, MMCA.Store and MMCA.Helpdesk went from
 > 1.127.0 straight to 1.131.0 on 2026-07-28. They never pinned 1.128.0, 1.129.0 or 1.130.0, and that
 > is intentional, not drift. 1.128.0 was distribution-only (assemblies byte-identical to 1.127.0), so

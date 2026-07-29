@@ -11,6 +11,7 @@
 @inject IOptions<ApiSettings> ApiSettingsOptions
 @inject NavigationManager Navigation
 @inject IUserPreferenceReader PreferenceReader
+@inject ICultureApplier CultureApplier
 @inject ThemeService ThemeService
 @inject IExternalAuthBroker ExternalAuthBroker
 @inject IStringLocalizer<SharedResource> L
@@ -204,10 +205,10 @@
         if (preferences.Culture is not null
             && !string.Equals(preferences.Culture, System.Globalization.CultureInfo.CurrentUICulture.Name, StringComparison.OrdinalIgnoreCase))
         {
-            // Route through /culture/set to write the culture cookie, then reload to the destination.
-            Navigation.NavigateTo(
-                $"/culture/set?culture={Uri.EscapeDataString(preferences.Culture)}&redirectUri={Uri.EscapeDataString(destination)}",
-                forceLoad: true);
+            // The applier owns both the switch and landing on the destination, so this is terminal:
+            // the web head round-trips /culture/set to write the cookie, a MAUI head switches the
+            // process culture in place and reloads the WebView (ADR-027).
+            await CultureApplier.ApplyAsync(preferences.Culture, destination);
             return;
         }
 
