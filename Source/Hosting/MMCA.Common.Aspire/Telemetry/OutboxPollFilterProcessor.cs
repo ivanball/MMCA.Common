@@ -15,8 +15,11 @@ namespace MMCA.Common.Aspire.Telemetry;
 public sealed class OutboxPollFilterProcessor : BaseProcessor<Activity>
 {
     // Both names must stay in sync with OutboxProcessor in MMCA.Common.Infrastructure
-    // (OutboxActivitySource / PollActivityName). Duplicated deliberately: the Aspire package
-    // has no project references by design.
+    // (OutboxActivitySource / PollActivityName). Duplicated deliberately: this package does not
+    // reference MMCA.Common.Infrastructure, so AddServiceDefaults stays usable from a host that
+    // does not take the persistence stack (EF Core, MassTransit, SignalR/Redis). Its one
+    // ProjectReference is MMCA.Common.Shared, for HttpResilienceDefaults. The same two literals
+    // also appear in the AddMeter / AddSource calls in Extensions.cs.
     private const string OutboxActivitySourceName = "MMCA.Common.Outbox";
     private const string PollActivityName = "OutboxPoll";
 
