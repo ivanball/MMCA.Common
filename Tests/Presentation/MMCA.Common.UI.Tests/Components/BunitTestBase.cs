@@ -22,6 +22,11 @@ public abstract class BunitTestBase : BunitComponentTestBase
         // Common's own tests render the layout chrome; consumer bUnit tests render pages directly.
         Services.AddScoped<ThemeService>();
 
+        // CultureSwitcher (same top-row) injects ICultureApplier, and Login injects it to apply the
+        // signed-in user's stored culture. The production web default, so layout tests exercise the
+        // real navigation; a test that cares about the call itself substitutes its own.
+        Services.AddScoped<ICultureApplier, EndpointCultureApplier>();
+
         // Capability defaults the shared pages/layout inject (ADR-042): Login consults the
         // external-auth broker, MainLayout renders the OfflineBanner. The Testing.UI harness
         // cannot register these (it deliberately does not reference MMCA.Common.UI).

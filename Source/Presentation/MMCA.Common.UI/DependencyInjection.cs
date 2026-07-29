@@ -82,6 +82,12 @@ public static class DependencyInjection
             // Day/Dark theme preference (ADR-028): cookie + localStorage persistence, system-pref default.
             services.TryAddScoped<ThemeService>();
 
+            // Culture switching (ADR-027). The default round-trips the server /culture/set endpoint, which
+            // only exists on a Blazor Web head; MAUI Blazor Hybrid heads override this AFTER AddUIShared
+            // with an in-process applier (UseMauiDeviceCapabilities does it), since a hybrid head has no
+            // ASP.NET pipeline and the endpoint URL would resolve to the Blazor not-found page.
+            services.TryAddScoped<ICultureApplier, EndpointCultureApplier>();
+
             // Per-user culture/theme persistence to the backend (ADR-027/028) — best-effort, anon no-op.
             services.TryAddScoped<IUserPreferenceWriter, ApiUserPreferenceWriter>();
             services.TryAddScoped<IUserPreferenceReader, ApiUserPreferenceReader>();

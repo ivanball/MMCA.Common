@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Hosting
 @inject NavigationManager Navigation
 @inject IServiceProvider Services
+@inject ICultureApplier CultureApplier
 @inject IStringLocalizer<SharedResource> L
 
 <MudMenu Icon="@Icons.Material.Filled.Translate"
@@ -40,11 +41,10 @@
             await writer.SaveAsync(culture, theme: null);
         }
 
+        // Host-specific from here: the web applier round-trips the /culture/set endpoint and reloads,
+        // the MAUI applier switches the process culture in place. Both land back on the current page,
+        // so this call is terminal (ADR-027).
         var current = new Uri(Navigation.Uri).PathAndQuery;
-        var url = $"/culture/set?culture={Uri.EscapeDataString(culture)}&redirectUri={Uri.EscapeDataString(current)}";
-
-        // Full reload: the server re-renders SSR under the new cookie and the WASM runtime re-reads it,
-        // keeping prerender and hydration on the same culture (ADR-027).
-        Navigation.NavigateTo(url, forceLoad: true);
+        await CultureApplier.ApplyAsync(culture, current);
     }
 }
