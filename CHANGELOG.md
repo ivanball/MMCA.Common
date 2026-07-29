@@ -24,6 +24,14 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   `UseMauiDeviceCapabilities()`, so hybrid heads need no code change; `UseMauiCulture()` is separately
   callable for a head that composes its own registrations.
 
+  `<html lang>` now follows the active culture on every head. A Blazor Web head emits it server-side
+  from `CurrentCulture`, but a hybrid head serves a static `index.html` that cannot be templated, so it
+  kept declaring the hardcoded language after a switch and misreported the page language to assistive
+  technology (WCAG 3.1.1). The new non-visual `DocumentLanguage` component, rendered once by
+  `MainLayout`, sets it on first interactive render; it is a no-op on web heads, where the server
+  already emitted the same value. Note that no automated gate catches this class of defect: axe checks
+  that `lang` is present and well-formed, never that it is correct.
+
   `SupportedCultures.ResolveClosest` is new: it resolves an arbitrary culture name to the closest
   allowlisted one (exact match, then language, then the default), so a hybrid head starting from a
   device locale of `es-MX` gets `es` rather than falling back to English. Web heads already got this

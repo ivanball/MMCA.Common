@@ -21,3 +21,14 @@ export function getCulture() {
     }
     return null;
 }
+
+// Sets <html lang> to the active UI language (ADR-027 Decision 10). A Blazor Web head emits the right
+// value server-side from CurrentCulture, so this is a no-op there. A MAUI Blazor Hybrid head serves a
+// STATIC index.html that cannot be templated, so without this the document keeps declaring whatever
+// language was hardcoded, misreporting the page language to assistive technology (WCAG 3.1.1) after a
+// switch. Automated checks do not catch it: axe flags a missing or malformed lang, never a wrong one.
+export function setDocumentLanguage(language) {
+    if (language) {
+        document.documentElement.lang = language;
+    }
+}
