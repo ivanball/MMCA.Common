@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Concurrency;
 
@@ -10,13 +12,36 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// exactly one request executes the handler and populates the cache; waiters re-check the
 /// cache and return the fresh entry instead of re-running the query. Cache keys are shared
 /// process-wide, so the lock table lives in a non-generic holder.
+/// <para>
+/// Populating the cache after a miss is best-effort: the read has already succeeded by that point,
+/// so a cache fault is logged at warning level and swallowed rather than failing the query. Only the
+/// populate is guarded; the two read paths are left to propagate, and a genuinely cancelled request
+/// still surfaces <see cref="OperationCanceledException"/> exactly as the inner handler would.
+/// </para>
 /// </summary>
 /// <typeparam name="TQuery">The query type.</typeparam>
 /// <typeparam name="TResult">The result type returned by the handler.</typeparam>
-public sealed class CachingQueryDecorator<TQuery, TResult>(
+public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     IQueryHandler<TQuery, TResult> inner,
-    ICacheService cacheService) : IQueryHandler<TQuery, TResult>
+    ICacheService cacheService,
+    ILogger<CachingQueryDecorator<TQuery, TResult>> logger) : IQueryHandler<TQuery, TResult>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CachingQueryDecorator{TQuery, TResult}"/> class
+    /// without a logger, discarding the cache-populate warnings.
+    /// <para>
+    /// Exists for source compatibility with consumers that construct the decorator directly (tests
+    /// pinned to a released package version). DI never selects it: container resolution prefers the
+    /// logger-bearing constructor, so production keeps logging.
+    /// </para>
+    /// </summary>
+    /// <param name="inner">The wrapped query handler.</param>
+    /// <param name="cacheService">The cache backing the query results.</param>
+    public CachingQueryDecorator(IQueryHandler<TQuery, TResult> inner, ICacheService cacheService)
+        : this(inner, cacheService, NullLogger<CachingQueryDecorator<TQuery, TResult>>.Instance)
+    {
+    }
+
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)
     {
@@ -44,13 +69,31 @@ public sealed class CachingQueryDecorator<TQuery, TResult>(
             // Only cache non-failure results
             if (result is not Shared.Abstractions.Result { IsFailure: true })
             {
-                await cacheService.SetAsync(cacheable.CacheKey, result, cacheable.CacheDuration, cancellationToken)
-                    .ConfigureAwait(false);
+                try
+                {
+                    await cacheService.SetAsync(cacheable.CacheKey, result, cacheable.CacheDuration, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // The read already succeeded, so a cache blip must not fail the query. The
+                    // request token is kept, so real cancellation still propagates through the filter.
+                    LogCachePopulateFailed(logger, cacheable.CacheKey, typeof(TQuery).Name, ex);
+                }
             }
 
             return result;
         }
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Cache populate failed for key '{CacheKey}' after query '{QueryName}' succeeded; the result is returned uncached")]
+    private static partial void LogCachePopulateFailed(
+        ILogger logger,
+        string cacheKey,
+        string queryName,
+        Exception exception);
 }
 
 /// <summary>

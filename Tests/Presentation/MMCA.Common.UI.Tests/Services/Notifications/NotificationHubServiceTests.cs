@@ -17,6 +17,9 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// <c>HubConnection</c> internally via <c>HubConnectionBuilder</c> with no injectable extension point, so
 /// exercising them would attempt real network connections with multi-second backoff. Left
 /// uncovered rather than changing Source (covered end to end by the consuming apps' E2E suites).
+/// The reference-counted channel membership that decides WHETHER those invocations happen is
+/// covered directly in <see cref="ChannelReferenceCounterTests"/>, since the decision is the part
+/// that regressed and it is reachable without a connection.
 /// </summary>
 public sealed class NotificationHubServiceTests
 {
@@ -167,5 +170,79 @@ public sealed class NotificationHubServiceTests
 
         await act.Should().NotThrowAsync();
         sut.IsConnected.Should().BeFalse();
+    }
+}
+
+/// <summary>
+/// Covers the reference-counted channel membership behind
+/// <see cref="NotificationHubService.JoinChannelAsync"/> / <see cref="NotificationHubService.LeaveChannelAsync"/>.
+/// The regression these lock down (H13): with the previous <c>HashSet</c> the first leaver removed the
+/// only entry, so a page leaving a channel cut an invisible listener off from the same channel.
+/// </summary>
+public sealed class ChannelReferenceCounterTests
+{
+    [Fact]
+    public void AddRef_FirstJoin_SignalsServerJoin_SecondDoesNot()
+    {
+        var sut = new ChannelReferenceCounter();
+
+        sut.AddRef("event:1").Should().BeTrue("the server must be told to join on the 0 to 1 transition");
+        sut.AddRef("event:1").Should().BeFalse("the connection is already in the group");
+        sut.RefCountFor("event:1").Should().Be(2);
+    }
+
+    [Fact]
+    public void Release_WithOutstandingRefs_DoesNotSignalServerLeave()
+    {
+        var sut = new ChannelReferenceCounter();
+        sut.AddRef("event:1");
+        sut.AddRef("event:1");
+
+        bool shouldLeave = sut.Release("event:1");
+
+        shouldLeave.Should().BeFalse("a second subscriber still holds the channel");
+        sut.RefCountFor("event:1").Should().Be(1);
+        sut.Snapshot().Should().Contain("event:1", "membership must survive one of two subscribers leaving");
+    }
+
+    [Fact]
+    public void Release_OnLastRef_SignalsServerLeaveExactlyOnce()
+    {
+        var sut = new ChannelReferenceCounter();
+        sut.AddRef("event:1");
+        sut.AddRef("event:1");
+
+        sut.Release("event:1").Should().BeFalse();
+        sut.Release("event:1").Should().BeTrue("the last outstanding join releases the group membership");
+        sut.Release("event:1").Should().BeFalse("an extra leave must not re-signal the server");
+
+        sut.RefCountFor("event:1").Should().Be(0);
+        sut.Snapshot().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Release_WithoutJoin_IsSafeNoOpAndNeverNegative()
+    {
+        var sut = new ChannelReferenceCounter();
+
+        bool shouldLeave = sut.Release("never-joined");
+
+        shouldLeave.Should().BeFalse();
+        sut.RefCountFor("never-joined").Should().Be(0, "the count must never go negative");
+        sut.Snapshot().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Snapshot_ReturnsDistinctKeysWithOutstandingRefs()
+    {
+        var sut = new ChannelReferenceCounter();
+        sut.AddRef("event:1");
+        sut.AddRef("event:1");
+        sut.AddRef("event:2");
+        sut.AddRef("event:3");
+        sut.Release("event:3");
+
+        // Reconnect replay: one re-join per held channel, regardless of how many subscribers hold it.
+        sut.Snapshot().Should().BeEquivalentTo("event:1", "event:2");
     }
 }

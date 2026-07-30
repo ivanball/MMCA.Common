@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
@@ -18,7 +19,10 @@ public sealed class CachingQueryDecoratorTests
         inner.Setup(x => x.HandleAsync(It.IsAny<NonCacheableTestQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success("data"));
 
-        var sut = new CachingQueryDecorator<NonCacheableTestQuery, Result<string>>(inner.Object, cacheService.Object);
+        var sut = new CachingQueryDecorator<NonCacheableTestQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<NonCacheableTestQuery, Result<string>>>.Instance);
 
         Result<string> result = await sut.HandleAsync(new NonCacheableTestQuery());
 
@@ -37,7 +41,10 @@ public sealed class CachingQueryDecoratorTests
         cacheService.Setup(x => x.GetAsync<Result<string>>("test-cache-key", It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedResult);
 
-        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(inner.Object, cacheService.Object);
+        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<CacheableTestQuery, Result<string>>>.Instance);
 
         Result<string> result = await sut.HandleAsync(new CacheableTestQuery());
 
@@ -57,7 +64,10 @@ public sealed class CachingQueryDecoratorTests
         inner.Setup(x => x.HandleAsync(It.IsAny<CacheableTestQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success("fresh-data"));
 
-        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(inner.Object, cacheService.Object);
+        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<CacheableTestQuery, Result<string>>>.Instance);
 
         Result<string> result = await sut.HandleAsync(new CacheableTestQuery());
 
@@ -80,7 +90,10 @@ public sealed class CachingQueryDecoratorTests
         inner.Setup(x => x.HandleAsync(It.IsAny<CacheableTestQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<string>(Error.Failure("test", "failed")));
 
-        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(inner.Object, cacheService.Object);
+        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<CacheableTestQuery, Result<string>>>.Instance);
 
         Result<string> result = await sut.HandleAsync(new CacheableTestQuery());
 
@@ -113,7 +126,10 @@ public sealed class CachingQueryDecoratorTests
                 return Result.Success("expensive-data");
             });
 
-        var sut = new CachingQueryDecorator<StampedeTestQuery, Result<string>>(inner.Object, cacheService.Object);
+        var sut = new CachingQueryDecorator<StampedeTestQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<StampedeTestQuery, Result<string>>>.Instance);
 
         Result<string>[] results = await Task.WhenAll(
             Enumerable.Range(0, 8).Select(_ => Task.Run(() => sut.HandleAsync(new StampedeTestQuery()))));
@@ -124,6 +140,33 @@ public sealed class CachingQueryDecoratorTests
             r.IsSuccess.Should().BeTrue();
             r.Value.Should().Be("expensive-data");
         });
+    }
+
+    // ── A cache outage on the populate must not fail an already-successful read (M28) ──
+    [Fact]
+    public async Task HandleAsync_WhenCachePopulateThrows_StillReturnsHandlerResult()
+    {
+        var inner = new Mock<IQueryHandler<CacheableTestQuery, Result<string>>>();
+        var cacheService = new Mock<ICacheService>();
+        cacheService.Setup(x => x.GetAsync<Result<string>>("test-cache-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Result<string>?)null);
+        cacheService.Setup(x => x.SetAsync(
+                It.IsAny<string>(), It.IsAny<Result<string>>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("cache unreachable"));
+        inner.Setup(x => x.HandleAsync(It.IsAny<CacheableTestQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success("fresh-data"));
+
+        var sut = new CachingQueryDecorator<CacheableTestQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<CacheableTestQuery, Result<string>>>.Instance);
+
+        Result<string> result = await sut.HandleAsync(new CacheableTestQuery());
+
+        // The read succeeded; the failed populate is swallowed and the handler's result flows out.
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be("fresh-data");
+        inner.Verify(x => x.HandleAsync(It.IsAny<CacheableTestQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }
 

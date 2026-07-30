@@ -9,6 +9,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Lets the unit tier cover ChannelReferenceCounter directly. The ref-count semantics cannot be
+         reached through NotificationHubService's public API: JoinChannelAsync starts a real
+         HubConnection, so a join-based test would need a live server and a multi-second backoff. -->
+    <InternalsVisibleTo Include="MMCA.Common.UI.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
