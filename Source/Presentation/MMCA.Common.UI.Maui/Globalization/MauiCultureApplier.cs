@@ -34,8 +34,10 @@ public sealed class MauiCultureApplier(NavigationManager navigation) : ICultureA
             return Task.CompletedTask;
         }
 
-        // Order and synchrony are load-bearing: persist and activate BEFORE the reload, with no await in
-        // between, so the culture is already current on the renderer's thread when the tree re-renders.
+        // Order is load-bearing: persist and activate BEFORE the reload, so the new culture is already
+        // the process default when the tree re-renders. ApplyToProcess deliberately sets only the thread
+        // defaults; see its remarks for why assigning CurrentUICulture here would pin the app to its
+        // startup language for the rest of the session.
         MauiCultureStore.Save(culture);
         MauiCultureStore.ApplyToProcess(culture);
 
