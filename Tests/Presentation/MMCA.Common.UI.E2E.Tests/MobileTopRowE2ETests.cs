@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Playwright;
 using MMCA.Common.Testing.E2E.Infrastructure;
 using MMCA.Common.UI.E2E.Tests.Infrastructure;
@@ -33,6 +34,37 @@ public sealed class MobileTopRowE2ETests : GalleryAxeTestBase
         // The gallery host runs anonymously, so this also proves the controls are not auth-gated.
         await Expect(topRow.GetByRole(AriaRole.Button, new() { Name = "Language" })).ToBeVisibleAsync();
         await Expect(topRow.GetByTitle("Toggle light/dark theme")).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task PhoneViewport_TopRowActions_DoNotOverlapTheHamburger()
+    {
+        await Page.SetViewportSizeAsync(390, 844);
+        await Page.GotoAsync("/");
+        await Page.WaitForLoadStateAsync();
+
+        // The theme toggle is the last item in the signed-out top-row, so it is the one that lands on
+        // the hamburger when .toprow-actions is allowed to shrink below its content width. The gallery
+        // host is anonymous, which is exactly the state that used to overlap: signed in, the user-name
+        // span absorbs the squeeze by ellipsizing and hides the defect.
+        var themeToggle = Page.Locator(".toprow-actions").GetByTitle("Toggle light/dark theme");
+        var hamburger = Page.Locator(".navbar-toggler");
+
+        // Settle both before measuring: BoundingBoxAsync does not auto-wait, so reading it straight
+        // after the navigation returns null whenever the interactive render has not landed yet.
+        await Expect(themeToggle).ToBeVisibleAsync();
+        await Expect(hamburger).ToBeVisibleAsync();
+
+        var themeBox = await themeToggle.BoundingBoxAsync();
+        var hamburgerBox = await hamburger.BoundingBoxAsync();
+
+        Assert.NotNull(themeBox);
+        Assert.NotNull(hamburgerBox);
+        var themeRight = (themeBox.X + themeBox.Width).ToString(CultureInfo.InvariantCulture);
+        var hamburgerLeft = hamburgerBox.X.ToString(CultureInfo.InvariantCulture);
+        Assert.True(
+            themeBox.X + themeBox.Width <= hamburgerBox.X,
+            $"Theme toggle (right edge {themeRight}) overlaps the hamburger (left edge {hamburgerLeft}).");
     }
 
     [Fact]
