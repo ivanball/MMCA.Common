@@ -193,7 +193,15 @@
     margin-right: 0.25rem;
     color: white;
     white-space: nowrap;
-    min-width: 0;
+    /* Never shrink below the actions' own width. .top-row reserves its 4.5rem right padding for
+       the absolutely positioned .navbar-toggler, but a shrinkable actions box (the previous
+       min-width: 0 plus the default flex-shrink: 1) gets squeezed by the width:100% brand
+       container and spills its nowrap, overflow-visible contents right into that reserve,
+       painting the theme icon over the hamburger. Signed in, .toprow-user-name absorbed the
+       squeeze by ellipsizing, so only the signed-out row (two fixed-width icon buttons, nothing
+       shrinkable) ever showed it. The brand is the element meant to give way instead:
+       .top-row .container-fluid is min-width: 0 and .navbar-brand already ellipsizes. */
+    flex: 0 0 auto;
     /* Prevent the top-row from clipping the badge above the icon */
     overflow: visible;
 }
