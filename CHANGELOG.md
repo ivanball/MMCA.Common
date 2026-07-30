@@ -14,6 +14,54 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.133.0] - 2026-07-30
+
+### Fixed
+
+- **Changing the language on a MAUI Blazor Hybrid head now takes effect immediately.** 1.132.0 fixed
+  the switcher navigating to a server endpoint no hybrid head hosts, but the language still did not
+  change: it only appeared after the next cold start, and only if the process was genuinely killed
+  rather than swiped away.
+
+  `CultureInfo.CurrentCulture` and `CurrentUICulture` are backed by an `AsyncLocal`, so the value flows
+  with the `ExecutionContext` and is restored every time that context is re-entered, taking precedence
+  over `DefaultThreadCurrentUICulture`. `MauiCultureInitializer` runs inside `MauiAppBuilder.Build()`,
+  before any window exists, so the context it wrote to is the ancestor of every later dispatch,
+  including the Blazor renderer's. A switch could then set the thread defaults and force-load the
+  WebView, and the re-attach would re-enter the startup context, restore the launch culture, and render
+  the old language for the rest of the session.
+
+  `MauiCultureStore.ApplyToProcess` now sets the thread defaults and nothing else. With no code path
+  assigning `Current*`, no thread or context materializes a culture of its own, so the defaults govern
+  everywhere and a switch lands across the whole app at once. Web heads were never affected: request
+  localization sets the culture per request, inside each request's own context, so nothing long-lived
+  is pinned. Verified on an Android emulator, switching live with no process restart.
+
+- **The mobile top-row actions no longer overlap the hamburger.** `.toprow-actions` carried
+  `min-width: 0` plus the default `flex-shrink: 1`, so the `width: 100%` brand container squeezed it
+  below its own content width. Its contents are `nowrap` with `overflow: visible`, so they spilled into
+  the `4.5rem` that `.top-row` reserves for the absolutely positioned `.navbar-toggler`.
+
+  Signed out, the spill was small enough to clip only the theme toggle. Signed in there are two more
+  items, so it grew large enough to hide the user name behind the hamburger almost entirely.
+  `flex: 0 0 auto` pins the group to its content width and lets the brand give way instead, which is
+  what `.top-row .container-fluid` (`min-width: 0`) and `.navbar-brand` (`text-overflow: ellipsis`)
+  were already set up to do. This was never MAUI-specific: every phone-width web render had it.
+
+- **Preference writes no longer spend a 401 per theme or culture toggle on a rejected session.** The
+  write is best-effort, so the response was never inspected and a 401 does not throw. The only guard
+  was that the token be non-empty, which an expired token passes, and the shared auth handler neither
+  refreshes nor retries. A session the API had stopped accepting therefore cost one silent failed
+  request per toggle, with no user-visible symptom, which at low traffic is enough on its own to trip a
+  failed-request alert rule.
+
+  `ApiUserPreferenceWriter` now skips the call when the token is not usable (reusing the freshness
+  check token storage already applies before re-acquiring), and skips it when the current token is one
+  the API has already rejected. It remembers the rejected token rather than latching a flag, so a fresh
+  sign-in resumes writing with no reset step. `ApiUserPreferenceReader` gets the freshness guard for
+  the same reason. Nothing changes for the user: the choice is applied and persisted locally before the
+  write, and the caller could never observe the failure.
+
 ## [1.132.0] - 2026-07-29
 
 ### Fixed
