@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Concurrency;
 
@@ -25,6 +26,22 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     ICacheService cacheService,
     ILogger<CachingQueryDecorator<TQuery, TResult>> logger) : IQueryHandler<TQuery, TResult>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CachingQueryDecorator{TQuery, TResult}"/> class
+    /// without a logger, discarding the cache-populate warnings.
+    /// <para>
+    /// Exists for source compatibility with consumers that construct the decorator directly (tests
+    /// pinned to a released package version). DI never selects it: container resolution prefers the
+    /// logger-bearing constructor, so production keeps logging.
+    /// </para>
+    /// </summary>
+    /// <param name="inner">The wrapped query handler.</param>
+    /// <param name="cacheService">The cache backing the query results.</param>
+    public CachingQueryDecorator(IQueryHandler<TQuery, TResult> inner, ICacheService cacheService)
+        : this(inner, cacheService, NullLogger<CachingQueryDecorator<TQuery, TResult>>.Instance)
+    {
+    }
+
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)
     {

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
@@ -26,6 +27,22 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
     ICacheService cacheService,
     ILogger<CachingCommandDecorator<TCommand, TResult>> logger) : ICommandHandler<TCommand, TResult>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CachingCommandDecorator{TCommand, TResult}"/> class
+    /// without a logger, discarding the invalidation-failure warnings.
+    /// <para>
+    /// Exists for source compatibility with consumers that construct the decorator directly (tests
+    /// pinned to a released package version). DI never selects it: container resolution prefers the
+    /// logger-bearing constructor, so production keeps logging.
+    /// </para>
+    /// </summary>
+    /// <param name="inner">The wrapped command handler.</param>
+    /// <param name="cacheService">The cache to invalidate after a successful command.</param>
+    public CachingCommandDecorator(ICommandHandler<TCommand, TResult> inner, ICacheService cacheService)
+        : this(inner, cacheService, NullLogger<CachingCommandDecorator<TCommand, TResult>>.Instance)
+    {
+    }
+
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
