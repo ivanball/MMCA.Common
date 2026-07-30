@@ -44,11 +44,25 @@ internal static class MauiCultureStore
     }
 
     /// <summary>
-    /// Makes <paramref name="culture"/> the active culture for the process. Both the thread defaults and
-    /// the calling thread are set: the defaults only apply to threads that have not materialized a
-    /// culture yet, and by the time a user switches, the MAUI UI thread (which is also the Blazor
-    /// renderer's dispatcher thread) already has one. Call this synchronously, before any await, so it
-    /// lands on the renderer's thread rather than on whatever thread a continuation resumes on.
+    /// Makes <paramref name="culture"/> the active culture for the process, by setting the thread
+    /// defaults and <b>only</b> the thread defaults.
+    /// <para>
+    /// Assigning <see cref="CultureInfo.CurrentCulture"/> / <see cref="CultureInfo.CurrentUICulture"/>
+    /// here would break runtime switching, which is why this deliberately does not. Those setters write
+    /// to an <c>AsyncLocal</c>, so the value flows with the <see cref="ExecutionContext"/> and is
+    /// RESTORED every time that context is re-entered, taking precedence over the thread defaults. The
+    /// startup restore (<see cref="MauiCultureInitializer"/>) runs before any window exists, so the
+    /// context it writes to is the one every later dispatch descends from, including the Blazor
+    /// renderer's. A later switch could then set the defaults to "es" and still re-render in the
+    /// startup culture forever: the reload re-enters that context, the AsyncLocal wins, and the app is
+    /// stuck on whatever language it launched in. A web head never hits this because request
+    /// localization sets the culture per request, inside each request's own context.
+    /// </para>
+    /// <para>
+    /// Nothing needs the calling thread set explicitly. As long as no code path ever assigns
+    /// <c>Current*</c>, no thread materializes a culture of its own, so the defaults govern every
+    /// thread and every context, and a switch takes effect everywhere at once.
+    /// </para>
     /// </summary>
     /// <param name="culture">A culture from <c>SupportedCultures.All</c>.</param>
     public static void ApplyToProcess(string culture)
@@ -57,7 +71,5 @@ internal static class MauiCultureStore
 
         CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
         CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
-        CultureInfo.CurrentCulture = cultureInfo;
-        CultureInfo.CurrentUICulture = cultureInfo;
     }
 }
