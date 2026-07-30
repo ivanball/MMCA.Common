@@ -17,11 +17,18 @@ public sealed class ApiUserPreferenceReader(
 {
     private static readonly UserPreferences Empty = new(null, null);
 
+    /// <summary>Matches the token-storage skew, so this agrees with the layer that does the refreshing.</summary>
+    private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
+
     /// <inheritdoc/>
     public async Task<UserPreferences> GetAsync(CancellationToken cancellationToken = default)
     {
         var token = await tokenStorageService.GetAccessTokenAsync();
-        if (string.IsNullOrWhiteSpace(token))
+
+        // Same guard as the writer: an expired or unreadable token buys a guaranteed 401, and this read
+        // is best-effort, so the caller cannot act on the failure either way. IsFresh also covers the
+        // anonymous (null) case.
+        if (!JwtTokenInfo.IsFresh(token, ExpirySkew))
         {
             return Empty;
         }
