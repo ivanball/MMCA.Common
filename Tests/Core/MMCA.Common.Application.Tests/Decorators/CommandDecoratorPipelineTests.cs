@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
@@ -69,7 +70,9 @@ public sealed class CommandDecoratorPipelineTests
             .ThrowsAsync(new InvalidOperationException("db failure"));
 
         var sut = new CachingCommandDecorator<CachePipelineTestCommand, Result>(
-            inner.Object, cacheService.Object);
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<CachePipelineTestCommand, Result>>.Instance);
 
         Func<Task> act = () => sut.HandleAsync(new CachePipelineTestCommand());
 
@@ -147,7 +150,9 @@ public sealed class CommandDecoratorPipelineTests
 
         // 2. Caching wraps transactional
         pipeline = new CachingCommandDecorator<FullPipelineTestCommand, Result>(
-            pipeline, cacheService.Object);
+            pipeline,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<FullPipelineTestCommand, Result>>.Instance);
 
         // 3. Logging wraps caching (outermost)
         pipeline = new LoggingCommandDecorator<FullPipelineTestCommand, Result>(
@@ -200,7 +205,9 @@ public sealed class CommandDecoratorPipelineTests
             new TransactionalCommandDecorator<FullPipelineTestCommand, Result>(
                 innerHandler.Object, unitOfWork.Object);
         pipeline = new CachingCommandDecorator<FullPipelineTestCommand, Result>(
-            pipeline, cacheService.Object);
+            pipeline,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<FullPipelineTestCommand, Result>>.Instance);
         pipeline = new LoggingCommandDecorator<FullPipelineTestCommand, Result>(
             pipeline, correlationCtx.Object, logger.Object);
 
@@ -247,7 +254,9 @@ public sealed class CommandDecoratorPipelineTests
             new TransactionalCommandDecorator<FullPipelineTestCommand, Result>(
                 innerHandler.Object, unitOfWork.Object);
         pipeline = new CachingCommandDecorator<FullPipelineTestCommand, Result>(
-            pipeline, cacheService.Object);
+            pipeline,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<FullPipelineTestCommand, Result>>.Instance);
         pipeline = new LoggingCommandDecorator<FullPipelineTestCommand, Result>(
             pipeline, correlationCtx.Object, logger.Object);
 
@@ -293,7 +302,9 @@ public sealed class CommandDecoratorPipelineTests
             new TransactionalCommandDecorator<PipelineTestCommand, Result>(
                 innerHandler.Object, unitOfWork.Object);
         pipeline = new CachingCommandDecorator<PipelineTestCommand, Result>(
-            pipeline, cacheService.Object);
+            pipeline,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<PipelineTestCommand, Result>>.Instance);
         pipeline = new LoggingCommandDecorator<PipelineTestCommand, Result>(
             pipeline, correlationCtx.Object, logger.Object);
 

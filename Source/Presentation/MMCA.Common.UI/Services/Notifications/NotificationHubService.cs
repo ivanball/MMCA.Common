@@ -16,9 +16,11 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// <para>
 /// The same connection also carries ephemeral live channel events: components join a channel via
 /// <see cref="JoinChannelAsync"/> and subscribe handlers via <see cref="OnChannelEvent"/> (multicast,
-/// so an invisible listener and a page can observe the same channel concurrently). Joined channels
-/// are tracked and re-joined automatically after an automatic reconnect, because SignalR group
-/// membership does not survive a new connection.
+/// so an invisible listener and a page can observe the same channel concurrently). Channel membership
+/// is reference-counted per key: the server is told to join on the first join and to leave only on the
+/// last matching leave, so one subscriber leaving never cuts the channel off for the others still
+/// holding it. Held channels are re-joined automatically after an automatic reconnect, because
+/// SignalR group membership does not survive a new connection.
 /// </para>
 /// </summary>
 public sealed partial class NotificationHubService : IAsyncDisposable
@@ -34,7 +36,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private readonly string _hubUrl;
     private readonly ILogger<NotificationHubService> _logger;
     private readonly Lock _channelSync = new();
-    private readonly HashSet<string> _joinedChannels = [];
+    private readonly ChannelReferenceCounter _channelRefs = new();
     private readonly Dictionary<string, List<ChannelSubscription>> _channelSubscriptions = [];
     private HubConnection? _hubConnection;
     private bool _disposed;
@@ -125,22 +127,22 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// Joins a live channel so <see cref="OnChannelEvent"/> handlers receive its events. Starts the
     /// hub connection if needed, tracks the membership, and re-joins automatically after reconnects.
     /// Join failures are logged, never thrown: live updates are best-effort by design.
-    /// Safe to call more than once for the same channel.
+    /// Safe to call more than once for the same channel: membership is reference-counted, so the
+    /// server is told to join only on the first join. Pair every call with one
+    /// <see cref="LeaveChannelAsync"/>.
     /// </summary>
     /// <param name="channelKey">The channel key (e.g. <c>event:1</c>).</param>
     public async Task JoinChannelAsync(string channelKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelKey);
 
-        lock (_channelSync)
-        {
-            _joinedChannels.Add(channelKey);
-        }
+        // Counted before the connection is started, so the rejoin replay inside StartAsync sees it.
+        bool isFirstJoin = _channelRefs.AddRef(channelKey);
 
         await StartAsync().ConfigureAwait(false);
 
         HubConnection? connection = _hubConnection;
-        if (connection?.State == HubConnectionState.Connected)
+        if (isFirstJoin && connection?.State == HubConnectionState.Connected)
         {
             try
             {
@@ -155,22 +157,22 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     }
 
     /// <summary>
-    /// Leaves a live channel and stops re-joining it after reconnects. Leave failures are logged,
-    /// never thrown. Subscriptions registered via <see cref="OnChannelEvent"/> are not removed;
-    /// dispose those individually.
+    /// Releases one <see cref="JoinChannelAsync"/> for a live channel. Membership is
+    /// reference-counted, so the server is told to leave (and the channel stops being re-joined
+    /// after reconnects) only when the last outstanding join is released; until then the channel
+    /// keeps delivering events to the remaining subscribers. A leave with no matching join is a
+    /// no-op. Leave failures are logged, never thrown. Subscriptions registered via
+    /// <see cref="OnChannelEvent"/> are not removed; dispose those individually.
     /// </summary>
     /// <param name="channelKey">The channel key (e.g. <c>event:1</c>).</param>
     public async Task LeaveChannelAsync(string channelKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(channelKey);
 
-        lock (_channelSync)
-        {
-            _joinedChannels.Remove(channelKey);
-        }
+        bool isLastLeave = _channelRefs.Release(channelKey);
 
         HubConnection? connection = _hubConnection;
-        if (connection?.State == HubConnectionState.Connected)
+        if (isLastLeave && connection?.State == HubConnectionState.Connected)
         {
             try
             {
@@ -261,11 +263,8 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     private async Task RejoinChannelsAsync()
     {
-        string[] channels;
-        lock (_channelSync)
-        {
-            channels = [.. _joinedChannels];
-        }
+        // Distinct keys with at least one outstanding join: a channel held twice is re-joined once.
+        string[] channels = _channelRefs.Snapshot();
 
         HubConnection? connection = _hubConnection;
         if (channels.Length == 0 || connection?.State != HubConnectionState.Connected)
