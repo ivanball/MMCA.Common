@@ -8,8 +8,10 @@ namespace MMCA.Common.UI.Components;
 
 /// <summary>
 /// Code-behind for the mobile infinite-scroll card list: page fetching via an IntersectionObserver
-/// sentinel, a rendered-item cap bounding DOM growth, cancellation of superseded fetches, and
-/// localized load-failure handling with retry.
+/// sentinel, a rendered-item cap bounding DOM growth, generation-guarded supersession of in-flight
+/// fetches (<see cref="ResetAsync"/> bumps a generation counter AND cancels the outstanding token;
+/// a fetch that completes under a superseded generation discards its results and leaves the page
+/// counter alone), and localized load-failure handling with retry.
 /// </summary>
 /// <typeparam name="TItem">The list item type rendered by the card template.</typeparam>
 public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
@@ -43,6 +45,13 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     private readonly List<TItem> _items = [];
     private int _totalCount;
     private int _currentPage;
+
+    /// <summary>
+    /// Incremented by <see cref="ResetAsync"/> to supersede every fetch already in flight. A load
+    /// snapshots it before awaiting and discards its results when the value moved while it waited.
+    /// </summary>
+    private int _generation;
+
     private bool _isInitialLoad = true;
     private bool _isLoadingMore;
     private bool _hasMore = true;
@@ -127,18 +136,30 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         _isLoadingMore = true;
         _loadError = false;
 
-        if (_cts is not null)
-        {
-            await _cts.CancelAsync();
-            _cts.Dispose();
-        }
+        // Snapshot the generation this load belongs to. Whoever supersedes it (ResetAsync) owns
+        // cancelling and disposing the token source it publishes here.
+        int generation = _generation;
+        var cts = new CancellationTokenSource();
+        _cts = cts;
 
-        _cts = new CancellationTokenSource();
+        // The page number is computed, not committed: _currentPage only advances on a successful,
+        // non-superseded completion. A cancelled, failed, or superseded fetch therefore leaves the
+        // counter untouched, so nothing has to be compensated back and no page is ever re-requested.
+        int targetPage = _currentPage + 1;
 
         try
         {
-            _currentPage++;
-            var (items, totalCount) = await FetchPage(_currentPage, PageSize, _cts.Token);
+            var (items, totalCount) = await FetchPage(targetPage, PageSize, cts.Token);
+
+            // The generation, not the token, is authoritative: FetchPage is consumer-supplied and may
+            // ignore the CancellationToken entirely, so a superseded fetch can still complete
+            // successfully. This check is what keeps its rows out of the list ResetAsync just cleared.
+            if (_disposed || generation != _generation)
+            {
+                return;
+            }
+
+            _currentPage = targetPage;
             _items.AddRange(items);
             _totalCount = totalCount;
 
@@ -148,11 +169,15 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            _currentPage--;
+            // Superseded or disposed; the page counter never advanced, so there is nothing to undo.
         }
         catch (Exception)
         {
-            _currentPage--;
+            if (_disposed || generation != _generation)
+            {
+                return;
+            }
+
             _loadError = true;
 
             if (isInitial)
@@ -164,7 +189,20 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         }
         finally
         {
-            _isLoadingMore = false;
+            if (generation == _generation)
+            {
+                // A superseding reset already cleared the flag (and the reload it started may have set
+                // it again), so only the current generation is allowed to clear it.
+                _isLoadingMore = false;
+            }
+
+            if (ReferenceEquals(_cts, cts))
+            {
+                // Only the still-current source is ours to dispose: a resetter that superseded this
+                // load already cancelled and disposed the one it took over.
+                _cts = null;
+                cts.Dispose();
+            }
         }
     }
 
@@ -180,6 +218,24 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     /// </summary>
     public async Task ResetAsync()
     {
+        // Supersede first: any fetch already awaiting FetchPage now belongs to an older generation
+        // and must drop its results instead of appending them to the list cleared below.
+        _generation++;
+
+        var stale = _cts;
+        _cts = null;
+
+        if (stale is not null)
+        {
+            await stale.CancelAsync();
+            stale.Dispose();
+        }
+
+        // The superseded load no longer owns the in-flight marker, and it will not clear it (its
+        // generation moved). Without clearing it here the reload below would early-return, leaving
+        // the list empty until the next sentinel hit.
+        _isLoadingMore = false;
+
         _items.Clear();
         _currentPage = 0;
         _totalCount = 0;

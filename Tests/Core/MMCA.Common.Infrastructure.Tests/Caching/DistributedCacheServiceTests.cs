@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
@@ -150,20 +151,23 @@ public class DistributedCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .Returns(keys.ToAsyncEnumerable());
 
-        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()))
-            .ReturnsAsync(2);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
 
         var sut = new DistributedCacheService(cacheMock.Object, NullLog, connectionMock.Object);
 
         await sut.RemoveByPrefixAsync("prefix:");
 
-        // Deletes are batched: both keys go out in one round trip instead of one per key.
+        // One command per key, never a multi-key DEL. The keys behind a prefix hash to arbitrary
+        // slots, and under cluster policy StackExchange.Redis answers a cross-slot multi-key command
+        // by throwing rather than under-deleting, so batching them would fault the invalidation.
         dbMock.Verify(
-            d => d.KeyDeleteAsync(
-                It.Is<RedisKey[]>(k => k.Length == 2 && k[0] == (RedisKey)"prefix:key1" && k[1] == (RedisKey)"prefix:key2"),
-                It.IsAny<CommandFlags>()),
+            d => d.KeyDeleteAsync(It.Is<RedisKey>(k => k == (RedisKey)"prefix:key1"), It.IsAny<CommandFlags>()),
             Times.Once);
-        dbMock.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+        dbMock.Verify(
+            d => d.KeyDeleteAsync(It.Is<RedisKey>(k => k == (RedisKey)"prefix:key2"), It.IsAny<CommandFlags>()),
+            Times.Once);
+        dbMock.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey[]>(), It.IsAny<CommandFlags>()), Times.Never);
     }
 
     [Fact]
@@ -206,6 +210,161 @@ public class DistributedCacheServiceTests
 
         dbMock.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
     }
+
+    // ── Prefix eviction must cover every primary, not one arbitrary server ──
+    // GetServers() reports every endpoint the multiplexer knows. Scanning only the first one leaves
+    // the keys held by the other primaries alive until their TTL expires, so an invalidation that
+    // reports success has silently done part of the job.
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_ScansEveryNonReplicaServer()
+    {
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var dbMock = new Mock<IDatabase>();
+        var primaryA = ServerStub("primary-a", isReplica: false, "prefix:a1");
+        var primaryB = ServerStub("primary-b", isReplica: false, "prefix:b1");
+
+        connectionMock.Setup(c => c.GetServers()).Returns([primaryA.Object, primaryB.Object]);
+        connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>())).ReturnsAsync(true);
+
+        var sut = new DistributedCacheService(new Mock<IDistributedCache>().Object, NullLog, connectionMock.Object);
+
+        await sut.RemoveByPrefixAsync("prefix:");
+
+        VerifyScanned(primaryA, Times.Once());
+        VerifyScanned(primaryB, Times.Once());
+        VerifyDeleted(dbMock, "prefix:a1", Times.Once());
+        VerifyDeleted(dbMock, "prefix:b1", Times.Once());
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_DoesNotScanReplicas()
+    {
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var dbMock = new Mock<IDatabase>();
+        var primary = ServerStub("primary", isReplica: false, "prefix:a1");
+        var replica = ServerStub("replica", isReplica: true, "prefix:a1");
+
+        connectionMock.Setup(c => c.GetServers()).Returns([primary.Object, replica.Object]);
+        connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>())).ReturnsAsync(true);
+
+        var sut = new DistributedCacheService(new Mock<IDistributedCache>().Object, NullLog, connectionMock.Object);
+
+        await sut.RemoveByPrefixAsync("prefix:");
+
+        // A replica mirrors a primary that was already scanned, and a DEL against it is rejected,
+        // so scanning it would only re-issue deletes that cannot succeed.
+        VerifyScanned(primary, Times.Once());
+        VerifyScanned(replica, Times.Never());
+        VerifyDeleted(dbMock, "prefix:a1", Times.Once());
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_AllServersAreReplicas_IsNoOp()
+    {
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var replica = ServerStub("replica", isReplica: true, "prefix:a1");
+
+        connectionMock.Setup(c => c.GetServers()).Returns([replica.Object]);
+
+        var sut = new DistributedCacheService(new Mock<IDistributedCache>().Object, NullLog, connectionMock.Object);
+
+        await sut.RemoveByPrefixAsync("prefix:");
+
+        VerifyScanned(replica, Times.Never());
+        connectionMock.Verify(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_WhenOneServerScanFails_StillEvictsOnTheOthers()
+    {
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var dbMock = new Mock<IDatabase>();
+        var healthy = ServerStub("healthy", isReplica: false, "prefix:ok1");
+        var broken = ServerStub("broken", isReplica: false);
+        broken.Setup(s => s.KeysAsync(
+                It.IsAny<int>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CommandFlags>()))
+            .Throws(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "node unreachable"));
+
+        // Broken first, so a fault that aborted the loop would take the healthy server with it.
+        connectionMock.Setup(c => c.GetServers()).Returns([broken.Object, healthy.Object]);
+        connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>())).ReturnsAsync(true);
+
+        var logger = new WarningCountingLogger();
+        var sut = new DistributedCacheService(new Mock<IDistributedCache>().Object, logger, connectionMock.Object);
+
+        await FluentActions.Invoking(() => sut.RemoveByPrefixAsync("prefix:"))
+            .Should().NotThrowAsync("one unreachable node must not fail the whole invalidation");
+
+        VerifyScanned(healthy, Times.Once());
+        VerifyDeleted(dbMock, "prefix:ok1", Times.Once());
+        logger.WarningCount.Should().Be(1, "the skipped node must be observable, not silent");
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_WithRedis_WhenOneServerDeleteFails_StillEvictsOnTheOthers()
+    {
+        var connectionMock = new Mock<IConnectionMultiplexer>();
+        var dbMock = new Mock<IDatabase>();
+        var failing = ServerStub("failing", isReplica: false, "prefix:bad1");
+        var healthy = ServerStub("healthy", isReplica: false, "prefix:ok1");
+
+        connectionMock.Setup(c => c.GetServers()).Returns([failing.Object, healthy.Object]);
+        connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>())).ReturnsAsync(true);
+        dbMock.Setup(d => d.KeyDeleteAsync(It.Is<RedisKey>(k => k == (RedisKey)"prefix:bad1"), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisServerException("CROSSSLOT Keys in request don't hash to the same slot"));
+
+        var logger = new WarningCountingLogger();
+        var sut = new DistributedCacheService(new Mock<IDistributedCache>().Object, logger, connectionMock.Object);
+
+        await FluentActions.Invoking(() => sut.RemoveByPrefixAsync("prefix:"))
+            .Should().NotThrowAsync();
+
+        VerifyScanned(healthy, Times.Once());
+        VerifyDeleted(dbMock, "prefix:ok1", Times.Once());
+        logger.WarningCount.Should().Be(1);
+    }
+
+    private static Mock<IServer> ServerStub(string host, bool isReplica, params string[] keys)
+    {
+        var serverMock = new Mock<IServer>();
+        serverMock.SetupGet(s => s.IsReplica).Returns(isReplica);
+        serverMock.SetupGet(s => s.EndPoint).Returns(new DnsEndPoint(host, 6379));
+        serverMock.Setup(s => s.KeysAsync(
+                It.IsAny<int>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(keys.Select(k => (RedisKey)k).ToAsyncEnumerable());
+
+        return serverMock;
+    }
+
+    private static void VerifyScanned(Mock<IServer> server, Times times) =>
+        server.Verify(
+            s => s.KeysAsync(
+                It.IsAny<int>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CommandFlags>()),
+            times);
+
+    private static void VerifyDeleted(Mock<IDatabase> db, string key, Times times) =>
+        db.Verify(
+            d => d.KeyDeleteAsync(It.Is<RedisKey>(k => k == (RedisKey)key), It.IsAny<CommandFlags>()),
+            times);
 
     // ── IncrementAsync must stay inside IDistributedCache's storage format ──
     // StackExchangeRedisCache stores every entry as a Redis HASH (absexp/sldexp/data, read with

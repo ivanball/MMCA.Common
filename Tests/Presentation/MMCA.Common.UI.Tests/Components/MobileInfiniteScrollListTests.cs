@@ -105,4 +105,70 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
 
         await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Bravo"));
     }
+
+    [Fact]
+    public async Task ResetDuringAnInFlightFetch_DiscardsTheStalePage_AndReloadsWithoutRefetching()
+    {
+        var requestedPages = new List<int>();
+        var stalePage = new TaskCompletionSource<(IReadOnlyList<string> Items, int TotalItems)>();
+
+        Task<(IReadOnlyList<string> Items, int TotalItems)> GatedFetch(int page, int pageSize, CancellationToken ct)
+        {
+            requestedPages.Add(page);
+
+            // Call 1 is the initial load. Call 2 (the sentinel's page 2) is held open so the reset
+            // lands while it is still outstanding. Everything after that answers immediately.
+            if (requestedPages.Count == 1)
+            {
+                return Task.FromResult<(IReadOnlyList<string>, int)>((["Original"], 3));
+            }
+
+            if (requestedPages.Count == 2)
+            {
+                return stalePage.Task;
+            }
+
+            return page == 1
+                ? Task.FromResult<(IReadOnlyList<string>, int)>((["FreshPageOne"], 3))
+                : Task.FromResult<(IReadOnlyList<string>, int)>((["FreshPageTwo"], 3));
+        }
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 1)
+            .Add(c => c.FetchPage, GatedFetch));
+
+        cut.Markup.Should().Contain("Original");
+
+        // Drive the whole race inside a single dispatcher work item so every step is deterministic:
+        // the sentinel's page-2 fetch suspends on the gate, the search/filter criteria change lands
+        // on top of it, and only then does the superseded fetch answer.
+        Task? supersededLoad = null;
+        await cut.InvokeAsync(async () =>
+        {
+            supersededLoad = cut.Instance.OnSentinelVisible();
+
+            await cut.Instance.ResetAsync();
+
+            stalePage.SetResult((["Stale"], 50));
+        });
+
+        await supersededLoad!;
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(
+            "FreshPageOne", "the reset must actually reload, not early-return on the in-flight flag"));
+        cut.Markup.Should().NotContain("Stale", "a superseded fetch must not append into the list the reset cleared");
+        cut.Markup.Should().NotContain("Original");
+        cut.FindComponents<MudCard>().Count.Should().Be(1);
+
+        // Initial load, the superseded page 2, then the reset's reload of page 1.
+        requestedPages.Should().Equal(1, 2, 1);
+
+        // The next sentinel hit must move forward instead of re-requesting the page the superseded
+        // fetch already consumed (which would render a duplicate row).
+        await cut.InvokeAsync(() => cut.Instance.OnSentinelVisible());
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("FreshPageTwo"));
+        requestedPages.Should().Equal(1, 2, 1, 2);
+        cut.FindComponents<MudCard>().Count.Should().Be(2);
+    }
 }

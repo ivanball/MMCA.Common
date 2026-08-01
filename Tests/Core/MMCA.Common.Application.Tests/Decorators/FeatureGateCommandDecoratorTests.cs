@@ -85,6 +85,57 @@ public sealed class FeatureGateCommandDecoratorTests
             Times.Never);
     }
 
+    // ── A handler whose TResult is neither Result nor Result<T> ──
+    // Scrutor's TryDecorate is unconditional, so such a handler gets decorated too. Building the
+    // failure delegate eagerly (in the static constructor) turned that into a
+    // TypeInitializationException the moment the decorator was RESOLVED, even for a command that
+    // never short-circuits.
+    [Fact]
+    public async Task HandleAsync_NonResultTResult_NonFeatureGatedCommand_PassesThrough()
+    {
+        var inner = new Mock<ICommandHandler<PlainCommand, string>>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<PlainCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("handled");
+
+        var sut = new FeatureGateCommandDecorator<PlainCommand, string>(inner.Object, _featureManager.Object);
+
+        var result = await sut.HandleAsync(new PlainCommand());
+
+        result.Should().Be("handled");
+        inner.Verify(x => x.HandleAsync(It.IsAny<PlainCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_NonResultTResult_EnabledFeature_PassesThrough()
+    {
+        var inner = new Mock<ICommandHandler<FeatureGatedCommand, string>>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<FeatureGatedCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("handled");
+        _featureManager.Setup(x => x.IsEnabledAsync("TestFeature")).ReturnsAsync(true);
+
+        var sut = new FeatureGateCommandDecorator<FeatureGatedCommand, string>(inner.Object, _featureManager.Object);
+
+        var result = await sut.HandleAsync(new FeatureGatedCommand());
+
+        result.Should().Be("handled");
+    }
+
+    [Fact]
+    public async Task HandleAsync_NonResultTResult_DisabledFeature_FailsOnlyOnTheShortCircuit()
+    {
+        var inner = new Mock<ICommandHandler<FeatureGatedCommandWithValue, string>>();
+        _featureManager.Setup(x => x.IsEnabledAsync("TestFeature")).ReturnsAsync(false);
+
+        var sut = new FeatureGateCommandDecorator<FeatureGatedCommandWithValue, string>(
+            inner.Object, _featureManager.Object);
+
+        // Fabricating a failure is genuinely impossible for this TResult, so the short-circuit path
+        // still fails: as the factory's own InvalidOperationException, at the point of use.
+        Func<Task> act = () => sut.HandleAsync(new FeatureGatedCommandWithValue());
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     // ── Enabled feature works with generic Result<T> ──
     [Fact]
     public async Task HandleAsync_EnabledFeature_WithGenericResult_DelegatesToInner()

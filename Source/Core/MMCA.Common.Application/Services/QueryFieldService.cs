@@ -15,6 +15,29 @@ namespace MMCA.Common.Application.Services;
 /// </summary>
 public sealed class QueryFieldService
 {
+    /// <summary>
+    /// Upper bound on the number of entries admitted to EACH of the two field-set caches
+    /// (<see cref="ProjectionCache"/> and <see cref="ShapedAccessorCache"/>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Both caches are keyed by (entity type, normalized field set), and the field set arrives
+    /// verbatim from the client's <c>fields=</c> query string: an entity with N properties has up to
+    /// 2^N distinct subsets, so a caller can grow either dictionary without bound simply by
+    /// permuting the list. Unlike the type-keyed caches in this class, the key space is not bounded
+    /// by the number of entity types in the application.
+    /// </para>
+    /// <para>
+    /// There is deliberately no LRU or eviction policy. These caches exist to skip repeated work for
+    /// the small, hot set of field lists a real client sends, which is admitted long before the cap
+    /// is reached. Past the cap each cache simply stops admitting entries and the request falls back
+    /// to the uncached path (server-side projection is skipped, shaping accessors are filtered per
+    /// request), which is correct but slightly slower, rather than paying for eviction bookkeeping
+    /// on every lookup.
+    /// </para>
+    /// </remarks>
+    private const int MaxCacheEntries = 512;
+
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertiesCache = new();
     private static readonly ConcurrentDictionary<Type, PropertyAccessor[]> AccessorCache = new();
     private static readonly JsonNamingPolicy CamelCase = JsonNamingPolicy.CamelCase;
@@ -151,10 +174,25 @@ public sealed class QueryFieldService
             return query;
 
         var fieldsSet = ParseFields(fields);
-        var selectExpression = ProjectionCache.GetOrAdd(
-            (typeof(TEntity), NormalizeFieldsKey(fieldsSet)),
-            static (_, set) => BuildProjection<TEntity>(set),
-            fieldsSet);
+        var key = (typeof(TEntity), NormalizeFieldsKey(fieldsSet));
+
+        // The hit path stays a lock-free TryGetValue; the Count check (which takes every bucket lock
+        // on a ConcurrentDictionary) runs only on a miss.
+        if (!ProjectionCache.TryGetValue(key, out var selectExpression))
+        {
+            // Past the cap, skip server-side projection instead of admitting another client-shaped
+            // key. Compiling the MemberInit tree per request on this path would turn cache pressure
+            // into CPU churn, which is the more expensive failure; skipping projection only widens
+            // the column list sent to the database, and the response shape is unchanged because
+            // ShapeCollectionData still trims the payload to the requested fields.
+            if (ProjectionCache.Count >= MaxCacheEntries)
+                return query;
+
+            selectExpression = ProjectionCache.GetOrAdd(
+                key,
+                static (_, set) => BuildProjection<TEntity>(set),
+                fieldsSet);
+        }
 
         return selectExpression is null
             ? query
@@ -165,11 +203,19 @@ public sealed class QueryFieldService
     /// Compiled projection lambdas, keyed by entity type and normalized field set.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Rebuilding the <c>MemberInit</c> tree per request meant reflecting over the entity's
     /// properties and allocating a binding array on every field-projected read, unlike the sibling
     /// lookup-selector cache in <c>EFReadRepository</c>. A <see langword="null"/> value is cached
     /// deliberately: it records "this field set projects nothing writable", so the miss is not
     /// recomputed on every subsequent request.
+    /// </para>
+    /// <para>
+    /// Capped at <see cref="MaxCacheEntries"/> (512) entries, with no LRU by design: the field-set
+    /// half of the key is client-supplied, so an entity with N properties admits up to 2^N distinct
+    /// keys. Past the cap, <see cref="ApplyFieldSelection"/> skips server-side projection rather
+    /// than growing this dictionary further. See <see cref="MaxCacheEntries"/>.
+    /// </para>
     /// </remarks>
     private static readonly ConcurrentDictionary<(Type EntityType, string Fields), LambdaExpression?> ProjectionCache = new();
 
@@ -201,12 +247,62 @@ public sealed class QueryFieldService
     /// Validates that all requested field names exist on the entity type.
     /// When <paramref name="allowWriteableFields"/> is false, read-only properties are rejected
     /// (they cannot be used for data shaping since the projection MemberInit requires setters).
+    /// Consults no DTO-to-entity mapping: use the overload that takes one when the same name is
+    /// later resolved through a map.
     /// </summary>
     /// <typeparam name="TEntity">The entity type to validate fields against.</typeparam>
     /// <param name="fields">Comma-separated field names to validate.</param>
     /// <param name="allowWriteableFields">If false, rejects read-only properties.</param>
     /// <returns>A success result, or a failure with validation errors.</returns>
     public static Result Validate<TEntity>(string? fields, bool allowWriteableFields = false)
+        => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap: null, allowWriteableFields);
+
+    /// <summary>
+    /// Validates requested field names against <typeparamref name="TEntity"/>, resolving DTO-facing
+    /// names through <paramref name="dtoToEntityPropertyMap"/> first. Use this overload wherever the
+    /// name is later resolved through the same map (sorting and filtering both do), so validation
+    /// accepts exactly what resolution accepts.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A map hit is accepted UNCONDITIONALLY: the mapped value is never resolved or reflected over.
+    /// Map entries are server-authored (a subclass of the query service supplies them, never the
+    /// client) and their values are deliberately not plain property names of
+    /// <typeparamref name="TEntity"/>: they may be nested navigation paths such as
+    /// <c>"Category.Name"</c> or Dynamic LINQ expressions. Reflecting over them would reject exactly
+    /// the DTO names the map exists to enable, which is what made a mapped sort column fail
+    /// validation while <see cref="ApplySorting"/> would have sorted by it happily.
+    /// </para>
+    /// <para>
+    /// A name with NO map entry falls back to the entity-property check below unchanged (existence,
+    /// plus the read-only rule when <paramref name="allowWriteableFields"/> is false), so a
+    /// client-supplied name the server never mapped is still rejected.
+    /// </para>
+    /// <para>
+    /// A <see langword="null"/> map is treated as an empty one, matching how the other map-aware
+    /// members of this layer (<see cref="ApplySorting"/>, <c>QueryFilterService.ValidateFilters</c>)
+    /// treat a caller that has no mappings.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="TEntity">The entity type to validate fields against.</typeparam>
+    /// <param name="fields">Comma-separated field names to validate.</param>
+    /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored; entries may be navigation paths or expressions).</param>
+    /// <param name="allowWriteableFields">If false, rejects read-only properties.</param>
+    /// <returns>A success result, or a failure with validation errors.</returns>
+    public static Result Validate<TEntity>(
+        string? fields,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        bool allowWriteableFields = false)
+        => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap, allowWriteableFields);
+
+    /// <summary>
+    /// Shared body of both <c>Validate</c> overloads. See the map-aware overload for why a map hit
+    /// short-circuits the entity-property check.
+    /// </summary>
+    private static Result ValidateFields<TEntity>(
+        string? fields,
+        IReadOnlyDictionary<string, string>? dtoToEntityPropertyMap,
+        bool allowWriteableFields)
     {
         if (string.IsNullOrWhiteSpace(fields))
             return Result.Success();
@@ -218,6 +314,10 @@ public sealed class QueryFieldService
 
         foreach (string field in fieldsSet)
         {
+            // Server-authored mapping wins outright: the mapped value is not a name to reflect over.
+            if (dtoToEntityPropertyMap is not null && dtoToEntityPropertyMap.ContainsKey(field))
+                continue;
+
             PropertyInfo? property = propertyInfos
                 .FirstOrDefault(p => p.Name.Equals(field, StringComparison.OrdinalIgnoreCase));
 
@@ -296,23 +396,43 @@ public sealed class QueryFieldService
     /// Shaping accessors filtered to a field set, keyed by entity type and normalized field set,
     /// so a repeated <c>fields=</c> request reuses the array instead of re-filtering per call.
     /// </summary>
+    /// <remarks>
+    /// Capped at <see cref="MaxCacheEntries"/> (512) entries, with no LRU by design: the field-set
+    /// half of the key is client-supplied, so an entity with N properties admits up to 2^N distinct
+    /// keys. Past the cap, <see cref="GetShapedAccessors"/> filters per request instead of growing
+    /// this dictionary further. See <see cref="MaxCacheEntries"/>.
+    /// </remarks>
     private static readonly ConcurrentDictionary<(Type EntityType, string Fields), PropertyAccessor[]> ShapedAccessorCache = new();
 
     /// <summary>
     /// Resolves the accessors to shape with: all of them when no field list was given, otherwise
-    /// the cached subset for that field set.
+    /// the cached subset for that field set (or a per-request subset once the cache is at its cap).
     /// </summary>
     private static PropertyAccessor[] GetShapedAccessors<TEntity>(string? fields)
     {
         var accessors = GetAccessors<TEntity>();
         var fieldsSet = ParseFields(fields);
 
-        return fieldsSet.Count == 0
-            ? accessors
-            : ShapedAccessorCache.GetOrAdd(
-                (typeof(TEntity), NormalizeFieldsKey(fieldsSet)),
-                static (_, arg) => FilterAccessorsByFields(arg.Accessors, arg.FieldsSet),
-                (Accessors: accessors, FieldsSet: fieldsSet));
+        if (fieldsSet.Count == 0)
+            return accessors;
+
+        var key = (typeof(TEntity), NormalizeFieldsKey(fieldsSet));
+
+        // The hit path stays a lock-free TryGetValue; the Count check (which takes every bucket lock
+        // on a ConcurrentDictionary) runs only on a miss.
+        if (ShapedAccessorCache.TryGetValue(key, out var cached))
+            return cached;
+
+        // Past the cap, filter per request rather than admitting another client-shaped key. This
+        // path is a single LINQ pass over an already-compiled accessor array (no expression
+        // compilation), so an uncached shape costs a scan, not a rebuild.
+        if (ShapedAccessorCache.Count >= MaxCacheEntries)
+            return FilterAccessorsByFields(accessors, fieldsSet);
+
+        return ShapedAccessorCache.GetOrAdd(
+            key,
+            static (_, arg) => FilterAccessorsByFields(arg.Accessors, arg.FieldsSet),
+            (Accessors: accessors, FieldsSet: fieldsSet));
     }
 
     /// <summary>

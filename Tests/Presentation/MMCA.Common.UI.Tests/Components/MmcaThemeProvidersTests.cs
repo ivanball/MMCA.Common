@@ -21,6 +21,9 @@ public sealed class MmcaThemeProvidersTests : BunitTestBase
     private static readonly FieldInfo OnChangeField = typeof(ThemeService)
         .GetField("OnChange", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
+    private static readonly FieldInfo IsDarkModeField = typeof(MmcaThemeProviders)
+        .GetField("_isDarkMode", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
     [Fact]
     public void Render_ProducesAllFourMudProviders_WithTheMmcaTheme()
     {
@@ -75,5 +78,33 @@ public sealed class MmcaThemeProvidersTests : BunitTestBase
 
         OnChangeField.GetValue(themeService).Should().BeNull(
             "the scoped ThemeService outlives the component, so Dispose must unsubscribe");
+    }
+
+    [Fact]
+    public async Task ThemeChangeRaisedAfterDisposal_IsIgnored_AndDoesNotThrow()
+    {
+        var themeService = Services.GetRequiredService<ThemeService>();
+        var cut = RenderUnderTest<MmcaThemeProviders>(_ => { });
+        var instance = cut.Instance;
+
+        // Let the first-render initialization settle so it cannot race the flip below.
+        await cut.WaitForAssertionAsync(() => themeService.IsInitialized.Should().BeTrue());
+
+        // OnChange is raised synchronously and its invocation list is captured at the raise, so a
+        // subscriber disposed partway through the chain (one scoped ThemeService feeds this component
+        // and every ThemeToggle placement) still gets called. Capture the delegate to replay that race.
+        var subscribers = (EventHandler?)OnChangeField.GetValue(themeService);
+        subscribers.Should().NotBeNull();
+
+        await DisposeComponentsAsync();
+        await themeService.SetDarkModeAsync(true);
+        IsDarkModeField.GetValue(instance).Should().Be(false, "the disposed component never saw the flip");
+
+        var raise = () => subscribers!.Invoke(themeService, EventArgs.Empty);
+
+        raise.Should().NotThrow(
+            "a rerender dispatched onto a disposed component must not surface to the publisher");
+        IsDarkModeField.GetValue(instance).Should().Be(false,
+            "the disposal guard returns before the handler refreshes state from the service");
     }
 }
