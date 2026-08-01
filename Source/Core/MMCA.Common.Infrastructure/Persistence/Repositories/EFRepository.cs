@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 
@@ -13,9 +14,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
 /// <remarks>
-/// The optional <paramref name="timeProvider"/> and <paramref name="currentUserService"/> are
-/// used only by <see cref="ExecuteUpdateAsync"/> for automatic audit stamping; when absent
-/// (direct construction in tests) the system clock is used and the user stamp is skipped.
+/// The optional <paramref name="timeProvider"/> and <paramref name="currentUserService"/> serve
+/// audit stamping: the clock for <see cref="ExecuteUpdateAsync"/>, which bypasses the save
+/// pipeline, and the user for both that path and the <see cref="Save"/> /
+/// <see cref="SaveChangesAsync"/> overloads. When absent (direct construction in tests) the system
+/// clock is used and the user stamp is skipped.
 /// </remarks>
 internal sealed class EFRepository<TEntity, TIdentifierType>(
     DbContext context,
@@ -139,11 +142,22 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public int Save() => _context.SaveChanges();
+    /// <remarks>
+    /// Routes through the user-id overload when the context is an <see cref="ApplicationDbContext"/>,
+    /// so the audit interceptor stamps the acting user instead of the system sentinel it falls back
+    /// to when no id is supplied. A context constructed outside the factory keeps the plain overload.
+    /// </remarks>
+    public int Save() =>
+        _context is ApplicationDbContext applicationContext
+            ? applicationContext.SaveChanges(currentUserService?.UserId)
+            : _context.SaveChanges();
 
     /// <inheritdoc />
+    /// <remarks>See <see cref="Save"/> for why the user id is threaded through.</remarks>
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        _context is ApplicationDbContext applicationContext
+            ? await applicationContext.SaveChangesAsync(currentUserService?.UserId, cancellationToken).ConfigureAwait(false)
+            : await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// Rolls back all Added/Modified entries to Unchanged and persists the reset

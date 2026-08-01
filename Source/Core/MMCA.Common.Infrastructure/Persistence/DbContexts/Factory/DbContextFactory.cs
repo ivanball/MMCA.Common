@@ -134,6 +134,25 @@ public sealed class DbContextFactory(
             }
         }
 
+        // Every cached context must be clean by the time the unit of work returns; anything still
+        // tracked here is silently lost. The assertion reads the change tracker rather than the
+        // saved set because both loss shapes must be caught: a context materialized past the pass
+        // bound (never in the set) AND a handler mutating an already-saved context (in the set, yet
+        // dirty). Read-only contexts and the outbox finalizer leave nothing tracked, so a clean
+        // scope never trips this.
+        var unsaved = _dbContexts
+            .Where(entry => entry.Value.ChangeTracker.HasChanges())
+            .Select(entry => entry.Key.ToString())
+            .ToArray();
+
+        if (unsaved.Length > 0)
+        {
+            throw new InvalidOperationException(
+                "The unit of work finished with unsaved changes still tracked on: "
+                + string.Join(", ", unsaved)
+                + ". A domain event handler mutated or materialized a context after the bounded save loop had finished; those changes would have been discarded.");
+        }
+
         return result;
     }
 
@@ -170,6 +189,16 @@ public sealed class DbContextFactory(
             foreach (var (entry, _) in savedStates)
                 entry.State = EntityState.Unchanged;
 
+            // The hidden rows are not written this round, so their domain events must not be
+            // captured this round either: capture serializes an event to the outbox and clears it
+            // from the aggregate, which would publish an event for a row inserted a round later.
+            // The exclusion names exactly the hidden entries. A state-based filter (skip every
+            // Unchanged aggregate) would also drop events legitimately raised on an already-saved
+            // aggregate, which is how the identity module publishes registration events.
+            DomainEventSaveChangesInterceptor.BeginCaptureExclusion(
+                context,
+                [.. savedStates.Select(s => s.Entry.Entity)]);
+
             // try/finally: a failed save must not leave IDENTITY_INSERT ON on the pooled
             // connection, nor leave the hidden entries stuck in the Unchanged state (they
             // would be silently dropped from any retried save).
@@ -194,6 +223,8 @@ public sealed class DbContextFactory(
             }
             finally
             {
+                DomainEventSaveChangesInterceptor.EndCaptureExclusion(context);
+
                 foreach (var (entry, originalState) in savedStates)
                     entry.State = originalState;
             }
@@ -329,6 +360,22 @@ public sealed class DbContextFactory(
     /// (along with a duplicate outbox row per event). Clearing is safe because the delegate
     /// re-executes wholesale and re-reads whatever it needs.
     /// </para>
+    /// <para>
+    /// A failure of the <b>commit</b> itself is never retried. Its outcome is unknowable (the
+    /// database may have applied the transaction and lost only the acknowledgement), and the
+    /// strategy would re-run the operation against a possibly-durable commit, duplicating its
+    /// writes. Such a failure surfaces as <see cref="TransactionCommitAmbiguousException"/>
+    /// instead; the caller owns recovery (an <c>[Idempotent]</c> API request replays safely, and
+    /// the outbox delivers whatever the commit did make durable).
+    /// </para>
+    /// <para>
+    /// <b>Limitation, multiple physical sources:</b> commits are sequential, so a commit failure on
+    /// source #2 leaves source #1 already committed. The ambiguity is then a partial commit rather
+    /// than an unknown one, and the caller's replay is what reconciles it. A witness row (a marker
+    /// written inside each source's transaction that a replay can read to learn what landed) would
+    /// close this; it is deliberately not built here, since a single transactional source, the case
+    /// every host runs today, needs none.
+    /// </para>
     /// </remarks>
     public async Task<TResult> ExecuteInTransactionAsync<TResult>(
         Func<CancellationToken, Task<TResult>> operation,
@@ -351,62 +398,140 @@ public sealed class DbContextFactory(
             ?? GetDbContext(DataSource.SQLServer);
 
         var attempt = 0;
+        Exception? commitFailure = null;
         var strategy = context.Database.CreateExecutionStrategy();
-        return await strategy.ExecuteAsync(async ct =>
+
+        var outcome = await strategy.ExecuteAsync(async ct =>
         {
             if (attempt++ > 0)
                 ResetForRetry();
 
-            BeginTransaction();
+            var (value, failure) = await RunTransactionalAttemptAsync(operation, ct).ConfigureAwait(false);
+            commitFailure = failure;
+            return value;
+        }, cancellationToken).ConfigureAwait(false);
+
+        // Thrown out here, past the strategy, on purpose. The strategy decides retriability by
+        // walking an exception's WHOLE inner chain, so a wrapper carrying the transient commit
+        // error would still be retried; returning normally is the only way to guarantee the
+        // delegate is not re-entered after a commit whose outcome is unknown.
+        if (commitFailure is not null)
+            throw new TransactionCommitAmbiguousException(commitFailure);
+
+        return outcome;
+    }
+
+    /// <summary>
+    /// Runs one attempt of the transactional unit: begin, operate, then commit or roll back.
+    /// </summary>
+    /// <returns>
+    /// The operation's result, plus the commit failure when the commit phase threw. A commit
+    /// failure is RETURNED rather than thrown so the execution strategy sees a completed attempt
+    /// and cannot re-run the operation against a commit that may already be durable.
+    /// </returns>
+    private async Task<(TResult Value, Exception? CommitFailure)> RunTransactionalAttemptAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> operation,
+        CancellationToken cancellationToken)
+    {
+        BeginTransaction();
+        try
+        {
+            var result = await operation(cancellationToken).ConfigureAwait(false);
+
+            if (result is Result { IsFailure: true })
+            {
+                // Business failure: atomicity over partial persistence. RollbackTransaction
+                // also drops any deferred event dispatch (the events' outbox rows roll back
+                // with the data, so nothing may be delivered).
+                RollbackTransaction();
+                return (result, null);
+            }
+
+            var commitFailure = TryCommit();
+            if (commitFailure is not null)
+                return (result, commitFailure);
+
+            // Deliver events only now that the data is durable: in-process handlers must
+            // never act on state that could still roll back. Snapshot first: a handler that
+            // reaches a not-yet-materialized source adds to _dbContexts while we enumerate.
+            foreach (var committedContext in _dbContexts.Values.ToArray())
+            {
+                await DomainEventSaveChangesInterceptor.FlushDeferredAsync(committedContext, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            return (result, null);
+        }
+        catch (OperationCanceledException)
+        {
+            // The connection may already be closed; best-effort rollback.
+            // Disposal will clean up if this fails.
             try
             {
-                var result = await operation(ct).ConfigureAwait(false);
-
-                if (result is Result { IsFailure: true })
-                {
-                    // Business failure: atomicity over partial persistence. RollbackTransaction
-                    // also drops any deferred event dispatch (the events' outbox rows roll back
-                    // with the data, so nothing may be delivered).
-                    RollbackTransaction();
-                    return result;
-                }
-
-                CommitTransaction();
-
-                // Deliver events only now that the data is durable: in-process handlers must
-                // never act on state that could still roll back. Snapshot first: a handler that
-                // reaches a not-yet-materialized source adds to _dbContexts while we enumerate.
-                foreach (var committedContext in _dbContexts.Values.ToArray())
-                {
-                    await DomainEventSaveChangesInterceptor.FlushDeferredAsync(committedContext, ct)
-                        .ConfigureAwait(false);
-                }
-
-                return result;
-            }
-            catch (OperationCanceledException)
-            {
-                // The connection may already be closed; best-effort rollback.
-                // Disposal will clean up if this fails.
-                try
-                {
-                    RollbackTransaction();
-                }
-                catch
-                {
-                    _transactionActive = false;
-                    foreach (var abortedContext in _dbContexts.Values.ToArray())
-                        DomainEventSaveChangesInterceptor.DropDeferred(abortedContext);
-                }
-
-                throw;
+                RollbackTransaction();
             }
             catch
             {
-                RollbackTransaction();
-                throw;
+                _transactionActive = false;
+                foreach (var abortedContext in _dbContexts.Values.ToArray())
+                    DomainEventSaveChangesInterceptor.DropDeferred(abortedContext);
             }
-        }, cancellationToken).ConfigureAwait(false);
+
+            throw;
+        }
+        catch
+        {
+            RollbackTransaction();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Commits every enlisted context, returning the failure instead of throwing it.
+    /// </summary>
+    /// <returns><see langword="null"/> on success, otherwise the exception the commit raised.</returns>
+    private Exception? TryCommit()
+    {
+        try
+        {
+            CommitTransaction();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            AbandonAfterCommitFailure();
+            return ex;
+        }
+    }
+
+    /// <summary>
+    /// Best-effort cleanup after a commit whose outcome is unknown: roll back whatever has not
+    /// committed yet (with multiple sources the commits are sequential, so later ones may still be
+    /// open) and drop every context's deferred dispatch. The outbox rows are the only delivery
+    /// record that survives an ambiguous commit, and the outbox processor delivers them if the
+    /// commit did land.
+    /// </summary>
+    private void AbandonAfterCommitFailure()
+    {
+        _transactionActive = false;
+
+        foreach (var context in _dbContexts.Values.ToArray())
+        {
+            DomainEventSaveChangesInterceptor.DropDeferred(context);
+
+            if (!SupportsTransactions(context) || !HasActiveTransaction(context))
+                continue;
+
+            try
+            {
+                context.Database.RollbackTransaction();
+            }
+            catch
+            {
+                // The transaction is already zombied or the connection is gone. Swallowing keeps
+                // the commit ambiguity as the reported failure; disposal releases what is left.
+            }
+        }
     }
 
     /// <inheritdoc />

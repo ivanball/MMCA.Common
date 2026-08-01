@@ -54,6 +54,14 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// </summary>
     private static readonly ConditionalWeakTable<DbContext, List<DeferredDispatch>> DeferredTable = [];
 
+    /// <summary>
+    /// Aggregate instances whose events must not be captured on the current save, keyed by context.
+    /// Registered by <see cref="MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory"/>
+    /// while it splits a save into per-table IDENTITY_INSERT rounds, and cleared again once the
+    /// round completes.
+    /// </summary>
+    private static readonly ConditionalWeakTable<DbContext, HashSet<object>> CaptureExclusionTable = [];
+
     /// <inheritdoc />
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
@@ -137,6 +145,39 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     internal static void DropDeferred(DbContext context) => DeferredTable.Remove(context);
 
     /// <summary>
+    /// Excludes exactly <paramref name="entities"/> from event capture on <paramref name="context"/>
+    /// until <see cref="EndCaptureExclusion"/> runs. Called by
+    /// <see cref="MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory"/> for the entries it
+    /// hides from an IDENTITY_INSERT round: those rows are not written this round, so capturing
+    /// their events here would persist and clear them ahead of the insert that justifies them.
+    /// The round that really writes them captures them.
+    /// </summary>
+    /// <remarks>
+    /// Instance-scoped on purpose. Excluding by entity STATE instead (skipping every Unchanged
+    /// aggregate) would also drop events raised on an already-saved aggregate, which is how the
+    /// identity module publishes its registration events.
+    /// </remarks>
+    /// <param name="context">The context whose next save must skip these entities.</param>
+    /// <param name="entities">The aggregate instances to skip; an empty set clears any exclusion.</param>
+    internal static void BeginCaptureExclusion(DbContext context, IReadOnlyCollection<object> entities)
+    {
+        if (entities.Count == 0)
+        {
+            CaptureExclusionTable.Remove(context);
+            return;
+        }
+
+        CaptureExclusionTable.AddOrUpdate(context, new HashSet<object>(entities, ReferenceEqualityComparer.Instance));
+    }
+
+    /// <summary>
+    /// Ends the exclusion started by <see cref="BeginCaptureExclusion"/>, so the next save on
+    /// <paramref name="context"/> captures every aggregate's events again.
+    /// </summary>
+    /// <param name="context">The context to restore to normal capture.</param>
+    internal static void EndCaptureExclusion(DbContext context) => CaptureExclusionTable.Remove(context);
+
+    /// <summary>
     /// Captures domain events from aggregate roots and serializes them to the outbox table
     /// so they are persisted in the same transaction as the aggregate changes.
     /// </summary>
@@ -150,8 +191,13 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
         // Snapshot each aggregate's events now: the flush removes exactly these, so anything a
         // handler raises during dispatch survives instead of being cleared along with them.
+        // Entries the factory hid from this IDENTITY_INSERT round are skipped: their rows are not
+        // written yet, so their events belong to the round that writes them.
+        _ = CaptureExclusionTable.TryGetValue(context, out var excluded);
+
         var captures = context.ChangeTracker.Entries<IAggregateRoot>()
-            .Where(e => e.Entity.DomainEvents is { Count: > 0 })
+            .Where(e => e.Entity.DomainEvents is { Count: > 0 }
+                && (excluded is null || !excluded.Contains(e.Entity)))
             .Select(e => new AggregateCapture(e, [.. e.Entity.DomainEvents]))
             .ToArray();
 
