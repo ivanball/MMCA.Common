@@ -80,15 +80,69 @@ public sealed class DevicesControllerTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ReturnsNoContent()
+    public async Task DeleteAsync_ScopesTheDeleteToTheCurrentUser()
     {
         _registrar
-            .Setup(x => x.DeleteAsync("abc123", It.IsAny<CancellationToken>()))
+            .Setup(x => x.DeleteAsync(42, "abc123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         var controller = CreateController();
 
         var result = await controller.DeleteAsync("abc123", TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<NoContentResult>();
+        _registrar.Verify(
+            x => x.DeleteAsync(42, "abc123", It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the installation id comes from the client, so the owner must be stamped server-side");
+        _registrar.Verify(
+            x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the unscoped overload performs no ownership check and must not be reached from the endpoint");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenInstallationIsUnknownOrNotOwned_StillReturnsNoContent()
+    {
+        // Both cases reach the controller as a successful registrar result on purpose: answering
+        // 404 for one and 204 for the other would let a caller probe for other users' ids.
+        _registrar
+            .Setup(x => x.DeleteAsync(42, "someone-elses-id", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        var controller = CreateController();
+
+        var result = await controller.DeleteAsync("someone-elses-id", TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithoutAuthenticatedUser_IsUnauthorized()
+    {
+        var controller = CreateController(userId: null);
+
+        var result = await controller.DeleteAsync("abc123", TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        _registrar.Verify(
+            x => x.DeleteAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _registrar.Verify(
+            x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenRegistrarFails_ReturnsProblemDetails()
+    {
+        _registrar
+            .Setup(x => x.DeleteAsync(42, "abc123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Failure("PushDevice.DeleteFailed", "Hub unavailable.")));
+        var controller = CreateController();
+
+        var result = await controller.DeleteAsync("abc123", TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 }

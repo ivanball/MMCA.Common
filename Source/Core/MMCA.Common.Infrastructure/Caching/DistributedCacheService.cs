@@ -10,9 +10,10 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// Cache backed by <see cref="IDistributedCache"/> (e.g., Redis, SQL Server).
 /// Serializes values as UTF-8 JSON via <see cref="System.Text.Json.JsonSerializer"/>.
 /// When an <see cref="IConnectionMultiplexer"/> is available (Redis), <see cref="RemoveByPrefixAsync"/>
-/// uses SCAN to enumerate and delete matching keys. Otherwise prefix invalidation is a no-op and is
-/// logged (once for the missing-multiplexer case, which is a steady state; every time for the
-/// anomalous no-server case) so a silently-dead invalidation is observable instead of invisible.
+/// uses SCAN on every non-replica server to enumerate matching keys and deletes them one key per
+/// command. Otherwise prefix invalidation is a no-op and is logged (once for the missing-multiplexer
+/// case, which is a steady state; every time for the anomalous no-server case) so a silently-dead
+/// invalidation is observable instead of invisible.
 /// </summary>
 internal sealed partial class DistributedCacheService(
     IDistributedCache cache,
@@ -20,7 +21,7 @@ internal sealed partial class DistributedCacheService(
     IConnectionMultiplexer? connectionMultiplexer = null,
     CacheKeyNamespace? keyNamespace = null) : ICacheService
 {
-    /// <summary>Keys per delete round trip during prefix invalidation.</summary>
+    /// <summary>Single-key deletes issued and awaited as one group during prefix invalidation.</summary>
     private const int DeleteBatchSize = 512;
 
     /// <summary>
@@ -58,9 +59,24 @@ internal sealed partial class DistributedCacheService(
 
     /// <inheritdoc />
     /// <remarks>
-    /// SCAN enumerates matching keys incrementally; deletes are issued in batches of
-    /// <see cref="DeleteBatchSize"/> (one round trip per batch instead of one per key),
-    /// keeping mutating commands from stalling on large invalidations.
+    /// <para>
+    /// Every non-replica server is scanned, not just the first one the multiplexer reports. Keys
+    /// are distributed across primaries, so scanning one server leaves the entries held by the
+    /// others alive until their TTL expires. Replicas are skipped: their keyspace mirrors a
+    /// primary already scanned, and a delete against a replica is rejected.
+    /// </para>
+    /// <para>
+    /// SCAN enumerates matching keys incrementally and each key is deleted by its own single-key
+    /// command. A multi-key DEL cannot span hash slots under Redis cluster policy, and
+    /// StackExchange.Redis rejects a cross-slot multi-key command by throwing rather than
+    /// under-deleting, which would fault the whole invalidation. Round trips still stay bounded:
+    /// up to <see cref="DeleteBatchSize"/> single-key deletes are in flight at a time and awaited
+    /// as one group.
+    /// </para>
+    /// <para>
+    /// Each server is scanned inside its own try/catch, so one unreachable or failing server is
+    /// logged and skipped instead of aborting invalidation on the servers that are healthy.
+    /// </para>
     /// </remarks>
     public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
     {
@@ -74,30 +90,67 @@ internal sealed partial class DistributedCacheService(
             return;
         }
 
-        var server = connectionMultiplexer.GetServers().FirstOrDefault();
-        if (server is null)
+        // Replicas mirror a primary's keyspace, so scanning them is redundant, and a DEL against a
+        // replica fails outright. Everything else is scanned: a key that lives on another primary
+        // is invisible to the first server's SCAN and would survive the invalidation.
+        IServer[] servers = [.. connectionMultiplexer.GetServers().Where(s => !s.IsReplica)];
+        if (servers.Length == 0)
         {
             LogPrefixEvictionNoServer(logger, prefix);
             return;
         }
 
-        var keys = server.KeysAsync(pattern: $"{_keys.Qualify(prefix)}*");
+        var pattern = $"{_keys.Qualify(prefix)}*";
         var db = connectionMultiplexer.GetDatabase();
-        var batch = new List<RedisKey>(DeleteBatchSize);
 
-        await foreach (var key in keys.WithCancellation(cancellationToken))
+        foreach (var server in servers)
         {
-            batch.Add(key);
-            if (batch.Count == DeleteBatchSize)
+            try
             {
-                await db.KeyDeleteAsync([.. batch]).ConfigureAwait(false);
-                batch.Clear();
+                await ScanAndDeleteAsync(db, server, pattern, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is RedisException or RedisCommandException or TimeoutException)
+            {
+                // Best-effort per server: a transport or command fault on one node must not leave the
+                // remaining nodes un-invalidated. Cancellation is deliberately not caught here.
+                LogPrefixEvictionServerFailed(logger, Describe(server), prefix, ex);
+            }
+        }
+    }
+
+    /// <summary>Scans one server for the pattern and deletes every match, one key per command.</summary>
+    private static async Task ScanAndDeleteAsync(
+        IDatabase db,
+        IServer server,
+        string pattern,
+        CancellationToken cancellationToken)
+    {
+        // Deletes go out one key at a time. Under Redis cluster policy a multi-key DEL must not span
+        // hash slots, and StackExchange.Redis answers a cross-slot multi-key command by throwing, so
+        // batching the keys of a prefix (which hash to arbitrary slots) would fault the invalidation
+        // instead of speeding it up. Single-key deletes are always slot-safe; the round-trip count
+        // stays bounded by keeping a group of them in flight and awaiting the group.
+        var pending = new List<Task<bool>>(DeleteBatchSize);
+
+        await foreach (var key in server.KeysAsync(pattern: pattern)
+            .WithCancellation(cancellationToken)
+            .ConfigureAwait(false))
+        {
+            pending.Add(db.KeyDeleteAsync(key));
+            if (pending.Count == DeleteBatchSize)
+            {
+                await Task.WhenAll(pending).ConfigureAwait(false);
+                pending.Clear();
             }
         }
 
-        if (batch.Count > 0)
-            await db.KeyDeleteAsync([.. batch]).ConfigureAwait(false);
+        if (pending.Count > 0)
+            await Task.WhenAll(pending).ConfigureAwait(false);
     }
+
+    /// <summary>Stable identifier for a server in log output, tolerating an unknown endpoint.</summary>
+    private static string Describe(IServer server) =>
+        server.EndPoint?.ToString() ?? "unknown";
 
     /// <inheritdoc />
     /// <remarks>
@@ -136,6 +189,9 @@ internal sealed partial class DistributedCacheService(
     [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation is a no-op: no IConnectionMultiplexer is registered, so cached entries are bounded only by their TTL. Register a Redis client (AddRedisClient) to enable prefix eviction.")]
     private static partial void LogPrefixEvictionNoMultiplexer(ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation skipped for prefix '{Prefix}': the connection multiplexer reports no servers.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation skipped for prefix '{Prefix}': the connection multiplexer reports no non-replica servers.")]
     private static partial void LogPrefixEvictionNoServer(ILogger logger, string prefix);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Prefix-based cache invalidation failed on server '{Server}' for prefix '{Prefix}'; the remaining servers are still processed, so entries on this one are bounded only by their TTL.")]
+    private static partial void LogPrefixEvictionServerFailed(ILogger logger, string server, string prefix, Exception exception);
 }

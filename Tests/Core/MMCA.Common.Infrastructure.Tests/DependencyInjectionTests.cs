@@ -7,9 +7,11 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Infrastructure.Concurrency;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Services;
 using Moq;
+using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure.Tests;
 
@@ -59,6 +61,31 @@ public sealed class DependencyInjectionTests
         ICacheService cacheService = provider.GetRequiredService<ICacheService>();
 
         cacheService.Should().BeOfType<DistributedCacheService>();
+    }
+
+    [Fact]
+    public void AddCaching_WithoutARedisConnection_FallsBackToProcessLocalLocking()
+    {
+        var services = new ServiceCollection();
+        services.AddCaching();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IDistributedLock distributedLock = provider.GetRequiredService<IDistributedLock>();
+
+        distributedLock.Should().BeOfType<InProcessDistributedLock>();
+    }
+
+    [Fact]
+    public void AddCaching_WithARedisConnection_UsesTheRedisLock()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(new Mock<IConnectionMultiplexer>().Object);
+        services.AddCaching();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IDistributedLock distributedLock = provider.GetRequiredService<IDistributedLock>();
+
+        distributedLock.Should().BeOfType<RedisDistributedLock>();
     }
 
     [Fact]

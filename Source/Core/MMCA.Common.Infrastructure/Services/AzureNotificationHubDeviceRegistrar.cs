@@ -72,10 +72,48 @@ public sealed class AzureNotificationHubDeviceRegistrar(
         catch (MessagingException ex)
         {
             logger.LogError(ex, "Device installation delete failed");
-            return Result.Failure(Error.Failure(
-                code: "PushDevice.DeleteFailed",
-                message: "The device could not be unregistered from push notifications.",
-                source: nameof(AzureNotificationHubDeviceRegistrar)));
+            return DeleteFailed();
         }
     }
+
+    /// <inheritdoc />
+    public async Task<Result> DeleteAsync(UserIdentifierType userId, string installationId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // The hub is the only ownership store: the installation's tags carry the
+            // user:{id} stamp written by UpsertAsync, so read-then-delete is the check.
+            // A concurrent re-registration of the same id between the two calls is the
+            // owner's own doing, so no lock is warranted.
+            Installation installation = await hubClient.GetInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
+            if (!OwnedBy(installation, userId))
+            {
+                // Someone else's installation (or one registered before ownership tagging).
+                // Reported as success: see the interface remarks on the existence oracle.
+                return Result.Success();
+            }
+
+            await hubClient.DeleteInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
+            return Result.Success();
+        }
+        catch (MessagingEntityNotFoundException)
+        {
+            // Idempotent delete: an unknown installation is already the desired state.
+            return Result.Success();
+        }
+        catch (MessagingException ex)
+        {
+            logger.LogError(ex, "Device installation delete failed");
+            return DeleteFailed();
+        }
+    }
+
+    private static bool OwnedBy(Installation installation, UserIdentifierType userId) =>
+        installation.Tags is { } tags && tags.Contains(NativePushPayloads.UserTag(userId), StringComparer.Ordinal);
+
+    private static Result DeleteFailed() =>
+        Result.Failure(Error.Failure(
+            code: "PushDevice.DeleteFailed",
+            message: "The device could not be unregistered from push notifications.",
+            source: nameof(AzureNotificationHubDeviceRegistrar)));
 }

@@ -222,7 +222,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         // Step 1: Validate all query parameters upfront before touching the database
         var validateResult = Result.Combine(
             QueryFieldService.Validate<TEntity>(fields, allowWriteableFields: false),
-            QueryFieldService.Validate<TEntity>(sortColumn, allowWriteableFields: true),
+            QueryFieldService.Validate<TEntity>(sortColumn, DTOToEntityPropertyMap, allowWriteableFields: true),
             QueryFieldService.ValidateSortDirection(sortDirection),
             QueryFilterService.ValidateFilters<TEntity>(filters, DTOToEntityPropertyMap)
             );
@@ -444,26 +444,50 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Builds the response's pagination metadata so that every value describes what the pipeline
+    /// ACTUALLY did, never what the caller asked for.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Both branches go through the validating constructor rather than an object initializer: the
+    /// initializer bypassed the constructor's negative-value guards entirely, so an out-of-range
+    /// input reached the derived properties instead of being corrected here.
+    /// </para>
+    /// <para>
+    /// The clamp is recomputed here instead of being read back from <see cref="Query.PagingMath"/>:
+    /// that helper returns a <c>(0, 0)</c> sentinel for a page whose offset is unreachable, and
+    /// reporting that take as the page size would advertise <c>PageSize = 0</c> for a request whose
+    /// page size was perfectly valid.
+    /// </para>
+    /// </remarks>
     private static PaginationMetadata BuildPaginationMetadata(int totalItemCount, int? pageNumber, int? pageSize)
     {
+        // The pipeline owns the total and should never report a negative one, but the constructor
+        // now throws on negatives: floor it so a bad count degrades the metadata instead of turning
+        // a successful read into a 500.
+        var safeTotalItemCount = Math.Max(totalItemCount, 0);
+
         if (!pageNumber.HasValue || !pageSize.HasValue)
         {
-            return new PaginationMetadata
-            {
-                TotalItemCount = totalItemCount,
-                PageSize = totalItemCount,
-                CurrentPage = 1
-            };
+            // An unpaginated read still materializes at most the framework ceiling while reporting
+            // the true total, so the page size is the row count actually returned, not the total.
+            // An empty result leaves PageSize = 0, which the constructor accepts (it rejects only
+            // negatives) and which keeps the derived values coherent: TotalPageCount, FirstRowOnPage
+            // and LastRowOnPage are all 0.
+            return new PaginationMetadata(
+                totalItemCount: safeTotalItemCount,
+                pageSize: Math.Min(safeTotalItemCount, Query.EntityQueryPipeline.MaxUnboundedResultLimit),
+                currentPage: 1);
         }
 
-        return new PaginationMetadata
-        {
-            TotalItemCount = totalItemCount,
-            // Report the page size the pipeline actually applied, not the one requested: the
-            // pipeline clamps to the framework ceiling, so an over-large request previously
-            // advertised a page size the response never contained.
-            PageSize = Math.Min(pageSize.Value, Query.EntityQueryPipeline.MaxUnboundedResultLimit),
-            CurrentPage = pageNumber.Value
-        };
+        // Floor and ceiling together mirror exactly what PagingMath applied for this request: it
+        // takes at least one row and at most the framework ceiling, and treats any page below 1 as
+        // page 1. Without the floor, pageSize = 0 (or negative) advertised PageSize = 0 and
+        // collapsed every derived value to 0 while the pipeline had really fetched one row.
+        return new PaginationMetadata(
+            totalItemCount: safeTotalItemCount,
+            pageSize: Math.Clamp(pageSize.Value, 1, Query.EntityQueryPipeline.MaxUnboundedResultLimit),
+            currentPage: Math.Max(pageNumber.Value, 1));
     }
 }

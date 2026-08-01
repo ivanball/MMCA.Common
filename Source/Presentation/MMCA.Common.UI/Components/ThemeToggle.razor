@@ -11,6 +11,8 @@
                OnClick="ToggleAsync" />
 
 @code {
+    private bool _disposed;
+
     protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
 
     private async Task ToggleAsync()
@@ -25,7 +27,42 @@
         }
     }
 
-    private void OnThemeChanged(object? sender, EventArgs e) => InvokeAsync(StateHasChanged);
+    // ThemeService.OnChange is raised synchronously, and one scoped ThemeService feeds several
+    // subscribers (both ThemeToggle placements plus MmcaThemeProviders). Disposal can therefore land
+    // between the event firing and this component's render dispatch: the invocation list is captured
+    // when the event is raised, so a handler still runs after its component is gone. Guarding here
+    // also stops a throw from cutting off the subscribers queued behind this one.
+    private void OnThemeChanged(object? sender, EventArgs e) => _ = RerenderSafeAsync();
 
-    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
+    private async Task RerenderSafeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component was disposed between event firing and render dispatch.
+        }
+        catch (InvalidOperationException)
+        {
+            // Same race, surfaced by the renderer as a disposed/unavailable dispatcher.
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        ThemeService.OnChange -= OnThemeChanged;
+    }
 }

@@ -1,7 +1,10 @@
+using System.Collections;
 using System.Globalization;
+using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Memory;
 using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Shared.Concurrency;
 
 namespace MMCA.Common.Infrastructure.Tests.Caching;
 
@@ -166,4 +169,94 @@ public sealed class MemoryCacheServiceTests : IDisposable
         await FluentActions.Invoking(() => _sut.RemoveByPrefixAsync("product:"))
             .Should().NotThrowAsync();
     }
+
+    // ── The cache and the key table must move as one ──
+    // Both SetAsync and RemoveByPrefixAsync mutate two structures: the IMemoryCache entry and the
+    // tracking table that makes prefix eviction possible at all. Without mutual exclusion a Set can
+    // land between a removal's two steps (or the removal between the Set's), leaving a LIVE cache
+    // entry the table no longer tracks: invisible to every later prefix invalidation and clearable
+    // only by its TTL. The post-eviction callback cannot repair that, so the stripe has to prevent it.
+    [Fact]
+    public async Task RemoveByPrefixAsync_InterleavedWithSetAsync_CannotLeaveALiveUntrackedEntry()
+    {
+        const string cacheKey = "product:1";
+        await _sut.SetAsync(cacheKey, "first");
+
+        // Force the interleaving rather than racing for it: the test takes the key's own stripe, so
+        // both operations park at exactly the point where the unsynchronized version could interleave.
+        var gate = await KeyLocksOf(_sut).AcquireAsync(cacheKey);
+
+        var set = Task.Run(() => _sut.SetAsync(cacheKey, "second"));
+        var removeByPrefix = Task.Run(() => _sut.RemoveByPrefixAsync("product:"));
+
+        await Task.Delay(100);
+
+        set.IsCompleted.Should().BeFalse("SetAsync must wait for the key's stripe");
+        removeByPrefix.IsCompleted.Should().BeFalse("RemoveByPrefixAsync must wait for the key's stripe");
+        (await _sut.GetAsync<string>(cacheKey)).Should().Be("first", "no half of either mutation may be visible");
+        TrackedKeysOf(_sut).Should().Contain(cacheKey, "no half of either mutation may be visible");
+
+        gate.Dispose();
+        await Task.WhenAll(set, removeByPrefix);
+
+        // Whichever order the stripe hands out, the two structures still agree afterwards: the entry
+        // is either gone, or present AND tracked. Present-but-untracked is the defect.
+        var live = await _sut.GetAsync<string>(cacheKey);
+        if (live is not null)
+        {
+            TrackedKeysOf(_sut).Should().Contain(
+                cacheKey, "a live entry the table does not track survives every future prefix invalidation");
+        }
+    }
+
+    [Fact]
+    public async Task RemoveAsync_TakesTheSameStripeAsSetAsync()
+    {
+        const string cacheKey = "product:1";
+        await _sut.SetAsync(cacheKey, "first");
+
+        var gate = await KeyLocksOf(_sut).AcquireAsync(cacheKey);
+        var remove = Task.Run(() => _sut.RemoveAsync(cacheKey));
+
+        await Task.Delay(100);
+
+        remove.IsCompleted.Should().BeFalse("RemoveAsync must wait for the key's stripe");
+        (await _sut.GetAsync<string>(cacheKey)).Should().Be("first");
+
+        gate.Dispose();
+        await remove;
+
+        (await _sut.GetAsync<string>(cacheKey)).Should().BeNull();
+        TrackedKeysOf(_sut).Should().NotContain(cacheKey);
+    }
+
+    [Fact]
+    public async Task RemoveByPrefixAsync_AfterSet_EvictsTheEntryAndItsTrackingRecord()
+    {
+        await _sut.SetAsync("product:1", "A");
+        await _sut.SetAsync("category:1", "C");
+
+        await _sut.RemoveByPrefixAsync("product:");
+
+        (await _sut.GetAsync<string>("product:1")).Should().BeNull();
+        (await _sut.GetAsync<string>("category:1")).Should().Be("C");
+        TrackedKeysOf(_sut).Should().NotContain("product:1");
+        TrackedKeysOf(_sut).Should().Contain("category:1");
+    }
+
+    /// <summary>Reads the per-instance stripe set so a test can force a specific interleaving.</summary>
+    private static KeyedSemaphoreStripe KeyLocksOf(MemoryCacheService service) =>
+        (KeyedSemaphoreStripe)FieldOf(service, "_keyLocks");
+
+    /// <summary>
+    /// Snapshots the tracking table's keys. Read through the non-generic dictionary interface so the
+    /// test does not pin the value type the implementation happens to track records with.
+    /// </summary>
+    private static IReadOnlyList<string> TrackedKeysOf(MemoryCacheService service) =>
+        [.. ((IDictionary)FieldOf(service, "_keys")).Keys.Cast<string>()];
+
+    private static object FieldOf(MemoryCacheService service, string name) =>
+        typeof(MemoryCacheService)
+            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(service)!;
 }

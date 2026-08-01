@@ -33,7 +33,23 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     /// <see cref="Error"/> instances. Built once per generic type instantiation via reflection
     /// to avoid per-call reflection overhead.
     /// </summary>
-    private static readonly Func<IEnumerable<Error>, TResult> CreateFailure = ResultFailureFactory.Build<TResult>();
+    /// <remarks>
+    /// Built on the first short-circuit rather than in the static constructor:
+    /// <see cref="ResultFailureFactory"/> supports only <see cref="Result"/> and
+    /// <see cref="Result{T}"/>, and an eager static initializer turned an unsupported
+    /// <typeparamref name="TResult"/> into a <see cref="TypeInitializationException"/> at RESOLVE
+    /// time (Scrutor's TryDecorate is unconditional) for a handler that never short-circuits. One
+    /// assignment per closed generic type; a benign duplicate build under a race produces an
+    /// equivalent delegate. The happy path never touches it.
+    /// </remarks>
+    private static Func<IEnumerable<Error>, TResult>? _createFailure;
+
+    /// <summary>
+    /// Returns the failure factory, building it on first use. Kept static so the lazy assignment is
+    /// never a write to a static field from an instance member.
+    /// </summary>
+    private static Func<IEnumerable<Error>, TResult> CreateFailure()
+        => _createFailure ??= ResultFailureFactory.Build<TResult>();
 
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
@@ -52,7 +68,8 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
         var errors = validationResult.ToErrors(typeof(TCommand).Name).ToList();
         LogValidationFailure(errors);
 
-        return CreateFailure(errors);
+        var createFailure = CreateFailure();
+        return createFailure(errors);
     }
 
     [LoggerMessage(

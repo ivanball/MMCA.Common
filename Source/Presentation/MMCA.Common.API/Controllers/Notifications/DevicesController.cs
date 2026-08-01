@@ -44,14 +44,27 @@ public sealed class DevicesController(
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 
-    /// <summary>Removes a device installation (DELETE /Notifications/Devices/{installationId}). Idempotent.</summary>
+    /// <summary>
+    /// Removes a device installation (DELETE /Notifications/Devices/{installationId}). Idempotent,
+    /// and scoped to the caller: the id comes from the client, so the registrar verifies the
+    /// installation's owner tag before deleting. An id that does not exist and an id belonging to
+    /// another user both answer 204 without deleting anything, so the response cannot be used to
+    /// probe for other users' installation ids.
+    /// </summary>
     [HttpDelete("{installationId}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
     public async Task<ActionResult> DeleteAsync(
         string installationId,
         CancellationToken cancellationToken = default)
     {
-        Result result = await registrar.DeleteAsync(installationId, cancellationToken).ConfigureAwait(false);
+        UserIdentifierType? userId = currentUserService.UserId;
+        if (!userId.HasValue)
+        {
+            return HandleFailure([Error.Unauthorized("PushDevice.Unauthorized", "User is not authenticated.")]);
+        }
+
+        Result result = await registrar.DeleteAsync(userId.Value, installationId, cancellationToken).ConfigureAwait(false);
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 }

@@ -15,6 +15,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Infrastructure.Concurrency;
 using MMCA.Common.Infrastructure.Http;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
@@ -171,6 +172,26 @@ public static class DependencyInjection
 
                 // In-process: the keyspace is private to this process, so no prefix is needed.
                 return new MemoryCacheService(sp.GetRequiredService<IMemoryCache>());
+            });
+
+            // Cross-replica mutual exclusion, registered alongside the cache because its one
+            // in-framework caller (the API idempotency filter) pairs the two: the lock guards the
+            // execute-then-store window that the cache entry closes. Redis when a multiplexer is
+            // registered, process-local (and warn-once) otherwise, mirroring the cache above.
+            services.TryAddSingleton<IDistributedLock>(sp =>
+            {
+                var multiplexer = sp.GetService<IConnectionMultiplexer>();
+                if (multiplexer is not null)
+                {
+                    var redisLogger = sp.GetService<ILogger<RedisDistributedLock>>()
+                        ?? NullLogger<RedisDistributedLock>.Instance;
+                    var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+                    return new RedisDistributedLock(multiplexer, redisLogger, keyNamespace);
+                }
+
+                var fallbackLogger = sp.GetService<ILogger<InProcessDistributedLock>>()
+                    ?? NullLogger<InProcessDistributedLock>.Instance;
+                return new InProcessDistributedLock(fallbackLogger);
             });
 
             return services;

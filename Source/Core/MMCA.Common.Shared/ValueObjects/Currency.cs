@@ -60,16 +60,25 @@ public sealed record Currency : ValueObject
 
 /// <summary>
 /// Serializes <see cref="Currency"/> as its ISO 4217 code string in JSON.
-/// Deserialization validates the code against <see cref="Currency.All"/>.
+/// Deserialization validates the code against <see cref="Currency.All"/>; a non-string token
+/// (number, object, array, boolean) and an unknown code both throw <see cref="JsonException"/>,
+/// matching the API-layer converter so non-MVC paths (cache, outbox, integration events,
+/// typed HttpClient calls) fail the same way MVC model binding does.
 /// </summary>
+/// <remarks>
+/// <see cref="JsonConverter{T}.HandleNull"/> is left at its default (<see langword="false"/>),
+/// so the serializer short-circuits a JSON null token before this converter runs and nullable
+/// <c>Currency?</c> / <c>Money?</c> members keep deserializing to <see langword="null"/>.
+/// </remarks>
 public sealed class CurrencyJsonConverter : JsonConverter<Currency>
 {
     /// <inheritdoc />
     public override Currency? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var code = reader.GetString();
-        if (code is null)
-            return null;
+        if (reader.TokenType != JsonTokenType.String)
+            throw new JsonException("Currency must be a string.");
+
+        string code = reader.GetString() ?? string.Empty;
 
         var result = Currency.FromCode(code);
         if (result.IsFailure)
