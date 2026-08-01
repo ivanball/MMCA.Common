@@ -26,6 +26,14 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// processes the outboxes of its own databases — services with separate databases never race
 /// for each other's messages.
 /// </para>
+/// <para>
+/// Delivery is at-least-once. A message dispatched but not yet stamped processed (a crash, or a
+/// cancellation landing mid-batch) is redelivered only once its claim lease expires, after
+/// <c>Outbox:LeaseSeconds</c> (300s by default) rather than immediately on restart, because the
+/// claim is persisted before dispatch and the poll skips leased rows. On a graceful shutdown the
+/// cancelled batch flushes the stamps it already collected on the way out, which closes that
+/// duplicate window for the messages it did deliver.
+/// </para>
 /// </summary>
 /// <param name="scopeFactory">Factory for creating DI scopes per processing cycle.</param>
 /// <param name="logger">Logger for processing diagnostics.</param>
@@ -57,6 +65,13 @@ public sealed partial class OutboxProcessor(
 
     /// <summary>Floor for the computed wait so an overdue pending message cannot hot-loop the processor.</summary>
     private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Budget for the best-effort save that flushes ProcessedOn stamps when a batch is cancelled
+    /// mid-flight. Deliberately short: the work is one small UPDATE against an already-open
+    /// connection, and anything slower is a dependency that must not delay host shutdown.
+    /// </summary>
+    private static readonly TimeSpan ShutdownSaveTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
     private static readonly Meter OutboxMeter = new("MMCA.Common.Outbox");
@@ -235,8 +250,23 @@ public sealed partial class OutboxProcessor(
 
         LogProcessingBatch(logger, toProcess.Count, sourceName);
 
-        var processedAny = await DispatchMessagesAsync(
-            toProcess, source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
+        bool processedAny;
+        try
+        {
+            processedAny = await DispatchMessagesAsync(
+                toProcess, source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Shutdown landed mid-batch. Every message dispatched before the cancellation carries
+            // its ProcessedOn stamp in the change tracker only, and the batch save below is now
+            // unreachable, so without this the delivered messages stay unprocessed and are
+            // redelivered once their lease expires (LeaseSeconds, 300s by default). Persisting the
+            // stamps on the way out shrinks that duplicate window to nothing on a graceful
+            // shutdown; delivery stays at-least-once for an ungraceful one.
+            await TryPersistStampsOnCancellationAsync(context, sourceName).ConfigureAwait(false);
+            throw;
+        }
 
         // Plain DbContext.SaveChangesAsync, without a user id: the audit interceptor stamps its
         // system sentinel rather than a caller's identity. The EF interceptors still run (they are
@@ -249,6 +279,33 @@ public sealed partial class OutboxProcessor(
         return new OutboxCycleResult(
             HasMoreEligibleWork: eligibleCount == _settings.BatchSize && processedAny,
             earliestPending);
+    }
+
+    /// <summary>
+    /// Best-effort save of the ProcessedOn stamps collected before a cancellation, run on the way
+    /// out of a cancelled batch. Two deliberate constraints:
+    /// <list type="bullet">
+    ///   <item>Its own try/catch. A failure here must never replace the propagating
+    ///   <see cref="OperationCanceledException"/>: the loop in <c>ExecuteAsync</c> recognizes
+    ///   shutdown by that exception type, and swapping it for a save failure would turn a clean
+    ///   stop into a logged error plus another polling cycle.</item>
+    ///   <item>Its own short-lived token rather than <see cref="CancellationToken.None"/>. The
+    ///   caller's token is already cancelled, so it cannot be reused, but an uncancellable save
+    ///   against a dead connection would hold host shutdown open until the command timeout.</item>
+    /// </list>
+    /// </summary>
+    private async Task TryPersistStampsOnCancellationAsync(ApplicationDbContext context, string sourceName)
+    {
+        using var timeout = new CancellationTokenSource(ShutdownSaveTimeout, _timeProvider);
+
+        try
+        {
+            await context.SaveChangesAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogShutdownSaveFailed(logger, sourceName, ex);
+        }
     }
 
     /// <summary>
@@ -469,6 +526,9 @@ public sealed partial class OutboxProcessor(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox processing failed for data source {DataSourceName}")]
     private static partial void LogSourceProcessingError(ILogger logger, string dataSourceName, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox shutdown save failed for data source {DataSourceName}: messages delivered in the cancelled batch will be redelivered when their lease expires")]
+    private static partial void LogShutdownSaveFailed(ILogger logger, string dataSourceName, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Processing {Count} pending outbox messages from {DataSourceName}")]
     private static partial void LogProcessingBatch(ILogger logger, int count, string dataSourceName);

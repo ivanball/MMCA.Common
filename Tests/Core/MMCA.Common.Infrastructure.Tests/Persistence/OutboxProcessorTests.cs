@@ -560,6 +560,76 @@ public sealed class OutboxProcessorTests : IDisposable
         }
     }
 
+    // ── Shutdown mid-batch: stamps collected before the cancellation are flushed on the way out ──
+    [Fact]
+    public async Task CancellationMidBatch_PersistsStampsOfAlreadyDispatchedMessages()
+    {
+        // Arrange: two eligible messages, oldest first. The dispatcher delivers the first, then
+        // host shutdown cancels the token during the second.
+        using var cts = new CancellationTokenSource();
+        OutboxMessage delivered = CreateEligibleMessage(occurredOn: DateTime.UtcNow.AddMinutes(-10));
+        OutboxMessage interrupted = CreateEligibleMessage(occurredOn: DateTime.UtcNow.AddMinutes(-5));
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(delivered, interrupted);
+        await _dbContext.SaveChangesAsync();
+
+        var calls = 0;
+        _dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .Returns<IEnumerable<IDomainEvent>, CancellationToken>(async (_, _) =>
+            {
+                calls++;
+                if (calls == 1)
+                {
+                    return;
+                }
+
+                await cts.CancelAsync();
+                throw new OperationCanceledException(cts.Token);
+            });
+
+        // Act
+        Func<Task> act = () => _sut.ProcessPendingMessagesAsync(cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>("shutdown must still reach the polling loop");
+
+        // Assert: the delivered message is stamped IN THE DATABASE, not just in the change tracker,
+        // so it is not redelivered when its lease expires.
+        List<OutboxMessage> persisted = await _dbContext.Set<OutboxMessage>().AsNoTracking().ToListAsync();
+        persisted.Single(m => m.Id == delivered.Id).ProcessedOn.Should().NotBeNull(
+            "a message delivered before the cancellation must not be redelivered after the lease expires");
+        persisted.Single(m => m.Id == interrupted.Id).ProcessedOn.Should().BeNull(
+            "the message the cancellation interrupted was never delivered");
+    }
+
+    // ── Shutdown mid-batch: a failing best-effort save must not mask the cancellation ──
+    [Fact]
+    public async Task CancellationMidBatch_WhenTheShutdownSaveFails_StillPropagatesTheCancellation()
+    {
+        // Arrange: the dispatcher cancels AND the database is gone, so the best-effort save on the
+        // way out fails too. The polling loop recognizes shutdown by the exception type, so
+        // swapping the cancellation for the save failure would turn a clean stop into an error
+        // plus another polling cycle.
+        using var cts = new CancellationTokenSource();
+        OutboxMessage message = CreateEligibleMessage();
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        _dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .Returns<IEnumerable<IDomainEvent>, CancellationToken>(async (_, _) =>
+            {
+                _dbContext.FailSaves = true;
+                await cts.CancelAsync();
+                throw new OperationCanceledException(cts.Token);
+            });
+
+        // Act / Assert
+        Func<Task> act = () => _sut.ProcessPendingMessagesAsync(cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>(
+            "a best-effort save failure must never replace the propagating cancellation");
+
+        _dbContext.FailSaves = false;
+    }
+
     // ── Test doubles ──
 
     /// <summary>
@@ -596,6 +666,16 @@ public sealed class OutboxProcessorTests : IDisposable
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
         internal override bool SupportsOutbox => true;
+
+        /// <summary>When set, every save fails, standing in for a connection lost at shutdown.</summary>
+        public bool FailSaves { get; set; }
+
+        public override Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default) =>
+            FailSaves
+                ? Task.FromException<int>(new InvalidOperationException("connection lost"))
+                : base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
 
         protected override void OnModelCreating(ModelBuilder modelBuilder) =>
             modelBuilder.Entity<OutboxMessage>(entity =>
