@@ -38,6 +38,31 @@ public sealed class BrokerEventBus(
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
+        await PublishBatchAsync([integrationEvent], cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task PublishAsync(IEnumerable<IIntegrationEvent> integrationEvents, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(integrationEvents);
+
+        var events = integrationEvents as IIntegrationEvent[] ?? [.. integrationEvents];
+        if (events.Length == 0)
+            return;
+
+        await PublishBatchAsync(events, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Persists every event of the batch to the outbox in ONE save, then wakes the processor once.
+    /// The previous per-event save-and-signal loop cost a round trip per event and, worse, was not
+    /// atomic: a failure partway through a batch left the earlier events committed and the rest
+    /// unwritten, so a caller that saw a failure could not tell what had already been published.
+    /// One save makes the batch all-or-nothing, and one signal is all the processor can consume
+    /// anyway (<see cref="IOutboxSignal"/> caps at a single permit and discards the surplus).
+    /// </summary>
+    private async Task PublishBatchAsync(IIntegrationEvent[] events, CancellationToken cancellationToken)
+    {
         var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
         var context = dbContextFactory.GetDbContext(target);
 
@@ -50,25 +75,17 @@ public sealed class BrokerEventBus(
                 $"BrokerEventBus requires an outbox-enabled data source. The configured outbox target '{target}' (Outbox:DataSource='{outboxOptions.Value.DataSource}', Outbox:DatabaseName='{outboxOptions.Value.DatabaseName}') does not support OutboxMessage. Configure SQL Server or SQLite, or fall back to InProcessEventBus.");
         }
 
-        var outboxEntry = OutboxMessage.FromDomainEvent(integrationEvent);
-#pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
-        context.Set<OutboxMessage>().Add(outboxEntry);
+        var outboxEntries = new List<OutboxMessage>(events.Length);
+        foreach (var integrationEvent in events)
+            outboxEntries.Add(OutboxMessage.FromDomainEvent(integrationEvent));
+
+#pragma warning disable VSTHRD103 // EF DbSet.AddRange is intentionally synchronous (in-memory); AddRangeAsync is only for special value generators (EF guidance).
+        context.Set<OutboxMessage>().AddRange(outboxEntries);
 #pragma warning restore VSTHRD103
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Wake the OutboxProcessor immediately so the broker publish doesn't wait for the
         // next polling cycle. The processor batches and publishes via IMessageBus.
         outboxSignal.Signal();
-    }
-
-    /// <inheritdoc />
-    public async Task PublishAsync(IEnumerable<IIntegrationEvent> integrationEvents, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(integrationEvents);
-
-        foreach (var integrationEvent in integrationEvents)
-        {
-            await PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
-        }
     }
 }

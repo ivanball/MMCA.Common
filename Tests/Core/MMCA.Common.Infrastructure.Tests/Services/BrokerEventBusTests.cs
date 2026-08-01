@@ -142,24 +142,57 @@ public sealed class BrokerEventBusTests
         mocks.OutboxSignal.Verify(s => s.Signal(), Times.Never);
     }
 
-    // ── Batch: each event is persisted and signalled individually ──
+    // ── Batch: every event persisted by ONE save, processor woken ONCE ──
     [Fact]
-    public async Task PublishBatch_PersistsEachEventAndSignalsPerEvent()
+    public async Task PublishBatch_PersistsEveryEventInOneSaveAndSignalsOnce()
     {
         await using var context = TestOutboxContext.Create();
         var (sut, mocks) = CreateSut(context);
         var event1 = new TestIntegrationEvent { DateOccurred = DateTime.UtcNow };
         var event2 = new TestIntegrationEvent { DateOccurred = DateTime.UtcNow };
+        var event3 = new TestIntegrationEvent { DateOccurred = DateTime.UtcNow };
 
-        await sut.PublishAsync([event1, event2], CancellationToken.None);
+        await sut.PublishAsync([event1, event2, event3], CancellationToken.None);
 
         List<OutboxMessage> messages = await context.Set<OutboxMessage>().ToListAsync();
-        messages.Should().HaveCount(2);
+        messages.Should().HaveCount(3);
         messages.Should().AllSatisfy(m => m.ProcessedOn.Should().BeNull());
-        mocks.OutboxSignal.Verify(s => s.Signal(), Times.Exactly(2));
+        var payloads = string.Concat(messages.Select(m => m.Payload));
+        payloads.Should().Contain(event1.MessageId.ToString());
+        payloads.Should().Contain(event2.MessageId.ToString());
+        payloads.Should().Contain(event3.MessageId.ToString());
+
+        context.SaveCount.Should().Be(1, "the whole batch must be one round trip, not one per event");
+        mocks.OutboxSignal.Verify(
+            s => s.Signal(),
+            Times.Once,
+            "the signal caps at a single permit, so one wake-up per batch is all the processor can consume");
     }
 
-    // ── Empty batch: no persistence, no signal ──
+    // ── Batch atomicity: a failing save persists nothing and never signals ──
+    [Fact]
+    public async Task PublishBatch_WhenTheSaveFails_PersistsNothingAndDoesNotSignal()
+    {
+        await using var context = TestOutboxContext.Create();
+        context.FailSaves = true;
+        var (sut, mocks) = CreateSut(context);
+
+        Func<Task> act = () => sut.PublishAsync(
+            [
+                new TestIntegrationEvent { DateOccurred = DateTime.UtcNow },
+                new TestIntegrationEvent { DateOccurred = DateTime.UtcNow },
+            ],
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*save failed*");
+
+        context.FailSaves = false;
+        List<OutboxMessage> messages = await context.Set<OutboxMessage>().AsNoTracking().ToListAsync();
+        messages.Should().BeEmpty("one save makes the batch all-or-nothing, so a failure leaves no partial publish behind");
+        mocks.OutboxSignal.Verify(s => s.Signal(), Times.Never);
+    }
+
+    // ── Empty batch: no persistence, no save, no signal ──
     [Fact]
     public async Task PublishBatch_EmptyCollection_DoesNotTouchOutboxOrSignal()
     {
@@ -170,6 +203,7 @@ public sealed class BrokerEventBusTests
 
         List<OutboxMessage> messages = await context.Set<OutboxMessage>().ToListAsync();
         messages.Should().BeEmpty();
+        context.SaveCount.Should().Be(0, "an empty sequence must not cost a no-op save");
         mocks.OutboxSignal.Verify(s => s.Signal(), Times.Never);
     }
 
@@ -204,9 +238,26 @@ public sealed class BrokerEventBusTests
     {
         internal override bool SupportsOutbox => true;
 
+        /// <summary>Number of saves the bus issued, so a batch can assert it cost exactly one.</summary>
+        public int SaveCount { get; private set; }
+
+        /// <summary>When set, every save fails, standing in for a lost connection mid-publish.</summary>
+        public bool FailSaves { get; set; }
+
         private TestOutboxContext(DbContextOptions<TestOutboxContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {
+        }
+
+        public override Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            SaveCount++;
+
+            return FailSaves
+                ? Task.FromException<int>(new InvalidOperationException("save failed"))
+                : base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
         public static TestOutboxContext Create()
