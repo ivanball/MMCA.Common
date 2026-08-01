@@ -153,8 +153,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         var emailExists = await EmailExistsAsync(registerEmail, cancellationToken).ConfigureAwait(false);
         if (emailExists)
         {
-            return Result.Failure<AuthenticationResponse>(
-                Error.Conflict("Auth.EmailAlreadyExists", "An account with this email already exists.", nameof(RegisterAsync)));
+            return EmailAlreadyExistsFailure();
         }
 
         var (hash, salt) = passwordHasher.HashPassword(request.Password);
@@ -169,7 +168,36 @@ public abstract class AuthenticationServiceBase<TUser>(
         user.UpdateRefreshToken(refreshToken, timeProvider.GetUtcNow().UtcDateTime.Add(RefreshTokenLifetime));
 
         await Repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: the persistence exception is not visible from this layer (see below)
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            // The email lookup above is a check-then-act: two concurrent registrations for the same
+            // address both pass it, and the loser only fails here, on the insert. Every consumer
+            // puts a unique index on Email (ADC unfiltered, Store filtered on IsDeleted), so this
+            // save is where the race actually surfaces, and without this catch it surfaces as a
+            // generic 500 instead of the 409 a serialized pair of requests would have produced.
+            //
+            // The catch is deliberately broad: Application has no EF Core dependency (by layer
+            // rule), so DbUpdateException is not a type this file can name. The re-check is what
+            // narrows it. If the address exists now, the concurrent registration is the cause and
+            // the caller gets the same conflict the serial path returns; anything else rethrows
+            // untouched, so a genuine persistence fault still reaches the exception middleware.
+            //
+            // CancellationToken.None: the re-check has to run even when the caller's token is what
+            // aborted the save, otherwise a cancelled save could never be classified.
+            if (await EmailExistsAsync(registerEmail, CancellationToken.None).ConfigureAwait(false))
+            {
+                return EmailAlreadyExistsFailure();
+            }
+
+            throw;
+        }
 
         // Post-commit hook: publish the app's registration side-effect (integration event) and/or
         // re-fetch so the first token can carry an id written post-commit by a domain-event handler.
@@ -318,4 +346,13 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </summary>
     protected virtual Error CreateRefreshUserMissingError() =>
         Error.Unauthorized("Auth.InvalidToken", "User not found.", nameof(RefreshTokenAsync));
+
+    /// <summary>
+    /// The registration conflict, returned both by the up-front email check and by the
+    /// unique-index race recovery in <see cref="RegisterAsync"/> so the two paths are
+    /// indistinguishable to the caller.
+    /// </summary>
+    private static Result<AuthenticationResponse> EmailAlreadyExistsFailure() =>
+        Result.Failure<AuthenticationResponse>(
+            Error.Conflict("Auth.EmailAlreadyExists", "An account with this email already exists.", nameof(RegisterAsync)));
 }

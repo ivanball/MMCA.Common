@@ -21,11 +21,15 @@ public sealed class IdempotencyFilterTests
         string? userId = null,
         string method = "POST",
         string? routeTemplate = null,
-        Mock<ICacheService>? sharedCache = null)
+        Mock<ICacheService>? sharedCache = null,
+        IDistributedLock? distributedLock = null)
     {
         var cache = sharedCache ?? new Mock<ICacheService>();
         var services = new ServiceCollection();
         services.AddSingleton(cache.Object);
+        if (distributedLock is not null)
+            services.AddSingleton(distributedLock);
+
         var serviceProvider = services.BuildServiceProvider();
 
         var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
@@ -448,5 +452,243 @@ public sealed class IdempotencyFilterTests
                 It.IsAny<TimeSpan>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ── Body-less successes ──
+    // Only ObjectResult used to be stored, so every command answering NoContent() cached nothing at
+    // all: a duplicate re-executed the action instead of replaying it, which is the whole point of
+    // the filter. StatusCodeResults are now stored with an empty body.
+    [Fact]
+    public async Task NoContentResponse_IsCachedWithAnEmptyBody()
+    {
+        var sut = new IdempotencyFilter();
+        var (context, cache) = CreateContext($"no-content-{Guid.NewGuid()}");
+
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+
+        await sut.OnActionExecutionAsync(context, () =>
+            Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = new NoContentResult()
+            }));
+
+        cache.Verify(
+            x => x.SetAsync(
+                It.IsAny<string>(),
+                It.Is<IdempotencyRecord>(r => r.StatusCode == 204 && r.ResponseBody.Length == 0),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task FailureStatusCodeResult_NotCached()
+    {
+        var sut = new IdempotencyFilter();
+        var (context, cache) = CreateContext($"status-failure-{Guid.NewGuid()}");
+
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+
+        await sut.OnActionExecutionAsync(context, () =>
+            Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = new StatusCodeResult(409)
+            }));
+
+        cache.Verify(
+            x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<IdempotencyRecord>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the 2xx-only rule applies to body-less results too");
+    }
+
+    [Fact]
+    public async Task CachedEmptyBody_ReplaysAsAStatusCodeWithNoContentType()
+    {
+        var sut = new IdempotencyFilter();
+        var (context, cache) = CreateContext($"replay-no-content-{Guid.NewGuid()}");
+
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IdempotencyRecord(204, string.Empty));
+
+        var nextCalled = false;
+
+        await sut.OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.Should().BeOfType<StatusCodeResult>(
+            "a response with no body must not be replayed as application/json content");
+        ((StatusCodeResult)context.Result!).StatusCode.Should().Be(204);
+        context.HttpContext.Response.Headers["X-Idempotent-Replay"].ToString().Should().Be("true");
+    }
+
+    // ── Cross-replica duplicates ──
+    // The per-process stripe only serializes duplicates that land on the same replica, and both
+    // deployed apps run more than one, so an IDistributedLock guards the execute-then-store window.
+    [Fact]
+    public async Task DistributedLock_WhenAcquired_ExecutesOnceAndReleases()
+    {
+        var sut = new IdempotencyFilter();
+        var handle = new TrackingHandle();
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(x => x.TryAcquireAsync(
+                It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(handle);
+
+        var (context, cache) = CreateContext($"lock-free-{Guid.NewGuid()}", distributedLock: distributedLock.Object);
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+
+        var nextCalls = 0;
+
+        await sut.OnActionExecutionAsync(context, () =>
+        {
+            nextCalls++;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = new ObjectResult(new { id = 1 }) { StatusCode = 201 }
+            });
+        });
+
+        nextCalls.Should().Be(1);
+        handle.Disposals.Should().Be(1, "the lock must be released even though the action succeeded");
+        cache.Verify(
+            x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<IdempotencyRecord>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the store has to happen inside the lock, before it is released");
+    }
+
+    [Fact]
+    public async Task DistributedLock_WhenHeldElsewhereAndTheHolderStored_ReplaysWithoutExecuting()
+    {
+        var sut = new IdempotencyFilter();
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(x => x.TryAcquireAsync(
+                It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IAsyncDisposable?)null);
+
+        var (context, cache) = CreateContext($"lock-held-{Guid.NewGuid()}", distributedLock: distributedLock.Object);
+
+        // Fast path misses; by the time the acquire gives up, the other replica has stored its response.
+        var getCalls = 0;
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Interlocked.Increment(ref getCalls) == 1
+                ? null
+                : new IdempotencyRecord(200, "{\"id\":1}"));
+
+        var nextCalled = false;
+
+        await sut.OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse("the other replica already ran this key; running it again is the double execution");
+        context.Result.Should().BeOfType<ContentResult>();
+        ((ContentResult)context.Result!).Content.Should().Be("{\"id\":1}");
+        context.HttpContext.Response.Headers["X-Idempotent-Replay"].ToString().Should().Be("true");
+    }
+
+    [Fact]
+    public async Task DistributedLock_WhenHeldElsewhereAndNothingStored_ReportsTheDuplicateInFlight()
+    {
+        var sut = new IdempotencyFilter();
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(x => x.TryAcquireAsync(
+                It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IAsyncDisposable?)null);
+
+        var (context, cache) = CreateContext($"lock-inflight-{Guid.NewGuid()}", distributedLock: distributedLock.Object);
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+
+        var nextCalled = false;
+
+        await sut.OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse("executing while another replica holds the key is exactly the duplicate write");
+        context.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        cache.Verify(
+            x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<IdempotencyRecord>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task DistributedLock_IsAskedForABoundedWaitAndACrashGuardTtl()
+    {
+        var sut = new IdempotencyFilter();
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(x => x.TryAcquireAsync(
+                It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TrackingHandle());
+
+        var (context, cache) = CreateContext($"lock-args-{Guid.NewGuid()}", distributedLock: distributedLock.Object);
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+
+        await sut.OnActionExecutionAsync(context, () =>
+            Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)));
+
+        distributedLock.Verify(
+            x => x.TryAcquireAsync(
+                It.Is<string>(key => key.StartsWith("idempotency:", StringComparison.Ordinal)),
+                It.Is<TimeSpan>(ttl => ttl > TimeSpan.Zero),
+                It.Is<TimeSpan>(wait => wait > TimeSpan.Zero && wait < TimeSpan.FromMinutes(1)),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the lock is taken on the same key the response is cached under, with a finite wait");
+    }
+
+    /// <summary>Lock handle that records how many times it was released.</summary>
+    private sealed class TrackingHandle : IAsyncDisposable
+    {
+        public int Disposals { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            Disposals++;
+            return ValueTask.CompletedTask;
+        }
     }
 }

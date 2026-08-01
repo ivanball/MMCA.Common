@@ -246,6 +246,45 @@ public sealed class AuthenticationServiceBaseTests
             Times.Never);
     }
 
+    // The email check and the insert are a check-then-act: two concurrent registrations for the
+    // same address both pass the check and the loser fails on the unique Email index. That used to
+    // escape as a 500; it now resolves to the same conflict a serialized pair would have produced.
+    [Fact]
+    public async Task RegisterAsync_WhenAConcurrentRegistrationWinsTheUniqueIndex_ReturnsConflict()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => sut.EmailExists = true)
+            .ThrowsAsync(new InvalidOperationException("Cannot insert duplicate key row in index 'IX_Users_Email'."));
+
+        Result<AuthenticationResponse> result = await sut.RegisterAsync(
+            new RegisterRequest("racer@example.com", "pw", "A", "B"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e =>
+            e.Code == "Auth.EmailAlreadyExists" && e.Type == ErrorType.Conflict);
+        sut.EmailExistsCallCount.Should().Be(
+            2,
+            "the failed save is classified by re-checking the address, since this layer cannot name the EF exception type");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WhenTheSaveFailsForAnyOtherReason_Rethrows()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("connection reset"));
+
+        Func<Task> act = async () => await sut.RegisterAsync(
+            new RegisterRequest("new@example.com", "pw", "A", "B"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("connection reset", "the broad catch classifies, it does not swallow");
+        sut.EmailExistsCallCount.Should().Be(2);
+    }
+
     [Fact]
     public async Task RegisterAsync_WhenUserFactoryFails_ReturnsFactoryFailure()
     {
@@ -603,6 +642,9 @@ public sealed class TestAuthenticationService(
 
     public bool EmailExists { get; set; }
 
+    /// <summary>Times the base asked. The post-save re-check that classifies a failed insert is the second.</summary>
+    public int EmailExistsCallCount { get; private set; }
+
     public Result<TestAuthUser>? CreateUserResult { get; set; }
 
     public Result LoginCandidateResult { get; set; } = Result.Success();
@@ -617,8 +659,11 @@ public sealed class TestAuthenticationService(
         return Task.FromResult(UntrackedUser);
     }
 
-    protected override Task<bool> EmailExistsAsync(Email? email, CancellationToken cancellationToken) =>
-        Task.FromResult(EmailExists);
+    protected override Task<bool> EmailExistsAsync(Email? email, CancellationToken cancellationToken)
+    {
+        EmailExistsCallCount++;
+        return Task.FromResult(EmailExists);
+    }
 
     protected override Result<TestAuthUser> CreateUser(RegisterRequest request, byte[] passwordHash, byte[] passwordSalt) =>
         CreateUserResult ?? Result.Success(new TestAuthUser
