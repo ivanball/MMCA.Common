@@ -34,9 +34,22 @@ public sealed record Money : ValueObject
     /// <summary>Gets a value indicating whether the amount is less than zero.</summary>
     public bool IsNegative => Amount < 0;
 
+    /// <summary>
+    /// Round-trip constructor: used by System.Text.Json and by EF Core when it materializes the
+    /// owned type. Every round-trip must supply a currency, because "no currency" is represented by
+    /// the <see cref="ValueObjects.Currency.None"/> sentinel and never by <see langword="null"/>.
+    /// A materializer that can yield <see langword="null"/> (a JSON payload omitting the currency
+    /// property, or an EF value converter that maps an unknown code to <see langword="null"/>) is a
+    /// broken contract, so it fails fast here instead of surfacing later as a null reference.
+    /// </summary>
+    /// <param name="amount">The monetary amount.</param>
+    /// <param name="currency">The currency; <see cref="ValueObjects.Currency.None"/> for a currency-less zero.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="currency"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     private Money(decimal amount, Currency currency)
     {
+        ArgumentNullException.ThrowIfNull(currency);
+
         Amount = amount;
         Currency = currency;
     }

@@ -41,6 +41,20 @@ public class CurrencyJsonConverterTests
         FluentActions.Invoking(() => JsonSerializer.Deserialize<Currency>("\"XYZ\""))
             .Should().Throw<JsonException>();
 
+    [Theory]
+    [InlineData("123")]
+    [InlineData("{\"Code\":\"USD\"}")]
+    [InlineData("[\"USD\"]")]
+    [InlineData("true")]
+    public void Read_NonStringToken_ThrowsJsonException(string json) =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<Currency>(json))
+            .Should().Throw<JsonException>();
+
+    [Fact]
+    public void Read_EmptyStringCode_ThrowsJsonException() =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<Currency>("\"\""))
+            .Should().Throw<JsonException>();
+
     [Fact]
     public void Read_NullValue_ReturnsNull()
     {
