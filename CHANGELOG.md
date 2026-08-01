@@ -14,6 +14,92 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.135.0] - 2026-08-01
+
+The BugHunt remediation release: 24 verified defects fixed across persistence, event delivery,
+the API boundary, shared contracts, and the query/caching/UI pipeline (workspace BugHunt ledger
+M1-M14, M29-M39). Every finding was adversarially re-verified against source before its fix was
+implemented. Four changes are behavioral and called out explicitly below.
+
+### Changed (behavioral)
+
+- **`SafeDomainEventHandler` now rethrows instead of swallowing.** The class always promised that a
+  failed handler would be retried via the outbox, but the swallow meant the dispatch pipeline marked
+  the rows processed and the work was lost permanently. Failures now propagate (log-and-rethrow
+  filter; `OperationCanceledException` passes through unlogged), so the outbox retry and dead-letter
+  paths engage. Consequence on the interceptor path: one rethrowing handler skips the processed
+  stamp for that save's entire local batch, so every local event in it redelivers. Delivery is
+  at-least-once; subclasses must tolerate repeats, including repeats of sibling events. No shipped
+  consumer subclasses this type today.
+- **Malformed money payloads fail fast.** The Shared `CurrencyJsonConverter` rejects non-string
+  JSON tokens with a `JsonException` (parity with the API-layer converter), and `Money`'s
+  `[JsonConstructor]` throws `ArgumentNullException` on a null currency instead of materializing an
+  instance that fails later in `Add`/`IsZero`. "No currency" is expressed by the `Currency.None`
+  sentinel, never null; EF value converters in consumers must materialize the sentinel for
+  empty or unknown stored codes (MMCA.Store already does as of its 2026-08-01 deploy).
+- **Direct repository saves stamp the acting user.** `EFRepository.Save()`/`SaveChangesAsync()`
+  route through the `ApplicationDbContext` user-id overloads, so audit columns record the real
+  actor instead of the system sentinel. No production caller exists today; the change protects
+  future direct-save callers.
+- **Sort validation accepts mapped DTO names, and pagination metadata is corrected.** Sort-column
+  validation now consults `DTOToEntityPropertyMap` first (parity with filter validation), so mapped
+  names that previously returned 400 validate and sort. Pagination metadata is built through the
+  validating constructor with floors applied: `pageSize=0` no longer reports `PageSize=0` for a
+  one-row fetch, the offset-overflow sentinel reports the clamped page size, and an unpaginated
+  read of more than the 1000-row materialization cap now reports the 1000 actually returned rather
+  than the total.
+
+### Added
+
+- **`IDistributedLock`** (Application) with a Redis implementation (`SET NX PX`, owner-token Lua
+  release) and an exact-key in-process fallback, registered like the cache with an optional
+  `IConnectionMultiplexer`. The idempotency filter uses it to close the cross-replica
+  double-execution window; when the lock is held elsewhere it waits, replays the holder's stored
+  response, and only conflicts when nothing was stored. Hosts without Redis keep prior behavior.
+- **`TransactionCommitAmbiguousException`**: a transient failure during the commit phase no longer
+  re-enters the execution-strategy delegate (which could duplicate a commit that actually landed);
+  it surfaces as this wrapper with the original as inner. Recovery is the API's `[Idempotent]`
+  replay. The multi-source sequential-commit case is documented as a known limitation.
+- **User-scoped push-device deletion**: `IPushDeviceRegistrar.DeleteAsync(userId, installationId, ...)`
+  (default interface implementation keeps external implementors compiling). The devices endpoint
+  verifies installation ownership via the `user:{userId}` tag and returns 204 for unknown and
+  not-owned ids alike, so deletion is no longer possible with a leaked installation id and the
+  response shape leaks no existence information.
+- **`TryParse<TIdentifier>` companion** to the deliberately coercing `Parse`, for callers that must
+  distinguish malformed input from legitimate defaults (bool/enum route values especially).
+
+### Fixed
+
+- **Persistence**: the bounded multi-pass save loop throws (naming the dirty contexts) instead of
+  silently dropping changes materialized after the third pass; domain-event capture skips exactly
+  the entries the identity-insert path temporarily hides as Unchanged, so their events dispatch
+  with the round that actually inserts the rows (events raised on genuinely Unchanged aggregates
+  keep dispatching).
+- **Event delivery**: a graceful shutdown mid-batch best-effort persists the in-memory processed
+  stamps (bounded 5s token, never masks the cancellation), closing the 300s lease-expiry
+  redelivery window; `BrokerEventBus` batch publish stages all rows in one save with one signal.
+- **Background services**: every warmup task is bounded (120s), so a hanging dependency lands on
+  the log-and-continue path instead of keeping `/health/ready` closed and the replica out of
+  rotation indefinitely.
+- **API boundary**: the idempotency filter stores and replays body-less 2xx responses (204) without
+  stamping a content type; a registration losing the unique-index race now surfaces
+  `Auth.EmailAlreadyExists` instead of a generic conflict; a `ResultFailureException` with no
+  errors surfaces its message as the gRPC detail while preserving `StatusCode.Internal` in all
+  four call shapes.
+- **Caching**: prefix eviction scans every non-replica Redis server with per-server error
+  tolerance and deletes per key (a cross-slot multi-key `DEL` throws on the production OSS-cluster
+  topology); `MemoryCacheService` serializes set/remove/prefix-remove per key and scopes eviction
+  callbacks to their own entry token, closing a race that left live entries invisible to prefix
+  invalidation; the client-keyed projection and accessor caches are capped at 512 entries each,
+  with past-cap requests computed per request (projection is skipped rather than compiled per
+  request).
+- **CQRS decorators**: the FeatureGate/Validating decorators build their failure factories lazily,
+  so a handler whose result type is not `Result`/`Result<T>` resolves instead of dying with
+  `TypeInitializationException` at first resolve.
+- **UI**: `MobileInfiniteScrollList.ResetAsync` cancels the in-flight fetch and a generation
+  counter discards stale appends and duplicate page fetches; `ThemeToggle` and
+  `MmcaThemeProviders` guard their theme-change rerenders against disposal.
+
 ## [1.133.0] - 2026-07-30
 
 ### Fixed
