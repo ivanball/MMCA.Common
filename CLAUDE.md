@@ -11,7 +11,7 @@ MMCA.Common is a .NET 10 NuGet package framework for building modular monolith a
 ```bash
 dotnet build MMCA.Common.slnx -c Release
 dotnet test --solution MMCA.Common.slnx -c Release                                # all tests
-dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- -method "*IdempotencyFilterTests*"   # single test (MTP filter; -class works too)
+dotnet test --project Tests/Presentation/MMCA.Common.API.Tests -- --filter-method "*IdempotencyFilterTests*"   # single test (MTP filter; --filter-class works too)
 dotnet test --project Tests/Architecture/MMCA.Common.Architecture.Tests           # NetArchTest layer/purity rules (fast, no DB)
 dotnet test --project Tests/Presentation/MMCA.Common.UI.E2E.Tests/MMCA.Common.UI.E2E.Tests.csproj      # UI a11y + render smoke (NOT in slnx; needs `playwright install chromium` once)
 dotnet run -c Release --project Tests/Performance/MMCA.Common.Benchmarks          # BenchmarkDotNet smoke; append `-- --job Dry` for a fast correctness pass
