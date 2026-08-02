@@ -89,7 +89,7 @@ An optional `Profiling` decorator pair is registered by a separate opt-in `AddAp
 
 ### Module System
 
-`IModule` implementations (with `Name`, `Dependencies`, `RequiresDependencies`, `Register()`, `SeedAsync()`, disabled-stub registration) are discovered via reflection and registered in topological order (Kahn's algorithm) by `ModuleLoader`. `ModulesSettings` (config section `Modules`) can disable modules; disabled modules receive stub registrations so cross-module interfaces stay resolvable. `ScanModuleApplicationServices<TAssemblyMarker>()` auto-registers domain event handlers (singleton), DTO/request mappers (scoped), command/query handlers (scoped), and validators. DI registration methods use C# preview extension types (`extension(IServiceCollection services)` blocks in `DependencyInjection.cs`).
+`IModule` implementations (five members: `Name`, `Dependencies`, `RequiresDependencies`, `Register()`, `RegisterDisabledStubs()`, the last three defaulted, so a leaf module is `Name` plus `Register`) are discovered via reflection and registered in topological order (Kahn's algorithm) by `ModuleLoader`. Seeding is a **separate** contract, `IModuleSeeder.SeedAsync(...)`, which `ModuleLoader` invokes in the same registration order; it is not a member of `IModule`. `ModulesSettings` (config section `Modules`) can disable modules; disabled modules receive stub registrations so cross-module interfaces stay resolvable. `ScanModuleApplicationServices<TAssemblyMarker>()` auto-registers domain event handlers (singleton), DTO/request mappers (scoped), command/query handlers (scoped), and validators. DI registration methods use C# preview extension types (`extension(IServiceCollection services)` blocks in `DependencyInjection.cs`).
 
 ### Entity Model
 
