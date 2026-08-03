@@ -32,14 +32,24 @@ Each package transitively includes the layers below it (`API -> Infrastructure -
 
 ## Try it in 15 minutes
 
-[**MMCA.Helpdesk**](https://github.com/ivanball/MMCA.Helpdesk) is the runnable seed: one `Tickets` module exercised end to end through all five layers, monolith-first, with the extraction path already in place. Clone it, run `dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost`, and read [Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html) alongside it: every step in the guide maps to real code in that repo.
+Scaffold a complete solution on the framework, no cloning and no credentials:
+
+```bash
+dotnet new install MMCA.Templates
+dotnet new mmca-app -n Contoso.Support --module Orders --aggregate Order
+```
+
+That is a warning-free build under all five analyzers and a passing test run including the architecture-fitness rules, with no database needed. [**Getting Started**](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html) takes it from there to a running, migrated app in six steps.
+
+[**MMCA.Helpdesk**](https://github.com/ivanball/MMCA.Helpdesk) is the runnable seed the template is generated from: one `Tickets` module exercised end to end through all five layers, monolith-first, with the extraction path already in place. Clone it, run `dotnet run --project Source/Hosting/MMCA.Helpdesk.AppHost`, and read [Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html) alongside it: every phase of that walkthrough maps to real code in that repo.
 
 ## Documentation
 
 The full reference library is published at **<https://ivanball.github.io/docs/>**:
 
 - **[Architecture Decision Records](https://ivanball.github.io/docs/adr/)**: the context, decision, and trade-offs behind every cross-cutting pattern. That index owns the canonical count and range.
-- **[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html)**: standing up a new application, a module vertical slice, the Aspire host, the fitness map, and a worked service extraction.
+- **[Getting Started](https://ivanball.github.io/docs/guides/common-GETTING-STARTED.html)**: standing up a new application from the `MMCA.Templates` scaffold, in six steps. [Templates](https://ivanball.github.io/docs/guides/common-TEMPLATES.html) documents every parameter of the four templates.
+- **[Building by Hand](https://ivanball.github.io/docs/guides/common-BUILD-BY-HAND.html)**: the same solution phase by phase (build plumbing, a module vertical slice, the Aspire host, the fitness map, and a worked service extraction), for retrofitting an existing solution or understanding what the scaffold generated.
 - **[Onboarding guide](https://ivanball.github.io/docs/onboarding/)**: a chapter-per-subsystem walkthrough of every first-party type.
 - **[Architecture scorecard](https://ivanball.github.io/docs/governance/common-ArchitectureScorecard.html)**: the framework graded against the 34-category rubric, with every score citing the code that earns it.
 - **[Article series](https://ivanball.github.io/writing.html)**: long-form deep dives on the patterns above, each one grounded in this source.
