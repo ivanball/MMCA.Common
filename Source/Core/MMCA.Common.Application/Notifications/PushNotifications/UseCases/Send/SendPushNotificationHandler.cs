@@ -27,6 +27,19 @@ public sealed partial class SendPushNotificationHandler(
         SendPushNotificationCommand command,
         CancellationToken cancellationToken = default)
     {
+        // Deduplication (opt-in): a retried send carrying the same key must not deliver twice.
+        // Whitespace is treated as absent so a blank header cannot claim the single "empty" key.
+        string? dedupKey = string.IsNullOrWhiteSpace(command.DedupKey) ? null : command.DedupKey;
+        if (dedupKey is not null)
+        {
+            PushNotification? alreadySent = await FindByDedupKeyAsync(dedupKey, cancellationToken).ConfigureAwait(false);
+            if (alreadySent is not null)
+            {
+                LogDedupHit(logger, alreadySent.Id, dedupKey);
+                return Result.Success(dtoMapper.MapToDTO(alreadySent));
+            }
+        }
+
         // Query all recipient user IDs via the app-specific provider
         IReadOnlyList<UserIdentifierType> recipientIds = await recipientProvider
             .GetRecipientUserIdsAsync(cancellationToken).ConfigureAwait(false);
@@ -44,7 +57,8 @@ public sealed partial class SendPushNotificationHandler(
             command.Request.Title,
             command.Request.Body,
             command.SentByUserId,
-            recipientIds.Count);
+            recipientIds.Count,
+            dedupKey);
         if (createResult.IsFailure)
         {
             return Result.Failure<PushNotificationDTO>(createResult.Errors);
@@ -53,7 +67,39 @@ public sealed partial class SendPushNotificationHandler(
         PushNotification notification = createResult.Value!;
         var repository = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
         await repository.AddAsync(notification, cancellationToken).ConfigureAwait(false);
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: the persistence exception is not visible from this layer (see below)
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            // The dedup lookup above is a check-then-act: two concurrent retries of the same send
+            // both pass it, and the loser only fails here, on the insert, against the filtered
+            // unique index on DedupKey. Swallow-and-requery is the same shape EfInboxStore uses on
+            // its InboxMessage.MessageId unique index; the difference is only which exception can
+            // be named. Application has no EF Core dependency (layer rule), so DbUpdateException
+            // is not a type this file can reference, and the requery is what narrows the broad
+            // catch: if the key exists now, the concurrent send is the cause and the caller gets
+            // that notification; anything else rethrows untouched so a genuine persistence fault
+            // still reaches the exception middleware.
+            //
+            // CancellationToken.None: the requery has to run even when the caller's token is what
+            // aborted the save, otherwise a cancelled save could never be classified.
+            if (dedupKey is not null)
+            {
+                PushNotification? winner = await FindByDedupKeyAsync(dedupKey, CancellationToken.None).ConfigureAwait(false);
+                if (winner is not null)
+                {
+                    LogDedupRaceRequery(logger, winner.Id, dedupKey);
+                    return Result.Success(dtoMapper.MapToDTO(winner));
+                }
+            }
+
+            throw;
+        }
 
         // Create per-user inbox records so recipients can retrieve missed notifications
         var userNotificationRepo = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
@@ -109,6 +155,22 @@ public sealed partial class SendPushNotificationHandler(
         return Result.Success(dtoMapper.MapToDTO(notification));
     }
 
+    /// <summary>
+    /// Looks up an already-persisted notification by its deduplication key. Uses the read
+    /// repository from the unit of work (never an injected <c>IRepository</c>), so the lookup runs
+    /// against the same data source as the write above.
+    /// </summary>
+    private async Task<PushNotification?> FindByDedupKeyAsync(string dedupKey, CancellationToken cancellationToken)
+    {
+        var readRepository = unitOfWork.GetReadRepository<PushNotification, PushNotificationIdentifierType>();
+        IReadOnlyCollection<PushNotification> matches = await readRepository.GetAllAsync(
+            [],
+            where: n => n.DedupKey == dedupKey,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return matches.FirstOrDefault();
+    }
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Push notification {NotificationId} sent to {RecipientCount} recipients")]
     private static partial void LogNotificationSent(ILogger logger, PushNotificationIdentifierType notificationId, int recipientCount);
 
@@ -117,4 +179,10 @@ public sealed partial class SendPushNotificationHandler(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Push notification {NotificationId} native (OS-level) delivery failed; inbox and SignalR legs unaffected")]
     private static partial void LogNativePushFailed(ILogger logger, PushNotificationIdentifierType notificationId, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Push notification {NotificationId} already exists for dedup key {DedupKey}; returning it without sending again")]
+    private static partial void LogDedupHit(ILogger logger, PushNotificationIdentifierType notificationId, string dedupKey);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Push notification {NotificationId} won the unique-index race on dedup key {DedupKey}; returning the existing notification without sending again")]
+    private static partial void LogDedupRaceRequery(ILogger logger, PushNotificationIdentifierType notificationId, string dedupKey);
 }

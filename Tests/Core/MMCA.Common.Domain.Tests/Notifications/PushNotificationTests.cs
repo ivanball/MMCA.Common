@@ -58,6 +58,56 @@ public class PushNotificationTests
         result.Errors.Should().Contain(e => e.Code == "PushNotification.Body.TooLong");
     }
 
+    // -- Create: dedup key --
+    [Fact]
+    public void Create_WithoutDedupKey_LeavesDedupKeyNull()
+    {
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 50);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.DedupKey.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_WithDedupKey_StoresDedupKey()
+    {
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 50, dedupKey: "key-123");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.DedupKey.Should().Be("key-123");
+    }
+
+    [Fact]
+    public void Create_WithWhitespaceDedupKey_NormalizesToNull()
+    {
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 50, dedupKey: "   ");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.DedupKey.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_WithDedupKeyExceedingMaxLength_ReturnsFailure()
+    {
+        string longKey = new('x', PushNotification.DedupKeyMaxLength + 1);
+
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 10, dedupKey: longKey);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "PushNotification.DedupKey.TooLong");
+    }
+
+    [Fact]
+    public void Create_WithDedupKeyAtMaxLength_ReturnsSuccess()
+    {
+        string maxKey = new('x', PushNotification.DedupKeyMaxLength);
+
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 10, dedupKey: maxKey);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.DedupKey.Should().Be(maxKey);
+    }
+
     [Fact]
     public void Create_RaisesPushNotificationCreatedEvent()
     {
