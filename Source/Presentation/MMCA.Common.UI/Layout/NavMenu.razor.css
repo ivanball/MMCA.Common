@@ -197,10 +197,11 @@
        the absolutely positioned .navbar-toggler, but a shrinkable actions box (the previous
        min-width: 0 plus the default flex-shrink: 1) gets squeezed by the width:100% brand
        container and spills its nowrap, overflow-visible contents right into that reserve,
-       painting the theme icon over the hamburger. Signed in, .toprow-user-name absorbed the
-       squeeze by ellipsizing, so only the signed-out row (two fixed-width icon buttons, nothing
-       shrinkable) ever showed it. The brand is the element meant to give way instead:
-       .top-row .container-fluid is min-width: 0 and .navbar-brand already ellipsizes. */
+       painting the theme icon over the hamburger. The row now holds only fixed-width icon buttons
+       in every auth state (the ellipsizing user name that used to absorb the squeeze when signed
+       in has moved to the hamburger menu's .nav-auth-section), so nothing here can give way and
+       this must stay. The brand is the element meant to give way instead: .top-row
+       .container-fluid is min-width: 0 and .navbar-brand already ellipsizes. */
     flex: 0 0 auto;
     /* Prevent the top-row from clipping the badge above the icon */
     overflow: visible;
@@ -231,23 +232,6 @@
     padding: 0 5px !important;
     border: 2px solid var(--mmca-sidebar-bg-dark, #141B2D) !important;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
-}
-
-.toprow-user-name {
-    font-size: 0.8125rem;
-    max-width: 7rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: rgba(255, 255, 255, 0.85);
-    padding: 0 0.25rem;
-}
-
-/* Very small phones: hide user name, keep icons */
-@media (max-width: 359.98px) {
-    .toprow-user-name {
-        display: none;
-    }
 }
 
 .top-row .container-fluid {

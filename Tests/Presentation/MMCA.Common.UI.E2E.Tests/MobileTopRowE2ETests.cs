@@ -81,4 +81,35 @@ public sealed class MobileTopRowE2ETests : GalleryAxeTestBase
         await Expect(appBar.GetByRole(AriaRole.Button, new() { Name = "Language" })).ToBeVisibleAsync();
         await Expect(appBar.GetByTitle("Toggle light/dark theme")).ToBeVisibleAsync();
     }
+
+    /// <summary>
+    /// The signed-in user name belongs in exactly one place on a phone: the hamburger menu, above
+    /// Logout. The top-row actions span only ever renders below 1024px, so a copy there was always a
+    /// duplicate of the menu entry, and it competed for room on the narrowest row in the layout.
+    /// </summary>
+    [Fact]
+    public async Task PhoneViewport_ShowsUserName_OnlyInTheHamburgerMenu()
+    {
+        await Page.Context.AddCookiesAsync(
+        [
+            new Cookie { Name = "gallery_auth", Value = "1", Url = BaseUrl },
+        ]);
+
+        await Page.SetViewportSizeAsync(390, 844);
+        await Page.GotoAsync("/");
+        await Page.WaitForLoadStateAsync();
+
+        // Premise: the gallery cookie really did sign this scan in, so an absent name below is the
+        // top-row rule and not an anonymous render.
+        await Expect(Page.Locator(".nav-auth-section")).ToContainTextAsync("Gallery Visitor");
+
+        await Expect(Page.Locator(".toprow-actions")).ToBeVisibleAsync();
+        await Expect(Page.Locator(".toprow-actions")).Not.ToContainTextAsync("Gallery Visitor");
+
+        // Opening the menu is what surfaces the name to the user: .nav-scrollable is collapsed to
+        // max-height 0 until the toggler is checked.
+        await Page.Locator(".navbar-toggler").CheckAsync();
+        await Expect(Page.Locator(".nav-user-identity")).ToBeVisibleAsync();
+        await Expect(Page.Locator(".nav-user-identity")).ToContainTextAsync("Gallery Visitor");
+    }
 }

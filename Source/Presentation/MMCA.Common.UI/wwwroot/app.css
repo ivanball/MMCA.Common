@@ -40,10 +40,14 @@
     --mmca-z-snackbar-mobile: 10000;
 }
 
+/* Deliberately no overflow-y here. With height: auto both boxes are already content-sized, so
+   overflow-y: auto changed nothing visually but made <body> a scroll container that never
+   scrolls (the viewport does). The layout's sticky sidebar then resolved against that dead
+   scrollport instead of the viewport and never stuck, so its background stopped one viewport
+   down on any page taller than the screen. Leave the default (visible). */
 html, body {
     font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     height: auto;
-    overflow-y: auto;
 }
 
 a, .btn-link {
