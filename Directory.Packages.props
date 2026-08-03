@@ -69,6 +69,11 @@
          the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.3" />
+    <!-- Pinned directly to force transitive resolution to the patched servicing version: the
+         DataProtection.Blobs/Keys chain otherwise pulls 10.0.7 (five high advisories, NU1903).
+         Projects with the AspNetCore framework reference prune this away; consumers WITHOUT it
+         (Aspire AppHosts) resolve the transitive as a real package and need the lifted version. -->
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />

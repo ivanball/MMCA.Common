@@ -3,6 +3,10 @@
     <PackageId>MMCA.Common.Aspire</PackageId>
     <Description>MMCA framework Aspire service defaults: OpenTelemetry, health checks, service discovery, HTTP resilience</Description>
     <IsAspireSharedProject>true</IsAspireSharedProject>
+    <!-- Pruning disabled so the System.Security.Cryptography.Xml advisory lift below stays a real
+         dependency and reaches the packed nuspec; pruned references never reach pack, and consumers
+         without the AspNetCore framework reference (Aspire AppHosts) need the lifted version. -->
+    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -28,6 +32,11 @@
     </PackageReference>
     <!-- Direct reference to force transitive OpenTelemetry.Api resolution to non-vulnerable 1.15.3. -->
     <PackageReference Include="OpenTelemetry.Api" />
+    <!-- Direct reference lifting the DataProtection.Blobs/Keys transitive off vulnerable 10.0.7
+         (NU1903) for consumers without the AspNetCore framework reference, i.e. Aspire AppHosts,
+         where nothing prunes the package. Requires the pruning opt-out above to survive into the
+         nuspec; framework-referencing consumers still prune the resulting transitive on their side. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
