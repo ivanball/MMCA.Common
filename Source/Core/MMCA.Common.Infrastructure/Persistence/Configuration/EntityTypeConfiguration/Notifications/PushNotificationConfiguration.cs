@@ -42,5 +42,18 @@ internal sealed class PushNotificationConfiguration
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(20);
+
+        builder.Property(p => p.DedupKey)
+            .HasMaxLength(PushNotification.DedupKeyMaxLength);
+
+        // Filtered unique index: at most one notification per deduplication key, while the many
+        // sends that carry no key (NULL) coexist freely. This is what makes a retried send safe,
+        // the database arbitrates the race that a check-then-act lookup in the handler cannot.
+        // "[DedupKey] IS NOT NULL" is SQL Server filter syntax and matches this configuration's
+        // engine base class (EntityTypeConfigurationSQLServer); the Cosmos context strips
+        // relational indexes, so no other engine sees it.
+        builder.HasIndex(p => p.DedupKey)
+            .IsUnique()
+            .HasFilter("[DedupKey] IS NOT NULL");
     }
 }

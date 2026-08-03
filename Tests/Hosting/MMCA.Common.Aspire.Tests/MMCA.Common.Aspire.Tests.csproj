@@ -5,6 +5,13 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Matches the FrameworkReference on MMCA.Common.Aspire itself. Without it the ASP.NET Core
+         pieces the tested code touches (DataProtection above all) resolve as standalone packages
+         instead of being pruned to the shared framework, which drags in a vulnerable
+         System.Security.Cryptography.Xml that the framework itself does not ship. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="coverlet.collector">

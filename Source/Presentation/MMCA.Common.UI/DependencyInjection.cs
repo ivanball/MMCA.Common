@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Shared.Resilience;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Services;
@@ -67,6 +68,12 @@ public static class DependencyInjection
                 }
 
                 client.BaseAddress = new Uri(apiSettings.ApiEndpoint, UriKind.Absolute);
+
+                // HttpClient's own default is 100s, chosen by the BCL with no knowledge of the
+                // resilience budget: it would cut a call off mid-policy at an arbitrary point.
+                // Pinning it to the shared total-request timeout (90s) keeps the two coordinated,
+                // so the budget decides when to give up and the transport never pre-empts it.
+                client.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
             })

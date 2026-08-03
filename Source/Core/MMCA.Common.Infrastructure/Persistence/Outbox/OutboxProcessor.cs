@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -74,11 +73,6 @@ public sealed partial class OutboxProcessor(
     private static readonly TimeSpan ShutdownSaveTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
-    private static readonly Meter OutboxMeter = new("MMCA.Common.Outbox");
-    private static readonly Counter<long> DeadLetterCounter = OutboxMeter.CreateCounter<long>(
-        "outbox.dead_letter.count",
-        "messages",
-        "Number of outbox messages dead-lettered due to unresolvable event types");
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -174,19 +168,23 @@ public sealed partial class OutboxProcessor(
 
     /// <summary>
     /// Drains every outbox source once and aggregates the per-source results: any source with
-    /// more eligible work triggers an immediate re-poll, and the earliest pending timestamp
-    /// across all sources drives the smart wait.
+    /// more eligible work triggers an immediate re-poll, the earliest pending timestamp
+    /// across all sources drives the smart wait, and the backlog observed across all sources is
+    /// published to the <c>outbox.pending.depth</c> gauge.
     /// </summary>
     internal async Task<OutboxCycleResult> ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
         var hasMoreEligibleWork = false;
         DateTime? earliestPendingOccurredOn = null;
+        var pendingDepth = 0L;
 
         foreach (var source in GetOutboxSources())
         {
             try
             {
-                var result = await ProcessSourceAsync(source, cancellationToken).ConfigureAwait(false);
+                (OutboxCycleResult result, long sourcePendingDepth) =
+                    await ProcessSourceAsync(source, cancellationToken).ConfigureAwait(false);
+                pendingDepth += sourcePendingDepth;
                 hasMoreEligibleWork |= result.HasMoreEligibleWork;
                 if (result.EarliestPendingOccurredOn is { } pending
                     && (earliestPendingOccurredOn is null || pending < earliestPendingOccurredOn))
@@ -207,10 +205,20 @@ public sealed partial class OutboxProcessor(
             }
         }
 
+        // Publish what THIS instance observed this cycle. A source that threw contributes zero, so
+        // an outage reads as a drop rather than as a stale plateau (see the gauge's remarks).
+        OutboxMetrics.SetPendingDepth(pendingDepth);
+
         return new OutboxCycleResult(hasMoreEligibleWork, earliestPendingOccurredOn);
     }
 
-    private async Task<OutboxCycleResult> ProcessSourceAsync(DataSourceKey source, CancellationToken cancellationToken)
+    /// <summary>
+    /// Drains one source and reports both its cycle result and the backlog it observed, so the
+    /// caller can sum the depth across sources for the <c>outbox.pending.depth</c> gauge.
+    /// </summary>
+    private async Task<(OutboxCycleResult Cycle, long PendingDepth)> ProcessSourceAsync(
+        DataSourceKey source,
+        CancellationToken cancellationToken)
     {
         var sourceName = source.ToString();
         using var scope = scopeFactory.CreateScope();
@@ -223,6 +231,8 @@ public sealed partial class OutboxProcessor(
         var cutoff = now.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
 
         var messages = await FetchCandidatesAsync(context, sourceName, now, cancellationToken).ConfigureAwait(false);
+        var pendingDepth = await CountPendingAsync(context, sourceName, messages.Count, now, cancellationToken)
+            .ConfigureAwait(false);
 
         // Split the ordered batch: the eligible prefix is processed now; the pending remainder
         // only informs how long to wait before the next cycle.
@@ -236,7 +246,7 @@ public sealed partial class OutboxProcessor(
 
         if (eligibleCount == 0)
         {
-            return new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending);
+            return (new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending), pendingDepth);
         }
 
         var toProcess = await ClaimEligibleAsync(context, messages, eligibleCount, now, cancellationToken)
@@ -245,7 +255,7 @@ public sealed partial class OutboxProcessor(
         if (toProcess.Count == 0)
         {
             // Another replica claimed the whole prefix between fetch and claim.
-            return new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending);
+            return (new OutboxCycleResult(HasMoreEligibleWork: false, earliestPending), pendingDepth);
         }
 
         LogProcessingBatch(logger, toProcess.Count, sourceName);
@@ -276,9 +286,42 @@ public sealed partial class OutboxProcessor(
 
         // A full eligible batch with progress means more eligible rows may be waiting; the
         // progress requirement stops a fully-failing batch from hot-spinning the processor.
-        return new OutboxCycleResult(
-            HasMoreEligibleWork: eligibleCount == _settings.BatchSize && processedAny,
-            earliestPending);
+        return (
+            new OutboxCycleResult(
+                HasMoreEligibleWork: eligibleCount == _settings.BatchSize && processedAny,
+                earliestPending),
+            pendingDepth);
+    }
+
+    /// <summary>
+    /// Backlog depth for one source, derived from the fetch wherever it can be: a batch that came
+    /// back short IS the whole backlog, so the steady state costs nothing extra. Only a saturated
+    /// batch (exactly the state an operator alerts on) pays for a COUNT, and that query runs inside
+    /// its own <c>OutboxPoll</c> activity so OutboxPollFilterProcessor suppresses it from export
+    /// exactly like the poll itself. The predicate mirrors <see cref="FetchCandidatesAsync"/> so
+    /// the gauge counts the rows this processor considers workable.
+    /// </summary>
+    private async Task<long> CountPendingAsync(
+        ApplicationDbContext context,
+        string sourceName,
+        int fetchedCount,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        if (fetchedCount < _settings.BatchSize)
+        {
+            return fetchedCount;
+        }
+
+        using var pollActivity = OutboxActivitySource.StartActivity(PollActivityName);
+        pollActivity?.SetTag("messaging.outbox.data_source", sourceName);
+
+        return await context.Set<OutboxMessage>()
+            .Where(m => m.ProcessedOn == null
+                && m.RetryCount < _settings.MaxRetries
+                && (m.LockedUntil == null || m.LockedUntil < now))
+            .LongCountAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -405,7 +448,7 @@ public sealed partial class OutboxProcessor(
                     message.LastError = $"Cannot resolve type: {message.EventType}";
                     message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
                     processedAny = true;
-                    DeadLetterCounter.Add(
+                    OutboxMetrics.DeadLetterCounter.Add(
                         1,
                         new KeyValuePair<string, object?>("event_type", message.EventType),
                         new KeyValuePair<string, object?>("reason", "type_unresolvable"));
@@ -425,8 +468,20 @@ public sealed partial class OutboxProcessor(
                     await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
                 }
 
-                message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
+                var processedOn = _timeProvider.GetUtcNow().UtcDateTime;
+                message.ProcessedOn = processedOn;
                 processedAny = true;
+
+                var eventTypeTag = new KeyValuePair<string, object?>("event_type", message.EventType);
+                OutboxMetrics.ProcessedCounter.Add(1, eventTypeTag);
+
+                // End-to-end delivery lag in seconds. Clamped at zero: OccurredOn is stamped by the
+                // writing host and ProcessedOn by this one, so clock skew between them must not
+                // publish a negative duration into the histogram.
+                OutboxMetrics.DispatchLagHistogram.Record(
+                    Math.Max((processedOn - message.OccurredOn).TotalSeconds, 0),
+                    eventTypeTag);
+
                 LogMessageProcessed(logger, message.Id, message.EventType);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -458,7 +513,7 @@ public sealed partial class OutboxProcessor(
                     // The moment of exhaustion is the operator's last loud signal: from here the
                     // row leaves the poll (RetryCount filter) and is eventually purged by
                     // OutboxCleanupService after the dead-letter retention window.
-                    DeadLetterCounter.Add(
+                    OutboxMetrics.DeadLetterCounter.Add(
                         1,
                         new KeyValuePair<string, object?>("event_type", message.EventType),
                         new KeyValuePair<string, object?>("reason", "retries_exhausted"));
@@ -475,8 +530,11 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
-    /// Exponential backoff for a failed message: <c>base * 2^(retryCount - 1)</c>, capped at the
-    /// lease so a failing row never holds its claim longer than a dead replica's rows would.
+    /// Exponential backoff for a failed message: <c>base * 2^(retryCount - 1)</c>, multiplied by a
+    /// random jitter factor in <c>[0.8, 1.2]</c> and then capped at the lease so a failing row never
+    /// holds its claim longer than a dead replica's rows would. The jitter is what keeps a batch
+    /// that failed together (one dependency outage fails all 50 rows in the same instant) from
+    /// retrying in lockstep and re-hammering that dependency on a single shared schedule.
     /// </summary>
     internal double ComputeRetryBackoffSeconds(int retryCount)
     {
@@ -486,7 +544,12 @@ public sealed partial class OutboxProcessor(
         var exponent = Math.Min(Math.Max(retryCount - 1, 0), 16);
         var backoff = _settings.RetryBackoffBaseSeconds * Math.Pow(2, exponent);
 
-        return Math.Min(backoff, _settings.LeaseSeconds);
+        // Jitter is applied BEFORE the cap so a capped backoff stays exactly at the lease bound.
+#pragma warning disable S2245, CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
+        var jitter = 0.8 + Random.Shared.NextDouble() * 0.4;
+#pragma warning restore S2245, CA5394
+
+        return Math.Min(backoff * jitter, _settings.LeaseSeconds);
     }
 
     /// <summary>

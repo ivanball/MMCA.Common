@@ -111,6 +111,13 @@ public static class DependencyInjection
 
             services.AddCaching(configuration);
 
+            // Relational persistence tuning (SQL command timeout). Optional: the defaults reproduce
+            // the framework's previous implicit behavior, so a host that omits the section is unchanged.
+            services.AddOptions<PersistenceSettings>()
+                .Bind(configuration.GetSection(PersistenceSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
             services.AddOptions<OutboxSettings>()
                 .Bind(configuration.GetSection(OutboxSettings.SectionName))
                 .ValidateDataAnnotations()

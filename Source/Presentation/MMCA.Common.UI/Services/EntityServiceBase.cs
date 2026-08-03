@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services.Auth;
 
@@ -12,7 +13,8 @@ namespace MMCA.Common.UI.Services;
 /// Base HTTP service implementing <see cref="IEntityService{TEntityDTO, TIdentifierType}"/>.
 /// Provides CRUD operations over the WebAPI with:
 /// <list type="bullet">
-///   <item>Polly exponential-backoff retry (3 attempts) for transient/server errors</item>
+///   <item>Polly exponential-backoff-with-jitter retry (3 retries) for transient/server errors</item>
+///   <item>An <c>Idempotency-Key</c> on creates, held constant across every retry attempt</item>
 ///   <item>Automatic domain exception extraction via <see cref="ServiceExceptionHelper"/></item>
 ///   <item>Named <c>"APIClient"</c> HttpClient with pre-configured base address and auth handler</item>
 /// </list>
@@ -122,10 +124,15 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}";
+
+        // Creates are the one CRUD verb that is not naturally idempotent: a retried POST whose
+        // first attempt actually reached the server would create a second record. The key makes the
+        // server collapse the duplicate; reads, updates (full PUT) and deletes need no key.
         return await SendRequestAsync<TEntityDTO>(
             httpClient => httpClient.PostAsJsonAsync(new Uri(url, UriKind.Relative), entity, cancellationToken),
             cancellationToken,
-            throwIfNull: true
+            throwIfNull: true,
+            idempotencyKey: NewIdempotencyKey()
         ) ?? throw new InvalidOperationException($"No {typeof(TEntityDTO).Name} returned from API.");
     }
 
@@ -168,16 +175,33 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// <param name="treatNotFoundAsDefault">When <see langword="true"/>, 404 returns default instead of throwing.</param>
     /// <param name="throwIfNull">When <see langword="true"/>, throws if deserialized result is <see langword="null"/>.</param>
     /// <param name="expectContent">When <see langword="false"/>, skips deserialization (PUT/DELETE with no body).</param>
+    /// <param name="idempotencyKey">
+    /// Optional idempotency key sent as the <c>Idempotency-Key</c> header (see
+    /// <see cref="AuthenticatedServiceBase.NewIdempotencyKey"/>). Supply one for non-idempotent
+    /// writes (creates); leave <see langword="null"/> for reads and naturally idempotent writes.
+    /// </param>
     protected async Task<T?> SendRequestAsync<T>(
         Func<HttpClient, Task<HttpResponseMessage>> httpAction,
         CancellationToken cancellationToken,
         bool treatNotFoundAsDefault = false,
         bool throwIfNull = false,
-        bool expectContent = true)
+        bool expectContent = true,
+        string? idempotencyKey = null)
     {
         using var httpClient = await CreateAuthenticatedClientAsync();
 
-        var response = await RetryPolicy.ExecuteAsync(() => httpAction(httpClient));
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            // This client is created once per logical operation and then serves EVERY retry attempt
+            // made by the policy below, so a default header set here rides along on each attempt
+            // with the same value. That is exactly the property the server needs: same key across
+            // attempts means the duplicate arrivals dedup instead of creating extra records.
+            httpClient.DefaultRequestHeaders.Add(IdempotencyHeaders.IdempotencyKey, idempotencyKey);
+        }
+
+        // The token flows into the policy so cancellation aborts the wait between attempts instead
+        // of letting an abandoned operation sleep out its full backoff budget.
+        var response = await RetryPolicy.ExecuteAsync(_ => httpAction(httpClient), cancellationToken);
 
         if (treatNotFoundAsDefault && response.StatusCode == HttpStatusCode.NotFound)
             return default;

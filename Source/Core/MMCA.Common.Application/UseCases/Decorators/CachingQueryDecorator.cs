@@ -13,10 +13,13 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// cache and return the fresh entry instead of re-running the query. Cache keys are shared
 /// process-wide, so the lock table lives in a non-generic holder.
 /// <para>
-/// Populating the cache after a miss is best-effort: the read has already succeeded by that point,
-/// so a cache fault is logged at warning level and swallowed rather than failing the query. Only the
-/// populate is guarded; the two read paths are left to propagate, and a genuinely cancelled request
-/// still surfaces <see cref="OperationCanceledException"/> exactly as the inner handler would.
+/// Every cache call is fail-open: the cache is an optimization, never the system of record, so a
+/// cache outage must degrade the application to uncached reads rather than turn every cacheable
+/// query into a 500. Both reads and the populate log at warning level and swallow the fault. A
+/// failed read is treated as a miss and falls through to the inner handler, so the query still
+/// answers correctly, just uncached; a failed populate returns the handler's result uncached. Only
+/// <see cref="OperationCanceledException"/> is excluded from the guard, so a genuinely cancelled
+/// request still surfaces exactly as the inner handler would.
 /// </para>
 /// </summary>
 /// <typeparam name="TQuery">The query type.</typeparam>
@@ -48,21 +51,35 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
         if (query is not IQueryCacheable cacheable)
             return await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
 
+        var queryName = typeof(TQuery).Name;
+
         // Fast path: no lock on a hit.
-        var cached = await cacheService.GetAsync<TResult>(cacheable.CacheKey, cancellationToken)
-            .ConfigureAwait(false);
+        var cached = await TryReadAsync(cacheable, queryName, cancellationToken).ConfigureAwait(false);
         if (cached is not null)
+        {
+            CqrsMetrics.RecordCacheHit(queryName);
             return cached;
+        }
 
         // Slow path: per-key double-check locking (same pattern as IdempotencyFilter). On
         // expiry of a hot key only one concurrent request runs the handler; the rest wait
         // and are served the freshly cached entry.
         using (await QueryCacheKeyLocks.Locks.AcquireAsync(cacheable.CacheKey, cancellationToken).ConfigureAwait(false))
         {
-            cached = await cacheService.GetAsync<TResult>(cacheable.CacheKey, cancellationToken)
-                .ConfigureAwait(false);
+            cached = await TryReadAsync(cacheable, queryName, cancellationToken).ConfigureAwait(false);
             if (cached is not null)
+            {
+                CqrsMetrics.RecordCacheHit(queryName);
                 return cached;
+            }
+
+            // One miss per executed query, recorded here rather than at either read: a request that
+            // misses the fast path, takes the lock and misses the double-check has read the cache
+            // twice but executed once, so counting at the reads would double-count it. This single
+            // point is reached exactly when execution falls through to the inner handler. A read
+            // that FAILED (cache outage, swallowed by TryReadAsync) also lands here and counts as a
+            // miss, which is correct: the query went uncached either way.
+            CqrsMetrics.RecordCacheMiss(queryName);
 
             var result = await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
 
@@ -76,9 +93,10 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    // The read already succeeded, so a cache blip must not fail the query. The
-                    // request token is kept, so real cancellation still propagates through the filter.
-                    LogCachePopulateFailed(logger, cacheable.CacheKey, typeof(TQuery).Name, ex);
+                    // The handler already produced the answer, so a cache blip must not fail the
+                    // query. The request token is kept, so real cancellation still propagates
+                    // through the filter.
+                    LogCachePopulateFailed(logger, cacheable.CacheKey, queryName, ex);
                 }
             }
 
@@ -94,6 +112,40 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
         string cacheKey,
         string queryName,
         Exception exception);
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "Cache read failed for key '{CacheKey}' on query '{QueryName}'; the read is treated as a miss and the query runs uncached")]
+    private static partial void LogCacheReadFailed(
+        ILogger logger,
+        string cacheKey,
+        string queryName,
+        Exception exception);
+
+    /// <summary>
+    /// Reads the cache fail-open: a cache fault is logged at warning level and reported as a miss
+    /// so the caller falls through to the inner handler. Cancellation is deliberately not caught.
+    /// </summary>
+    /// <param name="cacheable">The cacheable query carrying the key.</param>
+    /// <param name="queryName">The query type name, used for logging.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The cached value, or the default when the key is absent or the cache is unreachable.</returns>
+    private async Task<TResult?> TryReadAsync(
+        IQueryCacheable cacheable,
+        string queryName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await cacheService.GetAsync<TResult>(cacheable.CacheKey, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogCacheReadFailed(logger, cacheable.CacheKey, queryName, ex);
+            return default;
+        }
+    }
 }
 
 /// <summary>
@@ -111,7 +163,7 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
 /// </para>
 /// <para>
 /// The lock is per-process: with multiple app instances over a shared distributed cache
-/// (e.g. Redis), stampede protection is best-effort — at most one handler execution per
+/// (e.g. Redis), stampede protection is best-effort: at most one handler execution per
 /// instance, not one cluster-wide. That duplication is harmless (last write wins with equal
 /// content); a cluster-wide guarantee would need a distributed lock and is deliberately
 /// not attempted here.

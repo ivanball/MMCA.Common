@@ -134,6 +134,52 @@ public sealed class OutboxProcessorTests : IDisposable
         _sut.ProcessPendingMessagesAsync(CancellationToken.None);
 
     /// <summary>
+    /// Starts a <see cref="MeterListener"/> scoped to one instrument on the outbox meter and
+    /// collects every measurement plus its <c>event_type</c> tag into <paramref name="sink"/>.
+    /// A raw listener rather than <c>MetricCollector&lt;T&gt;</c>: the test project does not
+    /// reference Microsoft.Extensions.Diagnostics.Testing, and package versions are centrally
+    /// managed, so the listener is the dependency-free option (it is also what the dead-letter
+    /// test above already uses).
+    /// </summary>
+    private static MeterListener StartOutboxListener<T>(
+        string instrumentName,
+        System.Threading.Lock gate,
+        List<(T Value, string? EventType)> sink)
+        where T : struct
+    {
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (string.Equals(instrument.Meter.Name, "MMCA.Common.Outbox", StringComparison.Ordinal)
+                    && string.Equals(instrument.Name, instrumentName, StringComparison.Ordinal))
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<T>((_, value, tags, _) =>
+        {
+            string? eventType = null;
+            foreach (KeyValuePair<string, object?> tag in tags)
+            {
+                if (string.Equals(tag.Key, "event_type", StringComparison.Ordinal))
+                {
+                    eventType = tag.Value as string;
+                }
+            }
+
+            lock (gate)
+            {
+                sink.Add((value, eventType));
+            }
+        });
+
+        listener.Start();
+        return listener;
+    }
+
+    /// <summary>
     /// Creates an outbox message eligible for processing (old enough, unprocessed, zero retries).
     /// </summary>
     private static OutboxMessage CreateEligibleMessage(
@@ -628,6 +674,156 @@ public sealed class OutboxProcessorTests : IDisposable
             "a best-effort save failure must never replace the propagating cancellation");
 
         _dbContext.FailSaves = false;
+    }
+
+    // ── Metrics: processed count, dispatch lag, and observed backlog depth ──
+    [Fact]
+    public async Task DispatchedMessages_IncrementTheProcessedCounter_TaggedByEventType()
+    {
+        // Arrange
+        var gate = new System.Threading.Lock();
+        var measurements = new List<(long Value, string? EventType)>();
+        using MeterListener listener = StartOutboxListener("outbox.processed.count", gate, measurements);
+
+        var messages = Enumerable.Range(0, 3).Select(_ => CreateEligibleMessage()).ToArray();
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(messages);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        await InvokeProcessPendingMessagesAsync();
+
+        // Assert: one increment of 1 per dispatched message, carrying the event type tag.
+        var expectedEventType = typeof(TestDomainEvent).AssemblyQualifiedName;
+        lock (gate)
+        {
+            var forThisEventType = measurements
+                .Where(m => string.Equals(m.EventType, expectedEventType, StringComparison.Ordinal))
+                .ToList();
+
+            forThisEventType.Should().HaveCountGreaterThanOrEqualTo(
+                3,
+                "the counter increments once per message stamped processed");
+            forThisEventType.Should().AllSatisfy(m => m.Value.Should().Be(1));
+        }
+    }
+
+    [Fact]
+    public async Task DispatchedMessages_RecordTheDispatchLagInSeconds_TaggedByEventType()
+    {
+        // Arrange: a fake clock makes the lag exact. The row was written 10 minutes (600s) before
+        // the instant the processor stamps it.
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings(), timeProvider);
+
+        var gate = new System.Threading.Lock();
+        var measurements = new List<(double Value, string? EventType)>();
+        using MeterListener listener = StartOutboxListener("outbox.dispatch.lag", gate, measurements);
+
+        OutboxMessage message = CreateEligibleMessage(occurredOn: now.AddMinutes(-10));
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        // Assert
+        var expectedEventType = typeof(TestDomainEvent).AssemblyQualifiedName;
+        lock (gate)
+        {
+            measurements.Should().AllSatisfy(
+                m => m.Value.Should().BeGreaterThanOrEqualTo(0, "a delivery lag is never negative"));
+            measurements.Should().Contain(
+                m => m.Value > 599.9 && m.Value < 600.1
+                    && string.Equals(m.EventType, expectedEventType, StringComparison.Ordinal),
+                "the histogram records ProcessedOn minus OccurredOn in seconds");
+        }
+    }
+
+    [Fact]
+    public async Task PendingDepthGauge_ReportsTheBacklogObservedInTheLastCycle()
+    {
+        // Arrange: one eligible row plus two still inside the processing delay, so the cycle
+        // polls a backlog of three.
+        var gate = new System.Threading.Lock();
+        var measurements = new List<(long Value, string? EventType)>();
+        using MeterListener listener = StartOutboxListener("outbox.pending.depth", gate, measurements);
+
+        OutboxMessage eligible = CreateEligibleMessage();
+        OutboxMessage pendingA = CreateEligibleMessage(occurredOn: DateTime.UtcNow);
+        OutboxMessage pendingB = CreateEligibleMessage(occurredOn: DateTime.UtcNow);
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(eligible, pendingA, pendingB);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        await InvokeProcessPendingMessagesAsync();
+        listener.RecordObservableInstruments();
+
+        // Assert: the gauge is observed once and reports what this instance saw.
+        lock (gate)
+        {
+            measurements.Should()
+                .ContainSingle("an observable gauge yields one measurement per observation")
+                .Which.Value.Should().Be(3);
+        }
+    }
+
+    // ── Retry backoff: jittered so a batch that failed together does not retry in lockstep ──
+    [Theory]
+    [InlineData(1, 10d)]
+    [InlineData(2, 20d)]
+    [InlineData(3, 40d)]
+    [InlineData(4, 80d)]
+    public void RetryBackoff_StaysWithinTheJitterBandOfTheDeterministicBase(int retryCount, double deterministic)
+    {
+        // The backoff is no longer a single exact value: it is base * 2^(n-1) multiplied by a
+        // random factor in [0.8, 1.2], so the contract is a band, not an equality.
+        var settings = new OutboxSettings { RetryBackoffBaseSeconds = 10, LeaseSeconds = 3600 };
+        using OutboxProcessor processor = CreateProcessor(settings);
+
+        for (var i = 0; i < 50; i++)
+        {
+            var backoff = processor.ComputeRetryBackoffSeconds(retryCount);
+
+            backoff.Should().BeInRange(
+                deterministic * 0.8,
+                deterministic * 1.2,
+                "the jitter factor is bounded to plus or minus 20 percent of the deterministic backoff");
+        }
+    }
+
+    [Fact]
+    public void RetryBackoff_RemainsCappedAtTheLease_EvenAtTheTopOfTheJitterBand()
+    {
+        // Jitter is applied BEFORE the cap, so a backoff that overruns the lease still lands
+        // exactly on it: a failing row never holds its claim longer than a dead replica's rows.
+        var settings = new OutboxSettings { RetryBackoffBaseSeconds = 10, LeaseSeconds = 300 };
+        using OutboxProcessor processor = CreateProcessor(settings);
+
+        for (var i = 0; i < 50; i++)
+        {
+            var backoff = processor.ComputeRetryBackoffSeconds(10);
+
+            backoff.Should().BeLessThanOrEqualTo(settings.LeaseSeconds);
+            backoff.Should().BeApproximately(settings.LeaseSeconds, 1e-9);
+        }
+    }
+
+    [Fact]
+    public void RetryBackoff_VariesBetweenCalls_SoSimultaneousFailuresDoNotRetryTogether()
+    {
+        // The whole point of the jitter: 50 rows that failed in the same instant must not all
+        // become claimable again at the same instant.
+        var settings = new OutboxSettings { RetryBackoffBaseSeconds = 10, LeaseSeconds = 3600 };
+        using OutboxProcessor processor = CreateProcessor(settings);
+
+        var samples = Enumerable.Range(0, 50)
+            .Select(_ => processor.ComputeRetryBackoffSeconds(3))
+            .ToList();
+
+        samples.Distinct().Should().HaveCountGreaterThan(
+            1,
+            "a deterministic backoff would make a whole failed batch retry in lockstep");
     }
 
     // ── Test doubles ──

@@ -7,6 +7,7 @@ using MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistor
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using Moq;
 
@@ -18,14 +19,37 @@ public sealed class NotificationsControllerTests
     private readonly Mock<IQueryHandler<GetNotificationHistoryQuery, Result<PagedCollectionResult<PushNotificationDTO>>>> _historyHandler = new();
     private readonly Mock<ICurrentUserService> _currentUserService = new();
 
-    private NotificationsController CreateController() =>
-        new(_sendHandler.Object, _historyHandler.Object, _currentUserService.Object)
+    private SendPushNotificationCommand? _captured;
+
+    /// <summary>
+    /// Arranges an authenticated caller and a successful handler that records the command it
+    /// received, so a test can assert on what the controller built.
+    /// </summary>
+    private void ArrangeCapture()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(42);
+        _sendHandler
+            .Setup(h => h.HandleAsync(It.IsAny<SendPushNotificationCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<SendPushNotificationCommand, CancellationToken>((command, _) => _captured = command)
+            .ReturnsAsync(Result.Success(CreateDto()));
+    }
+
+    private NotificationsController CreateController(string? idempotencyKey = null)
+    {
+        var httpContext = new DefaultHttpContext();
+        if (idempotencyKey is not null)
+        {
+            httpContext.Request.Headers[IdempotencyHeaders.IdempotencyKey] = idempotencyKey;
+        }
+
+        return new NotificationsController(_sendHandler.Object, _historyHandler.Object, _currentUserService.Object)
         {
             ControllerContext = new ControllerContext
             {
-                HttpContext = new DefaultHttpContext(),
+                HttpContext = httpContext,
             },
         };
+    }
 
     private static PushNotificationDTO CreateDto() =>
         new()
@@ -89,6 +113,43 @@ public sealed class NotificationsControllerTests
         var objectResult = result.Result as ObjectResult;
         objectResult.Should().NotBeNull();
         objectResult!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    // ── SendAsync: idempotency key to DedupKey (gap 12) ──
+    [Fact]
+    public async Task SendAsync_WithIdempotencyKeyHeader_PopulatesCommandDedupKey()
+    {
+        ArrangeCapture();
+        NotificationsController sut = CreateController("idem-key-1");
+
+        await sut.SendAsync(new SendPushNotificationRequest("Title", "Body"));
+
+        _captured.Should().NotBeNull();
+        _captured!.DedupKey.Should().Be("idem-key-1");
+    }
+
+    [Fact]
+    public async Task SendAsync_WithoutIdempotencyKeyHeader_LeavesDedupKeyNull()
+    {
+        ArrangeCapture();
+        NotificationsController sut = CreateController();
+
+        await sut.SendAsync(new SendPushNotificationRequest("Title", "Body"));
+
+        _captured.Should().NotBeNull();
+        _captured!.DedupKey.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SendAsync_WithWhitespaceIdempotencyKeyHeader_LeavesDedupKeyNull()
+    {
+        ArrangeCapture();
+        NotificationsController sut = CreateController("   ");
+
+        await sut.SendAsync(new SendPushNotificationRequest("Title", "Body"));
+
+        _captured.Should().NotBeNull();
+        _captured!.DedupKey.Should().BeNull();
     }
 
     // ── GetHistoryAsync ──

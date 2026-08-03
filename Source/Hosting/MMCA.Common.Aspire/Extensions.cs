@@ -152,10 +152,13 @@ public static class Extensions
                         metrics.AddRuntimeInstrumentation();
                     }
 
-                    // MMCA.Common meters (literal names — Aspire has no reference to the defining
-                    // assemblies): outbox dead-letter counter and CQRS RED histograms.
+                    // MMCA.Common meters (literal names, because Aspire has no reference to the
+                    // defining assemblies): outbox counters and dispatch lag, CQRS RED histograms
+                    // plus query cache hit/miss, and the idempotency filter's replay, conflict and
+                    // degraded counters.
                     metrics.AddMeter("MMCA.Common.Outbox")
-                        .AddMeter("MMCA.Common.Cqrs");
+                        .AddMeter("MMCA.Common.Cqrs")
+                        .AddMeter("MMCA.Common.Idempotency");
                 })
                 .WithTracing(tracing =>
                 {

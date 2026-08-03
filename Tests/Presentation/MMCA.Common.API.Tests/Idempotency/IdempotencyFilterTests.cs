@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Interfaces;
 using Moq;
@@ -16,13 +18,17 @@ namespace MMCA.Common.API.Tests.Idempotency;
 
 public sealed class IdempotencyFilterTests
 {
+    /// <summary>The filter takes an <c>ILogger</c> so a swallowed cache fault is still reported.</summary>
+    private static IdempotencyFilter CreateSut() => new(NullLogger<IdempotencyFilter>.Instance);
+
     private static (ActionExecutingContext Context, Mock<ICacheService> Cache) CreateContext(
         string? idempotencyKey = null,
         string? userId = null,
         string method = "POST",
         string? routeTemplate = null,
         Mock<ICacheService>? sharedCache = null,
-        IDistributedLock? distributedLock = null)
+        IDistributedLock? distributedLock = null,
+        string? body = null)
     {
         var cache = sharedCache ?? new Mock<ICacheService>();
         var services = new ServiceCollection();
@@ -34,6 +40,9 @@ public sealed class IdempotencyFilterTests
 
         var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
         httpContext.Request.Method = method;
+        if (body is not null)
+            httpContext.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+
         if (idempotencyKey is not null)
             httpContext.Request.Headers[IdempotencyFilter.IdempotencyKeyHeader] = idempotencyKey;
 
@@ -60,7 +69,7 @@ public sealed class IdempotencyFilterTests
             .Callback<string, CancellationToken>((key, _) => observedKey ??= key)
             .ReturnsAsync((IdempotencyRecord?)null);
 
-        await new IdempotencyFilter().OnActionExecutionAsync(context, () =>
+        await CreateSut().OnActionExecutionAsync(context, () =>
             Task.FromResult(new ActionExecutedContext(
                 new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
                 [], null!)));
@@ -72,7 +81,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_NoIdempotencyKey_ExecutesNext()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, _) = CreateContext();
         var nextCalled = false;
 
@@ -90,7 +99,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_CachedResult_ReturnsCachedResponse()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext("unique-key-1");
 
         var cachedRecord = new IdempotencyRecord(200, "{\"id\":1}");
@@ -118,7 +127,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_NewRequest_ExecutesAndCaches()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext("new-key-2");
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -178,8 +187,8 @@ public sealed class IdempotencyFilterTests
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var filter1 = new IdempotencyFilter();
-        var filter2 = new IdempotencyFilter();
+        var filter1 = CreateSut();
+        var filter2 = CreateSut();
 
         async Task<ActionExecutedContext> NextDelegate1()
         {
@@ -225,7 +234,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task EmptyIdempotencyKey_ExecutesNormally()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext("   ");
         var nextCalled = false;
 
@@ -247,7 +256,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task NonObjectResult_NotCached()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var idempotencyKey = $"non-object-result-{Guid.NewGuid()}";
         var (context, cache) = CreateContext(idempotencyKey);
 
@@ -278,7 +287,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task CachedResponse_IncludesReplayHeader_OnDoubleCheckPath()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var idempotencyKey = $"double-check-replay-{Guid.NewGuid()}";
         var (context, cache) = CreateContext(idempotencyKey);
 
@@ -286,7 +295,7 @@ public sealed class IdempotencyFilterTests
         var getCallCount = 0;
 
         // First GetAsync returns null (fast path misses), second returns cached record
-        // (double-check inside the lock finds it — another request completed while waiting)
+        // (double-check inside the lock finds it: another request completed while waiting)
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
@@ -395,7 +404,7 @@ public sealed class IdempotencyFilterTests
     [InlineData(500)]
     public async Task FailureResponse_NotCached(int statusCode)
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext(string.Create(CultureInfo.InvariantCulture, $"failure-{statusCode}-{Guid.NewGuid()}"));
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -428,7 +437,7 @@ public sealed class IdempotencyFilterTests
     [InlineData(202)]
     public async Task SuccessResponse_IsCached(int statusCode)
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext(string.Create(CultureInfo.InvariantCulture, $"success-{statusCode}-{Guid.NewGuid()}"));
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -461,7 +470,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task NoContentResponse_IsCachedWithAnEmptyBody()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext($"no-content-{Guid.NewGuid()}");
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -487,7 +496,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task FailureStatusCodeResult_NotCached()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext($"status-failure-{Guid.NewGuid()}");
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -514,7 +523,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task CachedEmptyBody_ReplaysAsAStatusCodeWithNoContentType()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var (context, cache) = CreateContext($"replay-no-content-{Guid.NewGuid()}");
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -543,7 +552,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task DistributedLock_WhenAcquired_ExecutesOnceAndReleases()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var handle = new TrackingHandle();
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
@@ -583,7 +592,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task DistributedLock_WhenHeldElsewhereAndTheHolderStored_ReplaysWithoutExecuting()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
             .Setup(x => x.TryAcquireAsync(
@@ -618,7 +627,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task DistributedLock_WhenHeldElsewhereAndNothingStored_ReportsTheDuplicateInFlight()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
             .Setup(x => x.TryAcquireAsync(
@@ -654,7 +663,7 @@ public sealed class IdempotencyFilterTests
     [Fact]
     public async Task DistributedLock_IsAskedForABoundedWaitAndACrashGuardTtl()
     {
-        var sut = new IdempotencyFilter();
+        var sut = CreateSut();
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
             .Setup(x => x.TryAcquireAsync(
@@ -678,6 +687,323 @@ public sealed class IdempotencyFilterTests
                 It.IsAny<CancellationToken>()),
             Times.Once,
             "the lock is taken on the same key the response is cached under, with a finite wait");
+    }
+
+    // ── Request-body binding ──
+    // The key alone used to decide a replay, so a client that reused a key with a DIFFERENT payload
+    // was handed the first response and its second write silently never ran. The stored record now
+    // carries a hash of the body that produced it.
+    [Fact]
+    public async Task SameRequestBody_ReplaysTheCachedResponse()
+    {
+        const string body = "{\"amount\":10}";
+        var idempotencyKey = $"same-body-{Guid.NewGuid()}";
+
+        var stored = await CaptureStoredRecordAsync(
+            idempotencyKey, body, new ObjectResult(new { id = 42 }) { StatusCode = 201 });
+
+        stored.Should().NotBeNull();
+
+        var record = stored!;
+        record.RequestBodyHash.Should().NotBeNull("the stored record binds the payload to the key");
+
+        var (context, cache) = CreateContext(idempotencyKey, userId: "1", routeTemplate: "Orders", body: body);
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(record);
+
+        var nextCalled = false;
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse("an identical retry is the case idempotency exists to serve");
+        context.Result.Should().BeOfType<ContentResult>()
+            .Which.Content.Should().Be(record.ResponseBody);
+        context.HttpContext.Response.Headers["X-Idempotent-Replay"].ToString().Should().Be("true");
+    }
+
+    [Fact]
+    public async Task DifferentRequestBody_SameKey_IsRejectedAsUnprocessable()
+    {
+        var idempotencyKey = $"different-body-{Guid.NewGuid()}";
+
+        var stored = await CaptureStoredRecordAsync(
+            idempotencyKey, "{\"amount\":10}", new ObjectResult(new { id = 42 }) { StatusCode = 201 });
+
+        var (context, cache) = CreateContext(
+            idempotencyKey, userId: "1", routeTemplate: "Orders", body: "{\"amount\":99}");
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stored);
+
+        var nextCalled = false;
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity,
+                "409 already means the original is in flight, so key reuse needs its own status");
+        ((ProblemDetails)((ObjectResult)context.Result!).Value!).Detail
+            .Should().Be("The Idempotency-Key was already used with a different request body.");
+        context.HttpContext.Response.Headers.ContainsKey("X-Idempotent-Replay")
+            .Should().BeFalse("a rejected reuse is not a replay");
+    }
+
+    [Fact]
+    public async Task LegacyCachedRecord_WithNoStoredHash_ReplaysWithoutComparison()
+    {
+        var (context, cache) = CreateContext(
+            $"legacy-record-{Guid.NewGuid()}", userId: "1", routeTemplate: "Orders", body: "{\"amount\":99}");
+
+        // Written by the version before the hash existed: two properties, no RequestBodyHash.
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IdempotencyRecord(200, "{\"id\":1}"));
+
+        var nextCalled = false;
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.Should().BeOfType<ContentResult>(
+            "entries cached before the hash existed must keep replaying until they age out");
+        ((ContentResult)context.Result!).Content.Should().Be("{\"id\":1}");
+    }
+
+    [Fact]
+    public async Task BodylessRequest_StoresAndReplays()
+    {
+        var idempotencyKey = $"bodyless-{Guid.NewGuid()}";
+
+        var stored = await CaptureStoredRecordAsync(idempotencyKey, body: null, new NoContentResult());
+
+        stored.Should().NotBeNull();
+        stored!.RequestBodyHash.Should().NotBeNull("a body-less request hashes the empty payload");
+
+        var (context, cache) = CreateContext(idempotencyKey, userId: "1", routeTemplate: "Orders");
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stored);
+
+        var nextCalled = false;
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            nextCalled = true;
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!));
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.Should().BeOfType<StatusCodeResult>()
+            .Which.StatusCode.Should().Be(204);
+    }
+
+    // ── Resource stage ──
+    // Hashing the body means reading it, and the only point at which it can still be made
+    // re-readable is before model binding. Buffering is not free, so it is enabled only for the
+    // requests that actually carry a key.
+    [Fact]
+    public async Task ResourceStage_WithIdempotencyKey_EnablesBuffering()
+    {
+        var body = new NonSeekableStream(Encoding.UTF8.GetBytes("{\"amount\":10}"));
+        var context = CreateResourceContext($"buffering-on-{Guid.NewGuid()}", body);
+
+        await CreateSut().OnResourceExecutionAsync(
+            context,
+            () => Task.FromResult(new ResourceExecutedContext(context, context.Filters)));
+
+        context.HttpContext.Request.Body.Should().NotBeSameAs(body);
+        context.HttpContext.Request.Body.CanSeek.Should().BeTrue(
+            "the action stage has to be able to rewind the body to hash it");
+    }
+
+    [Fact]
+    public async Task ResourceStage_WithoutIdempotencyKey_LeavesTheBodyAlone()
+    {
+        var body = new NonSeekableStream(Encoding.UTF8.GetBytes("{\"amount\":10}"));
+        var context = CreateResourceContext(idempotencyKey: null, body);
+
+        await CreateSut().OnResourceExecutionAsync(
+            context,
+            () => Task.FromResult(new ResourceExecutedContext(context, context.Filters)));
+
+        context.HttpContext.Request.Body.Should().BeSameAs(body,
+            "ordinary traffic must not pay for buffering it never uses");
+    }
+
+    // ── Fail-open cache ──
+    // Deduplication is an optimization over an at-least-once client retry. A cache outage must
+    // degrade it, never turn every write endpoint carrying the attribute into a 500.
+    [Fact]
+    public async Task CacheReadFailure_StillExecutesTheActionAndKeepsItsResult()
+    {
+        var (context, cache) = CreateContext($"cache-read-fault-{Guid.NewGuid()}");
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("cache unreachable"));
+        cache.Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<IdempotencyRecord>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var expected = new ObjectResult(new { id = 7 }) { StatusCode = 201 };
+        ActionExecutedContext? executed = null;
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            executed = new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = expected
+            };
+            return Task.FromResult(executed);
+        });
+
+        executed.Should().NotBeNull("a failing cache read must be treated as a miss, not as an error");
+        executed!.Result.Should().BeSameAs(expected);
+        context.Result.Should().BeNull("the filter must not short-circuit a request it could not deduplicate");
+    }
+
+    [Fact]
+    public async Task CacheStoreFailure_StillReturnsTheActionResponse()
+    {
+        var (context, cache) = CreateContext($"cache-store-fault-{Guid.NewGuid()}");
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+        cache.Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<IdempotencyRecord>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("cache unreachable"));
+
+        var expected = new ObjectResult(new { id = 9 }) { StatusCode = 201 };
+        ActionExecutedContext? executed = null;
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            executed = new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = expected
+            };
+            return Task.FromResult(executed);
+        });
+
+        executed.Should().NotBeNull();
+        executed!.Result.Should().BeSameAs(expected,
+            "the write already happened; failing here would make the client retry it");
+        context.Result.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Runs the filter once against a cache miss and returns the record it stored, so a test can
+    /// replay a genuinely produced record instead of duplicating the hashing rule.
+    /// </summary>
+    private static async Task<IdempotencyRecord?> CaptureStoredRecordAsync(
+        string idempotencyKey,
+        string? body,
+        IActionResult result)
+    {
+        var (context, cache) = CreateContext(idempotencyKey, userId: "1", routeTemplate: "Orders", body: body);
+
+        IdempotencyRecord? stored = null;
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+        cache.Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<IdempotencyRecord>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, IdempotencyRecord, TimeSpan?, CancellationToken>((_, record, _, _) => stored = record)
+            .Returns(Task.CompletedTask);
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+            Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = result
+            }));
+
+        return stored;
+    }
+
+    /// <summary>Builds the resource-stage context, which runs before model binding.</summary>
+    private static ResourceExecutingContext CreateResourceContext(string? idempotencyKey, Stream body)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(new Mock<ICacheService>().Object);
+
+        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = body;
+        if (idempotencyKey is not null)
+            httpContext.Request.Headers[IdempotencyFilter.IdempotencyKeyHeader] = idempotencyKey;
+
+        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
+        return new ResourceExecutingContext(actionContext, [], []);
+    }
+
+    /// <summary>
+    /// A request body as the server first sees it: forward-only. Buffering is what makes it
+    /// seekable, so this is the only way to observe whether the filter turned buffering on.
+    /// </summary>
+    private sealed class NonSeekableStream(byte[] content) : Stream
+    {
+        private readonly MemoryStream _inner = new(content);
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => _inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+                _inner.Dispose();
+
+            base.Dispose(disposing);
+        }
     }
 
     /// <summary>Lock handle that records how many times it was released.</summary>

@@ -64,6 +64,11 @@
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.1" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <!-- Shared DataProtection key ring (MMCA.Common.Aspire.AddCommonDataProtection). Blobs persists
+         the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
+         the optional at-rest encryption of that key ring. Both reuse the Azure.Identity pin above. -->
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.3" />
+    <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.3" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />

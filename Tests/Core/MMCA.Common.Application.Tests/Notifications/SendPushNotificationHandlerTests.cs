@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -146,13 +147,134 @@ public class SendPushNotificationHandlerTests
         result.Value!.Status.Should().Be(nameof(PushNotificationStatus.Sent));
     }
 
+    // -- HandleAsync: deduplication (gap 12) --
+    [Fact]
+    public async Task HandleAsync_WithDedupKeyAlreadySent_ReturnsExistingDTOWithoutAddOrSend()
+    {
+        PushNotification existing = CreateExisting("Existing Title", "Existing Body", "key-1");
+        var (sut, mocks) = CreateSut(existingByDedupKey: existing);
+
+        SendPushNotificationCommand command = CreateCommand() with { DedupKey = "key-1" };
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Title.Should().Be("Existing Title");
+        result.Value.Body.Should().Be("Existing Body");
+
+        mocks.NotificationRepo.Verify(
+            x => x.AddAsync(It.IsAny<PushNotification>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNoSend(mocks);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithUnseenDedupKey_SendsNormally()
+    {
+        var (sut, mocks) = CreateSut();
+
+        SendPushNotificationCommand command = CreateCommand() with { DedupKey = "key-unseen" };
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Status.Should().Be(nameof(PushNotificationStatus.Sent));
+        mocks.NotificationRepo.Verify(
+            x => x.AddAsync(It.IsAny<PushNotification>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithNullDedupKey_TakesLegacyPathAndNeverQueriesForDuplicates()
+    {
+        var (sut, mocks) = CreateSut();
+
+        SendPushNotificationCommand command = CreateCommand();
+        command.DedupKey.Should().BeNull();
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Status.Should().Be(nameof(PushNotificationStatus.Sent));
+        mocks.ReadRepo.Verify(AnyDedupLookup(), Times.Never);
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(3));
+        mocks.PushNotificationSender.Verify(
+            x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                "Test Title",
+                "Test Body",
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenSaveHitsDedupUniqueIndex_RequeriesAndReturnsExistingDTO()
+    {
+        PushNotification winner = CreateExisting("Winner Title", "Winner Body", "key-2");
+        var (sut, mocks) = CreateSut(saveThrows: true, dedupWinnerOnRequery: winner);
+
+        SendPushNotificationCommand command = CreateCommand() with { DedupKey = "key-2" };
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Title.Should().Be("Winner Title");
+        VerifyNoSend(mocks);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenSaveFailsAndDedupKeyIsStillAbsent_Rethrows()
+    {
+        var (sut, _) = CreateSut(saveThrows: true);
+
+        SendPushNotificationCommand command = CreateCommand() with { DedupKey = "key-3" };
+
+        Func<Task> act = () => sut.HandleAsync(command);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
     // -- Helpers --
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
         Mock<IRepository<PushNotification, PushNotificationIdentifierType>> NotificationRepo,
+        Mock<IReadRepository<PushNotification, PushNotificationIdentifierType>> ReadRepo,
         Mock<INotificationRecipientProvider> RecipientProvider,
         Mock<IPushNotificationSender> PushNotificationSender,
         Mock<INativePushSender> NativePushSender);
+
+    private static PushNotification CreateExisting(string title, string body, string dedupKey) =>
+        PushNotification.Create(title, body, sentByUserId: 7, recipientCount: 5, dedupKey: dedupKey).Value!;
+
+    private static void VerifyNoSend(HandlerMocks mocks)
+    {
+        mocks.PushNotificationSender.Verify(
+            x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        mocks.NativePushSender.Verify(
+            x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Dictionary<string, string>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static Expression<Func<
+        IReadRepository<PushNotification, PushNotificationIdentifierType>,
+        Task<IReadOnlyCollection<PushNotification>>>> AnyDedupLookup() =>
+        r => r.GetAllAsync(
+            It.IsAny<IEnumerable<string>>(),
+            It.IsAny<Expression<Func<PushNotification, bool>>>(),
+            It.IsAny<Expression<Func<PushNotification, string>>>(),
+            It.IsAny<Expression<Func<PushNotification, PushNotification>>>(),
+            It.IsAny<bool>(),
+            It.IsAny<bool>(),
+            It.IsAny<CancellationToken>());
 
     private static SendPushNotificationCommand CreateCommand() =>
         new(new SendPushNotificationRequest("Test Title", "Test Body"), SentByUserId: 1);
@@ -160,17 +282,50 @@ public class SendPushNotificationHandlerTests
     private static (SendPushNotificationHandler Sut, HandlerMocks Mocks) CreateSut(
         int recipientCount = 3,
         bool sendThrows = false,
-        bool nativeSendThrows = false)
+        bool nativeSendThrows = false,
+        PushNotification? existingByDedupKey = null,
+        bool saveThrows = false,
+        PushNotification? dedupWinnerOnRequery = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var notificationRepo = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
         var userNotificationRepo = new Mock<IRepository<UserNotification, UserNotificationIdentifierType>>();
+        var readRepo = new Mock<IReadRepository<PushNotification, PushNotificationIdentifierType>>();
         unitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
             .Returns(notificationRepo.Object);
         unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
             .Returns(userNotificationRepo.Object);
-        unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+        unitOfWork.Setup(x => x.GetReadRepository<PushNotification, PushNotificationIdentifierType>())
+            .Returns(readRepo.Object);
+
+        if (saveThrows)
+        {
+            // Only the first save fails (the DedupKey unique-index violation); later saves succeed.
+            unitOfWork.SetupSequence(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Violation of UNIQUE KEY constraint on DedupKey"))
+                .ReturnsAsync(1);
+        }
+        else
+        {
+            unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
+        }
+
+        if (dedupWinnerOnRequery is null)
+        {
+            IReadOnlyCollection<PushNotification> dedupMatches =
+                existingByDedupKey is null ? [] : [existingByDedupKey];
+            readRepo.Setup(AnyDedupLookup()).ReturnsAsync(dedupMatches);
+        }
+        else
+        {
+            // First lookup (the pre-check) sees nothing; the post-violation requery finds the winner.
+            IReadOnlyCollection<PushNotification> noMatch = [];
+            IReadOnlyCollection<PushNotification> winnerMatch = [dedupWinnerOnRequery];
+            readRepo.SetupSequence(AnyDedupLookup())
+                .ReturnsAsync(noMatch)
+                .ReturnsAsync(winnerMatch);
+        }
 
         var recipientProvider = new Mock<INotificationRecipientProvider>();
         IReadOnlyList<UserIdentifierType> recipientIds = [.. Enumerable.Range(100, recipientCount)];
@@ -214,6 +369,7 @@ public class SendPushNotificationHandlerTests
         var mocks = new HandlerMocks(
             unitOfWork,
             notificationRepo,
+            readRepo,
             recipientProvider,
             pushNotificationSender,
             nativePushSender);

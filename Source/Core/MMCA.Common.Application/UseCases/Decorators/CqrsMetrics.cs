@@ -5,9 +5,13 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// <summary>
 /// RED (Rate / Errors / Duration) metrics for the CQRS pipeline, emitted by the logging
 /// decorators. Count gives rate, the <c>outcome</c> tag gives errors, and the histogram gives
-/// duration. A host exports these by registering the <see cref="MeterName"/> meter — the Aspire
-/// service defaults (<c>ConfigureOpenTelemetry</c>) do this. The meter name is duplicated as a
+/// duration. A host exports these by registering the <see cref="MeterName"/> meter (the Aspire
+/// service defaults, <c>ConfigureOpenTelemetry</c>, do this). The meter name is duplicated as a
 /// literal in MMCA.Common.Aspire because that package has no reference to Application.
+/// <para>
+/// The caching query decorator adds the cache hit/miss counters below, so a host can chart the
+/// hit ratio per query and spot a cache that has stopped serving reads.
+/// </para>
 /// </summary>
 internal static class CqrsMetrics
 {
@@ -27,4 +31,26 @@ internal static class CqrsMetrics
         "cqrs.query.duration",
         unit: "ms",
         description: "Duration of CQRS query handling, tagged by query name and outcome.");
+
+    /// <summary>Cacheable queries served from the cache without executing the handler, tagged by <c>query</c>.</summary>
+    internal static readonly Counter<long> QueryCacheHits = Meter.CreateCounter<long>(
+        "cqrs.query.cache.hit",
+        unit: "{query}",
+        description: "Count of cacheable queries served from the cache, tagged by query name.");
+
+    /// <summary>Cacheable queries that fell through to the handler, tagged by <c>query</c>.</summary>
+    internal static readonly Counter<long> QueryCacheMisses = Meter.CreateCounter<long>(
+        "cqrs.query.cache.miss",
+        unit: "{query}",
+        description: "Count of cacheable queries that executed the handler because the cache did not serve them, tagged by query name.");
+
+    /// <summary>Records one cache hit for the named query.</summary>
+    /// <param name="queryName">The query type name.</param>
+    internal static void RecordCacheHit(string queryName) =>
+        QueryCacheHits.Add(1, new KeyValuePair<string, object?>("query", queryName));
+
+    /// <summary>Records one cache miss for the named query.</summary>
+    /// <param name="queryName">The query type name.</param>
+    internal static void RecordCacheMiss(string queryName) =>
+        QueryCacheMisses.Add(1, new KeyValuePair<string, object?>("query", queryName));
 }
