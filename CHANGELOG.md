@@ -14,6 +14,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.136.0] - 2026-08-03
+
+A shared-layout fix release: the desktop sidebar now stays pinned while the page scrolls,
+and the signed-in user name no longer renders twice on a phone. Both are pure UI changes in
+MMCA.Common.UI; consumers pick them up with the pin bump and no code change.
+
 ### Fixed
 
 - **The desktop sidebar stays pinned while the page scrolls.** It is exactly one viewport tall and
