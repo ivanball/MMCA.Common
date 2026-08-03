@@ -49,6 +49,13 @@ public sealed class NavMenuTests : BunitTestBase
         cut.Markup.Should().Contain("Logout");
         cut.Markup.Should().Contain("Ada Lovelace");
         cut.Markup.Should().NotContain(">Login<");
+
+        // Exactly once: the name belongs to the hamburger menu's auth section only. The mobile
+        // top-row used to render a second copy (with a duplicate title attribute), which on a phone
+        // showed the same name twice and squeezed the narrowest row in the layout.
+        cut.FindAll(".nav-user-identity").Should().ContainSingle();
+        cut.FindAll(".toprow-actions").Should().ContainSingle();
+        cut.Find(".toprow-actions").TextContent.Should().NotContain("Ada Lovelace");
     }
 
     [Fact]

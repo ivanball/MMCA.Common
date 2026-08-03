@@ -19,8 +19,11 @@
     </div>
     @* Mobile-only quick actions (CSS hides this row at >=1024px, where the MudAppBar takes over; the
        app bar itself is hidden below 1024px). Culture + theme must be available to everyone here,
-       authenticated or not (ADR-027/028); only the module app-bar components and the user name are
-       gated on authentication. *@
+       authenticated or not (ADR-027/028); only the module app-bar components are gated on
+       authentication. The signed-in user name deliberately does NOT repeat here: this row only ever
+       renders below 1024px, which is exactly where .nav-auth-section shows the name above Logout in
+       the hamburger menu, so a copy on the top row was pure duplication competing for the narrowest
+       row in the layout. *@
     <div class="toprow-actions" aria-label="@L["Nav.QuickActions.Aria"]">
         <CultureSwitcher />
         <ThemeToggle />
@@ -30,7 +33,6 @@
                 {
                     <DynamicComponent Type="componentType" />
                 }
-                <span class="toprow-user-name" title="@context.User.Identity?.Name">@context.User.Identity?.Name</span>
             </Authorized>
         </AuthorizeView>
     </div>

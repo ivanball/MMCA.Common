@@ -14,6 +14,26 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+### Fixed
+
+- **The desktop sidebar stays pinned while the page scrolls.** It is exactly one viewport tall and
+  relies on `position: sticky`, so on any page taller than the screen its background stopped one
+  viewport down and the page background showed beside the content. Sticky resolves against the
+  nearest ancestor scroll container, and two rules were creating dead ones that never scroll:
+  `html, body { overflow-y: auto }` in `app.css`, and `.page { overflow-x: hidden }` in
+  `MainLayout.razor.css` (a non-visible `overflow-x` forces the computed `overflow-y` from
+  `visible` to `auto`). The first is removed; the second is now `clip`, which bounds horizontal
+  overflow without establishing a scrollport. Consumers get the fix with no code change.
+
+### Changed
+
+- **The signed-in user name no longer repeats on the mobile top row.** `NavMenu`'s
+  `.toprow-user-name` span is removed. That row only ever renders below 1024px, which is exactly
+  where the hamburger menu's `.nav-auth-section` already shows the name above Logout, so it was
+  always a duplicate and it competed for room on the narrowest row in the layout. On a phone the
+  name is now visible after opening the menu rather than always on screen; hosts wanting an
+  always-visible indicator should add an avatar or account icon via their app-bar components.
+
 ## [1.135.0] - 2026-08-01
 
 The BugHunt remediation release: 24 verified defects fixed across persistence, event delivery,

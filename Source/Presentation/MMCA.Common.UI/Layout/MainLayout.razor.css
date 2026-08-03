@@ -112,7 +112,14 @@ main {
         flex-wrap: wrap;
         width: 100%;
         max-width: 100vw;
-        overflow-x: hidden;
+        /* clip, NOT hidden: per spec a non-visible overflow-x forces the computed overflow-y
+           from visible to auto, which turns .page into a scroll container. The sticky sidebar
+           below then resolves against .page's scrollport instead of the viewport, and since
+           .page grows with its content and never scrolls itself, the sidebar never sticks: it
+           scrolled off with the document and its background stopped one viewport down. clip
+           bounds the horizontal overflow the same way without creating a scrollport. Same
+           reasoning as main's overflow-x below. */
+        overflow-x: clip;
     }
 
     /* Force the footer onto the next flex line so it spans full width instead of
