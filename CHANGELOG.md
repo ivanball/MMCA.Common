@@ -14,6 +14,65 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.137.0] - 2026-08-03
+
+A production-hardening release closing the high and medium impact gaps from the 2026-08-03
+production-patterns audit: durable DataProtection for multi-replica hosts, request-body
+fingerprinting and fail-open degradation for idempotency, cache-outage resilience, a governed SQL
+command timeout, client-side idempotency keys, retry jitter, and outbox/cache/idempotency metrics.
+Everything is additive or config-gated except the one signature change called out under Changed.
+
+### Added
+
+- **`AddCommonDataProtection()`** (MMCA.Common.Aspire): shared DataProtection key ring with Azure
+  Blob persistence and optional Key Vault at-rest key encryption. Config-gated on
+  `DataProtection:BlobStorageUri` so local dev keeps framework defaults; multi-replica hosts doing
+  cookie or antiforgery crypto stop minting per-replica ephemeral key rings.
+- **Idempotency request fingerprint**: `IdempotencyFilter` stores a SHA-256 hash of the request body
+  and answers **422 Unprocessable Entity** when an `Idempotency-Key` is reused with a different
+  payload (409 keeps meaning "original still in flight"). Records cached by earlier versions carry
+  no hash and still replay unchanged.
+- **Idempotency observability**: structured logging plus the new `MMCA.Common.Idempotency` meter
+  (`idempotency.replayed`, `idempotency.conflict` tagged by kind, `idempotency.degraded`).
+- **Outbox metrics** on the existing `MMCA.Common.Outbox` meter: `outbox.processed.count`,
+  `outbox.dispatch.lag` (OccurredOn to ProcessedOn, seconds), and an `outbox.pending.depth` gauge.
+- **Query-cache metrics**: `cqrs.query.cache.hit` / `cqrs.query.cache.miss` on the CQRS meter.
+- **`Persistence:CommandTimeoutSeconds`** (default 30): a governed, overridable SQL command timeout
+  applied by `SQLServerDbContext`.
+- **Client-side idempotency keys**: new shared `IdempotencyHeaders` constant;
+  `EntityServiceBase.AddAsync` now emits a stable `Idempotency-Key` reused across every retry
+  attempt, and `AuthenticatedServiceBase.NewIdempotencyKey()` serves hand-rolled services.
+- **`SoftDeletedUserCache`** helper: single home for the `user:deleted:{id}` marker key shape, so
+  identity modules can write the marker through on delete instead of relying on an eviction whose
+  prefix never matched.
+- **Push send dedup**: optional `DedupKey` on `SendPushNotificationCommand` and `PushNotification`
+  backed by a filtered unique index; a replay returns the original notification instead of sending
+  twice. `NotificationsController.SendAsync` is now `[Idempotent]` and maps the client key into the
+  command.
+
+### Changed
+
+- **Cache reads fail open.** `CachingQueryDecorator`, `IdempotencyFilter`, and
+  `SoftDeletedUserMiddleware` now treat cache faults as misses (logged and counted) instead of
+  failing the request: a Redis outage degrades to uncached reads and unguarded writes rather than
+  500s on every authenticated request. The soft-delete check falls back to the validator query and
+  only then proceeds open; 15-minute access tokens bound the exposure.
+- **UI retry policy**: exponential backoff gains jitter, 408 and 429 are retried, 501 and 505 are
+  not, and the policy honors the caller's `CancellationToken`; the outbox retry backoff gains
+  jitter in the same pass.
+- **Shared `APIClient` timeout**: the UI-layer HTTP client is bounded at
+  `HttpResilienceDefaults.TotalRequestTimeout` (90s) instead of the 100s framework default.
+- **Breaking (direct callers only)**: `SoftDeletedUserMiddleware.InvokeAsync` gained an `ILogger`
+  parameter. Convention-activated middleware usage (every known consumer) is unaffected.
+
+### Security
+
+- **`System.Security.Cryptography.Xml` lifted to 10.0.10.** The DataProtection package chain pulls
+  10.0.7 (five high advisories); projects with the AspNetCore framework reference prune it, but
+  Aspire AppHosts resolve it as a real package. MMCA.Common.Aspire now references the patched
+  version directly (pruning disabled for the project so the pin reaches the nuspec and package-mode
+  consumers inherit it).
+
 ## [1.136.0] - 2026-08-03
 
 A shared-layout fix release: the desktop sidebar now stays pinned while the page scrolls,
