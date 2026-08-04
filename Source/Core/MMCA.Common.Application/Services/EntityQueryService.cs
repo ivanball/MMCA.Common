@@ -278,7 +278,6 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     public virtual async Task<Result<IReadOnlyCollection<BaseLookup<TIdentifierType>>>> GetAllForLookupAsync(
         string nameProperty,
         Expression<Func<TEntity, bool>>? where = null,
-        Expression<Func<TEntity, string>>? orderBy = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default)
     {
