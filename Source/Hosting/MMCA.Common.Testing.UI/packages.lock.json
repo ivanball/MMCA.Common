@@ -4,18 +4,18 @@
     "net10.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.6.0, )",
-        "resolved": "1.6.0",
-        "contentHash": "kVnhnZlM4Yww2KWqW3uSL8isvhYsrTTBMSPAgoF8ZhMrLSoay6783AP6dQxAj1J9gvWKi3OIM4ZezdE2Y4ufCQ=="
+        "requested": "[1.7.0, )",
+        "resolved": "1.7.0",
+        "contentHash": "v1R++46dblGRBo2/fKFUfgtZOaFnDGQhqBM0AarxgZSJuumj1e1vexBbjlTv2hx3Olr3qeoJa2yUoWyv5fuJ5A=="
       },
       "bunit": {
         "type": "Direct",
-        "requested": "[2.8.6, )",
-        "resolved": "2.8.6",
-        "contentHash": "kBGHiCrn0LvUGRiDaqLxBewZXAOIIqYlJTcfh/+yaMc5XOzWm2eeuDl2+3ksK3AuLSSnVitmCLu8n1RV9CXpSQ==",
+        "requested": "[2.9.0, )",
+        "resolved": "2.9.0",
+        "contentHash": "Jz9ywwpjjYHppFDw4bIMkk5cNOy0vN74p3PzJFVIlCZicK8vpAovM5LsuNDLKE4bpwISNKrjwSrsw4SIVzT+0g==",
         "dependencies": {
-          "AngleSharp": "1.5.2",
-          "AngleSharp.Css": "1.0.0-beta.224",
+          "AngleSharp": "1.7.0",
+          "AngleSharp.Css": "1.0.1",
           "AngleSharp.Diffing": "1.1.1",
           "Microsoft.AspNetCore.Components.WebAssembly": "10.0.10",
           "Microsoft.AspNetCore.Components.WebAssembly.Authentication": "10.0.10"
@@ -23,9 +23,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.133, )",
-        "resolved": "3.0.133",
-        "contentHash": "pwJq1q4BGRKATlX41YTGRBpxp0XQIxRqpxPyMzB0eaY2aGj0v7u8qg6lIJnqbM7NHBN8sk2IjsanV2Fu8GGS7w=="
+        "requested": "[3.0.138, )",
+        "resolved": "3.0.138",
+        "contentHash": "o97FZRHWIpMeg/Mzb5Whhcqe1/95SxZLn1bkG+P8T4ijiAY6eoe9BYTYyINBVzkyl5zehQ7NB6bz1DnEgqVZmQ=="
       },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
@@ -53,9 +53,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.30.0.144632, )",
-        "resolved": "10.30.0.144632",
-        "contentHash": "e4n1kWNoFAuXcYR4uEGyMi4I5vKHcjAVmIw6k6y57UWJA1o6cxkeHmcE45xfCphM4k4G0Yo8yMhOT637AmofJw=="
+        "requested": "[10.31.0.145097, )",
+        "resolved": "10.31.0.145097",
+        "contentHash": "Kz/B+7NsmSaRgHWdd9exXHLFNAS9Dt1LmLqwiAdUHybV/z/stcOFlaGSzflekLMu7hVog0aUek2ihTiFlu06Zw=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",
@@ -68,8 +68,8 @@
       },
       "AngleSharp.Css": {
         "type": "Transitive",
-        "resolved": "1.0.0-beta.224",
-        "contentHash": "BF/hPs8sRjhR+rYkBom7WaMLN0w36Qvnu+WvoHK/gL67MrQOONkkivBTGilvta4sNix5Y8T9XVlZsRI8IU2/vA==",
+        "resolved": "1.0.1",
+        "contentHash": "6S13xNHH+SUGPZd6EO1MhkuDbpEnFroUM6A8DZpLJHQnLRTvtBJb3Ydu65s618E4gWF9FSWmM5jhKk4RIfwT2A==",
         "dependencies": {
           "AngleSharp": "[1.5.0, 2.0.0)"
         }
