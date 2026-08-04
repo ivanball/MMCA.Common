@@ -14,6 +14,17 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.140.0] - 2026-08-04
+
+A dependency-refresh release (Dependabot group #199, 16 minor/patch updates). No API or behavior
+change. Notables: MassTransit 8.5.5 to 8.5.10 (stays on the v8 line per the license pin),
+Grpc 2.80 to 2.83, bunit 2.8.6 to 2.9.0 and AngleSharp 1.6 to 1.7 (test tier),
+Testcontainers.MsSql/RabbitMq 4.8 to 4.13, Microsoft.Data.SqlClient 6.1.1 to 6.1.6,
+Asp.Versioning 10.0.1, System.IdentityModel.Tokens.Jwt 8.22.0, Scalar 2.16.17, and both analyzer
+packages (Meziantou 3.0.138, Sonar 10.31) with zero new findings at error severity. Consumers must
+align their own pins for the packages Common exposes without PrivateAssets (bunit, Grpc pair,
+Asp.Versioning, IdentityModel, Scalar) in the same sweep to avoid NU1605.
+
 ## [1.139.0] - 2026-08-04
 
 A one-item contract-honesty release.
