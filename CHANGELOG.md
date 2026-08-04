@@ -14,6 +14,71 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.138.0] - 2026-08-03
+
+The Wave 5 move-to-Common extraction (workspace extraction plan, wave 5): everything the
+2026-08-03 cross-repo scan confirmed as duplicated between MMCA.ADC and MMCA.Store moves into the
+framework, plus the long-deferred Identity use-case bases (plan items 3.2/3.3/3.4). Every addition
+is additive: no existing public member changed, no EF schema change (the `OwnsMoney` and converter
+swaps are proven facet-identical to the hand-rolled consumer blocks), and consumers keep their
+error codes, routes, and behaviors byte-for-byte except where a change is called out below.
+
+### Added
+
+- **Kestrel endpoint extension** (`ConfigureEndpointsWithHealthProbe`, MMCA.Common.Aspire): the
+  h2c-with-HTTP/1.1-health-probe listener profile previously copy-pasted across five service
+  hosts, parameterized by `HttpProtocols` so mixed-protocol hosts are the same call.
+- **`SelfHttpWarmupTaskBase`** (MMCA.Common.Aspire): the self-HTTP warm-up skeleton (server-started
+  wait, port resolution, non-fatal error handling) shared by six service hosts; subclasses supply
+  only `Name`, `WarmupPaths`, and optional HTTP-version/success-semantics overrides.
+- **`WithE2eRegistrationThrottleLift`** (MMCA.Common.Aspire.Hosting): the E2E registration-throttle
+  lift both AppHosts carried inline.
+- **EF persistence helpers** (MMCA.Common.Infrastructure): `EmailValueConverter` /
+  `PhoneNumberValueConverter` (plus nullable variants), the `OwnsMoney(...)` owned-type extension
+  (including the `NoCurrency` materialization sentinel), and `HasSoftDeleteFilter` for hand-authored
+  non-unique indexes (the sibling of `SoftDeleteUniqueIndexConvention`).
+- **`IdentityModuleDbSeederBase<TUser>`** + `SeedAccount` (MMCA.Common.Infrastructure): the
+  per-account seed idiom with app-supplied account lists, user factory, and an opt-in seed gate.
+- **`CommonInvariants`** gains `EnsurePreferredCultureIsValid`, `EnsurePreferredThemeIsValid`,
+  `EnsureMoneyIsNotNegative`, `EnsureIntIsPositive`, and `EnsureCollectionIsNotEmpty<T>`.
+- **`OwnedByUserSpecification<TEntity, TId>`** (MMCA.Common.Domain): "owned by user" filtering over
+  the audit `CreatedBy` column.
+- **Identity contracts** (MMCA.Common.Domain): `IPasswordChangeableUser`, `IUserPreferences`, and
+  `IErasableUser` (interface-dispatched delete, so aggregates that shadow `Delete()` stay correct).
+- **Users use-case handler bases** (MMCA.Common.Application, plan item 3.2): ChangePassword,
+  ChangePreferences, GetPreferences (read-repository path), and DeleteUser (virtual
+  before/after-delete hooks plus a post-commit work queue), with `UserOwnershipRule` and the
+  generic `SoftDeletedUserValidator<TUser>` (3.3), and shared `ChangePreferencesRequest` /
+  `UserPreferencesResponse` / `GetUserPreferencesQuery` payload types (MMCA.Common.Shared).
+- **`UserAccountAuthControllerBase`** (MMCA.Common.API): the password/preferences endpoints as a
+  subclass of the unchanged `AuthControllerBase`; app commands stay app-side via factory hooks.
+- **Testing**: `JwtTokenGenerator.ConfigureInProcessTokenValidation` (in-process JWT validation for
+  cross-service tiers; adds the JwtBearer package dependency), `CrossServiceFixtureBase` +
+  `TestPolling` (the multi-host Testcontainers SQL/RabbitMQ scaffold; adds Testcontainers.MsSql and
+  Testcontainers.RabbitMq, test tier only), `DependencyInjectionAssert`,
+  `ModuleConformanceTestsBase<TModule>` (Testing.Architecture), and `WebVitalsBudget` with
+  `AssertWithinBudget` (Testing.E2E).
+- **UI**: `AddUIModule<TModule>` module-registration extension. **UI.Maui** becomes the hybrid host
+  layer: `MainPageBase` (back-navigation + JSRuntime dispatch glue), the hardened
+  `MauiTokenStorageService` (degrades gracefully on OS keystore invalidation) with
+  `AddCommonMauiTokenStorage()`, and the `NativeThemeSync` component.
+
+### Fixed
+
+- **`EntityQueryService.GetAllForLookupAsync` now forwards its `where` predicate** to the
+  repository; previously the parameter was accepted and silently dropped, forcing consumers to
+  hand-roll lookup readers.
+
+### Changed
+
+- **MMCA.Common.UI.Maui packaging**: the project moves to the Razor SDK to compile its new
+  component; the WebView.Maui reference excludes build assets so consuming MAUI Blazor heads keep
+  sole ownership of the static-web-asset pipeline. No consumer-visible API change.
+- **Log text standardization**: the Users handler bases and warm-up base emit standardized message
+  templates (for example "User {UserId} password changed"); levels and semantics are unchanged, but
+  generator-assigned EventIds move to the shared holders, so telemetry keyed on EventId (rather
+  than message text) needs re-pinning.
+
 ## [1.137.0] - 2026-08-03
 
 A production-hardening release closing the high and medium impact gaps from the 2026-08-03
