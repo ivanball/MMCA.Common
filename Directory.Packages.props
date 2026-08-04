@@ -110,10 +110,10 @@
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.80" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.133" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.138" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.30.0.144632" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.31.0.145097" />
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
