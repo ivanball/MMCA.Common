@@ -53,6 +53,22 @@ public sealed class GetNotificationHistoryHandlerTests
         result.Value!.PaginationMetadata.PageSize.Should().Be(500);
     }
 
+    // ── Sub-1 page numbers ──
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    public async Task HandleAsync_WithNegativePageNumber_ReportsPageOneWithoutThrowing(int pageNumber)
+    {
+        var (sut, _) = CreateSut(totalCount: 25, pageItems: 10);
+
+        var query = new GetNotificationHistoryQuery(pageNumber, PageSize: 10);
+        Result<PagedCollectionResult<PushNotificationDTO>> result = await sut.HandleAsync(query);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.PaginationMetadata.CurrentPage.Should().Be(1);
+        result.Value.PaginationMetadata.PageSize.Should().Be(10);
+    }
+
     // ── Helpers ──
     private static (GetNotificationHistoryHandler Sut, Mock<IUnitOfWork> UnitOfWork) CreateSut(
         int totalCount, int pageItems)

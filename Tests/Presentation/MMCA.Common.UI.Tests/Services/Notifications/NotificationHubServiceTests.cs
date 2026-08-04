@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
@@ -12,11 +13,15 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// Verifies the testable surface of <see cref="NotificationHubService"/>: constructor endpoint
 /// validation, the idle lifecycle (not connected before start; stop/dispose are safe no-ops), and
 /// the channel API's argument validation, subscription registry, and disconnected no-op paths.
-/// PARTIAL BY DESIGN: <c>StartAsync</c>, the retry/backoff loop, the ReceiveNotification and
+/// The terminal-failure path of the retry loop IS covered, via the internal
+/// <c>InitialRetryDelay</c> override plus an unroutable endpoint: it is the path that regressed
+/// (H20), and a failed start used to leave the connection field populated so every later start
+/// no-opped forever.
+/// PARTIAL BY DESIGN: the successful <c>StartAsync</c>, the ReceiveNotification and
 /// ReceiveChannelEvent wiring, and the join/re-join invocations build a real SignalR
 /// <c>HubConnection</c> internally via <c>HubConnectionBuilder</c> with no injectable extension point, so
-/// exercising them would attempt real network connections with multi-second backoff. Left
-/// uncovered rather than changing Source (covered end to end by the consuming apps' E2E suites).
+/// exercising them would need a live hub. Left uncovered rather than changing Source (covered end
+/// to end by the consuming apps' E2E suites).
 /// The reference-counted channel membership that decides WHETHER those invocations happen is
 /// covered directly in <see cref="ChannelReferenceCounterTests"/>, since the decision is the part
 /// that regressed and it is reachable without a connection.
@@ -170,6 +175,62 @@ public sealed class NotificationHubServiceTests
 
         await act.Should().NotThrowAsync();
         sut.IsConnected.Should().BeFalse();
+    }
+
+    // ── Terminal connection failure must not poison later starts (H20) ──
+    [Fact]
+    public async Task StartAsync_AfterExhaustedRetries_RetriesOnNextCall()
+    {
+        var logger = new CapturingLogger();
+        var tokenStorage = new Mock<ITokenStorageService>();
+
+        // The access-token provider runs before the negotiate request, so throwing here fails every
+        // attempt without any network wait.
+        tokenStorage.Setup(t => t.GetAccessTokenAsync()).ThrowsAsync(new InvalidOperationException("no session"));
+
+        await using var sut = new NotificationHubService(
+            tokenStorage.Object,
+            Options.Create(new ApiSettings { ApiEndpoint = "http://127.0.0.1:1" }),
+            logger)
+        {
+            InitialRetryDelay = TimeSpan.Zero,
+        };
+
+        await sut.StartAsync();
+        await sut.StartAsync();
+
+        logger.FailureCount.Should().Be(
+            2,
+            "a start that never connected must leave no connection behind, or the second call no-ops forever");
+        sut.IsConnected.Should().BeFalse();
+    }
+
+    /// <summary>Counts the terminal "Failed to connect" warning; the retry loop's own messages are ignored.</summary>
+    private sealed class CapturingLogger : ILogger<NotificationHubService>
+    {
+        private int _failureCount;
+
+        public int FailureCount => Volatile.Read(ref _failureCount);
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+
+            if (formatter(state, exception).Contains("Failed to connect", StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref _failureCount);
+            }
+        }
     }
 }
 

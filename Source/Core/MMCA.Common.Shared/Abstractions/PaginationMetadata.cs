@@ -30,17 +30,45 @@ public sealed record PaginationMetadata
         CurrentPage = currentPage;
     }
 
+    // The init accessors re-validate because object initializers, record "with" expressions and
+    // System.Text.Json (which builds this type through the parameterless constructor plus the init
+    // setters) all bypass the constructor guards above.
+
     /// <summary>Gets the total number of items across all pages.</summary>
     [DataMember(Order = 1)]
-    public int TotalItemCount { get; init; }
+    public int TotalItemCount
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            field = value;
+        }
+    }
 
     /// <summary>Gets the number of items per page.</summary>
     [DataMember(Order = 2)]
-    public int PageSize { get; init; }
+    public int PageSize
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            field = value;
+        }
+    }
 
     /// <summary>Gets the 1-based current page number.</summary>
     [DataMember(Order = 3)]
-    public int CurrentPage { get; init; }
+    public int CurrentPage
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            field = value;
+        }
+    }
 
     /// <summary>Gets the total number of pages (ceiling division of total items by page size).</summary>
     [IgnoreDataMember]

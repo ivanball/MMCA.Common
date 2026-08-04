@@ -7,7 +7,8 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// <summary>
 /// Decorator that invalidates cached data after a command succeeds, when the command
 /// implements the <see cref="ICacheInvalidating"/> marker interface. Cache entries
-/// matching the command's <see cref="ICacheInvalidating.CachePrefix"/> are evicted.
+/// matching the command's <see cref="ICacheInvalidating.CachePrefix"/> are evicted; an empty or
+/// whitespace prefix is the opt-out and evicts nothing.
 /// <para>
 /// Invalidation is intentionally skipped on failure results to avoid evicting valid
 /// cache entries when the mutation did not actually persist any changes.
@@ -48,8 +49,12 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
     {
         var result = await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
-        // Only invalidate cache on success — failed commands should not evict valid cache entries
-        if (command is ICacheInvalidating cacheInvalidating && !IsFailure(result))
+        // Only invalidate cache on success — failed commands should not evict valid cache entries.
+        // An empty prefix is the opt-out for commands that carry a defaulted prefix, and the guard
+        // is load-bearing either way: RemoveByPrefixAsync("") would evict the entire cache.
+        if (command is ICacheInvalidating cacheInvalidating
+            && !string.IsNullOrWhiteSpace(cacheInvalidating.CachePrefix)
+            && !IsFailure(result))
         {
             try
             {

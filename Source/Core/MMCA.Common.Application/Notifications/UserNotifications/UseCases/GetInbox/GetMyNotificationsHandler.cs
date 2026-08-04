@@ -54,7 +54,9 @@ public sealed class GetMyNotificationsHandler(
             joined.Skip(skip).Take(take),
             cancellationToken).ConfigureAwait(false);
 
-        var metadata = new PaginationMetadata(totalCount, take, query.PageNumber);
+        // The floor mirrors what PagingMath.Clamp already applied for the read, so the metadata
+        // reports the page actually served instead of throwing on a sub-1 page number.
+        var metadata = new PaginationMetadata(totalCount, take, Math.Max(query.PageNumber, 1));
         return Result.Success(new PagedCollectionResult<UserNotificationDTO>(paged, metadata));
     }
 }

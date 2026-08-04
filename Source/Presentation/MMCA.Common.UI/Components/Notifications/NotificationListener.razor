@@ -38,26 +38,37 @@
     {
         HubService.NotificationCallback = async (title, body) =>
         {
-            await InvokeAsync(() =>
+            try
             {
-                // Optimistic: increment immediately so the badge updates without waiting for an API round-trip
-                NotificationState.IncrementUnreadCount();
-                // Ask NotificationBell to also fetch the authoritative count from the API
-                NotificationState.RequestRefresh();
-                Snackbar.Add(builder =>
+                await InvokeAsync(() =>
                 {
-                    builder.OpenElement(0, "strong");
-                    builder.AddContent(1, title);
-                    builder.CloseElement();
-                    builder.OpenElement(2, "br");
-                    builder.CloseElement();
-                    builder.AddContent(3, body);
-                }, Severity.Info, options =>
-                {
-                    options.RequireInteraction = true;
-                    options.SnackbarVariant = Variant.Filled;
+                    // Optimistic: increment immediately so the badge updates without waiting for an API round-trip
+                    NotificationState.IncrementUnreadCount();
+                    // Ask NotificationBell to also fetch the authoritative count from the API
+                    NotificationState.RequestRefresh();
+                    Snackbar.Add(builder =>
+                    {
+                        builder.OpenElement(0, "strong");
+                        builder.AddContent(1, title);
+                        builder.CloseElement();
+                        builder.OpenElement(2, "br");
+                        builder.CloseElement();
+                        builder.AddContent(3, body);
+                    }, Severity.Info, options =>
+                    {
+                        options.RequireInteraction = true;
+                        options.SnackbarVariant = Variant.Filled;
+                    });
                 });
-            });
+            }
+            catch (ObjectDisposedException)
+            {
+                // Component was disposed between the hub event and the render dispatch.
+            }
+            catch (InvalidOperationException)
+            {
+                // Same race, surfaced by the renderer as a disposed/unavailable dispatcher.
+            }
         };
 
         await HubService.StartAsync();

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Abstractions;
 
@@ -102,5 +103,50 @@ public class PaginationMetadataTests
     [Fact]
     public void Constructor_WithNegativeCurrentPage_Throws() =>
         FluentActions.Invoking(() => new PaginationMetadata(10, 10, -1))
+            .Should().Throw<ArgumentOutOfRangeException>();
+
+    // ── Object-initializer validation (bypasses the constructor guards) ──
+    [Fact]
+    public void ObjectInitializer_WithNegativeTotalItemCount_Throws() =>
+        FluentActions.Invoking(() => new PaginationMetadata { TotalItemCount = -1 })
+            .Should().Throw<ArgumentOutOfRangeException>();
+
+    [Fact]
+    public void ObjectInitializer_WithNegativePageSize_Throws() =>
+        FluentActions.Invoking(() => new PaginationMetadata { PageSize = -1 })
+            .Should().Throw<ArgumentOutOfRangeException>();
+
+    [Fact]
+    public void ObjectInitializer_WithNegativeCurrentPage_Throws() =>
+        FluentActions.Invoking(() => new PaginationMetadata { CurrentPage = -1 })
+            .Should().Throw<ArgumentOutOfRangeException>();
+
+    [Fact]
+    public void WithExpression_WithNegativeValue_Throws() =>
+        FluentActions.Invoking(() => new PaginationMetadata(100, 10, 1) with { PageSize = -1 })
+            .Should().Throw<ArgumentOutOfRangeException>();
+
+    // ── JSON round-trip ──
+    // Pins the deserialization path the init accessors depend on: with two public constructors and
+    // no [JsonConstructor], System.Text.Json builds through the parameterless one and the setters.
+    [Fact]
+    public void JsonRoundTrip_PreservesCoreValues()
+    {
+        var original = new PaginationMetadata(101, 10, 2);
+
+        string json = JsonSerializer.Serialize(original);
+        PaginationMetadata? restored = JsonSerializer.Deserialize<PaginationMetadata>(json);
+
+        restored.Should().NotBeNull();
+        restored!.TotalItemCount.Should().Be(101);
+        restored.PageSize.Should().Be(10);
+        restored.CurrentPage.Should().Be(2);
+        restored.TotalPageCount.Should().Be(11);
+    }
+
+    [Fact]
+    public void JsonDeserialize_WithNegativeValue_Throws() =>
+        FluentActions.Invoking(() => JsonSerializer.Deserialize<PaginationMetadata>(
+                """{"TotalItemCount":-1,"PageSize":10,"CurrentPage":1}"""))
             .Should().Throw<ArgumentOutOfRangeException>();
 }

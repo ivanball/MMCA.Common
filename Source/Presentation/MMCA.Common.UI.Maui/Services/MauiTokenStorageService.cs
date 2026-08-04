@@ -31,8 +31,22 @@ public sealed class MauiTokenStorageService : ITokenStorageService
     /// <inheritdoc />
     public async Task SetTokensAsync(string accessToken, string refreshToken)
     {
-        await SetAsync(AccessTokenKey, accessToken);
+        // Refresh first: if it fails the old pair stays coherent. If the access write then fails,
+        // drop both so storage is a clean signed-out state instead of a mismatched pair holding a
+        // new access token against a stale refresh token whose refresh path is already dead.
         await SetAsync(RefreshTokenKey, refreshToken);
+        try
+        {
+            await SetAsync(AccessTokenKey, accessToken);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync; rethrown after the cleanup
+        catch
+#pragma warning restore CA1031
+        {
+            TryRemove(AccessTokenKey);
+            TryRemove(RefreshTokenKey);
+            throw;
+        }
     }
 
     /// <inheritdoc />

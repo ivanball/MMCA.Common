@@ -77,6 +77,19 @@ public sealed class DeleteEntityHandlerTests
 
         _repository.Verify(r => r.GetByIdAsync(1, token), Times.Once);
     }
+
+    // ── Cache invalidation contract (M50) ──
+    // The generic controller constructs this command itself, so the default prefix is the only
+    // thing that makes a delete evict the aggregate's cached reads.
+    [Fact]
+    public void CachePrefix_DefaultsToEntityFullNameConvention() =>
+        new DeleteEntityCommand<TestAggregateEntity, int>(1).CachePrefix
+            .Should().Be(typeof(TestAggregateEntity).FullName + ":");
+
+    [Fact]
+    public void CachePrefix_CanBeOverriddenToOptOut() =>
+        (new DeleteEntityCommand<TestAggregateEntity, int>(1) with { CachePrefix = string.Empty })
+            .CachePrefix.Should().BeEmpty();
 }
 
 // ── Test aggregate entity (must be public for Moq DynamicProxy) ──
