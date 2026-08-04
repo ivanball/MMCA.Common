@@ -38,8 +38,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <!-- BlazorWebView: the control MainPageBase dispatches through to reach the renderer's
-         IJSRuntime. Versioned on the MAUI train in Directory.Packages.props. -->
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" />
+         IJSRuntime. Versioned on the MAUI train in Directory.Packages.props.
+         ExcludeAssets=build/buildTransitive: with the Razor SDK, letting this package's
+         .targets run HERE makes the library a static-web-asset producer whose transitive
+         blazor.modules.json collides with the one every consuming MAUI Blazor head
+         generates itself (Conflicting assets with the same target path
+         '_framework/blazor.modules.json'). Compile-time assemblies still flow; the heads
+         reference this package directly, so its build targets run where they belong. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" ExcludeAssets="build;buildTransitive" />
     <PackageReference Include="Plugin.LocalNotification" />
     <PackageReference Include="CommunityToolkit.Maui" />
     <PackageReference Include="MinVer">
