@@ -15,12 +15,20 @@
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
     <PackageReference Include="AwesomeAssertions" />
+    <!-- JwtTokenGenerator.ConfigureInProcessTokenValidation re-points a host's JwtBearerOptions at the
+         committed test key, so the options type must be referenced here rather than in every test project. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.FeatureManagement" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Respawn" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <!-- CrossServiceFixtureBase owns the SQL Server + RabbitMQ container lifecycle for the cross-service
+         real-broker tier. Consumers of that tier need a Docker daemon; the single-host
+         SqlServerIntegrationTestFixtureBase does not touch these. -->
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
     <PackageReference Include="xunit.v3.extensibility.core" />
   </ItemGroup>
   <ItemGroup>

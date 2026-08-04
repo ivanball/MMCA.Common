@@ -298,6 +298,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
 
         return Result.Success(await Repository.GetAllForLookupAsync(
                 nameProperty,
+                where: where,
                 asTracking: asTracking,
                 cancellationToken: cancellationToken).ConfigureAwait(false));
     }

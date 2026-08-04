@@ -42,12 +42,11 @@ public sealed class SoftDeleteUniqueIndexConvention(DataSource engine) : IModelF
 
     private void ApplyFilterToUniqueIndexes(IConventionEntityType entityType)
     {
-        var isDeletedColumn = entityType.FindProperty(nameof(IAuditableEntity.IsDeleted))?.GetColumnName()
-            ?? nameof(IAuditableEntity.IsDeleted);
-
-        var filterSql = engine == DataSource.SQLServer
-            ? $"[{isDeletedColumn}] = 0"
-            : $"\"{isDeletedColumn}\" = 0";
+        // Same predicate builder a hand-authored index reaches through HasSoftDeleteFilter(), so the
+        // automatic and the opt-in path can never disagree about quoting or column name.
+        var filterSql = SoftDeleteFilterSql.Build(engine, entityType);
+        if (filterSql is null)
+            return;
 
         foreach (var index in entityType.GetIndexes())
         {

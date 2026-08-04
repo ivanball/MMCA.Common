@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AwesomeAssertions;
 using Microsoft.Playwright;
 
 namespace MMCA.Common.Testing.E2E.Infrastructure;
@@ -10,9 +12,10 @@ namespace MMCA.Common.Testing.E2E.Infrastructure;
 /// (rubric §12). No third-party JS or network egress: an init script installs the observers before
 /// first paint and accumulates into <c>window.__vitals</c>, which <see cref="CollectAsync"/> reads back.
 /// LCP/CLS are Chromium-only metrics, so on Firefox/WebKit those fields stay 0 (the observers fail
-/// silently and the budget assertions pass) — this is the client-side analogue of a backend k6 load
-/// test, not a cross-engine field measurement. Consumers keep their own budget-asserting tests; this
-/// class is only the measurement infrastructure.
+/// silently and the budget assertions pass): this is the client-side analogue of a backend k6 load
+/// test, not a cross-engine field measurement. Consumers own which pages carry a budget and what the
+/// numbers are (their runners and hosting differ, so their calibrated maxima do too); this class is the
+/// measurement infrastructure and <see cref="WebVitalsBudget"/> is the shared assert mechanics.
 /// </summary>
 public static class WebVitalsCollector
 {
@@ -85,3 +88,71 @@ public sealed record WebVitalsSample
 
 /// <summary>The artifact envelope written to <c>web-vitals-{label}.json</c>.</summary>
 public sealed record WebVitalsArtifact(string Label, string Path, WebVitalsSample Vitals);
+
+/// <summary>
+/// A per-page Core Web Vitals budget plus the assertion mechanics shared by every consumer's budget test.
+/// The defaults are the Core Web Vitals "good" band (LCP 2500 / FCP 1800 / CLS 0.1) plus a TTFB ceiling and
+/// a single-interaction INP sample ceiling; a consumer whose measured CI maxima justify tighter numbers
+/// passes its own, which is the point of keeping the budget itself consumer-side.
+/// </summary>
+/// <param name="Lcp">Largest Contentful Paint ceiling, milliseconds.</param>
+/// <param name="Fcp">First Contentful Paint ceiling, milliseconds.</param>
+/// <param name="Ttfb">Time To First Byte ceiling, milliseconds.</param>
+/// <param name="Cls">Cumulative Layout Shift ceiling (unitless).</param>
+/// <param name="Inp">Single-interaction INP sample ceiling, milliseconds.</param>
+public sealed record WebVitalsBudget(
+    double Lcp = 2500,
+    double Fcp = 1800,
+    double Ttfb = 800,
+    double Cls = 0.1,
+    double Inp = 500)
+{
+    /// <summary>
+    /// Formats one sample as the single-line, artifact-citable log record the budget tests emit to test
+    /// output alongside the JSON artifact.
+    /// </summary>
+    /// <param name="label">The artifact label (e.g. <c>sessions</c>).</param>
+    /// <param name="path">The page path measured.</param>
+    /// <param name="sample">The measured sample.</param>
+    /// <returns>The formatted line.</returns>
+    public static string Describe(string label, string path, WebVitalsSample sample)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"[web-vitals:{label}] path={path} LCP={sample.Lcp:F0}ms FCP={sample.Fcp:F0}ms CLS={sample.Cls:F3} TTFB={sample.Ttfb:F0}ms INP-sample={sample.Inp:F0}ms");
+    }
+
+    /// <summary>
+    /// Writes the sample line (when <paramref name="writeLine"/> is supplied, normally
+    /// <c>ITestOutputHelper.WriteLine</c>) and asserts every metric is within budget. INP is asserted only
+    /// when a sample was actually recorded: no interaction clearing the 16 ms event threshold leaves it at
+    /// 0, and 0 must not read as a pass-by-absence nor as a failure.
+    /// </summary>
+    /// <param name="sample">The measured sample.</param>
+    /// <param name="label">The artifact label, echoed in the output line.</param>
+    /// <param name="path">The page path measured, echoed in every failure message.</param>
+    /// <param name="writeLine">Optional sink for the sample line.</param>
+    public void AssertWithinBudget(WebVitalsSample sample, string label, string path, Action<string>? writeLine = null)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+
+        writeLine?.Invoke(Describe(label, path, sample));
+
+        sample.Lcp.Should().BeLessThanOrEqualTo(Lcp, Message("LCP", sample.Lcp, Lcp, path));
+        sample.Fcp.Should().BeLessThanOrEqualTo(Fcp, Message("FCP", sample.Fcp, Fcp, path));
+        sample.Ttfb.Should().BeLessThanOrEqualTo(Ttfb, Message("TTFB", sample.Ttfb, Ttfb, path));
+        sample.Cls.Should().BeLessThanOrEqualTo(Cls, Message("CLS", sample.Cls, Cls, path, "F3"));
+
+        if (sample.Inp > 0)
+        {
+            sample.Inp.Should().BeLessThanOrEqualTo(Inp, Message("INP-sample", sample.Inp, Inp, path));
+        }
+    }
+
+    private static string Message(string metric, double measured, double budget, string path, string format = "F0") =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"{metric} {measured.ToString(format, CultureInfo.InvariantCulture)} exceeded budget {budget} on {path}");
+}

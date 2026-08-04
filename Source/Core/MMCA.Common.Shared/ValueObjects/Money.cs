@@ -12,7 +12,10 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// of the target currency.
 /// </summary>
 /// <remarks>
-/// Configured as an EF owned type via <c>OwnsOne</c> in entity configurations.
+/// Configured as an EF owned type via <c>OwnsOne</c> in entity configurations; prefer the shipped
+/// <c>MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.OwnsMoney</c>
+/// helper, which produces that mapping (amount column plus ISO 4217 code column) together with the
+/// currency round-trip fallback every hand-rolled block has to repeat.
 /// </remarks>
 [DataContract]
 public sealed record Money : ValueObject

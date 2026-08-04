@@ -1,0 +1,53 @@
+@using MMCA.Common.UI.Services
+@inject ThemeService ThemeService
+@implements IDisposable
+
+@* Renders nothing. Bridges the Blazor Day/Dark preference (ADR-028) to MAUI's own AppTheme so the
+   NATIVE chrome follows the in-app toggle. Without it the two disagree: ThemeService only drives the
+   MudThemeProvider inside the WebView, while Application.UserAppTheme was never set at all, so the
+   native side kept tracking the OS. Dark mode on a light-mode phone left the page background behind
+   the WebView (visible on cold start, and around the safe areas) rendering light.
+
+   It ships from MMCA.Common.UI.Maui rather than MMCA.Common.UI by necessity: Application and
+   MainThread are MAUI types, so the plain net10.0 MMCA.Common.UI (shared with the Blazor Web heads)
+   cannot reference them. Hybrid heads render it by listing it in an IUIModule's
+   LayoutComponentTypes. *@
+
+@code {
+    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // MmcaThemeProviders resolves the stored preference on ITS first render and raises OnChange,
+        // which normally lands here. Layout components have no guaranteed order relative to it, so if
+        // that already happened before this component initialized, catch up now instead of waiting for
+        // a toggle that may never come.
+        if (firstRender && ThemeService.IsInitialized)
+        {
+            Apply();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e) => Apply();
+
+    private void Apply()
+    {
+        var app = Microsoft.Maui.Controls.Application.Current;
+        if (app is null)
+        {
+            return;
+        }
+
+        var theme = ThemeService.IsDarkMode ? AppTheme.Dark : AppTheme.Light;
+        if (app.UserAppTheme == theme)
+        {
+            return;
+        }
+
+        // OnChange is raised from the renderer's dispatcher, which IS the MAUI UI thread, but
+        // InitializeAsync resumes off a JS interop await, so do not assume it.
+        MainThread.BeginInvokeOnMainThread(() => app.UserAppTheme = theme);
+    }
+
+    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
+}

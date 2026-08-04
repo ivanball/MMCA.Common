@@ -106,6 +106,9 @@
          Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
          upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
+    <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
+         versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.80" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.133" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
@@ -130,6 +133,10 @@
          Microsoft.Extensions.Caching.StackExchangeRedis supplies the concrete RedisCache the shipped
          code only sees as IDistributedCache. -->
     <PackageVersion Include="Testcontainers.Redis" Version="4.8.0" />
+    <!-- Multi-host cross-service fixture base in MMCA.Common.Testing (Wave 5.8): SQL Server +
+         RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.8.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.8.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.10" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />

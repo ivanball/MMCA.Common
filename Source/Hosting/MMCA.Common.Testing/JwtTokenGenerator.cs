@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 namespace MMCA.Common.Testing;
@@ -149,5 +150,41 @@ public static class JwtTokenGenerator
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// Re-points a Bearer scheme at the in-memory <see cref="DefaultPublicKeyPem"/> RSA key so a test host
+    /// validates tokens minted by <see cref="GenerateToken"/> without any JWKS/OIDC endpoint being
+    /// reachable. Call it from a <c>PostConfigure&lt;JwtBearerOptions&gt;</c> in a
+    /// <c>WebApplicationFactory</c> override: <c>AddForwardedJwtBearer</c> otherwise fetches the issuer and
+    /// signing keys from the Identity service's JWKS document through the gateway, which no in-process test
+    /// topology serves. Nulling <see cref="JwtBearerOptions.Authority"/> and
+    /// <see cref="JwtBearerOptions.ConfigurationManager"/> stops that discovery; the handler then validates
+    /// against the static key set below.
+    /// </summary>
+    /// <param name="options">The Bearer options to re-point (the scheme the host already registered).</param>
+    /// <param name="audience">The audience the host issues and validates (its <c>Jwt:Audience</c>).</param>
+    public static void ConfigureInProcessTokenValidation(JwtBearerOptions options, string audience)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        options.Authority = null;
+        options.ConfigurationManager = null;
+        options.RequireHttpsMetadata = false;
+
+        RSAParameters parameters;
+        using (var rsa = RSA.Create())
+        {
+            rsa.ImportFromPem(DefaultPublicKeyPem);
+            parameters = rsa.ExportParameters(includePrivateParameters: false);
+        }
+
+        options.TokenValidationParameters.ValidateIssuerSigningKey = true;
+        options.TokenValidationParameters.IssuerSigningKey =
+            new RsaSecurityKey(parameters) { KeyId = DefaultKeyId };
+        options.TokenValidationParameters.ValidateIssuer = true;
+        options.TokenValidationParameters.ValidIssuer = DefaultIssuer;
+        options.TokenValidationParameters.ValidateAudience = true;
+        options.TokenValidationParameters.ValidAudience = audience;
     }
 }

@@ -1,6 +1,8 @@
 using AwesomeAssertions;
 using MMCA.Common.Domain.Invariants;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Globalization;
+using MMCA.Common.Shared.ValueObjects;
 
 namespace MMCA.Common.Domain.Tests.Invariants;
 
@@ -135,5 +137,181 @@ public sealed class CommonInvariantsTests
             null!, "Test.Null", "Data is required.", "Upload", "File");
 
         result.IsFailure.Should().BeTrue();
+    }
+
+    // ── EnsureIntIsPositive ──
+    [Fact]
+    public void EnsureIntIsPositive_WithPositiveValue_ReturnsSuccess()
+    {
+        Result result = CommonInvariants.EnsureIntIsPositive(
+            1, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public void EnsureIntIsPositive_WithZeroOrNegative_ReturnsFailure(int value)
+    {
+        Result result = CommonInvariants.EnsureIntIsPositive(
+            value, "Test.Quantity.NotPositive", "Quantity must be positive.", "Create", "Quantity");
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors[0].Code.Should().Be("Test.Quantity.NotPositive");
+        result.Errors[0].Message.Should().Be("Quantity must be positive.");
+        result.Errors[0].Type.Should().Be(ErrorType.Invariant);
+    }
+
+    // ── EnsureMoneyIsNotNegative ──
+    [Fact]
+    public void EnsureMoneyIsNotNegative_WithPositiveAmount_ReturnsSuccess()
+    {
+        Money money = Money.Create(10.50m, Currency.Usd).Value!;
+
+        Result result = CommonInvariants.EnsureMoneyIsNotNegative(
+            money, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EnsureMoneyIsNotNegative_WithZeroAmount_ReturnsSuccess()
+    {
+        var money = Money.Zero(Currency.Usd);
+
+        Result result = CommonInvariants.EnsureMoneyIsNotNegative(
+            money, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EnsureMoneyIsNotNegative_WithNegativeAmount_ReturnsFailure()
+    {
+        Money money = Money.Create(-0.01m, Currency.Eur).Value!;
+
+        Result result = CommonInvariants.EnsureMoneyIsNotNegative(
+            money, "Test.Price.Negative", "Price cannot be negative.", "Create", "Price");
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors[0].Code.Should().Be("Test.Price.Negative");
+        result.Errors[0].Type.Should().Be(ErrorType.Invariant);
+    }
+
+    [Fact]
+    public void EnsureMoneyIsNotNegative_WithNull_ReturnsFailure()
+    {
+        Result result = CommonInvariants.EnsureMoneyIsNotNegative(
+            null!, "Test.Price.Missing", "Price is required.", "Create", "Price");
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    // ── EnsureCollectionIsNotEmpty ──
+    [Fact]
+    public void EnsureCollectionIsNotEmpty_WithItems_ReturnsSuccess()
+    {
+        Result result = CommonInvariants.EnsureCollectionIsNotEmpty<string>(
+            ["line"], "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EnsureCollectionIsNotEmpty_WithEmptyCollection_ReturnsFailure()
+    {
+        Result result = CommonInvariants.EnsureCollectionIsNotEmpty<string>(
+            [], "Test.Lines.Empty", "Order must not be empty.", "Create", "OrderLines");
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors[0].Code.Should().Be("Test.Lines.Empty");
+        result.Errors[0].Type.Should().Be(ErrorType.Invariant);
+    }
+
+    [Fact]
+    public void EnsureCollectionIsNotEmpty_WithNull_ReturnsFailure()
+    {
+        Result result = CommonInvariants.EnsureCollectionIsNotEmpty<string>(
+            null!, "Test.Lines.Null", "Order must not be empty.", "Create", "OrderLines");
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    // ── EnsurePreferredCultureIsValid ──
+    [Fact]
+    public void EnsurePreferredCultureIsValid_WithNull_ReturnsSuccess()
+    {
+        Result result = CommonInvariants.EnsurePreferredCultureIsValid(
+            null, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EnsurePreferredCultureIsValid_WithSupportedCulture_ReturnsSuccess()
+    {
+        Result result = CommonInvariants.EnsurePreferredCultureIsValid(
+            SupportedCultures.Default, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("xx-YY")]
+    public void EnsurePreferredCultureIsValid_WithUnsupportedCulture_ReturnsFailure(string culture)
+    {
+        Result result = CommonInvariants.EnsurePreferredCultureIsValid(
+            culture, "Test.Culture.Invalid", "Culture is not supported.", "SetPreferences", "Culture");
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors[0].Code.Should().Be("Test.Culture.Invalid");
+        result.Errors[0].Type.Should().Be(ErrorType.Invariant);
+    }
+
+    // ── EnsurePreferredThemeIsValid ──
+    [Fact]
+    public void EnsurePreferredThemeIsValid_WithNull_ReturnsSuccess()
+    {
+        Result result = CommonInvariants.EnsurePreferredThemeIsValid(
+            null, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("light")]
+    [InlineData("dark")]
+    [InlineData("LIGHT")]
+    [InlineData("Dark")]
+    public void EnsurePreferredThemeIsValid_WithKnownTheme_ReturnsSuccess(string theme)
+    {
+        Result result = CommonInvariants.EnsurePreferredThemeIsValid(
+            theme, "Code", "Message", "Source", "Target");
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("neon")]
+    public void EnsurePreferredThemeIsValid_WithUnknownTheme_ReturnsFailure(string theme)
+    {
+        Result result = CommonInvariants.EnsurePreferredThemeIsValid(
+            theme, "Test.Theme.Invalid", "Theme is not valid.", "SetPreferences", "Theme");
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors[0].Code.Should().Be("Test.Theme.Invalid");
+        result.Errors[0].Type.Should().Be(ErrorType.Invariant);
+    }
+
+    [Fact]
+    public void ThemeConstants_MatchTheAcceptedValues()
+    {
+        CommonInvariants.LightTheme.Should().Be("light");
+        CommonInvariants.DarkTheme.Should().Be("dark");
     }
 }
