@@ -14,6 +14,71 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.141.0] - 2026-08-04
+
+A bug-hunt closure release: ten verified defects across Shared, Application, Infrastructure, API, UI
+and MAUI, each reproduced against source before the fix. No public API changed and nothing here is
+breaking, but one item changes a generated index and therefore needs a consumer migration (see
+below).
+
+### Fixed
+
+- **Sub-1 page numbers no longer 500 the notification reads (H19).** Both notification handlers
+  passed the raw `PageNumber` into `PaginationMetadata`, which throws on a negative, even though
+  `PagingMath` had already floored the page to 1 for the query itself. The metadata page is now
+  floored the same way, matching `EntityQueryService`.
+- **A failed notification-hub connect no longer disables the hub for the process lifetime (H20).**
+  `NotificationHubService` left the connection field populated after a terminal connect failure, so
+  every later `StartAsync` no-opped at the null guard. Automatic reconnect only covers drops after a
+  successful start, so live notifications never recovered. A connection that never started is now
+  cleared and disposed.
+- **Deleting an aggregate invalidates its cached reads (M50).** `DeleteEntityCommand` implemented no
+  cache contract, leaving every cached read of a deleted aggregate stale. It now implements
+  `ICacheInvalidating` against the aggregate-prefix convention consumers already key under; an empty
+  prefix opts out.
+- **`BETWEEN` rejects malformed ranges (M51).** The operator validated through `ParseList`, which
+  drops unparseable and empty segments, so `5,abc,10` and `5,,10` passed as two-bound ranges and the
+  strategy applied bounds the caller never asked for. Exactly two parseable segments are now
+  required.
+- **Cookie session refresh no longer serializes every user behind one lock (M52).**
+  `CookieSessionRefresher` held a single process-wide semaphore across the outbound refresh call, so
+  unrelated users' cold navigations queued behind whichever refresh was in flight. The lock is now
+  striped by refresh token via `KeyedSemaphoreStripe`.
+- **Concurrent token hydration stops losing a token (M53).** Both token storage services used an
+  unguarded `??=` for single-flight hydration; on a genuinely multi-threaded Blazor Server circuit
+  the later of two hydrates overwrote the other's token. The slot is now taken under a `Lock` and
+  each caller clears only its own task.
+- **A notification arriving after teardown no longer throws back at the hub (M54).** The
+  `NotificationListener` callback dispatched a render unguarded, so an event delivered after the
+  component was disposed surfaced inside the hub service's receive handler. It now carries the same
+  `ObjectDisposedException` / `InvalidOperationException` guard as its sibling components.
+- **MAUI token writes are ordered so a partial failure stays recoverable (M55).**
+  `MauiTokenStorageService` wrote the access token before the refresh token with no rollback, so a
+  failed refresh write left a new access token paired with a stale refresh token whose refresh path
+  was already dead. Refresh is written first and a failed access write drops both. H14 semantics are
+  unchanged.
+- **`PaginationMetadata` cannot be constructed invalid (M56).** Validation lived only in the
+  constructor, so object initializers, `with` expressions and System.Text.Json could each build a
+  negative instance. The properties are now semi-auto and validate in `init`. The `init` accessors
+  are deliberate: the record has two explicit constructors and no `[JsonConstructor]`, so
+  deserialization runs through the parameterless constructor plus init setters, and removing them
+  would produce all-zero metadata in every client reading a paged response.
+- **Soft-deleted push notifications release their dedup slot (M58).**
+  `PushNotificationConfiguration` declared its unique dedup index with a hand-authored filter, and
+  `SoftDeleteUniqueIndexConvention` deliberately leaves hand-authored filters alone, so this was the
+  one unique index on a soft-deletable entity without the `IsDeleted = 0` predicate. A soft-deleted
+  notification therefore occupied its dedup key forever and every later send under that key was
+  rejected by an index the application could not see. The index now opts in through
+  `HasSoftDeleteFilter(additionalFilter: "[DedupKey] IS NOT NULL")`, the shared predicate builder the
+  convention itself uses, which reads the column name from the model and the identifier quoting from
+  the engine instead of hard-coding SQL Server syntax.
+
+### Consumer action required
+
+M58 changes a generated index, so consumers that map `PushNotification` need an EF migration in the
+same sweep that takes this version. It is index-only (drop and recreate with the composed filter);
+there is no table or column change and no data movement.
+
 ## [1.140.0] - 2026-08-04
 
 A dependency-refresh release (Dependabot group #199, 16 minor/patch updates). No API or behavior
