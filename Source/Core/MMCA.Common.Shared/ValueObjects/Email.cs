@@ -7,7 +7,10 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// <summary>
 /// Immutable value object representing a validated email address. The value is normalized
 /// to lowercase at creation time. Configured in EF via <c>HasConversion</c> (not <c>OwnsOne</c>)
-/// so the backing column remains <c>nvarchar</c>.
+/// so the backing column remains <c>nvarchar</c>: pass the shipped
+/// <c>MMCA.Common.Infrastructure.Persistence.Conversions.EmailValueConverter</c>, or
+/// <c>NullableEmailValueConverter</c> for an optional <c>Email?</c> property, rather than
+/// hand-rolling the lambda pair per entity configuration.
 /// </summary>
 [DataContract]
 public sealed record Email : ValueObject

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
@@ -25,6 +26,13 @@ public static class Extensions
     /// Default Aspire resource name used for the RabbitMQ container.
     /// </summary>
     public const string DefaultBrokerResourceName = "rabbitmq";
+
+    /// <summary>
+    /// Registrations per IP per hour allowed while an E2E suite is running (see
+    /// <c>WithE2eRegistrationThrottleLift</c>). High enough that no suite can reach it; production
+    /// keeps the real anti-abuse throttle.
+    /// </summary>
+    public const int E2eRegistrationsPerIpPerHour = 1000;
 
     extension(IDistributedApplicationBuilder builder)
     {
@@ -141,6 +149,45 @@ public static class Extensions
                 .WithEnvironment("Jwt__RsaPrivateKeyPem", privateKey)
                 .WithEnvironment("Jwt__RsaPublicKeyPem", publicKey)
                 .WithEnvironment("Jwks__RsaPublicKeyPem", publicKey);
+        }
+
+        /// <summary>
+        /// CI/E2E only: lifts the per-IP registration throttle on the Identity service
+        /// (<c>LoginProtectionSettings.MaxRegistrationsPerIpPerHour</c>, default 10) to
+        /// <see cref="E2eRegistrationsPerIpPerHour"/> when the E2E workflow asks for it. An E2E suite
+        /// registers far more than ten accounts from a single localhost IP, so the production default
+        /// refuses every register test past the tenth and the failures look like broken registration
+        /// rather than the anti-abuse control doing its job. Mirrors the value the integration
+        /// fixtures use.
+        /// <para>
+        /// The trigger is the <c>E2E_LIFT_REGISTRATION_THROTTLE</c> environment variable (set by the
+        /// E2E workflow, absent locally and in production, so this is a no-op there),
+        /// OR <paramref name="alsoLiftWhen"/> for an AppHost that implies the lift from another E2E
+        /// switch of its own.
+        /// </para>
+        /// </summary>
+        /// <param name="alsoLiftWhen">
+        /// An extra trigger evaluated at the call site and OR-ed with the environment variable. Pass
+        /// the AppHost's own E2E flag (for example a forced-render-mode switch that implies the same
+        /// registration volume); defaults to <see langword="false"/>, leaving the environment
+        /// variable as the only trigger.
+        /// </param>
+        /// <returns>The Identity resource builder for chaining.</returns>
+        public IResourceBuilder<ProjectResource> WithE2eRegistrationThrottleLift(bool alsoLiftWhen = false)
+        {
+            ArgumentNullException.ThrowIfNull(identity);
+
+            var lift = alsoLiftWhen
+                || string.Equals(
+                    Environment.GetEnvironmentVariable("E2E_LIFT_REGISTRATION_THROTTLE"),
+                    "true",
+                    StringComparison.OrdinalIgnoreCase);
+
+            return lift
+                ? identity.WithEnvironment(
+                    "LoginProtection__MaxRegistrationsPerIpPerHour",
+                    E2eRegistrationsPerIpPerHour.ToString(CultureInfo.InvariantCulture))
+                : identity;
         }
     }
 

@@ -1,5 +1,7 @@
 using MMCA.Common.UI.Maui.Capabilities;
+using MMCA.Common.UI.Maui.Services;
 using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Capabilities;
 
 namespace MMCA.Common.UI.Maui;
@@ -58,6 +60,18 @@ public static class DependencyInjection
             services.AddScoped<IExternalAuthBroker, MauiExternalAuthBroker>();
             return services;
         }
+
+        /// <summary>
+        /// Registers the OS-SecureStorage token storage (<see cref="MauiTokenStorageService"/> as
+        /// the scoped <c>ITokenStorageService</c>): the platform secure enclave holds both tokens,
+        /// and every read/write is guarded so an OS-invalidated keystore entry degrades to one
+        /// clean re-login instead of an unhandled throw on launch. The browser-host equivalents are
+        /// <c>AddCommonServerTokenStorage()</c> (MMCA.Common.UI.Web) and the WASM
+        /// <c>WasmTokenStorageService</c> (MMCA.Common.UI). Scoped rather than singleton to match
+        /// those siblings, so component code can depend on one lifetime across every head.
+        /// </summary>
+        public IServiceCollection AddCommonMauiTokenStorage() =>
+            services.AddScoped<ITokenStorageService, MauiTokenStorageService>();
 
         /// <summary>
         /// Registers the native <see cref="IFormFactor"/> (<see cref="MauiFormFactor"/>: DeviceInfo

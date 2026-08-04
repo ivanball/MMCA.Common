@@ -7,7 +7,10 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// <summary>
 /// Immutable value object representing a validated phone number. Whitespace is trimmed
 /// at creation time. Configured in EF via <c>HasConversion</c> (not <c>OwnsOne</c>)
-/// so the backing column remains <c>nvarchar</c>.
+/// so the backing column remains <c>nvarchar</c>: pass the shipped
+/// <c>MMCA.Common.Infrastructure.Persistence.Conversions.PhoneNumberValueConverter</c>, or
+/// <c>NullablePhoneNumberValueConverter</c> for an optional <c>PhoneNumber?</c> property, rather
+/// than hand-rolling the lambda pair per entity configuration.
 /// </summary>
 [DataContract]
 public sealed record PhoneNumber : ValueObject

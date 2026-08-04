@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Resilience;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Services;
@@ -129,6 +130,36 @@ public static class DependencyInjection
         /// </summary>
         public IServiceCollection AddWasmFormFactor() =>
             services.AddSingleton<IFormFactor, WasmFormFactor>();
+
+        /// <summary>
+        /// Registers one UI module: the Scrutor scan that picks up every
+        /// <see cref="IEntityService{TEntityDTO, TIdentifierType}"/> implementation in
+        /// <typeparamref name="TModule"/>'s assembly, plus the module descriptor itself (nav items,
+        /// app-bar and layout components, and the assembly the router adds to
+        /// <c>AdditionalAssemblies</c>).
+        /// <para>
+        /// This is the two-step prologue every module's own <c>Add{Module}UI()</c> opens with;
+        /// calling it removes the copy of the scan from each of them. Module-specific services
+        /// (lookup services, state containers, custom contracts) are registered by the caller
+        /// afterwards, so a module whose services must win over a shared default still controls
+        /// its own registration order.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TModule">
+        /// The module descriptor type. Its assembly is the scan root, so it must live alongside the
+        /// module's entity services and Razor pages.
+        /// </typeparam>
+        public IServiceCollection AddUIModule<TModule>()
+            where TModule : class, IUIModule
+        {
+            services.Scan(scan => scan
+                .FromAssemblyOf<TModule>()
+                .AddClasses(classes => classes.AssignableTo(typeof(IEntityService<,>)))
+                .AsImplementedInterfaces()
+                .WithScopedLifetime());
+
+            return services.AddSingleton<IUIModule, TModule>();
+        }
     }
 }
 
