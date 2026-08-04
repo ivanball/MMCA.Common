@@ -32,12 +32,12 @@ public sealed class CultureSwitcherTests : BunitTestBase
     }
 
     [Fact]
-    public void SelectingACulture_DelegatesToTheApplier_WithTheCurrentPathAsReturnPath()
+    public async Task SelectingACulture_DelegatesToTheApplier_WithTheCurrentPathAsReturnPath()
     {
         var navigation = Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>();
         navigation.NavigateTo("/sessions?page=2");
 
-        SpanishItem().Click();
+        await SpanishItem().ClickAsync();
 
         _applier.Culture.Should().Be("es");
         _applier.ReturnPath.Should().Be("/sessions?page=2");
@@ -46,16 +46,19 @@ public sealed class CultureSwitcherTests : BunitTestBase
     // The switcher must not reintroduce a navigation of its own: the applier owns landing the user back
     // on the page, and on a hybrid head that is a WebView reload, not a server redirect.
     [Fact]
-    public void SelectingACulture_DoesNotNavigateOnItsOwn()
+    public async Task SelectingACulture_DoesNotNavigateOnItsOwn()
     {
         var navigation = Services.GetRequiredService<Bunit.TestDoubles.BunitNavigationManager>();
 
-        SpanishItem().Click();
+        await SpanishItem().ClickAsync();
 
         _applier.Culture.Should().Be("es", "the applier ran, so an empty history is not a no-op test");
         navigation.History.Should().BeEmpty();
     }
 
+    // Selecting a culture must be awaited via ClickAsync: MudMenuItem's OnClick is an async
+    // EventCallback, so the synchronous Click() returns once the handler is dispatched rather than
+    // once it has run, and asserting on the applier straight after it loses the race under CI load.
     private IElement SpanishItem()
     {
         var items = OpenMenu();

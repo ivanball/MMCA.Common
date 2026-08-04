@@ -52,8 +52,14 @@ internal sealed class PushNotificationConfiguration
         // "[DedupKey] IS NOT NULL" is SQL Server filter syntax and matches this configuration's
         // engine base class (EntityTypeConfigurationSQLServer); the Cosmos context strips
         // relational indexes, so no other engine sees it.
+        //
+        // The IsDeleted clause follows the same precedent SoftDeleteUniqueIndexConvention applies
+        // to every other unique index on a soft-deletable entity: without it a soft-deleted row
+        // keeps occupying its dedup slot forever and blocks a resend under the same key (BugHunt
+        // M58). The convention leaves a hand-authored filter alone, so this index has to opt in,
+        // which HasSoftDeleteFilter does while reading the column name and quoting from the model.
         builder.HasIndex(p => p.DedupKey)
             .IsUnique()
-            .HasFilter("[DedupKey] IS NOT NULL");
+            .HasSoftDeleteFilter(additionalFilter: "[DedupKey] IS NOT NULL");
     }
 }
