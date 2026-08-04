@@ -42,8 +42,8 @@ internal static class FilterValueParser
     /// <summary>
     /// Whether a value-type strategy can apply <paramref name="value"/> under <paramref name="op"/>,
     /// following the shape every built-in strategy shares: presence checks ignore the value, IN needs
-    /// at least one parseable item, BETWEEN needs exactly two bounds, and every other operator needs
-    /// the single scalar to parse.
+    /// at least one parseable item, BETWEEN needs exactly two segments that both parse, and every
+    /// other operator needs the single scalar to parse.
     /// </summary>
     /// <typeparam name="T">The value type each item parses to.</typeparam>
     /// <param name="op">The operator, already uppercased by the caller.</param>
@@ -59,8 +59,28 @@ internal static class FilterValueParser
         {
             "IS EMPTY" or "IS NOT EMPTY" => true,
             "IN" => ParseList(value, parse).Count > 0,
-            "BETWEEN" => ParseList(value, parse).Count == 2,
+            "BETWEEN" => HasExactlyTwoBounds(value, parse),
             _ => parse(value) is not null,
         };
+    }
+
+    /// <summary>
+    /// Whether <paramref name="value"/> is exactly two comma-separated segments that both parse.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately does not use <see cref="StringSplitOptions.RemoveEmptyEntries"/> and does not go
+    /// through <see cref="ParseList{T}(string, Func{string, T?})"/>: dropping unparseable and empty
+    /// segments let "5,abc,10" and "5,,10" validate as a two-bound range, and the strategies then
+    /// applied the surviving pair as the bounds the caller never asked for.
+    /// </remarks>
+    private static bool HasExactlyTwoBounds<T>(string value, Func<string, T?> parse)
+        where T : struct
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var parts = value.Split(Separator, StringSplitOptions.TrimEntries);
+
+        return parts.Length == 2 && parse(parts[0]) is not null && parse(parts[1]) is not null;
     }
 }

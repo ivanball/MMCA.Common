@@ -30,8 +30,6 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private const string ReceiveChannelEventMethodName = "ReceiveChannelEvent";
     private const string JoinChannelMethodName = "JoinChannel";
     private const string LeaveChannelMethodName = "LeaveChannel";
-    private static readonly TimeSpan InitialRetryDelay = TimeSpan.FromSeconds(2);
-
     private readonly ITokenStorageService _tokenStorageService;
     private readonly string _hubUrl;
     private readonly ILogger<NotificationHubService> _logger;
@@ -60,6 +58,12 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     /// <summary>Gets a value indicating whether the hub connection is active.</summary>
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
+
+    /// <summary>
+    /// Backoff before the first connection retry, doubling on each subsequent attempt. Settable so a
+    /// test can exercise the terminal-failure path without waiting out the real multi-second backoff.
+    /// </summary>
+    internal TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// Starts the SignalR connection if not already connected. Called after user login.
@@ -96,6 +100,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         {
             if (_disposed)
             {
+                await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
                 return;
             }
 
@@ -113,6 +118,11 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                 if (attempt == MaxRetries)
                 {
                     LogConnectionFailed(ex, _hubUrl);
+
+                    // A connection that never started must not satisfy the null guard above, or every
+                    // later StartAsync (including one reached through JoinChannelAsync) no-ops
+                    // forever; automatic reconnect only covers drops after a successful start.
+                    await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
                     return;
                 }
 
@@ -232,6 +242,22 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     {
         _disposed = true;
         await StopAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Clears and disposes the connection built for a start attempt that never succeeded, leaving the
+    /// field null so the next <see cref="StartAsync"/> builds a fresh one. Tolerates
+    /// <see cref="StopAsync"/> having already cleared the field.
+    /// </summary>
+    private async Task DiscardUnstartedConnectionAsync()
+    {
+        HubConnection? failed = _hubConnection;
+        _hubConnection = null;
+
+        if (failed is not null)
+        {
+            await failed.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     private async Task DispatchChannelEventAsync(string channelKey, string eventName, string payloadJson)
