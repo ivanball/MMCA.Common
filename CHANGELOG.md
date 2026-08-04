@@ -14,6 +14,22 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.139.0] - 2026-08-04
+
+A one-item contract-honesty release.
+
+### Removed (breaking)
+
+- **`IEntityQueryService.GetAllForLookupAsync` loses its `orderBy` parameter.** The parameter was
+  accepted and silently dropped since introduction: the repository contract has no ordering hook and
+  the EF implementation always orders lookups by the projected display name, so every caller got
+  name ordering regardless. No consumer passes the argument; the observable behavior of every lookup
+  endpoint is unchanged. The compile-time break is confined to test mocks that enumerated the old
+  five-argument signature (both apps' fixes ride this sweep). The interface remarks now document the
+  fixed name ordering; if entity-level lookup ordering ever becomes a real requirement, the path is
+  widening the repository contract, not restoring a decorative parameter. Repository-level
+  `GetAllAsync` ordering is unaffected.
+
 ## [1.138.0] - 2026-08-03
 
 The Wave 5 move-to-Common extraction (workspace extraction plan, wave 5): everything the
