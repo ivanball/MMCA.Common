@@ -199,7 +199,6 @@ public sealed class EntityControllerBaseTests
             .Setup(q => q.GetAllForLookupAsync(
                 "Name",
                 null,
-                null,
                 false,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(lookups));
@@ -222,7 +221,6 @@ public sealed class EntityControllerBaseTests
         _queryServiceMock
             .Setup(q => q.GetAllForLookupAsync(
                 "Name",
-                null,
                 null,
                 false,
                 It.IsAny<CancellationToken>()))
