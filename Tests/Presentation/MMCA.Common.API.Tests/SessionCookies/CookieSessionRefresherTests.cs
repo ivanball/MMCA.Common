@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Concurrency;
 using Moq;
 
 namespace MMCA.Common.API.Tests.SessionCookies;
@@ -157,7 +159,86 @@ public sealed class CookieSessionRefresherTests
             "new-access", "the sibling still gets cookies and the stashed token for its own SSR pass");
     }
 
+    // ── Per-token single flight (M52) ──
+    // The lock is held across the outbound refresh call, so a process-wide one made every unrelated
+    // user's cold navigation queue behind whichever refresh happened to be in flight.
+    [Fact]
+    public async Task GetOrRefreshAsync_ConcurrentDifferentTokens_RefreshInParallel()
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+        const string tokenA = "refresh-a";
+        string tokenB = TokenOnAnotherStripeThan(tokenA);
+
+        harness.Handler.BlockWhenBodyContains = tokenA;
+        Task<SessionTokenResult?> blocked = harness.Sut.GetOrRefreshAsync(
+            CreateContext(accessToken: expired, refreshToken: tokenA));
+        await harness.Handler.Entered.Task.WaitAsync(WaitTimeout);
+
+        SessionTokenResult? unrelated = await harness.Sut
+            .GetOrRefreshAsync(CreateContext(accessToken: expired, refreshToken: tokenB))
+            .WaitAsync(WaitTimeout);
+
+        unrelated.Should().NotBeNull("an unrelated token must not queue behind an in-flight refresh");
+        blocked.IsCompleted.Should().BeFalse();
+
+        harness.Handler.Gate.SetResult();
+        (await blocked.WaitAsync(WaitTimeout)).Should().NotBeNull();
+        harness.Handler.CallCount.Should().Be(2, "two distinct tokens each rotate once");
+    }
+
+    [Fact]
+    public async Task GetOrRefreshAsync_ConcurrentSameToken_SecondReusesRotationWithoutSecondCall()
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+
+        harness.Handler.BlockWhenBodyContains = "old-refresh";
+        Task<SessionTokenResult?> first = harness.Sut.GetOrRefreshAsync(
+            CreateContext(accessToken: expired, refreshToken: "old-refresh"));
+        await harness.Handler.Entered.Task.WaitAsync(WaitTimeout);
+
+        Task<SessionTokenResult?> second = harness.Sut.GetOrRefreshAsync(
+            CreateContext(accessToken: expired, refreshToken: "old-refresh"));
+
+        second.IsCompleted.Should().BeFalse("the same token must still serialize on one stripe");
+
+        harness.Handler.Gate.SetResult();
+        SessionTokenResult?[] results = await Task.WhenAll(first, second).WaitAsync(WaitTimeout);
+
+        harness.Handler.CallCount.Should().Be(1, "the queued sibling reuses the rotation-grace entry");
+        results[0]!.Value.AccessToken.Should().Be("new-access");
+        results[1]!.Value.AccessToken.Should().Be("new-access");
+    }
+
     // ── Helpers ──
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Finds a refresh token whose stripe differs from <paramref name="token"/>'s, so the parallel
+    /// test cannot flake on the one-in-<see cref="KeyedSemaphoreStripe.DefaultWidth"/> collision that
+    /// striping accepts by design. Mirrors the stripe's ordinal-hash fold over the real cache key,
+    /// which is also the striping key.
+    /// </summary>
+    private static string TokenOnAnotherStripeThan(string token)
+    {
+        uint target = StripeOf(token);
+        for (int i = 0; i < 1000; i++)
+        {
+            string candidate = string.Create(CultureInfo.InvariantCulture, $"refresh-b-{i}");
+            if (StripeOf(candidate) != target)
+            {
+                return candidate;
+            }
+        }
+
+        throw new InvalidOperationException("No candidate refresh token landed on a different stripe.");
+    }
+
+    private static uint StripeOf(string refreshToken) =>
+        (uint)string.GetHashCode(CookieSessionRefresher.CacheKey(refreshToken), StringComparison.Ordinal)
+        % KeyedSemaphoreStripe.DefaultWidth;
+
     private static string CreateJwt(DateTime expires) =>
         new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
             notBefore: expires.AddMinutes(-30),
@@ -219,7 +300,7 @@ public sealed class CookieSessionRefresherTests
 
         public void Dispose()
         {
-            Sut.Dispose();
+            // The sut is not disposable: its striped locks are held for the process lifetime by design.
             Handler.Dispose();
             _cache.Dispose();
         }
@@ -234,21 +315,43 @@ public sealed class CookieSessionRefresherTests
     private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
         : HttpMessageHandler
     {
-        public int CallCount { get; private set; }
+        private int _callCount;
+
+        // Counted with Interlocked because the concurrency tests drive this handler from two
+        // requests at once.
+        public int CallCount => Volatile.Read(ref _callCount);
 
         public Uri? LastRequestUri { get; private set; }
 
         public string? LastRequestBody { get; private set; }
 
+        /// <summary>Completed once a blocking call has entered the handler and is waiting on <see cref="Gate"/>.</summary>
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Released by the test to let the blocked call finish.</summary>
+        public TaskCompletionSource Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>When set, a call whose body carries this token parks on <see cref="Gate"/>.</summary>
+        public string? BlockWhenBodyContains { get; set; }
+
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            CallCount++;
+            Interlocked.Increment(ref _callCount);
             LastRequestUri = request.RequestUri;
-            LastRequestBody = request.Content is null
+            string? body = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            LastRequestBody = body;
+
+            if (BlockWhenBodyContains is { } marker
+                && body?.Contains(marker, StringComparison.Ordinal) == true)
+            {
+                Entered.TrySetResult();
+                await Gate.Task.ConfigureAwait(false);
+            }
+
             return responder(request);
         }
     }

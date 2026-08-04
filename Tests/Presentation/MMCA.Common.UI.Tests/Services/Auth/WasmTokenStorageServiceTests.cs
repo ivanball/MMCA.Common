@@ -111,6 +111,19 @@ public sealed class WasmTokenStorageServiceTests
         refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task GetAccessTokenAsync_AfterCompletion_SecondStaleCallStartsNewHydrate()
+    {
+        // The single-flight slot must be cleared once its own hydrate finishes, so a later caller
+        // with a still-stale token hydrates again rather than awaiting a completed task forever.
+        var (sut, mocks) = CreateSut(refresherToken: null);
+
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+        (await sut.GetAccessTokenAsync()).Should().BeNull();
+
+        mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
     // == Refresh token never surfaces in the browser ==
     [Fact]
     public async Task GetRefreshTokenAsync_EvenAfterSet_ReturnsNull()

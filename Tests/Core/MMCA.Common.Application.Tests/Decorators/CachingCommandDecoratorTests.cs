@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
+using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
 
@@ -124,6 +125,71 @@ public sealed class CachingCommandDecoratorTests
             x => x.RemoveByPrefixAsync("test-prefix", CancellationToken.None),
             Times.Once);
     }
+
+    // ── An empty prefix opts out; without the guard it would evict the whole cache (M50) ──
+    [Fact]
+    public async Task HandleAsync_WithEmptyCachePrefix_SkipsEviction()
+    {
+        var inner = new Mock<ICommandHandler<OptedOutCacheInvalidatingTestCommand, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<OptedOutCacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+
+        var sut = new CachingCommandDecorator<OptedOutCacheInvalidatingTestCommand, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<OptedOutCacheInvalidatingTestCommand, Result>>.Instance);
+
+        var result = await sut.HandleAsync(new OptedOutCacheInvalidatingTestCommand());
+
+        result.IsSuccess.Should().BeTrue();
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ── The generic delete command now evicts its aggregate's prefix (M50) ──
+    [Fact]
+    public async Task HandleAsync_DeleteEntityCommand_EvictsEntityPrefixOnSuccess()
+    {
+        var inner = new Mock<ICommandHandler<DeleteEntityCommand<CachingTestEntity, int>, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<DeleteEntityCommand<CachingTestEntity, int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+
+        var sut = new CachingCommandDecorator<DeleteEntityCommand<CachingTestEntity, int>, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<DeleteEntityCommand<CachingTestEntity, int>, Result>>.Instance);
+
+        var result = await sut.HandleAsync(new DeleteEntityCommand<CachingTestEntity, int>(1));
+
+        result.IsSuccess.Should().BeTrue();
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync(typeof(CachingTestEntity).FullName + ":", CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DeleteEntityCommandFailure_DoesNotEvict()
+    {
+        var inner = new Mock<ICommandHandler<DeleteEntityCommand<CachingTestEntity, int>, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<DeleteEntityCommand<CachingTestEntity, int>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Failure("test", "missing")));
+
+        var sut = new CachingCommandDecorator<DeleteEntityCommand<CachingTestEntity, int>, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<DeleteEntityCommand<CachingTestEntity, int>, Result>>.Instance);
+
+        var result = await sut.HandleAsync(new DeleteEntityCommand<CachingTestEntity, int>(1));
+
+        result.IsFailure.Should().BeTrue();
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
 
 // ── Test types (must be public for Moq DynamicProxy) ──
@@ -133,3 +199,10 @@ public sealed record CacheInvalidatingTestCommand : ICacheInvalidating
 {
     public string CachePrefix => "test-prefix";
 }
+
+public sealed record OptedOutCacheInvalidatingTestCommand : ICacheInvalidating
+{
+    public string CachePrefix => string.Empty;
+}
+
+public sealed class CachingTestEntity : AuditableAggregateRootEntity<int>;

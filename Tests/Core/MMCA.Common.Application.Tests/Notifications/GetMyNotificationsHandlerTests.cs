@@ -53,6 +53,22 @@ public sealed class GetMyNotificationsHandlerTests
         result.Value!.PaginationMetadata.PageSize.Should().Be(500);
     }
 
+    // ── Sub-1 page numbers ──
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    public async Task HandleAsync_WithNegativePageNumber_ReportsPageOneWithoutThrowing(int pageNumber)
+    {
+        var (sut, _) = CreateSut(totalCount: 5, pageItems: 5);
+
+        var query = new GetMyNotificationsQuery(UserId: 1, pageNumber, PageSize: 20);
+        Result<PagedCollectionResult<UserNotificationDTO>> result = await sut.HandleAsync(query);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.PaginationMetadata.CurrentPage.Should().Be(1);
+        result.Value.PaginationMetadata.PageSize.Should().Be(20);
+    }
+
     // ── Helpers ──
     private static (GetMyNotificationsHandler Sut, Mock<IUnitOfWork> UnitOfWork) CreateSut(
         int totalCount, int pageItems)

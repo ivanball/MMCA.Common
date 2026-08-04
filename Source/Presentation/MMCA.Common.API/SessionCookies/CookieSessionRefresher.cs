@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Concurrency;
 
 namespace MMCA.Common.API.SessionCookies;
 
@@ -34,23 +35,28 @@ public interface ICookieSessionRefresher
 }
 
 /// <summary>
-/// Singleton refresher. A process-wide lock plus a short rotation-grace cache collapse concurrent
+/// Singleton refresher. A per-token lock plus a short rotation-grace cache collapse concurrent
 /// refreshes (single-flight): the first request rotates and caches the result keyed by the OLD refresh
 /// token; queued/slightly-late siblings carrying the same expired pair return the cached result instead
-/// of rotating again — preventing double rotation under a thundering herd. Refreshes are infrequent
-/// (only on access-token expiry during a cold navigation) and each holds the lock for one short HTTP call.
+/// of rotating again — preventing double rotation under a thundering herd.
+/// <para>
+/// The lock is striped by refresh token rather than process-wide: it is held across an outbound HTTP
+/// call, so a single semaphore serialized every unrelated user's cold navigation behind whichever
+/// refresh was in flight. Two unrelated tokens can still share a stripe, which is harmless because the
+/// rotation-grace cache is re-checked per token after acquiring.
+/// </para>
 /// </summary>
 internal sealed class CookieSessionRefresher(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
-    IWebHostEnvironment environment) : ICookieSessionRefresher, IDisposable
+    IWebHostEnvironment environment) : ICookieSessionRefresher
 {
     internal const string RefreshClientName = "SessionCookieRefreshClient";
 
     private static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan RotationGrace = TimeSpan.FromSeconds(10);
 
-    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private readonly KeyedSemaphoreStripe _refreshLocks = new();
 
     public async Task<SessionTokenResult?> GetOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
     {
@@ -90,21 +96,15 @@ internal sealed class CookieSessionRefresher(
             return cached;
         }
 
-        await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            // Double-check: a request we were queued behind may have just rotated this same token.
-            if (cache.TryGetValue(CacheKey(refreshToken), out cached))
-            {
-                return cached;
-            }
+        using var releaser = await _refreshLocks.AcquireAsync(CacheKey(refreshToken), cancellationToken).ConfigureAwait(false);
 
-            return await CallRefreshAsync(accessToken, refreshToken).ConfigureAwait(false);
-        }
-        finally
+        // Double-check: a request we were queued behind may have just rotated this same token.
+        if (cache.TryGetValue(CacheKey(refreshToken), out cached))
         {
-            _refreshLock.Release();
+            return cached;
         }
+
+        return await CallRefreshAsync(accessToken, refreshToken).ConfigureAwait(false);
     }
 
     private async Task<AuthenticationResponse?> CallRefreshAsync(string accessToken, string refreshToken)
@@ -165,7 +165,9 @@ internal sealed class CookieSessionRefresher(
         }
     }
 
-    private static string CacheKey(string refreshToken) => $"mmca:session-refresh:{refreshToken}";
-
-    public void Dispose() => _refreshLock.Dispose();
+    /// <summary>
+    /// The rotation-grace cache key, which is also the striping key. Internal rather than private so a
+    /// concurrency test can pick two refresh tokens that do not land on the same stripe.
+    /// </summary>
+    internal static string CacheKey(string refreshToken) => $"mmca:session-refresh:{refreshToken}";
 }

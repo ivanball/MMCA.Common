@@ -10,6 +10,7 @@ public sealed class QueryFilterServiceValidateTests
     {
         public string Name { get; set; } = string.Empty;
         public int Price { get; set; }
+        public long Quantity { get; set; }
         public decimal Amount { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
@@ -241,6 +242,46 @@ public sealed class QueryFilterServiceValidateTests
     {
         // Presence checks never read the value, so an arbitrary one must not be rejected.
         var filters = new Dictionary<string, (string, string)> { ["Price"] = (op, "ignored") };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, EmptyMap);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    // ── BETWEEN needs exactly two segments that both parse ──
+    // Dropping unparseable and empty segments let a three-segment value validate as a two-bound
+    // range, and the strategy then applied bounds the caller never asked for.
+    [Theory]
+    [InlineData("Price", "5,abc,10")]
+    [InlineData("Price", "5,,10")]
+    [InlineData("Price", "5,10,")]
+    [InlineData("Price", ",5,10")]
+    [InlineData("Quantity", "5,abc,10")]
+    [InlineData("Quantity", "5,,10")]
+    [InlineData("Amount", "5.5,abc,10.5")]
+    [InlineData("Amount", "5.5,,10.5")]
+    [InlineData("CreatedOn", "2026-01-01,nope,2026-12-31")]
+    [InlineData("CreatedOn", "2026-01-01,,2026-12-31")]
+    public void ValidateFilters_Between_WithAnythingButTwoParseableSegments_ReturnsFailure(
+        string property, string value)
+    {
+        var filters = new Dictionary<string, (string, string)> { [property] = ("BETWEEN", value) };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, EmptyMap);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Filter.Value.Invalid");
+    }
+
+    [Theory]
+    [InlineData("Price", "5,10")]
+    [InlineData("Price", " 5 , 10 ")]
+    [InlineData("Quantity", "5,10")]
+    [InlineData("Amount", "5.5,10.5")]
+    [InlineData("CreatedOn", "2026-01-01,2026-12-31")]
+    public void ValidateFilters_Between_WithTwoValidBounds_ReturnsSuccess(string property, string value)
+    {
+        var filters = new Dictionary<string, (string, string)> { [property] = ("BETWEEN", value) };
 
         var result = QueryFilterService.ValidateFilters<Product>(filters, EmptyMap);
 

@@ -22,6 +22,8 @@ public sealed class ServerTokenStorageService(
 {
     private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
 
+    private readonly Lock _hydrateSync = new();
+
     private string? _accessToken;
     private Task<string?>? _hydrateInFlight;
 
@@ -40,15 +42,32 @@ public sealed class ServerTokenStorageService(
             return _accessToken;
         }
 
-        // Single-flight: concurrent callers (delegating handler, auth-state, SignalR) share one acquisition.
-        var inFlight = _hydrateInFlight ??= HydrateAsync();
+        // Single-flight: concurrent callers (delegating handler, auth-state, SignalR) share one
+        // acquisition. The circuit is genuinely multi-threaded, so an unguarded "??=" lets two
+        // callers each start a hydrate and the later one to finish overwrite the other's token.
+        // HydrateAsync reaches its first await immediately, so nothing slow runs under the lock.
+        Task<string?> inFlight;
+        lock (_hydrateSync)
+        {
+            _hydrateInFlight ??= HydrateAsync();
+            inFlight = _hydrateInFlight;
+        }
+
         try
         {
             return await inFlight.ConfigureAwait(false);
         }
         finally
         {
-            _hydrateInFlight = null;
+            // Only clear our own task: an unguarded clear can drop a NEWER hydrate started after
+            // this one completed, splitting the next set of callers again.
+            lock (_hydrateSync)
+            {
+                if (ReferenceEquals(_hydrateInFlight, inFlight))
+                {
+                    _hydrateInFlight = null;
+                }
+            }
         }
     }
 
