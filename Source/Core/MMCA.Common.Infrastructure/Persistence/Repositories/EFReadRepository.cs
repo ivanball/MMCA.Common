@@ -157,7 +157,12 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(id);
 
-        return await Entities.FindAsync([id], cancellationToken).ConfigureAwait(false);
+        // A filtered query, not FindAsync: FindAsync serves a tracked instance straight from the
+        // identity map without evaluating the global soft-delete filter, so an entity soft-deleted
+        // earlier in the same scope came back as if it were live. Table (tracked) is deliberate:
+        // EFRepository inherits this member and the generic delete/update handlers load through it,
+        // mutate, and save, so a no-tracking query would turn those into silent no-ops.
+        return await Table.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

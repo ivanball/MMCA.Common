@@ -34,6 +34,11 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private readonly string _hubUrl;
     private readonly ILogger<NotificationHubService> _logger;
     private readonly Lock _channelSync = new();
+
+    // Serializes StartAsync. A SemaphoreSlim rather than _channelSync because the guarded body
+    // awaits, and a System.Threading.Lock cannot be held across an await.
+    private readonly SemaphoreSlim _startSync = new(1, 1);
+
     private readonly ChannelReferenceCounter _channelRefs = new();
     private readonly Dictionary<string, List<ChannelSubscription>> _channelSubscriptions = [];
     private HubConnection? _hubConnection;
@@ -68,8 +73,50 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// <summary>
     /// Starts the SignalR connection if not already connected. Called after user login.
     /// Retries with exponential backoff if the initial attempt fails.
+    /// <para>
+    /// Serialized: without it, two concurrent callers (two components calling
+    /// <see cref="JoinChannelAsync"/> at once on Blazor Server, which has no single
+    /// synchronization context) could both see a null connection, both build one, and leak the
+    /// loser socket with duplicate server registrations. A second caller now waits for the first
+    /// attempt to finish; if that attempt fails terminally the connection is discarded, so the
+    /// second caller runs its own attempt exactly as a sequential caller would.
+    /// </para>
     /// </summary>
     public async Task StartAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await _startSync.WaitAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposed while this caller was waiting: there is nothing left to start.
+            return;
+        }
+
+        try
+        {
+            await StartCoreAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            try
+            {
+                _startSync.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The service was disposed while this start was running. Nothing to release.
+            }
+        }
+    }
+
+    private async Task StartCoreAsync()
     {
         if (_hubConnection is not null)
         {
@@ -240,8 +287,19 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
         await StopAsync().ConfigureAwait(false);
+
+        // Disposal deliberately does not wait for a start already in flight: that start can be
+        // sitting in a multi-second retry backoff, and blocking a Blazor circuit teardown on it
+        // would be worse than the alternative. The _disposed flag makes the retry loop bail at its
+        // next iteration, and StartAsync tolerates the semaphore disappearing underneath it.
+        _startSync.Dispose();
     }
 
     /// <summary>

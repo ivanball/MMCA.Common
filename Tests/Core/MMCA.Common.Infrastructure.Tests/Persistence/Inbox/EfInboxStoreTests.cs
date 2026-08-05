@@ -104,6 +104,30 @@ public sealed class EfInboxStoreTests : IDisposable
         rows.Should().Be(1, "the unique index guarantees exactly one inbox row per message id");
     }
 
+    [Fact]
+    public async Task AfterAbsorbedDuplicate_TheSameScopeCanStillRecordAnotherMessage()
+    {
+        // The context is cached per data source for the whole scope, so the rejected row has to be
+        // detached. Left Added, it poisoned the scope: every later save re-attempted the duplicate
+        // insert and threw, taking an unrelated message down with it.
+        var storeA = CreateStore(_contextA);
+        var storeB = CreateStore(_contextB);
+        var duplicated = Guid.NewGuid();
+        var unrelated = Guid.NewGuid();
+
+        await storeA.MarkProcessedAsync(duplicated, "UserRegistered", CancellationToken.None);
+        await storeB.MarkProcessedAsync(duplicated, "UserRegistered", CancellationToken.None);
+
+        // Same store, same (poisoned) context, a different message id.
+        var next = async () => await storeB.MarkProcessedAsync(unrelated, "OrderPlaced", CancellationToken.None);
+        await next.Should().NotThrowAsync("the rejected duplicate must not poison the scope's context");
+
+        (await storeA.AlreadyProcessedAsync(duplicated, CancellationToken.None)).Should().BeTrue();
+        (await storeA.AlreadyProcessedAsync(unrelated, CancellationToken.None)).Should().BeTrue(
+            "the unrelated message must actually have been persisted");
+        (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == duplicated)).Should().Be(1);
+    }
+
     private static EfInboxStore CreateStore(ApplicationDbContext context)
     {
         var factory = new Mock<IDbContextFactory>();

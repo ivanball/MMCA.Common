@@ -84,4 +84,39 @@ public sealed class RsaJwksProviderTests
         // Assert: provider caches via Lazy<T>; same instance both times.
         ReferenceEquals(first, second).Should().BeTrue();
     }
+
+    [Fact]
+    public void GetJsonWebKeySet_TransientKeyFileFailure_IsNotCached_AndALaterCallSucceeds()
+    {
+        // A transient IO failure reading the PEM used to be cached forever by the default
+        // Lazy mode, bricking /.well-known/jwks.json (and cross-service auth) until a restart.
+        var path = Path.Combine(Path.GetTempPath(), $"mmca-jwks-{Guid.NewGuid():N}.pem");
+        var settings = new JwksSettings
+        {
+            Enabled = true,
+            KeyId = "transient-key",
+            RsaPublicKeyPath = path,
+        };
+        var sut = new RsaJwksProvider(Options.Create(settings));
+
+        try
+        {
+            // Act 1: the key file is not there yet.
+            var firstCall = () => sut.GetJsonWebKeySet();
+            firstCall.Should().Throw<FileNotFoundException>();
+
+            // Act 2: the file appears (the transient condition clears).
+            using var rsa = RSA.Create(2048);
+            File.WriteAllText(path, rsa.ExportSubjectPublicKeyInfoPem());
+
+            // Assert: the failure was not cached, so the retry builds the key set.
+            var keySet = sut.GetJsonWebKeySet();
+            keySet.Keys.Should().ContainSingle();
+            keySet.Keys[0].Kid.Should().Be("transient-key");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

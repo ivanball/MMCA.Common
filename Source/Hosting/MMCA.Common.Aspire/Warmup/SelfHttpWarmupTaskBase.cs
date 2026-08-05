@@ -158,11 +158,32 @@ public abstract partial class SelfHttpWarmupTaskBase(
     {
         var address = server.Features.Get<IServerAddressesFeature>()?.Addresses
             .FirstOrDefault(a => a.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-            ?? configuration["ASPNETCORE_URLS"];
+            ?? SelectCleartextUrl(configuration["ASPNETCORE_URLS"]);
 
-        return int.TryParse(address?.Split(':')[^1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var port)
+        return int.TryParse(address?.TrimEnd('/').Split(':')[^1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var port)
             ? port
             : DefaultPort;
+    }
+
+    /// <summary>
+    /// Picks the cleartext entry out of an <c>ASPNETCORE_URLS</c> value. The variable may hold a
+    /// semicolon-separated list (for example <c>https://+:443;http://+:8080/</c>), and entries
+    /// commonly carry a trailing slash, which the caller trims before reading the port. Wildcard
+    /// hosts such as <c>+</c> and <c>*</c> are why this stays string handling: Uri rejects them.
+    /// </summary>
+    /// <param name="configuredUrls">The raw configuration value, possibly null.</param>
+    /// <returns>The chosen url, or null when nothing was configured.</returns>
+    private static string? SelectCleartextUrl(string? configuredUrls)
+    {
+        if (string.IsNullOrWhiteSpace(configuredUrls))
+        {
+            return null;
+        }
+
+        var entries = configuredUrls.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return Array.Find(entries, e => e.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            ?? (entries.Length > 0 ? entries[0] : null);
     }
 
     // The warm-up runner is a hosted service that starts BEFORE Kestrel begins listening (the web

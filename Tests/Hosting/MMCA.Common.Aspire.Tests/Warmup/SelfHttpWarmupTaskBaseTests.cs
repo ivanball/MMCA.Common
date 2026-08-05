@@ -107,12 +107,27 @@ public sealed class SelfHttpWarmupTaskBaseTests
     [Theory]
     [InlineData(null)]
     [InlineData("http://+:not-a-port")]
-    [InlineData("http://localhost:8080/")]
+    [InlineData("http://localhost/")]
     public void ResolveWarmupPort_FallsBackToTheContainerDefault_WhenNothingParses(string? aspnetcoreUrls)
     {
         var port = SelfHttpWarmupTaskBase.ResolveWarmupPort(ServerWith(), Config(aspnetcoreUrls));
 
         port.Should().Be(SelfHttpWarmupTaskBase.DefaultPort);
+    }
+
+    [Theory]
+    // A trailing slash is the normal shape of ASPNETCORE_URLS; splitting on ':' used to leave
+    // "9090/", which does not parse, so the warm-up silently self-requested DefaultPort instead.
+    [InlineData("http://+:9090/", 9090)]
+    [InlineData("http://localhost:9090/", 9090)]
+    // ASPNETCORE_URLS may also hold a semicolon-separated list; the cleartext entry is the one to use.
+    [InlineData("https://+:443;http://+:9090/", 9090)]
+    [InlineData("https://+:443;http://+:9090", 9090)]
+    public void ResolveWarmupPort_HandlesTrailingSlashesAndUrlLists(string aspnetcoreUrls, int expected)
+    {
+        var port = SelfHttpWarmupTaskBase.ResolveWarmupPort(ServerWith(), Config(aspnetcoreUrls));
+
+        port.Should().Be(expected);
     }
 
     // ---------------------------------------------------------------- execution semantics

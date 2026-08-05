@@ -35,8 +35,13 @@ public sealed class MauiMediaPickerService : IMediaPickerService
                 return null;
             }
 
-            var stream = await file.OpenReadAsync().ConfigureAwait(false);
+            // Checked before the stream is opened, not after: throwing between OpenReadAsync and the
+            // PickedMedia that owns the stream would leak the file handle, since nothing downstream
+            // has anything to dispose yet. A cancellation that lands during OpenReadAsync simply
+            // returns the picked media, which the caller disposes as usual.
             cancellationToken.ThrowIfCancellationRequested();
+
+            var stream = await file.OpenReadAsync().ConfigureAwait(false);
             return new PickedMedia(stream, file.FileName, file.ContentType ?? "application/octet-stream");
         }
         catch (OperationCanceledException)

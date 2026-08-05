@@ -115,4 +115,52 @@ public class ResultJsonConverterFactoryTests
         roundTripped.IsSuccess.Should().BeTrue();
         roundTripped.Value.Should().Be(new TestDTO(7, "X"));
     }
+
+    // ── A corrupt Result<T> payload must not deserialize as a fake success (L17) ──
+    [Fact]
+    public void GenericResult_WithNeitherValueNorErrors_Throws()
+    {
+        // Write always emits one of the two for Result<T>, so an empty object is a corrupt payload
+        // (a truncated or partially overwritten cache entry). It used to become
+        // Result.Success(default!): a success carrying null that the caller could not tell apart.
+        var act = () => JsonSerializer.Deserialize<Result<int>>("{}", WebOptions);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void GenericResult_WithOnlyUnknownProperties_Throws()
+    {
+        var act = () => JsonSerializer.Deserialize<Result<TestDTO>>("""{"stale":true}""", WebOptions);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void GenericResult_WithExplicitNullValue_IsStillASuccess()
+    {
+        // "value": null is what Write emits for a success whose value genuinely is null, so it must
+        // stay a success: the marker is the property's presence, not its content.
+        var roundTripped = JsonSerializer.Deserialize<Result<string>>("""{"value":null}""", WebOptions);
+
+        roundTripped.Should().NotBeNull();
+        roundTripped.IsSuccess.Should().BeTrue();
+        roundTripped.Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void NonGenericResult_EmptyObject_IsStillASuccess()
+    {
+        // Scope guard: the non-generic Result carries no value, so Write emits a bare "{}" for a
+        // success. An empty object is the legitimate wire form there and must NOT throw.
+        const string json = "{}";
+
+        var roundTripped = JsonSerializer.Deserialize<Result>(json, WebOptions);
+
+        roundTripped.Should().NotBeNull();
+        roundTripped.IsSuccess.Should().BeTrue();
+
+        // And that really is what Write produces.
+        JsonSerializer.Serialize(Result.Success(), WebOptions).Should().Be(json);
+    }
 }
