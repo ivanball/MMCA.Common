@@ -14,7 +14,13 @@ namespace MMCA.Common.Infrastructure.Auth;
 /// <param name="options">The bound <see cref="JwksSettings"/> options.</param>
 public sealed class RsaJwksProvider(IOptions<JwksSettings> options) : IJwksProvider
 {
-    private readonly Lazy<JsonWebKeySet> _cachedKeySet = new(() => BuildKeySet(options.Value));
+    // PublicationOnly, not the default ExecutionAndPublication: the default caches a factory
+    // exception forever, so one transient IO failure reading the PEM would brick
+    // /.well-known/jwks.json (and with it cross-service auth) until the process restarts.
+    // PublicationOnly caches only a successful result and lets a later call retry. Concurrent
+    // factory runs are harmless: BuildKeySet is pure and disposes its own RSA instance.
+    private readonly Lazy<JsonWebKeySet> _cachedKeySet =
+        new(() => BuildKeySet(options.Value), LazyThreadSafetyMode.PublicationOnly);
 
     /// <inheritdoc />
     public JsonWebKeySet GetJsonWebKeySet() => _cachedKeySet.Value;
@@ -58,8 +64,9 @@ public sealed class RsaJwksProvider(IOptions<JwksSettings> options) : IJwksProvi
 
         if (!string.IsNullOrWhiteSpace(settings.RsaPublicKeyPath))
         {
-            // File.ReadAllText is acceptable here — the provider runs once at startup
-            // (the result is cached in _cachedKeySet) so we don't need an async read path.
+            // File.ReadAllText is acceptable here: the provider runs on the first request and the
+            // result is cached in _cachedKeySet on success, so we don't need an async read path.
+            // A failure is not cached, so the next call reads the file again.
             return File.ReadAllText(settings.RsaPublicKeyPath);
         }
 

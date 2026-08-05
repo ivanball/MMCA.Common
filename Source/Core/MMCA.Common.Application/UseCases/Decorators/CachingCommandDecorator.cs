@@ -44,6 +44,20 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
     {
     }
 
+    /// <summary>
+    /// Gets or sets the delay before the second, best-effort eviction. A query that missed the cache
+    /// and started executing before this command committed can finish afterwards and re-populate the
+    /// entry with pre-write state; the delayed re-eviction removes that repopulated entry. Settable so
+    /// a test does not have to wait out the production delay.
+    /// </summary>
+    internal TimeSpan ReInvalidationDelay { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets the most recent delayed re-invalidation. Exposed so the fire-and-forget task is observed
+    /// rather than dropped, and so a test can await it deterministically.
+    /// </summary>
+    internal Task InvalidationFollowUp { get; private set; } = Task.CompletedTask;
+
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
@@ -62,6 +76,13 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
                 // cleanup must outlive a caller that has already walked away.
                 await cacheService.RemoveByPrefixAsync(cacheInvalidating.CachePrefix, CancellationToken.None)
                     .ConfigureAwait(false);
+
+                // A read that missed the cache before this command committed can still be running its
+                // handler against pre-write state and populate the entry after the eviction above.
+                // A second, delayed eviction removes that repopulated entry. Best-effort like the
+                // first one: ICacheService is a singleton, so the follow-up outlives the request scope
+                // safely, and anything it cannot evict expires on its own TTL.
+                InvalidationFollowUp = ReInvalidateAfterDelayAsync(cacheInvalidating.CachePrefix);
             }
 #pragma warning disable CA1031 // Do not catch general exception types: invalidation is best-effort and must never fail a committed command
             catch (Exception ex)
@@ -72,6 +93,25 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Waits <see cref="ReInvalidationDelay"/> and evicts the prefix a second time, swallowing every
+    /// failure exactly like the first eviction does.
+    /// </summary>
+    private async Task ReInvalidateAfterDelayAsync(string cachePrefix)
+    {
+        try
+        {
+            await Task.Delay(ReInvalidationDelay, CancellationToken.None).ConfigureAwait(false);
+            await cacheService.RemoveByPrefixAsync(cachePrefix, CancellationToken.None).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: re-invalidation is best-effort and runs detached from the request
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            LogCacheInvalidationFailed(logger, cachePrefix, typeof(TCommand).Name, ex);
+        }
     }
 
     [LoggerMessage(

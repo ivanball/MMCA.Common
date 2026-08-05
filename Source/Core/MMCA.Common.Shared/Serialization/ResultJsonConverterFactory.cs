@@ -34,6 +34,9 @@ public sealed class ResultJsonConverterFactory : JsonConverterFactory
 
     private sealed class ResultConverter : JsonConverter<Result>
     {
+        // Note: the non-generic Result carries no value, so Write emits a bare "{}" for a success.
+        // An empty object is therefore the legitimate wire form here and must stay a success, unlike
+        // in ResultConverter<T> where it means a corrupt payload.
         public override Result Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             List<Error>? errors = null;
@@ -63,16 +66,36 @@ public sealed class ResultJsonConverterFactory : JsonConverterFactory
         {
             T? value = default;
             List<Error>? errors = null;
+            var sawValue = false;
+            var sawErrors = false;
 
             ReadObject(ref reader, options, (ref r, propertyName) =>
             {
                 if (string.Equals(propertyName, ValuePropertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    sawValue = true;
                     value = JsonSerializer.Deserialize<T>(ref r, options);
+                }
                 else if (string.Equals(propertyName, ErrorsPropertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    sawErrors = true;
                     errors = JsonSerializer.Deserialize<List<Error>>(ref r, options);
+                }
                 else
+                {
                     r.Skip();
+                }
             });
+
+            // Write always emits one of the two properties for Result<T>, so an object carrying
+            // neither is a corrupt payload (a truncated or partially overwritten cache entry).
+            // Returning Result.Success(default!) there would hand the caller a fake success wrapping
+            // null. A success whose value genuinely is null still writes "value": null, which sets
+            // sawValue and stays a success.
+            if (!sawValue && !sawErrors)
+            {
+                throw new JsonException("Result<T> payload contained neither 'value' nor 'errors'.");
+            }
 
             return errors is { Count: > 0 } ? Result.Failure<T>(errors) : Result.Success(value!);
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
@@ -31,6 +32,47 @@ public sealed class CurrentUserServiceTests
         var sut = CreateSut(principal);
 
         sut.UserId.Should().Be(42);
+    }
+
+    [Fact]
+    public void GetClaimValue_UnderANonInvariantCulture_StillParsesTheInvariantClaimValue()
+    {
+        // TokenService writes claims with CultureInfo.InvariantCulture, and API hosts run
+        // UseRequestLocalization, so reading them under the ambient culture is a mismatch. Under
+        // de-DE the dot is a group separator, so "1.5" used to come back as 15.
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+
+            var principal = CreatePrincipal(new Claim("balance", "1.5"));
+            var sut = CreateSut(principal);
+
+            sut.GetClaimValue<decimal>("balance").Should().Be(1.5m);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public void UserId_UnderANonInvariantCulture_StillParsesTheInvariantClaimValue()
+    {
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+
+            var principal = CreatePrincipal(new Claim("user_id", "42"));
+            var sut = CreateSut(principal);
+
+            sut.UserId.Should().Be(42);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 
     [Fact]

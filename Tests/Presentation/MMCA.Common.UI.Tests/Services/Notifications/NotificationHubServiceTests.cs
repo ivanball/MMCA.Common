@@ -205,6 +205,83 @@ public sealed class NotificationHubServiceTests
         sut.IsConnected.Should().BeFalse();
     }
 
+    // ── Concurrent starts must not each build a connection (L11) ──
+    [Fact]
+    public async Task StartAsync_CalledConcurrently_NeverRunsTwoStartsAtOnce()
+    {
+        // Two components calling JoinChannelAsync at the same time both used to see a null
+        // connection field, both build one, and start both: the loser's socket leaked with
+        // duplicate server registrations. Blazor Server has no single synchronization context,
+        // so nothing else serialized them.
+        var tokenStorage = new ConcurrencyTrackingTokenStorage();
+
+        await using var sut = new NotificationHubService(
+            tokenStorage,
+            Options.Create(new ApiSettings { ApiEndpoint = "http://127.0.0.1:1" }),
+            NullLogger<NotificationHubService>.Instance)
+        {
+            InitialRetryDelay = TimeSpan.FromMilliseconds(1),
+        };
+
+        await Task.WhenAll(
+            Task.Run(async () => await sut.StartAsync()),
+            Task.Run(async () => await sut.StartAsync()));
+
+        // The access-token provider runs inside the guarded body, so overlapping entries there mean
+        // overlapping starts. Reverting the fix lets both callers in, and this reads 2.
+        tokenStorage.MaxConcurrentCalls.Should().Be(1, "StartAsync must be serialized");
+    }
+
+    /// <summary>
+    /// A token provider that records how many callers are inside it at once and then fails the
+    /// attempt fast (the provider runs before the negotiate request, so no network wait). The short
+    /// hold widens the overlap window: without it a revert could slip through unobserved. The
+    /// flakiness is one-sided, so a false pass is only ever possible on the reverted code.
+    /// </summary>
+    private sealed class ConcurrencyTrackingTokenStorage : ITokenStorageService
+    {
+        private int _current;
+        private int _max;
+
+        public int MaxConcurrentCalls => Volatile.Read(ref _max);
+
+        public async Task<string?> GetAccessTokenAsync()
+        {
+            var inside = Interlocked.Increment(ref _current);
+            RecordMax(inside);
+            try
+            {
+                await Task.Delay(50).ConfigureAwait(false);
+                throw new InvalidOperationException("no session");
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _current);
+            }
+        }
+
+        public Task<string?> GetRefreshTokenAsync() => Task.FromResult<string?>(null);
+
+        public Task SetTokensAsync(string accessToken, string refreshToken) => Task.CompletedTask;
+
+        public Task ClearTokensAsync() => Task.CompletedTask;
+
+        private void RecordMax(int inside)
+        {
+            int observed = Volatile.Read(ref _max);
+            while (inside > observed)
+            {
+                int previous = Interlocked.CompareExchange(ref _max, inside, observed);
+                if (previous == observed)
+                {
+                    return;
+                }
+
+                observed = previous;
+            }
+        }
+    }
+
     /// <summary>Counts the terminal "Failed to connect" warning; the retry loop's own messages are ignored.</summary>
     private sealed class CapturingLogger : ILogger<NotificationHubService>
     {

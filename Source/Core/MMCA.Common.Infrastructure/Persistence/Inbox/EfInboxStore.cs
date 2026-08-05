@@ -35,7 +35,7 @@ public sealed partial class EfInboxStore(
     {
         var context = ResolveContext();
 #pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
-        context.Set<InboxMessage>().Add(new InboxMessage
+        var entry = context.Set<InboxMessage>().Add(new InboxMessage
         {
             MessageId = messageId,
             EventType = eventType,
@@ -51,6 +51,12 @@ public sealed partial class EfInboxStore(
         {
             // A concurrent duplicate delivery already inserted this MessageId (unique index).
             // Idempotent — treat as processed.
+            // The context is cached per data source for the whole scope, so the rejected row must be
+            // detached: left Added, every later SaveChangesAsync on this scope would re-attempt the
+            // duplicate insert and fail. Same idiom as DomainEventSaveChangesInterceptor uses when it
+            // discards an abandoned capture.
+            entry.State = EntityState.Detached;
+
             LogConcurrentDuplicate(logger, messageId);
         }
     }

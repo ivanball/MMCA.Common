@@ -190,6 +190,62 @@ public sealed class CachingCommandDecoratorTests
             x => x.RemoveByPrefixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    // ── Delayed re-invalidation closes the read-repopulate race (L2) ──
+    [Fact]
+    public async Task HandleAsync_SuccessfulCacheInvalidatingCommand_EvictsPrefixASecondTimeAfterTheDelay()
+    {
+        var inner = new Mock<ICommandHandler<CacheInvalidatingTestCommand, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<CacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+
+        var sut = new CachingCommandDecorator<CacheInvalidatingTestCommand, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<CacheInvalidatingTestCommand, Result>>.Instance)
+        {
+            // A real short delay, not a fake clock: the in-process xUnit v3 runner cannot drive
+            // FakeTimeProvider through a fire-and-forget continuation.
+            ReInvalidationDelay = TimeSpan.FromMilliseconds(50),
+        };
+
+        await sut.HandleAsync(new CacheInvalidatingTestCommand());
+        await sut.InvalidationFollowUp;
+
+        // A query that missed the cache before the command committed can re-populate the entry with
+        // pre-write state right after the first eviction, so a second one has to follow.
+        cacheService.Verify(
+            x => x.RemoveByPrefixAsync("test-prefix", It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task HandleAsync_DelayedReInvalidationFails_IsSwallowed()
+    {
+        var inner = new Mock<ICommandHandler<CacheInvalidatingTestCommand, Result>>();
+        var cacheService = new Mock<ICacheService>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<CacheInvalidatingTestCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        cacheService
+            .SetupSequence(x => x.RemoveByPrefixAsync("test-prefix", It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .ThrowsAsync(new InvalidOperationException("cache went away"));
+
+        var sut = new CachingCommandDecorator<CacheInvalidatingTestCommand, Result>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingCommandDecorator<CacheInvalidatingTestCommand, Result>>.Instance)
+        {
+            ReInvalidationDelay = TimeSpan.FromMilliseconds(50),
+        };
+
+        var result = await sut.HandleAsync(new CacheInvalidatingTestCommand());
+
+        result.IsSuccess.Should().BeTrue();
+        var followUp = async () => await sut.InvalidationFollowUp;
+        await followUp.Should().NotThrowAsync("re-invalidation is best-effort, exactly like the first eviction");
+    }
 }
 
 // ── Test types (must be public for Moq DynamicProxy) ──

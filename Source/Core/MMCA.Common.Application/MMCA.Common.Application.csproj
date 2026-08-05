@@ -4,6 +4,9 @@
     <Description>MMCA framework: CQRS handlers, decorators, module system, query service</Description>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MMCA.Common.Application.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Microsoft.FeatureManagement" />
 
