@@ -14,6 +14,52 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.142.0] - 2026-08-05
+
+The Low-severity closure release: the bug-hunt ledger's entire remaining Common Low tail (L2-L5,
+L8-L11, L14-L17), each adversarially re-verified against source before its fix. Nothing here is
+breaking and no consumer migration is needed, but three items change observable behavior (see
+Changed).
+
+### Changed
+
+- **`GetByIdAsync(id)` now respects the soft-delete filter (L4).** The id-only overload used
+  `FindAsync`, which returns tracked soft-deleted entities and bypasses the global query filter. It
+  now issues the same filtered query as the includes overload while staying tracked (the generic
+  delete/update handlers depend on tracking); a soft-deleted id returns null.
+- **A corrupt `Result<T>` payload now throws instead of deserializing as a fake success (L17).**
+  JSON carrying neither `value` nor `errors` (truncated write, partial cache corruption, `{}`)
+  produced `Result.Success(default)`. The generic converter now throws `JsonException`; the
+  non-generic `Result` still round-trips `{}` as success by design.
+- **Money display is currency-aware (L5, L14).** `ToDisplayString` rendered `$` for every currency;
+  it now maps the currency to its symbol. `ToDisplayRange` computed one min/max across
+  mixed-currency collections under the first item's code; it now renders one range per currency.
+
+### Fixed
+
+- **In-flight reads can no longer re-cache data a write just invalidated (L2).** A read racing the
+  post-commit eviction could store the stale value it had already fetched. Post-commit invalidation
+  now fires a second, delayed eviction to close the window; the cache service being a singleton
+  makes the detached follow-up safe.
+- **A transient JWKS key-build failure is no longer cached for the process lifetime (L3).** The
+  provider's `Lazy<JsonWebKeySet>` used the default mode, which permanently caches a factory
+  exception; `PublicationOnly` lets a later call retry.
+- **`EfInboxStore` detaches the losing entry after a duplicate-key insert (L8).** The abandoned
+  `Added` entity previously stayed tracked and failed every later `SaveChangesAsync` on that scope.
+- **Auth-claim parsing is culture-invariant (L9).** `CurrentUserService` read numeric claims with
+  the current culture while `TokenService` writes them invariantly; on some host cultures a valid
+  claim silently parsed to null.
+- **Int filters parse invariantly like their sibling strategies (L10).** `IntFilterStrategy` was
+  the one strategy tracking the request culture; a failed parse fell through to an unfiltered query.
+- **`NotificationHubService.StartAsync` is single-flight (L11).** Concurrent first starts could
+  each build and start a hub connection, orphaning one (leaked socket, duplicate registrations).
+  Disposal stays non-blocking and idempotent.
+- **Warm-up port resolution survives a trailing slash (L15).** The `ASPNETCORE_URLS` fallback now
+  selects the cleartext entry from a semicolon list and trims a trailing `/` before parsing the
+  port, so self-HTTP warm-up no longer silently falls back to the default port.
+- **The MAUI media picker no longer leaks a file stream on a pre-cancelled pick (L16).** The
+  cancellation check now runs before the file is opened.
+
 ## [1.141.0] - 2026-08-04
 
 A bug-hunt closure release: ten verified defects across Shared, Application, Infrastructure, API, UI
