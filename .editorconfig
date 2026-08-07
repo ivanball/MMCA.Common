@@ -87,7 +87,7 @@ dotnet_style_prefer_inferred_tuple_names = true:error
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:error
 dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
 dotnet_style_prefer_simplified_interpolation = true:suggestion
-dotnet_style_namespace_match_folder = true:suggestion
+dotnet_style_namespace_match_folder = true:warning
 dotnet_style_prefer_foreach_explicit_cast_in_source = when_strongly_typed:suggestion
 
 # Field preferences
@@ -850,3 +850,24 @@ dotnet_diagnostic.CA2007.severity = none
 # analyzer.
 [*.{cs,razor}]
 dotnet_diagnostic.S8969.severity = suggestion
+
+# IDE0130 (namespace must match folder structure): warning in the shared baseline. The
+# locations below diverge DELIBERATELY, so the rule is disabled for them:
+#   - Testing.Architecture/Bases/ and Testing.UI/Infrastructure/: the folder is organizational,
+#     but the namespace is the package's flat public API surface (consumers subclass these
+#     bases; ADR-015). Renaming the namespace would be a breaking change for every consumer.
+#   - Aspire/DataProtection/: extension methods stay in the MMCA.Common.Aspire namespace so a
+#     host gets them through the using directive it already has.
+#   - API.Tests/Fakes/: the fake controller deliberately carries a consumer-shaped namespace
+#     (Fakes.MMCA.Store...) because the convention under test keys on namespace shape.
+[Source/Hosting/MMCA.Common.Testing.Architecture/Bases/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
+
+[Source/Hosting/MMCA.Common.Testing.UI/Infrastructure/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
+
+[Source/Hosting/MMCA.Common.Aspire/DataProtection/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
+
+[Tests/Presentation/MMCA.Common.API.Tests/Fakes/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
