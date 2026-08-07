@@ -14,6 +14,23 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.143.0] - 2026-08-07
+
+A governance and documentation release: no behavioral changes, and the shipped assemblies are
+functionally identical to 1.142.0 (only an XML documentation line differs). Consumers take it as a
+routine lockstep sweep (ADR-016).
+
+### Changed
+
+- **Namespace-matches-folder is now build-enforced repo-wide (IDE0130 at warning).** The shared
+  analyzer baseline promotes `dotnet_style_namespace_match_folder` from suggestion to warning, so
+  under `TreatWarningsAsErrors` a stale namespace after a file move fails the build. The deliberate
+  flat-namespace surfaces (`Testing.Architecture` bases, `Testing.UI` infrastructure,
+  `MMCA.Common.Aspire` DataProtection extensions, the API.Tests convention fake) are documented
+  exceptions; their public namespaces are unchanged.
+- **`OutboxSettings` retry-backoff XML documentation now mentions the retry jitter**, so the
+  IntelliSense contract matches the processor's actual delay behavior.
+
 ## [1.142.0] - 2026-08-05
 
 The Low-severity closure release: the bug-hunt ledger's entire remaining Common Low tail (L2-L5,
