@@ -83,8 +83,9 @@ public sealed class OutboxSettings
 
     /// <summary>
     /// Gets the base, in seconds, of the exponential backoff applied to a FAILED message before it
-    /// is retried (attempt <c>n</c> waits <c>RetryBackoffBaseSeconds * 2^(n-1)</c>, capped at
-    /// <see cref="LeaseSeconds"/>). Defaults to <c>10</c>.
+    /// is retried (attempt <c>n</c> waits <c>RetryBackoffBaseSeconds * 2^(n-1)</c>, multiplied by a
+    /// random jitter factor in [0.8, 1.2] so rows that failed together do not retry in lockstep,
+    /// then capped at <see cref="LeaseSeconds"/>). Defaults to <c>10</c>.
     /// </summary>
     /// <remarks>
     /// A failed message keeps its claim until this backoff elapses. Before this setting existed the
