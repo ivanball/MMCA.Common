@@ -7,6 +7,8 @@
 
 A .NET 10 framework for building a modular monolith you can extract services out of later, without a rewrite.
 
+[**Cleavestack**](https://cleavestack.com/) is the commercial home of MMCA: build as one, ship as many.
+
 ## Why it exists
 
 Most teams face the same fork: start as a monolith and pay for it when you need to scale a piece of it, or start with microservices and pay for it immediately. MMCA takes the first path and removes the later cost. Modules are discovered and registered in dependency order, each owns its own database and transactional outbox from day one, and application code talks to abstractions (`IMessageBus`, `INavigationPopulator`, repositories) while transport choices stay at the edges. Lifting a module into its own gRPC service changes hosting and configuration, not your handlers.
