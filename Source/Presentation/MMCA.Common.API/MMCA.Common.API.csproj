@@ -6,6 +6,7 @@
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Asp.Versioning.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="AspNet.Security.OAuth.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />

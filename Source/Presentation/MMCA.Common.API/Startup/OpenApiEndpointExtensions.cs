@@ -22,14 +22,16 @@ public static class OpenApiEndpointExtensions
         /// <summary>
         /// Maps the OpenAPI document endpoint (<c>/openapi/{documentName}.json</c>) <b>outside
         /// Production</b> — matching the convention that these internal service specs are dev/CI
-        /// artifacts, not a public production surface. Requires <c>AddCommonOpenApi()</c> to have been
+        /// artifacts, not a public production surface. <c>WithDocumentPerVersion()</c> applies the
+        /// API-versioning convention so the route resolves one document per discovered API version
+        /// (<c>/openapi/v1.json</c> for v1.0). Requires <c>AddCommonOpenApi()</c> to have been
         /// called during service registration. No-op in Production.
         /// </summary>
         public WebApplication MapCommonOpenApi()
         {
             if (!app.Environment.IsProduction())
             {
-                app.MapOpenApi();
+                app.MapOpenApi().WithDocumentPerVersion();
             }
 
             return app;
