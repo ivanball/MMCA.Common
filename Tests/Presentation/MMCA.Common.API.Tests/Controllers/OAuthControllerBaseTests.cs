@@ -632,6 +632,9 @@ public sealed class OAuthControllerBaseTests
     }
 }
 
+// [ApiController] mirrors the attribute set the XML docs on OAuthControllerBase tell consumers to
+// apply to their derived controller, and satisfies AV0014 from the Asp.Versioning analyzers.
+[ApiController]
 internal sealed class TestOAuthController(
     IAuthenticationService authenticationService,
     ICacheService cacheService,

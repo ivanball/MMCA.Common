@@ -109,9 +109,11 @@ public static class WebApplicationBuilderExtensions
         /// </summary>
         public IServiceCollection AddCommonApiVersioning()
         {
+            // DefaultApiVersion is deliberately not set: 1.0 is already the framework default, and
+            // the API explorer inherits both it and AssumeDefaultVersionWhenUnspecified from the
+            // versioning options below (restating either one trips AV0011/AV0024).
             services.AddApiVersioning(options =>
             {
-                options.DefaultApiVersion = new ApiVersion(1, 0);
                 options.AssumeDefaultVersionWhenUnspecified = true;
                 options.ReportApiVersions = true;
                 options.ApiVersionReader = new HeaderApiVersionReader("api-version");
@@ -120,8 +122,6 @@ public static class WebApplicationBuilderExtensions
             {
                 options.GroupNameFormat = "'v'VVV";
                 options.SubstituteApiVersionInUrl = true;
-                options.DefaultApiVersion = new ApiVersion(1, 0);
-                options.AssumeDefaultVersionWhenUnspecified = true;
             });
 
             return services;
@@ -217,12 +217,19 @@ public static class WebApplicationBuilderExtensions
         }
 
         /// <summary>
-        /// Registers OpenAPI document generation (ASP.NET Core's built-in generator). Pair with
-        /// <c>MapCommonOpenApi()</c> so each service serves <c>/openapi/v1.json</c> the same way;
-        /// versioned controllers populate the <c>v1</c> document via the API explorer registered by
-        /// <c>AddCommonApiVersioning</c>.
+        /// Registers OpenAPI document generation through the API-versioning builder, which creates
+        /// one document per discovered API version named by the API explorer's
+        /// <c>GroupNameFormat</c> (<c>'v'VVV</c>, so v1.0 is the <c>v1</c> document). Pair with
+        /// <c>MapCommonOpenApi()</c> so each service serves <c>/openapi/v1.json</c> the same way.
+        /// The parameterless <c>AddApiVersioning()</c> call only returns the builder; the options
+        /// configured by <c>AddCommonApiVersioning</c> accumulate independently of call order.
         /// </summary>
-        public IServiceCollection AddCommonOpenApi() => services.AddOpenApi();
+        public IServiceCollection AddCommonOpenApi()
+        {
+            services.AddApiVersioning().AddOpenApi();
+
+            return services;
+        }
 
         /// <summary>
         /// Registers JWT Bearer authentication that trusts an external Identity service's JWKS
