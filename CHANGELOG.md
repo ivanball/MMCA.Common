@@ -14,6 +14,44 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.144.0] - 2026-08-11
+
+A dependency-refresh release driven by the August Dependabot sweep, plus the framework changes the
+Asp.Versioning 10.2 analyzers required. No consumer code changes are needed for header-versioned v1
+APIs (the entire current consumer surface): the served OpenAPI path stays `/openapi/v1.json`.
+
+### Changed
+
+- **`AddCommonOpenApi()` now registers OpenAPI through the API-versioning builder**
+  (`AddApiVersioning().AddOpenApi()`), and **`MapCommonOpenApi()` serves one document per discovered
+  API version** via `MapOpenApi().WithDocumentPerVersion()`. For today's v1-only hosts the output is
+  unchanged (`/openapi/v1.json`, name derived from the `'v'VVV` group-name format); once a host
+  introduces v2.0 it gets its own `/openapi/v2.json` instead of bleeding into the v1 document. This
+  adopts the guidance behind the new AV0029/AV0030 analyzers.
+- **`AddCommonApiVersioning()` no longer restates inherited defaults**: the explicit 1.0
+  `DefaultApiVersion` (already the framework default, AV0011) and the API-explorer copies of
+  `DefaultApiVersion`/`AssumeDefaultVersionWhenUnspecified` (inherited from the versioning options,
+  AV0024) are removed. Runtime behavior is identical.
+- **New `MMCA.Common.API` dependency: `Asp.Versioning.OpenApi` 10.2.1**, which supplies the
+  versioning-aware OpenAPI registration and the per-version document convention.
+
+### Dependencies
+
+- Asp.Versioning.Mvc / Asp.Versioning.Mvc.ApiExplorer 10.0.1 to 10.2.1 (ships new AV-prefixed
+  Roslyn analyzers; consumers that reference these packages directly and pin them centrally must
+  bump to 10.2.1 to avoid an NU1605 downgrade, and may see new AV diagnostics in their own hosts).
+- MudBlazor 9.7.0 to 9.8.0 (consumers referencing MudBlazor directly must pin at least 9.8.0).
+- AngleSharp 1.7.0 to 1.7.1, Scalar.AspNetCore 2.16.17 to 2.16.18.
+- Analyzers: Meziantou.Analyzer 3.0.141, Roslynator.Analyzers 4.16.0, SonarAnalyzer.CSharp 10.32.0.
+
+### Known issues
+
+- Upstream Asp.Versioning 10.2.1 throws a `NullReferenceException` in its XML-comments OpenAPI
+  transformer when a route uses URL-segment versioning (`v{version:apiVersion}`), returning 500 from
+  the document endpoint. No MMCA consumer uses URL-segment versioning (all versioning is
+  header-based), so nothing is affected today; tracked as a consumer-facing caveat until fixed
+  upstream.
+
 ## [1.143.0] - 2026-08-07
 
 A governance and documentation release: no behavioral changes, and the shipped assemblies are
