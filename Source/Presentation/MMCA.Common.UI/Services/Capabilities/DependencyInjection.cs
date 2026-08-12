@@ -51,6 +51,11 @@ public static class DependencyInjection
             // Media picking (ADR-045): web heads render InputFile instead (IsSupported false).
             services.TryAddSingleton<IMediaPickerService, NullMediaPickerService>();
 
+            // Camera barcode/QR scanning (ADR-042): no browser primitive, so web heads hide the
+            // affordance. The native override is opt-in (UseCommonBarcodeScanner in UI.Maui), so
+            // even a MAUI head keeps this default until it asks for the camera.
+            services.TryAddSingleton<IBarcodeScannerService, NullBarcodeScannerService>();
+
             // Scoped so the Blazor Server fallback holds per-circuit (per-user) state,
             // never cross-user state.
             services.TryAddScoped<IDevicePreferences, InMemoryDevicePreferences>();

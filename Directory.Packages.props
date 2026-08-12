@@ -95,6 +95,10 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />
     <PackageVersion Include="MudBlazor" Version="9.8.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
+    <!-- QR encoding for the shared QrCodeImage component (MIT). Pure managed encode-to-PNG: no
+         native binary, no network call, no image service, so it renders identically on every head
+         including Blazor WebAssembly. -->
+    <PackageVersion Include="QRCoder" Version="1.8.0" />
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin 10.0.70); MAUI plugin/toolkit packages bind to the MAUI minor, so
          bump them together, never independently. -->
@@ -113,6 +117,11 @@
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.80" />
+    <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
+         Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
+         -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
+         binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
+    <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.3" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.141" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />

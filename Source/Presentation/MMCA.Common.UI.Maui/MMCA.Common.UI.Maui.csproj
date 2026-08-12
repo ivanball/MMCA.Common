@@ -48,6 +48,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" ExcludeAssets="build;buildTransitive" />
     <PackageReference Include="Plugin.LocalNotification" />
     <PackageReference Include="CommunityToolkit.Maui" />
+    <!-- Camera barcode/QR scanning behind the opt-in UseCommonBarcodeScanner() builder call.
+         Ships lib assets only (no build/buildTransitive targets), so unlike WebView.Maui above it
+         cannot turn this Razor-SDK project into a static-web-asset producer. -->
+    <PackageReference Include="ZXing.Net.Maui.Controls" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

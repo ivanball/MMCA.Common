@@ -365,6 +365,11 @@
         "resolved": "1.0.0",
         "contentHash": "N4KeF3cpcm1PUHym1RmakkzfkEv3GRMyofVv40uXsQhCQeglr2OHNcUk2WOG51AKpGO8ynGpo9M/kFXSzghwug=="
       },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "hqTM5628jSsQiv+HGpiq3WKBl2c8v1KZfby2J6Pr7pEPlK9waPdgEO6b8A/+/xn/yZ9ulv8HuqK71ONy2tg67A=="
+      },
       "MiniProfiler.AspNetCore": {
         "type": "Transitive",
         "resolved": "4.5.4",
@@ -490,6 +495,14 @@
           "System.Security.Cryptography.ProtectedData": "9.0.4"
         }
       },
+      "System.Drawing.Common": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "NfuoKUiP2nUWwKZN6twGqXioIe1zVD0RIj2t976A+czLHr2nY454RwwXs6JU9Htc6mwqL6Dn/nEL3dpVf2jOhg==",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "6.0.0"
+        }
+      },
       "System.IO.Hashing": {
         "type": "Transitive",
         "resolved": "10.0.3",
@@ -598,6 +611,7 @@
           "Microsoft.FeatureManagement": "[4.6.0, )",
           "MudBlazor": "[9.8.0, )",
           "Polly": "[8.7.0, )",
+          "QRCoder": "[1.8.0, )",
           "Scrutor": "[7.0.0, )",
           "System.IdentityModel.Tokens.Jwt": "[8.22.0, )"
         }
@@ -994,6 +1008,15 @@
         "contentHash": "0qR4f0OR8FeCAfLWcfwzAM7w6EmpUgwa22PgxKjcL25dEAto7sKpQQXbtxp38vVvK+V3RFkh/TeI7g/iUdoYIQ==",
         "dependencies": {
           "Polly.Core": "8.7.0"
+        }
+      },
+      "QRCoder": {
+        "type": "CentralTransitive",
+        "requested": "[1.8.0, )",
+        "resolved": "1.8.0",
+        "contentHash": "RuvX3PEXU6pbY/I5ItAk800jm62r+YnoPLgyS2WTgwxkOnGkOfU9ORiipHUF0LkLyqM8rlroUCA319JjRYfRFQ==",
+        "dependencies": {
+          "System.Drawing.Common": "6.0.0"
         }
       },
       "Scalar.AspNetCore": {
