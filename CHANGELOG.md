@@ -60,7 +60,6 @@ capability to the UI packages, plus a security pin lifting a vulnerable transiti
   ([GHSA-q939-rpr3-3284](https://github.com/advisories/GHSA-q939-rpr3-3284), high severity,
   ScpClient recursive-download path traversal). CPM does not pin transitives, hence the direct
   reference; no MMCA code uses SSH.NET.
->>>>>>> origin/main
 
 ## [1.144.0] - 2026-08-11
 
