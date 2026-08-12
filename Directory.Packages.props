@@ -150,6 +150,14 @@
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.13.0" />
+    <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
+         package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
+         2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
+         server-controlled SCP filenames); fixed in 2026.0.0. CPM does not pin transitives, so the
+         projects that pull Testcontainers add a direct PackageReference (same pattern as the
+         MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
+         MMCA.Common.Testing package through the published package graph. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.10" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
