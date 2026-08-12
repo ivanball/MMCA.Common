@@ -6,12 +6,15 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.API.Authorization;
+using MMCA.Common.API.OpenApi;
 using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.API.Startup;
@@ -106,6 +109,8 @@ public static class WebApplicationBuilderExtensions
     {
         /// <summary>
         /// Registers header-based API versioning (v1.0 default) with MVC and API explorer support.
+        /// Also installs <see cref="ApiParameterDescriptorBackfillProvider"/>, which keeps
+        /// URL-segment-versioned routes from failing OpenAPI document generation.
         /// </summary>
         public IServiceCollection AddCommonApiVersioning()
         {
@@ -123,6 +128,8 @@ public static class WebApplicationBuilderExtensions
                 options.GroupNameFormat = "'v'VVV";
                 options.SubstituteApiVersionInUrl = true;
             });
+
+            services.AddApiParameterDescriptorBackfill();
 
             return services;
         }
@@ -223,13 +230,27 @@ public static class WebApplicationBuilderExtensions
         /// <c>MapCommonOpenApi()</c> so each service serves <c>/openapi/v1.json</c> the same way.
         /// The parameterless <c>AddApiVersioning()</c> call only returns the builder; the options
         /// configured by <c>AddCommonApiVersioning</c> accumulate independently of call order.
+        /// Also installs <see cref="ApiParameterDescriptorBackfillProvider"/>, so a host that opts
+        /// into OpenAPI without calling <c>AddCommonApiVersioning</c> is guarded too.
         /// </summary>
         public IServiceCollection AddCommonOpenApi()
         {
             services.AddApiVersioning().AddOpenApi();
+            services.AddApiParameterDescriptorBackfill();
 
             return services;
         }
+
+        /// <summary>
+        /// Registers the <see cref="ApiParameterDescriptorBackfillProvider"/> guard exactly once,
+        /// however many of the registration helpers above a host calls.
+        /// <see cref="ServiceCollectionDescriptorExtensions.TryAddEnumerable(IServiceCollection, ServiceDescriptor)"/>
+        /// de-duplicates on the implementation type, so the repeated call is a no-op rather than a
+        /// second pass over every API description.
+        /// </summary>
+        private void AddApiParameterDescriptorBackfill() =>
+            services.TryAddEnumerable(
+                ServiceDescriptor.Transient<IApiDescriptionProvider, ApiParameterDescriptorBackfillProvider>());
 
         /// <summary>
         /// Registers JWT Bearer authentication that trusts an external Identity service's JWKS
