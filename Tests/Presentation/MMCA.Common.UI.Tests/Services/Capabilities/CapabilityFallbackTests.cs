@@ -121,6 +121,22 @@ public sealed class CapabilityFallbackTests
     }
 
     [Fact]
+    public async Task NullBarcodeScannerService_ReportsUnsupportedAndReturnsNull()
+    {
+        var sut = new NullBarcodeScannerService();
+
+        sut.IsSupported.Should().BeFalse();
+        (await sut.ScanAsync()).Should().BeNull();
+
+        // Even a pre-cancelled token must come back as a plain null, never an OperationCanceledException:
+        // the contract is that the scan affordance is simply absent on heads without a camera.
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+        var act = async () => (await sut.ScanAsync(cancelled.Token)).Should().BeNull();
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
     public async Task RemainingNullFallbacks_DegradeSilently()
     {
         (await new NullMapNavigationService().OpenAddressAsync("100 Main St", "Venue")).Should().BeFalse();

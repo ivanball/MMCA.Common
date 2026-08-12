@@ -1,6 +1,9 @@
+using MMCA.Common.UI.Maui.Capabilities;
 using MMCA.Common.UI.Maui.Globalization;
 using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Capabilities;
 using Plugin.LocalNotification;
+using ZXing.Net.Maui.Controls;
 
 namespace MMCA.Common.UI.Maui;
 
@@ -35,6 +38,30 @@ public static class HostingDependencyInjection
             // here means no head can be left half-configured. UseMauiCulture() stays separately
             // callable for a head that composes its registrations by hand.
             builder.UseMauiCulture();
+            return builder;
+        }
+
+        /// <summary>
+        /// Opt-in camera barcode/QR scanning (ADR-042): registers the ZXing.Net.MAUI handlers
+        /// (<c>UseBarcodeReader()</c>) and overrides the null <c>IBarcodeScannerService</c> with
+        /// <see cref="MauiBarcodeScannerService"/>. Deliberately NOT folded into
+        /// <see cref="UseMauiDeviceCapabilities"/>: a head that never scans should ship neither the
+        /// camera handler nor a camera permission declaration.
+        /// <para>
+        /// The head still declares the platform permission itself (Android CAMERA, iOS
+        /// NSCameraUsageDescription). Call AFTER <c>AddUIShared</c> so the plain Add overrides the
+        /// TryAdd default (last registration wins).
+        /// </para>
+        /// </summary>
+        /// <param name="cancelText">Label for the scan page's cancel button; pass a localized string.</param>
+        /// <param name="cameraDescription">Accessible description and title for the scan surface; pass a localized string.</param>
+        public MauiAppBuilder UseCommonBarcodeScanner(
+            string cancelText = "Cancel",
+            string cameraDescription = "Scan a code")
+        {
+            builder.UseBarcodeReader();
+            builder.Services.AddSingleton<IBarcodeScannerService>(
+                _ => new MauiBarcodeScannerService(cancelText, cameraDescription));
             return builder;
         }
 
