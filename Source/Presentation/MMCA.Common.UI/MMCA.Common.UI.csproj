@@ -31,6 +31,8 @@
     </PackageReference>
     <PackageReference Include="MudBlazor" />
     <PackageReference Include="Polly" />
+    <!-- QrCodeImage encodes locally; managed-only, so it stays WebAssembly-safe. -->
+    <PackageReference Include="QRCoder" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="Scrutor" />
   </ItemGroup>

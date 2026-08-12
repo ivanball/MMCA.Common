@@ -1,0 +1,84 @@
+@using QRCoder
+
+@* Shared QR rendering primitive. Encodes the payload locally with QRCoder (MIT) and emits it as a
+   base64 PNG data URI, so there is no network round trip and no third-party image service in the
+   path. The component only renders: callers own what goes in. When the code is meant to be scanned
+   by another device's OS camera, encode an absolute PUBLIC url, never a WebView-internal origin. *@
+
+@if (_dataUri is not null)
+{
+    <img src="@_dataUri" alt="@AltText" class="@Class" />
+}
+
+@code {
+    /// <summary>Text encoded into the code, typically an absolute public url. Blank renders nothing.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Payload { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Alternative text for the image. Required: a QR code carries no accessible information of
+    /// its own, so the alt text must say where the code leads (screen readers cannot scan it).
+    /// </summary>
+    [Parameter]
+    [EditorRequired]
+    public string AltText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Rendered pixels per QR module. Defaults to 10, which puts a typical short url at roughly
+    /// 300 CSS pixels. Values below 1 are clamped to 1.
+    /// </summary>
+    [Parameter]
+    public int PixelsPerModule { get; set; } = 10;
+
+    /// <summary>Error-correction strength. Defaults to <see cref="QrErrorCorrectionLevel.Medium"/>.</summary>
+    [Parameter]
+    public QrErrorCorrectionLevel ErrorCorrection { get; set; } = QrErrorCorrectionLevel.Medium;
+
+    /// <summary>CSS classes applied to the rendered image (sizing, borders, print rules).</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string? _dataUri;
+    private string? _encodedPayload;
+    private int _encodedPixelsPerModule;
+    private QrErrorCorrectionLevel _encodedLevel;
+
+    protected override void OnParametersSet()
+    {
+        // Encoding is CPU work, so it runs only when an input that affects the bitmap actually
+        // changed; an unrelated parent re-render must not re-encode the same code.
+        if (string.Equals(_encodedPayload, Payload, StringComparison.Ordinal)
+            && _encodedPixelsPerModule == PixelsPerModule
+            && _encodedLevel == ErrorCorrection)
+        {
+            return;
+        }
+
+        _encodedPayload = Payload;
+        _encodedPixelsPerModule = PixelsPerModule;
+        _encodedLevel = ErrorCorrection;
+        _dataUri = Encode(Payload, PixelsPerModule, ErrorCorrection);
+    }
+
+    private static string? Encode(string payload, int pixelsPerModule, QrErrorCorrectionLevel level)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return null;
+        }
+
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(payload, ToEccLevel(level));
+        using var png = new PngByteQRCode(data);
+        return "data:image/png;base64," + Convert.ToBase64String(png.GetGraphic(Math.Max(1, pixelsPerModule)));
+    }
+
+    private static QRCodeGenerator.ECCLevel ToEccLevel(QrErrorCorrectionLevel level) => level switch
+    {
+        QrErrorCorrectionLevel.Low => QRCodeGenerator.ECCLevel.L,
+        QrErrorCorrectionLevel.Quartile => QRCodeGenerator.ECCLevel.Q,
+        QrErrorCorrectionLevel.High => QRCodeGenerator.ECCLevel.H,
+        _ => QRCodeGenerator.ECCLevel.M,
+    };
+}

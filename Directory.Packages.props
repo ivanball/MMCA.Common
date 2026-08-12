@@ -95,6 +95,10 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />
     <PackageVersion Include="MudBlazor" Version="9.8.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
+    <!-- QR encoding for the shared QrCodeImage component (MIT). Pure managed encode-to-PNG: no
+         native binary, no network call, no image service, so it renders identically on every head
+         including Blazor WebAssembly. -->
+    <PackageVersion Include="QRCoder" Version="1.8.0" />
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin 10.0.70); MAUI plugin/toolkit packages bind to the MAUI minor, so
          bump them together, never independently. -->
@@ -113,6 +117,11 @@
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.80" />
+    <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
+         Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
+         -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
+         binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
+    <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.3" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.141" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
@@ -141,6 +150,14 @@
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.13.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.13.0" />
+    <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
+         package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
+         2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
+         server-controlled SCP filenames); fixed in 2026.0.0. CPM does not pin transitives, so the
+         projects that pull Testcontainers add a direct PackageReference (same pattern as the
+         MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
+         MMCA.Common.Testing package through the published package graph. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.10" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
