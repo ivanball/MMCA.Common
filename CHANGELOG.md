@@ -14,6 +14,38 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.145.0] - 2026-08-12
+
+A feature release adding a shared QR-code display component and a device barcode-scanning
+capability to the UI packages, plus a security pin lifting a vulnerable transitive dependency.
+
+### Added
+
+- **`QrCodeImage` component in `MMCA.Common.UI`**: renders a QR code for a given `Payload` as an
+  inline base64 data URI (QRCoder `PngByteQRCode`, managed path only). Required `AltText` parameter
+  keeps consumers accessible by default; `PixelsPerModule`, `ErrorCorrection`
+  (new `QrErrorCorrectionLevel` enum, default Medium) and `Class` cover sizing and styling. Blank
+  payloads render nothing; the bitmap is re-encoded only when a bitmap-affecting parameter changes.
+- **`IBarcodeScannerService` device capability in `MMCA.Common.UI`** (`bool IsSupported`,
+  `Task<string?> ScanAsync(CancellationToken)`; never throws, `null` means cancelled, denied or
+  unsupported), with a `NullBarcodeScannerService` fallback registered by
+  `AddDeviceCapabilityDefaults()` beside the existing media-picker capability.
+- **MAUI implementation in `MMCA.Common.UI.Maui`**: `UseCommonBarcodeScanner(cancelText,
+  cameraDescription)` opts a head in (wraps ZXing's `UseBarcodeReader()` and overrides the null
+  registration); `MauiBarcodeScannerService` pushes a modal scan page (2D formats) whose decode,
+  cancel, back-gesture and token-cancellation paths all resolve exactly once. Supported on Android
+  and iOS; other targets keep the null fallback.
+
+### Dependencies
+
+- New: `QRCoder` 1.8.0 (MIT) in `MMCA.Common.UI`; `ZXing.Net.Maui.Controls` 0.10.3 (MIT) in
+  `MMCA.Common.UI.Maui`.
+- **Security**: direct `SSH.NET` 2026.0.0 pin in `MMCA.Common.Testing` (and the Redis test tier)
+  to lift the vulnerable transitive brought in by Testcontainers
+  ([GHSA-q939-rpr3-3284](https://github.com/advisories/GHSA-q939-rpr3-3284), high severity,
+  ScpClient recursive-download path traversal). CPM does not pin transitives, hence the direct
+  reference; no MMCA code uses SSH.NET.
+
 ## [1.144.0] - 2026-08-11
 
 A dependency-refresh release driven by the August Dependabot sweep, plus the framework changes the
