@@ -14,6 +14,25 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+### Added
+
+- **`UseCommonBarcodeScanner(Func<string> cancelText, Func<string> cameraDescription)` overload in
+  `MMCA.Common.UI.Maui`**: the localization-correct way to wire the camera scanner. Both delegates
+  are invoked once per scan, when the modal page is built, so the scan surface follows the user's
+  in-app language choice. `MauiBarcodeScannerService` gained the matching
+  `(Func<string>, Func<string>)` constructor.
+
+### Fixed
+
+- **The MAUI scan page no longer ignores the in-app language.** `UseCommonBarcodeScanner` resolved
+  its cancel label and camera description at `MauiAppBuilder` time, which runs before
+  `MauiCultureInitializer` restores the persisted culture (ADR-027), so the modal rendered in the
+  DEVICE language for the life of the process even after the user switched language in the app.
+  Both strings now resolve per scan through the new delegate overload. The existing string overload
+  keeps working unchanged (it wraps the values as `() => value`), so no consumer has to move; its
+  XML doc now states plainly that those values are fixed at startup and points heads with a language
+  switcher at the delegate overload. This removes the limitation recorded in ADR-071.
+
 ## [1.146.0] - 2026-08-12
 
 A single-fix release so the OpenAPI guard ships in the same consumer sweep as 1.145.0 (which was
