@@ -14,6 +14,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.147.0] - 2026-08-13
+
+A single-fix release: the MAUI barcode-scan surface now follows the in-app language.
+
 ### Added
 
 - **`UseCommonBarcodeScanner(Func<string> cancelText, Func<string> cameraDescription)` overload in
