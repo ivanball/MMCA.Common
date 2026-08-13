@@ -14,6 +14,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+### Fixed
+
+- **URL-segment-versioned routes no longer fail OpenAPI document generation.** A route such as
+  `[Route("api/v{version:apiVersion}/orders")]` turned `GET /openapi/{documentName}.json` into a
+  500: MVC leaves `ApiParameterDescription.ParameterDescriptor` null for a route token with no
+  matching action parameter, and `Asp.Versioning.OpenApi` 10.2.1 dereferences it without a null
+  check inside `XmlCommentsTransformer`. `AddCommonApiVersioning()` and `AddCommonOpenApi()` now
+  register `ApiParameterDescriptorBackfillProvider`, an `IApiDescriptionProvider` that runs last and
+  fills a placeholder descriptor wherever one is missing. This closes the 1.144.0 known issue below.
+  The guard is deliberately general: an unbound `{tenant}` or `{region}` token fails identically,
+  because it is the token being unbound, not the versioning, that produces the null. Existing
+  descriptors are never replaced, so the guard goes inert once the upstream null check lands and can
+  then be removed without a behavior change. No consumer action is required, and header-versioned
+  hosts (the entire current consumer surface) are unaffected either way.
+
 ## [1.145.0] - 2026-08-12
 
 A feature release adding a shared QR-code display component and a device barcode-scanning
