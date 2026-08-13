@@ -14,6 +14,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.146.0] - 2026-08-12
+
+A single-fix release so the OpenAPI guard ships in the same consumer sweep as 1.145.0 (which was
+tagged hours earlier and is superseded by this version in every consumer pin).
+
 ### Fixed
 
 - **URL-segment-versioned routes no longer fail OpenAPI document generation.** A route such as
