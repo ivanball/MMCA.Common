@@ -13,11 +13,50 @@ namespace MMCA.Common.UI.Maui.Capabilities;
 /// Registered by <c>UseCommonBarcodeScanner()</c> only, so a head that never scans neither ships
 /// the camera handler nor needs the permission.
 /// </para>
+/// <para>
+/// The page's two strings are supplied as delegates, not values, and are invoked once per scan, at
+/// the moment the page is built. The service is a singleton created while the app is being built,
+/// which is BEFORE <c>MauiCultureInitializer</c> restores the user's persisted language (ADR-027);
+/// resolving the text at construction would therefore pin it to the device language for the life of
+/// the process, and no later in-app language switch would ever reach it.
+/// </para>
 /// </summary>
-/// <param name="cancelText">Label for the scan page's cancel button; pass a localized string.</param>
-/// <param name="cameraDescription">Accessible description and title for the scan surface.</param>
-public sealed class MauiBarcodeScannerService(string cancelText, string cameraDescription) : IBarcodeScannerService
+public sealed class MauiBarcodeScannerService : IBarcodeScannerService
 {
+    private readonly Func<string> _cancelText;
+    private readonly Func<string> _cameraDescription;
+
+    /// <summary>
+    /// Initializes the service with text resolved lazily, per scan. This is the localization-correct
+    /// overload: pass the resource lookups themselves (for example
+    /// <c>() =&gt; Localizer["Cancel"]</c>) so each scan page is built under the
+    /// <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> in effect at that moment.
+    /// </summary>
+    /// <param name="cancelText">Resolves the label for the scan page's cancel button.</param>
+    /// <param name="cameraDescription">Resolves the accessible description and title for the scan surface.</param>
+    public MauiBarcodeScannerService(Func<string> cancelText, Func<string> cameraDescription)
+    {
+        ArgumentNullException.ThrowIfNull(cancelText);
+        ArgumentNullException.ThrowIfNull(cameraDescription);
+
+        _cancelText = cancelText;
+        _cameraDescription = cameraDescription;
+    }
+
+    /// <summary>
+    /// Initializes the service with fixed text. The values are captured as given and never
+    /// re-resolved, so they stay in whatever language was active when the service was constructed
+    /// (the device language, on a head that persists a different in-app choice). Prefer the
+    /// <see cref="MauiBarcodeScannerService(Func{string}, Func{string})"/> overload on any head that
+    /// offers a language switcher.
+    /// </summary>
+    /// <param name="cancelText">Label for the scan page's cancel button.</param>
+    /// <param name="cameraDescription">Accessible description and title for the scan surface.</param>
+    public MauiBarcodeScannerService(string cancelText, string cameraDescription)
+        : this(() => cancelText, () => cameraDescription)
+    {
+    }
+
     /// <inheritdoc />
     /// <remarks>
     /// Android and iOS only. Mac Catalyst and Windows have cameras, but the scan affordance there
@@ -38,8 +77,10 @@ public sealed class MauiBarcodeScannerService(string cancelText, string cameraDe
 
         try
         {
+            // The delegates are invoked here, once per scan, so the page is built under the culture
+            // that is active NOW rather than the one that was active when the app was built.
             return await MainThread
-                .InvokeOnMainThreadAsync(() => ScanOnMainThreadAsync(cancelText, cameraDescription, cancellationToken))
+                .InvokeOnMainThreadAsync(() => ScanOnMainThreadAsync(_cancelText(), _cameraDescription(), cancellationToken))
                 .ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types - scanning is best-effort; a missing window, a denied camera, and a handler-less platform must all read as "no scan"
