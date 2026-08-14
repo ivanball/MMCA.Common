@@ -462,28 +462,31 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         LoadFailed = false;
         StateHasChanged();
 
-        var filters = ExtractGridFilters(state);
-        additionalFilters?.Invoke(filters);
-
-        var (sortColumn, sortDirection) = ExtractSortParameters(state);
-
-        // First-fetch fallback: when MudDataGrid hasn't yet picked up a SortDefinition
-        // (typical on initial load with a URL-driven sort), use the sort restored from
-        // the query string so the data lands sorted from the very first request.
-        if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
-        {
-            sortColumn = _savedSortColumn;
-            sortDirection = _savedSortDescending ? "desc" : "asc";
-        }
-
         // Bound the fetch token: during SSR pre-render (CreateFetchCts) it times out so a cold/unreachable
         // backend can't block prerendering — and therefore the page load / navigation — indefinitely (the
         // dominant cause of E2E navigation timeouts). On timeout the fetch throws OperationCanceledException
         // and we return an empty grid; the first INTERACTIVE ServerData call then loads the real data.
         using var fetchCts = CreateFetchCts();
 
+        // Filter and sort extraction run INSIDE the try: the caller's additionalFilters callback is
+        // arbitrary page code, and a throw from it (or from the extraction itself) used to escape
+        // past the finally, stranding IsLoading at true and leaving the grid spinning forever.
         try
         {
+            var filters = ExtractGridFilters(state);
+            additionalFilters?.Invoke(filters);
+
+            var (sortColumn, sortDirection) = ExtractSortParameters(state);
+
+            // First-fetch fallback: when MudDataGrid hasn't yet picked up a SortDefinition
+            // (typical on initial load with a URL-driven sort), use the sort restored from
+            // the query string so the data lands sorted from the very first request.
+            if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
+            {
+                sortColumn = _savedSortColumn;
+                sortDirection = _savedSortDescending ? "desc" : "asc";
+            }
+
             var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
             var gridData = new GridData<TDto> { Items = items, TotalItems = totalItems };
             _lastSuccessfulGridData = gridData;
@@ -594,12 +597,23 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
     }
 
+    /// <summary>
+    /// Flattens the grid's filter definitions into the one-filter-per-column shape the fetch
+    /// delegate takes. MudDataGrid lets the user add several filter rows on the SAME column, which
+    /// a dictionary cannot carry, so the newest row wins instead of the projection throwing.
+    /// </summary>
     private static Dictionary<string, (string Operator, string Value)> ExtractGridFilters(GridState<TDto> state) =>
         state.FilterDefinitions?
             .Where(f => !string.IsNullOrWhiteSpace(f.Column?.PropertyName))
+            .GroupBy(f => f.Column!.PropertyName!, StringComparer.Ordinal)
             .ToDictionary(
-                f => f.Column!.PropertyName!,
-                f => (f.Operator ?? string.Empty, f.Value?.ToString() ?? string.Empty)
+                g => g.Key,
+                g =>
+                {
+                    var newest = g.Last();
+                    return (newest.Operator ?? string.Empty, newest.Value?.ToString() ?? string.Empty);
+                },
+                StringComparer.Ordinal
             ) ?? [];
 
     private static (string? SortColumn, string? SortDirection) ExtractSortParameters(GridState<TDto> state)

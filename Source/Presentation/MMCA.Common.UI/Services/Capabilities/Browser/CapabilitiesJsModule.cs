@@ -13,11 +13,10 @@ public sealed class CapabilitiesJsModule : IAsyncDisposable
 {
     private const string ModulePath = "./_content/MMCA.Common.UI/capabilities-interop.js";
 
-    private readonly IJSRuntime _jsRuntime;
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _module;
 
     /// <summary>Initializes the accessor over the host's <see cref="IJSRuntime"/>.</summary>
-    public CapabilitiesJsModule(IJSRuntime jsRuntime) => _jsRuntime = jsRuntime;
+    public CapabilitiesJsModule(IJSRuntime jsRuntime) => _module = new LazyJsModule(jsRuntime, ModulePath);
 
     /// <summary>
     /// Invokes a module export, returning <see langword="default"/> when JS interop is
@@ -31,10 +30,8 @@ public sealed class CapabilitiesJsModule : IAsyncDisposable
     {
         try
         {
-            _module ??= await _jsRuntime
-                .InvokeAsync<IJSObjectReference>("import", cancellationToken, ModulePath)
-                .ConfigureAwait(false);
-            return await _module.InvokeAsync<T>(identifier, cancellationToken, args).ConfigureAwait(false);
+            var module = await _module.GetOrImportAsync(cancellationToken).ConfigureAwait(false);
+            return await module.InvokeAsync<T>(identifier, cancellationToken, args).ConfigureAwait(false);
         }
         catch (InvalidOperationException)
         {
@@ -52,20 +49,5 @@ public sealed class CapabilitiesJsModule : IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async ValueTask DisposeAsync()
-    {
-        if (_module is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await _module.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (JSDisconnectedException)
-        {
-            // Circuit already gone; nothing to release.
-        }
-    }
+    public ValueTask DisposeAsync() => _module.DisposeAsync();
 }

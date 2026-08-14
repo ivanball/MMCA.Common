@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Concurrency;
@@ -138,6 +139,56 @@ public sealed class CookieSessionRefresherTests
 
         result.Should().NotBeNull();
         result!.Value.AccessToken.Should().Be("new-access");
+    }
+
+    // ── Transport and payload failures ──
+    // These run during SSR: an escaping exception turned a signed-in user's navigation into a 500
+    // instead of an anonymous render.
+    [Fact]
+    public async Task GetOrRefreshAsync_WhenRefreshCallThrows_ReturnsNullWithoutThrowing()
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(_ => throw new HttpRequestException("connection refused"));
+        var context = CreateContext(accessToken: expired, refreshToken: "old-refresh");
+
+        SessionTokenResult? result = null;
+        Func<Task> act = async () => result = await harness.Sut.GetOrRefreshAsync(context);
+
+        await act.Should().NotThrowAsync("a transport failure means no session, not a broken request");
+        result.Should().BeNull();
+        context.Response.Headers.SetCookie.Count.Should().Be(0);
+        context.Items.Should().NotContainKey(CookieTokenReader.FreshAccessTokenItemKey);
+    }
+
+    [Fact]
+    public async Task GetOrRefreshAsync_WhenRefreshReturnsMalformedSuccessBody_ReturnsNullWithoutThrowing()
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{ not json at all", System.Text.Encoding.UTF8, "application/json"),
+        });
+        var context = CreateContext(accessToken: expired, refreshToken: "old-refresh");
+
+        SessionTokenResult? result = null;
+        Func<Task> act = async () => result = await harness.Sut.GetOrRefreshAsync(context);
+
+        await act.Should().NotThrowAsync();
+        result.Should().BeNull();
+        context.Response.Headers.SetCookie.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetOrRefreshAsync_AfterAFailedRefresh_RetriesOnTheNextCall()
+    {
+        // Only a successful rotation is cached, so a failure must not stick to the refresh token.
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(_ => throw new HttpRequestException("connection refused"));
+
+        await harness.Sut.GetOrRefreshAsync(CreateContext(accessToken: expired, refreshToken: "old-refresh"));
+        await harness.Sut.GetOrRefreshAsync(CreateContext(accessToken: expired, refreshToken: "old-refresh"));
+
+        harness.Handler.CallCount.Should().Be(2, "a failed refresh is never cached");
     }
 
     // ── Rotation-grace single flight ──
@@ -291,7 +342,11 @@ public sealed class CookieSessionRefresherTests
             _cache = new MemoryCache(new MemoryCacheOptions());
             var environment = new Mock<IWebHostEnvironment>();
             environment.SetupGet(x => x.EnvironmentName).Returns(Environments.Production);
-            Sut = new CookieSessionRefresher(new StubHttpClientFactory(Handler), _cache, environment.Object);
+            Sut = new CookieSessionRefresher(
+                new StubHttpClientFactory(Handler),
+                _cache,
+                environment.Object,
+                NullLogger<CookieSessionRefresher>.Instance);
         }
 
         public CookieSessionRefresher Sut { get; }

@@ -31,8 +31,16 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        await Browser.DisposeAsync().ConfigureAwait(false);
-        Playwright.Dispose();
+
+        // A failed InitializeAsync (no browser binaries, a launch timeout) leaves these null despite
+        // the null! declarations, and the NullReferenceException from disposal then replaced the real
+        // launch error in the run output.
+        if (Browser is { } browser)
+        {
+            await browser.DisposeAsync().ConfigureAwait(false);
+        }
+
+        Playwright?.Dispose();
     }
 }
 

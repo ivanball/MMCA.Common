@@ -91,10 +91,20 @@ public interface IEntityQuerier<TEntity, TIdentifierType>
 
     /// <summary>Retrieves entities projected to a different type via a selector expression (translated to SQL).</summary>
     /// <typeparam name="TResult">The projected result type.</typeparam>
+    /// <param name="select">The projection expression.</param>
+    /// <param name="where">Optional filter predicate.</param>
+    /// <param name="asTracking">Whether to track the source entities for changes.</param>
+    /// <param name="ignoreQueryFilters">
+    /// Whether to include soft-deleted rows. It drops the <c>SoftDelete</c> global query filter and
+    /// <b>only</b> that one: the <c>Tenant</c> filter stays in force, so a caller asking for deleted
+    /// rows can never read another tenant's data.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyCollection<TResult>> GetProjectedAsync<TResult>(
         Expression<Func<TEntity, TResult>> select,
         Expression<Func<TEntity, bool>>? where = null,
         bool asTracking = false,
+        bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>Retrieves entities as lightweight id/name pairs for lookup scenarios.</summary>

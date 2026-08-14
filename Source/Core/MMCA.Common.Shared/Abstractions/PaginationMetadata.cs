@@ -76,7 +76,7 @@ public sealed record PaginationMetadata
 
     /// <summary>Gets the 1-based index of the first item on the current page.</summary>
     [IgnoreDataMember]
-    public int FirstRowOnPage => TotalItemCount == 0 || PageSize == 0 ? 0 : (int)((long)(CurrentPage - 1) * PageSize + 1);
+    public int FirstRowOnPage => TotalItemCount == 0 || PageSize == 0 || CurrentPage < 1 ? 0 : (int)((long)(CurrentPage - 1) * PageSize + 1);
 
     /// <summary>Gets the 1-based index of the last item on the current page, clamped to <see cref="TotalItemCount"/>.</summary>
     [IgnoreDataMember]

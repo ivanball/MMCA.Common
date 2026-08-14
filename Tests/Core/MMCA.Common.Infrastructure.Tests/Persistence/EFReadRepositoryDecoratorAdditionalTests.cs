@@ -45,6 +45,7 @@ public sealed class EFReadRepositoryDecoratorAdditionalTests
                 It.IsAny<Expression<Func<FakeEntity, string>>>(),
                 It.IsAny<Expression<Func<FakeEntity, bool>>>(),
                 false,
+                false,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(projected);
 

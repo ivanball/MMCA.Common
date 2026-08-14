@@ -48,27 +48,20 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     /// via <see cref="Microsoft.EntityFrameworkCore.ChangeTracking.PropertyValues.SetValues(object)"/>
     /// to avoid an "already tracked" exception. Otherwise, <see cref="DbSet{TEntity}.Update"/>
     /// attaches and marks the entity as modified.
-    /// On failure, all pending changes are rolled back to <see cref="EntityState.Unchanged"/>
-    /// to keep the context in a usable state.
     /// </remarks>
     public Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        try
-        {
-            // FindEntry is an O(1) key lookup against the tracker's identity map (and never
-            // falls back to the database), replacing a linear scan of the LocalView.
-            var trackedEntry = Entities.Local.FindEntry(entity.Id);
-            if (trackedEntry is not null)
-                trackedEntry.CurrentValues.SetValues(entity);
-            else
-                Entities.Update(entity);
-            return Task.CompletedTask;
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new DbUpdateException(GetFullErrorTextAndRollbackEntityChanges(ex), ex);
-        }
+
+        // FindEntry is an O(1) key lookup against the tracker's identity map (and never
+        // falls back to the database), replacing a linear scan of the LocalView.
+        var trackedEntry = Entities.Local.FindEntry(entity.Id);
+        if (trackedEntry is not null)
+            trackedEntry.CurrentValues.SetValues(entity);
+        else
+            Entities.Update(entity);
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -158,37 +151,4 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
         _context is ApplicationDbContext applicationContext
             ? await applicationContext.SaveChangesAsync(currentUserService?.UserId, cancellationToken).ConfigureAwait(false)
             : await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-    /// <summary>
-    /// Rolls back all Added/Modified entries to Unchanged and persists the reset
-    /// so the context is left in a clean state after a failed update.
-    /// </summary>
-    /// <returns>The full error text from the original or rollback exception.</returns>
-    private string GetFullErrorTextAndRollbackEntityChanges(DbUpdateException exception)
-    {
-        var entries = _context.ChangeTracker.Entries()
-            .Where(e => e.State is EntityState.Added or EntityState.Modified).ToList();
-
-        foreach (var entry in entries)
-        {
-            try
-            {
-                entry.State = EntityState.Unchanged;
-            }
-            catch (InvalidOperationException)
-            {
-                // Entry may be in a state that cannot transition to Unchanged (e.g. keyless).
-            }
-        }
-
-        try
-        {
-            _context.SaveChanges();
-            return exception.ToString();
-        }
-        catch (Exception ex)
-        {
-            return ex.ToString();
-        }
-    }
 }

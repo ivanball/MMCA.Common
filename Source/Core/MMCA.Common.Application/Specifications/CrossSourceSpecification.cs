@@ -53,7 +53,7 @@ public static class CrossSourceSpecification
 
         var principalRepository = unitOfWork.GetReadRepository<TPrincipal, TPrincipalId>();
         var matchingKeys = await principalRepository
-            .GetProjectedAsync(p => p.Id, principalPredicate, asTracking: false, cancellationToken)
+            .GetProjectedAsync(p => p.Id, principalPredicate, asTracking: false, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
         // Materialize once so the predicate embeds a stable collection EF can translate (IN / ARRAY_CONTAINS).

@@ -36,4 +36,48 @@ public sealed class RegisterFormTests : BunitTestBase
             x => x.RegisterAsync(It.IsAny<RegisterRequest>(), It.IsAny<CancellationToken>()),
             Times.Never());
     }
+
+    [Fact]
+    public void SubmittingWithAnInvalidAddress_ShowsTheAddressError_AndDoesNotRegister()
+    {
+        // The optional address block used to be built with Address.Create and its failure discarded,
+        // so a partially-filled address silently created an account with NO address at all. Anything
+        // the user typed is now validated, and the failure blocks the submit.
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+
+        // City entered, address line 1 left blank: an address the value object refuses to build.
+        // The address fields are not Immediate, so they commit on change rather than on input.
+        cut.Find("input[autocomplete='address-level2']").Change("Atlanta");
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Address Line 1 cannot be empty"));
+        _auth.Verify(
+            x => x.RegisterAsync(It.IsAny<RegisterRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public void SubmittingWithNoAddressAtAll_StillRegisters()
+    {
+        // The address block is optional: an untouched block must still register, with a null address.
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() => _auth.Verify(
+            x => x.RegisterAsync(It.Is<RegisterRequest>(r => r.Address == null), It.IsAny<CancellationToken>()),
+            Times.Once()));
+    }
+
+    private static void FillRequiredFields(IRenderedComponent<Register> cut)
+    {
+        cut.Find("input[autocomplete='given-name']").Input("Ada");
+        cut.Find("input[autocomplete='family-name']").Input("Lovelace");
+        cut.Find("input[autocomplete='email']").Input("ada@example.com");
+        cut.FindAll("input[autocomplete='new-password']")[0].Input("Str0ng!Passw0rd");
+        cut.FindAll("input[autocomplete='new-password']")[1].Input("Str0ng!Passw0rd");
+    }
 }

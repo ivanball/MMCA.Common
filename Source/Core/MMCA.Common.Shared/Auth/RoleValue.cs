@@ -43,7 +43,7 @@ public abstract class RoleValue
     {
         ArgumentNullException.ThrowIfNull(knownRoles);
 
-        return knownRoles.Contains(role ?? string.Empty)
+        return IsKnown(role, knownRoles)
             ? Result.Success()
             : Result.Failure(Error.Invariant(
                 code: "User.Role.Invalid",
@@ -51,6 +51,18 @@ public abstract class RoleValue
                 source: source,
                 target: nameof(role)));
     }
+
+    /// <summary>
+    /// Case-insensitive membership test that does not depend on how the caller built its set.
+    /// The fast path is the set's own lookup (correct and O(1) for the intended
+    /// <see cref="StringComparer.OrdinalIgnoreCase"/> sets); a miss falls back to an explicit
+    /// case-insensitive scan, so a set built with the default ordinal comparer still validates
+    /// case-insensitively as the contract promises. Role sets hold a handful of entries, so the
+    /// fallback scan is negligible and only ever runs on a miss.
+    /// </summary>
+    private static bool IsKnown(string? role, IReadOnlySet<string> knownRoles) =>
+        knownRoles.Contains(role ?? string.Empty)
+        || knownRoles.Any(k => string.Equals(k, role, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Builds a case-insensitive, frozen lookup of the supplied role instances keyed by their

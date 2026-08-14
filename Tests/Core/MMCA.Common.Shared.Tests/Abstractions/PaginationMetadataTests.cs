@@ -57,6 +57,15 @@ public class PaginationMetadataTests
         metadata.FirstRowOnPage.Should().Be(0);
     }
 
+    [Fact]
+    public void FirstRowOnPage_WithCurrentPageZero_ReturnsZero()
+    {
+        // CurrentPage is 1-based, but 0 is a legal value (the parameterless constructor uses it, and
+        // any deserialized payload can carry it), which made the arithmetic produce a negative row.
+        var metadata = new PaginationMetadata(100, 10, 0);
+        metadata.FirstRowOnPage.Should().Be(0);
+    }
+
     // ── LastRowOnPage ──
     [Fact]
     public void LastRowOnPage_FullPage_ReturnsPageBoundary()

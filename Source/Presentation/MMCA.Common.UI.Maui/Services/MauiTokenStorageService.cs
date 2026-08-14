@@ -10,7 +10,9 @@ namespace MMCA.Common.UI.Maui.Services;
 /// enrolment change), and the raw APIs then throw a platform exception instead of returning
 /// nothing. An unhandled throw here bricks the app on launch until it is reinstalled, so a read
 /// failure degrades to "no token stored" (which <see cref="ITokenStorageService"/> already
-/// documents) and drops the unreadable entry, forcing one clean re-login.
+/// documents) and drops the unreadable entry, forcing one clean re-login. A write failure clears
+/// BOTH entries before it propagates, so the app can never be left holding a stale pair it believes
+/// is current: the outcome of any failed write is the clean signed-out state.
 /// <para>
 /// Register with <c>AddCommonMauiTokenStorage()</c>; the browser-host siblings are
 /// <c>WasmTokenStorageService</c> (MMCA.Common.UI) and <c>ServerTokenStorageService</c>
@@ -31,12 +33,13 @@ public sealed class MauiTokenStorageService : ITokenStorageService
     /// <inheritdoc />
     public async Task SetTokensAsync(string accessToken, string refreshToken)
     {
-        // Refresh first: if it fails the old pair stays coherent. If the access write then fails,
-        // drop both so storage is a clean signed-out state instead of a mismatched pair holding a
-        // new access token against a stale refresh token whose refresh path is already dead.
-        await SetAsync(RefreshTokenKey, refreshToken);
+        // Refresh first, both writes under the SAME guard: whichever one fails, drop both so storage
+        // is a clean signed-out state. A failing refresh write used to escape before the guard was
+        // entered, leaving the OLD pair in place: the app then held a stale access token it believed
+        // was current, and only a manual sign-out cleared it.
         try
         {
+            await SetAsync(RefreshTokenKey, refreshToken);
             await SetAsync(AccessTokenKey, accessToken);
         }
 #pragma warning disable CA1031 // Do not catch general exception types - see GetAsync; rethrown after the cleanup
