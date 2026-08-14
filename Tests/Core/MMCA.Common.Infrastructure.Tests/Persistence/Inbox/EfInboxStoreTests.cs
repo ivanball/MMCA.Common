@@ -128,6 +128,22 @@ public sealed class EfInboxStoreTests : IDisposable
         (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == duplicated)).Should().Be(1);
     }
 
+    [Fact]
+    public async Task NonDuplicateWriteFailure_IsRethrown_AndNothingIsRecorded()
+    {
+        // A write that fails for a reason OTHER than the unique index (here the NOT NULL EventType
+        // column) must surface: swallowing it would ACK a message whose inbox row was never written,
+        // so the broker never redelivers and the message is lost.
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        var failing = async () => await store.MarkProcessedAsync(messageId, null!, CancellationToken.None);
+        await failing.Should().ThrowAsync<DbUpdateException>();
+
+        (await store.AlreadyProcessedAsync(messageId, CancellationToken.None)).Should().BeFalse(
+            "the row was never written, so the message must stay eligible for redelivery");
+    }
+
     private static EfInboxStore CreateStore(ApplicationDbContext context)
     {
         var factory = new Mock<IDbContextFactory>();

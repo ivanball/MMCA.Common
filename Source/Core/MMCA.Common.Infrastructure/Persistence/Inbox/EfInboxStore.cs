@@ -49,13 +49,19 @@ public sealed partial class EfInboxStore(
         }
         catch (DbUpdateException)
         {
-            // A concurrent duplicate delivery already inserted this MessageId (unique index).
-            // Idempotent — treat as processed.
             // The context is cached per data source for the whole scope, so the rejected row must be
             // detached: left Added, every later SaveChangesAsync on this scope would re-attempt the
-            // duplicate insert and fail. Same idiom as DomainEventSaveChangesInterceptor uses when it
+            // failed insert and fail. Same idiom as DomainEventSaveChangesInterceptor uses when it
             // discards an abandoned capture.
             entry.State = EntityState.Detached;
+
+            // Only a concurrent duplicate delivery (the unique index on MessageId) is idempotent and
+            // safe to absorb. Re-query instead of sniffing provider-specific error codes, so the check
+            // holds for SQL Server and SQLite alike. Any other write failure must surface: swallowing
+            // it would ACK a message whose inbox row was never written, hiding the failure from the
+            // broker's redelivery.
+            if (!await AlreadyProcessedAsync(messageId, cancellationToken).ConfigureAwait(false))
+                throw;
 
             LogConcurrentDuplicate(logger, messageId);
         }

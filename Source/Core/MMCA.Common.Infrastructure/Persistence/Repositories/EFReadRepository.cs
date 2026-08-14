@@ -66,11 +66,15 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         Expression<Func<TEntity, TResult>> select,
         Expression<Func<TEntity, bool>>? where = null,
         bool asTracking = false,
+        bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(select);
 
         var query = asTracking ? Table : TableNoTracking;
+
+        if (ignoreQueryFilters)
+            query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
 
         if (where is not null)
             query = query.Where(where);

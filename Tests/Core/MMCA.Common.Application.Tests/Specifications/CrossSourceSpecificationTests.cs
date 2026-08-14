@@ -32,6 +32,7 @@ public sealed class CrossSourceSpecificationTests
                 It.IsAny<Expression<Func<Principal, int>>>(),
                 It.IsAny<Expression<Func<Principal, bool>>>(),
                 false,
+                false,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(matchingPrincipalKeys);
 
