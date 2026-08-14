@@ -14,6 +14,22 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.149.0] - 2026-08-13
+
+A single-fix release: the scoped bulk mark-read introduced in 1.148.0 never persisted its marks.
+
+### Fixed
+
+- **Scoped mark-all-read silently no-oped.** `MarkAllNotificationsReadHandler`'s scoped branch
+  joined the tracked `UserNotification` query with `PushNotification`'s no-tracking source, and an
+  `AsNoTracking` call anywhere in a composed EF query switches the whole query to no-tracking, so
+  the loaded rows were never tracked and `SaveChangesAsync` persisted nothing (the endpoint still
+  returned 204). The scoped branch now joins the tracked `Table`; the `select un` projection
+  materializes only `UserNotification`, so no `PushNotification` instances are tracked. Caught by
+  MMCA.ADC's integration tier; new SQLite-backed regression tests in Infrastructure.Tests run the
+  real handler against real change tracking and fail under the old code. Unscoped reads and the
+  read-only scoped queries (inbox, unread count) were unaffected.
+
 ## [1.148.0] - 2026-08-13
 
 Event-scoped notifications and palette-aware shared section styles.
