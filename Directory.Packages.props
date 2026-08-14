@@ -60,6 +60,15 @@
          resolve them as real packages, so the newer pin quietly moves five shared transitives across
          the graph for no functional gain. At 10.8.0 this adds exactly one entry per lock file. -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.8.0" />
+    <!-- Cron expression parsing for the opt-in recurring job scheduler (ScheduledJobRunner). MIT,
+         zero-dependency (netstandard2.0, no transitive graph at all), and it does exactly one thing:
+         parse a five-field expression and answer "what is the next occurrence after this UTC
+         instant". Deliberately NOT Hangfire or Quartz: both ship their own persistence, their own
+         worker/thread model and their own dashboards, all of which duplicate machinery this
+         framework already owns and has production history with (the OutboxProcessor claim-lease
+         idiom, the DI scope-per-execution pattern, the OpenTelemetry meters). The only piece the
+         framework lacked was the cron grammar, so that is the only piece taken as a dependency. -->
+    <PackageVersion Include="Cronos" Version="0.13.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the

@@ -49,6 +49,11 @@
          unconditionally so the type is available to hosts that call it; a host that does not is
          unaffected, since nothing registers HybridCache until AddCommonHybridCache runs. -->
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
+    <!-- Cron grammar for the opt-in recurring job scheduler (ScheduledJobRunner). MIT and
+         zero-dependency, so it adds one entry to a consumer's lock file and nothing else.
+         Referenced unconditionally so the types are available to hosts that call AddScheduledJobs;
+         a host that does not call it registers no runner and maps no table. -->
+    <PackageReference Include="Cronos" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.Application\MMCA.Common.Application.csproj" />

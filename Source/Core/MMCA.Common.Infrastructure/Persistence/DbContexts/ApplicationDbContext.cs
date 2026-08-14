@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -12,6 +13,8 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Infrastructure.Settings;
 using StackExchange.Profiling;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -41,6 +44,20 @@ public abstract class ApplicationDbContext(
 {
     /// <summary>Gets the physical data source key (engine + database name) this context targets.</summary>
     public DataSourceKey DataSourceKey => physicalDataSource.Key;
+
+    /// <summary>
+    /// Whether the <c>ScheduledJobs</c> table belongs in THIS context's model. Resolved once in
+    /// <see cref="OnConfiguring"/> from the root provider (the same place the interceptors are
+    /// resolved) and read by <see cref="ConfigureScheduler"/>, because <c>OnModelCreating</c> must
+    /// not depend on anything the model cache key does not cover.
+    /// <para>
+    /// Two conditions, both required. <c>Scheduler:Enabled</c> keeps the model of a host that never
+    /// opted in byte-identical to what it was before the scheduler shipped, so its migrations never
+    /// see the table. The <c>Default</c>-source condition keeps the table in exactly one database:
+    /// jobs are host-scoped, unlike the outbox, which exists once per physical source.
+    /// </para>
+    /// </summary>
+    private bool _schedulerTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -184,6 +201,13 @@ public abstract class ApplicationDbContext(
         var domainEventInterceptor = serviceProvider.GetRequiredService<DomainEventSaveChangesInterceptor>();
         optionsBuilder.AddInterceptors(auditInterceptor, domainEventInterceptor);
 
+        // Settings-gated table (see the field's remarks). GetService, not GetRequiredService: a host
+        // that never calls AddScheduledJobs registers no SchedulerSettings, and that absence must
+        // read as "disabled" rather than fail every context construction in the application.
+        _schedulerTableEnabled =
+            serviceProvider.GetService<IOptions<SchedulerSettings>>()?.Value.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, DataSourceKey.DefaultName, StringComparison.Ordinal);
+
         // Key EF's model cache by (context type, physical source name): the same context class is
         // instantiated once per database, each with a different model. Without this, the first
         // built model would silently be reused for every database.
@@ -231,6 +255,9 @@ public abstract class ApplicationDbContext(
 
         // Configure the inbox table for consumer-side idempotency (used when MessageBus:EnableInbox).
         ConfigureInbox(modelBuilder);
+
+        // Configure the recurring job table (used when Scheduler:Enabled, Default source only).
+        ConfigureScheduler(modelBuilder);
     }
 
     /// <summary>
@@ -340,6 +367,41 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.ProcessedOn)
                   .HasDatabaseName("IX_InboxMessages_ProcessedOn");
         });
+
+    /// <summary>
+    /// Configures the <see cref="ScheduledJobEntry"/> entity (the recurring job store). Unlike the
+    /// outbox and inbox tables this one is <b>gated</b>: it is mapped only when the host opted in
+    /// via <c>Scheduler:Enabled</c> AND this context targets the <c>Default</c> data source. A host
+    /// that did not opt in gets exactly the model it had before the scheduler shipped, so the table
+    /// never appears in its migrations. Cosmos DB never reaches this method (it overrides
+    /// <see cref="OnModelCreating"/>).
+    /// </summary>
+    private void ConfigureScheduler(ModelBuilder modelBuilder)
+    {
+        if (!_schedulerTableEnabled)
+        {
+            return;
+        }
+
+        modelBuilder.Entity<ScheduledJobEntry>(entity =>
+        {
+            entity.ToTable("ScheduledJobs", "dbo");
+            entity.HasKey(e => e.JobName);
+            entity.Property(e => e.JobName).HasMaxLength(128).IsUnicode(false);
+            entity.Property(e => e.CronExpression).IsRequired().HasMaxLength(128).IsUnicode(false);
+            entity.Property(e => e.LastOutcome).HasMaxLength(32).IsUnicode(false);
+            entity.Property(e => e.LastError).HasMaxLength(2048);
+
+            // Claim path (ScheduledJobRunner): due rows, earliest first. Deliberately NOT filtered to
+            // unlocked rows: the poll must also find rows whose lease has EXPIRED (that is how a dead
+            // replica's work is reclaimed), and "LockedUntil IS NULL" would hide exactly those. The
+            // lease columns ride along as included columns instead, so the predicate is answered from
+            // the index without a key lookup per candidate row.
+            entity.HasIndex(e => e.NextRunOn)
+                  .IncludeProperties(e => new { e.LockedUntil, e.LockToken })
+                  .HasDatabaseName("IX_ScheduledJobs_NextRunOn");
+        });
+    }
 
     /// <summary>
     /// Discovers and applies the EF entity configurations for the given engine from module

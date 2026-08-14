@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Interfaces;
@@ -67,6 +68,11 @@ public static class DesignTimeDbContextHelper
         services.AddSingleton<IOutboxSignal, OutboxSignal>();
         services.AddSingleton<AuditSaveChangesInterceptor>();
         services.AddSingleton<DomainEventSaveChangesInterceptor>();
+        // The context reads Scheduler:Enabled from the root provider to decide whether the
+        // ScheduledJobs table is part of the model. Registered unconditionally (defaulting to
+        // disabled) so `dotnet ef` behaves identically for consumers with and without the flag.
+        services.AddSingleton<IOptions<SchedulerSettings>>(
+            Options.Create(new SchedulerSettings { Enabled = designOptions.EnableScheduler }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

@@ -27,6 +27,20 @@ public sealed class DesignTimeDbContextOptions
     public Dictionary<string, DataSourceEntrySettings> DataSources { get; } = [];
 
     /// <summary>
+    /// Gets or sets a value indicating whether the recurring job table (<c>ScheduledJobs</c>) is part
+    /// of the design-time model, mirroring <c>Scheduler:Enabled</c> at runtime. Defaults to
+    /// <see langword="false"/>, so <c>dotnet ef</c> keeps producing exactly the migrations it
+    /// produced before the scheduler shipped.
+    /// </summary>
+    /// <remarks>
+    /// Set it to <see langword="true"/> in the migrations project for the <c>Default</c> data source
+    /// of a host that calls <c>AddScheduledJobs</c>, and only there: the table is host-scoped, so a
+    /// second migrations project that also enabled it would create a second copy. The flag must
+    /// match the host's configuration, or the scaffolded migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableScheduler { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>

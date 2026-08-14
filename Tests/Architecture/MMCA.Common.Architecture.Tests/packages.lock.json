@@ -1187,6 +1187,7 @@
         "dependencies": {
           "Azure.Identity": "[1.21.0, )",
           "Azure.Storage.Blobs": "[12.29.1, )",
+          "Cronos": "[0.13.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
           "MassTransit": "[8.5.10, )",
           "MassTransit.Azure.ServiceBus.Core": "[8.5.10, )",
@@ -1289,6 +1290,12 @@
           "Azure.Core": "1.55.0",
           "Azure.Storage.Common": "12.28.0"
         }
+      },
+      "Cronos": {
+        "type": "CentralTransitive",
+        "requested": "[0.13.0, )",
+        "resolved": "0.13.0",
+        "contentHash": "Nkve+Yi0+ol3ntSBRHeW0ka9cJQ8vndSUvvkXqF9LVqwpoqWueyxu/HS275r98RDOmF7/mzRnZW5XXUBXob+TA=="
       },
       "FluentValidation.DependencyInjectionExtensions": {
         "type": "CentralTransitive",

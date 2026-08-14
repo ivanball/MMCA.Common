@@ -21,6 +21,12 @@
           "Azure.Storage.Common": "12.28.0"
         }
       },
+      "Cronos": {
+        "type": "Direct",
+        "requested": "[0.13.0, )",
+        "resolved": "0.13.0",
+        "contentHash": "Nkve+Yi0+ol3ntSBRHeW0ka9cJQ8vndSUvvkXqF9LVqwpoqWueyxu/HS275r98RDOmF7/mzRnZW5XXUBXob+TA=="
+      },
       "MassTransit": {
         "type": "Direct",
         "requested": "[8.5.10, )",

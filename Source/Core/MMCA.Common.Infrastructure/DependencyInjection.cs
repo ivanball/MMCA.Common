@@ -8,6 +8,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -272,6 +273,69 @@ public static class DependencyInjection
                     keyNamespace);
             });
 
+            return services;
+        }
+
+        /// <summary>
+        /// Enables the recurring job scheduler: binds the <c>Scheduler</c> settings section and
+        /// registers the background runner that executes registered
+        /// <see cref="IScheduledJob"/>s on their cron schedules.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the <c>Scheduler</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Call this <b>once</b> per host, and <c>AddScheduledJob&lt;TJob&gt;</c> any number of
+        /// times. The two are order-free: a module may register its jobs before the host enables the
+        /// scheduler, or after. Calling this more than once is harmless, since the runner is
+        /// registered through <c>TryAddEnumerable</c> and would otherwise run twice in one process.
+        /// </para>
+        /// <para>
+        /// Registering the scheduler is not the same as turning it on. The runner and the
+        /// <c>ScheduledJobs</c> table both stay inert until <c>Scheduler:Enabled</c> is true, so a
+        /// host can ship the registration and enable it per environment.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddScheduledJobs(IConfiguration configuration)
+        {
+            services.AddOptions<SchedulerSettings>()
+                .Bind(configuration.GetSection(SchedulerSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // TryAddEnumerable, not AddHostedService: the latter appends a descriptor per call, so a
+            // host (or two modules) calling this twice would run two runners in one process, and both
+            // would race for the same job rows.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, Scheduling.ScheduledJobRunner>());
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers one <see cref="IScheduledJob"/> implementation with the scheduler.
+        /// </summary>
+        /// <typeparam name="TJob">The job implementation.</typeparam>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Jobs accumulate: each module calls this for the jobs it owns and every registration is
+        /// added to the same <c>IEnumerable&lt;IScheduledJob&gt;</c>, exactly like the permission
+        /// registry's accumulate-across-modules idiom. Registration order does not matter, and the
+        /// same type registered twice is added once.
+        /// </para>
+        /// <para>
+        /// The job is <b>scoped</b>: the runner resolves it in a fresh scope per execution, so it may
+        /// take scoped dependencies (unit of work, repositories, handlers) and must hold no state
+        /// between runs. The concrete type is registered too, so a host can resolve it directly (a
+        /// test, or an admin endpoint that triggers the job on demand).
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddScheduledJob<TJob>()
+            where TJob : class, IScheduledJob
+        {
+            services.TryAddScoped<TJob>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IScheduledJob, TJob>());
             return services;
         }
 
