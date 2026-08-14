@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Concurrency;
 
@@ -46,10 +48,11 @@ public interface ICookieSessionRefresher
 /// rotation-grace cache is re-checked per token after acquiring.
 /// </para>
 /// </summary>
-internal sealed class CookieSessionRefresher(
+internal sealed partial class CookieSessionRefresher(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
-    IWebHostEnvironment environment) : ICookieSessionRefresher
+    IWebHostEnvironment environment,
+    ILogger<CookieSessionRefresher> logger) : ICookieSessionRefresher
 {
     internal const string RefreshClientName = "SessionCookieRefreshClient";
 
@@ -111,27 +114,41 @@ internal sealed class CookieSessionRefresher(
     {
         var client = httpClientFactory.CreateClient(RefreshClientName);
 
-        // CancellationToken.None: once we hold the lock the refresh must complete (and write its cookies)
-        // regardless of whether the triggering request was aborted; the call is short.
-        using var response = await client.PostAsJsonAsync(
-            new Uri("auth/refresh", UriKind.Relative),
-            new RefreshTokenRequest(accessToken, refreshToken),
-            CancellationToken.None).ConfigureAwait(false);
-
-        if (!response.IsSuccessStatusCode)
+        // A transport failure or a malformed body means "no session right now", not a broken request:
+        // this runs during SSR, so an escaping exception turned a signed-in user's navigation into a
+        // 500 instead of an anonymous render. The failure is deliberately NOT cached (only a
+        // successful rotation reaches cache.Set below), so the next navigation retries. A missing
+        // BaseAddress raises InvalidOperationException and is left to propagate: that is a host
+        // configuration error, not a runtime condition.
+        try
         {
+            // CancellationToken.None: once we hold the lock the refresh must complete (and write its cookies)
+            // regardless of whether the triggering request was aborted; the call is short.
+            using var response = await client.PostAsJsonAsync(
+                new Uri("auth/refresh", UriKind.Relative),
+                new RefreshTokenRequest(accessToken, refreshToken),
+                CancellationToken.None).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var auth = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(CancellationToken.None).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(auth.AccessToken))
+            {
+                return null;
+            }
+
+            // Cache by the OLD refresh token so a slightly-late sibling request gets the same rotated pair.
+            cache.Set(CacheKey(refreshToken), auth, RotationGrace);
+            return auth;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or NotSupportedException)
+        {
+            LogRefreshCallFailed(logger, ex);
             return null;
         }
-
-        var auth = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(CancellationToken.None).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(auth.AccessToken))
-        {
-            return null;
-        }
-
-        // Cache by the OLD refresh token so a slightly-late sibling request gets the same rotated pair.
-        cache.Set(CacheKey(refreshToken), auth, RotationGrace);
-        return auth;
     }
 
     private static bool TryReadValidExpiry(string? token, out DateTime expiry)
@@ -170,4 +187,7 @@ internal sealed class CookieSessionRefresher(
     /// concurrency test can pick two refresh tokens that do not land on the same stripe.
     /// </summary>
     internal static string CacheKey(string refreshToken) => $"mmca:session-refresh:{refreshToken}";
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Session cookie refresh call failed; the request renders anonymously and the next navigation retries")]
+    private static partial void LogRefreshCallFailed(ILogger logger, Exception exception);
 }
