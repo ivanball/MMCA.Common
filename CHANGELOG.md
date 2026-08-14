@@ -14,6 +14,34 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.148.0] - 2026-08-13
+
+Event-scoped notifications and palette-aware shared section styles.
+
+### Added
+
+- **Notification scope keys.** `PushNotification` gained an optional opaque `ScopeKey` (max 128,
+  e.g. `event:2`) so a consuming app can scope the notification inbox, the unread badge and bulk
+  mark-read to its current context. `SendPushNotificationRequest` and `PushNotificationDTO` carry
+  the key as init properties (no constructor break); the inbox, unread-count and read-all endpoints
+  accept an optional `scope` query parameter. Semantics: an absent scope keeps every query
+  byte-identical to the legacy shape (the unread-count and mark-all-read paths only join
+  `PushNotification` when a scope is supplied, so they never inherit its soft-delete filter); a
+  supplied scope selects rows whose key is null or matches. Scope is a view filter, not a security
+  boundary.
+- **`INotificationScopeProvider` in `MMCA.Common.UI`**: resolves the app's current scope key.
+  `AddNotificationUI()` registers a null-returning default via `TryAddScoped`, so apps that never
+  register a provider (Store, Helpdesk) are byte-for-byte unaffected. `PushNotificationService`
+  stamps the current scope onto unscoped sends and `NotificationInboxService` threads it through
+  every scoped read, so what gets sent and what gets shown always resolve to one scope.
+
+### Fixed
+
+- **Shared section styles now follow the theme.** `.mmca-section-heading .mud-icon` and
+  `.mmca-section-description` in `app.css` used hardcoded black values that vanished (watermark) or
+  failed contrast (description text) on the dark palette; both now derive from the MudBlazor
+  palette variables, with the `-light` heading variant keeping its white ink on dark bands.
+
 ## [1.147.0] - 2026-08-13
 
 A single-fix release: the MAUI barcode-scan surface now follows the in-app language.
