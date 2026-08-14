@@ -20,6 +20,10 @@
          antiforgery decryption) plus the optional Key Vault at-rest encryption, both config-gated
          in DataProtection/DataProtectionExtensions.cs. Azure.Identity supplies the
          DefaultAzureCredential used by both sinks. -->
+    <!-- Azure Key Vault as a configuration source, config-gated in
+         Configuration/KeyVaultConfigurationExtensions.cs. Shares the Azure.Identity credential
+         below with the DataProtection sinks. -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="Azure.Identity" />

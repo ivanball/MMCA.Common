@@ -78,6 +78,12 @@
          Projects with the AspNetCore framework reference prune this away; consumers WITHOUT it
          (Aspire AppHosts) resolve the transitive as a real package and need the lifted version. -->
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+    <!-- Azure Key Vault as a configuration source (MMCA.Common.Aspire.AddCommonKeyVaultConfiguration).
+         Opt-in and gated on KeyVault:Uri, so an unconfigured host never contacts a vault and local
+         development stays Azure-free. Reuses the Azure.Identity pin above for the
+         DefaultAzureCredential the provider authenticates with; the host identity needs the
+         Key Vault Secrets User role on the vault (samples/deployment/DEPLOYMENT.md, bootstrap step 3). -->
+    <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />
