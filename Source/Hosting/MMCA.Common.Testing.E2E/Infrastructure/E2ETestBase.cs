@@ -39,13 +39,25 @@ public abstract class E2ETestBase : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        if (E2ETestConfiguration.TracePath is not null)
+
+        // A failed InitializeAsync (context or page creation threw) leaves these null despite the
+        // null! declarations, and the NullReferenceException from disposal then replaced the real
+        // setup error in the run output. StopTracingAsync dereferences the context, so it is guarded
+        // by the same check.
+        if (E2ETestConfiguration.TracePath is not null && _context is not null)
         {
             await StopTracingAsync(E2ETestConfiguration.TracePath).ConfigureAwait(false);
         }
 
-        await Page.CloseAsync().ConfigureAwait(false);
-        await _context.DisposeAsync().ConfigureAwait(false);
+        if (Page is { } page)
+        {
+            await page.CloseAsync().ConfigureAwait(false);
+        }
+
+        if (_context is not null)
+        {
+            await _context.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     // Stops the Playwright trace. When E2E_TRACE names a DIRECTORY (per-test mode), a trace is written
