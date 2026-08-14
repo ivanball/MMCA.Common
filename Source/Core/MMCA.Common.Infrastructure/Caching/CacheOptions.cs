@@ -9,11 +9,19 @@ namespace MMCA.Common.Infrastructure.Caching;
 public static class CacheOptions
 {
     /// <summary>
+    /// Gets the default time-to-live applied when a caller passes no expiration. Exposed as a bare
+    /// <see cref="TimeSpan"/> so implementations that do not speak
+    /// <see cref="DistributedCacheEntryOptions"/> (<c>HybridCacheService</c>, whose entry options are
+    /// its own type) still default to the same policy rather than a second hard-coded 30 seconds.
+    /// </summary>
+    public static TimeSpan DefaultDuration { get; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets the default cache entry options with a 30-second absolute expiration.
     /// </summary>
     public static DistributedCacheEntryOptions DefaultExpiration => new()
     {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
+        AbsoluteExpirationRelativeToNow = DefaultDuration
     };
 
     /// <summary>

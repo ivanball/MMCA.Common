@@ -1,3 +1,5 @@
+using MMCA.Common.Shared.Concurrency;
+
 namespace MMCA.Common.Application.Interfaces;
 
 /// <summary>
@@ -61,4 +63,84 @@ public interface ICacheService
         await SetAsync(key, next, expiration, cancellationToken).ConfigureAwait(false);
         return next;
     }
+
+    /// <summary>
+    /// Returns the cached value for <paramref name="key"/>, or invokes <paramref name="factory"/>
+    /// and caches its result. Concurrent misses on one key run the factory once per process
+    /// (stampede protection), the same shape
+    /// <see cref="UseCases.Decorators.CachingQueryDecorator{TQuery,TResult}"/> applies to cacheable
+    /// queries.
+    /// </summary>
+    /// <typeparam name="T">The cached value type.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="factory">Produces the value when the key is absent.</param>
+    /// <param name="expiration">Optional expiration applied to the value the factory produced.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The cached value, or the value the factory produced.</returns>
+    /// <remarks>
+    /// <para>
+    /// Caching is unconditional: whatever the factory returns is stored, including a failed
+    /// <see cref="Shared.Abstractions.Result"/> or a <see langword="null"/>-equivalent value. A
+    /// caller that must not cache failures has to keep its own read/execute/write sequence, which
+    /// is exactly why the caching decorators do NOT route through this member.
+    /// </para>
+    /// <para>
+    /// Stampede protection is best-effort and per process: the stripe is a process-wide table, so
+    /// with several replicas over one shared cache the factory can still run once per replica.
+    /// A cluster-wide guarantee would need a distributed lock and is deliberately not attempted.
+    /// </para>
+    /// <para>
+    /// The default implementation is get, then per-key stripe, then a double-check, then factory and
+    /// set: correct for every backing store and a non-breaking addition (the
+    /// <see cref="IncrementAsync"/> precedent). Implementations with a native two-level primitive
+    /// (<c>HybridCacheService</c>) override it.
+    /// </para>
+    /// </remarks>
+    async Task<T> GetOrCreateAsync<T>(
+        string key,
+        Func<CancellationToken, Task<T>> factory,
+        TimeSpan? expiration = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+
+        // Fast path: no lock on a hit.
+        var cached = await GetAsync<T>(key, cancellationToken).ConfigureAwait(false);
+        if (cached is not null)
+            return cached;
+
+        using (await CacheKeyLocks.Locks.AcquireAsync(key, cancellationToken).ConfigureAwait(false))
+        {
+            // Double-check: the request that held the stripe has populated the key by now, so the
+            // waiters read the fresh entry instead of re-running the factory.
+            cached = await GetAsync<T>(key, cancellationToken).ConfigureAwait(false);
+            if (cached is not null)
+                return cached;
+
+            var created = await factory(cancellationToken).ConfigureAwait(false);
+            await SetAsync(key, created, expiration, cancellationToken).ConfigureAwait(false);
+            return created;
+        }
+    }
+}
+
+/// <summary>
+/// Process-wide per-cache-key locks for the default
+/// <see cref="ICacheService.GetOrCreateAsync{T}(string, Func{CancellationToken, Task{T}}, TimeSpan?, CancellationToken)"/>
+/// implementation. Kept in a non-generic holder so every closed generic call shares one table
+/// (statics on a generic method's declaring type would still be shared, but a holder keeps the
+/// table addressable and matches <c>QueryCacheKeyLocks</c>).
+/// </summary>
+/// <remarks>
+/// Striped rather than one semaphore per key, for the reasons documented on
+/// <see cref="KeyedSemaphoreStripe"/>: a per-key table forces a choice between dropping the entry
+/// on release (two callers then run concurrently) and never dropping it (a parameterized cache key
+/// grows the table without bound). Separate from the caching decorator's table on purpose: these
+/// are different call sites over different keys, and sharing stripes would only widen the
+/// unrelated-key collisions striping already tolerates.
+/// </remarks>
+internal static class CacheKeyLocks
+{
+    /// <summary>Fixed-width stripes shared by every caller of the default implementation.</summary>
+    internal static readonly KeyedSemaphoreStripe Locks = new();
 }

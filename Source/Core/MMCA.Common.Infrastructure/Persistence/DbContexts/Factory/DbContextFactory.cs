@@ -1,10 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -14,12 +18,31 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 /// <see cref="DataSourceKey"/> (engine + database). Each physical source yields at most one
 /// context per scope; subsequent calls return the cached instance.
 /// Coordinates save, transaction, and disposal across all active contexts.
+/// <para>
+/// Under database-per-tenant it is also the routing point: a source the current tenant declares an
+/// override for is created against that tenant's connection string, keeping the same
+/// <see cref="DataSourceKey"/> so EF still compiles one model per source across every tenant.
+/// </para>
 /// </summary>
+/// <param name="physicalDbContextFactory">Creates the raw contexts.</param>
+/// <param name="entityDataSourceRegistry">Registry enumerating the physical sources in use.</param>
+/// <param name="dataSourceResolver">Resolves connection information per physical source.</param>
+/// <param name="currentUserService">Supplies the user id used for audit stamps on save.</param>
+/// <param name="tenantContext">
+/// The scope's tenant, or <see langword="null"/> in a container that never registered tenancy.
+/// Read live by every context this factory creates.
+/// </param>
+/// <param name="tenancySettings">
+/// Bound tenancy configuration, consulted only for per-tenant connection overrides. Defaulted so
+/// the pre-tenancy constructor shape keeps resolving.
+/// </param>
 public sealed class DbContextFactory(
     IPhysicalDbContextFactory physicalDbContextFactory,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    ICurrentUserService currentUserService
+    ICurrentUserService currentUserService,
+    ITenantContext? tenantContext = null,
+    IOptions<TenancySettings>? tenancySettings = null
 ) : IDbContextFactory
 {
     /// <summary>
@@ -38,6 +61,13 @@ public sealed class DbContextFactory(
     /// Caches one context per physical data source so all repositories within a scope share the same change tracker.
     /// </summary>
     private readonly Dictionary<DataSourceKey, ApplicationDbContext> _dbContexts = [];
+
+    /// <summary>
+    /// The tenant each per-tenant-routed context was created for. Only sources the tenant actually
+    /// overrides appear here: everything else is shared and needs no guard, because the query filter
+    /// and the save interceptor already scope it.
+    /// </summary>
+    private readonly Dictionary<DataSourceKey, string?> _routedContextTenants = [];
 
     /// <summary>
     /// Tracks whether a transaction is active so that contexts created lazily (after
@@ -61,20 +91,111 @@ public sealed class DbContextFactory(
 
         if (!_dbContexts.TryGetValue(dataSourceKey, out var context) || context is null)
         {
-            context = _physicalDbContextFactory.Create(dataSourceKey);
+            var tenantOverride = ResolveTenantOverride(dataSourceKey);
+            context = tenantOverride is null
+                ? _physicalDbContextFactory.Create(dataSourceKey)
+                : _physicalDbContextFactory.Create(dataSourceKey, tenantOverride);
+
             _dbContexts[dataSourceKey] = context;
+
+            if (tenantOverride is not null)
+                _routedContextTenants[dataSourceKey] = tenantContext?.TenantId;
+
+            AttachTenantAccessor(context);
 
             // Enlist late-created contexts in the active transaction so that all
             // persistence within a transactional command shares the same boundary.
             if (_transactionActive && SupportsTransactions(context))
                 context.Database.BeginTransaction();
         }
+        else
+        {
+            // A routed context is bound to one tenant's database; hand it back only to that tenant.
+            GuardRoutedTenantUnchanged(dataSourceKey);
+        }
+
         return context;
     }
 
     /// <inheritdoc />
     public ApplicationDbContext GetDbContext(DataSource dataSource) =>
         GetDbContext(DataSourceKey.Default(dataSource));
+
+    /// <summary>
+    /// Gives a freshly created context a live view of the scope's tenant. An accessor, not a copied
+    /// value: the context can be created before the request's tenant is resolved, and the query
+    /// filter must read the answer that holds at query time rather than at construction time.
+    /// </summary>
+    /// <remarks>
+    /// Written as a method taking a non-nullable parameter, and null-guarding inside, so the null
+    /// tolerance a test double needs (a mocked physical factory can hand back no context at all)
+    /// does not leak a maybe-null flow state back into the caller.
+    /// </remarks>
+    private void AttachTenantAccessor(ApplicationDbContext context)
+    {
+        if (context is null)
+            return;
+
+        context.TenantIdAccessor = () => tenantContext?.TenantId;
+    }
+
+    /// <summary>
+    /// The tenant's own connection information for one source, or <see langword="null"/> when this
+    /// source stays shared. The clone keeps the ORIGINAL <see cref="DataSourceKey"/>: the key is
+    /// what EF's model cache is keyed on, so replacing only the connection string is what lets one
+    /// compiled model serve every tenant's database.
+    /// </summary>
+    private PhysicalDataSource? ResolveTenantOverride(DataSourceKey dataSourceKey)
+    {
+        if (tenantContext?.TenantId is not { } tenantId
+            || tenancySettings?.Value is not { } settings
+            || !settings.Tenants.TryGetValue(tenantId, out var tenant)
+            || !tenant.DataSources.TryGetValue(dataSourceKey.Name, out var over))
+        {
+            return null;
+        }
+
+        var connectionString = TenancySettingsValidator.ConnectionStringFor(dataSourceKey.Engine, over);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            // The tenant overrides this source on a different engine only; this one stays shared.
+            return null;
+        }
+
+        var shared = _dataSourceResolver.GetPhysical(dataSourceKey);
+        return shared with
+        {
+            ConnectionString = connectionString,
+            CosmosDatabaseName = string.IsNullOrWhiteSpace(over.CosmosDatabaseName)
+                ? shared.CosmosDatabaseName
+                : over.CosmosDatabaseName,
+        };
+    }
+
+    /// <summary>
+    /// Refuses to hand back a per-tenant-routed context after the scope's tenant changed. The
+    /// cached context is bound to one physical database, so serving it to a second tenant would
+    /// read and write the first tenant's data with the second tenant's filter value: the one
+    /// failure mode database-per-tenant exists to make impossible.
+    /// </summary>
+    private void GuardRoutedTenantUnchanged(DataSourceKey dataSourceKey)
+    {
+        if (!_routedContextTenants.TryGetValue(dataSourceKey, out var creationTenant))
+            return;
+
+        var current = tenantContext?.TenantId;
+        if (string.Equals(creationTenant, current, StringComparison.Ordinal))
+            return;
+
+        throw new InvalidOperationException(string.Format(
+            CultureInfo.InvariantCulture,
+            "The context for \"{0}\" was created for tenant \"{1}\" but this scope's tenant is now \"{2}\". "
+            + "A per-tenant data source is bound to one database for the life of the scope; "
+            + "use a fresh scope per tenant.",
+            dataSourceKey,
+            creationTenant ?? "<none>",
+            current ?? "<none>"));
+    }
 
     /// <inheritdoc />
     public async Task EnsureCreatedAsync(CancellationToken cancellationToken = default)

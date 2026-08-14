@@ -20,6 +20,14 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 {
     protected readonly DbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
+    /// <summary>
+    /// The single global filter <c>ignoreQueryFilters: true</c> is allowed to drop. EF 10 names
+    /// filters, and the framework registers two: <c>SoftDelete</c> and <c>Tenant</c>. Dropping both
+    /// (EF's parameterless <c>IgnoreQueryFilters()</c>) would let a caller asking to see deleted rows
+    /// silently read every tenant's data, so the repository names the one it means.
+    /// </summary>
+    private static readonly string[] SoftDeleteFilterOnly = [DbContexts.ApplicationDbContext.SoftDeleteFilterName];
+
     protected virtual DbSet<TEntity> Entities => _context.Set<TEntity>();
 
     /// <inheritdoc />
@@ -37,7 +45,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
             : TableNoTracking;
 
         if (ignoreQueryFilters)
-            query = query.IgnoreQueryFilters();
+            query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
 
         query = ApplyIncludes(query, includes);
 
@@ -142,7 +150,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         var query = asTracking ? Table : TableNoTracking;
 
         if (ignoreQueryFilters)
-            query = query.IgnoreQueryFilters();
+            query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
 
         if (includes is not null)
             query = ApplyIncludes(query, includes);
@@ -206,7 +214,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(id);
 
         return await AnyAsync(
-            ignoreQueryFilters ? Entities.IgnoreQueryFilters() : Entities,
+            ignoreQueryFilters ? Entities.IgnoreQueryFilters(SoftDeleteFilterOnly) : Entities,
             e => e.Id.Equals(id),
             cancellationToken).ConfigureAwait(false);
     }
@@ -220,7 +228,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(where);
 
         return await AnyAsync(
-            ignoreQueryFilters ? Entities.IgnoreQueryFilters() : Entities,
+            ignoreQueryFilters ? Entities.IgnoreQueryFilters(SoftDeleteFilterOnly) : Entities,
             where,
             cancellationToken).ConfigureAwait(false);
     }

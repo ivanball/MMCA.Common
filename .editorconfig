@@ -856,8 +856,8 @@ dotnet_diagnostic.S8969.severity = suggestion
 #   - Testing.Architecture/Bases/ and Testing.UI/Infrastructure/: the folder is organizational,
 #     but the namespace is the package's flat public API surface (consumers subclass these
 #     bases; ADR-015). Renaming the namespace would be a breaking change for every consumer.
-#   - Aspire/DataProtection/: extension methods stay in the MMCA.Common.Aspire namespace so a
-#     host gets them through the using directive it already has.
+#   - Aspire/DataProtection/ and Aspire/Configuration/: extension methods stay in the
+#     MMCA.Common.Aspire namespace so a host gets them through the using directive it already has.
 #   - API.Tests/Fakes/: the fake controller deliberately carries a consumer-shaped namespace
 #     (Fakes.MMCA.Store...) because the convention under test keys on namespace shape.
 [Source/Hosting/MMCA.Common.Testing.Architecture/Bases/**.cs]
@@ -867,6 +867,9 @@ dotnet_diagnostic.IDE0130.severity = none
 dotnet_diagnostic.IDE0130.severity = none
 
 [Source/Hosting/MMCA.Common.Aspire/DataProtection/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
+
+[Source/Hosting/MMCA.Common.Aspire/Configuration/**.cs]
 dotnet_diagnostic.IDE0130.severity = none
 
 [Tests/Presentation/MMCA.Common.API.Tests/Fakes/**.cs]

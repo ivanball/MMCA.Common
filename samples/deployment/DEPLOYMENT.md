@@ -35,6 +35,11 @@ az role assignment create --assignee-object-id "$PRINCIPAL" --assignee-principal
 # (az CLI 2.84 may misreport role writes — verify with `az role assignment list`.)
 ```
 
+Step 3 is also the only grant `AddCommonKeyVaultConfiguration()` (MMCA.Common.Aspire) needs: the app opts
+in by setting `KeyVault:Uri` to the vault URI, and the same managed identity reads the secrets as
+configuration. Name the secrets with a double dash where the configuration key has a colon
+(`ConnectionStrings--Default` binds to `ConnectionStrings:Default`).
+
 ## OIDC for the GitHub deploy identity (no stored cloud secret)
 
 CD authenticates to Azure with a **federated credential** — GitHub mints a short-lived OIDC token per

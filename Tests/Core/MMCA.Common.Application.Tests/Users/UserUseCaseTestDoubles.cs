@@ -118,3 +118,9 @@ public sealed record TestDeleteUserCommand(
     UserIdentifierType UserId,
     UserIdentifierType CurrentUserId,
     string? CurrentUserRole) : IUserOwnedRequest;
+
+/// <summary>App-side export-user-data query shape (target plus authenticated caller).</summary>
+public sealed record TestExportUserDataQuery(
+    UserIdentifierType UserId,
+    UserIdentifierType CurrentUserId,
+    string? CurrentUserRole) : IUserOwnedRequest;

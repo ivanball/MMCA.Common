@@ -8,6 +8,7 @@ using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
+using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Application.Validation;
 using MMCA.Common.Shared.Abstractions;
 
@@ -174,6 +175,39 @@ public static class DependencyInjection
                 services.TryAddTransient(serviceType, validatorType);
             }
 
+            return services;
+        }
+
+        /// <summary>
+        /// Registers one <see cref="IUserDataExportSection"/> implementation as a contributor to the
+        /// data-subject export.
+        /// </summary>
+        /// <typeparam name="TSection">The section implementation.</typeparam>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Sections accumulate: each module calls this for the data it owns and every registration is
+        /// added to the same <c>IEnumerable&lt;IUserDataExportSection&gt;</c> the export handler fans
+        /// out over, exactly like the scheduled-job and permission-registry idioms. The same type
+        /// registered twice is added once, and registration order is the order the sections appear in
+        /// the export document.
+        /// </para>
+        /// <para>
+        /// The section is <b>scoped</b>: it runs inside the request's unit of work, so it may take
+        /// scoped dependencies (repositories, gRPC clients, handlers).
+        /// </para>
+        /// <para>
+        /// The export handler itself needs no registration here. Apps subclass
+        /// <c>ExportUserDataHandlerBase&lt;TUser, TQuery&gt;</c> in their own Application assembly,
+        /// and <see cref="ScanModuleApplicationServices{TAssemblyMarker}"/> picks the concrete
+        /// subclass up as an <c>IQueryHandler</c> like any other handler.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddUserDataExportSection<TSection>()
+            where TSection : class, IUserDataExportSection
+        {
+            services.TryAddScoped<TSection>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserDataExportSection, TSection>());
             return services;
         }
 

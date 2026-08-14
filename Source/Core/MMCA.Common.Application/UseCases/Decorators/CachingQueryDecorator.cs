@@ -21,13 +21,21 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// <see cref="OperationCanceledException"/> is excluded from the guard, so a genuinely cancelled
 /// request still surfaces exactly as the inner handler would.
 /// </para>
+/// <para>
+/// <b>Tenant isolation lives here, not in the cache.</b> <c>ICacheService</c> is a singleton and
+/// cannot see the scoped tenant, so a cache key that two tenants both compute would serve one
+/// tenant's rows to the other. When a tenant is resolved the decorator prefixes the key (and the
+/// stampede lock) with <c>t:{tenantId}:</c>; when none is, keys are exactly what they were before
+/// tenancy shipped.
+/// </para>
 /// </summary>
 /// <typeparam name="TQuery">The query type.</typeparam>
 /// <typeparam name="TResult">The result type returned by the handler.</typeparam>
 public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     IQueryHandler<TQuery, TResult> inner,
     ICacheService cacheService,
-    ILogger<CachingQueryDecorator<TQuery, TResult>> logger) : IQueryHandler<TQuery, TResult>
+    ILogger<CachingQueryDecorator<TQuery, TResult>> logger,
+    ITenantContext? tenantContext = null) : IQueryHandler<TQuery, TResult>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CachingQueryDecorator{TQuery, TResult}"/> class
@@ -45,6 +53,16 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     {
     }
 
+    /// <summary>
+    /// The cache key for this query in the current tenant: the query's own key, prefixed with the
+    /// tenant when one is resolved. Two tenants therefore never share an entry, and a host that
+    /// resolves no tenant keeps byte-identical keys to the pre-tenancy framework.
+    /// </summary>
+    /// <param name="cacheable">The cacheable query carrying the key.</param>
+    /// <returns>The effective cache key.</returns>
+    private string EffectiveKey(IQueryCacheable cacheable) =>
+        TenantCacheKey.Scope(tenantContext, cacheable.CacheKey);
+
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)
     {
@@ -53,8 +71,12 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
 
         var queryName = typeof(TQuery).Name;
 
+        // Tenant-scoped from here down: read, stampede lock and populate must all agree, or one
+        // tenant would wait on another's lock and read another's entry.
+        var cacheKey = EffectiveKey(cacheable);
+
         // Fast path: no lock on a hit.
-        var cached = await TryReadAsync(cacheable, queryName, cancellationToken).ConfigureAwait(false);
+        var cached = await TryReadAsync(cacheKey, queryName, cancellationToken).ConfigureAwait(false);
         if (cached is not null)
         {
             CqrsMetrics.RecordCacheHit(queryName);
@@ -64,9 +86,9 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
         // Slow path: per-key double-check locking (same pattern as IdempotencyFilter). On
         // expiry of a hot key only one concurrent request runs the handler; the rest wait
         // and are served the freshly cached entry.
-        using (await QueryCacheKeyLocks.Locks.AcquireAsync(cacheable.CacheKey, cancellationToken).ConfigureAwait(false))
+        using (await QueryCacheKeyLocks.Locks.AcquireAsync(cacheKey, cancellationToken).ConfigureAwait(false))
         {
-            cached = await TryReadAsync(cacheable, queryName, cancellationToken).ConfigureAwait(false);
+            cached = await TryReadAsync(cacheKey, queryName, cancellationToken).ConfigureAwait(false);
             if (cached is not null)
             {
                 CqrsMetrics.RecordCacheHit(queryName);
@@ -88,7 +110,7 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
             {
                 try
                 {
-                    await cacheService.SetAsync(cacheable.CacheKey, result, cacheable.CacheDuration, cancellationToken)
+                    await cacheService.SetAsync(cacheKey, result, cacheable.CacheDuration, cancellationToken)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -96,7 +118,7 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
                     // The handler already produced the answer, so a cache blip must not fail the
                     // query. The request token is kept, so real cancellation still propagates
                     // through the filter.
-                    LogCachePopulateFailed(logger, cacheable.CacheKey, queryName, ex);
+                    LogCachePopulateFailed(logger, cacheKey, queryName, ex);
                 }
             }
 
@@ -126,23 +148,23 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     /// Reads the cache fail-open: a cache fault is logged at warning level and reported as a miss
     /// so the caller falls through to the inner handler. Cancellation is deliberately not caught.
     /// </summary>
-    /// <param name="cacheable">The cacheable query carrying the key.</param>
+    /// <param name="cacheKey">The tenant-scoped cache key.</param>
     /// <param name="queryName">The query type name, used for logging.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The cached value, or the default when the key is absent or the cache is unreachable.</returns>
     private async Task<TResult?> TryReadAsync(
-        IQueryCacheable cacheable,
+        string cacheKey,
         string queryName,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await cacheService.GetAsync<TResult>(cacheable.CacheKey, cancellationToken)
+            return await cacheService.GetAsync<TResult>(cacheKey, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            LogCacheReadFailed(logger, cacheable.CacheKey, queryName, ex);
+            LogCacheReadFailed(logger, cacheKey, queryName, ex);
             return default;
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -12,6 +13,8 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Infrastructure.Settings;
 using StackExchange.Profiling;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -20,7 +23,8 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 /// Base DbContext shared by all data-source-specific contexts (SQL Server, Cosmos, SQLite).
 /// Cross-cutting concerns (audit stamping, domain event capture/dispatch) are handled by
 /// <see cref="AuditSaveChangesInterceptor"/> and <see cref="DomainEventSaveChangesInterceptor"/>.
-/// This class provides global soft-delete query filters and model configuration.
+/// This class provides the global named query filters (<c>SoftDelete</c> and <c>Tenant</c>) and
+/// model configuration.
 /// <para>
 /// One instance exists per <b>physical data source</b> (database): the same context class is
 /// instantiated multiple times with different <see cref="PhysicalDataSource"/> values, each
@@ -42,8 +46,57 @@ public abstract class ApplicationDbContext(
     /// <summary>Gets the physical data source key (engine + database name) this context targets.</summary>
     public DataSourceKey DataSourceKey => physicalDataSource.Key;
 
+    /// <summary>
+    /// Whether the <c>ScheduledJobs</c> table belongs in THIS context's model. Resolved once in
+    /// <see cref="OnConfiguring"/> from the root provider (the same place the interceptors are
+    /// resolved) and read by <see cref="ConfigureScheduler"/>, because <c>OnModelCreating</c> must
+    /// not depend on anything the model cache key does not cover.
+    /// <para>
+    /// Two conditions, both required. <c>Scheduler:Enabled</c> keeps the model of a host that never
+    /// opted in byte-identical to what it was before the scheduler shipped, so its migrations never
+    /// see the table. The <c>Default</c>-source condition keeps the table in exactly one database:
+    /// jobs are host-scoped, unlike the outbox, which exists once per physical source.
+    /// </para>
+    /// </summary>
+    private bool _schedulerTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>AuditTrailEntries</c> table belongs in THIS context's model. Resolved once in
+    /// <see cref="OnConfiguring"/> from the root provider and read by <see cref="ConfigureAuditTrail"/>,
+    /// for the same reason as <see cref="_schedulerTableEnabled"/>.
+    /// <para>
+    /// One condition only, unlike the scheduler: <c>AuditTrail:Enabled</c>. The trail table belongs
+    /// in EVERY relational source, because a trail row must commit in the same transaction as the
+    /// change it describes, and a transaction does not span databases (the outbox precedent, not the
+    /// host-scoped job table).
+    /// </para>
+    /// </summary>
+    private bool _auditTrailTableEnabled;
+
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
+
+    /// <summary>
+    /// Live accessor for the tenant the owning scope runs as, assigned by the scoped
+    /// <see cref="Factory.DbContextFactory"/> at context creation. Left <see langword="null"/> for a
+    /// context created outside a scope (design time, a directly-constructed test context), which
+    /// reads as "no tenant".
+    /// </summary>
+    /// <remarks>
+    /// An accessor rather than a copied value on purpose. A context can be created before the
+    /// request's tenant is resolved (a middleware ordering detail no persistence code should depend
+    /// on), and a copy taken at that moment would pin the context to the wrong answer for its whole
+    /// life. Reading through the delegate at query and save time removes the ordering hazard
+    /// entirely.
+    /// </remarks>
+    internal Func<string?>? TenantIdAccessor { get; set; }
+
+    /// <summary>
+    /// Gets the tenant this context is currently scoped to, or <see langword="null"/> when no
+    /// tenant is resolved (background services, seeders, admin flows), in which case the
+    /// <c>Tenant</c> query filter is inert and every tenant's rows are visible.
+    /// </summary>
+    public string? CurrentTenantId => TenantIdAccessor?.Invoke();
 
     /// <summary>
     /// Keyless entity used to map scalar SQL results (e.g. from raw queries) without a backing table.
@@ -182,7 +235,40 @@ public abstract class ApplicationDbContext(
         // rather than inline in SaveChangesAsync.
         var auditInterceptor = serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>();
         var domainEventInterceptor = serviceProvider.GetRequiredService<DomainEventSaveChangesInterceptor>();
-        optionsBuilder.AddInterceptors(auditInterceptor, domainEventInterceptor);
+
+        // Registration order IS execution order, and the tenant interceptor belongs BETWEEN the two:
+        // after the audit stamps (it must not run against half-stamped entries) and before the
+        // domain-event interceptor serializes outbox rows, so those rows describe an entity whose
+        // tenant is already final. GetService, not GetRequiredService: a directly-constructed test
+        // or design-time context that never registered it must still build.
+        if (serviceProvider.GetService<TenantSaveChangesInterceptor>() is { } tenantInterceptor)
+        {
+            optionsBuilder.AddInterceptors(auditInterceptor, tenantInterceptor, domainEventInterceptor);
+        }
+        else
+        {
+            optionsBuilder.AddInterceptors(auditInterceptor, domainEventInterceptor);
+        }
+
+        // Registration order IS execution order, and the change trail must run last: it diffs the
+        // final values, after the audit stamps are written and after the outbox rows are added.
+        // GetService, not GetRequiredService: a host that never calls AddAuditTrail registers no
+        // interceptor, and that absence must read as "the trail is off" rather than fail every
+        // context construction in the application.
+        if (serviceProvider.GetService<AuditTrail.AuditTrailSaveChangesInterceptor>() is { } auditTrailInterceptor)
+        {
+            optionsBuilder.AddInterceptors(auditTrailInterceptor);
+        }
+
+        // Settings-gated table (see the field's remarks). GetService, not GetRequiredService: a host
+        // that never calls AddScheduledJobs registers no SchedulerSettings, and that absence must
+        // read as "disabled" rather than fail every context construction in the application.
+        _schedulerTableEnabled =
+            serviceProvider.GetService<IOptions<SchedulerSettings>>()?.Value.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, DataSourceKey.DefaultName, StringComparison.Ordinal);
+
+        // Same gate treatment, no source condition: see the field's remarks.
+        _auditTrailTableEnabled = serviceProvider.GetService<IOptions<AuditTrailSettings>>()?.Value.Enabled == true;
 
         // Key EF's model cache by (context type, physical source name): the same context class is
         // instantiated once per database, each with a different model. Without this, the first
@@ -218,6 +304,7 @@ public abstract class ApplicationDbContext(
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ApplySoftDeleteFilters(modelBuilder);
+        ApplyTenantFilters(modelBuilder);
         ConfigureConcurrencyTokens(modelBuilder);
 
         // Register keyless ValReturn<T> types mapped to no table/view — used for raw SQL scalar queries.
@@ -231,6 +318,12 @@ public abstract class ApplicationDbContext(
 
         // Configure the inbox table for consumer-side idempotency (used when MessageBus:EnableInbox).
         ConfigureInbox(modelBuilder);
+
+        // Configure the recurring job table (used when Scheduler:Enabled, Default source only).
+        ConfigureScheduler(modelBuilder);
+
+        // Configure the entity change-history table (used when AuditTrail:Enabled, every source).
+        ConfigureAuditTrail(modelBuilder);
     }
 
     /// <summary>
@@ -252,7 +345,100 @@ public abstract class ApplicationDbContext(
                 Expression.Equal(property, Expression.Constant(false)),
                 parameter
             );
-            modelBuilder.Entity(clrType).HasQueryFilter("SoftDelete", filter);
+            modelBuilder.Entity(clrType).HasQueryFilter(SoftDeleteFilterName, filter);
+        }
+    }
+
+    /// <summary>
+    /// The name of the soft-delete query filter. Named so that a caller asking to include
+    /// soft-deleted rows (<c>ignoreQueryFilters: true</c>) drops exactly this filter and leaves the
+    /// tenant filter in force.
+    /// </summary>
+    internal const string SoftDeleteFilterName = "SoftDelete";
+
+    /// <summary>The name of the tenant query filter, used to keep it out of soft-delete bypasses.</summary>
+    internal const string TenantFilterName = "Tenant";
+
+    /// <summary>The shadow-safe name of the tenant discriminator column on every tenant-owned entity.</summary>
+    internal const string TenantIdPropertyName = nameof(ITenantEntity.TenantId);
+
+    /// <summary>Column width of <c>TenantId</c>, matching the claim/header values it is fed from.</summary>
+    internal const int TenantIdMaxLength = 64;
+
+    /// <summary>
+    /// Configures the tenant column and applies the named <c>Tenant</c> global query filter to every
+    /// non-owned <see cref="ITenantEntity"/>. Owned types are excluded: they inherit their parent's
+    /// filter, exactly as they do for soft delete.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Two named filters, composed by EF.</b> This one sits beside <c>SoftDelete</c>; EF combines
+    /// named filters with AND, so a tenant-owned soft-deletable entity is filtered on both without
+    /// either filter knowing about the other, and <c>IgnoreQueryFilters(["SoftDelete"])</c> can drop
+    /// one without dropping the other.
+    /// </para>
+    /// <para>
+    /// <b>One model serves every tenant.</b> The filter body embeds this context instance as a
+    /// constant typed as the context; EF rewrites context-typed constants to the executing context
+    /// at query compile time and lifts <see cref="CurrentTenantId"/> into a SQL parameter. The model
+    /// cache is keyed by (context type, physical source), so two scopes on two tenants share one
+    /// compiled model and still read disjoint rows.
+    /// </para>
+    /// <para>
+    /// <b>A null tenant sees everything.</b> The <c>CurrentTenantId == null</c> disjunct is what
+    /// keeps the outbox processor, the seeders and the retention jobs working: they run with no
+    /// tenant and must see every tenant's rows.
+    /// </para>
+    /// </remarks>
+    /// <param name="modelBuilder">The model builder to apply the filter to.</param>
+    protected void ApplyTenantFilters(ModelBuilder modelBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
+
+        // The tenant value is read off THIS context at query time. Typed as ApplicationDbContext so
+        // EF's context-constant rewrite matches (it tests assignability from the executing context's
+        // runtime type, which is always a subclass of this one).
+        var contextConstant = Expression.Constant(this, typeof(ApplicationDbContext));
+        var currentTenant = Expression.Property(contextConstant, nameof(CurrentTenantId));
+        var nullTenant = Expression.Constant(null, typeof(string));
+
+        foreach (var clrType in modelBuilder.Model.GetEntityTypes()
+            .Where(et => typeof(ITenantEntity).IsAssignableFrom(et.ClrType) && !et.IsOwned())
+            .Select(et => et.ClrType))
+        {
+            var entity = modelBuilder.Entity(clrType);
+
+            entity.Property(TenantIdPropertyName)
+                .IsRequired()
+                .HasMaxLength(TenantIdMaxLength)
+                .IsUnicode(false);
+
+            // Every tenant-scoped read carries "TenantId = @tenant" as its leading predicate, so the
+            // column that answers it must be indexed or shared-schema tenancy degrades into a scan
+            // per query.
+            if (physicalDataSource.Key.Engine != DataSource.CosmosDB)
+            {
+                entity.HasIndex(TenantIdPropertyName);
+            }
+
+            var parameter = Expression.Parameter(clrType, "e");
+
+            // EF.Property rather than a CLR member access: it works for an explicitly implemented
+            // interface member and for a shadow property, and translates identically otherwise.
+            var tenantOfEntity = Expression.Call(
+                typeof(EF),
+                nameof(EF.Property),
+                [typeof(string)],
+                parameter,
+                Expression.Constant(TenantIdPropertyName));
+
+            var filter = Expression.Lambda(
+                Expression.OrElse(
+                    Expression.Equal(currentTenant, nullTenant),
+                    Expression.Equal(tenantOfEntity, currentTenant)),
+                parameter);
+
+            entity.HasQueryFilter(TenantFilterName, filter);
         }
     }
 
@@ -340,6 +526,79 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.ProcessedOn)
                   .HasDatabaseName("IX_InboxMessages_ProcessedOn");
         });
+
+    /// <summary>
+    /// Configures the <see cref="ScheduledJobEntry"/> entity (the recurring job store). Unlike the
+    /// outbox and inbox tables this one is <b>gated</b>: it is mapped only when the host opted in
+    /// via <c>Scheduler:Enabled</c> AND this context targets the <c>Default</c> data source. A host
+    /// that did not opt in gets exactly the model it had before the scheduler shipped, so the table
+    /// never appears in its migrations. Cosmos DB never reaches this method (it overrides
+    /// <see cref="OnModelCreating"/>).
+    /// </summary>
+    private void ConfigureScheduler(ModelBuilder modelBuilder)
+    {
+        if (!_schedulerTableEnabled)
+        {
+            return;
+        }
+
+        modelBuilder.Entity<ScheduledJobEntry>(entity =>
+        {
+            entity.ToTable("ScheduledJobs", "dbo");
+            entity.HasKey(e => e.JobName);
+            entity.Property(e => e.JobName).HasMaxLength(128).IsUnicode(false);
+            entity.Property(e => e.CronExpression).IsRequired().HasMaxLength(128).IsUnicode(false);
+            entity.Property(e => e.LastOutcome).HasMaxLength(32).IsUnicode(false);
+            entity.Property(e => e.LastError).HasMaxLength(2048);
+
+            // Claim path (ScheduledJobRunner): due rows, earliest first. Deliberately NOT filtered to
+            // unlocked rows: the poll must also find rows whose lease has EXPIRED (that is how a dead
+            // replica's work is reclaimed), and "LockedUntil IS NULL" would hide exactly those. The
+            // lease columns ride along as included columns instead, so the predicate is answered from
+            // the index without a key lookup per candidate row.
+            entity.HasIndex(e => e.NextRunOn)
+                  .IncludeProperties(e => new { e.LockedUntil, e.LockToken })
+                  .HasDatabaseName("IX_ScheduledJobs_NextRunOn");
+        });
+    }
+
+    /// <summary>
+    /// Configures the <see cref="AuditTrail.AuditTrailEntry"/> entity (the change-history table).
+    /// Gated on <c>AuditTrail:Enabled</c> like the scheduler table, but mapped into <b>every</b>
+    /// relational source rather than one: a trail row commits in the same transaction as the change
+    /// it describes, and a transaction does not span databases. Cosmos DB never reaches this method
+    /// (it overrides <see cref="OnModelCreating"/>).
+    /// </summary>
+    private void ConfigureAuditTrail(ModelBuilder modelBuilder)
+    {
+        if (!_auditTrailTableEnabled)
+        {
+            return;
+        }
+
+        modelBuilder.Entity<AuditTrail.AuditTrailEntry>(entity =>
+        {
+            entity.ToTable("AuditTrailEntries", "dbo");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityType).IsRequired().HasMaxLength(256).IsUnicode(false);
+            entity.Property(e => e.EntityKey).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.PropertyName).HasMaxLength(128).IsUnicode(false);
+            entity.Property(e => e.Operation).IsRequired().HasMaxLength(16).IsUnicode(false);
+            entity.Property(e => e.CorrelationId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.TenantId).HasMaxLength(64).IsUnicode(false);
+
+            // Read path: one entity's history, newest first. Every shipped query and every consumer
+            // screen asks the same question, so the index carries the whole predicate plus the sort.
+            entity.HasIndex(e => new { e.EntityType, e.EntityKey, e.ChangedOn })
+                  .HasDatabaseName("IX_AuditTrailEntries_Entity");
+
+            // Retention path (AuditTrailCleanupJob): rows older than the cutoff, across all types.
+            // The read index above leads with EntityType, so without this the nightly sweep scans
+            // the largest table the framework writes (the outbox precedent).
+            entity.HasIndex(e => e.ChangedOn)
+                  .HasDatabaseName("IX_AuditTrailEntries_ChangedOn");
+        });
+    }
 
     /// <summary>
     /// Discovers and applies the EF entity configurations for the given engine from module

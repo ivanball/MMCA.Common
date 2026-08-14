@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -32,6 +33,10 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
 /// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff; defaults to
 /// <see cref="TimeProvider.System"/> so tests can drive the hour-scale loop deterministically.</param>
+/// <param name="tenancyOptions">
+/// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
+/// such database has its own outbox and inbox tables, which the shared sweep never reaches.
+/// </param>
 public sealed partial class OutboxCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxCleanupService> logger,
@@ -39,7 +44,8 @@ public sealed partial class OutboxCleanupService(
     IOptions<MessageBusSettings> messageBusOptions,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null) : BackgroundService
+    TimeProvider? timeProvider = null,
+    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
     private readonly bool _inboxEnabled = messageBusOptions.Value.EnableInbox;
@@ -80,14 +86,22 @@ public sealed partial class OutboxCleanupService(
     {
         var cutoff = _timeProvider.GetUtcNow().UtcDateTime.Subtract(TimeSpan.FromDays(_settings.RetentionDays));
 
-        foreach (var source in GetRelationalSources())
+        foreach (var target in GetRelationalTargets())
         {
-            var sourceName = source.ToString();
+            var sourceName = target.ToString();
             try
             {
                 using var scope = scopeFactory.CreateScope();
+
+                // Set before the context is asked for: the tenant is what routes the scoped factory
+                // to this tenant's own database.
+                if (target.TenantId is { } tenantId)
+                {
+                    scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
+                }
+
                 var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
-                var context = dbContextFactory.GetDbContext(source);
+                var context = dbContextFactory.GetDbContext(target.Source);
 
                 var deleted = await context.Set<OutboxMessage>()
                     .Where(m => m.ProcessedOn != null && m.ProcessedOn < cutoff)
@@ -177,6 +191,14 @@ public sealed partial class OutboxCleanupService(
 
         return [.. sources.Distinct()];
     }
+
+    /// <summary>
+    /// The units this sweep visits: every owned source against the shared database, plus one extra
+    /// unit per tenant that keeps its own copy of a source (whose outbox and inbox tables live in a
+    /// database nothing else opens).
+    /// </summary>
+    internal List<TenantDataSourceTarget> GetRelationalTargets() =>
+        TenantDataSourceTargets.Expand(GetRelationalSources(), tenancyOptions?.Value);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox cleanup disabled: Outbox:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);

@@ -13,6 +13,13 @@ public interface IApplicationSettings
     int MaxPageSize { get; init; }
 
     /// <summary>
+    /// Maximum number of rows a single CSV export may stream before it stops and marks itself
+    /// truncated. The export endpoint page-loops the query service at <see cref="MaxPageSize"/> per
+    /// page, so this is the ceiling on the whole file, not on one page.
+    /// </summary>
+    int MaxExportRows { get; init; }
+
+    /// <summary>
     /// Controls database initialization strategy on startup.
     /// <list type="bullet">
     ///   <item><c>"Migrate"</c> — applies pending EF Core migrations (development/testing).</item>

@@ -48,6 +48,27 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
+    <!-- Two-level cache (L1 in-process + L2 distributed) behind the opt-in AddCommonHybridCache
+         (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
+         never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
+         one key is the WRONGTYPE production failure this framework already paid for once.
+         Held at 10.8.0, the same dotnet/extensions train as Http.Resilience, ServiceDiscovery and
+         TimeProvider.Testing, rather than the newer 10.9.0: 10.9.0 floors Microsoft.Extensions
+         .Caching.Abstractions/Memory (and through them DependencyInjection.Abstractions, Logging
+         .Abstractions, Options, Primitives) at 10.0.11, above the 10.0.10 every other pin here
+         resolves. Projects with the framework reference prune those away, but the ones without it
+         resolve them as real packages, so the newer pin quietly moves five shared transitives across
+         the graph for no functional gain. At 10.8.0 this adds exactly one entry per lock file. -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.8.0" />
+    <!-- Cron expression parsing for the opt-in recurring job scheduler (ScheduledJobRunner). MIT,
+         zero-dependency (netstandard2.0, no transitive graph at all), and it does exactly one thing:
+         parse a five-field expression and answer "what is the next occurrence after this UTC
+         instant". Deliberately NOT Hangfire or Quartz: both ship their own persistence, their own
+         worker/thread model and their own dashboards, all of which duplicate machinery this
+         framework already owns and has production history with (the OutboxProcessor claim-lease
+         idiom, the DI scope-per-execution pattern, the OpenTelemetry meters). The only piece the
+         framework lacked was the cron grammar, so that is the only piece taken as a dependency. -->
+    <PackageVersion Include="Cronos" Version="0.13.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
@@ -78,6 +99,12 @@
          Projects with the AspNetCore framework reference prune this away; consumers WITHOUT it
          (Aspire AppHosts) resolve the transitive as a real package and need the lifted version. -->
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+    <!-- Azure Key Vault as a configuration source (MMCA.Common.Aspire.AddCommonKeyVaultConfiguration).
+         Opt-in and gated on KeyVault:Uri, so an unconfigured host never contacts a vault and local
+         development stays Azure-free. Reuses the Azure.Identity pin above for the
+         DefaultAzureCredential the provider authenticates with; the host identity needs the
+         Key Vault Secrets User role on the vault (samples/deployment/DEPLOYMENT.md, bootstrap step 3). -->
+    <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.1" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />

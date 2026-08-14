@@ -6,6 +6,68 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+The enterprise capability wave: eight opt-in features in one release. Everything below is inert
+until a host calls the matching registration extension, so upgrading the pins alone changes no
+behavior.
+
+### Added
+
+- **Multi-tenancy (shared-schema + database-per-tenant).** `ITenantEntity` entities gain a named
+  `"Tenant"` EF query filter composing with the existing `"SoftDelete"` filter (one cached model
+  serves every tenant; the tenant value is a query parameter). `TenantResolutionMiddleware`
+  resolves claim-then-header per `Tenancy` settings (fail-closed `RequireTenant` default),
+  `TenantSaveChangesInterceptor` stamps `TenantId` on insert and throws `CrossTenantWriteException`
+  on cross-tenant writes, and per-tenant `DataSources` overrides route a tenant onto its own
+  database through the same `DataSourceKey` (outbox drained per `(source, tenant)` pair; startup
+  migrations get a per-tenant pass). A null tenant is the system context and sees all rows.
+  Opt in with `AddMultiTenancy(configuration)`.
+- **Recurring job scheduler.** `IScheduledJob` (cron via Cronos, UTC) over a `ScheduledJobs` store
+  in the Default relational source, claim-leased by `ScheduledJobRunner` so exactly one replica
+  runs a due job; missed occurrences run once then advance. Config cron overrides win over code
+  defaults; OTel meter `MMCA.Common.Scheduler`. Opt in with `AddScheduledJobs(configuration)` +
+  `AddScheduledJob<TJob>()`.
+- **Audit trail.** `IAuditedEntity` aggregates get field-level change history
+  (`AuditTrailEntries`, one row per changed property, written in the same transaction as the data;
+  `[Pii]` values are stored as `[REDACTED]` on both sides). Retention ships as the first framework
+  scheduled job (`audit-trail-cleanup`). Minimal `IAuditTrailReader` read surface. Opt in with
+  `AddAuditTrail(configuration)`.
+- **Data-subject export (DSAR).** `ExportUserDataHandlerBase<TUser, TQuery>` hoists the
+  ADC/Store export idiom (ownership gate, best-effort `IUserDataExportSection` fan-out that
+  degrades a failing section to `Available = false`), with a `UserDataExportDTO` wire envelope in
+  Shared and an abstract `DataExportControllerBase` (authorized, gated by the new
+  `Privacy.DataExport` feature flag) for hosts that want the JSON download surface.
+- **CSV export on the generic entity controllers.** `GET {controller}/export` streams RFC 4180
+  CSV (UTF-8 BOM, ISO 8601 invariant dates, columns matching the JSON field names) through the
+  existing query pipeline, honoring `fields`, `filters` and sorting, capped by
+  `ApplicationSettings.MaxExportRows` (default 100000) with an `X-Export-Row-Limit` header and a
+  trailing truncation marker. A distinct route by design: the public output-cache policy does not
+  vary by `Accept`.
+- **`Enumeration<TEnumeration>` smart-enum base** in `Shared/ValueObjects` (closed sets with
+  behavior: `FromValue`/`FromName` returning `Result<T>`, frozen lookups, name-based JSON via
+  `EnumerationJsonConverterFactory` registered in `AddAPI`, EF `EnumerationValueConverter` pair).
+- **Azure Key Vault configuration provider.** `AddCommonKeyVaultConfiguration()` (Aspire package)
+  wires `KeyVault:Uri` into the configuration pipeline via `DefaultAzureCredential`; no-op when
+  the key is absent, optional reload interval, requires the Key Vault Secrets User role the
+  deployment sample already grants.
+- **HybridCache substrate (opt-in).** `AddCommonHybridCache()` swaps `ICacheService` to a
+  HybridCache-backed implementation (L1 + L2, stampede protection) under a disjoint
+  `hc:` keyspace so the old and new serialization formats can never cross-read; counters bypass
+  the local cache to keep L2-only semantics. `ICacheService` gains a non-breaking
+  `GetOrCreateAsync` default member. The default path without the call is unchanged.
+
+### Changed
+
+- **`IPhysicalDbContextFactory` gained an abstract member** `Create(DataSourceKey, PhysicalDataSource)`
+  (per-tenant routing). Custom implementors must add it; the framework implementation and all
+  shipped call sites are updated.
+- **Repository `ignoreQueryFilters: true` now means "include soft-deleted rows" only**: the
+  tenant filter survives via the named-filter overload, so an admin read can no longer silently
+  cross tenants. Callers of EF's own parameterless `IgnoreQueryFilters()` on raw `Table` surfaces
+  still bypass every filter; prefer the repository parameter.
+- New pins: `Cronos` 0.13.0, `Microsoft.Extensions.Caching.Hybrid` 10.8.0 (10.9.0 skews shared
+  Microsoft.Extensions transitives to 10.0.11), `Azure.Extensions.AspNetCore.Configuration.Secrets`
+  1.5.1.
+
 > **Consumer versions skipped deliberately.** MMCA.ADC, MMCA.Store and MMCA.Helpdesk went from
 > 1.127.0 straight to 1.131.0 on 2026-07-28. They never pinned 1.128.0, 1.129.0 or 1.130.0, and that
 > is intentional, not drift. 1.128.0 was distribution-only (assemblies byte-identical to 1.127.0), so

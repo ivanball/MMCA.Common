@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using AwesomeAssertions;
 using MMCA.Common.Application.Settings;
 
@@ -13,6 +15,10 @@ public sealed class ApplicationSettingsTests
     [Fact]
     public void MaxPageSize_DefaultsTo500() =>
         new ApplicationSettings().MaxPageSize.Should().Be(500);
+
+    [Fact]
+    public void MaxExportRows_DefaultsTo100000() =>
+        new ApplicationSettings().MaxExportRows.Should().Be(100_000);
 
     [Fact]
     public void DatabaseInitStrategy_DefaultsToMigrate() =>
@@ -38,6 +44,26 @@ public sealed class ApplicationSettingsTests
         var settings = new ApplicationSettings { MaxPageSize = 100 };
 
         settings.MaxPageSize.Should().Be(100);
+    }
+
+    [Fact]
+    public void MaxExportRows_CanBeSet()
+    {
+        var settings = new ApplicationSettings { MaxExportRows = 250 };
+
+        settings.MaxExportRows.Should().Be(250);
+    }
+
+    [Fact]
+    public void MaxExportRows_CarriesARangeAttribute()
+    {
+        RangeAttribute? range = typeof(ApplicationSettings)
+            .GetProperty(nameof(ApplicationSettings.MaxExportRows))!
+            .GetCustomAttribute<RangeAttribute>();
+
+        range.Should().NotBeNull(because: "a host that opts into data-annotations validation must reject a nonsensical cap");
+        range!.Minimum.Should().Be(1);
+        range.Maximum.Should().Be(10_000_000);
     }
 
     [Fact]

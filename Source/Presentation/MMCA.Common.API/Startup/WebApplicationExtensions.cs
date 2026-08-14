@@ -39,8 +39,8 @@ public static class WebApplicationExtensions
         /// <summary>
         /// Configures the standard MMCA middleware pipeline in the correct order:
         /// exception handling → correlation ID → forwarded headers → HTTPS →
-        /// response compression → routing → CORS → rate limiting → auth →
-        /// soft-delete user filter → authorization → output cache → controllers.
+        /// response compression → routing → CORS → auth → tenant resolution →
+        /// rate limiting → soft-delete user filter → authorization → output cache → controllers.
         /// </summary>
         public WebApplication UseCommonMiddlewarePipeline()
         {
@@ -94,6 +94,13 @@ public static class WebApplicationExtensions
                 ? WebApplicationBuilderExtensions.CorsPolicyAllowAll
                 : WebApplicationBuilderExtensions.CorsPolicyAllowSpecificOrigins);
             app.UseAuthentication();
+
+            // Immediately after authentication, and that order is load-bearing: the claim strategy
+            // reads HttpContext.User, which carries the token's claims only once authentication has
+            // run. Registered unconditionally and inert unless the host called AddMultiTenancy and
+            // set Tenancy:Enabled (the SoftDeletedUserMiddleware precedent).
+            app.UseMiddleware<TenantResolutionMiddleware>();
+
             // Rate limiting runs AFTER authentication on purpose (ADR-019): GlobalRateLimitPartition
             // partitions by the authenticated principal and routes anonymous traffic down a NoLimiter
             // branch, so HttpContext.User must already be populated here — otherwise every request

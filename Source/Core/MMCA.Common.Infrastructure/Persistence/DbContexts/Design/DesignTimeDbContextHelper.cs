@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -67,6 +69,24 @@ public static class DesignTimeDbContextHelper
         services.AddSingleton<IOutboxSignal, OutboxSignal>();
         services.AddSingleton<AuditSaveChangesInterceptor>();
         services.AddSingleton<DomainEventSaveChangesInterceptor>();
+        // The tenant interceptor and the tenancy options are registered unconditionally (the
+        // options defaulting to disabled), so `dotnet ef` builds exactly the runtime pipeline for
+        // consumers with and without tenancy. Design time never resolves a tenant, so the
+        // interceptor is inert and the Tenant query filter short-circuits: the scaffolded migration
+        // is identical either way, apart from the TenantId column and index the model declares.
+        services.AddSingleton<TenantSaveChangesInterceptor>();
+        services.AddSingleton<IOptions<TenancySettings>>(Options.Create(new TenancySettings()));
+        // The context reads Scheduler:Enabled from the root provider to decide whether the
+        // ScheduledJobs table is part of the model. Registered unconditionally (defaulting to
+        // disabled) so `dotnet ef` behaves identically for consumers with and without the flag.
+        services.AddSingleton<IOptions<SchedulerSettings>>(
+            Options.Create(new SchedulerSettings { Enabled = designOptions.EnableScheduler }));
+        // Same treatment for the change-history table, and the interceptor that writes to it: the
+        // context resolves the interceptor with GetService, so omitting it here would still work,
+        // but registering it keeps the design-time pipeline identical to the runtime one.
+        services.AddSingleton<IOptions<AuditTrailSettings>>(
+            Options.Create(new AuditTrailSettings { Enabled = designOptions.EnableAuditTrail }));
+        services.AddSingleton<AuditTrailSaveChangesInterceptor>();
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

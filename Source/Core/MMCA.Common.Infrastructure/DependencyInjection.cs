@@ -3,10 +3,12 @@ using System.Reflection;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -54,6 +56,11 @@ public static class DependencyInjection
             // stateless (per-save state is stored in ConditionalWeakTable keyed by context).
             services.TryAddSingleton<AuditSaveChangesInterceptor>();
             services.TryAddSingleton<DomainEventSaveChangesInterceptor>();
+
+            // Always registered, like the other two: it is a no-op for every entity that does not
+            // carry ITenantEntity, so a host that never adopts tenancy pays nothing, while a host
+            // that does can never accidentally leave the write-side guard off.
+            services.TryAddSingleton<TenantSaveChangesInterceptor>();
 
             services.TryAddSingleton<IJwtSettings>(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
 
@@ -205,6 +212,230 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// Replaces the registered <see cref="ICacheService"/> with the two-level
+        /// <see cref="HybridCache"/> implementation: an in-process L1 in front of the host's
+        /// distributed cache.
+        /// </summary>
+        /// <param name="configure">Optional hook to adjust the <see cref="HybridCacheOptions"/> after the framework defaults are applied.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Opt-in, and intended for hosts that already register a distributed L2 (Redis). A
+        /// memory-only host gains nothing: <see cref="MemoryCacheService"/> is already in-process, and
+        /// the default registration stays byte-identical to today for every host that does not call
+        /// this.
+        /// </para>
+        /// <para>
+        /// Order-independent with <c>AddInfrastructure</c> and
+        /// <c>AddCaching</c>, in both directions. Called first, this
+        /// registration is already present when <c>AddCaching</c>'s <c>TryAddSingleton</c> runs, so
+        /// that one no-ops; called second, <c>RemoveAll</c> drops what <c>AddCaching</c> registered
+        /// before adding this one. Either way the host ends with exactly one
+        /// <see cref="ICacheService"/> and it is this one.
+        /// </para>
+        /// <para>
+        /// <b>That includes a host's own custom <see cref="ICacheService"/>:</b> <c>RemoveAll</c> does
+        /// not distinguish the framework's registration from anyone else's. Calling this is a
+        /// statement that the two-level cache is the cache, so a host with a bespoke implementation
+        /// should not call it.
+        /// </para>
+        /// <para>
+        /// Cache keys are namespaced exactly as in <c>AddCaching</c> (the <c>Cache:KeyPrefix</c>
+        /// section), and the optional <see cref="IConnectionMultiplexer"/> is resolved the same way,
+        /// since prefix eviction still needs SCAN.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddCommonHybridCache(Action<HybridCacheOptions>? configure = null)
+        {
+            services.AddHybridCache(options =>
+            {
+                // Same TTL policy the rest of the framework applies, expressed in HybridCache's own
+                // option type; the local copy is capped so a replica that misses an invalidation
+                // re-reads L2 within the window.
+                options.DefaultEntryOptions = new HybridCacheEntryOptions
+                {
+                    Expiration = CacheOptions.DefaultDuration,
+                    LocalCacheExpiration = HybridCacheService.LocalCacheDefault,
+                };
+
+                configure?.Invoke(options);
+            });
+
+            // Deliberately RemoveAll + Add rather than TryAdd: this call is the host stating which
+            // cache wins, and it has to win whether it runs before or after AddInfrastructure.
+            services.RemoveAll<ICacheService>();
+            services.AddSingleton<ICacheService>(sp =>
+            {
+                var logger = sp.GetService<ILogger<HybridCacheService>>()
+                    ?? NullLogger<HybridCacheService>.Instance;
+                var multiplexer = sp.GetService<IConnectionMultiplexer>();
+                var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+
+                return new HybridCacheService(
+                    sp.GetRequiredService<HybridCache>(),
+                    logger,
+                    multiplexer,
+                    keyNamespace);
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// Enables the recurring job scheduler: binds the <c>Scheduler</c> settings section and
+        /// registers the background runner that executes registered
+        /// <see cref="IScheduledJob"/>s on their cron schedules.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the <c>Scheduler</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Call this <b>once</b> per host, and <c>AddScheduledJob&lt;TJob&gt;</c> any number of
+        /// times. The two are order-free: a module may register its jobs before the host enables the
+        /// scheduler, or after. Calling this more than once is harmless, since the runner is
+        /// registered through <c>TryAddEnumerable</c> and would otherwise run twice in one process.
+        /// </para>
+        /// <para>
+        /// Registering the scheduler is not the same as turning it on. The runner and the
+        /// <c>ScheduledJobs</c> table both stay inert until <c>Scheduler:Enabled</c> is true, so a
+        /// host can ship the registration and enable it per environment.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddScheduledJobs(IConfiguration configuration)
+        {
+            services.AddOptions<SchedulerSettings>()
+                .Bind(configuration.GetSection(SchedulerSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // TryAddEnumerable, not AddHostedService: the latter appends a descriptor per call, so a
+            // host (or two modules) calling this twice would run two runners in one process, and both
+            // would race for the same job rows.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, Scheduling.ScheduledJobRunner>());
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers one <see cref="IScheduledJob"/> implementation with the scheduler.
+        /// </summary>
+        /// <typeparam name="TJob">The job implementation.</typeparam>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Jobs accumulate: each module calls this for the jobs it owns and every registration is
+        /// added to the same <c>IEnumerable&lt;IScheduledJob&gt;</c>, exactly like the permission
+        /// registry's accumulate-across-modules idiom. Registration order does not matter, and the
+        /// same type registered twice is added once.
+        /// </para>
+        /// <para>
+        /// The job is <b>scoped</b>: the runner resolves it in a fresh scope per execution, so it may
+        /// take scoped dependencies (unit of work, repositories, handlers) and must hold no state
+        /// between runs. The concrete type is registered too, so a host can resolve it directly (a
+        /// test, or an admin endpoint that triggers the job on demand).
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddScheduledJob<TJob>()
+            where TJob : class, IScheduledJob
+        {
+            services.TryAddScoped<TJob>();
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IScheduledJob, TJob>());
+            return services;
+        }
+
+        /// <summary>
+        /// Enables the entity change-history trail: binds the <c>AuditTrail</c> settings section,
+        /// registers the interceptor that records changes to <c>IAuditedEntity</c> entities, the read
+        /// surface (<see cref="IAuditTrailReader"/>), and the retention job.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the <c>AuditTrail</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Call this once per host. Registering the trail is not the same as turning it on: the
+        /// interceptor and the <c>AuditTrailEntries</c> table both stay inert until
+        /// <c>AuditTrail:Enabled</c> is true, so a host can ship the registration and enable it per
+        /// environment. A host that never calls this keeps exactly the model and the save pipeline it
+        /// had before the trail shipped, because <c>ApplicationDbContext</c> resolves the interceptor
+        /// with <c>GetService</c> and finds nothing.
+        /// </para>
+        /// <para>
+        /// <b>Retention needs the scheduler.</b> This registers <c>AuditTrailCleanupJob</c>, but a
+        /// job only runs when the host ALSO calls <c>AddScheduledJobs(configuration)</c> and sets
+        /// <c>Scheduler:Enabled</c>. Without the scheduler the trail still records every change and
+        /// nothing is ever purged: pruning the table is then the operator's job, and
+        /// <c>AuditTrail:RetentionDays</c> is inert.
+        /// </para>
+        /// <para>
+        /// Marking entities is the other half: an entity records nothing until it carries
+        /// <c>IAuditedEntity</c>. That is deliberate, and it is where the write volume is decided.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddAuditTrail(IConfiguration configuration)
+        {
+            services.AddOptions<AuditTrailSettings>()
+                .Bind(configuration.GetSection(AuditTrailSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // Singleton for the same reason as the other two save interceptors: stateless, with any
+            // per-save state held in a ConditionalWeakTable keyed by context.
+            services.TryAddSingleton<Persistence.AuditTrail.AuditTrailSaveChangesInterceptor>();
+
+            services.TryAddScoped<IAuditTrailReader, Persistence.AuditTrail.AuditTrailReader>();
+
+            // The framework's own scheduled job. Registering it here rather than in AddScheduledJobs
+            // keeps the two features independent: the trail can be enabled without the scheduler, and
+            // the scheduler without the trail.
+            services.AddScheduledJob<Persistence.AuditTrail.AuditTrailCleanupJob>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Enables multi-tenancy: binds the <c>Tenancy</c> settings section, validates it at
+        /// startup, and turns on tenant resolution at the API edge.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the <c>Tenancy</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// This call binds configuration; it does not install isolation. The <c>Tenant</c> query
+        /// filter, <see cref="TenantSaveChangesInterceptor"/> and <see cref="ITenantContext"/> are
+        /// always present and always inert until a tenant is resolved, so the framework can never be
+        /// in the state where entities are marked <c>ITenantEntity</c> but only half the guard is
+        /// wired.
+        /// </para>
+        /// <para>
+        /// What this DOES switch on is resolution: with <c>Tenancy:Enabled</c> true,
+        /// <c>TenantResolutionMiddleware</c> reads the tenant from the configured claim or header
+        /// and, by default (<c>Tenancy:RequireTenant</c>), rejects a request that carries none.
+        /// </para>
+        /// <para>
+        /// <b>Database-per-tenant is configuration only.</b> A tenant listed under
+        /// <c>Tenancy:Tenants:{id}:DataSources:{sourceName}</c> is routed to its own database for
+        /// that source; a tenant with no entry shares the database and is isolated by the filter.
+        /// The override keys are PHYSICAL data source names, and startup validation fails the host
+        /// when one names a source that does not exist, because the alternative is a silent fall
+        /// back to the shared database.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddMultiTenancy(IConfiguration configuration)
+        {
+            services.AddOptions<TenancySettings>()
+                .Bind(configuration.GetSection(TenancySettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // TryAddEnumerable: two modules calling this must not run the same validation twice.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<TenancySettings>, TenancySettingsValidator>());
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers application services: current user, token, password hashing, email, and time provider.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
@@ -213,6 +444,13 @@ public static class DependencyInjection
             services.AddHttpContextAccessor();
 
             services.TryAddScoped<ICorrelationContext, CorrelationContext>();
+
+            // Registered whether or not the host called AddMultiTenancy: everything that reads it
+            // (the query filter's accessor, the save interceptor, the caching decorators) treats an
+            // unresolved tenant as "no tenancy", so the always-on registration costs one object per
+            // scope and removes a whole class of "works until someone forgets the opt-in" bug.
+            services.TryAddScoped<ITenantContext, TenantContext>();
+
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
             // Singleton: TokenService owns RSA handles (RS256) disposed in IDisposable.Dispose.
             // Scoped lifetime caused the underlying RSA to be disposed at end-of-request while
