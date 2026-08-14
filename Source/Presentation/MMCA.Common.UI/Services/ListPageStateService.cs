@@ -55,13 +55,13 @@ public sealed record ListPageState
 /// (via the <c>nav-interop.js</c> module) so state survives circuit teardowns,
 /// <c>forceLoad: true</c> navigations, and the SSR → WASM render-mode transition.
 /// </summary>
-public sealed class ListPageStateService(IJSRuntime js)
+public sealed class ListPageStateService(IJSRuntime js) : IAsyncDisposable
 {
     private const string ModulePath = "./_content/MMCA.Common.UI/nav-interop.js";
     private const string SessionKeyPrefix = "mmca.lps:";
 
     private readonly Dictionary<string, ListPageState> _states = [];
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _module = new(js, ModulePath);
 
     /// <summary>
     /// Returns the in-memory snapshot for <paramref name="routePath"/>, or
@@ -163,15 +163,9 @@ public sealed class ListPageStateService(IJSRuntime js)
 
     private async ValueTask<IJSObjectReference?> GetModuleAsync()
     {
-        if (_module is not null)
-        {
-            return _module;
-        }
-
         try
         {
-            _module = await js.InvokeAsync<IJSObjectReference>("import", ModulePath).ConfigureAwait(false);
-            return _module;
+            return await _module.GetOrImportAsync().ConfigureAwait(false);
         }
         catch (InvalidOperationException)
         {
@@ -182,4 +176,7 @@ public sealed class ListPageStateService(IJSRuntime js)
             return null;
         }
     }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync() => _module.DisposeAsync();
 }

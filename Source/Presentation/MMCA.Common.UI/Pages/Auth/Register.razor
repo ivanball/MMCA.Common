@@ -1,4 +1,5 @@
 @page "/register"
+@using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.Shared.Auth
 @using MMCA.Common.Shared.ValueObjects
 @using MMCA.Common.UI.Services.Auth
@@ -122,13 +123,20 @@
     private string? _errorMessage;
     private bool _isLoading;
 
-    private Address? BuildAddress()
+    // Null means "no address entered", which is legitimate: the address block is optional. Anything
+    // the user DID type is validated, and an invalid address blocks the registration instead of being
+    // silently dropped (the account used to be created with no address at all).
+    private Result<Address>? BuildAddressResult()
     {
-        if (string.IsNullOrWhiteSpace(_model.AddressLine1))
+        if (string.IsNullOrWhiteSpace(_model.AddressLine1)
+            && string.IsNullOrWhiteSpace(_model.AddressLine2)
+            && string.IsNullOrWhiteSpace(_model.City)
+            && string.IsNullOrWhiteSpace(_model.State)
+            && string.IsNullOrWhiteSpace(_model.ZipCode)
+            && string.IsNullOrWhiteSpace(_model.Country))
             return null;
 
-        var result = Address.Create(_model.AddressLine1, _model.AddressLine2, _model.City, _model.State, _model.ZipCode, _model.Country);
-        return result.IsSuccess ? result.Value : null;
+        return Address.Create(_model.AddressLine1, _model.AddressLine2, _model.City, _model.State, _model.ZipCode, _model.Country);
     }
 
     private async Task HandleRegisterAsync()
@@ -137,12 +145,20 @@
         // EditForm + DataAnnotations before OnValidSubmit fires; this method only handles the call and
         // any server-side failure, surfaced in the form-level MudAlert.
         _errorMessage = null;
+
+        var addressResult = BuildAddressResult();
+        if (addressResult is { IsFailure: true } failedAddress)
+        {
+            _errorMessage = failedAddress.Errors[0].Message;
+            return;
+        }
+
         _isLoading = true;
 
         try
         {
             var result = await AuthService.RegisterAsync(
-                new RegisterRequest(_model.Email, _model.Password, _model.FirstName, _model.LastName, BuildAddress()));
+                new RegisterRequest(_model.Email, _model.Password, _model.FirstName, _model.LastName, addressResult?.Value));
             if (result is not null)
             {
                 Navigation.NavigateTo("/", forceLoad: true);

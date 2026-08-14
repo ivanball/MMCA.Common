@@ -16,7 +16,7 @@ namespace MMCA.Common.UI.Services;
 public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
 {
     private const string ModulePath = "./_content/MMCA.Common.UI/theme.js";
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _module = new(jsRuntime, ModulePath);
 
     /// <summary>Whether dark mode is currently active.</summary>
     public bool IsDarkMode { get; private set; }
@@ -61,22 +61,8 @@ public sealed class ThemeService(IJSRuntime jsRuntime) : IAsyncDisposable
     /// <summary>Flips between light and dark, persisting the new value.</summary>
     public Task ToggleAsync() => SetDarkModeAsync(!IsDarkMode);
 
-    private async Task<IJSObjectReference> GetModuleAsync() =>
-        _module ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", ModulePath);
+    private Task<IJSObjectReference> GetModuleAsync() => _module.GetOrImportAsync();
 
     /// <inheritdoc/>
-    public async ValueTask DisposeAsync()
-    {
-        if (_module is not null)
-        {
-            try
-            {
-                await _module.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-                // The circuit is already gone (page closed); nothing to dispose.
-            }
-        }
-    }
+    public ValueTask DisposeAsync() => _module.DisposeAsync();
 }

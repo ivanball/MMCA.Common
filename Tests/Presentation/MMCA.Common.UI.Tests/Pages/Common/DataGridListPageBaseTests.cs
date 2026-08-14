@@ -32,7 +32,9 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         SetRendererInfo(new RendererInfo("Server", isInteractive: true));
     }
 
-    private sealed record WidgetRow(int Id, string Name);
+    // Public so Moq can proxy MudBlazor's Column&lt;WidgetRow&gt; over it (Castle cannot subclass a
+    // generic type closed over an inaccessible argument).
+    public sealed record WidgetRow(int Id, string Name);
 
     private sealed class TestGridPage : DataGridListPageBase<WidgetRow>
     {
@@ -128,6 +130,88 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         seenFilters.Should().NotBeNull();
         seenFilters!.Should().ContainKey("search").WhoseValue.Should().Be(("contains", "blue"));
+    }
+
+    private static IFilterDefinition<WidgetRow> Filter(string propertyName, string @operator, string value)
+    {
+        var column = new Mock<Column<WidgetRow>>();
+        column.Setup(c => c.PropertyName).Returns(propertyName);
+
+        var definition = new Mock<IFilterDefinition<WidgetRow>>();
+        definition.SetupGet(f => f.Column).Returns(column.Object);
+        definition.SetupGet(f => f.Operator).Returns(@operator);
+        definition.SetupGet(f => f.Value).Returns(value);
+        return definition.Object;
+    }
+
+    // == Grid filter extraction ==
+    [Fact]
+    public async Task LoadServerDataAsync_TranslatesGridFiltersIntoTheFetchDictionary()
+    {
+        var cut = Render<TestGridPage>();
+        Dictionary<string, (string Operator, string Value)>? seenFilters = null;
+        cut.Instance.Fetch = (filters, _, _, _, _, _) =>
+        {
+            seenFilters = filters;
+            return Task.FromResult<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(([], 0));
+        };
+
+        var state = State(page: 0, pageSize: 10);
+        state.FilterDefinitions = [Filter("Name", "contains", "blue")];
+
+        await LoadOnDispatcherAsync(cut, state);
+
+        seenFilters.Should().NotBeNull();
+        seenFilters!.Should().ContainKey("Name").WhoseValue.Should().Be(("contains", "blue"));
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_WithTwoFiltersOnTheSameColumn_KeepsTheNewestAndStillLoads()
+    {
+        // MudDataGrid lets the user add a second filter row on a column that is already filtered.
+        // The fetch contract carries one filter per column, so the projection used to throw
+        // ArgumentException ("an item with the same key has already been added") BEFORE the try
+        // block, stranding IsLoading at true and leaving the grid spinning forever.
+        var cut = Render<TestGridPage>();
+        Dictionary<string, (string Operator, string Value)>? seenFilters = null;
+        cut.Instance.Fetch = (filters, _, _, _, _, _) =>
+        {
+            seenFilters = filters;
+            return Task.FromResult<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(([], 0));
+        };
+
+        var state = State(page: 0, pageSize: 10);
+        state.FilterDefinitions =
+        [
+            Filter("Name", "contains", "blue"),
+            Filter("Name", "equals", "green")
+        ];
+
+        var act = async () => await LoadOnDispatcherAsync(cut, state);
+
+        await act.Should().NotThrowAsync();
+        seenFilters.Should().NotBeNull();
+        seenFilters!.Should().ContainKey("Name").WhoseValue.Should().Be(("equals", "green"),
+            "the newest filter row wins when a column carries more than one");
+        cut.Instance.LoadingNow.Should().BeFalse("the loading flag must always be reset");
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_WhenAdditionalFiltersCallbackThrows_ReportsAndResetsLoading()
+    {
+        // The callback is arbitrary page code; a throw from it used to escape past the finally.
+        var cut = Render<TestGridPage>();
+
+        var data = await LoadOnDispatcherAsync(
+            cut,
+            State(page: 0, pageSize: 10),
+            additionalFilters: _ => throw new InvalidOperationException("bad filter"));
+
+        data.Items.Should().BeEmpty();
+        cut.Instance.LoadingNow.Should().BeFalse();
+        _snackbar.Verify(
+            s => s.Add(It.IsAny<string>(), Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once);
     }
 
     // == State persistence: in-memory service + URL mirror ==

@@ -9,11 +9,11 @@ namespace MMCA.Common.UI.Services.Navigation;
 /// the MAUI hardware-back bridge to perform a real <c>history.back()</c> when an
 /// in-history previous entry exists, falling back to a hard-coded path otherwise.
 /// </summary>
-public sealed class NavigationHistoryService(NavigationManager navigation, IJSRuntime js)
+public sealed class NavigationHistoryService(NavigationManager navigation, IJSRuntime js) : IAsyncDisposable
 {
     private const string ModulePath = "./_content/MMCA.Common.UI/nav-interop.js";
 
-    private IJSObjectReference? _module;
+    private readonly LazyJsModule _module = new(js, ModulePath);
 
     /// <summary>
     /// Returns <see langword="true"/> when the browser history stack contains a
@@ -84,15 +84,9 @@ public sealed class NavigationHistoryService(NavigationManager navigation, IJSRu
 
     private async ValueTask<IJSObjectReference?> GetModuleAsync()
     {
-        if (_module is not null)
-        {
-            return _module;
-        }
-
         try
         {
-            _module = await js.InvokeAsync<IJSObjectReference>("import", ModulePath).ConfigureAwait(false);
-            return _module;
+            return await _module.GetOrImportAsync().ConfigureAwait(false);
         }
         catch (InvalidOperationException)
         {
@@ -103,4 +97,7 @@ public sealed class NavigationHistoryService(NavigationManager navigation, IJSRu
             return null;
         }
     }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync() => _module.DisposeAsync();
 }
