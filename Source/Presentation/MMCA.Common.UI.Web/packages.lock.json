@@ -602,6 +602,7 @@
           "Microsoft.EntityFrameworkCore.Cosmos": "[10.0.10, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[10.0.10, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.10, )",
+          "Microsoft.Extensions.Caching.Hybrid": "[10.8.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.8.0, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
@@ -900,6 +901,12 @@
           "Microsoft.Data.SqlClient": "6.1.1",
           "Microsoft.EntityFrameworkCore.Relational": "10.0.10"
         }
+      },
+      "Microsoft.Extensions.Caching.Hybrid": {
+        "type": "CentralTransitive",
+        "requested": "[10.8.0, )",
+        "resolved": "10.8.0",
+        "contentHash": "RCtCTK3eqKXx8LXqd7B8GjbTkIp4k3EgKeunaCmBJ+WA55Nva83CI2I+wVyp0S9jTG+aT6AYWQbkKOfvFOlmLA=="
       },
       "Microsoft.Extensions.Http.Resilience": {
         "type": "CentralTransitive",

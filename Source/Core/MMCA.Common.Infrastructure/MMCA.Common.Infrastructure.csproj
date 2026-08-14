@@ -45,6 +45,10 @@
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
     <PackageReference Include="StackExchange.Redis" />
+    <!-- Two-level caching behind the opt-in AddCommonHybridCache (HybridCacheService). Referenced
+         unconditionally so the type is available to hosts that call it; a host that does not is
+         unaffected, since nothing registers HybridCache until AddCommonHybridCache runs. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.Application\MMCA.Common.Application.csproj" />

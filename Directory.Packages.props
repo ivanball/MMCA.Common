@@ -48,6 +48,18 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
+    <!-- Two-level cache (L1 in-process + L2 distributed) behind the opt-in AddCommonHybridCache
+         (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
+         never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
+         one key is the WRONGTYPE production failure this framework already paid for once.
+         Held at 10.8.0, the same dotnet/extensions train as Http.Resilience, ServiceDiscovery and
+         TimeProvider.Testing, rather than the newer 10.9.0: 10.9.0 floors Microsoft.Extensions
+         .Caching.Abstractions/Memory (and through them DependencyInjection.Abstractions, Logging
+         .Abstractions, Options, Primitives) at 10.0.11, above the 10.0.10 every other pin here
+         resolves. Projects with the framework reference prune those away, but the ones without it
+         resolve them as real packages, so the newer pin quietly moves five shared transitives across
+         the graph for no functional gain. At 10.8.0 this adds exactly one entry per lock file. -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.Hybrid" Version="10.8.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the

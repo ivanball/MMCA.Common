@@ -21,9 +21,6 @@ internal sealed partial class DistributedCacheService(
     IConnectionMultiplexer? connectionMultiplexer = null,
     CacheKeyNamespace? keyNamespace = null) : ICacheService
 {
-    /// <summary>Single-key deletes issued and awaited as one group during prefix invalidation.</summary>
-    private const int DeleteBatchSize = 512;
-
     /// <summary>
     /// Namespace applied to every key so services sharing one cache instance cannot collide.
     /// Defaults to no prefix, which is correct for a host that owns its cache outright.
@@ -70,12 +67,16 @@ internal sealed partial class DistributedCacheService(
     /// command. A multi-key DEL cannot span hash slots under Redis cluster policy, and
     /// StackExchange.Redis rejects a cross-slot multi-key command by throwing rather than
     /// under-deleting, which would fault the whole invalidation. Round trips still stay bounded:
-    /// up to <see cref="DeleteBatchSize"/> single-key deletes are in flight at a time and awaited
-    /// as one group.
+    /// a fixed number of single-key deletes are in flight at a time and awaited as one group.
     /// </para>
     /// <para>
     /// Each server is scanned inside its own try/catch, so one unreachable or failing server is
     /// logged and skipped instead of aborting invalidation on the servers that are healthy.
+    /// </para>
+    /// <para>
+    /// The scan itself lives in <see cref="RedisPrefixScanner"/>, shared with
+    /// <see cref="HybridCacheService"/>. This method supplies the raw <c>KeyDeleteAsync</c> as the
+    /// per-key delete and keeps the log messages, which name the caller-supplied prefix.
     /// </para>
     /// </remarks>
     public async Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
@@ -90,67 +91,18 @@ internal sealed partial class DistributedCacheService(
             return;
         }
 
-        // Replicas mirror a primary's keyspace, so scanning them is redundant, and a DEL against a
-        // replica fails outright. Everything else is scanned: a key that lives on another primary
-        // is invisible to the first server's SCAN and would survive the invalidation.
-        IServer[] servers = [.. connectionMultiplexer.GetServers().Where(s => !s.IsReplica)];
-        if (servers.Length == 0)
-        {
-            LogPrefixEvictionNoServer(logger, prefix);
-            return;
-        }
+        // Resolved on the first delete rather than up front: a host whose multiplexer reports no
+        // scannable server never asks for a database at all.
+        IDatabase? db = null;
 
-        var pattern = $"{_keys.Qualify(prefix)}*";
-        var db = connectionMultiplexer.GetDatabase();
-
-        foreach (var server in servers)
-        {
-            try
-            {
-                await ScanAndDeleteAsync(db, server, pattern, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is RedisException or RedisCommandException or TimeoutException)
-            {
-                // Best-effort per server: a transport or command fault on one node must not leave the
-                // remaining nodes un-invalidated. Cancellation is deliberately not caught here.
-                LogPrefixEvictionServerFailed(logger, Describe(server), prefix, ex);
-            }
-        }
+        await RedisPrefixScanner.RemoveMatchingAsync(
+            connectionMultiplexer,
+            $"{_keys.Qualify(prefix)}*",
+            key => (db ??= connectionMultiplexer.GetDatabase()).KeyDeleteAsync(key),
+            () => LogPrefixEvictionNoServer(logger, prefix),
+            (server, ex) => LogPrefixEvictionServerFailed(logger, server, prefix, ex),
+            cancellationToken).ConfigureAwait(false);
     }
-
-    /// <summary>Scans one server for the pattern and deletes every match, one key per command.</summary>
-    private static async Task ScanAndDeleteAsync(
-        IDatabase db,
-        IServer server,
-        string pattern,
-        CancellationToken cancellationToken)
-    {
-        // Deletes go out one key at a time. Under Redis cluster policy a multi-key DEL must not span
-        // hash slots, and StackExchange.Redis answers a cross-slot multi-key command by throwing, so
-        // batching the keys of a prefix (which hash to arbitrary slots) would fault the invalidation
-        // instead of speeding it up. Single-key deletes are always slot-safe; the round-trip count
-        // stays bounded by keeping a group of them in flight and awaiting the group.
-        var pending = new List<Task<bool>>(DeleteBatchSize);
-
-        await foreach (var key in server.KeysAsync(pattern: pattern)
-            .WithCancellation(cancellationToken)
-            .ConfigureAwait(false))
-        {
-            pending.Add(db.KeyDeleteAsync(key));
-            if (pending.Count == DeleteBatchSize)
-            {
-                await Task.WhenAll(pending).ConfigureAwait(false);
-                pending.Clear();
-            }
-        }
-
-        if (pending.Count > 0)
-            await Task.WhenAll(pending).ConfigureAwait(false);
-    }
-
-    /// <summary>Stable identifier for a server in log output, tolerating an unknown endpoint.</summary>
-    private static string Describe(IServer server) =>
-        server.EndPoint?.ToString() ?? "unknown";
 
     /// <inheritdoc />
     /// <remarks>

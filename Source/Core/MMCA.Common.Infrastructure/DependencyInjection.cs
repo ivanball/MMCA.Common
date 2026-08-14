@@ -3,6 +3,7 @@ using System.Reflection;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -199,6 +200,76 @@ public static class DependencyInjection
                 var fallbackLogger = sp.GetService<ILogger<InProcessDistributedLock>>()
                     ?? NullLogger<InProcessDistributedLock>.Instance;
                 return new InProcessDistributedLock(fallbackLogger);
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// Replaces the registered <see cref="ICacheService"/> with the two-level
+        /// <see cref="HybridCache"/> implementation: an in-process L1 in front of the host's
+        /// distributed cache.
+        /// </summary>
+        /// <param name="configure">Optional hook to adjust the <see cref="HybridCacheOptions"/> after the framework defaults are applied.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Opt-in, and intended for hosts that already register a distributed L2 (Redis). A
+        /// memory-only host gains nothing: <see cref="MemoryCacheService"/> is already in-process, and
+        /// the default registration stays byte-identical to today for every host that does not call
+        /// this.
+        /// </para>
+        /// <para>
+        /// Order-independent with <c>AddInfrastructure</c> and
+        /// <c>AddCaching</c>, in both directions. Called first, this
+        /// registration is already present when <c>AddCaching</c>'s <c>TryAddSingleton</c> runs, so
+        /// that one no-ops; called second, <c>RemoveAll</c> drops what <c>AddCaching</c> registered
+        /// before adding this one. Either way the host ends with exactly one
+        /// <see cref="ICacheService"/> and it is this one.
+        /// </para>
+        /// <para>
+        /// <b>That includes a host's own custom <see cref="ICacheService"/>:</b> <c>RemoveAll</c> does
+        /// not distinguish the framework's registration from anyone else's. Calling this is a
+        /// statement that the two-level cache is the cache, so a host with a bespoke implementation
+        /// should not call it.
+        /// </para>
+        /// <para>
+        /// Cache keys are namespaced exactly as in <c>AddCaching</c> (the <c>Cache:KeyPrefix</c>
+        /// section), and the optional <see cref="IConnectionMultiplexer"/> is resolved the same way,
+        /// since prefix eviction still needs SCAN.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddCommonHybridCache(Action<HybridCacheOptions>? configure = null)
+        {
+            services.AddHybridCache(options =>
+            {
+                // Same TTL policy the rest of the framework applies, expressed in HybridCache's own
+                // option type; the local copy is capped so a replica that misses an invalidation
+                // re-reads L2 within the window.
+                options.DefaultEntryOptions = new HybridCacheEntryOptions
+                {
+                    Expiration = CacheOptions.DefaultDuration,
+                    LocalCacheExpiration = HybridCacheService.LocalCacheDefault,
+                };
+
+                configure?.Invoke(options);
+            });
+
+            // Deliberately RemoveAll + Add rather than TryAdd: this call is the host stating which
+            // cache wins, and it has to win whether it runs before or after AddInfrastructure.
+            services.RemoveAll<ICacheService>();
+            services.AddSingleton<ICacheService>(sp =>
+            {
+                var logger = sp.GetService<ILogger<HybridCacheService>>()
+                    ?? NullLogger<HybridCacheService>.Instance;
+                var multiplexer = sp.GetService<IConnectionMultiplexer>();
+                var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+
+                return new HybridCacheService(
+                    sp.GetRequiredService<HybridCache>(),
+                    logger,
+                    multiplexer,
+                    keyNamespace);
             });
 
             return services;
