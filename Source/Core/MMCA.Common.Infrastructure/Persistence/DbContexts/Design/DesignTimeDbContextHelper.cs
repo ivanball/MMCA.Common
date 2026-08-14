@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -73,6 +74,12 @@ public static class DesignTimeDbContextHelper
         // disabled) so `dotnet ef` behaves identically for consumers with and without the flag.
         services.AddSingleton<IOptions<SchedulerSettings>>(
             Options.Create(new SchedulerSettings { Enabled = designOptions.EnableScheduler }));
+        // Same treatment for the change-history table, and the interceptor that writes to it: the
+        // context resolves the interceptor with GetService, so omitting it here would still work,
+        // but registering it keeps the design-time pipeline identical to the runtime one.
+        services.AddSingleton<IOptions<AuditTrailSettings>>(
+            Options.Create(new AuditTrailSettings { Enabled = designOptions.EnableAuditTrail }));
+        services.AddSingleton<AuditTrailSaveChangesInterceptor>();
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

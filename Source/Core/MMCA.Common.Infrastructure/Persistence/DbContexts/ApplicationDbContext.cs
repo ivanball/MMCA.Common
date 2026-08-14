@@ -59,6 +59,19 @@ public abstract class ApplicationDbContext(
     /// </summary>
     private bool _schedulerTableEnabled;
 
+    /// <summary>
+    /// Whether the <c>AuditTrailEntries</c> table belongs in THIS context's model. Resolved once in
+    /// <see cref="OnConfiguring"/> from the root provider and read by <see cref="ConfigureAuditTrail"/>,
+    /// for the same reason as <see cref="_schedulerTableEnabled"/>.
+    /// <para>
+    /// One condition only, unlike the scheduler: <c>AuditTrail:Enabled</c>. The trail table belongs
+    /// in EVERY relational source, because a trail row must commit in the same transaction as the
+    /// change it describes, and a transaction does not span databases (the outbox precedent, not the
+    /// host-scoped job table).
+    /// </para>
+    /// </summary>
+    private bool _auditTrailTableEnabled;
+
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
 
@@ -201,12 +214,25 @@ public abstract class ApplicationDbContext(
         var domainEventInterceptor = serviceProvider.GetRequiredService<DomainEventSaveChangesInterceptor>();
         optionsBuilder.AddInterceptors(auditInterceptor, domainEventInterceptor);
 
+        // Registration order IS execution order, and the change trail must run last: it diffs the
+        // final values, after the audit stamps are written and after the outbox rows are added.
+        // GetService, not GetRequiredService: a host that never calls AddAuditTrail registers no
+        // interceptor, and that absence must read as "the trail is off" rather than fail every
+        // context construction in the application.
+        if (serviceProvider.GetService<AuditTrail.AuditTrailSaveChangesInterceptor>() is { } auditTrailInterceptor)
+        {
+            optionsBuilder.AddInterceptors(auditTrailInterceptor);
+        }
+
         // Settings-gated table (see the field's remarks). GetService, not GetRequiredService: a host
         // that never calls AddScheduledJobs registers no SchedulerSettings, and that absence must
         // read as "disabled" rather than fail every context construction in the application.
         _schedulerTableEnabled =
             serviceProvider.GetService<IOptions<SchedulerSettings>>()?.Value.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, DataSourceKey.DefaultName, StringComparison.Ordinal);
+
+        // Same gate treatment, no source condition: see the field's remarks.
+        _auditTrailTableEnabled = serviceProvider.GetService<IOptions<AuditTrailSettings>>()?.Value.Enabled == true;
 
         // Key EF's model cache by (context type, physical source name): the same context class is
         // instantiated once per database, each with a different model. Without this, the first
@@ -258,6 +284,9 @@ public abstract class ApplicationDbContext(
 
         // Configure the recurring job table (used when Scheduler:Enabled, Default source only).
         ConfigureScheduler(modelBuilder);
+
+        // Configure the entity change-history table (used when AuditTrail:Enabled, every source).
+        ConfigureAuditTrail(modelBuilder);
     }
 
     /// <summary>
@@ -400,6 +429,44 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.NextRunOn)
                   .IncludeProperties(e => new { e.LockedUntil, e.LockToken })
                   .HasDatabaseName("IX_ScheduledJobs_NextRunOn");
+        });
+    }
+
+    /// <summary>
+    /// Configures the <see cref="AuditTrail.AuditTrailEntry"/> entity (the change-history table).
+    /// Gated on <c>AuditTrail:Enabled</c> like the scheduler table, but mapped into <b>every</b>
+    /// relational source rather than one: a trail row commits in the same transaction as the change
+    /// it describes, and a transaction does not span databases. Cosmos DB never reaches this method
+    /// (it overrides <see cref="OnModelCreating"/>).
+    /// </summary>
+    private void ConfigureAuditTrail(ModelBuilder modelBuilder)
+    {
+        if (!_auditTrailTableEnabled)
+        {
+            return;
+        }
+
+        modelBuilder.Entity<AuditTrail.AuditTrailEntry>(entity =>
+        {
+            entity.ToTable("AuditTrailEntries", "dbo");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityType).IsRequired().HasMaxLength(256).IsUnicode(false);
+            entity.Property(e => e.EntityKey).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.PropertyName).HasMaxLength(128).IsUnicode(false);
+            entity.Property(e => e.Operation).IsRequired().HasMaxLength(16).IsUnicode(false);
+            entity.Property(e => e.CorrelationId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.TenantId).HasMaxLength(64).IsUnicode(false);
+
+            // Read path: one entity's history, newest first. Every shipped query and every consumer
+            // screen asks the same question, so the index carries the whole predicate plus the sort.
+            entity.HasIndex(e => new { e.EntityType, e.EntityKey, e.ChangedOn })
+                  .HasDatabaseName("IX_AuditTrailEntries_Entity");
+
+            // Retention path (AuditTrailCleanupJob): rows older than the cutoff, across all types.
+            // The read index above leads with EntityType, so without this the nightly sweep scans
+            // the largest table the framework writes (the outbox precedent).
+            entity.HasIndex(e => e.ChangedOn)
+                  .HasDatabaseName("IX_AuditTrailEntries_ChangedOn");
         });
     }
 

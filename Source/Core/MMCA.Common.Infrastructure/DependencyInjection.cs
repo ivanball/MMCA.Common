@@ -340,6 +340,55 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// Enables the entity change-history trail: binds the <c>AuditTrail</c> settings section,
+        /// registers the interceptor that records changes to <c>IAuditedEntity</c> entities, the read
+        /// surface (<see cref="IAuditTrailReader"/>), and the retention job.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the <c>AuditTrail</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// Call this once per host. Registering the trail is not the same as turning it on: the
+        /// interceptor and the <c>AuditTrailEntries</c> table both stay inert until
+        /// <c>AuditTrail:Enabled</c> is true, so a host can ship the registration and enable it per
+        /// environment. A host that never calls this keeps exactly the model and the save pipeline it
+        /// had before the trail shipped, because <c>ApplicationDbContext</c> resolves the interceptor
+        /// with <c>GetService</c> and finds nothing.
+        /// </para>
+        /// <para>
+        /// <b>Retention needs the scheduler.</b> This registers <c>AuditTrailCleanupJob</c>, but a
+        /// job only runs when the host ALSO calls <c>AddScheduledJobs(configuration)</c> and sets
+        /// <c>Scheduler:Enabled</c>. Without the scheduler the trail still records every change and
+        /// nothing is ever purged: pruning the table is then the operator's job, and
+        /// <c>AuditTrail:RetentionDays</c> is inert.
+        /// </para>
+        /// <para>
+        /// Marking entities is the other half: an entity records nothing until it carries
+        /// <c>IAuditedEntity</c>. That is deliberate, and it is where the write volume is decided.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddAuditTrail(IConfiguration configuration)
+        {
+            services.AddOptions<AuditTrailSettings>()
+                .Bind(configuration.GetSection(AuditTrailSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // Singleton for the same reason as the other two save interceptors: stateless, with any
+            // per-save state held in a ConditionalWeakTable keyed by context.
+            services.TryAddSingleton<Persistence.AuditTrail.AuditTrailSaveChangesInterceptor>();
+
+            services.TryAddScoped<IAuditTrailReader, Persistence.AuditTrail.AuditTrailReader>();
+
+            // The framework's own scheduled job. Registering it here rather than in AddScheduledJobs
+            // keeps the two features independent: the trail can be enabled without the scheduler, and
+            // the scheduler without the trail.
+            services.AddScheduledJob<Persistence.AuditTrail.AuditTrailCleanupJob>();
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers application services: current user, token, password hashing, email, and time provider.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>

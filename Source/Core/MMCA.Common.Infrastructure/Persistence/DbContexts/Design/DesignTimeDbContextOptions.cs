@@ -41,6 +41,20 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableScheduler { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the change-history table (<c>AuditTrailEntries</c>) is
+    /// part of the design-time model, mirroring <c>AuditTrail:Enabled</c> at runtime. Defaults to
+    /// <see langword="false"/>, so <c>dotnet ef</c> keeps producing exactly the migrations it
+    /// produced before the audit trail shipped.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="EnableScheduler"/>, set it in the migrations project of <b>every</b> data
+    /// source whose entities are audited: a trail row is written to the database holding the entity
+    /// that changed, so each of those databases needs the table. The flag must match the host's
+    /// configuration, or the scaffolded migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableAuditTrail { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>
