@@ -1,10 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.API.Startup;
 
@@ -84,8 +88,100 @@ public static class DatabaseInitializationExtensions
                         "Valid values are: Migrate, EnsureCreated, None.");
             }
 
+            await InitializeTenantDatabasesAsync(services, applicationSettings, sourcesInUse, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Module seeding runs on the default scope only. A seeder writes reference data an
+            // application needs to boot; running it per tenant would need a per-tenant notion of
+            // "which seeders apply", which no module declares today, and running it twice against a
+            // shared database is worse than not running it per tenant at all.
             await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Applies the same schema strategy to each tenant that keeps its own copy of a data source.
+    /// Nothing else opens those databases, so without this pass a per-tenant database is never
+    /// created and never migrated.
+    /// </summary>
+    /// <remarks>
+    /// Each tenant gets a FRESH scope with its tenant set before the context factory is asked for
+    /// anything: the scoped factory binds one physical database per source for the life of a scope,
+    /// so reusing the outer scope would keep handing back the shared database.
+    /// </remarks>
+    private static async Task InitializeTenantDatabasesAsync(
+        IServiceProvider services,
+        ApplicationSettings applicationSettings,
+        IReadOnlyCollection<DataSourceKey> sourcesInUse,
+        CancellationToken cancellationToken)
+    {
+        var settings = services.GetService<IOptions<TenancySettings>>()?.Value;
+        if (settings is null || settings.Tenants.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var target in TenantDataSourceTargets.Expand(sourcesInUse, settings)
+            .Where(t => t.TenantId is not null))
+        {
+            using var tenantScope = services.CreateScope();
+            tenantScope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(target.TenantId!);
+
+            var factory = tenantScope.ServiceProvider.GetRequiredService<IDbContextFactory>();
+            var database = factory.GetDbContext(target.Source).Database;
+
+            switch (applicationSettings.DatabaseInitStrategy)
+            {
+                case "Migrate":
+                    if (target.Source.Engine == DataSource.SQLServer)
+                    {
+                        await database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+                    }
+
+                    break;
+                case "EnsureCreated":
+                    await database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                case "None":
+                    await ThrowIfTenantPendingMigrationsAsync(database, target, cancellationToken)
+                        .ConfigureAwait(false);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Unknown DatabaseInitStrategy: '{applicationSettings.DatabaseInitStrategy}'. " +
+                        "Valid values are: Migrate, EnsureCreated, None.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Production guard for a tenant database under the <c>"None"</c> strategy: a tenant left
+    /// behind by a migration is exactly as broken as a shared database left behind, and silently so.
+    /// </summary>
+    private static async Task ThrowIfTenantPendingMigrationsAsync(
+        DatabaseFacade database,
+        TenantDataSourceTarget target,
+        CancellationToken cancellationToken)
+    {
+        if (target.Source.Engine != DataSource.SQLServer)
+        {
+            return;
+        }
+
+        var pending = await database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
+        if (!pending.Any())
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Tenant database has pending migrations that must be applied before starting: "
+            + $"{target}: {string.Join(", ", pending)}. "
+            + "Run 'dotnet ef database update' against the tenant's connection string.");
     }
 
     /// <summary>

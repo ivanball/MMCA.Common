@@ -20,13 +20,20 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// any failure is logged at warning level and swallowed rather than propagated: a cache outage must
 /// never turn a committed command into a failure. Entries left behind expire on their own TTL.
 /// </para>
+/// <para>
+/// Under multi-tenancy the prefix is scoped to the resolved tenant (<c>t:{tenantId}:</c>) by the
+/// same transformation <see cref="CachingQueryDecorator{TQuery, TResult}"/> applies to its keys, so
+/// an invalidation evicts exactly the entries this tenant's queries wrote and can never evict
+/// another tenant's cache. With no tenant resolved the prefix is untouched.
+/// </para>
 /// </summary>
 /// <typeparam name="TCommand">The command type.</typeparam>
 /// <typeparam name="TResult">The result type returned by the handler.</typeparam>
 public sealed partial class CachingCommandDecorator<TCommand, TResult>(
     ICommandHandler<TCommand, TResult> inner,
     ICacheService cacheService,
-    ILogger<CachingCommandDecorator<TCommand, TResult>> logger) : ICommandHandler<TCommand, TResult>
+    ILogger<CachingCommandDecorator<TCommand, TResult>> logger,
+    ITenantContext? tenantContext = null) : ICommandHandler<TCommand, TResult>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CachingCommandDecorator{TCommand, TResult}"/> class
@@ -70,11 +77,15 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
             && !string.IsNullOrWhiteSpace(cacheInvalidating.CachePrefix)
             && !IsFailure(result))
         {
+            // Scoped to the tenant the command ran as, exactly as the query decorator scoped the
+            // keys it wrote.
+            var cachePrefix = TenantCacheKey.Scope(tenantContext, cacheInvalidating.CachePrefix);
+
             try
             {
                 // CancellationToken.None, not the request token: the command has committed, so the
                 // cleanup must outlive a caller that has already walked away.
-                await cacheService.RemoveByPrefixAsync(cacheInvalidating.CachePrefix, CancellationToken.None)
+                await cacheService.RemoveByPrefixAsync(cachePrefix, CancellationToken.None)
                     .ConfigureAwait(false);
 
                 // A read that missed the cache before this command committed can still be running its
@@ -82,13 +93,13 @@ public sealed partial class CachingCommandDecorator<TCommand, TResult>(
                 // A second, delayed eviction removes that repopulated entry. Best-effort like the
                 // first one: ICacheService is a singleton, so the follow-up outlives the request scope
                 // safely, and anything it cannot evict expires on its own TTL.
-                InvalidationFollowUp = ReInvalidateAfterDelayAsync(cacheInvalidating.CachePrefix);
+                InvalidationFollowUp = ReInvalidateAfterDelayAsync(cachePrefix);
             }
 #pragma warning disable CA1031 // Do not catch general exception types: invalidation is best-effort and must never fail a committed command
             catch (Exception ex)
 #pragma warning restore CA1031
             {
-                LogCacheInvalidationFailed(logger, cacheInvalidating.CachePrefix, typeof(TCommand).Name, ex);
+                LogCacheInvalidationFailed(logger, cachePrefix, typeof(TCommand).Name, ex);
             }
         }
 

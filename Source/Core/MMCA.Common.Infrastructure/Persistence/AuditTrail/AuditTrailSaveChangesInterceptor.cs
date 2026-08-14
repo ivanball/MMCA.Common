@@ -48,9 +48,14 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// capturing one would be a lifetime bug rather than a feature. The trace id is ambient, is what
 /// the telemetry pipeline correlates on, and is the same value
 /// <c>CorrelationIdMiddleware</c> itself falls back to when a request carries no
-/// <c>X-Correlation-ID</c> header. A caller-supplied header value is therefore NOT recorded in v1;
-/// honoring it needs a live accessor on the context assigned by the scoped factory (the shape the
-/// multi-tenancy work introduces for <c>TenantId</c>), which is deliberately out of scope here.
+/// <c>X-Correlation-ID</c> header. A caller-supplied header value is therefore NOT recorded;
+/// honoring it needs a live accessor on the context assigned by the scoped factory, which is the
+/// shape multi-tenancy introduced for <c>TenantId</c> and could be reused here later.
+/// </para>
+/// <para>
+/// <b>Tenant.</b> The row records <c>ApplicationDbContext.CurrentTenantId</c>, which does reach this
+/// interceptor: it is read off the context rather than off a scoped service, through the live
+/// accessor the scoped context factory assigns. It is null in a host that never resolved a tenant.
 /// </para>
 /// </remarks>
 /// <param name="timeProvider">Provides the UTC capture timestamp.</param>
@@ -73,6 +78,9 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
     /// <summary>Column width of <c>CorrelationId</c>; longer values are truncated to fit.</summary>
     internal const int MaxCorrelationIdLength = 64;
+
+    /// <summary>Column width of <c>TenantId</c>; longer values are truncated to fit.</summary>
+    internal const int MaxTenantIdLength = 64;
 
     /// <summary>Separator joining the parts of a composite primary key into one <c>EntityKey</c> value.</summary>
     internal const char KeySeparator = '|';
@@ -181,7 +189,8 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
         var capture = new CaptureContext(
             context.CurrentSaveUserId,
             timeProvider.GetUtcNow().UtcDateTime,
-            Truncate(Activity.Current?.TraceId.ToString(), MaxCorrelationIdLength));
+            Truncate(Activity.Current?.TraceId.ToString(), MaxCorrelationIdLength),
+            Truncate(context.CurrentTenantId, MaxTenantIdLength));
 
         // Snapshot before adding: the rows this method writes land in the same tracker, and
         // enumerating it lazily while adding to it would throw.
@@ -248,6 +257,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
             ChangedBy = capture.ChangedBy,
             ChangedOn = capture.ChangedOn,
             CorrelationId = capture.CorrelationId,
+            TenantId = capture.TenantId,
         });
 
         // A store-generated key (the framework's identity columns) does not exist yet at this point:
@@ -302,6 +312,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
                 ChangedBy = capture.ChangedBy,
                 ChangedOn = capture.ChangedOn,
                 CorrelationId = capture.CorrelationId,
+                TenantId = capture.TenantId,
             });
         }
     }
@@ -526,10 +537,12 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
     /// <param name="ChangedBy">The user the save runs as, or null.</param>
     /// <param name="ChangedOn">The UTC capture instant.</param>
     /// <param name="CorrelationId">The ambient trace identifier, or null.</param>
+    /// <param name="TenantId">The tenant the saving scope resolved, or null for a system save.</param>
     private readonly record struct CaptureContext(
         UserIdentifierType? ChangedBy,
         DateTime ChangedOn,
-        string? CorrelationId);
+        string? CorrelationId,
+        string? TenantId);
 
     /// <summary>A trail row awaiting the store-generated key of the entity it describes.</summary>
     /// <param name="Row">The tracked trail row whose <c>EntityKey</c> must be rewritten.</param>

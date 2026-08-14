@@ -31,9 +31,12 @@ public sealed class PhysicalDbContextFactory(
         new DbContextOptionsBuilder<CosmosDbContext>().Options;
 
     /// <inheritdoc />
-    public ApplicationDbContext Create(DataSourceKey key)
+    public ApplicationDbContext Create(DataSourceKey key) => Create(key, resolver.GetPhysical(key));
+
+    /// <inheritdoc />
+    public ApplicationDbContext Create(DataSourceKey key, PhysicalDataSource physicalDataSource)
     {
-        var physical = resolver.GetPhysical(key);
+        var physical = physicalDataSource ?? throw new ArgumentNullException(nameof(physicalDataSource));
 
         return key.Engine switch
         {

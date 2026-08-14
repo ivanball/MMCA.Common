@@ -88,8 +88,10 @@ public sealed class CosmosDbContext(
 
         // Does NOT call base.OnModelCreating because the base also registers
         // ValReturn<T> keyless types mapped to views (a relational-only construct that
-        // the Cosmos provider does not support). Soft-delete filters are applied
-        // independently via the extracted helper method.
+        // the Cosmos provider does not support). Soft-delete and tenant filters are applied
+        // independently via the extracted helper methods; the tenant helper skips its index for
+        // Cosmos, which indexes every property itself.
         ApplySoftDeleteFilters(modelBuilder);
+        ApplyTenantFilters(modelBuilder);
     }
 }

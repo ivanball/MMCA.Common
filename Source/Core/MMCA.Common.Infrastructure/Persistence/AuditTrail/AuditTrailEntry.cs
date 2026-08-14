@@ -91,9 +91,10 @@ public sealed class AuditTrailEntry
     public string? CorrelationId { get; init; }
 
     /// <summary>
-    /// Gets the owning tenant, or <see langword="null"/>. Always null today: the column exists so
-    /// the multi-tenancy feature can start populating it without a schema migration on every
-    /// consumer that has already adopted the trail.
+    /// Gets the tenant the change was made under, or <see langword="null"/> when the save resolved
+    /// no tenant (a background service, a seeder, a single-tenant host). Recorded from
+    /// <c>ApplicationDbContext.CurrentTenantId</c> at capture, so a trail row can be read back per
+    /// tenant even where the trail table itself is shared.
     /// </summary>
     public string? TenantId { get; init; }
 }

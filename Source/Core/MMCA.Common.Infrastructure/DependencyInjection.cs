@@ -57,6 +57,11 @@ public static class DependencyInjection
             services.TryAddSingleton<AuditSaveChangesInterceptor>();
             services.TryAddSingleton<DomainEventSaveChangesInterceptor>();
 
+            // Always registered, like the other two: it is a no-op for every entity that does not
+            // carry ITenantEntity, so a host that never adopts tenancy pays nothing, while a host
+            // that does can never accidentally leave the write-side guard off.
+            services.TryAddSingleton<TenantSaveChangesInterceptor>();
+
             services.TryAddSingleton<IJwtSettings>(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
 
             services.AddOptions<ConnectionStringSettings>()
@@ -389,6 +394,48 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// Enables multi-tenancy: binds the <c>Tenancy</c> settings section, validates it at
+        /// startup, and turns on tenant resolution at the API edge.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the <c>Tenancy</c> section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// This call binds configuration; it does not install isolation. The <c>Tenant</c> query
+        /// filter, <see cref="TenantSaveChangesInterceptor"/> and <see cref="ITenantContext"/> are
+        /// always present and always inert until a tenant is resolved, so the framework can never be
+        /// in the state where entities are marked <c>ITenantEntity</c> but only half the guard is
+        /// wired.
+        /// </para>
+        /// <para>
+        /// What this DOES switch on is resolution: with <c>Tenancy:Enabled</c> true,
+        /// <c>TenantResolutionMiddleware</c> reads the tenant from the configured claim or header
+        /// and, by default (<c>Tenancy:RequireTenant</c>), rejects a request that carries none.
+        /// </para>
+        /// <para>
+        /// <b>Database-per-tenant is configuration only.</b> A tenant listed under
+        /// <c>Tenancy:Tenants:{id}:DataSources:{sourceName}</c> is routed to its own database for
+        /// that source; a tenant with no entry shares the database and is isolated by the filter.
+        /// The override keys are PHYSICAL data source names, and startup validation fails the host
+        /// when one names a source that does not exist, because the alternative is a silent fall
+        /// back to the shared database.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddMultiTenancy(IConfiguration configuration)
+        {
+            services.AddOptions<TenancySettings>()
+                .Bind(configuration.GetSection(TenancySettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // TryAddEnumerable: two modules calling this must not run the same validation twice.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<TenancySettings>, TenancySettingsValidator>());
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers application services: current user, token, password hashing, email, and time provider.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
@@ -397,6 +444,13 @@ public static class DependencyInjection
             services.AddHttpContextAccessor();
 
             services.TryAddScoped<ICorrelationContext, CorrelationContext>();
+
+            // Registered whether or not the host called AddMultiTenancy: everything that reads it
+            // (the query filter's accessor, the save interceptor, the caching decorators) treats an
+            // unresolved tenant as "no tenancy", so the always-on registration costs one object per
+            // scope and removes a whole class of "works until someone forgets the opt-in" bug.
+            services.TryAddScoped<ITenantContext, TenantContext>();
+
             services.TryAddScoped<ICurrentUserService, CurrentUserService>();
             // Singleton: TokenService owns RSA handles (RS256) disposed in IDisposable.Dispose.
             // Scoped lifetime caused the underlying RSA to be disposed at end-of-request while

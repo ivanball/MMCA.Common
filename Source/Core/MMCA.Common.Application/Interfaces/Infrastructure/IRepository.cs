@@ -11,6 +11,11 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure;
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
+/// <remarks>
+/// Every <c>ignoreQueryFilters</c> parameter on this interface means "include soft-deleted rows",
+/// nothing more. It drops the named <c>SoftDelete</c> filter and leaves the named <c>Tenant</c>
+/// filter applied.
+/// </remarks>
 public interface IEntityReader<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
@@ -31,7 +36,11 @@ public interface IEntityReader<TEntity, TIdentifierType>
     /// <param name="ids">The collection of primary keys to look up.</param>
     /// <param name="includes">Navigation properties to eager-load.</param>
     /// <param name="asTracking">Whether to track the returned entities for changes.</param>
-    /// <param name="ignoreQueryFilters">Whether to bypass EF global query filters (e.g., soft-delete).</param>
+    /// <param name="ignoreQueryFilters">
+    /// Whether to include soft-deleted rows. It drops the <c>SoftDelete</c> global query filter and
+    /// <b>only</b> that one: the <c>Tenant</c> filter stays in force, so a caller asking for deleted
+    /// rows can never read another tenant's data.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A read-only collection of matching entities (may be fewer than requested if some IDs don't exist).</returns>
     Task<IReadOnlyCollection<TEntity>> GetByIdsAsync(
@@ -61,6 +70,11 @@ public interface IEntityReader<TEntity, TIdentifierType>
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
+/// <remarks>
+/// Every <c>ignoreQueryFilters</c> parameter on this interface means "include soft-deleted rows",
+/// nothing more. It drops the named <c>SoftDelete</c> filter and leaves the named <c>Tenant</c>
+/// filter applied.
+/// </remarks>
 public interface IEntityQuerier<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull

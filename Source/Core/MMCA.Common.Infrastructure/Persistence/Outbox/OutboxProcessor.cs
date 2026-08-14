@@ -42,6 +42,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
 /// <param name="timeProvider">Clock abstraction for the startup delay and lease/eligibility timestamps;
 /// defaults to <see cref="TimeProvider.System"/> so tests can drive the loop deterministically.</param>
+/// <param name="tenancyOptions">
+/// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
+/// such database has its own outbox table that nothing else would drain. Defaulted, so a host
+/// without tenancy keeps the previous constructor shape and behavior.
+/// </param>
 public sealed partial class OutboxProcessor(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxProcessor> logger,
@@ -49,7 +54,8 @@ public sealed partial class OutboxProcessor(
     IOutboxSignal outboxSignal,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null) : BackgroundService
+    TimeProvider? timeProvider = null,
+    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
@@ -80,7 +86,7 @@ public sealed partial class OutboxProcessor(
         // Brief startup delay so the application finishes initializing before we start polling.
         await _timeProvider.Delay(TimeSpan.FromSeconds(5), stoppingToken).ConfigureAwait(false);
 
-        if (GetOutboxSources().Count == 0)
+        if (GetOutboxTargets().Count == 0)
         {
             LogOutboxDisabled(logger);
             return;
@@ -167,6 +173,15 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
+    /// The units this cycle visits: every owned source against the shared database, plus one extra
+    /// unit per tenant that keeps its own copy of a source. A tenant database has its own
+    /// <c>OutboxMessages</c> table, and nothing else opens that database, so without this its events
+    /// would sit undelivered forever.
+    /// </summary>
+    internal List<TenantDataSourceTarget> GetOutboxTargets() =>
+        TenantDataSourceTargets.Expand(GetOutboxSources(), tenancyOptions?.Value);
+
+    /// <summary>
     /// Drains every outbox source once and aggregates the per-source results: any source with
     /// more eligible work triggers an immediate re-poll, the earliest pending timestamp
     /// across all sources drives the smart wait, and the backlog observed across all sources is
@@ -178,12 +193,12 @@ public sealed partial class OutboxProcessor(
         DateTime? earliestPendingOccurredOn = null;
         var pendingDepth = 0L;
 
-        foreach (var source in GetOutboxSources())
+        foreach (var target in GetOutboxTargets())
         {
             try
             {
                 (OutboxCycleResult result, long sourcePendingDepth) =
-                    await ProcessSourceAsync(source, cancellationToken).ConfigureAwait(false);
+                    await ProcessSourceAsync(target, cancellationToken).ConfigureAwait(false);
                 pendingDepth += sourcePendingDepth;
                 hasMoreEligibleWork |= result.HasMoreEligibleWork;
                 if (result.EarliestPendingOccurredOn is { } pending
@@ -201,7 +216,7 @@ public sealed partial class OutboxProcessor(
                 // One unreachable database must not starve the other sources' outboxes.
                 // A failing source contributes nothing to the wait — its rows are retried
                 // on the next signal or polling interval.
-                LogSourceProcessingError(logger, source.ToString(), ex);
+                LogSourceProcessingError(logger, target.ToString(), ex);
             }
         }
 
@@ -217,11 +232,20 @@ public sealed partial class OutboxProcessor(
     /// caller can sum the depth across sources for the <c>outbox.pending.depth</c> gauge.
     /// </summary>
     private async Task<(OutboxCycleResult Cycle, long PendingDepth)> ProcessSourceAsync(
-        DataSourceKey source,
+        TenantDataSourceTarget target,
         CancellationToken cancellationToken)
     {
-        var sourceName = source.ToString();
+        var source = target.Source;
+        var sourceName = target.ToString();
         using var scope = scopeFactory.CreateScope();
+
+        // Before the context is asked for, not after: the tenant is what routes the scoped factory
+        // to this tenant's database, and it is also what the query filter reads.
+        if (target.TenantId is { } tenantId)
+        {
+            scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
+        }
+
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<DbContexts.Factory.IDbContextFactory>();
         var context = dbContextFactory.GetDbContext(source);
         var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();

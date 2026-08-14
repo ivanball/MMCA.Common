@@ -69,6 +69,13 @@ public static class DesignTimeDbContextHelper
         services.AddSingleton<IOutboxSignal, OutboxSignal>();
         services.AddSingleton<AuditSaveChangesInterceptor>();
         services.AddSingleton<DomainEventSaveChangesInterceptor>();
+        // The tenant interceptor and the tenancy options are registered unconditionally (the
+        // options defaulting to disabled), so `dotnet ef` builds exactly the runtime pipeline for
+        // consumers with and without tenancy. Design time never resolves a tenant, so the
+        // interceptor is inert and the Tenant query filter short-circuits: the scaffolded migration
+        // is identical either way, apart from the TenantId column and index the model declares.
+        services.AddSingleton<TenantSaveChangesInterceptor>();
+        services.AddSingleton<IOptions<TenancySettings>>(Options.Create(new TenancySettings()));
         // The context reads Scheduler:Enabled from the root provider to decide whether the
         // ScheduledJobs table is part of the model. Registered unconditionally (defaulting to
         // disabled) so `dotnet ef` behaves identically for consumers with and without the flag.

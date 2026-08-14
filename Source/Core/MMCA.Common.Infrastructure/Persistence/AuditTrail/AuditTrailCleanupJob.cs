@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
@@ -36,12 +37,22 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// <param name="logger">Logger for sweep diagnostics.</param>
 /// <param name="options">Bound audit-trail settings (the retention window).</param>
 /// <param name="timeProvider">Clock abstraction for the retention cutoff.</param>
+/// <param name="scopeFactory">
+/// Creates the per-tenant scope a database-per-tenant sweep needs. Defaulted: a host without
+/// tenancy never leaves the job's own scope.
+/// </param>
+/// <param name="tenancyOptions">
+/// Bound tenancy settings, used only to discover tenants whose own database holds its own trail
+/// table (which the shared sweep never reaches).
+/// </param>
 internal sealed partial class AuditTrailCleanupJob(
     IDbContextFactory dbContextFactory,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     ILogger<AuditTrailCleanupJob> logger,
     IOptions<AuditTrailSettings> options,
-    TimeProvider timeProvider) : IScheduledJob
+    TimeProvider timeProvider,
+    IServiceScopeFactory? scopeFactory = null,
+    IOptions<TenancySettings>? tenancyOptions = null) : IScheduledJob
 {
     /// <summary>The number of rows removed per statement.</summary>
     internal const int BatchSize = 1000;
@@ -65,25 +76,62 @@ internal sealed partial class AuditTrailCleanupJob(
 
         var cutoff = timeProvider.GetUtcNow().UtcDateTime.Subtract(TimeSpan.FromDays(_settings.RetentionDays));
 
-        foreach (var source in entityDataSourceRegistry.GetPhysicalSourcesInUse()
+        var relationalSources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
             .Where(key => key.Engine != DataSource.CosmosDB)
-            .Distinct())
+            .Distinct();
+
+        foreach (var target in TenantDataSourceTargets.Expand(relationalSources, tenancyOptions?.Value))
         {
-            var context = dbContextFactory.GetDbContext(source);
+            await PurgeTargetAsync(target, cutoff, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
-            // Cosmos is already excluded, but a relational source can still lack the table when the
-            // host disabled the trail after it was written, so the model is the authority.
-            if (context.Model.FindEntityType(typeof(AuditTrailEntry)) is null)
-            {
-                continue;
-            }
+    /// <summary>
+    /// Sweeps one target. The shared database is swept on the job's own scope; a tenant that keeps
+    /// its own database needs a fresh scope with that tenant set, because the scoped context factory
+    /// binds one database per scope and the job's scope is already bound to the shared one.
+    /// </summary>
+    private async Task PurgeTargetAsync(
+        TenantDataSourceTarget target,
+        DateTime cutoff,
+        CancellationToken cancellationToken)
+    {
+        if (target.TenantId is null || scopeFactory is null)
+        {
+            await PurgeWithFactoryAsync(dbContextFactory, target, cutoff, cancellationToken).ConfigureAwait(false);
+            return;
+        }
 
-            var deleted = await PurgeSourceAsync(context, cutoff, cancellationToken).ConfigureAwait(false);
-            if (deleted > 0)
-            {
-                var sourceName = source.ToString();
-                LogPurged(logger, deleted, sourceName);
-            }
+        using var scope = scopeFactory.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(target.TenantId);
+        await PurgeWithFactoryAsync(
+            scope.ServiceProvider.GetRequiredService<IDbContextFactory>(),
+            target,
+            cutoff,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Resolves the target's context from <paramref name="factory"/> and purges it.</summary>
+    private async Task PurgeWithFactoryAsync(
+        IDbContextFactory factory,
+        TenantDataSourceTarget target,
+        DateTime cutoff,
+        CancellationToken cancellationToken)
+    {
+        var context = factory.GetDbContext(target.Source);
+
+        // Cosmos is already excluded, but a relational source can still lack the table when the
+        // host disabled the trail after it was written, so the model is the authority.
+        if (context.Model.FindEntityType(typeof(AuditTrailEntry)) is null)
+        {
+            return;
+        }
+
+        var deleted = await PurgeSourceAsync(context, cutoff, cancellationToken).ConfigureAwait(false);
+        if (deleted > 0)
+        {
+            var sourceName = target.ToString();
+            LogPurged(logger, deleted, sourceName);
         }
     }
 
