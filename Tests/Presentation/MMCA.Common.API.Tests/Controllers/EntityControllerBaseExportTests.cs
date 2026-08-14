@@ -1,5 +1,6 @@
 using System.Dynamic;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Text;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +28,17 @@ public sealed class EntityControllerBaseExportTests : IDisposable
     private readonly Mock<ILogger<EntityControllerBase<ExportTestEntity, ExportTestDTO, int>>> _loggerMock = new();
     private readonly MemoryStream _body = new();
 
-    private ExportTestController CreateController(int maxPageSize = 500, int maxExportRows = 100_000)
+    private ExportTestController CreateController(int maxPageSize = 500, int maxExportRows = 100_000) =>
+        new(_queryServiceMock.Object, _loggerMock.Object)
+        {
+            ControllerContext = CreateControllerContext(maxPageSize, maxExportRows)
+        };
+
+    /// <summary>
+    /// Builds the request context the export reads its settings, clock and response body from.
+    /// Shared with the scoped-controller tests, which differ only in the controller they construct.
+    /// </summary>
+    private ControllerContext CreateControllerContext(int maxPageSize, int maxExportRows)
     {
         var settingsMock = new Mock<IApplicationSettings>();
         settingsMock.Setup(s => s.MaxPageSize).Returns(maxPageSize);
@@ -44,12 +55,9 @@ public sealed class EntityControllerBaseExportTests : IDisposable
         };
         httpContext.Response.Body = _body;
 
-        return new ExportTestController(_queryServiceMock.Object, _loggerMock.Object)
+        return new ControllerContext
         {
-            ControllerContext = new ControllerContext
-            {
-                HttpContext = httpContext
-            }
+            HttpContext = httpContext
         };
     }
 
@@ -396,6 +404,78 @@ public sealed class EntityControllerBaseExportTests : IDisposable
             "the export must query exactly what the paged endpoint would, at the max page size");
     }
 
+    // ── Scoping hook ──
+    [Fact]
+    public async Task ExportAsync_DefaultHook_QueriesUnscopedAndWritesTheSameBytes()
+    {
+        SetupPages().ReturnsAsync(Result.Success(Page([Dto(1, "Ada"), Dto(2, "Grace")], totalItemCount: 2)));
+        ExportTestController sut = CreateController(maxPageSize: 10);
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        BodyText().Should().Be(
+            "﻿id,name,isActive,createdOn\r\n"
+            + "1,Ada,true,2026-01-01T00:00:00.0000000Z\r\n"
+            + "2,Grace,true,2026-01-01T00:00:00.0000000Z\r\n",
+            because: "a controller that overrides nothing must produce the byte-identical file it produced before the hook existed");
+        _queryServiceMock.Verify(
+            q => q.GetAllAsync(
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                null,
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the default hook returns null, which is the unscoped query the endpoint always issued");
+    }
+
+    [Fact]
+    public async Task ExportAsync_OverriddenSpecification_FiltersEveryPage()
+    {
+        var queryService = new SpecificationHonoringQueryService(Enumerable.Range(1, 7));
+        var specification = new InlineSpecification<ExportTestEntity, int>(e => e.Id % 2 == 1);
+        var sut = new ScopedExportTestController(queryService, _loggerMock.Object, specification)
+        {
+            ControllerContext = CreateControllerContext(maxPageSize: 2, maxExportRows: 100)
+        };
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        queryService.SpecificationsSeen.Should().HaveCount(3, because: "four matching rows at two per page take three queries");
+        queryService.SpecificationsSeen.Should().AllSatisfy(
+            seen => seen.Should().BeSameAs(specification),
+            because: "a specification applied only to the first page would leak the rest of the table");
+        string[] lines = BodyLines(BodyText());
+        lines.Should().HaveCount(5, because: "header plus the four odd-numbered rows");
+        lines[1..].Select(line => line.Split(',')[0]).Should().Equal("1", "3", "5", "7");
+    }
+
+    [Fact]
+    public async Task ExportAsync_OverriddenSpecification_TruncationCountsTheFilteredSet()
+    {
+        var queryService = new SpecificationHonoringQueryService(Enumerable.Range(1, 7));
+        var specification = new InlineSpecification<ExportTestEntity, int>(e => e.Id % 2 == 1);
+        var sut = new ScopedExportTestController(queryService, _loggerMock.Object, specification)
+        {
+            ControllerContext = CreateControllerContext(maxPageSize: 2, maxExportRows: 3)
+        };
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        string[] lines = BodyLines(BodyText());
+        lines.Should().HaveCount(5, because: "header plus three data rows plus the truncation marker");
+        lines[1..4].Should().Equal("1,Name 1,true,2026-01-01T00:00:00.0000000Z", "3,Name 3,true,2026-01-01T00:00:00.0000000Z", "5,Name 5,true,2026-01-01T00:00:00.0000000Z");
+        lines[^1].Should().Be(
+            "# export truncated at 3 rows",
+            because: "the ceiling counts the rows the specification allowed, not the rows the table holds");
+    }
+
     // ── Settings resolution ──
     [Fact]
     public async Task ExportAsync_NonPositiveConfiguredCap_FallsBackToTheDefault()
@@ -416,6 +496,115 @@ public sealed class ExportTestController(
     ILogger<EntityControllerBase<ExportTestEntity, ExportTestDTO, int>> logger)
     : EntityControllerBase<ExportTestEntity, ExportTestDTO, int>(queryService, logger);
 
+/// <summary>
+/// A controller that row-scopes its export, standing in for the consumer controllers whose list
+/// endpoints already filter by ownership.
+/// </summary>
+public sealed class ScopedExportTestController(
+    IEntityQueryService<ExportTestEntity, ExportTestDTO, int> queryService,
+    ILogger<EntityControllerBase<ExportTestEntity, ExportTestDTO, int>> logger,
+    Specification<ExportTestEntity, int>? specification)
+    : EntityControllerBase<ExportTestEntity, ExportTestDTO, int>(queryService, logger)
+{
+    protected override Specification<ExportTestEntity, int>? GetExportSpecification() => specification;
+}
+
+/// <summary>
+/// Query-service stand-in that actually honors the specification it is handed and records every
+/// one it sees, so a test can prove the export scoped EVERY page rather than only the first query.
+/// A Moq sequence cannot show that: it replays the same rows whatever it is asked.
+/// </summary>
+public sealed class SpecificationHonoringQueryService(IEnumerable<int> ids)
+    : IEntityQueryService<ExportTestEntity, ExportTestDTO, int>
+{
+    private readonly List<ExportTestEntity> _rows = [.. ids.Select(id => new ExportTestEntity { Id = id })];
+
+    /// <summary>Gets the specification passed to each page query, in call order.</summary>
+    public List<Specification<ExportTestEntity, int>?> SpecificationsSeen { get; } = [];
+
+    public IEntityDTOMapper<ExportTestEntity, ExportTestDTO, int> DTOMapper => throw new NotSupportedException();
+
+    public Task<Result<PagedCollectionResult<object>>> GetAllAsync(
+        bool includeFKs = false,
+        bool includeChildren = false,
+        Specification<ExportTestEntity, int>? specification = null,
+        Dictionary<string, (string Operator, string Value)>? filters = null,
+        string? sortColumn = null,
+        string? sortDirection = null,
+        string? fields = null,
+        int? pageNumber = null,
+        int? pageSize = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default)
+    {
+        SpecificationsSeen.Add(specification);
+
+        List<ExportTestEntity> matching = [.. _rows.Where(row => specification is null || specification.IsSatisfiedBy(row))];
+        int size = Math.Max(1, pageSize ?? matching.Count);
+        int page = Math.Max(1, pageNumber ?? 1);
+
+        IReadOnlyCollection<object> items =
+        [
+            .. matching
+                .Skip((page - 1) * size)
+                .Take(size)
+                .Select(row => (object)new ExportTestDTO
+                {
+                    Id = row.Id,
+                    Name = string.Create(CultureInfo.InvariantCulture, $"Name {row.Id}"),
+                    IsActive = true,
+                    CreatedOn = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                })
+        ];
+
+        return Task.FromResult(Result.Success(
+            new PagedCollectionResult<object>(items, new PaginationMetadata(matching.Count, size, page))));
+    }
+
+    public Task<Result<PagedCollectionResult<object>>> GetAllAsync(
+        bool includeFKs = false,
+        bool includeChildren = false,
+        Specification<ExportTestEntity, int>? specification = null,
+        string? fields = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<Result<IReadOnlyCollection<BaseLookup<int>>>> GetAllForLookupAsync(
+        string nameProperty,
+        Expression<Func<ExportTestEntity, bool>>? where = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<Result<ExportTestEntity>> GetEntityByIdAsync(
+        string idValue,
+        string? idField = null,
+        bool includeFKs = false,
+        bool includeChildren = false,
+        Specification<ExportTestEntity, int>? specification = null,
+        string? fields = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<Result<object>> GetByIdAsync(
+        int id,
+        bool includeFKs = false,
+        bool includeChildren = false,
+        Specification<ExportTestEntity, int>? specification = null,
+        string? fields = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task<bool> ExistsAsync(
+        Expression<Func<ExportTestEntity, bool>> where,
+        bool ignoreQueryFilters = false,
+        CancellationToken cancellationToken = default) => throw new NotSupportedException();
+}
+
+public sealed class ExportShapeTestController(
+    IEntityQueryService<ExportTestEntity, ExportShapeTestDTO, int> queryService,
+    ILogger<EntityControllerBase<ExportTestEntity, ExportShapeTestDTO, int>> logger)
+    : EntityControllerBase<ExportTestEntity, ExportShapeTestDTO, int>(queryService, logger);
+
 public sealed class ExportTestEntity : AuditableBaseEntity<int>;
 
 public sealed record ExportTestDTO : IBaseDTO<int>
@@ -427,4 +616,176 @@ public sealed record ExportTestDTO : IBaseDTO<int>
     public bool IsActive { get; init; }
 
     public DateTime CreatedOn { get; init; }
+}
+
+/// <summary>
+/// A DTO carrying one of each shape the CSV formatter has to decide about: scalars, a binary
+/// concurrency token, a binary memory, a child collection, and a value object.
+/// </summary>
+public sealed record ExportShapeTestDTO : IBaseDTO<int>
+{
+    public required int Id { get; init; }
+
+    public string? Name { get; init; }
+
+    public byte[] RowVersion { get; init; } = [];
+
+    public ReadOnlyMemory<byte> Signature { get; init; }
+
+    public IReadOnlyCollection<string> Comments { get; init; } = [];
+
+    public ExportMoney? Price { get; init; }
+}
+
+/// <summary>A value object with a meaningful invariant string form, which the export must keep.</summary>
+public sealed record ExportMoney(decimal Amount, string Currency)
+{
+    public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"{Amount} {Currency}");
+}
+
+/// <summary>
+/// Covers the column-selection rules: a property whose value cannot render a faithful scalar cell
+/// (a binary token, a child collection) produces no column at all, in either the reflection path or
+/// the shaped <c>fields=</c> path, and naming one explicitly is a validation failure rather than a
+/// silent omission.
+/// </summary>
+public sealed class EntityControllerBaseExportColumnTests : IDisposable
+{
+    private readonly Mock<IEntityQueryService<ExportTestEntity, ExportShapeTestDTO, int>> _queryServiceMock = new();
+    private readonly Mock<ILogger<EntityControllerBase<ExportTestEntity, ExportShapeTestDTO, int>>> _loggerMock = new();
+    private readonly MemoryStream _body = new();
+
+    public void Dispose() => _body.Dispose();
+
+    private ExportShapeTestController CreateController()
+    {
+        var settingsMock = new Mock<IApplicationSettings>();
+        settingsMock.Setup(s => s.MaxPageSize).Returns(10);
+        settingsMock.Setup(s => s.MaxExportRows).Returns(100);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(settingsMock.Object);
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 8, 14, 9, 0, 0, TimeSpan.Zero)));
+        ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = serviceProvider
+        };
+        httpContext.Response.Body = _body;
+
+        return new ExportShapeTestController(_queryServiceMock.Object, _loggerMock.Object)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            }
+        };
+    }
+
+    private string[] BodyLines() =>
+        Encoding.UTF8.GetString(_body.ToArray()).TrimStart('﻿').Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+
+    private void SetupPage(IReadOnlyCollection<object> items) =>
+        _queryServiceMock.Setup(q => q.GetAllAsync(
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Specification<ExportTestEntity, int>?>(),
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(new PagedCollectionResult<object>(
+                items,
+                new PaginationMetadata(items.Count, pageSize: 10, currentPage: 1))));
+
+    [Fact]
+    public async Task ExportAsync_BinaryAndCollectionProperties_ProduceNoColumns()
+    {
+        SetupPage([
+            new ExportShapeTestDTO
+            {
+                Id = 1,
+                Name = "Ada",
+                RowVersion = [1, 2, 3],
+                Signature = new byte[] { 4, 5 },
+                Comments = ["first", "second"],
+                Price = new ExportMoney(9.5m, "USD")
+            }
+        ]);
+        ExportShapeTestController sut = CreateController();
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        string[] lines = BodyLines();
+        lines[0].Should().Be(
+            "id,name,price",
+            because: "a rowversion renders its type name and a child collection renders the materialized list type, so neither earns a column");
+        lines[1].Should().Be(
+            "1,Ada,9.5 USD",
+            because: "a value object still renders through its invariant ToString, which is the whole point of dropping only the two unrenderable categories");
+    }
+
+    [Fact]
+    public async Task ExportAsync_EmptyResult_HeaderAlsoDropsThoseColumns()
+    {
+        SetupPage([]);
+        ExportShapeTestController sut = CreateController();
+
+        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        BodyLines().Should().ContainSingle().Which.Should().Be(
+            "id,name,price",
+            because: "the DTO-shape fallback must name the same columns a populated export would");
+    }
+
+    [Fact]
+    public async Task ExportAsync_ShapedRowCarryingADroppedKey_OmitsThatColumn()
+    {
+        IDictionary<string, object?> shaped = new ExpandoObject();
+        shaped["id"] = 1;
+        shaped["rowVersion"] = new byte[] { 1, 2, 3 };
+        shaped["price"] = new ExportMoney(3m, "EUR");
+        SetupPage([(ExpandoObject)shaped]);
+        ExportShapeTestController sut = CreateController();
+
+        await sut.ExportAsync(fields: "Id,Price", cancellationToken: CancellationToken.None);
+
+        string[] lines = BodyLines();
+        lines[0].Should().Be("id,price", because: "the shaped path filters the row's own keys too, not just the reflected properties");
+        lines[1].Should().Be("1,3 EUR");
+    }
+
+    [Fact]
+    public async Task ExportAsync_FieldsNamingADroppedProperty_FailsValidation()
+    {
+        ExportShapeTestController sut = CreateController();
+
+        IActionResult result = await sut.ExportAsync(fields: "Id,rowversion", cancellationToken: CancellationToken.None);
+
+        var objectResult = result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(
+            StatusCodes.Status400BadRequest,
+            because: "an unexportable field is a validation failure, exactly as an unknown field is on the JSON endpoints");
+        objectResult.Value.Should().BeOfType<ProblemDetails>();
+        _body.ToArray().Should().BeEmpty(because: "the request is rejected before the first page is queried");
+        _queryServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ExportAsync_FieldsNamingOnlyExportableProperties_Succeeds()
+    {
+        SetupPage([]);
+        ExportShapeTestController sut = CreateController();
+
+        IActionResult result = await sut.ExportAsync(fields: "Id,Name", cancellationToken: CancellationToken.None);
+
+        result.Should().BeOfType<EmptyResult>(because: "the validation gate only rejects the fields the export cannot render");
+        BodyLines()[0].Should().Be("id,name");
+    }
 }

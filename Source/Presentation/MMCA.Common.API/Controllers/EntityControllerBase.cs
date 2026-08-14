@@ -1,3 +1,4 @@
+using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Reflection;
@@ -13,6 +14,7 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
@@ -202,7 +204,17 @@ public abstract class EntityControllerBase<
     /// </para>
     /// <para>
     /// <b>Child collections.</b> Unlike the paged endpoint this takes no <c>includeChildren</c>: a
-    /// child collection has no faithful representation in a flat CSV cell.
+    /// child collection has no faithful representation in a flat CSV cell. For the same reason the
+    /// column set drops any DTO property that cannot render a faithful scalar cell (binary tokens
+    /// such as <c>rowVersion</c>, and every collection-typed property), so those columns are absent
+    /// rather than filled with a type name. A <c>fields=</c> request that names one of them is a
+    /// validation failure, not a silent omission.
+    /// </para>
+    /// <para>
+    /// <b>Row scoping.</b> The rows queried here are whatever
+    /// <see cref="GetExportSpecification"/> allows. The default returns null, so an export is
+    /// unscoped unless the concrete controller says otherwise; a controller whose list endpoints
+    /// row-scope reads must override that hook.
     /// </para>
     /// </remarks>
     /// <param name="includeFKs">When true, eagerly loads foreign key navigation properties.</param>
@@ -227,6 +239,13 @@ public abstract class EntityControllerBase<
         [ModelBinder(typeof(QueryFilterModelBinder))] Dictionary<string, (string Operator, string Value)>? filters = null,
         CancellationToken cancellationToken = default)
     {
+        var unexportableFieldErrors = ValidateExportFields(fields);
+        if (unexportableFieldErrors is not null)
+            return HandleFailure(unexportableFieldErrors);
+
+        // Resolved once, so every page of the loop is filtered by the same instance.
+        var specification = GetExportSpecification();
+
         var maxExportRows = MaxExportRows;
         var pageSize = Math.Max(1, MaxPageSize);
         var pageNumber = 1;
@@ -246,7 +265,7 @@ public abstract class EntityControllerBase<
                 var result = await QueryService.GetAllAsync(
                     includeFKs: includeFKs,
                     includeChildren: false,
-                    specification: null,
+                    specification: specification,
                     filters: filters,
                     sortColumn: sortColumn,
                     sortDirection: sortDirection,
@@ -445,6 +464,106 @@ public abstract class EntityControllerBase<
     }
 
     /// <summary>
+    /// Gets the specification <see cref="ExportAsync"/> applies to every page it streams. Returns
+    /// <see langword="null"/> by default, which queries unscoped exactly as the endpoint always has.
+    /// </summary>
+    /// <returns>The specification every export page is filtered by, or <see langword="null"/> for an unscoped export.</returns>
+    /// <remarks>
+    /// <para>
+    /// A controller whose list endpoints row-scope reads (an ownership specification, a tenancy
+    /// predicate, anything that decides which rows this caller may see) MUST override this with the
+    /// same specification, so <c>/export</c> shows exactly what the list shows. Leaving it at the
+    /// default on such a controller hands every caller the whole table in one request.
+    /// </para>
+    /// <para>
+    /// A controller that overrides this can then relax any privileged-role gate it put on the export
+    /// as an interim mitigation: with the specification in force it is the query, not the role, that
+    /// keeps one caller out of another caller's rows, and an owner can export their own data again.
+    /// </para>
+    /// <para>
+    /// Called once per request, before the first page, so the same instance filters every page of
+    /// the loop. Return a specification that is safe to reuse across those queries.
+    /// </para>
+    /// </remarks>
+    protected virtual Specification<TEntity, TIdentifierType>? GetExportSpecification() => null;
+
+    /// <summary>
+    /// The DTO property names an export omits, because their values cannot render a faithful scalar
+    /// CSV cell: binary concurrency tokens (<see langword="byte"/>[], <see cref="ReadOnlyMemory{T}"/>
+    /// of bytes) and every collection-typed property except <see langword="string"/>. Computed once
+    /// per closed controller type, since a DTO's shape cannot change at runtime.
+    /// </summary>
+    /// <remarks>
+    /// Value objects and other class-typed properties are deliberately NOT dropped: a record or
+    /// value object has a meaningful invariant <c>ToString</c>, which is exactly the cell a reader
+    /// expects. Only the two categories above render a type name instead of a value.
+    /// </remarks>
+    private static readonly string[] UnexportablePropertyNames =
+    [
+        .. typeof(TEntityDTO)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanRead && !IsExportableType(p.PropertyType))
+            .Select(p => p.Name)
+    ];
+
+    /// <summary>
+    /// <see cref="UnexportablePropertyNames"/> as the camelCase column names a shaped row carries,
+    /// for filtering a resolved column list.
+    /// </summary>
+    private static readonly HashSet<string> UnexportableColumns =
+        [.. UnexportablePropertyNames.Select(JsonNamingPolicy.CamelCase.ConvertName)];
+
+    /// <summary>
+    /// <see cref="UnexportablePropertyNames"/> as a case-insensitive set, for matching the names a
+    /// caller spells in <c>fields=</c>.
+    /// </summary>
+    private static readonly HashSet<string> UnexportableFields =
+        new(UnexportablePropertyNames, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Decides whether a DTO property type can render a faithful scalar CSV cell. See
+    /// <see cref="UnexportablePropertyNames"/> for what the two exclusions buy.
+    /// </summary>
+    /// <param name="type">The declared property type.</param>
+    /// <returns><see langword="true"/> when the property earns a column.</returns>
+    private static bool IsExportableType(Type type) =>
+        type != typeof(byte[])
+        && type != typeof(ReadOnlyMemory<byte>)
+        && (type == typeof(string) || !typeof(IEnumerable).IsAssignableFrom(type));
+
+    /// <summary>Whether a resolved column survives the exclusions in <see cref="UnexportableColumns"/>.</summary>
+    /// <param name="column">The camelCase column name.</param>
+    /// <returns><see langword="true"/> when the column is written.</returns>
+    private static bool IsExportableColumn(string column) => !UnexportableColumns.Contains(column);
+
+    /// <summary>
+    /// Rejects a <c>fields=</c> request that names a property the export cannot render. Answering
+    /// such a request with the column quietly missing would hide the contract from the caller, so it
+    /// fails the same way an unknown field does on the JSON endpoints: an
+    /// <c>Error.InvalidEntityField</c> validation failure, before a single byte of body is written.
+    /// </summary>
+    /// <param name="fields">The requested field projection, or null for all fields.</param>
+    /// <returns>The validation errors, or <see langword="null"/> when the request is clean.</returns>
+    private static List<Error>? ValidateExportFields(string? fields)
+    {
+        if (UnexportableFields.Count == 0)
+            return null;
+
+        List<Error> errors =
+        [
+            .. ParseExportFields(fields)
+                .Where(UnexportableFields.Contains)
+                .Select(field => Error.InvalidEntityField with
+                {
+                    Message = $"Field '{field}' on type '{typeof(TEntityDTO).Name}' cannot be exported to CSV: binary and collection properties have no faithful CSV representation.",
+                    Target = typeof(TEntityDTO).Name
+                })
+        ];
+
+        return errors.Count > 0 ? errors : null;
+    }
+
+    /// <summary>
     /// Sets the response status headers for an export, before the first body byte goes out.
     /// </summary>
     /// <param name="maxExportRows">The row ceiling in force, advertised as <see cref="ExportRowLimitHeaderName"/>.</param>
@@ -505,6 +624,12 @@ public abstract class EntityControllerBase<
     /// DTO's own shape when that page is empty (an export of nothing still owes the caller a header
     /// row naming the columns).
     /// </summary>
+    /// <remarks>
+    /// Both paths drop the columns named in <see cref="UnexportableColumns"/>: the shaped-row path
+    /// filters the row's own keys, the empty-page path filters the DTO's properties by type. A
+    /// dropped property yields no column at all rather than an empty one, so a reader never sees a
+    /// header it cannot trust.
+    /// </remarks>
     /// <param name="items">The first page of rows, typed DTOs or already-shaped dynamic objects.</param>
     /// <param name="fields">The requested field projection, or null for all fields.</param>
     /// <returns>The column names, in output order, as camelCase JSON names.</returns>
@@ -512,7 +637,7 @@ public abstract class EntityControllerBase<
     {
         var first = items.FirstOrDefault();
         if (first is not null)
-            return [.. ShapeExportRow(first, fields).Keys];
+            return [.. ShapeExportRow(first, fields).Keys.Where(IsExportableColumn)];
 
         var requested = ParseExportFields(fields);
 
@@ -522,7 +647,9 @@ public abstract class EntityControllerBase<
         [
             .. typeof(TEntityDTO)
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.CanRead && (requested.Count == 0 || requested.Contains(p.Name)))
+                .Where(p => p.CanRead
+                    && IsExportableType(p.PropertyType)
+                    && (requested.Count == 0 || requested.Contains(p.Name)))
                 .Select(p => JsonNamingPolicy.CamelCase.ConvertName(p.Name))
         ];
     }

@@ -14,6 +14,31 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+### Added
+
+- **Row scoping for the generic CSV export.** `EntityControllerBase.GetExportSpecification()` is a
+  new `protected virtual` hook whose result is applied to every page `GET {controller}/export`
+  streams, through the specification parameter `IEntityQueryService.GetAllAsync` already carries for
+  authorization filtering (no Application-layer change). It returns null by default, so a controller
+  that overrides nothing queries unscoped and produces the byte-identical file 1.150.0 produced. A
+  controller whose list endpoints row-scope reads should override it with the same specification,
+  and can then relax the privileged-role gate it put on `/export` as the 1.150.0 interim mitigation:
+  with the specification in force it is the query, not the role, that keeps one caller out of
+  another caller's rows, so an owner can export their own data again.
+
+### Fixed
+
+- **CSV export omits columns it cannot render faithfully.** Binary properties (`byte[]` and
+  `ReadOnlyMemory<byte>`, which covers the ubiquitous `rowVersion` concurrency token) and
+  collection-typed properties used to fill every cell with a type name (`System.Byte[]`, the
+  internal materialized-list type) even though the export deliberately queries with
+  `includeChildren: false`. They now produce no column at all, in both the reflection column path
+  and the shaped `fields=` path. Value objects and other class-typed properties are untouched and
+  still render through their invariant `ToString`. A `fields=` request that names a dropped property
+  now fails with the same `Error.InvalidEntityField` validation failure the JSON endpoints return
+  for an unknown field, before a byte of body is written, rather than silently returning a file
+  missing a column the caller asked for.
+
 ## [1.150.0] - 2026-08-14
 
 The enterprise capability wave: eight opt-in features in one release. Everything below is inert
