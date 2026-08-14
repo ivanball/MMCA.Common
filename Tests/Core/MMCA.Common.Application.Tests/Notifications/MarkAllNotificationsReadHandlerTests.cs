@@ -76,6 +76,11 @@ public sealed class MarkAllNotificationsReadHandlerTests
         mocks.UnitOfWork.Verify(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>(), Times.Never);
     }
 
+    // These two scope tests pin the PREDICATE only. They run against in-memory queryables, which have
+    // no change tracker, so they stayed green while the scoped join composed over a no-tracking source
+    // and the marks were never persisted. Real tracking coverage lives in the Infrastructure tier
+    // (Tests/Core/MMCA.Common.Infrastructure.Tests/Persistence/MarkAllNotificationsReadHandlerTrackingTests.cs),
+    // where the handler runs against a real EF context.
     [Fact]
     public async Task HandleAsync_WithScope_MarksMatchingAndUnscopedOnly()
     {
@@ -130,7 +135,7 @@ public sealed class MarkAllNotificationsReadHandlerTests
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         repository.Setup(x => x.Table).Returns(userNotifications.AsQueryable());
-        pushNotificationRepo.Setup(x => x.TableNoTracking).Returns(pushNotifications.AsQueryable());
+        pushNotificationRepo.Setup(x => x.Table).Returns(pushNotifications.AsQueryable());
 
         queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotification>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IQueryable<UserNotification> source, CancellationToken _) => source.ToList());

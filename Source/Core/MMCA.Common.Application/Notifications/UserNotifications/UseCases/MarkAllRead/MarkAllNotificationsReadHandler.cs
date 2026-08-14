@@ -32,8 +32,14 @@ public sealed class MarkAllNotificationsReadHandler(
             string scopeKey = command.ScopeKey;
             var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
 
+            // The TRACKED Table is load-bearing here, unlike the read-only handlers that join over
+            // TableNoTracking: an AsNoTracking source anywhere in a composed EF query switches the
+            // WHOLE query to no-tracking, so the UserNotification rows would come back untracked and
+            // the MarkAsRead mutations below would never be persisted by SaveChangesAsync (a scoped
+            // read-all would silently no-op). Projecting `select un` materializes only
+            // UserNotification instances, so no PushNotification is tracked by this join.
             unreadQuery = from un in unreadQuery
-                          join pn in pushNotificationRepo.TableNoTracking on un.PushNotificationId equals pn.Id
+                          join pn in pushNotificationRepo.Table on un.PushNotificationId equals pn.Id
                           where pn.ScopeKey == null || pn.ScopeKey == scopeKey
                           select un;
         }
