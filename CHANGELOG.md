@@ -14,6 +14,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.151.0] - 2026-08-14
+
+The ADR-078 recorded follow-up: owner-scoped CSV exports and formatter hardening.
+
 ### Added
 
 - **Row scoping for the generic CSV export.** `EntityControllerBase.GetExportSpecification()` is a
