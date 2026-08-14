@@ -152,6 +152,31 @@ public sealed class NotificationsControllerTests
         _captured!.DedupKey.Should().BeNull();
     }
 
+    // ── SendAsync: scope key travels on the request body ──
+    [Fact]
+    public async Task SendAsync_WithScopedRequest_PassesScopeKeyThroughOnTheCommand()
+    {
+        ArrangeCapture();
+        NotificationsController sut = CreateController();
+
+        await sut.SendAsync(new SendPushNotificationRequest("Title", "Body") { ScopeKey = "event:2" });
+
+        _captured.Should().NotBeNull();
+        _captured!.Request.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public async Task SendAsync_WithUnscopedRequest_LeavesScopeKeyNull()
+    {
+        ArrangeCapture();
+        NotificationsController sut = CreateController();
+
+        await sut.SendAsync(new SendPushNotificationRequest("Title", "Body"));
+
+        _captured.Should().NotBeNull();
+        _captured!.Request.ScopeKey.Should().BeNull();
+    }
+
     // ── GetHistoryAsync ──
     [Fact]
     public async Task GetHistoryAsync_Success_ReturnsOk()

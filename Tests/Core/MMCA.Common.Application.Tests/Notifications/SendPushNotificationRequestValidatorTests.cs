@@ -1,6 +1,7 @@
 using System.Globalization;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
+using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.PushNotifications.Invariants;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 
@@ -80,11 +81,45 @@ public sealed class SendPushNotificationRequestValidatorTests
         result.ShouldNotHaveValidationErrorFor(x => x.Body);
     }
 
+    // ── Scope key ──
+    [Fact]
+    public void Validate_WhenScopeKeyExceedsMaxLength_HasValidationError()
+    {
+        string longScopeKey = new('S', PushNotification.ScopeKeyMaxLength + 1);
+        var request = new SendPushNotificationRequest("Valid title", "Valid body") { ScopeKey = longScopeKey };
+
+        TestValidationResult<SendPushNotificationRequest> result = _validator.TestValidate(request);
+
+        result.ShouldHaveValidationErrorFor(x => x.ScopeKey)
+            .WithErrorMessage(string.Create(CultureInfo.InvariantCulture, $"Notification scope key cannot exceed {PushNotification.ScopeKeyMaxLength} characters."));
+    }
+
+    [Fact]
+    public void Validate_WhenScopeKeyAtMaxLength_NoScopeKeyError()
+    {
+        string maxScopeKey = new('S', PushNotification.ScopeKeyMaxLength);
+        var request = new SendPushNotificationRequest("Valid title", "Valid body") { ScopeKey = maxScopeKey };
+
+        TestValidationResult<SendPushNotificationRequest> result = _validator.TestValidate(request);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.ScopeKey);
+    }
+
+    [Fact]
+    public void Validate_WhenScopeKeyNull_NoScopeKeyError()
+    {
+        var request = new SendPushNotificationRequest("Valid title", "Valid body");
+
+        TestValidationResult<SendPushNotificationRequest> result = _validator.TestValidate(request);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.ScopeKey);
+    }
+
     // ── Valid request ──
     [Fact]
     public void Validate_WhenValid_NoErrors()
     {
-        var request = new SendPushNotificationRequest("Alert", "Something happened");
+        var request = new SendPushNotificationRequest("Alert", "Something happened") { ScopeKey = "event:2" };
 
         TestValidationResult<SendPushNotificationRequest> result = _validator.TestValidate(request);
 

@@ -8,10 +8,14 @@ namespace MMCA.Common.UI.Services.Notifications;
 
 /// <summary>
 /// HTTP service for the notification inbox WebAPI resource.
+/// Every read that the API can scope carries the application's current scope key, resolved through
+/// <see cref="INotificationScopeProvider"/>, so the inbox, the badge and a bulk mark-read all agree
+/// on which notifications the user is looking at.
 /// </summary>
 public sealed class NotificationInboxService(
     IHttpClientFactory httpClientFactory,
-    ITokenStorageService tokenStorageService)
+    ITokenStorageService tokenStorageService,
+    INotificationScopeProvider scopeProvider)
     : AuthenticatedServiceBase(httpClientFactory, tokenStorageService), INotificationInboxUIService
 {
     private const string Endpoint = "notifications/inbox";
@@ -22,8 +26,9 @@ public sealed class NotificationInboxService(
         int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        string scopeQuery = await ScopeQueryAsync("&", cancellationToken);
         using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}");
+        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}{scopeQuery}");
 
         HttpResponseMessage response = await RetryPolicy
             .ExecuteAsync(() => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken));
@@ -41,8 +46,9 @@ public sealed class NotificationInboxService(
     /// <inheritdoc />
     public async Task<int> GetUnreadCountAsync(CancellationToken cancellationToken = default)
     {
+        string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
         using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = $"{Endpoint}/unread-count";
+        var url = $"{Endpoint}/unread-count{scopeQuery}";
 
         HttpResponseMessage response = await RetryPolicy
             .ExecuteAsync(() => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken));
@@ -76,8 +82,9 @@ public sealed class NotificationInboxService(
     /// <inheritdoc />
     public async Task MarkAllReadAsync(CancellationToken cancellationToken = default)
     {
+        string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
         using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = $"{Endpoint}/read-all";
+        var url = $"{Endpoint}/read-all{scopeQuery}";
 
         HttpResponseMessage response = await RetryPolicy
             .ExecuteAsync(() => httpClient.PutAsync(new Uri(url, UriKind.Relative), content: null, cancellationToken));
@@ -87,5 +94,22 @@ public sealed class NotificationInboxService(
             await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken);
             response.EnsureSuccessStatusCode();
         }
+    }
+
+    /// <summary>
+    /// Renders the <c>scope</c> query fragment for the application's current scope, or an empty
+    /// string when it is unscoped, which leaves the request byte-identical to the pre-scope one.
+    /// </summary>
+    /// <param name="separator">
+    /// <c>"&amp;"</c> for a URL that already carries query parameters, <c>"?"</c> for one that does not.
+    /// </param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    private async Task<string> ScopeQueryAsync(string separator, CancellationToken cancellationToken)
+    {
+        string? scopeKey = await scopeProvider.GetCurrentScopeKeyAsync(cancellationToken);
+
+        return string.IsNullOrWhiteSpace(scopeKey)
+            ? string.Empty
+            : $"{separator}scope={Uri.EscapeDataString(scopeKey)}";
     }
 }

@@ -25,6 +25,9 @@ public record class PushNotificationDTO : IBaseDTO<PushNotificationIdentifierTyp
     /// <summary>Gets or inits the delivery status.</summary>
     public required string Status { get; init; }
 
+    /// <summary>Gets or inits the optional scope key the notification was stamped with.</summary>
+    public string? ScopeKey { get; init; }
+
     /// <summary>Gets or inits the creation timestamp.</summary>
     public DateTime CreatedOn { get; init; }
 }

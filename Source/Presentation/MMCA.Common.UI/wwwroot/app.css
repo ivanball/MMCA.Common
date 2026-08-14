@@ -273,7 +273,10 @@ h1:focus {
 
 .mmca-section-heading .mud-icon {
     font-size: 8rem !important;
-    color: rgba(0, 0, 0, 0.04);
+    /* Palette-aware watermark: the ink follows the theme, the opacity keeps it a ghost behind the
+       title. A hardcoded black at 4% disappeared entirely on a dark surface. */
+    color: var(--mud-palette-text-primary);
+    opacity: 0.05;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -282,7 +285,10 @@ h1:focus {
 }
 
 .mmca-section-heading-light .mud-icon {
+    /* Sits on a deliberately dark band in both themes, so it keeps its white and resets the
+       opacity the base rule applies (the alpha is already in the color). */
     color: rgba(255, 255, 255, 0.06);
+    opacity: 1;
 }
 
 .mmca-section-heading .mud-typography {
@@ -306,7 +312,7 @@ h1:focus {
 .mmca-section-description {
     max-width: 700px;
     margin: 0 auto;
-    color: rgba(0, 0, 0, 0.62);
+    color: var(--mud-palette-text-secondary);
     line-height: 1.8;
 }
 

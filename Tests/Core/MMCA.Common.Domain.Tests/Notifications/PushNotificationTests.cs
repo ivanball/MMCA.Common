@@ -108,6 +108,67 @@ public class PushNotificationTests
         result.Value!.DedupKey.Should().Be(maxKey);
     }
 
+    // -- Create: scope key --
+    [Fact]
+    public void Create_WithoutScopeKey_LeavesScopeKeyNull()
+    {
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 50);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ScopeKey.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_WithScopeKey_StoresScopeKey()
+    {
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 50, scopeKey: "event:2");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public void Create_WithWhitespaceScopeKey_NormalizesToNull()
+    {
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 50, scopeKey: "   ");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ScopeKey.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_WithScopeKeyExceedingMaxLength_ReturnsFailure()
+    {
+        string longKey = new('x', PushNotification.ScopeKeyMaxLength + 1);
+
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 10, scopeKey: longKey);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "PushNotification.ScopeKey.TooLong");
+    }
+
+    [Fact]
+    public void Create_WithScopeKeyAtMaxLength_ReturnsSuccess()
+    {
+        string maxKey = new('x', PushNotification.ScopeKeyMaxLength);
+
+        var result = PushNotification.Create("Test Title", "Test Body", sentByUserId: 1, recipientCount: 10, scopeKey: maxKey);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ScopeKey.Should().Be(maxKey);
+    }
+
+    [Fact]
+    public void Create_WithBothDedupKeyAndScopeKey_StoresBothIndependently()
+    {
+        var result = PushNotification.Create(
+            "Test Title", "Test Body", sentByUserId: 1, recipientCount: 10, dedupKey: "key-123", scopeKey: "event:2");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.DedupKey.Should().Be("key-123");
+        result.Value.ScopeKey.Should().Be("event:2");
+    }
+
     [Fact]
     public void Create_RaisesPushNotificationCreatedEvent()
     {

@@ -1,5 +1,6 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
+using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 using MMCA.Common.Shared.Abstractions;
 
@@ -20,9 +21,25 @@ public sealed class GetUnreadNotificationCountHandler(
     {
         var repository = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
 
-        int count = await queryableExecutor.CountAsync(
-            repository.TableNoTracking.Where(un => un.UserId == query.UserId && !un.IsRead),
-            cancellationToken).ConfigureAwait(false);
+        IQueryable<UserNotification> unread = repository.TableNoTracking
+            .Where(un => un.UserId == query.UserId && !un.IsRead);
+
+        // The join to PushNotification is introduced ONLY for a scoped count. An unconditional join
+        // would drag PushNotification's soft-delete global query filter into the legacy no-scope
+        // count and change a number that no caller asked to change; a scoped count deliberately
+        // accepts that narrowing, since a scoped reader cannot see a deleted parent anyway.
+        if (!string.IsNullOrWhiteSpace(query.ScopeKey))
+        {
+            string scopeKey = query.ScopeKey;
+            var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
+
+            unread = from un in unread
+                     join pn in pushNotificationRepo.TableNoTracking on un.PushNotificationId equals pn.Id
+                     where pn.ScopeKey == null || pn.ScopeKey == scopeKey
+                     select un;
+        }
+
+        int count = await queryableExecutor.CountAsync(unread, cancellationToken).ConfigureAwait(false);
 
         return Result.Success(count);
     }

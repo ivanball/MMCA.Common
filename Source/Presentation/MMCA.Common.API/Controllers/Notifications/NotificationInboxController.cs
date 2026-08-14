@@ -11,6 +11,7 @@ using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnread
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead;
 using MMCA.Common.Application.UseCases;
+using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.UserNotifications;
@@ -33,12 +34,17 @@ public sealed class InboxController(
     ICommandHandler<MarkAllNotificationsReadCommand, Result> markAllReadHandler,
     ICurrentUserService currentUserService) : ApiControllerBase
 {
-    /// <summary>Gets the current user's notification inbox (GET /api/notifications/inbox).</summary>
+    /// <summary>
+    /// Gets the current user's notification inbox (GET /api/notifications/inbox).
+    /// An optional <c>scope</c> narrows the inbox to the notifications carrying that scope plus the
+    /// unscoped ones; omitting it returns everything, exactly as before.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedCollectionResult<UserNotificationDTO>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedCollectionResult<UserNotificationDTO>>> GetInboxAsync(
         [FromQuery, Range(1, int.MaxValue)] int pageNumber = 1,
         [FromQuery, Range(1, int.MaxValue)] int pageSize = 20,
+        [FromQuery, StringLength(PushNotification.ScopeKeyMaxLength)] string? scope = null,
         CancellationToken cancellationToken = default)
     {
         UserIdentifierType? userId = currentUserService.UserId;
@@ -47,18 +53,23 @@ public sealed class InboxController(
             return HandleFailure([Error.Unauthorized("Notification.Unauthorized", "User is not authenticated.")]);
         }
 
-        var query = new GetMyNotificationsQuery(userId.Value, pageNumber, pageSize);
+        var query = new GetMyNotificationsQuery(userId.Value, pageNumber, pageSize, scope);
         Result<PagedCollectionResult<UserNotificationDTO>> result = await inboxHandler
             .HandleAsync(query, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }
 
-    /// <summary>Gets the count of unread notifications (GET /api/notifications/inbox/unread-count).</summary>
+    /// <summary>
+    /// Gets the count of unread notifications (GET /api/notifications/inbox/unread-count).
+    /// The optional <c>scope</c> matches the inbox read, so the badge and the list agree.
+    /// </summary>
     [HttpGet("unread-count")]
     [ResponseCache(NoStore = true)]
     [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
-    public async Task<ActionResult<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default)
+    public async Task<ActionResult<int>> GetUnreadCountAsync(
+        [FromQuery, StringLength(PushNotification.ScopeKeyMaxLength)] string? scope = null,
+        CancellationToken cancellationToken = default)
     {
         UserIdentifierType? userId = currentUserService.UserId;
         if (!userId.HasValue)
@@ -66,7 +77,7 @@ public sealed class InboxController(
             return HandleFailure([Error.Unauthorized("Notification.Unauthorized", "User is not authenticated.")]);
         }
 
-        var query = new GetUnreadNotificationCountQuery(userId.Value);
+        var query = new GetUnreadNotificationCountQuery(userId.Value, scope);
         Result<int> result = await unreadCountHandler.HandleAsync(query, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
@@ -92,10 +103,16 @@ public sealed class InboxController(
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();
     }
 
-    /// <summary>Marks all notifications as read (PUT /api/notifications/inbox/read-all).</summary>
+    /// <summary>
+    /// Marks all notifications as read (PUT /api/notifications/inbox/read-all).
+    /// The optional <c>scope</c> keeps the write aligned with what the caller can see: a scoped
+    /// caller never clears notifications its inbox read hid from it.
+    /// </summary>
     [HttpPut("read-all")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> MarkAllReadAsync(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> MarkAllReadAsync(
+        [FromQuery, StringLength(PushNotification.ScopeKeyMaxLength)] string? scope = null,
+        CancellationToken cancellationToken = default)
     {
         UserIdentifierType? userId = currentUserService.UserId;
         if (!userId.HasValue)
@@ -103,7 +120,7 @@ public sealed class InboxController(
             return HandleFailure([Error.Unauthorized("Notification.Unauthorized", "User is not authenticated.")]);
         }
 
-        var command = new MarkAllNotificationsReadCommand(userId.Value);
+        var command = new MarkAllNotificationsReadCommand(userId.Value, scope);
         Result result = await markAllReadHandler.HandleAsync(command, cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : NoContent();

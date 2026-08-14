@@ -18,6 +18,9 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// <summary>Maximum allowed length for the deduplication key.</summary>
     public const int DedupKeyMaxLength = 128;
 
+    /// <summary>Maximum allowed length for the scope key.</summary>
+    public const int ScopeKeyMaxLength = 128;
+
     /// <summary>Gets the notification title.</summary>
     public string Title { get; private set; }
 
@@ -41,6 +44,14 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// </summary>
     public string? DedupKey { get; private set; }
 
+    /// <summary>
+    /// Gets the optional scope key stamped by the sending application (for example
+    /// <c>"event:2"</c>). It is an opaque view filter, not a security boundary: a read that
+    /// supplies a scope sees the notifications carrying that scope plus every unscoped one, while
+    /// a read that supplies none still sees everything. Null for every send that carries no scope.
+    /// </summary>
+    public string? ScopeKey { get; private set; }
+
     /// <summary>EF Core parameterless constructor.</summary>
     private PushNotification()
     {
@@ -53,7 +64,8 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
         string body,
         UserIdentifierType sentByUserId,
         int recipientCount,
-        string? dedupKey)
+        string? dedupKey,
+        string? scopeKey)
     {
         Title = title;
         Body = body;
@@ -61,6 +73,7 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
         RecipientCount = recipientCount;
         Status = PushNotificationStatus.Pending;
         DedupKey = string.IsNullOrWhiteSpace(dedupKey) ? null : dedupKey;
+        ScopeKey = string.IsNullOrWhiteSpace(scopeKey) ? null : scopeKey;
     }
 
     /// <summary>
@@ -75,13 +88,18 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
     /// Optional deduplication key (max 128 chars); null (the default) keeps the legacy behaviour
     /// where every send creates a new notification.
     /// </param>
+    /// <param name="scopeKey">
+    /// Optional scope key (max 128 chars); null (the default) keeps the legacy behaviour where the
+    /// notification is visible to every read, scoped or not.
+    /// </param>
     /// <returns>A <see cref="Result{T}"/> containing the created notification, or validation errors.</returns>
     public static Result<PushNotification> Create(
         string title,
         string body,
         UserIdentifierType sentByUserId,
         int recipientCount,
-        string? dedupKey = null)
+        string? dedupKey = null,
+        string? scopeKey = null)
     {
         var result = Result.Combine(
             PushNotificationInvariants.EnsureTitleIsValid(title, nameof(Create)),
@@ -92,13 +110,20 @@ public sealed class PushNotification : AuditableAggregateRootEntity<PushNotifica
                 "PushNotification.DedupKey.TooLong",
                 string.Create(CultureInfo.InvariantCulture, $"Notification dedup key cannot exceed {DedupKeyMaxLength} characters."),
                 nameof(Create),
-                nameof(dedupKey)));
+                nameof(dedupKey)),
+            CommonInvariants.EnsureStringMaxLength(
+                scopeKey,
+                ScopeKeyMaxLength,
+                "PushNotification.ScopeKey.TooLong",
+                string.Create(CultureInfo.InvariantCulture, $"Notification scope key cannot exceed {ScopeKeyMaxLength} characters."),
+                nameof(Create),
+                nameof(scopeKey)));
         if (result.IsFailure)
         {
             return Result.Failure<PushNotification>(result.Errors);
         }
 
-        var notification = new PushNotification(title, body, sentByUserId, recipientCount, dedupKey)
+        var notification = new PushNotification(title, body, sentByUserId, recipientCount, dedupKey, scopeKey)
         {
             Id = default
         };

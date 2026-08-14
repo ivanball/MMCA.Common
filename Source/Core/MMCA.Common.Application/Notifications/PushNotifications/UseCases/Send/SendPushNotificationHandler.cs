@@ -58,7 +58,8 @@ public sealed partial class SendPushNotificationHandler(
             command.Request.Body,
             command.SentByUserId,
             recipientIds.Count,
-            dedupKey);
+            dedupKey,
+            command.Request.ScopeKey);
         if (createResult.IsFailure)
         {
             return Result.Failure<PushNotificationDTO>(createResult.Errors);

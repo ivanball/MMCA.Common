@@ -90,6 +90,40 @@ public sealed class NotificationInboxControllerTests
     }
 
     [Fact]
+    public async Task GetInboxAsync_WithScope_ForwardsScopeOnTheQuery()
+    {
+        _currentUserServiceMock.Setup(s => s.UserId).Returns(42);
+        GetMyNotificationsQuery? capturedQuery = null;
+        _inboxHandlerMock
+            .Setup(h => h.HandleAsync(It.IsAny<GetMyNotificationsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<GetMyNotificationsQuery, CancellationToken>((q, _) => capturedQuery = q)
+            .ReturnsAsync(Result.Success(new PagedCollectionResult<UserNotificationDTO>()));
+        InboxController sut = CreateController();
+
+        await sut.GetInboxAsync(scope: "event:2");
+
+        capturedQuery.Should().NotBeNull();
+        capturedQuery!.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public async Task GetInboxAsync_WithoutScope_ForwardsNullScope()
+    {
+        _currentUserServiceMock.Setup(s => s.UserId).Returns(42);
+        GetMyNotificationsQuery? capturedQuery = null;
+        _inboxHandlerMock
+            .Setup(h => h.HandleAsync(It.IsAny<GetMyNotificationsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<GetMyNotificationsQuery, CancellationToken>((q, _) => capturedQuery = q)
+            .ReturnsAsync(Result.Success(new PagedCollectionResult<UserNotificationDTO>()));
+        InboxController sut = CreateController();
+
+        await sut.GetInboxAsync();
+
+        capturedQuery.Should().NotBeNull();
+        capturedQuery!.ScopeKey.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetInboxAsync_Failure_ReturnsHandleFailure()
     {
         _currentUserServiceMock.Setup(s => s.UserId).Returns(42);
@@ -152,6 +186,40 @@ public sealed class NotificationInboxControllerTests
 
         capturedQuery.Should().NotBeNull();
         capturedQuery!.UserId.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task GetUnreadCountAsync_WithScope_ForwardsScopeOnTheQuery()
+    {
+        _currentUserServiceMock.Setup(s => s.UserId).Returns(99);
+        GetUnreadNotificationCountQuery? capturedQuery = null;
+        _unreadCountHandlerMock
+            .Setup(h => h.HandleAsync(It.IsAny<GetUnreadNotificationCountQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<GetUnreadNotificationCountQuery, CancellationToken>((q, _) => capturedQuery = q)
+            .ReturnsAsync(Result.Success(0));
+        InboxController sut = CreateController();
+
+        await sut.GetUnreadCountAsync(scope: "event:2");
+
+        capturedQuery.Should().NotBeNull();
+        capturedQuery!.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public async Task GetUnreadCountAsync_WithoutScope_ForwardsNullScope()
+    {
+        _currentUserServiceMock.Setup(s => s.UserId).Returns(99);
+        GetUnreadNotificationCountQuery? capturedQuery = null;
+        _unreadCountHandlerMock
+            .Setup(h => h.HandleAsync(It.IsAny<GetUnreadNotificationCountQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<GetUnreadNotificationCountQuery, CancellationToken>((q, _) => capturedQuery = q)
+            .ReturnsAsync(Result.Success(0));
+        InboxController sut = CreateController();
+
+        await sut.GetUnreadCountAsync();
+
+        capturedQuery.Should().NotBeNull();
+        capturedQuery!.ScopeKey.Should().BeNull();
     }
 
     [Fact]
@@ -277,6 +345,40 @@ public sealed class NotificationInboxControllerTests
 
         capturedCommand.Should().NotBeNull();
         capturedCommand!.UserId.Should().Be(77);
+    }
+
+    [Fact]
+    public async Task MarkAllReadAsync_WithScope_ForwardsScopeOnTheCommand()
+    {
+        _currentUserServiceMock.Setup(s => s.UserId).Returns(77);
+        MarkAllNotificationsReadCommand? capturedCommand = null;
+        _markAllReadHandlerMock
+            .Setup(h => h.HandleAsync(It.IsAny<MarkAllNotificationsReadCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<MarkAllNotificationsReadCommand, CancellationToken>((c, _) => capturedCommand = c)
+            .ReturnsAsync(Result.Success());
+        InboxController sut = CreateController();
+
+        await sut.MarkAllReadAsync(scope: "event:2");
+
+        capturedCommand.Should().NotBeNull();
+        capturedCommand!.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public async Task MarkAllReadAsync_WithoutScope_ForwardsNullScope()
+    {
+        _currentUserServiceMock.Setup(s => s.UserId).Returns(77);
+        MarkAllNotificationsReadCommand? capturedCommand = null;
+        _markAllReadHandlerMock
+            .Setup(h => h.HandleAsync(It.IsAny<MarkAllNotificationsReadCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<MarkAllNotificationsReadCommand, CancellationToken>((c, _) => capturedCommand = c)
+            .ReturnsAsync(Result.Success());
+        InboxController sut = CreateController();
+
+        await sut.MarkAllReadAsync();
+
+        capturedCommand.Should().NotBeNull();
+        capturedCommand!.ScopeKey.Should().BeNull();
     }
 
     [Fact]

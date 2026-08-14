@@ -22,14 +22,23 @@ public sealed class NotificationInboxServiceTests
 {
     private sealed record Mocks(StubHttpMessageHandler Handler, StubHttpClientFactory Factory);
 
+    /// <summary>Scope provider stub: whatever the app currently scopes to, or null for unscoped.</summary>
+    private sealed class StubScopeProvider(string? scopeKey) : INotificationScopeProvider
+    {
+        public Task<string?> GetCurrentScopeKeyAsync(CancellationToken ct = default) => Task.FromResult(scopeKey);
+    }
+
     private static (NotificationInboxService Sut, Mocks Mocks) CreateSut(
-        Func<HttpRequestMessage, HttpResponseMessage> responder)
+        Func<HttpRequestMessage, HttpResponseMessage> responder,
+        string? scopeKey = null)
     {
         var handler = new StubHttpMessageHandler(responder);
         var factory = new StubHttpClientFactory(handler);
         var tokenStorage = new Mock<ITokenStorageService>();
         tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync("stored-access-token");
-        return (new NotificationInboxService(factory, tokenStorage.Object), new Mocks(handler, factory));
+        return (
+            new NotificationInboxService(factory, tokenStorage.Object, new StubScopeProvider(scopeKey)),
+            new Mocks(handler, factory));
     }
 
     private static UserNotificationDTO Notification(int id, bool isRead = false) => new()
@@ -145,5 +154,64 @@ public sealed class NotificationInboxServiceTests
 
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Put);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox/read-all");
+    }
+
+    // == Scope key ==
+    // The provider decides the scope; an unscoped app must produce the byte-identical legacy URLs
+    // pinned by the tests above, which is why those tests deliberately assert no scope parameter.
+    [Fact]
+    public async Task GetInboxAsync_WhenAppIsScoped_AppendsScopeToTheQuery()
+    {
+        var (sut, mocks) = CreateSut(_ => InboxResponse(Notification(1)), scopeKey: "event:2");
+
+        await sut.GetInboxAsync(pageNumber: 2, pageSize: 5, TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Uri!.PathAndQuery.Should()
+            .Be("/notifications/inbox?pageNumber=2&pageSize=5&scope=event%3A2");
+    }
+
+    [Fact]
+    public async Task GetUnreadCountAsync_WhenAppIsScoped_AppendsScopeToTheQuery()
+    {
+        var (sut, mocks) = CreateSut(
+            _ => StubHttpMessageHandler.CreateResponse(HttpStatusCode.OK, "3"),
+            scopeKey: "event:2");
+
+        await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Uri!.PathAndQuery.Should()
+            .Be("/notifications/inbox/unread-count?scope=event%3A2");
+    }
+
+    [Fact]
+    public async Task MarkAllReadAsync_WhenAppIsScoped_AppendsScopeToTheQuery()
+    {
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NoContent), scopeKey: "event:2");
+
+        await sut.MarkAllReadAsync(TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Uri!.PathAndQuery.Should()
+            .Be("/notifications/inbox/read-all?scope=event%3A2");
+    }
+
+    [Fact]
+    public async Task MarkReadAsync_WhenAppIsScoped_StaysUnscoped()
+    {
+        // A single mark-read targets one identifier the user already saw, so it needs no filter.
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NoContent), scopeKey: "event:2");
+
+        await sut.MarkReadAsync(42, TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox/42/read");
+    }
+
+    [Fact]
+    public async Task GetInboxAsync_WhenProviderReturnsWhitespace_OmitsTheScopeParameter()
+    {
+        var (sut, mocks) = CreateSut(_ => InboxResponse(Notification(1)), scopeKey: "   ");
+
+        await sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox?pageNumber=1&pageSize=20");
     }
 }
