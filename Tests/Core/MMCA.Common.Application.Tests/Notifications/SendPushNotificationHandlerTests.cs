@@ -232,6 +232,55 @@ public class SendPushNotificationHandlerTests
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
+    // -- HandleAsync: scope key --
+    [Fact]
+    public async Task HandleAsync_WithScopedRequest_PersistsScopeKeyAndReturnsItOnTheDTO()
+    {
+        var (sut, mocks) = CreateSut();
+        PushNotification? added = null;
+        mocks.NotificationRepo
+            .Setup(x => x.AddAsync(It.IsAny<PushNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<PushNotification, CancellationToken>((notification, _) => added = notification);
+
+        SendPushNotificationCommand command = CreateCommand(scopeKey: "event:2");
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ScopeKey.Should().Be("event:2");
+        added.Should().NotBeNull();
+        added!.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithUnscopedRequest_LeavesScopeKeyNull()
+    {
+        var (sut, mocks) = CreateSut();
+        PushNotification? added = null;
+        mocks.NotificationRepo
+            .Setup(x => x.AddAsync(It.IsAny<PushNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<PushNotification, CancellationToken>((notification, _) => added = notification);
+
+        SendPushNotificationCommand command = CreateCommand();
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.ScopeKey.Should().BeNull();
+        added.Should().NotBeNull();
+        added!.ScopeKey.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task HandleAsync_WithScopeKeyExceedingMaxLength_ReturnsFailure()
+    {
+        var (sut, _) = CreateSut();
+
+        SendPushNotificationCommand command = CreateCommand(scopeKey: new string('x', PushNotification.ScopeKeyMaxLength + 1));
+        Result<PushNotificationDTO> result = await sut.HandleAsync(command);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "PushNotification.ScopeKey.TooLong");
+    }
+
     // -- Helpers --
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
@@ -276,8 +325,8 @@ public class SendPushNotificationHandlerTests
             It.IsAny<bool>(),
             It.IsAny<CancellationToken>());
 
-    private static SendPushNotificationCommand CreateCommand() =>
-        new(new SendPushNotificationRequest("Test Title", "Test Body"), SentByUserId: 1);
+    private static SendPushNotificationCommand CreateCommand(string? scopeKey = null) =>
+        new(new SendPushNotificationRequest("Test Title", "Test Body") { ScopeKey = scopeKey }, SentByUserId: 1);
 
     private static (SendPushNotificationHandler Sut, HandlerMocks Mocks) CreateSut(
         int recipientCount = 3,

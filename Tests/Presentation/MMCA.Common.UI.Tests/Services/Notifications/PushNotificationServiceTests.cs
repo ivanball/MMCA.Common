@@ -20,14 +20,23 @@ public sealed class PushNotificationServiceTests
 {
     private sealed record Mocks(StubHttpMessageHandler Handler, StubHttpClientFactory Factory);
 
+    /// <summary>Scope provider stub: whatever the app currently scopes to, or null for unscoped.</summary>
+    private sealed class StubScopeProvider(string? scopeKey) : INotificationScopeProvider
+    {
+        public Task<string?> GetCurrentScopeKeyAsync(CancellationToken ct = default) => Task.FromResult(scopeKey);
+    }
+
     private static (PushNotificationService Sut, Mocks Mocks) CreateSut(
-        Func<HttpRequestMessage, HttpResponseMessage> responder)
+        Func<HttpRequestMessage, HttpResponseMessage> responder,
+        string? scopeKey = null)
     {
         var handler = new StubHttpMessageHandler(responder);
         var factory = new StubHttpClientFactory(handler);
         var tokenStorage = new Mock<ITokenStorageService>();
         tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync("stored-access-token");
-        return (new PushNotificationService(factory, tokenStorage.Object), new Mocks(handler, factory));
+        return (
+            new PushNotificationService(factory, tokenStorage.Object, new StubScopeProvider(scopeKey)),
+            new Mocks(handler, factory));
     }
 
     private static PushNotificationDTO Sent(int id, string title = "Maintenance window") => new()
@@ -70,6 +79,52 @@ public sealed class PushNotificationServiceTests
             TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    // == Scope stamping ==
+    [Fact]
+    public async Task SendAsync_WhenAppIsScoped_StampsScopeKeyOnTheRequestBody()
+    {
+        var (sut, mocks) = CreateSut(
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Sent(7)) },
+            scopeKey: "event:2");
+
+        await sut.SendAsync(
+            new SendPushNotificationRequest("Maintenance window", "The site goes down at midnight."),
+            TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Body.Should().Contain("\"scopeKey\":\"event:2\"");
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenAppIsUnscoped_SendsNullScopeKey()
+    {
+        var (sut, mocks) = CreateSut(
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Sent(7)) });
+
+        await sut.SendAsync(
+            new SendPushNotificationRequest("Maintenance window", "The site goes down at midnight."),
+            TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Body.Should().Contain("\"scopeKey\":null");
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenRequestAlreadyCarriesAScope_KeepsTheCallersScope()
+    {
+        // An explicit caller choice outranks the ambient one.
+        var (sut, mocks) = CreateSut(
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Sent(7)) },
+            scopeKey: "event:2");
+
+        await sut.SendAsync(
+            new SendPushNotificationRequest("Maintenance window", "The site goes down at midnight.")
+            {
+                ScopeKey = "event:9",
+            },
+            TestContext.Current.CancellationToken);
+
+        mocks.Handler.LastRequest.Body.Should().Contain("\"scopeKey\":\"event:9\"");
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
+using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 using MMCA.Common.Shared.Abstractions;
 
@@ -20,8 +21,25 @@ public sealed class MarkAllNotificationsReadHandler(
     {
         var repository = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
 
+        IQueryable<UserNotification> unreadQuery = repository.Table
+            .Where(un => un.UserId == command.UserId && !un.IsRead);
+
+        // Same conditional join as the unread count, for two reasons: a scoped client must not mark
+        // rows it cannot see as read, and a no-scope command must keep the legacy query exactly as
+        // it was rather than inherit PushNotification's soft-delete global query filter.
+        if (!string.IsNullOrWhiteSpace(command.ScopeKey))
+        {
+            string scopeKey = command.ScopeKey;
+            var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
+
+            unreadQuery = from un in unreadQuery
+                          join pn in pushNotificationRepo.TableNoTracking on un.PushNotificationId equals pn.Id
+                          where pn.ScopeKey == null || pn.ScopeKey == scopeKey
+                          select un;
+        }
+
         List<UserNotification> unread = await queryableExecutor.ToListAsync(
-            repository.Table.Where(un => un.UserId == command.UserId && !un.IsRead),
+            unreadQuery,
             cancellationToken).ConfigureAwait(false);
 
         var readOnUtc = timeProvider.GetUtcNow().UtcDateTime;

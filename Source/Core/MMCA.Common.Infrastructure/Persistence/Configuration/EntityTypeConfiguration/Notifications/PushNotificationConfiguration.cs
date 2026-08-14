@@ -46,6 +46,12 @@ internal sealed class PushNotificationConfiguration
         builder.Property(p => p.DedupKey)
             .HasMaxLength(PushNotification.DedupKeyMaxLength);
 
+        // Nullable and deliberately unindexed: the scope filter runs after the primary-key join from
+        // UserNotification, over a table that holds one row per send, so an index would cost writes
+        // without buying a read.
+        builder.Property(p => p.ScopeKey)
+            .HasMaxLength(PushNotification.ScopeKeyMaxLength);
+
         // Filtered unique index: at most one notification per deduplication key, while the many
         // sends that carry no key (NULL) coexist freely. This is what makes a retried send safe,
         // the database arbitrates the race that a check-then-act lookup in the handler cannot.

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services.Notifications;
 
@@ -18,6 +19,10 @@ public static class DependencyInjection
         /// </summary>
         public IServiceCollection AddNotificationUI()
         {
+            // Scope provider consumed by both HTTP services below. TryAdd so an app that registers
+            // its own provider wins whichever order the two registration calls run in.
+            services.TryAddScoped<INotificationScopeProvider, NullNotificationScopeProvider>();
+
             // Push notification API service
             services.AddScoped<IPushNotificationUIService, PushNotificationService>();
 

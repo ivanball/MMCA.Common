@@ -33,8 +33,18 @@ public sealed class GetMyNotificationsHandler(
         var userNotificationRepo = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
         var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
 
+        // Scope is a view filter, not a security boundary: a read that supplies one sees the
+        // notifications carrying that scope plus the unscoped ones, and a read that supplies none
+        // keeps the legacy query untouched (the join stays over the whole table).
+        IQueryable<PushNotification> pushNotifications = pushNotificationRepo.TableNoTracking;
+        if (!string.IsNullOrWhiteSpace(query.ScopeKey))
+        {
+            string scopeKey = query.ScopeKey;
+            pushNotifications = pushNotifications.Where(pn => pn.ScopeKey == null || pn.ScopeKey == scopeKey);
+        }
+
         var joined = from un in userNotificationRepo.TableNoTracking
-                     join pn in pushNotificationRepo.TableNoTracking on un.PushNotificationId equals pn.Id
+                     join pn in pushNotifications on un.PushNotificationId equals pn.Id
                      where un.UserId == query.UserId
                      orderby pn.CreatedOn descending
                      select new UserNotificationDTO

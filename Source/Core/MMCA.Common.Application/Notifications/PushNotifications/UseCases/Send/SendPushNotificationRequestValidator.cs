@@ -1,5 +1,6 @@
 using System.Globalization;
 using FluentValidation;
+using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.PushNotifications.Invariants;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 
@@ -21,5 +22,10 @@ public sealed class SendPushNotificationRequestValidator : AbstractValidator<Sen
             .NotEmpty().WithMessage("Notification body is required.")
             .MaximumLength(PushNotificationInvariants.BodyMaxLength)
             .WithMessage(string.Create(CultureInfo.InvariantCulture, $"Notification body cannot exceed {PushNotificationInvariants.BodyMaxLength} characters."));
+
+        // The scope key stays optional: a null one is the unscoped send every existing caller makes.
+        RuleFor(x => x.ScopeKey)
+            .MaximumLength(PushNotification.ScopeKeyMaxLength)
+            .WithMessage(string.Create(CultureInfo.InvariantCulture, $"Notification scope key cannot exceed {PushNotification.ScopeKeyMaxLength} characters."));
     }
 }

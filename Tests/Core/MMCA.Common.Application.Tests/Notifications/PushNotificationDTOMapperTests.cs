@@ -65,6 +65,26 @@ public sealed class PushNotificationDTOMapperTests
         dto.Status.Should().Be(nameof(PushNotificationStatus.Failed));
     }
 
+    [Fact]
+    public void MapToDTO_WithScopedEntity_MapsScopeKey()
+    {
+        PushNotification entity = CreateEntity("Title", "Body", scopeKey: "event:2");
+
+        PushNotificationDTO dto = _mapper.MapToDTO(entity);
+
+        dto.ScopeKey.Should().Be("event:2");
+    }
+
+    [Fact]
+    public void MapToDTO_WithUnscopedEntity_MapsScopeKeyAsNull()
+    {
+        PushNotification entity = CreateEntity("Title", "Body");
+
+        PushNotificationDTO dto = _mapper.MapToDTO(entity);
+
+        dto.ScopeKey.Should().BeNull();
+    }
+
     // ── MapToDTOs ──
     [Fact]
     public void MapToDTOs_WithCollection_MapsAllEntities()
@@ -103,9 +123,11 @@ public sealed class PushNotificationDTOMapperTests
         string title = "Title",
         string body = "Body",
         UserIdentifierType sentByUserId = 1,
-        int recipientCount = 5)
+        int recipientCount = 5,
+        string? scopeKey = null)
     {
-        Result<PushNotification> result = PushNotification.Create(title, body, sentByUserId, recipientCount);
+        Result<PushNotification> result = PushNotification.Create(
+            title, body, sentByUserId, recipientCount, scopeKey: scopeKey);
         return result.Value!;
     }
 }
