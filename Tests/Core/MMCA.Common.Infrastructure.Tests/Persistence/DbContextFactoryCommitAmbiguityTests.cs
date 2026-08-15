@@ -38,8 +38,7 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
 
     public DbContextFactoryCommitAmbiguityTests()
     {
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
+        _connection = OpenConnection();
         _dbContext = CommitFailingDbContext.Create(_connection, _dispatcherMock.Object);
 
         var physicalFactory = new Mock<IPhysicalDbContextFactory>();
@@ -87,6 +86,14 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         attempts.Should().Be(
             1,
             "a retry would re-run every write of an operation whose commit may already be durable");
+
+        thrown.And.CommittedSources.Should().BeEmpty(
+            "nothing was committed ahead of the only source, so no part of the write is known durable");
+        thrown.And.AmbiguousSource.Should().Be(
+            DataSourceKey.Default(DataSource.SQLServer).ToString(),
+            "with one transactional source the whole outcome is that source's outcome");
+        thrown.And.RolledBackSources.Should().BeEmpty(
+            "there was no later source left holding an open transaction");
     }
 
     // ── Nothing is delivered in-process for a commit nobody can vouch for ──
@@ -150,6 +157,91 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         attempts.Should().Be(
             4,
             "one attempt plus the strategy's three retries; only the commit phase opts out of this");
+    }
+
+    // ── Sequential commits: the exception names what landed, what is unknowable, and what did not ──
+    [Fact]
+    public async Task ExecuteInTransactionAsync_SecondSourceCommitFails_ReportsEachSourceOutcome()
+    {
+        // The default SQL Server key comes first deliberately: ExecuteInTransactionAsync materializes
+        // it to obtain an execution strategy, which makes it the first entry and so the first commit.
+        var productsKey = DataSourceKey.Default(DataSource.SQLServer);
+        var ordersKey = new DataSourceKey(DataSource.SQLServer, "Orders");
+        var auditKey = new DataSourceKey(DataSource.SQLServer, "Audit");
+
+        await using var productsConnection = OpenConnection();
+        await using var ordersConnection = OpenConnection();
+        await using var auditConnection = OpenConnection();
+
+        var products = CommitFailingDbContext.Create(productsConnection, _dispatcherMock.Object);
+        var orders = CommitFailingDbContext.Create(ordersConnection, _dispatcherMock.Object);
+        var audit = CommitFailingDbContext.Create(auditConnection, _dispatcherMock.Object);
+
+        var lostAcknowledgement = new TimeoutException("commit acknowledgement lost");
+        orders.FailCommitWith = lostAcknowledgement;
+
+        var physicalFactory = new Mock<IPhysicalDbContextFactory>();
+        physicalFactory.Setup(f => f.Create(productsKey)).Returns(products);
+        physicalFactory.Setup(f => f.Create(ordersKey)).Returns(orders);
+        physicalFactory.Setup(f => f.Create(auditKey)).Returns(audit);
+
+        var registry = new Mock<IEntityDataSourceRegistry>();
+        registry.Setup(r => r.GetPhysicalSourcesInUse()).Returns([]);
+
+        await using var sut = new DbContextFactory(
+            physicalFactory.Object,
+            registry.Object,
+            Mock.Of<IDataSourceResolver>(),
+            Mock.Of<ICurrentUserService>());
+
+        var act = async () => await sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                // Touch order is enlistment order, which is commit order.
+                sut.GetDbContext(productsKey).Set<TestAggregate>().Add(CreateAggregateWithEvent());
+                sut.GetDbContext(ordersKey).Set<TestAggregate>().Add(CreateAggregateWithEvent());
+                sut.GetDbContext(auditKey).Set<TestAggregate>().Add(CreateAggregateWithEvent());
+                await sut.SaveChangesAsync(ct);
+                return Result.Success();
+            });
+
+        var thrown = await act.Should().ThrowAsync<TransactionCommitAmbiguousException>();
+
+        thrown.And.InnerException.Should().BeSameAs(
+            lostAcknowledgement,
+            "the provider's failure stays the diagnostic payload under the outcome map");
+        thrown.And.CommittedSources.Should().ContainSingle()
+            .Which.Should().Be(
+                productsKey.ToString(),
+                "the first source committed before the failure and is durable");
+        thrown.And.AmbiguousSource.Should().Be(
+            ordersKey.ToString(),
+            "the source whose commit threw is the one nobody can vouch for");
+        thrown.And.RolledBackSources.Should().ContainSingle()
+            .Which.Should().Be(
+                auditKey.ToString(),
+                "a source never reached by the sequential commit wrote nothing that survives");
+        thrown.And.Message.Should()
+            .Contain("committed [" + productsKey.ToString() + "]")
+            .And.Contain("ambiguous [" + ordersKey.ToString() + "]")
+            .And.Contain("rolled back [" + auditKey.ToString() + "]",
+                "the partial state has to be readable straight off the message in a log");
+
+        audit.Database.CurrentTransaction.Should().BeNull(
+            "the sources past the failure are rolled back before the ambiguity surfaces");
+        (await products.Set<TestAggregate>().AsNoTracking().CountAsync()).Should().Be(
+            1,
+            "there is no two-phase commit, so an already-committed source stays committed");
+        (await audit.Set<TestAggregate>().AsNoTracking().CountAsync()).Should().Be(
+            0,
+            "the rolled-back source is the half of the partial commit that did not land");
+    }
+
+    private static SqliteConnection OpenConnection()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        return connection;
     }
 
     private static TestAggregate CreateAggregateWithEvent()
