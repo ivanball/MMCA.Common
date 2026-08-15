@@ -492,7 +492,10 @@ public sealed class DbContextFactory(
     /// <para>
     /// <b>Limitation, multiple physical sources:</b> commits are sequential, so a commit failure on
     /// source #2 leaves source #1 already committed. The ambiguity is then a partial commit rather
-    /// than an unknown one, and the caller's replay is what reconciles it. A witness row (a marker
+    /// than an unknown one, and the caller's replay is what reconciles it. The thrown
+    /// <see cref="TransactionCommitAmbiguousException"/> names each source's outcome (committed,
+    /// ambiguous, or rolled back) so that partial state is observable rather than inferred. A
+    /// witness row (a marker
     /// written inside each source's transaction that a replay can read to learn what landed) would
     /// close this; it is deliberately not built here, since a single transactional source, the case
     /// every host runs today, needs none.
@@ -519,7 +522,7 @@ public sealed class DbContextFactory(
             ?? GetDbContext(DataSource.SQLServer);
 
         var attempt = 0;
-        Exception? commitFailure = null;
+        TransactionCommitAmbiguousException? commitFailure = null;
         var strategy = context.Database.CreateExecutionStrategy();
 
         var outcome = await strategy.ExecuteAsync(async ct =>
@@ -537,7 +540,7 @@ public sealed class DbContextFactory(
         // error would still be retried; returning normally is the only way to guarantee the
         // delegate is not re-entered after a commit whose outcome is unknown.
         if (commitFailure is not null)
-            throw new TransactionCommitAmbiguousException(commitFailure);
+            throw commitFailure;
 
         return outcome;
     }
@@ -550,7 +553,7 @@ public sealed class DbContextFactory(
     /// failure is RETURNED rather than thrown so the execution strategy sees a completed attempt
     /// and cannot re-run the operation against a commit that may already be durable.
     /// </returns>
-    private async Task<(TResult Value, Exception? CommitFailure)> RunTransactionalAttemptAsync<TResult>(
+    private async Task<(TResult Value, TransactionCommitAmbiguousException? CommitFailure)> RunTransactionalAttemptAsync<TResult>(
         Func<CancellationToken, Task<TResult>> operation,
         CancellationToken cancellationToken)
     {
@@ -608,21 +611,47 @@ public sealed class DbContextFactory(
     }
 
     /// <summary>
-    /// Commits every enlisted context, returning the failure instead of throwing it.
+    /// Commits every enlisted context in turn, returning the failure instead of throwing it and
+    /// recording what each physical source did. Commits are sequential and independent (no
+    /// two-phase commit), so a failure part-way through leaves earlier sources durable; naming them
+    /// is what makes the partial state observable to the caller who owns the replay.
     /// </summary>
-    /// <returns><see langword="null"/> on success, otherwise the exception the commit raised.</returns>
-    private Exception? TryCommit()
+    /// <returns>
+    /// <see langword="null"/> on success, otherwise the ambiguity carrying the provider's failure
+    /// and the per-source outcome.
+    /// </returns>
+    private TransactionCommitAmbiguousException? TryCommit()
     {
-        try
+        _transactionActive = false;
+
+        // Snapshot before committing anything: this order IS the commit order, so the entries past
+        // the failing one are exactly what AbandonAfterCommitFailure rolls back.
+        var enlisted = _dbContexts
+            .Where(entry => SupportsTransactions(entry.Value) && HasActiveTransaction(entry.Value))
+            .Select(entry => (Source: entry.Key.ToString(), Context: entry.Value))
+            .ToArray();
+
+        var committed = new List<string>(enlisted.Length);
+
+        for (var index = 0; index < enlisted.Length; index++)
         {
-            CommitTransaction();
-            return null;
+            var (source, context) = enlisted[index];
+
+            try
+            {
+                context.Database.CommitTransaction();
+            }
+            catch (Exception ex)
+            {
+                var rolledBack = enlisted[(index + 1)..].Select(entry => entry.Source).ToArray();
+                AbandonAfterCommitFailure();
+                return new TransactionCommitAmbiguousException(ex, committed, source, rolledBack);
+            }
+
+            committed.Add(source);
         }
-        catch (Exception ex)
-        {
-            AbandonAfterCommitFailure();
-            return ex;
-        }
+
+        return null;
     }
 
     /// <summary>
