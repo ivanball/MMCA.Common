@@ -18,6 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
+using MMCA.Common.Shared.Resilience;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
 
@@ -492,6 +493,112 @@ public sealed class OutboxProcessorTests : IDisposable
         retried.ProcessedOn.Should().BeNull("a broker failure must not mark the event delivered");
         retried.RetryCount.Should().Be(1);
         retried.LastError.Should().Be("Broker unreachable");
+    }
+
+    [Fact]
+    public async Task SustainedPublishFailures_OpenTheBrokerCircuit_RowsStillRetryAndTheOpeningIsReportedOnce()
+    {
+        // A dead broker makes every publish wait out its own transport timeout, so one batch can
+        // spend minutes discovering the same fact 50 times. The breaker turns the later attempts
+        // into an immediate rejection; nothing is lost, because a rejected row follows the normal
+        // failure path (retry increment, re-lease) and is retried on a later cycle.
+        _messageBusMock
+            .Setup(b => b.PublishAsync(It.IsAny<IIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Broker unreachable"));
+
+        // The breaker only evaluates its failure ratio once it has MinimumThroughput samples in the
+        // window, so the batch has to be larger than that threshold to open mid-cycle.
+        var messageCount = BrokerResilienceDefaults.MinimumThroughput + 5;
+        OutboxMessage[] messages = [.. Enumerable.Range(0, messageCount).Select(i =>
+            CreateEligibleMessage(
+                eventType: typeof(TestIntegrationEvent).AssemblyQualifiedName,
+                occurredOn: DateTime.UtcNow.AddMinutes(-10).AddSeconds(i)))];
+        await _dbContext.Set<OutboxMessage>().AddRangeAsync(messages);
+        await _dbContext.SaveChangesAsync();
+
+        var logged = new List<(LogLevel Level, string Message)>();
+        var mockLogger = new Mock<ILogger<OutboxProcessor>>();
+        mockLogger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        mockLogger
+            .Setup(l => l.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(invocation =>
+            {
+                var formatter = (Delegate)invocation.Arguments[4];
+                logged.Add((
+                    (LogLevel)invocation.Arguments[0],
+                    (string)formatter.DynamicInvoke(invocation.Arguments[2], invocation.Arguments[3])!));
+            }));
+
+        var gate = new System.Threading.Lock();
+        var circuitOpenMeasurements = new List<(long Value, string? EventType)>();
+        using MeterListener listener = StartBrokerListener(gate, circuitOpenMeasurements);
+
+        using OutboxProcessor processor = CreateProcessor(new OutboxSettings(), logger: mockLogger.Object);
+        await processor.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        // Every row took the normal failure path: nothing is marked delivered, nothing is lost.
+        List<OutboxMessage> updated = await _dbContext.Set<OutboxMessage>().ToListAsync();
+        updated.Should().HaveCount(messageCount);
+        updated.Should().AllSatisfy(m =>
+        {
+            m.ProcessedOn.Should().BeNull("a broker failure must not mark the event delivered");
+            m.RetryCount.Should().Be(1);
+        });
+
+        // Some rows never reached the broker at all: that is the breaker doing its job.
+        circuitOpenMeasurements.Should().NotBeEmpty("the circuit must open once the failure ratio is provable");
+        updated.Should().Contain(
+            m => m.LastError != null && m.LastError.Contains("circuit", StringComparison.OrdinalIgnoreCase),
+            "a short-circuited publish records the rejection, not a transport error it never saw");
+
+        // Once per batch, not once per row: an open circuit rejects the whole remainder in the
+        // same instant, and 50 identical warnings is noise an operator learns to filter.
+        logged.Where(e => e.Message.Contains("circuit is open", StringComparison.Ordinal))
+            .Should().ContainSingle();
+    }
+
+    /// <summary>
+    /// Listener for the broker meter's circuit-open counter, mirroring
+    /// <see cref="StartOutboxListener{T}"/> for the outbox meter.
+    /// </summary>
+    private static MeterListener StartBrokerListener(
+        System.Threading.Lock gate,
+        List<(long Value, string? EventType)> sink)
+    {
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (string.Equals(instrument.Meter.Name, "MMCA.Common.Broker", StringComparison.Ordinal)
+                    && string.Equals(instrument.Name, "broker.circuit.open.count", StringComparison.Ordinal))
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            string? eventType = null;
+            foreach (KeyValuePair<string, object?> tag in tags)
+            {
+                if (string.Equals(tag.Key, "event_type", StringComparison.Ordinal))
+                {
+                    eventType = tag.Value as string;
+                }
+            }
+
+            lock (gate)
+            {
+                sink.Add((value, eventType));
+            }
+        });
+        listener.Start();
+        return listener;
     }
 
     // ── Lease: rows under an unexpired lock are skipped; expired locks are claimable ──

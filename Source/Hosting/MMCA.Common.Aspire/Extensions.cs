@@ -155,12 +155,15 @@ public static class Extensions
                     // MMCA.Common meters (literal names, because Aspire has no reference to the
                     // defining assemblies): outbox counters and dispatch lag, CQRS RED histograms
                     // plus query cache hit/miss, the idempotency filter's replay, conflict and
-                    // degraded counters, and the recurring scheduler's run outcomes, duration and
-                    // schedule lag (inert in a host that never enables Scheduler:Enabled).
+                    // degraded counters, the recurring scheduler's run outcomes, duration and
+                    // schedule lag (inert in a host that never enables Scheduler:Enabled), and the
+                    // broker transport's consumer faults plus outbox circuit-breaker openings
+                    // (inert in a host that stays on the in-process bus).
                     metrics.AddMeter("MMCA.Common.Outbox")
                         .AddMeter("MMCA.Common.Cqrs")
                         .AddMeter("MMCA.Common.Idempotency")
-                        .AddMeter("MMCA.Common.Scheduler");
+                        .AddMeter("MMCA.Common.Scheduler")
+                        .AddMeter("MMCA.Common.Broker");
                 })
                 .WithTracing(tracing =>
                 {
