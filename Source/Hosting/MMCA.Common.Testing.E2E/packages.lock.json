@@ -10,35 +10,35 @@
       },
       "Deque.AxeCore.Commons": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "s5mYpGoEL08/of5p20qNIBDE3JWKhabEAiG/zL3UkMYXV6V7YA58s5Utjkcym9TNPfshFqlQXfPX6oInrKUuQQ==",
+        "requested": "[4.13.0, )",
+        "resolved": "4.13.0",
+        "contentHash": "roq2z6OmKY4KVXGj1lSigUbjE7DnIcYLqPOVcnWrusS6CI7oB6/He8Oo3ZO/TCOlnaTS1hkJOuKPwL+PyhyC6w==",
         "dependencies": {
           "NewtonSoft.Json": "13.0.1"
         }
       },
       "Deque.AxeCore.Playwright": {
         "type": "Direct",
-        "requested": "[4.12.0, )",
-        "resolved": "4.12.0",
-        "contentHash": "hmSmXW5SCbUXZo/T0+epp1MSHbhIdWswp8lanqN32dQzKSqghloVxSJqNyv3UGZ52K8Lk2R5sGMl6fvlUHTSIA==",
+        "requested": "[4.13.0, )",
+        "resolved": "4.13.0",
+        "contentHash": "tqzqVEsQfVg4fmx9/AkbgYjVMYHHOGI7WkTznKuP8ayi0uaBcd+2skOfxnVdUBlEhpHdu9stzxOZ6uPVhIS2JA==",
         "dependencies": {
-          "Deque.AxeCore.Commons": "4.12.0",
+          "Deque.AxeCore.Commons": "4.13.0",
           "Microsoft.Playwright": "1.20.2",
           "System.IO.Abstractions": "17.0.24"
         }
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.141, )",
-        "resolved": "3.0.141",
-        "contentHash": "p0mtUYG/36FEnU6P5GovB82mVH4DoWGdHYjePkLnIeTNI0LQfmvjGj2twQEBTosw6/YTTnk8Fknu2VvaFybECA=="
+        "requested": "[3.0.163, )",
+        "resolved": "3.0.163",
+        "contentHash": "l9iZ+OXBGlAFEKH1y4BSKPXHcmpJmikysSm0brjTau8fR7Qm7IVGLVig+dh0RH9mq4s3neZayuPQrHRweOpxxw=="
       },
       "Microsoft.Playwright": {
         "type": "Direct",
-        "requested": "[1.61.0, )",
-        "resolved": "1.61.0",
-        "contentHash": "VM149rQ2Pu+3xAzrO2gvh2WRgrWNbIl0jL9LG2oMC9xKUVYDnUrsh+E/5S+NQToVV4S+yhZ3NHsa6kf1PdHeag==",
+        "requested": "[1.62.0, )",
+        "resolved": "1.62.0",
+        "contentHash": "cos6dmHPcMpS6bXw2WEgoXb8KXwMhs3c5L0P/cUf2rdUpjVA3g3u+KiSpVp2VCzsXymRpy2tFHqm+Wnz7s5VhQ==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "6.0.0",
           "System.ComponentModel.Annotations": "5.0.0"
@@ -58,9 +58,9 @@
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "/EZ1HVILd9jPdXquT03vBawvAuGNotmf+r/GBiVfPj9BdUyn/olOdjF9BqqjIK5Cyq3pdBDL/qMuJEGtBLMaZA=="
+        "requested": "[4.16.1, )",
+        "resolved": "4.16.1",
+        "contentHash": "AGzq3UZvIwTGSh9xyIna+Q9F666S8UaLlX/Pk3Iz21qIAWjL8iYporVCcX1k/oi5chrRZ8VJRahup4me4HZptw=="
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
