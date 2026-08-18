@@ -14,6 +14,98 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.153.0] - 2026-08-18
+
+The Section A architecture wave: broker poison-message handling, pipeline authorization and
+timeout policies, specification-driven queries with projection pushdown, keyset pagination, and
+three new build gates (namespace cycles, CancellationToken declarations, public API surface).
+ADRs 085-087 plus revisions to 009/014/015/019/021/031/048/054/055 document the wave.
+
+### Added
+
+- **Second-level broker redelivery and fault observability (ADR-087).** A message that exhausts
+  `UseMessageRetry` is now rescheduled per `MessageBus:RedeliveryIntervalsSeconds` (default
+  60/600/3600) before dead-lettering: always on for Azure Service Bus (native scheduling), opt-in
+  via `MessageBus:EnableDelayedRedelivery` on RabbitMQ (requires the delayed-message-exchange
+  plugin, which the Aspire dev container does not ship). `RegisterIntegrationEventConsumer` also
+  registers a `FaultIntegrationEventConsumer<TEvent>` (opt out per event with its
+  `registerFaultConsumer` parameter) that turns an otherwise silent `_error`-queue row into one
+  structured Error log plus a `broker.fault.count` metric on the new `MMCA.Common.Broker` meter.
+- **Circuit breaker on the outbox broker publish (ADR-009 revision).** The outbox processor's
+  `IMessageBus.PublishAsync` call now runs under a Polly circuit breaker
+  (`BrokerResilienceDefaults`: 0.5 failure ratio, 10 minimum throughput, 30s sampling, 15s break),
+  so a dead broker sheds load fast instead of stacking publish timeouts; open-circuit failures
+  follow the normal re-lease path and increment `broker.circuit.open.count`. A per-query database
+  breaker was evaluated and rejected this wave; EF's retrying execution strategy remains the DB
+  posture.
+- **Authorization and Timeout decorators in the CQRS pipeline (ADR-014 revision).** Commands and
+  queries implementing `IRequiresPermission` are checked against
+  `IPermissionRegistry.HasPermission` with `ICurrentUserService.Roles`; a denial short-circuits
+  with a Forbidden error and increments `cqrs.authorization.denied.count`, and the decorator sits
+  outside caching so a denied query never reads or populates the cache. `IHasTimeout` requests run
+  under a linked token cancelled after their budget; expiry returns a `Request.TimedOut` failure
+  and increments `cqrs.timeout.count` while caller cancellation still propagates. New order:
+  FeatureGate, Authorization, Logging, Caching, Validating, Timeout, Transactional.
+- **Rate limiting settings, sliding window, and a distributed option (ADR-019 revision).**
+  `RateLimitingSettings` (section `RateLimiting`) now backs `AddCommonRateLimiting` with an
+  `Algorithm` choice (fixed or sliding window), and `Distributed=true` with a registered
+  `IConnectionMultiplexer` moves the global and `UserPolicy` partitions onto a Redis-backed
+  fixed-window limiter (INCR plus EXPIRE, fail-open on Redis unavailability); `auth-ip` stays
+  in-process by design. Existing signatures delegate unchanged.
+- **Feature-flag targeting (ADR-031 revision).** `CurrentUserTargetingContextAccessor` is
+  registered via `WithTargeting`, so the built-in Targeting and Percentage filters now work
+  through the existing `IFeatureGated` pipeline with no decorator change: percentage and
+  group-targeted rollouts become a pure configuration exercise.
+- **Specification-driven repository reads with projection pushdown (ADR-055 revision).**
+  `QuerySpecification` adds ordering, string includes (with the collection split-query
+  auto-switch), paging, and tracking control on top of the criteria-only base;
+  `And`/`Or`/`Not` now compose by parameter substitution with per-instance caching and gain
+  fluent extension forms. `IEntityQuerier` gains `ListAsync` (entity and projected overloads),
+  `CountAsync` and `AnyAsync` by specification, and `IEntityQueryService` accepts
+  `ISpecification` everywhere. An optional `IEntityDTOProjector` lets the generic read path
+  project to DTOs in SQL instead of materializing full entities (PushNotification ships the
+  reference projector with a value-equivalence test against the instance mapper).
+- **Keyset pagination and deterministic paged ordering.** `GetPageByCursorAsync` pages by an
+  opaque, versioned base64url cursor of (sort value, id) with `Result`-based validation of
+  malformed cursors and unknown sort columns. Offset paging is now deterministic: an unsorted
+  paged read orders by Id and every caller sort gains an Id tie-break.
+- **Three new build gates (ADR-015 revision).** A namespace dependency-cycle fitness rule
+  (signature-level, SCC-based, with a justified-allowance hook; one pre-existing Infrastructure
+  cycle is exempted with per-edge rationale), a trailing-`CancellationToken` declaration rule for
+  public async methods in Application and Infrastructure, and
+  `Microsoft.CodeAnalysis.PublicApiAnalyzers` on every in-slnx Source project with committed
+  `PublicAPI.Shipped.txt` baselines, so an accidental public-API break now fails the local build
+  instead of first surfacing in the consumer canary.
+
+### Changed
+
+- **Inbox stays opt-in but is loudly off (ADR-021 revision).** A broker-connected host running
+  without `MessageBus:EnableInbox=true` now logs a startup warning naming the duplicate-side-effect
+  risk. Enabling the inbox needs no schema work on a migrated relational host (the
+  `InboxMessages` table is part of the shared model; Cosmos hosts skip it).
+- **Dependency refresh.** xunit.v3 4.0.0 and Testcontainers 4.14.0 (testing group), plus the
+  August minor/patch group (EF Core and ASP.NET 10.0.11, dotnet/extensions 10.9.0, Meziantou
+  3.0.163, Playwright 1.62.0 and more). Consumers were pre-aligned on 2026-08-18 so the version
+  sweep resolves a coherent graph.
+
+### Known consumer-sweep notes
+
+- Consumer `DecoratorPipelineOrderTests` subclasses need `ICurrentUserService` and
+  `IPermissionRegistry` test doubles once they take this version (the new decorators are in the
+  default expected lists).
+- A literal `CountAsync(null)` call is now ambiguous between the predicate and specification
+  overloads and needs a cast.
+
+## [1.152.0] - 2026-08-14
+
+The 2026-08-14 bug-hunt remediation wave (this entry was added retroactively on 2026-08-18; the
+tag predates it). Twenty-three defects from the full 35-unit sweep fixed in one pass (Common
+#245), spanning paging, filtering, and handler edge cases; `GetProjectedAsync` gained an
+`ignoreQueryFilters` parameter, a defaulted-parameter-before-CancellationToken change that
+required a positional-caller and Moq sweep in consumers. Two reported findings were refuted with
+evidence rather than changed. Details: `Reports/BugHunt.md` ledger (workspace) and the consumer
+bump PRs ADC #122 / Store #88.
+
 ## [1.151.0] - 2026-08-14
 
 The ADR-078 recorded follow-up: owner-scoped CSV exports and formatter hardening.
