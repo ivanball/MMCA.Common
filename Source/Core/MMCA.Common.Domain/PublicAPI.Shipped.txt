@@ -1,0 +1,255 @@
+#nullable enable
+MMCA.Common.Domain.AssemblyReference
+MMCA.Common.Domain.Attributes.IdValueGeneratedAttribute
+MMCA.Common.Domain.Attributes.IdValueGeneratedAttribute.IdValueGeneratedAttribute() -> void
+MMCA.Common.Domain.Attributes.NavigationAttribute
+MMCA.Common.Domain.Attributes.NavigationAttribute.IsCollection.get -> bool
+MMCA.Common.Domain.Attributes.NavigationAttribute.IsCollection.init -> void
+MMCA.Common.Domain.Attributes.NavigationAttribute.NavigationAttribute() -> void
+MMCA.Common.Domain.Attributes.PiiAttribute
+MMCA.Common.Domain.Attributes.PiiAttribute.PiiAttribute() -> void
+MMCA.Common.Domain.Auth.IAuthUser
+MMCA.Common.Domain.Auth.IAuthUser.PasswordHash.get -> byte[]!
+MMCA.Common.Domain.Auth.IAuthUser.PasswordSalt.get -> byte[]!
+MMCA.Common.Domain.Auth.IAuthUser.RefreshToken.get -> string?
+MMCA.Common.Domain.Auth.IAuthUser.RefreshTokenExpiry.get -> System.DateTime?
+MMCA.Common.Domain.Auth.IAuthUser.RevokeRefreshToken() -> void
+MMCA.Common.Domain.Auth.IAuthUser.UpdateRefreshToken(string! refreshToken, System.DateTime expiry) -> void
+MMCA.Common.Domain.Auth.IErasableUser
+MMCA.Common.Domain.Auth.IErasableUser.Delete() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.IPasswordChangeableUser
+MMCA.Common.Domain.Auth.IPasswordChangeableUser.ChangePassword(byte[]! newPasswordHash, byte[]! newPasswordSalt) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.IUserPreferences
+MMCA.Common.Domain.Auth.IUserPreferences.PreferredCulture.get -> string?
+MMCA.Common.Domain.Auth.IUserPreferences.PreferredTheme.get -> string?
+MMCA.Common.Domain.Auth.IUserPreferences.UpdatePreferences(string? preferredCulture, string? preferredTheme) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.ClassReference
+MMCA.Common.Domain.ClassReference.ClassReference() -> void
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent.BaseDomainEvent() -> void
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent.BaseDomainEvent(MMCA.Common.Domain.DomainEvents.BaseDomainEvent! original) -> void
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent.DateOccurred.get -> System.DateTime
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent.DateOccurred.init -> void
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent.MessageId.get -> System.Guid
+MMCA.Common.Domain.DomainEvents.BaseDomainEvent.MessageId.init -> void
+MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent
+MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.BaseIntegrationEvent() -> void
+MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.BaseIntegrationEvent(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent! original) -> void
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Deconstruct(out MMCA.Common.Domain.Enums.DomainEntityState State, out TIdentifierType EntityId) -> void
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.EntityChangedEvent(MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>! original) -> void
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.EntityChangedEvent(MMCA.Common.Domain.Enums.DomainEntityState State, TIdentifierType EntityId) -> void
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.EntityId.get -> TIdentifierType
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.EntityId.init -> void
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.State.get -> MMCA.Common.Domain.Enums.DomainEntityState
+MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.State.init -> void
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.AddDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent) -> void
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.AuditableAggregateRootEntity() -> void
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.ClearDomainEvents() -> void
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.DomainEvents.get -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Domain.Interfaces.IDomainEvent!>!
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.RemoveDomainEvents(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IDomainEvent!>! domainEvents) -> void
+MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.SetItems<TChildEntity>(System.Collections.Generic.List<TChildEntity>! collection, System.Collections.Generic.IEnumerable<TChildEntity>! items) -> void
+MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>
+MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.AuditableBaseEntity() -> void
+MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.RowVersion.get -> byte[]!
+MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.Undelete() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>
+MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.BaseEntity() -> void
+MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.Id.init -> void
+MMCA.Common.Domain.Enums.DomainEntityState
+MMCA.Common.Domain.Enums.DomainEntityState.Added = 1 -> MMCA.Common.Domain.Enums.DomainEntityState
+MMCA.Common.Domain.Enums.DomainEntityState.Deleted = 3 -> MMCA.Common.Domain.Enums.DomainEntityState
+MMCA.Common.Domain.Enums.DomainEntityState.Unchanged = 0 -> MMCA.Common.Domain.Enums.DomainEntityState
+MMCA.Common.Domain.Enums.DomainEntityState.Updated = 2 -> MMCA.Common.Domain.Enums.DomainEntityState
+MMCA.Common.Domain.Extensions.EntityTypeExtensions
+MMCA.Common.Domain.Extensions.EntityTypeExtensions.extension(System.Type!)
+MMCA.Common.Domain.Extensions.EntityTypeExtensions.extension(System.Type!).IsIdValueGenerated.get -> bool
+MMCA.Common.Domain.Interfaces.IAggregateRoot
+MMCA.Common.Domain.Interfaces.IAggregateRoot.AddDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent) -> void
+MMCA.Common.Domain.Interfaces.IAggregateRoot.ClearDomainEvents() -> void
+MMCA.Common.Domain.Interfaces.IAggregateRoot.DomainEvents.get -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Domain.Interfaces.IDomainEvent!>!
+MMCA.Common.Domain.Interfaces.IAggregateRoot.RemoveDomainEvents(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IDomainEvent!>! domainEvents) -> void
+MMCA.Common.Domain.Interfaces.IAnonymizable
+MMCA.Common.Domain.Interfaces.IAnonymizable.Anonymize() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Interfaces.IAuditableEntity
+MMCA.Common.Domain.Interfaces.IAuditableEntity.CreatedBy.get -> int
+MMCA.Common.Domain.Interfaces.IAuditableEntity.CreatedOn.get -> System.DateTime
+MMCA.Common.Domain.Interfaces.IAuditableEntity.IsDeleted.get -> bool
+MMCA.Common.Domain.Interfaces.IAuditableEntity.LastModifiedBy.get -> int?
+MMCA.Common.Domain.Interfaces.IAuditableEntity.LastModifiedOn.get -> System.DateTime?
+MMCA.Common.Domain.Interfaces.IAuditedEntity
+MMCA.Common.Domain.Interfaces.IBaseEntity<TIdentifierType>
+MMCA.Common.Domain.Interfaces.IBaseEntity<TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Domain.Interfaces.IBaseEntity<TIdentifierType>.Id.init -> void
+MMCA.Common.Domain.Interfaces.IDomainEvent
+MMCA.Common.Domain.Interfaces.IDomainEvent.DateOccurred.get -> System.DateTime
+MMCA.Common.Domain.Interfaces.IDomainEvent.MessageId.get -> System.Guid
+MMCA.Common.Domain.Interfaces.IIntegrationEvent
+MMCA.Common.Domain.Interfaces.IRowVersioned
+MMCA.Common.Domain.Interfaces.IRowVersioned.RowVersion.get -> byte[]!
+MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>.IsSatisfiedBy(TEntity entity) -> bool
+MMCA.Common.Domain.Interfaces.ITenantEntity
+MMCA.Common.Domain.Interfaces.ITenantEntity.TenantId.get -> string!
+MMCA.Common.Domain.Invariants.CommonInvariants
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Deconstruct(out int NotificationId, out string! Title, out int RecipientCount) -> void
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Equals(MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated? other) -> bool
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.NotificationId.get -> int
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.NotificationId.init -> void
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.PushNotificationCreated(int NotificationId, string! Title, int RecipientCount) -> void
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.RecipientCount.get -> int
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.RecipientCount.init -> void
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Title.get -> string!
+MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Title.init -> void
+MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.Body.get -> string!
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.DedupKey.get -> string?
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.MarkAsFailed() -> void
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.MarkAsSent() -> void
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.RecipientCount.get -> int
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.ScopeKey.get -> string?
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.SentByUserId.get -> int
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.Status.get -> MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.Title.get -> string!
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus.Failed = 2 -> MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus.Pending = 0 -> MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus
+MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus.Sent = 1 -> MMCA.Common.Domain.Notifications.PushNotifications.PushNotificationStatus
+MMCA.Common.Domain.Notifications.UserNotifications.UserNotification
+MMCA.Common.Domain.Notifications.UserNotifications.UserNotification.IsRead.get -> bool
+MMCA.Common.Domain.Notifications.UserNotifications.UserNotification.MarkAsRead(System.DateTime readOnUtc) -> void
+MMCA.Common.Domain.Notifications.UserNotifications.UserNotification.PushNotificationId.get -> int
+MMCA.Common.Domain.Notifications.UserNotifications.UserNotification.ReadOn.get -> System.DateTime?
+MMCA.Common.Domain.Notifications.UserNotifications.UserNotification.UserId.get -> int
+MMCA.Common.Domain.Privacy.PiiRedactor
+MMCA.Common.Domain.Specifications.AndSpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.AndSpecification<TEntity, TIdentifierType>.AndSpecification(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! spec1, MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! spec2) -> void
+MMCA.Common.Domain.Specifications.InlineSpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.InlineSpecification<TEntity, TIdentifierType>.InlineSpecification(System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>! criteria) -> void
+MMCA.Common.Domain.Specifications.NotSpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.NotSpecification<TEntity, TIdentifierType>.NotSpecification(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! spec) -> void
+MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>.OrSpecification(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! spec1, MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! spec2) -> void
+MMCA.Common.Domain.Specifications.OrderExpression
+MMCA.Common.Domain.Specifications.OrderExpression.<Clone>$() -> MMCA.Common.Domain.Specifications.OrderExpression!
+MMCA.Common.Domain.Specifications.OrderExpression.Deconstruct(out System.Linq.Expressions.LambdaExpression! KeySelector, out bool Descending) -> void
+MMCA.Common.Domain.Specifications.OrderExpression.Descending.get -> bool
+MMCA.Common.Domain.Specifications.OrderExpression.Descending.init -> void
+MMCA.Common.Domain.Specifications.OrderExpression.Equals(MMCA.Common.Domain.Specifications.OrderExpression? other) -> bool
+MMCA.Common.Domain.Specifications.OrderExpression.KeySelector.get -> System.Linq.Expressions.LambdaExpression!
+MMCA.Common.Domain.Specifications.OrderExpression.KeySelector.init -> void
+MMCA.Common.Domain.Specifications.OrderExpression.OrderExpression(System.Linq.Expressions.LambdaExpression! KeySelector, bool Descending) -> void
+MMCA.Common.Domain.Specifications.OwnedByUserSpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.OwnedByUserSpecification<TEntity, TIdentifierType>.OwnedByUserSpecification(int userId) -> void
+MMCA.Common.Domain.Specifications.OwnedByUserSpecification<TEntity, TIdentifierType>.UserId.get -> int
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.AddInclude(string! path) -> void
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.AddOrderBy<TKey>(System.Linq.Expressions.Expression<System.Func<TEntity, TKey>!>! keySelector, bool descending = false) -> void
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.ApplyPaging(int skip, int take) -> void
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.AsTracking.get -> bool
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.IgnoreQueryFilters.get -> bool
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.IncludePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.OrderBy.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Specifications.OrderExpression!>!
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.QuerySpecification() -> void
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.Skip.get -> int?
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.Take.get -> int?
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.WithSoftDeleted() -> void
+MMCA.Common.Domain.Specifications.QuerySpecification<TEntity, TIdentifierType>.WithTracking() -> void
+MMCA.Common.Domain.Specifications.Specification<TEntity, TIdentifierType>
+MMCA.Common.Domain.Specifications.Specification<TEntity, TIdentifierType>.Specification() -> void
+MMCA.Common.Domain.Specifications.SpecificationExtensions
+MMCA.Common.Domain.Specifications.SpecificationExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>!)
+MMCA.Common.Domain.Specifications.SpecificationExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>!).And(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.AndSpecification<TEntity, TIdentifierType>!
+MMCA.Common.Domain.Specifications.SpecificationExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>!).Not() -> MMCA.Common.Domain.Specifications.NotSpecification<TEntity, TIdentifierType>!
+MMCA.Common.Domain.Specifications.SpecificationExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>!).Or(MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>!
+abstract MMCA.Common.Domain.DomainEvents.BaseDomainEvent.<Clone>$() -> MMCA.Common.Domain.DomainEvents.BaseDomainEvent!
+abstract MMCA.Common.Domain.Specifications.Specification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+const MMCA.Common.Domain.Invariants.CommonInvariants.DarkTheme = "dark" -> string!
+const MMCA.Common.Domain.Invariants.CommonInvariants.LightTheme = "light" -> string!
+const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.DedupKeyMaxLength = 128 -> int
+const MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.ScopeKeyMaxLength = 128 -> int
+const MMCA.Common.Domain.Privacy.PiiRedactor.RedactedToken = "[REDACTED]" -> string!
+override MMCA.Common.Domain.DomainEvents.BaseDomainEvent.Equals(object? obj) -> bool
+override MMCA.Common.Domain.DomainEvents.BaseDomainEvent.GetHashCode() -> int
+override MMCA.Common.Domain.DomainEvents.BaseDomainEvent.ToString() -> string!
+override MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.EqualityContract.get -> System.Type!
+override MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.Equals(object? obj) -> bool
+override MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.GetHashCode() -> int
+override MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.ToString() -> string!
+override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.EqualityContract.get -> System.Type!
+override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Equals(object? obj) -> bool
+override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.GetHashCode() -> int
+override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.ToString() -> string!
+override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.<Clone>$() -> MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated!
+override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Equals(object? obj) -> bool
+override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.GetHashCode() -> int
+override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.ToString() -> string!
+override MMCA.Common.Domain.Specifications.AndSpecification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+override MMCA.Common.Domain.Specifications.InlineSpecification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+override MMCA.Common.Domain.Specifications.NotSpecification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+override MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>!
+override MMCA.Common.Domain.Specifications.OrderExpression.Equals(object? obj) -> bool
+override MMCA.Common.Domain.Specifications.OrderExpression.GetHashCode() -> int
+override MMCA.Common.Domain.Specifications.OrderExpression.ToString() -> string!
+override MMCA.Common.Domain.Specifications.OwnedByUserSpecification<TEntity, TIdentifierType>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>!
+override abstract MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.<Clone>$() -> MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent!
+override abstract MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.<Clone>$() -> MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>!
+override sealed MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
+override sealed MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
+override sealed MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
+static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
+static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator ==(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
+static MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? left, MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? right) -> bool
+static MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.operator ==(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? left, MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? right) -> bool
+static MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.operator !=(MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? left, MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? right) -> bool
+static MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.operator ==(MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? left, MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? right) -> bool
+static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.GetChildOrNotFound<TChild, TChildId>(System.Collections.Generic.IEnumerable<TChild!>! collection, TChildId childId, string! source) -> MMCA.Common.Shared.Abstractions.Result<TChild!>!
+static MMCA.Common.Domain.Extensions.EntityTypeExtensions.get_IsIdValueGenerated(System.Type! entityType) -> bool
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureBytesAreNotEmpty(byte[]! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureCollectionIsNotEmpty<T>(System.Collections.Generic.IReadOnlyCollection<T>! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureIdIsNotDefault<TId>(TId id, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureIntIsPositive(int value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureMoneyIsNotNegative(MMCA.Common.Shared.ValueObjects.Money! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsurePreferredCultureIsValid(string? culture, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsurePreferredThemeIsValid(string? theme, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureStringIsNotEmpty(string! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureStringMaxLength(string? value, int maxLength, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.operator !=(MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated? left, MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated? right) -> bool
+static MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.operator ==(MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated? left, MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated? right) -> bool
+static MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.EnsureBodyIsValid(string! body, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.EnsureTitleIsValid(string! title, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Notifications.PushNotifications.PushNotification.Create(string! title, string! body, int sentByUserId, int recipientCount, string? dedupKey = null, string? scopeKey = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Notifications.PushNotifications.PushNotification!>!
+static MMCA.Common.Domain.Notifications.UserNotifications.UserNotification.Create(int userId, int pushNotificationId) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Notifications.UserNotifications.UserNotification!>!
+static MMCA.Common.Domain.Privacy.PiiRedactor.HasPii(System.Type! type) -> bool
+static MMCA.Common.Domain.Privacy.PiiRedactor.Redact(object? value) -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>!
+static MMCA.Common.Domain.Privacy.PiiRedactor.RedactToString(object? value) -> string!
+static MMCA.Common.Domain.Specifications.OrderExpression.operator !=(MMCA.Common.Domain.Specifications.OrderExpression? left, MMCA.Common.Domain.Specifications.OrderExpression? right) -> bool
+static MMCA.Common.Domain.Specifications.OrderExpression.operator ==(MMCA.Common.Domain.Specifications.OrderExpression? left, MMCA.Common.Domain.Specifications.OrderExpression? right) -> bool
+static MMCA.Common.Domain.Specifications.SpecificationExtensions.And<TEntity, TIdentifierType>(this MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! specification, MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.AndSpecification<TEntity, TIdentifierType>!
+static MMCA.Common.Domain.Specifications.SpecificationExtensions.Not<TEntity, TIdentifierType>(this MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! specification) -> MMCA.Common.Domain.Specifications.NotSpecification<TEntity, TIdentifierType>!
+static MMCA.Common.Domain.Specifications.SpecificationExtensions.Or<TEntity, TIdentifierType>(this MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! specification, MMCA.Common.Domain.Interfaces.ISpecification<TEntity, TIdentifierType>! other) -> MMCA.Common.Domain.Specifications.OrSpecification<TEntity, TIdentifierType>!
+static readonly MMCA.Common.Domain.AssemblyReference.Assembly -> System.Reflection.Assembly!
+static readonly MMCA.Common.Domain.AssemblyReference.AssemblyName -> string!
+static readonly MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.BodyMaxLength -> int
+static readonly MMCA.Common.Domain.Notifications.PushNotifications.Invariants.PushNotificationInvariants.TitleMaxLength -> int
+virtual MMCA.Common.Domain.DomainEvents.BaseDomainEvent.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Domain.DomainEvents.BaseDomainEvent.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
+virtual MMCA.Common.Domain.DomainEvents.BaseDomainEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.Equals(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? other) -> bool
+virtual MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.SchemaVersion.get -> int
+virtual MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Equals(MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? other) -> bool
+virtual MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.ValidateSetItems<TChildEntity>(System.Collections.Generic.IList<TChildEntity>! currentItems, System.Collections.Generic.IList<TChildEntity>! incomingItems) -> void
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.CreatedBy.get -> int
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.CreatedOn.get -> System.DateTime
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.Delete() -> MMCA.Common.Shared.Abstractions.Result!
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.IsDeleted.get -> bool
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.LastModifiedBy.get -> int?
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.LastModifiedOn.get -> System.DateTime?
+virtual MMCA.Common.Domain.Specifications.Specification<TEntity, TIdentifierType>.IsSatisfiedBy(TEntity entity) -> bool

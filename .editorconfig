@@ -874,3 +874,30 @@ dotnet_diagnostic.IDE0130.severity = none
 
 [Tests/Presentation/MMCA.Common.API.Tests/Fakes/**.cs]
 dotnet_diagnostic.IDE0130.severity = none
+
+[*.cs]
+# ─────────────────────────────────────────────────────────────────────────────
+# Microsoft.CodeAnalysis.PublicApiAnalyzers (RS rules): overrides
+# The public API surface gate is Source-only (see Directory.Build.props); the two rules that make it
+# a gate (RS0016 for a public member missing from PublicAPI.Shipped.txt, RS0017 for a declared member
+# that disappeared) stay at the global error severity. The rest are turned off deliberately.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# RS0026/RS0027: "do not add multiple public overloads with optional parameters". Sound advice for a
+# NEW API, but the v1.152.0 surface being baselined already ships those pairs (the repository
+# read/query methods above all), and obeying the rule now would mean a breaking signature change on
+# every consumer. Off rather than silently baselined as a lie.
+dotnet_diagnostic.RS0026.severity = none
+dotnet_diagnostic.RS0027.severity = none
+# RS0041: "public members should not use oblivious reference types". Every hit is inside Razor
+# generated code (BuildRenderTree and friends), which is not nullable-annotated and is not ours to
+# annotate; the rule cannot be satisfied from source.
+dotnet_diagnostic.RS0041.severity = none
+# RS0051-RS0056: the INTERNAL-API analog of the same analyzer (InternalAPI.Shipped.txt). Only the
+# public, packaged surface is under contract here, so internal API tracking is not adopted.
+dotnet_diagnostic.RS0051.severity = none
+dotnet_diagnostic.RS0052.severity = none
+dotnet_diagnostic.RS0053.severity = none
+dotnet_diagnostic.RS0054.severity = none
+dotnet_diagnostic.RS0055.severity = none
+dotnet_diagnostic.RS0056.severity = none

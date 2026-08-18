@@ -1,0 +1,26 @@
+#nullable enable
+MMCA.Common.UI.Web.Components.Pages.Error
+MMCA.Common.UI.Web.Components.Pages.Error.Error() -> void
+MMCA.Common.UI.Web.DependencyInjection
+MMCA.Common.UI.Web.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.Web.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonBlazorCsp() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Web.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonServerTokenStorage() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Web.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonWebFormFactor() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Web.Services.ServerTokenStorageService
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.ServerTokenStorageService(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor, MMCA.Common.API.SessionCookies.CookieTokenReader! cookieTokenReader, MMCA.Common.UI.Services.Auth.ISessionCookieSync! sessionCookieSync, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher) -> void
+MMCA.Common.UI.Web.Services.ServerTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Web.Services.WebFormFactor
+MMCA.Common.UI.Web.Services.WebFormFactor.GetFormFactor() -> string!
+MMCA.Common.UI.Web.Services.WebFormFactor.GetPlatform() -> string!
+MMCA.Common.UI.Web.Services.WebFormFactor.WebFormFactor() -> void
+MMCA.Common.UI.Web._Imports
+MMCA.Common.UI.Web._Imports.Execute() -> void
+MMCA.Common.UI.Web._Imports._Imports() -> void
+override MMCA.Common.UI.Web.Components.Pages.Error.OnInitialized() -> void
+static MMCA.Common.UI.Web.DependencyInjection.AddCommonBlazorCsp(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Web.DependencyInjection.AddCommonServerTokenStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Web.DependencyInjection.AddCommonWebFormFactor(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+~override MMCA.Common.UI.Web.Components.Pages.Error.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

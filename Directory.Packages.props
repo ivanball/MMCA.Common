@@ -122,6 +122,12 @@
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
     <PackageVersion Include="MudBlazor" Version="9.8.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
+    <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
+         rather than the Polly meta-package: Core carries the v8 resilience-pipeline API on its own,
+         while Polly adds the v7 Policy compatibility shim that Infrastructure has no use for. Kept
+         on the same version as the Polly pin above so the two never resolve to different Core
+         assemblies in one graph. -->
+    <PackageVersion Include="Polly.Core" Version="8.7.0" />
     <!-- QR encoding for the shared QrCodeImage component (MIT). Pure managed encode-to-PNG: no
          native binary, no network call, no image service, so it renders identically on every head
          including Blazor WebAssembly. -->
@@ -151,6 +157,11 @@
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.3" />
     <!-- Analyzers -->
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.163" />
+    <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
+         PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
+         reviewable diff instead of an accident discovered by a consumer. Source-only (see the
+         PublicApiAnalyzers ItemGroup in Directory.Build.props). -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.16.1" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.32.0.713" />

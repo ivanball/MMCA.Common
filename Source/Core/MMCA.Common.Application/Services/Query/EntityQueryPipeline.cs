@@ -22,6 +22,19 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
     /// </summary>
     public const int MaxUnboundedResultLimit = 1000;
 
+    /// <summary>
+    /// The key property appended as a final ascending sort key on every paginated read, making the
+    /// order total. Every entity has it (<c>IBaseEntity.Id</c>), it is unique, and it is
+    /// server-supplied rather than client input.
+    /// </summary>
+    /// <remarks>
+    /// Only paginated reads get it. An unpaginated read materializes one capped set in one
+    /// statement, so it cannot suffer the split-across-pages incoherence the tie-break exists to
+    /// prevent, and adding an ORDER BY there would charge every unsorted list read for a sort the
+    /// caller never asked for.
+    /// </remarks>
+    private const string PaginationTieBreakProperty = "Id";
+
     /// <inheritdoc />
     public async Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> ExecuteAsync<TEntity, TIdentifierType>(
         IQueryable<TEntity> baseQuery,
@@ -29,6 +42,84 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         EntityQueryParameters<TEntity> parameters,
         Func<IReadOnlyCollection<TEntity>, NavigationMetadata, bool, bool, CancellationToken, Task> navigationPopulator,
         CancellationToken cancellationToken)
+        where TEntity : AuditableBaseEntity<TIdentifierType>
+        where TIdentifierType : notnull
+    {
+        var query = ApplyIncludesCriteriaAndFilters<TEntity, TIdentifierType>(baseQuery, navigationMetadata, parameters);
+
+        // PATH 2 - Unsupported includes: When the data source does not support JOINs
+        // (e.g. Cosmos DB where entities may live in different containers), we must
+        // materialize the query, then manually load related data via the NavigationPopulator.
+        if (navigationMetadata.UnsupportedIncludes.Count != 0)
+            return await ExecuteWithManualNavigationAsync<TEntity, TIdentifierType>(query, navigationMetadata, parameters, navigationPopulator, cancellationToken).ConfigureAwait(false);
+
+        return await ExecuteWithServerSideIncludesAsync<TEntity, TIdentifierType>(query, parameters, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<(IReadOnlyCollection<TResult> Items, int TotalCount)> ExecuteProjectedAsync<TEntity, TResult, TIdentifierType>(
+        IQueryable<TEntity> baseQuery,
+        EntityQueryParameters<TEntity> parameters,
+        Func<IQueryable<TEntity>, IQueryable<TResult>> project,
+        CancellationToken cancellationToken)
+        where TEntity : AuditableBaseEntity<TIdentifierType>
+        where TIdentifierType : notnull
+    {
+        ArgumentNullException.ThrowIfNull(parameters);
+        ArgumentNullException.ThrowIfNull(project);
+
+        var query = baseQuery;
+
+        if (parameters.Criteria is not null)
+            query = query.Where(parameters.Criteria);
+
+        if (parameters.Filters is not null && parameters.Filters.Count != 0)
+            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap);
+
+        bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
+
+        query = QueryFieldService.ApplySorting(
+            query,
+            parameters.SortColumn,
+            parameters.SortDirection,
+            parameters.DTOToEntityPropertyMap,
+            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null);
+
+        int totalCount = 0;
+        var unpagedQuery = query;
+
+        if (isPaginated)
+        {
+            totalCount = await queryableExecutor.CountAsync(query, cancellationToken).ConfigureAwait(false);
+            query = ApplyPaging(query, parameters);
+        }
+        else
+        {
+            query = query.Take(MaxUnboundedResultLimit);
+        }
+
+        // Project LAST: filtering, sorting and paging all run over entity rows, so the provider pages
+        // exactly the rows it means to and only that page's columns are selected. Navigation includes
+        // are deliberately not applied on this path: the projection itself decides which columns and
+        // joins the provider emits, and an Include over a non-entity projection is ignored anyway.
+        var result = await queryableExecutor.ToListAsync(project(query), cancellationToken).ConfigureAwait(false);
+
+        if (!isPaginated)
+        {
+            totalCount = await CountUnpaginatedAsync(unpagedQuery, result.Count, cancellationToken).ConfigureAwait(false);
+        }
+
+        return (result, totalCount);
+    }
+
+    /// <summary>
+    /// Shared front half of the entity path: server-side includes (with the child-collection
+    /// split-query switch), specification criteria, and dynamic filters.
+    /// </summary>
+    private IQueryable<TEntity> ApplyIncludesCriteriaAndFilters<TEntity, TIdentifierType>(
+        IQueryable<TEntity> baseQuery,
+        NavigationMetadata navigationMetadata,
+        EntityQueryParameters<TEntity> parameters)
         where TEntity : AuditableBaseEntity<TIdentifierType>
         where TIdentifierType : notnull
     {
@@ -59,13 +150,7 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         if (parameters.Filters is not null && parameters.Filters.Count != 0)
             query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap);
 
-        // PATH 2 - Unsupported includes: When the data source does not support JOINs
-        // (e.g. Cosmos DB where entities may live in different containers), we must
-        // materialize the query, then manually load related data via the NavigationPopulator.
-        if (navigationMetadata.UnsupportedIncludes.Count != 0)
-            return await ExecuteWithManualNavigationAsync<TEntity, TIdentifierType>(query, navigationMetadata, parameters, navigationPopulator, cancellationToken).ConfigureAwait(false);
-
-        return await ExecuteWithServerSideIncludesAsync<TEntity, TIdentifierType>(query, parameters, cancellationToken).ConfigureAwait(false);
+        return query;
     }
 
     /// <summary>
@@ -85,8 +170,14 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
         int totalCount = 0;
 
-        // Sort at the DB level before materialization
-        query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
+        // Sort at the DB level before materialization. A paginated read also gets the key tie-break,
+        // so Skip/Take runs over a total order (see PaginationTieBreakProperty).
+        query = QueryFieldService.ApplySorting(
+            query,
+            parameters.SortColumn,
+            parameters.SortDirection,
+            parameters.DTOToEntityPropertyMap,
+            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null);
 
         var unpagedQuery = query;
 
@@ -129,9 +220,17 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
         where TEntity : AuditableBaseEntity<TIdentifierType>
         where TIdentifierType : notnull
     {
-        query = QueryFieldService.ApplySorting(query, parameters.SortColumn, parameters.SortDirection, parameters.DTOToEntityPropertyMap);
-
         bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
+
+        // A paginated read also gets the key tie-break, so Skip/Take runs over a total order
+        // (see PaginationTieBreakProperty).
+        query = QueryFieldService.ApplySorting(
+            query,
+            parameters.SortColumn,
+            parameters.SortDirection,
+            parameters.DTOToEntityPropertyMap,
+            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null);
+
         int totalCount = 0;
         var unpagedQuery = query;
 

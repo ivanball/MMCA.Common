@@ -1,0 +1,794 @@
+#nullable enable
+MMCA.Common.Application.AssemblyReference
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.<Clone>$() -> MMCA.Common.Application.Auditing.AuditTrailEntryDTO!
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.AuditTrailEntryDTO() -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedBy.get -> int?
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedBy.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedOn.get -> System.DateTime
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ChangedOn.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.CorrelationId.get -> string?
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.CorrelationId.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityKey.get -> string!
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityKey.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityType.get -> string!
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.EntityType.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? other) -> bool
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Id.get -> System.Guid
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Id.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.NewValue.get -> string?
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.NewValue.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.OldValue.get -> string?
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.OldValue.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Operation.get -> string!
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Operation.init -> void
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.PropertyName.get -> string?
+MMCA.Common.Application.Auditing.AuditTrailEntryDTO.PropertyName.init -> void
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.ITokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.AuthenticationValidators! validators) -> void
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.IssueTokensAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RefreshTokenAsync(MMCA.Common.Shared.Auth.RefreshTokenRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, string? ipAddress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.Repository.get -> MMCA.Common.Application.Interfaces.Infrastructure.IRepository<TUser!, int>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeTokenAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.TimeProvider.get -> System.TimeProvider!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.TokenService.get -> MMCA.Common.Application.Interfaces.Infrastructure.ITokenService!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Auth.AuthenticationValidators
+MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.RefreshTokenRequest>! refresh) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.Login.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.LoginRequest>!
+MMCA.Common.Application.Auth.AuthenticationValidators.Refresh.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.RefreshTokenRequest>!
+MMCA.Common.Application.Auth.AuthenticationValidators.Register.get -> FluentValidation.IValidator<MMCA.Common.Shared.Auth.RegisterRequest>!
+MMCA.Common.Application.Auth.IAuthenticationService
+MMCA.Common.Application.Auth.IAuthenticationService.ExternalLoginAsync(string! loginProvider, string! providerKey, string! email, string! firstName, string! lastName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RefreshTokenAsync(MMCA.Common.Shared.Auth.RefreshTokenRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, string? ipAddress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RevokeTokenAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.ILoginProtectionService
+MMCA.Common.Application.Auth.ILoginProtectionService.CheckLockoutAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.ILoginProtectionService.CheckRegistrationRateLimitAsync(string? ipAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.ILoginProtectionService.IncrementFailedAttemptsAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.ILoginProtectionService.IncrementRegistrationCountAsync(string? ipAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.ILoginProtectionService.ResetFailedAttemptsAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.SoftDeletedUserCache
+MMCA.Common.Application.Auth.Validation.LoginRequestValidator
+MMCA.Common.Application.Auth.Validation.LoginRequestValidator.LoginRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.RefreshTokenRequestValidator
+MMCA.Common.Application.Auth.Validation.RefreshTokenRequestValidator.RefreshTokenRequestValidator() -> void
+MMCA.Common.Application.ClassReference
+MMCA.Common.Application.ClassReference.ClassReference() -> void
+MMCA.Common.Application.DependencyInjection
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddApplication() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddApplicationDecorators() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddApplicationProfiling() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUserDataExportSection<TSection>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ScanModuleApplicationServices<TAssemblyMarker>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DomainEvents.SafeDomainEventHandler<TDomainEvent>
+MMCA.Common.Application.DomainEvents.SafeDomainEventHandler<TDomainEvent>.HandleAsync(TDomainEvent! domainEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.DomainEvents.SafeDomainEventHandler<TDomainEvent>.SafeDomainEventHandler(Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Extensions.ReadRepositoryExtensions
+MMCA.Common.Application.Extensions.ReadRepositoryExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!)
+MMCA.Common.Application.Extensions.ReadRepositoryExtensions.extension<TEntity, TIdentifierType>(MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!).GetByIdOrFailAsync(TIdentifierType id, string! source, System.Collections.Generic.IEnumerable<string!>? includes = null, bool asTracking = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+MMCA.Common.Application.Extensions.ValidationFailureExtensions
+MMCA.Common.Application.Extensions.ValidationFailureExtensions.extension(FluentValidation.Results.ValidationResult!)
+MMCA.Common.Application.Extensions.ValidationFailureExtensions.extension(FluentValidation.Results.ValidationResult!).ToErrors(string! source) -> System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Application.Interfaces.IAuditTrailReader
+MMCA.Common.Application.Interfaces.IAuditTrailReader.GetForEntityAsync(string! entityType, string! entityKey, int page = 1, int pageSize = 50, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Auditing.AuditTrailEntryDTO!>!>!
+MMCA.Common.Application.Interfaces.ICacheService
+MMCA.Common.Application.Interfaces.ICacheService.GetAsync<T>(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
+MMCA.Common.Application.Interfaces.ICacheService.GetOrCreateAsync<T>(string! key, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<T>!>! factory, System.TimeSpan? expiration = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>!
+MMCA.Common.Application.Interfaces.ICacheService.IncrementAsync(string! key, System.TimeSpan expiration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<long>!
+MMCA.Common.Application.Interfaces.ICacheService.RemoveAsync(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.ICacheService.RemoveByPrefixAsync(string! prefix, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.ICacheService.SetAsync<T>(string! key, T value, System.TimeSpan? expiration = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.ICorrelationContext
+MMCA.Common.Application.Interfaces.ICorrelationContext.CorrelationId.get -> string!
+MMCA.Common.Application.Interfaces.ICorrelationContext.SetCorrelationId(string! correlationId) -> void
+MMCA.Common.Application.Interfaces.ICreateRequest
+MMCA.Common.Application.Interfaces.IDistributedLock
+MMCA.Common.Application.Interfaces.IDistributedLock.TryAcquireAsync(string! key, System.TimeSpan ttl, System.TimeSpan wait, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.IAsyncDisposable?>!
+MMCA.Common.Application.Interfaces.IDomainEventDispatcher
+MMCA.Common.Application.Interfaces.IDomainEventDispatcher.DispatchAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IDomainEvent!>! domainEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.IDomainEventHandler<TDomainEvent>
+MMCA.Common.Application.Interfaces.IDomainEventHandler<TDomainEvent>.HandleAsync(TDomainEvent domainEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType>
+MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType>.MapToDTO(TEntity! entity) -> TEntityDTO
+MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType>.MapToDTOs(System.Collections.Generic.IReadOnlyCollection<TEntity!>! entityCollection) -> System.Collections.Generic.IReadOnlyCollection<TEntityDTO>!
+MMCA.Common.Application.Interfaces.IEntityDTOProjector<TEntity, TEntityDTO, TIdentifierType>
+MMCA.Common.Application.Interfaces.IEntityDTOProjector<TEntity, TEntityDTO, TIdentifierType>.ProjectTo(System.Linq.IQueryable<TEntity!>! source) -> System.Linq.IQueryable<TEntityDTO>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.DTOMapper.get -> MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity!, TEntityDTO, TIdentifierType>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.ExistsAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>? filters = null, string? sortColumn = null, string? sortDirection = null, string? fields = null, int? pageNumber = null, int? pageSize = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<object!>!>!
+MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetEntityByIdAsync(string! idValue, string? idField = null, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+MMCA.Common.Application.Interfaces.IEntityRequestMapper<TEntity, TCreateRequest, TIdentifierType>
+MMCA.Common.Application.Interfaces.IEntityRequestMapper<TEntity, TCreateRequest, TIdentifierType>.CreateEntityAsync(TCreateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+MMCA.Common.Application.Interfaces.IEventBus
+MMCA.Common.Application.Interfaces.IEventBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.IEventBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.IIntegrationEventHandler<TIntegrationEvent>
+MMCA.Common.Application.Interfaces.IIntegrationEventHandler<TIntegrationEvent>.HandleAsync(TIntegrationEvent integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.INavigationMetadata
+MMCA.Common.Application.Interfaces.INavigationMetadata.SupportedIncludes.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.NavigationPropertyInfo!>!
+MMCA.Common.Application.Interfaces.INavigationMetadata.UnsupportedIncludes.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.NavigationPropertyInfo!>!
+MMCA.Common.Application.Interfaces.INavigationPopulator<TEntity>
+MMCA.Common.Application.Interfaces.INavigationPopulator<TEntity>.PopulateAsync(System.Collections.Generic.IReadOnlyCollection<TEntity>! entities, MMCA.Common.Application.Interfaces.NavigationMetadata! navigationMetadata, bool includeFKs, bool includeChildren, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.IScheduledJob
+MMCA.Common.Application.Interfaces.IScheduledJob.CronExpression.get -> string!
+MMCA.Common.Application.Interfaces.IScheduledJob.ExecuteAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.IScheduledJob.Name.get -> string!
+MMCA.Common.Application.Interfaces.ITenantContext
+MMCA.Common.Application.Interfaces.ITenantContext.IsResolved.get -> bool
+MMCA.Common.Application.Interfaces.ITenantContext.SetTenant(string! tenantId) -> void
+MMCA.Common.Application.Interfaces.ITenantContext.TenantId.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.DataSource.CosmosDB = 0 -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.DataSource.SQLServer = 2 -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.DataSource.Sqlite = 1 -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.DataSourceKey() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.DataSourceKey(MMCA.Common.Application.Interfaces.Infrastructure.DataSource Engine, string! Name) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Deconstruct(out MMCA.Common.Application.Interfaces.Infrastructure.DataSource Engine, out string! Name) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Engine.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Engine.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Equals(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey other) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Name.get -> string!
+MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Name.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService.GetClaimValue<T>(string! claimType) -> T?
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService.IsInRole(string! roleName) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService.Role.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService.Roles.get -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService.User.get -> System.Security.Claims.ClaimsPrincipal!
+MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService.UserId.get -> int?
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService.GetDataSource(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService.GetDataSource(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService.HaveIncludeSupport(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey first, MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey second) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService.HaveIncludeSupport(string! firstEntityFullName, string! secondEntityFullName) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.IEmailSender
+MMCA.Common.Application.Interfaces.Infrastructure.IEmailSender.SendAsync(string! subject, string! body, bool isHtml = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IEmailSender.SendAsync(string! to, string! subject, string! body, bool isHtml = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider.GetConfigurationAssemblies() -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.AnyAsync(MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>! specification, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.CountAsync(MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>! specification, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.CountAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.CountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.GetAllAsync(System.Collections.Generic.IEnumerable<string!>! includes, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, System.Linq.Expressions.Expression<System.Func<TEntity!, string!>!>? orderBy = null, System.Linq.Expressions.Expression<System.Func<TEntity!, TEntity!>!>? select = null, bool asTracking = false, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<TEntity!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.GetPageByCursorAsync(MMCA.Common.Shared.Abstractions.KeysetPageRequest! request, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.KeysetCollectionResult<TEntity!>!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.GetProjectedAsync<TResult>(System.Linq.Expressions.Expression<System.Func<TEntity!, TResult>!>! select, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, bool asTracking = false, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<TResult>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.ListAsync(MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>! specification, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<TEntity!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityQuerier<TEntity, TIdentifierType>.ListAsync<TResult>(MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>! specification, System.Linq.Expressions.Expression<System.Func<TEntity!, TResult>!>! select, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<TResult>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityReader<TEntity, TIdentifierType>
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityReader<TEntity, TIdentifierType>.ExistsAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityReader<TEntity, TIdentifierType>.ExistsAsync(TIdentifierType id, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityReader<TEntity, TIdentifierType>.GetByIdAsync(TIdentifierType id, System.Collections.Generic.IEnumerable<string!>! includes, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TEntity?>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityReader<TEntity, TIdentifierType>.GetByIdAsync(TIdentifierType id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TEntity?>!
+MMCA.Common.Application.Interfaces.Infrastructure.IEntityReader<TEntity, TIdentifierType>.GetByIdsAsync(System.Collections.Generic.IEnumerable<TIdentifierType>! ids, System.Collections.Generic.IEnumerable<string!>? includes = null, bool asTracking = false, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<TEntity!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IFileStorageService
+MMCA.Common.Application.Interfaces.Infrastructure.IFileStorageService.DeleteAsync(string! blobName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IFileStorageService.IsConfigured.get -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.IFileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IImageProcessor
+MMCA.Common.Application.Interfaces.Infrastructure.IImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.ILiveChannelPublisher
+MMCA.Common.Application.Interfaces.Infrastructure.ILiveChannelPublisher.PublishAsync(string! channelKey, string! eventName, string! payloadJson, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.INativePushSender
+MMCA.Common.Application.Interfaces.Infrastructure.INativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.INativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.INotificationRecipientProvider
+MMCA.Common.Application.Interfaces.Infrastructure.INotificationRecipientProvider.GetRecipientUserIdsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<int>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher
+MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher.HashPassword(string! password) -> (byte[]! Hash, byte[]! Salt)
+MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher.VerifyPassword(string! password, byte[]! hash, byte[]! salt) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar
+MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar.DeleteAsync(int userId, string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar.DeleteAsync(string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar.UpsertAsync(int userId, MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender
+MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender.SendToUserAsync(int userId, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor
+MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor.AsSplitQuery<T>(System.Linq.IQueryable<T!>! query) -> System.Linq.IQueryable<T!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor.CountAsync<T>(System.Linq.IQueryable<T>! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor.Include<T>(System.Linq.IQueryable<T!>! query, string! navigationPropertyPath) -> System.Linq.IQueryable<T!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor.ToListAsync<T>(System.Linq.IQueryable<T>! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<T>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity, TIdentifierType>
+MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity, TIdentifierType>.Table.get -> System.Linq.IQueryable<TEntity!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity, TIdentifierType>.TableNoTracking.get -> System.Linq.IQueryable<TEntity!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity, TIdentifierType>.TableNoTrackingSingleQuery.get -> System.Linq.IQueryable<TEntity!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity, TIdentifierType>.TableNoTrackingSplitQuery.get -> System.Linq.IQueryable<TEntity!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IRepository<TEntity, TIdentifierType>
+MMCA.Common.Application.Interfaces.Infrastructure.ISoftDeletedUserValidator
+MMCA.Common.Application.Interfaces.Infrastructure.ISoftDeletedUserValidator.IsUserSoftDeletedAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Interfaces.Infrastructure.ITokenService
+MMCA.Common.Application.Interfaces.Infrastructure.ITokenService.AccessTokenLifetime.get -> System.TimeSpan
+MMCA.Common.Application.Interfaces.Infrastructure.ITokenService.GenerateAccessToken(int userId, string! email, string! role, string! fullName, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims = null) -> string!
+MMCA.Common.Application.Interfaces.Infrastructure.ITokenService.GenerateRefreshToken() -> string!
+MMCA.Common.Application.Interfaces.Infrastructure.ITokenService.GetPrincipalFromExpiredToken(string! token) -> System.Security.Claims.ClaimsPrincipal?
+MMCA.Common.Application.Interfaces.Infrastructure.ITokenService.RefreshTokenLifetime.get -> System.TimeSpan
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.BeginTransaction() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.CommitTransaction() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.ExecuteInTransactionAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! operation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.GetReadRepository<TEntity, TIdentifierType>() -> MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.GetRepository<TEntity, TIdentifierType>() -> MMCA.Common.Application.Interfaces.Infrastructure.IRepository<TEntity!, TIdentifierType>!
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.RequestIdentityInsert() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.RollbackTransaction() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.Save() -> int
+MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity>
+MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity>.Set<TProperty>(System.Linq.Expressions.Expression<System.Func<TEntity, TProperty>!>! property, System.Linq.Expressions.Expression<System.Func<TEntity, TProperty>!>! valueFactory) -> MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity>!
+MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity>.Set<TProperty>(System.Linq.Expressions.Expression<System.Func<TEntity, TProperty>!>! property, TProperty value) -> MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity>!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.AddAsync(TEntity! entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.AddRangeAsync(System.Collections.Generic.IEnumerable<TEntity!>! entities, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.ExecuteDeleteAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.ExecuteUpdateAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, System.Action<MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity!>!>! setProperties, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.Save() -> int
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.SetOriginalRowVersion(MMCA.Common.Domain.Interfaces.IRowVersioned! childEntity, byte[]? rowVersion) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.SetOriginalRowVersion(TEntity! entity, byte[]? rowVersion) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.UpdateAsync(TEntity! entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.UpdateRange(System.Collections.Generic.IEnumerable<TEntity!>! entities) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.ImageContentSniffer
+MMCA.Common.Application.Interfaces.Infrastructure.NullNotificationRecipientProvider
+MMCA.Common.Application.Interfaces.Infrastructure.NullNotificationRecipientProvider.GetRecipientUserIdsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<int>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.NullNotificationRecipientProvider.NullNotificationRecipientProvider() -> void
+MMCA.Common.Application.Interfaces.NavigationMetadata
+MMCA.Common.Application.Interfaces.NavigationMetadata.NavigationMetadata() -> void
+MMCA.Common.Application.Interfaces.NavigationMetadata.SupportedIncludes.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.NavigationPropertyInfo!>!
+MMCA.Common.Application.Interfaces.NavigationMetadata.UnsupportedIncludes.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.NavigationPropertyInfo!>!
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.<Clone>$() -> MMCA.Common.Application.Interfaces.NavigationPropertyInfo!
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.DeclaringEntityType.get -> System.Type!
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.DeclaringEntityType.init -> void
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.Deconstruct(out string! PropertyName, out MMCA.Common.Application.Interfaces.NavigationType Type, out System.Type! DeclaringEntityType, out System.Type! TargetEntityType) -> void
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.Equals(MMCA.Common.Application.Interfaces.NavigationPropertyInfo? other) -> bool
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.NavigationPropertyInfo(string! PropertyName, MMCA.Common.Application.Interfaces.NavigationType Type, System.Type! DeclaringEntityType, System.Type! TargetEntityType) -> void
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.PropertyName.get -> string!
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.PropertyName.init -> void
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.TargetEntityType.get -> System.Type!
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.TargetEntityType.init -> void
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.Type.get -> MMCA.Common.Application.Interfaces.NavigationType
+MMCA.Common.Application.Interfaces.NavigationPropertyInfo.Type.init -> void
+MMCA.Common.Application.Interfaces.NavigationType
+MMCA.Common.Application.Interfaces.NavigationType.ChildCollection = 1 -> MMCA.Common.Application.Interfaces.NavigationType
+MMCA.Common.Application.Interfaces.NavigationType.ForeignKey = 0 -> MMCA.Common.Application.Interfaces.NavigationType
+MMCA.Common.Application.Messaging.IMessageBus
+MMCA.Common.Application.Messaging.IMessageBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Messaging.IMessageBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Modules.IModule
+MMCA.Common.Application.Modules.IModule.Dependencies.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Modules.IModule.Name.get -> string!
+MMCA.Common.Application.Modules.IModule.Register(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfigurationBuilder! configuration, MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings) -> void
+MMCA.Common.Application.Modules.IModule.RegisterDisabledStubs(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+MMCA.Common.Application.Modules.IModule.RequiresDependencies.get -> bool
+MMCA.Common.Application.Modules.IModuleSeeder
+MMCA.Common.Application.Modules.IModuleSeeder.ModuleName.get -> string!
+MMCA.Common.Application.Modules.IModuleSeeder.SeedAsync(System.IServiceProvider! serviceProvider, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Modules.ModuleLoader
+MMCA.Common.Application.Modules.ModuleLoader.DisabledModuleNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Modules.ModuleLoader.DiscoverAndRegister(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfigurationBuilder! configurationBuilder, MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings, MMCA.Common.Application.Settings.ModulesSettings! modulesSettings, string? environmentName = null) -> void
+MMCA.Common.Application.Modules.ModuleLoader.DiscoverAndRegister(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfigurationBuilder! configurationBuilder, MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings, MMCA.Common.Application.Settings.ModulesSettings! modulesSettings, string? environmentName, System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>? moduleAssemblies) -> void
+MMCA.Common.Application.Modules.ModuleLoader.EnabledModules.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Modules.IModule!>!
+MMCA.Common.Application.Modules.ModuleLoader.Logger.get -> Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Modules.ModuleLoader!>!
+MMCA.Common.Application.Modules.ModuleLoader.Logger.init -> void
+MMCA.Common.Application.Modules.ModuleLoader.ModuleLoader() -> void
+MMCA.Common.Application.Modules.ModuleLoader.SeedAllAsync(System.IServiceProvider! serviceProvider, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Modules.ModuleLoader.ValidateRemoteDependencies(System.IServiceProvider! serviceProvider) -> void
+MMCA.Common.Application.Notifications.DependencyInjection
+MMCA.Common.Application.Notifications.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Application.Notifications.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddNotificationApplicationServices() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOMapper
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOMapper.MapToDTO(MMCA.Common.Domain.Notifications.PushNotifications.PushNotification! entity) -> MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOMapper.MapToDTOs(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Domain.Notifications.PushNotifications.PushNotification!>! entityCollection) -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOMapper.PushNotificationDTOMapper() -> void
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOProjector
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOProjector.ProjectTo(System.Linq.IQueryable<MMCA.Common.Domain.Notifications.PushNotifications.PushNotification!>! source) -> System.Linq.IQueryable<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!
+MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOProjector.PushNotificationDTOProjector() -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryHandler
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryHandler.GetNotificationHistoryHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor! queryableExecutor, MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOMapper! dtoMapper) -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryHandler.HandleAsync(MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!>!
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.<Clone>$() -> MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery!
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.Deconstruct(out int PageNumber, out int PageSize) -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.Equals(MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? other) -> bool
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.GetNotificationHistoryQuery(int PageNumber = 1, int PageSize = 10) -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.PageNumber.get -> int
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.PageNumber.init -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.PageSize.get -> int
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.PageSize.init -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.<Clone>$() -> MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand!
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.Deconstruct(out MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! Request, out int SentByUserId) -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.DedupKey.get -> string?
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.DedupKey.init -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.Equals(MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand? other) -> bool
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.Request.get -> MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest!
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.Request.init -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.SendPushNotificationCommand(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! Request, int SentByUserId) -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.SentByUserId.get -> int
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.SentByUserId.init -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationHandler
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationHandler.HandleAsync(MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand! command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationHandler.SendPushNotificationHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.INotificationRecipientProvider! recipientProvider, MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender! pushNotificationSender, MMCA.Common.Application.Interfaces.Infrastructure.INativePushSender! nativePushSender, MMCA.Common.Application.Notifications.PushNotifications.DTOs.PushNotificationDTOMapper! dtoMapper, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationHandler!>! logger) -> void
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationRequestValidator
+MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationRequestValidator.SendPushNotificationRequestValidator() -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsHandler
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsHandler.GetMyNotificationsHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor! queryableExecutor) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsHandler.HandleAsync(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>!>!>!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.<Clone>$() -> MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.Deconstruct(out int UserId, out int PageNumber, out int PageSize, out string? ScopeKey) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.Equals(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery? other) -> bool
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.GetMyNotificationsQuery(int UserId, int PageNumber = 1, int PageSize = 20, string? ScopeKey = null) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.PageNumber.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.PageNumber.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.PageSize.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.PageSize.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.ScopeKey.get -> string?
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.ScopeKey.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.UserId.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.UserId.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountHandler
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountHandler.GetUnreadNotificationCountHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor! queryableExecutor) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountHandler.HandleAsync(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.<Clone>$() -> MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.Deconstruct(out int UserId, out string? ScopeKey) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.Equals(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery? other) -> bool
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.GetUnreadNotificationCountQuery(int UserId, string? ScopeKey = null) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.ScopeKey.get -> string?
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.ScopeKey.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.UserId.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.UserId.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.<Clone>$() -> MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.Deconstruct(out int UserId, out string? ScopeKey) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.Equals(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? other) -> bool
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.MarkAllNotificationsReadCommand(int UserId, string? ScopeKey = null) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.ScopeKey.get -> string?
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.ScopeKey.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.UserId.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.UserId.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadHandler
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadHandler.HandleAsync(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand! command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadHandler.MarkAllNotificationsReadHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor! queryableExecutor, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.<Clone>$() -> MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.Deconstruct(out int NotificationId, out int UserId) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.Equals(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? other) -> bool
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.MarkNotificationReadCommand(int NotificationId, int UserId) -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.NotificationId.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.NotificationId.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.UserId.get -> int
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.UserId.init -> void
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadHandler
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadHandler.HandleAsync(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand! command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadHandler.MarkNotificationReadHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor! queryableExecutor, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Application.Services.DomainEventDispatcher
+MMCA.Common.Application.Services.DomainEventDispatcher.DispatchAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IDomainEvent!>! domainEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Services.DomainEventDispatcher.DomainEventDispatcher(System.IServiceProvider! serviceProvider, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Services.DomainEventDispatcher!>! logger) -> void
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.DTOMapper.get -> MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity!, TEntityDTO, TIdentifierType>!
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.DTOProjector.get -> MMCA.Common.Application.Interfaces.IEntityDTOProjector<TEntity!, TEntityDTO, TIdentifierType>?
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.EntityQueryService(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Services.Query.INavigationMetadataProvider! navigationMetadataProvider, MMCA.Common.Application.Services.Query.IEntityQueryPipeline! queryPipeline, MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity!, TEntityDTO, TIdentifierType>! dtoMapper, MMCA.Common.Application.Interfaces.INavigationPopulator<TEntity!>! navigationPopulator) -> void
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.EntityQueryService(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Services.Query.INavigationMetadataProvider! navigationMetadataProvider, MMCA.Common.Application.Services.Query.IEntityQueryPipeline! queryPipeline, MMCA.Common.Application.Interfaces.IEntityDTOMapper<TEntity!, TEntityDTO, TIdentifierType>! dtoMapper, MMCA.Common.Application.Interfaces.INavigationPopulator<TEntity!>! navigationPopulator, MMCA.Common.Application.Interfaces.IEntityDTOProjector<TEntity!, TEntityDTO, TIdentifierType>! dtoProjector) -> void
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.ExistsAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, bool ignoreQueryFilters = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.NavigationPopulator.get -> MMCA.Common.Application.Interfaces.INavigationPopulator<TEntity!>!
+MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Services.Filtering.IFilterStrategy
+MMCA.Common.Application.Services.Filtering.IFilterStrategy.Apply<T>(System.Linq.IQueryable<T>! query, string! property, string! op, string! value) -> System.Linq.IQueryable<T>!
+MMCA.Common.Application.Services.Filtering.IFilterStrategy.CanParseValue(string! op, string! value) -> bool
+MMCA.Common.Application.Services.Filtering.IFilterStrategy.SupportedOperators.get -> System.Collections.Generic.IReadOnlySet<string!>?
+MMCA.Common.Application.Services.Filtering.QueryFilterService
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.AssignAction.get -> System.Action<TEntity, System.Collections.Generic.List<TChild!>!>!
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.AssignAction.init -> void
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.ChildForeignKeySelector.get -> System.Linq.Expressions.Expression<System.Func<TChild!, TParentId>!>!
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.ChildForeignKeySelector.init -> void
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.ChildNavigationDescriptor() -> void
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.LoadAsync(System.Collections.Generic.IReadOnlyCollection<TEntity>! entities, MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.ParentKeySelector.get -> System.Func<TEntity, TParentId>!
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.ParentKeySelector.init -> void
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.PropertyName.get -> string!
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.PropertyName.init -> void
+MMCA.Common.Application.Services.Navigation.ChildNavigationDescriptor<TEntity, TParentId, TChild, TChildId>.RequiresChildren.get -> bool
+MMCA.Common.Application.Services.Navigation.DeclarativeNavigationPopulator<TEntity>
+MMCA.Common.Application.Services.Navigation.DeclarativeNavigationPopulator<TEntity>.DeclarativeNavigationPopulator(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Services.Navigation.INavigationDescriptor<TEntity>!>! descriptors) -> void
+MMCA.Common.Application.Services.Navigation.DeclarativeNavigationPopulator<TEntity>.PopulateAsync(System.Collections.Generic.IReadOnlyCollection<TEntity>! entities, MMCA.Common.Application.Interfaces.NavigationMetadata! navigationMetadata, bool includeFKs, bool includeChildren, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.AssignAction.get -> System.Action<TEntity, System.Collections.Generic.List<TChild!>!>!
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.AssignAction.init -> void
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.ChildForeignKeySelector.get -> System.Linq.Expressions.Expression<System.Func<TChild!, TChildId>!>!
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.ChildForeignKeySelector.init -> void
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.FKNavigationDescriptor() -> void
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.LoadAsync(System.Collections.Generic.IReadOnlyCollection<TEntity>! entities, MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.ParentKeySelector.get -> System.Func<TEntity, TChildId?>!
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.ParentKeySelector.init -> void
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.PropertyName.get -> string!
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.PropertyName.init -> void
+MMCA.Common.Application.Services.Navigation.FKNavigationDescriptor<TEntity, TChild, TChildId>.RequiresChildren.get -> bool
+MMCA.Common.Application.Services.Navigation.INavigationDescriptor<TEntity>
+MMCA.Common.Application.Services.Navigation.INavigationDescriptor<TEntity>.LoadAsync(System.Collections.Generic.IReadOnlyCollection<TEntity>! entities, MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Services.Navigation.INavigationDescriptor<TEntity>.PropertyName.get -> string!
+MMCA.Common.Application.Services.Navigation.INavigationDescriptor<TEntity>.RequiresChildren.get -> bool
+MMCA.Common.Application.Services.NavigationLoader
+MMCA.Common.Application.Services.NullNavigationPopulator<TEntity>
+MMCA.Common.Application.Services.NullNavigationPopulator<TEntity>.NullNavigationPopulator() -> void
+MMCA.Common.Application.Services.NullNavigationPopulator<TEntity>.PopulateAsync(System.Collections.Generic.IReadOnlyCollection<TEntity>! entities, MMCA.Common.Application.Interfaces.NavigationMetadata! navigationMetadata, bool includeFKs, bool includeChildren, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.<Clone>$() -> MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>!
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Criteria.get -> System.Linq.Expressions.Expression<System.Func<TEntity, bool>!>?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Criteria.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.DTOToEntityPropertyMap.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.DTOToEntityPropertyMap.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.EntityQueryParameters() -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Equals(MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>? other) -> bool
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Fields.get -> string?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Fields.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Filters.get -> System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Filters.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.IncludeChildren.get -> bool
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.IncludeChildren.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.IncludeFKs.get -> bool
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.IncludeFKs.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.PageNumber.get -> int?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.PageNumber.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.PageSize.get -> int?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.PageSize.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.SortColumn.get -> string?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.SortColumn.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.SortDirection.get -> string?
+MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.SortDirection.init -> void
+MMCA.Common.Application.Services.Query.EntityQueryPipeline
+MMCA.Common.Application.Services.Query.EntityQueryPipeline.EntityQueryPipeline(MMCA.Common.Application.Interfaces.Infrastructure.IQueryableExecutor! queryableExecutor) -> void
+MMCA.Common.Application.Services.Query.EntityQueryPipeline.ExecuteAsync<TEntity, TIdentifierType>(System.Linq.IQueryable<TEntity!>! baseQuery, MMCA.Common.Application.Interfaces.NavigationMetadata! navigationMetadata, MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity!>! parameters, System.Func<System.Collections.Generic.IReadOnlyCollection<TEntity!>!, MMCA.Common.Application.Interfaces.NavigationMetadata!, bool, bool, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! navigationPopulator, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyCollection<TEntity!>! Items, int TotalCount)>!
+MMCA.Common.Application.Services.Query.EntityQueryPipeline.ExecuteProjectedAsync<TEntity, TResult, TIdentifierType>(System.Linq.IQueryable<TEntity!>! baseQuery, MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity!>! parameters, System.Func<System.Linq.IQueryable<TEntity!>!, System.Linq.IQueryable<TResult>!>! project, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyCollection<TResult>! Items, int TotalCount)>!
+MMCA.Common.Application.Services.Query.IEntityQueryPipeline
+MMCA.Common.Application.Services.Query.IEntityQueryPipeline.ExecuteAsync<TEntity, TIdentifierType>(System.Linq.IQueryable<TEntity!>! baseQuery, MMCA.Common.Application.Interfaces.NavigationMetadata! navigationMetadata, MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity!>! parameters, System.Func<System.Collections.Generic.IReadOnlyCollection<TEntity!>!, MMCA.Common.Application.Interfaces.NavigationMetadata!, bool, bool, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! navigationPopulator, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyCollection<TEntity!>! Items, int TotalCount)>!
+MMCA.Common.Application.Services.Query.IEntityQueryPipeline.ExecuteProjectedAsync<TEntity, TResult, TIdentifierType>(System.Linq.IQueryable<TEntity!>! baseQuery, MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity!>! parameters, System.Func<System.Linq.IQueryable<TEntity!>!, System.Linq.IQueryable<TResult>!>! project, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyCollection<TResult>! Items, int TotalCount)>!
+MMCA.Common.Application.Services.Query.INavigationMetadataProvider
+MMCA.Common.Application.Services.Query.INavigationMetadataProvider.BuildIncludes<TEntity>(bool includeFKs, bool includeChildren) -> MMCA.Common.Application.Interfaces.NavigationMetadata!
+MMCA.Common.Application.Services.Query.NavigationMetadataProvider
+MMCA.Common.Application.Services.Query.NavigationMetadataProvider.BuildIncludes<TEntity>(bool includeFKs, bool includeChildren) -> MMCA.Common.Application.Interfaces.NavigationMetadata!
+MMCA.Common.Application.Services.Query.NavigationMetadataProvider.NavigationMetadataProvider(MMCA.Common.Application.Interfaces.Infrastructure.IDataSourceService! dataSourceService) -> void
+MMCA.Common.Application.Services.Query.PagingMath
+MMCA.Common.Application.Services.QueryFieldService
+MMCA.Common.Application.Services.QueryFieldService.QueryFieldService() -> void
+MMCA.Common.Application.Settings.ApplicationSettings
+MMCA.Common.Application.Settings.ApplicationSettings.ApplicationSettings() -> void
+MMCA.Common.Application.Settings.ApplicationSettings.DatabaseInitStrategy.get -> string!
+MMCA.Common.Application.Settings.ApplicationSettings.DatabaseInitStrategy.init -> void
+MMCA.Common.Application.Settings.ApplicationSettings.MaxExportRows.get -> int
+MMCA.Common.Application.Settings.ApplicationSettings.MaxExportRows.init -> void
+MMCA.Common.Application.Settings.ApplicationSettings.MaxPageSize.get -> int
+MMCA.Common.Application.Settings.ApplicationSettings.MaxPageSize.init -> void
+MMCA.Common.Application.Settings.ApplicationSettings.UseMiniProfiler.get -> bool
+MMCA.Common.Application.Settings.ApplicationSettings.UseMiniProfiler.init -> void
+MMCA.Common.Application.Settings.IApplicationSettings
+MMCA.Common.Application.Settings.IApplicationSettings.DatabaseInitStrategy.get -> string!
+MMCA.Common.Application.Settings.IApplicationSettings.DatabaseInitStrategy.init -> void
+MMCA.Common.Application.Settings.IApplicationSettings.MaxExportRows.get -> int
+MMCA.Common.Application.Settings.IApplicationSettings.MaxExportRows.init -> void
+MMCA.Common.Application.Settings.IApplicationSettings.MaxPageSize.get -> int
+MMCA.Common.Application.Settings.IApplicationSettings.MaxPageSize.init -> void
+MMCA.Common.Application.Settings.IApplicationSettings.UseMiniProfiler.get -> bool
+MMCA.Common.Application.Settings.IApplicationSettings.UseMiniProfiler.init -> void
+MMCA.Common.Application.Settings.ModuleSettings
+MMCA.Common.Application.Settings.ModuleSettings.Enabled.get -> bool
+MMCA.Common.Application.Settings.ModuleSettings.Enabled.init -> void
+MMCA.Common.Application.Settings.ModuleSettings.ModuleSettings() -> void
+MMCA.Common.Application.Settings.ModuleSettings.RemoteDependencies.get -> System.Collections.Generic.List<string!>!
+MMCA.Common.Application.Settings.ModuleSettings.RemoteDependencies.set -> void
+MMCA.Common.Application.Settings.ModulesSettings
+MMCA.Common.Application.Settings.ModulesSettings.IsDependencyRemote(string! consumerModule, string! dependencyModule) -> bool
+MMCA.Common.Application.Settings.ModulesSettings.IsModuleEnabled(string! moduleName) -> bool
+MMCA.Common.Application.Settings.ModulesSettings.ModulesSettings() -> void
+MMCA.Common.Application.Specifications.CrossSourceSpecification
+MMCA.Common.Application.UseCases.Decorators.AuthorizationCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.AuthorizationCommandDecorator<TCommand, TResult>.AuthorizationCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService! currentUser, MMCA.Common.Shared.Auth.IPermissionRegistry! permissionRegistry) -> void
+MMCA.Common.Application.UseCases.Decorators.AuthorizationCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.AuthorizationQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.AuthorizationQueryDecorator<TQuery, TResult>.AuthorizationQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService! currentUser, MMCA.Common.Shared.Auth.IPermissionRegistry! permissionRegistry) -> void
+MMCA.Common.Application.UseCases.Decorators.AuthorizationQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>.CachingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService) -> void
+MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>.CachingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>!>! logger, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null) -> void
+MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>.CachingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService) -> void
+MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>.CachingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>!>! logger, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null) -> void
+MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.FeatureGateCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.FeatureGateCommandDecorator<TCommand, TResult>.FeatureGateCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, Microsoft.FeatureManagement.IFeatureManager! featureManager) -> void
+MMCA.Common.Application.UseCases.Decorators.FeatureGateCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.FeatureGateQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.FeatureGateQueryDecorator<TQuery, TResult>.FeatureGateQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, Microsoft.FeatureManagement.IFeatureManager! featureManager) -> void
+MMCA.Common.Application.UseCases.Decorators.FeatureGateQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.LoggingCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.LoggingCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.LoggingCommandDecorator<TCommand, TResult>.LoggingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.ICorrelationContext! correlationContext, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.LoggingCommandDecorator<TCommand, TResult>!>! logger) -> void
+MMCA.Common.Application.UseCases.Decorators.LoggingQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.LoggingQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.LoggingQueryDecorator<TQuery, TResult>.LoggingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.ICorrelationContext! correlationContext, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.LoggingQueryDecorator<TQuery, TResult>!>! logger) -> void
+MMCA.Common.Application.UseCases.Decorators.ProfilingCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.ProfilingCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.ProfilingCommandDecorator<TCommand, TResult>.ProfilingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner) -> void
+MMCA.Common.Application.UseCases.Decorators.ProfilingQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.ProfilingQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.ProfilingQueryDecorator<TQuery, TResult>.ProfilingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner) -> void
+MMCA.Common.Application.UseCases.Decorators.TimeoutCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.TimeoutCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.TimeoutCommandDecorator<TCommand, TResult>.TimeoutCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner) -> void
+MMCA.Common.Application.UseCases.Decorators.TimeoutQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.TimeoutQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.TimeoutQueryDecorator<TQuery, TResult>.TimeoutQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner) -> void
+MMCA.Common.Application.UseCases.Decorators.TransactionalCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.TransactionalCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.TransactionalCommandDecorator<TCommand, TResult>.TransactionalCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork) -> void
+MMCA.Common.Application.UseCases.Decorators.ValidatingCommandDecorator<TCommand, TResult>
+MMCA.Common.Application.UseCases.Decorators.ValidatingCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.ValidatingCommandDecorator<TCommand, TResult>.ValidatingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, System.Collections.Generic.IEnumerable<FluentValidation.IValidator<TCommand>!>! validators, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.ValidatingCommandDecorator<TCommand, TResult>!>! logger) -> void
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.<Clone>$() -> MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>!
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.CachePrefix.get -> string!
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.CachePrefix.init -> void
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.Deconstruct(out TIdentifierType Id) -> void
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.DeleteEntityCommand(TIdentifierType Id) -> void
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.Equals(MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>? other) -> bool
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.Id.init -> void
+MMCA.Common.Application.UseCases.DeleteEntityHandler<TEntity, TIdentifierType>
+MMCA.Common.Application.UseCases.DeleteEntityHandler<TEntity, TIdentifierType>.DeleteEntityHandler(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork) -> void
+MMCA.Common.Application.UseCases.DeleteEntityHandler<TEntity, TIdentifierType>.HandleAsync(MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity!, TIdentifierType>! command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.UseCases.ICacheInvalidating
+MMCA.Common.Application.UseCases.ICacheInvalidating.CachePrefix.get -> string!
+MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>
+MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.ICommandWithRequest<TRequest>
+MMCA.Common.Application.UseCases.ICommandWithRequest<TRequest>.Request.get -> TRequest
+MMCA.Common.Application.UseCases.IFeatureGated
+MMCA.Common.Application.UseCases.IFeatureGated.FeatureName.get -> string!
+MMCA.Common.Application.UseCases.IHasTimeout
+MMCA.Common.Application.UseCases.IHasTimeout.Timeout.get -> System.TimeSpan
+MMCA.Common.Application.UseCases.IQueryCacheable
+MMCA.Common.Application.UseCases.IQueryCacheable.CacheDuration.get -> System.TimeSpan
+MMCA.Common.Application.UseCases.IQueryCacheable.CacheKey.get -> string!
+MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>
+MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.IRequiresPermission
+MMCA.Common.Application.UseCases.IRequiresPermission.Permission.get -> string!
+MMCA.Common.Application.UseCases.ITransactional
+MMCA.Common.Application.Users.IUserOwnedRequest
+MMCA.Common.Application.Users.IUserOwnedRequest.CurrentUserId.get -> int
+MMCA.Common.Application.Users.IUserOwnedRequest.CurrentUserRole.get -> string?
+MMCA.Common.Application.Users.IUserScopedCommand<TRequest>
+MMCA.Common.Application.Users.IUserScopedCommand<TRequest>.Request.get -> TRequest
+MMCA.Common.Application.Users.IUserScopedRequest
+MMCA.Common.Application.Users.IUserScopedRequest.UserId.get -> int
+MMCA.Common.Application.Users.SoftDeletedUserValidator<TUser>
+MMCA.Common.Application.Users.SoftDeletedUserValidator<TUser>.IsUserSoftDeletedAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.Application.Users.SoftDeletedUserValidator<TUser>.SoftDeletedUserValidator(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork) -> void
+MMCA.Common.Application.Users.UseCases.ChangePassword.ChangePasswordHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.ChangePassword.ChangePasswordHandlerBase<TUser, TCommand>.ChangePasswordHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher! passwordHasher, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.ChangePassword.ChangePasswordHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.ChangePassword.ChangePasswordHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.ChangePreferencesHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.DeleteUserHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>
+MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.ExportUserDataHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, System.Collections.Generic.IEnumerable<MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection!>! sections, System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Privacy.UserDataExportDTO!>!>!
+MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection
+MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection.ExportAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!>!
+MMCA.Common.Application.Users.UseCases.ExportUserData.IUserDataExportSection.SectionName.get -> string!
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionDefaults
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.<Clone>$() -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Available.get -> bool
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Available.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Data.get -> object?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Data.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Equals(MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? other) -> bool
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.SectionName.get -> string!
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.SectionName.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.UnavailableReason.get -> string?
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.UnavailableReason.init -> void
+MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.UserDataExportSectionResult() -> void
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesHandlerBase<TUser>
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesHandlerBase<TUser>.GetUserPreferencesHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork) -> void
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesHandlerBase<TUser>.HandleAsync(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.UserPreferencesResponse!>!>!
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.<Clone>$() -> MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery!
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.Deconstruct(out int UserId) -> void
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.Equals(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? other) -> bool
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.GetUserPreferencesQuery(int UserId) -> void
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.UserId.get -> int
+MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.UserId.init -> void
+MMCA.Common.Application.Users.UserOwnershipRule
+MMCA.Common.Application.Validation.AddressLine1Rules<T>
+MMCA.Common.Application.Validation.AddressLine1Rules<T>.AddressLine1Rules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector) -> void
+MMCA.Common.Application.Validation.AddressLine2Rules<T>
+MMCA.Common.Application.Validation.AddressLine2Rules<T>.AddressLine2Rules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Validation.AddressValidator
+MMCA.Common.Application.Validation.AddressValidator.AddressValidator() -> void
+MMCA.Common.Application.Validation.CityRules<T>
+MMCA.Common.Application.Validation.CityRules<T>.CityRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Validation.CommandRequestValidator<TCommand, TRequest>
+MMCA.Common.Application.Validation.CommandRequestValidator<TCommand, TRequest>.CommandRequestValidator(System.Collections.Generic.IEnumerable<FluentValidation.IValidator<TRequest>!>! requestValidators) -> void
+MMCA.Common.Application.Validation.CountryRules<T>
+MMCA.Common.Application.Validation.CountryRules<T>.CountryRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Validation.EmailRules<T>
+MMCA.Common.Application.Validation.EmailRules<T>.EmailRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string! fieldName, int maxLength) -> void
+MMCA.Common.Application.Validation.NonNegativeIntRules<T>
+MMCA.Common.Application.Validation.NonNegativeIntRules<T>.NonNegativeIntRules(System.Linq.Expressions.Expression<System.Func<T, int>!>! selector, string! fieldName) -> void
+MMCA.Common.Application.Validation.OptionalStringRules<T>
+MMCA.Common.Application.Validation.OptionalStringRules<T>.OptionalStringRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector, string! fieldName, int maxLength) -> void
+MMCA.Common.Application.Validation.PasswordRules<T>
+MMCA.Common.Application.Validation.PasswordRules<T>.PasswordRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector) -> void
+MMCA.Common.Application.Validation.PositiveDecimalRules<T>
+MMCA.Common.Application.Validation.PositiveDecimalRules<T>.PositiveDecimalRules(System.Linq.Expressions.Expression<System.Func<T, decimal>!>! selector, string! fieldName) -> void
+MMCA.Common.Application.Validation.PositiveIntRules<T>
+MMCA.Common.Application.Validation.PositiveIntRules<T>.PositiveIntRules(System.Linq.Expressions.Expression<System.Func<T, int>!>! selector, string! fieldName) -> void
+MMCA.Common.Application.Validation.RequiredStringRules<T>
+MMCA.Common.Application.Validation.RequiredStringRules<T>.RequiredStringRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string! fieldName, int maxLength) -> void
+MMCA.Common.Application.Validation.StateRules<T>
+MMCA.Common.Application.Validation.StateRules<T>.StateRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+MMCA.Common.Application.Validation.StrongPasswordRules<T>
+MMCA.Common.Application.Validation.StrongPasswordRules<T>.StrongPasswordRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector) -> void
+MMCA.Common.Application.Validation.ZipCodeRules<T>
+MMCA.Common.Application.Validation.ZipCodeRules<T>.ZipCodeRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector) -> void
+abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateAccessToken(TUser! user) -> string!
+abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateUser(MMCA.Common.Shared.Auth.RegisterRequest request, byte[]! passwordHash, byte[]! passwordSalt) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
+abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.EmailExistsAsync(MMCA.Common.Shared.ValueObjects.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+abstract MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
+abstract MMCA.Common.Application.DomainEvents.SafeDomainEventHandler<TDomainEvent>.HandleSafelyAsync(TDomainEvent! domainEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+abstract MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.HasDeletePrivilege(string? currentUserRole) -> bool
+abstract MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.BuildSubjectSnapshotAsync(TUser! user, TQuery query, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<object?>!
+abstract MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.HasExportPrivilege(string? currentUserRole) -> bool
+const MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.DefaultName = "Default" -> string!
+const MMCA.Common.Application.Services.Query.EntityQueryPipeline.MaxUnboundedResultLimit = 1000 -> int
+const MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.CurrentFormatVersion = "1.0" -> string!
+const MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionDefaults.UnavailableReason = "This section could not be retrieved. The data is unchanged; the export can be requested again later." -> string!
+override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.Equals(object? obj) -> bool
+override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.GetHashCode() -> int
+override MMCA.Common.Application.Auditing.AuditTrailEntryDTO.ToString() -> string!
+override MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.GetHashCode() -> int
+override MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.ToString() -> string!
+override MMCA.Common.Application.Interfaces.NavigationPropertyInfo.Equals(object? obj) -> bool
+override MMCA.Common.Application.Interfaces.NavigationPropertyInfo.GetHashCode() -> int
+override MMCA.Common.Application.Interfaces.NavigationPropertyInfo.ToString() -> string!
+override MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.Equals(object? obj) -> bool
+override MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.GetHashCode() -> int
+override MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.ToString() -> string!
+override MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.Equals(object? obj) -> bool
+override MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.GetHashCode() -> int
+override MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.ToString() -> string!
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.Equals(object? obj) -> bool
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.GetHashCode() -> int
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.ToString() -> string!
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.Equals(object? obj) -> bool
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.GetHashCode() -> int
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.ToString() -> string!
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.Equals(object? obj) -> bool
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.GetHashCode() -> int
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.ToString() -> string!
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.Equals(object? obj) -> bool
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.GetHashCode() -> int
+override MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.ToString() -> string!
+override MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.Equals(object? obj) -> bool
+override MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.GetHashCode() -> int
+override MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.ToString() -> string!
+override MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.Equals(object? obj) -> bool
+override MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.GetHashCode() -> int
+override MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.ToString() -> string!
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Equals(object? obj) -> bool
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.GetHashCode() -> int
+override MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.ToString() -> string!
+override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.Equals(object? obj) -> bool
+override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.GetHashCode() -> int
+override MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.ToString() -> string!
+static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator !=(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
+static MMCA.Common.Application.Auditing.AuditTrailEntryDTO.operator ==(MMCA.Common.Application.Auditing.AuditTrailEntryDTO? left, MMCA.Common.Application.Auditing.AuditTrailEntryDTO? right) -> bool
+static MMCA.Common.Application.Auth.SoftDeletedUserCache.KeyFor(int userId) -> string!
+static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkDeletedAsync(MMCA.Common.Application.Interfaces.ICacheService! cache, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static MMCA.Common.Application.Auth.SoftDeletedUserCache.MarkerDuration.get -> System.TimeSpan
+static MMCA.Common.Application.DependencyInjection.AddApplication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.AddApplicationDecorators(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.AddApplicationProfiling(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.AddUserDataExportSection<TSection>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.ScanModuleApplicationServices<TAssemblyMarker>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.Extensions.ReadRepositoryExtensions.GetByIdOrFailAsync<TEntity, TIdentifierType>(this MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>! repository, TIdentifierType id, string! source, System.Collections.Generic.IEnumerable<string!>? includes = null, bool asTracking = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+static MMCA.Common.Application.Extensions.ValidationFailureExtensions.ToErrors(this FluentValidation.Results.ValidationResult! result, string! source) -> System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!
+static MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Default(MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+static MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.operator !=(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey left, MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.operator ==(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey left, MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.ImageContentSniffer.IsAllowedImage(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.ImageContentSniffer.IsJpeg(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.ImageContentSniffer.IsPng(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.ImageContentSniffer.IsWebP(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.NavigationPropertyInfo.operator !=(MMCA.Common.Application.Interfaces.NavigationPropertyInfo? left, MMCA.Common.Application.Interfaces.NavigationPropertyInfo? right) -> bool
+static MMCA.Common.Application.Interfaces.NavigationPropertyInfo.operator ==(MMCA.Common.Application.Interfaces.NavigationPropertyInfo? left, MMCA.Common.Application.Interfaces.NavigationPropertyInfo? right) -> bool
+static MMCA.Common.Application.Notifications.DependencyInjection.AddNotificationApplicationServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.operator !=(MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? left, MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? right) -> bool
+static MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery.operator ==(MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? left, MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory.GetNotificationHistoryQuery? right) -> bool
+static MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.operator !=(MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand? left, MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand? right) -> bool
+static MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand.operator ==(MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand? left, MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send.SendPushNotificationCommand? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.operator !=(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery.operator ==(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox.GetMyNotificationsQuery? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.operator !=(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery.operator ==(MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount.GetUnreadNotificationCountQuery? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.operator !=(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand.operator ==(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead.MarkAllNotificationsReadCommand? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.operator !=(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? right) -> bool
+static MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand.operator ==(MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? left, MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead.MarkNotificationReadCommand? right) -> bool
+static MMCA.Common.Application.Services.Filtering.QueryFilterService.ApplyFilters<TEntity>(System.Linq.IQueryable<TEntity>! query, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! dtoToEntityPropertyMap) -> System.Linq.IQueryable<TEntity>!
+static MMCA.Common.Application.Services.Filtering.QueryFilterService.RegisterStrategy(System.Type! propertyType, MMCA.Common.Application.Services.Filtering.IFilterStrategy! strategy) -> void
+static MMCA.Common.Application.Services.Filtering.QueryFilterService.ValidateFilters<TEntity>(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>? filters, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! dtoToEntityPropertyMap) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Application.Services.NavigationLoader.LoadChildrenPropertyAsync<TEntity, TParentIdentifierType, TChildEntity, TChildIdentifierType>(System.Collections.Generic.IReadOnlyCollection<TEntity>! parents, System.Func<TEntity, TParentIdentifierType>! parentKeySelector, System.Linq.Expressions.Expression<System.Func<TChildEntity!, TParentIdentifierType>!>! childForeignKeySelector, MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TChildEntity!, TChildIdentifierType>! childRepository, System.Action<TEntity, System.Collections.Generic.List<TChildEntity!>!>! assignAction, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static MMCA.Common.Application.Services.NavigationLoader.LoadFKPropertyAsync<TEntity, TChildEntity, TChildIdentifierType>(System.Collections.Generic.IReadOnlyCollection<TEntity>! parents, System.Func<TEntity, TChildIdentifierType?>! parentKeySelector, System.Linq.Expressions.Expression<System.Func<TChildEntity!, TChildIdentifierType>!>! childForeignKeySelector, MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TChildEntity!, TChildIdentifierType>! childRepository, System.Action<TEntity, System.Collections.Generic.List<TChildEntity!>!>! assignAction, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+static MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.operator !=(MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>? left, MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>? right) -> bool
+static MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>.operator ==(MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>? left, MMCA.Common.Application.Services.Query.EntityQueryParameters<TEntity>? right) -> bool
+static MMCA.Common.Application.Services.Query.PagingMath.Clamp(int pageNumber, int pageSize, int maxPageSize) -> (int Skip, int Take)
+static MMCA.Common.Application.Services.QueryFieldService.ApplyFieldSelection<TEntity>(System.Linq.IQueryable<TEntity>! query, string? fields) -> System.Linq.IQueryable<TEntity>!
+static MMCA.Common.Application.Services.QueryFieldService.ApplySorting<TEntity>(System.Linq.IQueryable<TEntity>! query, string? sortColumn, string? sortDirection, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! dtoToEntityPropertyMap, System.Linq.Expressions.Expression<System.Func<TEntity, object!>!>? defaultSort = null, string? tieBreakProperty = null) -> System.Linq.IQueryable<TEntity>!
+static MMCA.Common.Application.Services.QueryFieldService.ShapeCollectionData<TEntity>(System.Collections.Generic.IEnumerable<TEntity>! entities, string? fields) -> System.Collections.Generic.List<System.Dynamic.ExpandoObject!>!
+static MMCA.Common.Application.Services.QueryFieldService.ShapeData<TEntity>(TEntity entity, string? fields) -> System.Dynamic.ExpandoObject!
+static MMCA.Common.Application.Services.QueryFieldService.Validate<TEntity>(string? fields, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! dtoToEntityPropertyMap, bool allowWriteableFields = false) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Application.Services.QueryFieldService.Validate<TEntity>(string? fields, bool allowWriteableFields = false) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Application.Services.QueryFieldService.ValidateSortDirection(string? sortDirection) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Application.Specifications.CrossSourceSpecification.BuildAsync<TDependent, TDependentId, TPrincipal, TPrincipalId>(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, System.Linq.Expressions.Expression<System.Func<TPrincipal!, bool>!>! principalPredicate, System.Linq.Expressions.Expression<System.Func<TDependent, TPrincipalId>!>! dependentForeignKey, System.Linq.Expressions.Expression<System.Func<TDependent, bool>!>? localPredicate = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Specifications.Specification<TDependent, TDependentId>!>!
+static MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.operator !=(MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>? left, MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>? right) -> bool
+static MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>.operator ==(MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>? left, MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity, TIdentifierType>? right) -> bool
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Complete(string! sectionName, object? data) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.Unavailable(string! sectionName, string? reason = null) -> MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult!
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.operator !=(MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? right) -> bool
+static MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult.operator ==(MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? left, MMCA.Common.Application.Users.UseCases.ExportUserData.UserDataExportSectionResult? right) -> bool
+static MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.operator !=(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? left, MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? right) -> bool
+static MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery.operator ==(MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? left, MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesQuery? right) -> bool
+static MMCA.Common.Application.Users.UserOwnershipRule.CheckOwnership(MMCA.Common.Application.Users.IUserOwnedRequest! request, bool callerHasPrivilegedRole, string! code, string! message, string! source) -> MMCA.Common.Shared.Abstractions.Error?
+static readonly MMCA.Common.Application.AssemblyReference.Assembly -> System.Reflection.Assembly!
+static readonly MMCA.Common.Application.AssemblyReference.AssemblyName -> string!
+static readonly MMCA.Common.Application.Settings.ApplicationSettings.SectionName -> string!
+static readonly MMCA.Common.Application.Settings.ModulesSettings.SectionName -> string!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AccessTokenLifetime.get -> System.TimeSpan
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CreateRefreshUserMissingError() -> MMCA.Common.Shared.Abstractions.Error!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.OnUserRegisteredAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser!>!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RefreshTokenLifetime.get -> System.TimeSpan
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ValidateLoginCandidateAsync(TUser! untrackedUser, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ValidateRefreshCandidateAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.DTOToEntityPropertyMap.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>? filters = null, string? sortColumn = null, string? sortDirection = null, string? fields = null, int? pageNumber = null, int? pageSize = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<object!>!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>? where = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<object!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.GetEntityByIdAsync(string! idValue, string? idField = null, bool includeFKs = false, bool includeChildren = false, MMCA.Common.Domain.Interfaces.ISpecification<TEntity!, TIdentifierType>? specification = null, string? fields = null, bool asTracking = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntity!>!>!
+virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO, TIdentifierType>.Repository.get -> MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!
+virtual MMCA.Common.Application.Users.UseCases.ChangePassword.ChangePasswordHandlerBase<TUser, TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.ChangePreferences.ChangePreferencesHandlerBase<TUser, TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.DeleteUser.DeleteUserHandlerBase<TUser, TCommand>.OnAfterSoftDeleteAsync(TUser! user, TCommand command, System.Collections.Generic.ICollection<System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>!>! afterCommit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+virtual MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.ExportUserData.ExportUserDataHandlerBase<TUser, TQuery>.OnExportCompletedAsync(TUser! user, TQuery query, MMCA.Common.Shared.Privacy.UserDataExportDTO! export, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Application.Users.UseCases.GetPreferences.GetUserPreferencesHandlerBase<TUser>.HandlerName.get -> string!
+~override MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey.Equals(object obj) -> bool

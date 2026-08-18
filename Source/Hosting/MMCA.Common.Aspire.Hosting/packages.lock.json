@@ -181,6 +181,12 @@
         "resolved": "3.0.163",
         "contentHash": "l9iZ+OXBGlAFEKH1y4BSKPXHcmpJmikysSm0brjTau8fR7Qm7IVGLVig+dh0RH9mq4s3neZayuPQrHRweOpxxw=="
       },
+      "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
+        "type": "Direct",
+        "requested": "[5.6.0, )",
+        "resolved": "5.6.0",
+        "contentHash": "W4kJGezNIKLzo0Ak5FAQDFvkMf2U7DtGL4THmHyRSApfKsKt5V+eX/bU0ZLKAt/uf9Bb2o1bi0YDKj/GRB/vYQ=="
+      },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
         "requested": "[18.7.23, )",
@@ -972,11 +978,6 @@
           "OpenTelemetry.Api": "1.15.3"
         }
       },
-      "Polly.Core": {
-        "type": "Transitive",
-        "resolved": "8.6.6",
-        "contentHash": "lCBL9mmhF9TZxHG3beVRkyjlLohkIC464xIAq7J7Y59C+z42hmsdUaeCKl2SIAYertOUU5TeBXyQDLDQGIKePQ=="
-      },
       "PolyType": {
         "type": "Transitive",
         "resolved": "1.3.1",
@@ -1210,6 +1211,12 @@
           "Microsoft.Extensions.Hosting.Abstractions": "10.0.0",
           "OpenTelemetry": "1.15.3"
         }
+      },
+      "Polly.Core": {
+        "type": "CentralTransitive",
+        "requested": "[8.7.0, )",
+        "resolved": "8.6.6",
+        "contentHash": "lCBL9mmhF9TZxHG3beVRkyjlLohkIC464xIAq7J7Y59C+z42hmsdUaeCKl2SIAYertOUU5TeBXyQDLDQGIKePQ=="
       },
       "System.IdentityModel.Tokens.Jwt": {
         "type": "CentralTransitive",

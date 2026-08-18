@@ -8,9 +8,13 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Shared.Resilience;
+using Polly;
+using Polly.CircuitBreaker;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 
@@ -79,6 +83,20 @@ public sealed partial class OutboxProcessor(
     private static readonly TimeSpan ShutdownSaveTimeout = TimeSpan.FromSeconds(5);
 
     private static readonly ActivitySource OutboxActivitySource = new("MMCA.Common.Outbox");
+
+    /// <summary>
+    /// Circuit breaker guarding the broker-publish call only (never the database calls: a breaker
+    /// on those would open exactly when the processor most needs to persist retry state). Tuned by
+    /// <see cref="BrokerResilienceDefaults"/> and carrying NO retry strategy, because the outbox
+    /// already owns retry via <c>RetryCount</c> and <see cref="ComputeRetryBackoffSeconds"/>.
+    /// <para>
+    /// Per instance rather than per process. A host runs one processor, so the practical scope is
+    /// the same, while an instance field keeps the breaker state from leaking across the many
+    /// processors a test assembly constructs in parallel: one test deliberately failing publishes
+    /// would otherwise open a shared circuit under another test's feet.
+    /// </para>
+    /// </summary>
+    private readonly ResiliencePipeline _brokerPublishPipeline = BuildBrokerPublishPipeline();
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -461,6 +479,12 @@ public sealed partial class OutboxProcessor(
         CancellationToken cancellationToken)
     {
         var processedAny = false;
+
+        // Log-once latch for this batch: an open circuit rejects every remaining row in the same
+        // instant, and 50 identical Warning lines per cycle is noise an operator learns to filter.
+        // The per-row signal stays on the metric (BrokerMetrics.CircuitOpenCounter).
+        var circuitOpenLogged = false;
+
         foreach (var message in messages)
         {
             using var activity = StartOutboxActivity(message, source);
@@ -485,7 +509,15 @@ public sealed partial class OutboxProcessor(
                 // determines delivery. Pure domain events keep the legacy in-process dispatch.
                 if (domainEvent is IIntegrationEvent integrationEvent)
                 {
-                    await messageBus.PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
+                    // Only the broker hop is wrapped. The in-process dispatcher branch below is a
+                    // direct method call into this same process: it has no transport to be dead,
+                    // so a breaker there would only add a way to reject work that would have
+                    // succeeded.
+                    await _brokerPublishPipeline.ExecuteAsync(
+                        static async (state, ct) =>
+                            await state.Bus.PublishAsync(state.Event, ct).ConfigureAwait(false),
+                        (Bus: messageBus, Event: integrationEvent),
+                        cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
@@ -532,6 +564,26 @@ public sealed partial class OutboxProcessor(
 
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 
+                // An open circuit is a rejection, not a delivery attempt: the publish never left
+                // the process. It still follows the normal failure path above (retry increment and
+                // re-lease) so the row is retried on a later cycle exactly like any other failure,
+                // but it gets its own counter and its own log line, because "the broker refused
+                // 50 messages" and "we did not try, the broker is known-dead" are different
+                // operational facts.
+                var circuitOpen = ex is BrokenCircuitException;
+                if (circuitOpen)
+                {
+                    BrokerMetrics.CircuitOpenCounter.Add(
+                        1,
+                        new KeyValuePair<string, object?>("event_type", message.EventType));
+                }
+
+                if (circuitOpen && !circuitOpenLogged)
+                {
+                    circuitOpenLogged = true;
+                    LogBrokerCircuitOpen(logger, source.ToString());
+                }
+
                 if (message.RetryCount >= _settings.MaxRetries)
                 {
                     // The moment of exhaustion is the operator's last loud signal: from here the
@@ -543,8 +595,9 @@ public sealed partial class OutboxProcessor(
                         new KeyValuePair<string, object?>("reason", "retries_exhausted"));
                     LogRetriesExhausted(logger, message.Id, message.EventType, message.RetryCount, ex);
                 }
-                else
+                else if (!circuitOpen)
                 {
+                    // Circuit-open rejections already reported themselves above, once per batch.
                     LogMessageRetry(logger, message.Id, message.RetryCount, ex);
                 }
             }
@@ -575,6 +628,26 @@ public sealed partial class OutboxProcessor(
 
         return Math.Min(backoff * jitter, _settings.LeaseSeconds);
     }
+
+    /// <summary>
+    /// Builds the broker-publish circuit breaker from <see cref="BrokerResilienceDefaults"/>.
+    /// <see cref="OperationCanceledException"/> is excluded from the handled set: a host shutdown
+    /// cancelling a batch mid-flight is not evidence that the broker is unhealthy, and letting it
+    /// count toward the failure ratio would leave the circuit open against a perfectly good broker
+    /// on the next start.
+    /// </summary>
+    private static ResiliencePipeline BuildBrokerPublishPipeline() =>
+        new ResiliencePipelineBuilder()
+            .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+            {
+                FailureRatio = BrokerResilienceDefaults.FailureRatio,
+                MinimumThroughput = BrokerResilienceDefaults.MinimumThroughput,
+                SamplingDuration = BrokerResilienceDefaults.SamplingDuration,
+                BreakDuration = BrokerResilienceDefaults.BreakDuration,
+                ShouldHandle = new PredicateBuilder()
+                    .Handle<Exception>(ex => ex is not OperationCanceledException),
+            })
+            .Build();
 
     /// <summary>
     /// Starts a new <see cref="Activity"/> linked to the original request's trace context
@@ -634,4 +707,9 @@ public sealed partial class OutboxProcessor(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} ({EventType}) dead-lettered: retries exhausted after {RetryCount} attempts — the event was never delivered")]
     private static partial void LogRetriesExhausted(ILogger logger, Guid messageId, string eventType, int retryCount, Exception exception);
+
+    // Logged once per batch, not once per message: an open circuit rejects every remaining row in
+    // the same instant. Warning rather than Error because nothing is lost, only deferred.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Broker circuit is open for data source {DataSourceName}: skipping outbox publishes this cycle and retrying the affected messages on a later one")]
+    private static partial void LogBrokerCircuitOpen(ILogger logger, string dataSourceName);
 }

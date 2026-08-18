@@ -1,0 +1,102 @@
+#nullable enable
+MMCA.Common.Aspire.DataProtectionExtensions
+MMCA.Common.Aspire.DataProtectionExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aspire.DataProtectionExtensions.extension<TBuilder>(TBuilder).AddCommonDataProtection() -> TBuilder
+MMCA.Common.Aspire.Extensions
+MMCA.Common.Aspire.Extensions.extension(Microsoft.AspNetCore.Builder.WebApplication!)
+MMCA.Common.Aspire.Extensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapDefaultEndpoints() -> Microsoft.AspNetCore.Builder.WebApplication!
+MMCA.Common.Aspire.Extensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aspire.Extensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddWarmupTask<TTask>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddDefaultHealthChecks() -> TBuilder
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireSqlServer = false) -> TBuilder
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddServiceDefaults() -> TBuilder
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddWarmupReadiness() -> TBuilder
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).ConfigureOpenTelemetry() -> TBuilder
+MMCA.Common.Aspire.GatewayCorsExtensions
+MMCA.Common.Aspire.GatewayCorsExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aspire.GatewayCorsExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonGatewayCors(Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.HealthCheckTags
+MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions
+MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
+MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).ConfigureEndpointsWithHealthProbe(Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols defaultProtocols, bool redeclareCleartextEndpoint = true, int cleartextPort = 8080) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
+MMCA.Common.Aspire.KeyVaultConfigurationExtensions
+MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aspire.KeyVaultConfigurationExtensions.extension<TBuilder>(TBuilder).AddCommonKeyVaultConfiguration() -> TBuilder
+MMCA.Common.Aspire.Security.CspPolicy
+MMCA.Common.Aspire.Security.CspPolicy.<Clone>$() -> MMCA.Common.Aspire.Security.CspPolicy!
+MMCA.Common.Aspire.Security.CspPolicy.CspPolicy(string! Value, bool Enforce) -> void
+MMCA.Common.Aspire.Security.CspPolicy.Deconstruct(out string! Value, out bool Enforce) -> void
+MMCA.Common.Aspire.Security.CspPolicy.Enforce.get -> bool
+MMCA.Common.Aspire.Security.CspPolicy.Enforce.init -> void
+MMCA.Common.Aspire.Security.CspPolicy.Equals(MMCA.Common.Aspire.Security.CspPolicy? other) -> bool
+MMCA.Common.Aspire.Security.CspPolicy.Value.get -> string!
+MMCA.Common.Aspire.Security.CspPolicy.Value.init -> void
+MMCA.Common.Aspire.Security.ICspPolicyProvider
+MMCA.Common.Aspire.Security.ICspPolicyProvider.GetPolicy(Microsoft.AspNetCore.Http.HttpContext! context) -> MMCA.Common.Aspire.Security.CspPolicy?
+MMCA.Common.Aspire.Security.SecurityHeadersExtensions
+MMCA.Common.Aspire.Security.SecurityHeadersExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+MMCA.Common.Aspire.Security.SecurityHeadersExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseCommonSecurityHeaders() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+MMCA.Common.Aspire.Security.SecurityHeadersExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aspire.Security.SecurityHeadersExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonSecurityHeaders(Microsoft.Extensions.Configuration.IConfiguration? configuration = null, System.Action<MMCA.Common.Aspire.Security.SecurityHeadersSettings!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.Security.SecurityHeadersMiddleware
+MMCA.Common.Aspire.Security.SecurityHeadersMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext! context) -> System.Threading.Tasks.Task!
+MMCA.Common.Aspire.Security.SecurityHeadersMiddleware.SecurityHeadersMiddleware(Microsoft.AspNetCore.Http.RequestDelegate! next, Microsoft.Extensions.Options.IOptions<MMCA.Common.Aspire.Security.SecurityHeadersSettings!>! options, MMCA.Common.Aspire.Security.ICspPolicyProvider! cspPolicyProvider, Microsoft.AspNetCore.Hosting.IWebHostEnvironment! environment) -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.ContentSecurityPolicy.get -> string?
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.ContentSecurityPolicy.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.EnableHsts.get -> bool
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.EnableHsts.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.EnforceContentSecurityPolicy.get -> bool
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.EnforceContentSecurityPolicy.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.FrameOptions.get -> string!
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.FrameOptions.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.HstsValue.get -> string!
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.HstsValue.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.PermissionsPolicy.get -> string!
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.PermissionsPolicy.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.ReferrerPolicy.get -> string!
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.ReferrerPolicy.set -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.SecurityHeadersSettings() -> void
+MMCA.Common.Aspire.Telemetry.OutboxPollFilterProcessor
+MMCA.Common.Aspire.Telemetry.OutboxPollFilterProcessor.OutboxPollFilterProcessor() -> void
+MMCA.Common.Aspire.Warmup.IWarmupTask
+MMCA.Common.Aspire.Warmup.IWarmupTask.ExecuteAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Aspire.Warmup.IWarmupTask.Name.get -> string!
+MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase
+MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.ExecuteAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.SelfHttpWarmupTaskBase(Microsoft.AspNetCore.Hosting.Server.IServer! server, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, Microsoft.Extensions.Hosting.IHostApplicationLifetime! lifetime, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Aspire.Warmup.WarmupReadinessGate
+MMCA.Common.Aspire.Warmup.WarmupReadinessGate.IsReady.get -> bool
+MMCA.Common.Aspire.Warmup.WarmupReadinessGate.WarmupReadinessGate() -> void
+abstract MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.Name.get -> string!
+abstract MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.WarmupPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+const MMCA.Common.Aspire.HealthCheckTags.Live = "live" -> string!
+const MMCA.Common.Aspire.HealthCheckTags.Optional = "optional" -> string!
+const MMCA.Common.Aspire.HealthCheckTags.Ready = "ready" -> string!
+const MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.DefaultCleartextPort = 8080 -> int
+const MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.HealthProbePortConfigKey = "HealthProbe:Port" -> string!
+const MMCA.Common.Aspire.Security.SecurityHeadersSettings.SectionName = "SecurityHeaders" -> string!
+const MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.DefaultPort = 8080 -> int
+override MMCA.Common.Aspire.Security.CspPolicy.Equals(object? obj) -> bool
+override MMCA.Common.Aspire.Security.CspPolicy.GetHashCode() -> int
+override MMCA.Common.Aspire.Security.CspPolicy.ToString() -> string!
+override MMCA.Common.Aspire.Telemetry.OutboxPollFilterProcessor.OnEnd(System.Diagnostics.Activity! data) -> void
+static MMCA.Common.Aspire.DataProtectionExtensions.AddCommonDataProtection<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddDefaultHealthChecks<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireSqlServer = false) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddServiceDefaults<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddWarmupReadiness<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddWarmupTask<TTask>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Extensions.ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aspire.Extensions.MapDefaultEndpoints(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
+static MMCA.Common.Aspire.GatewayCorsExtensions.AddCommonGatewayCors(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.ConfigureEndpointsWithHealthProbe(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols defaultProtocols, bool redeclareCleartextEndpoint = true, int cleartextPort = 8080) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
+static MMCA.Common.Aspire.KeyVaultConfigurationExtensions.AddCommonKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
+static MMCA.Common.Aspire.Security.CspPolicy.operator !=(MMCA.Common.Aspire.Security.CspPolicy? left, MMCA.Common.Aspire.Security.CspPolicy? right) -> bool
+static MMCA.Common.Aspire.Security.CspPolicy.operator ==(MMCA.Common.Aspire.Security.CspPolicy? left, MMCA.Common.Aspire.Security.CspPolicy? right) -> bool
+static MMCA.Common.Aspire.Security.SecurityHeadersExtensions.AddCommonSecurityHeaders(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration = null, System.Action<MMCA.Common.Aspire.Security.SecurityHeadersSettings!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Security.SecurityHeadersExtensions.UseCommonSecurityHeaders(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+virtual MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.RequestVersion.get -> System.Version!
+virtual MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.RequestVersionPolicy.get -> System.Net.Http.HttpVersionPolicy
+virtual MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.RequireSuccessStatusCode.get -> bool

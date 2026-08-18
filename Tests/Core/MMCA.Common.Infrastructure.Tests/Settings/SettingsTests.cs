@@ -223,6 +223,48 @@ public class OutboxSettingsTests
     }
 }
 
+// ── MessageBusSettings ──
+public class MessageBusSettingsTests
+{
+    [Fact]
+    public void SectionName_IsMessageBus() =>
+        MessageBusSettings.SectionName.Should().Be("MessageBus");
+
+    [Fact]
+    public void Default_Provider_IsInProcess() =>
+        new MessageBusSettings().Provider.Should().Be(MessageBusProvider.InProcess);
+
+    [Fact]
+    public void Default_EnableInbox_IsFalse() =>
+        new MessageBusSettings().EnableInbox.Should().BeFalse();
+
+    // Default-off is load-bearing, not incidental: RabbitMQ needs the delayed-message-exchange
+    // plugin, which the Aspire development container does not ship, so a default-on flag would
+    // fail bus start on every local run.
+    [Fact]
+    public void Default_EnableDelayedRedelivery_IsFalse() =>
+        new MessageBusSettings().EnableDelayedRedelivery.Should().BeFalse();
+
+    [Fact]
+    public void Default_RedeliveryIntervalsSeconds_IsOneMinuteTenMinutesOneHour() =>
+        new MessageBusSettings().RedeliveryIntervalsSeconds.Should().Equal(60, 600, 3600);
+
+    [Fact]
+    public void ResilienceProperties_RoundTrip()
+    {
+        var sut = new MessageBusSettings
+        {
+            EnableInbox = true,
+            EnableDelayedRedelivery = true,
+            RedeliveryIntervalsSeconds = [5, 15],
+        };
+
+        sut.EnableInbox.Should().BeTrue();
+        sut.EnableDelayedRedelivery.Should().BeTrue();
+        sut.RedeliveryIntervalsSeconds.Should().Equal(5, 15);
+    }
+}
+
 // ── PushNotificationSettings ──
 public class PushNotificationSettingsTests
 {

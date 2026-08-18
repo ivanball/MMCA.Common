@@ -58,10 +58,58 @@ public sealed class MessageBusSettings
     /// <summary>
     /// Gets a value indicating whether the consumer-side idempotency inbox is enabled. When
     /// <see langword="true"/>, <c>IntegrationEventConsumer</c> dedups already-processed messages via
-    /// an <c>InboxMessages</c> table in the consumer's database — which requires that table to exist
-    /// (apply the <c>AddInboxMessages</c> migration). Defaults to <see langword="false"/>.
+    /// the <c>InboxMessages</c> table in the consumer's database. The table is part of the shared
+    /// relational model (created by the standard migrations; Cosmos hosts skip it), so enabling
+    /// this on a migrated relational host needs no schema work. Defaults to <see langword="false"/>.
+    /// <para>
+    /// RECOMMENDED <see langword="true"/> for any broker-connected host. Broker delivery is
+    /// at-least-once by contract: a consumer that acks after a network blip, a redelivered message
+    /// after a lease expiry, or an outbox row republished after a crash all hand the same event to
+    /// the same handlers twice. With the inbox off, every one of those becomes a duplicate side
+    /// effect (a second email, a second charge attempt, a double decrement) unless every handler
+    /// happens to be idempotent on its own. The default stays <see langword="false"/> only so an
+    /// existing host does not start querying a table it has not migrated yet; a host that enables
+    /// broker messaging and leaves this off gets a startup warning
+    /// (<c>InboxDisabledWarningService</c>) rather than silence.
+    /// </para>
     /// </summary>
     public bool EnableInbox { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether second-level (broker-scheduled) redelivery is applied on
+    /// top of the in-process <c>UseMessageRetry</c> policy. When <see langword="true"/>, a message
+    /// that exhausts its immediate retries is scheduled back onto the queue after each interval in
+    /// <see cref="RedeliveryIntervalsSeconds"/> instead of dead-lettering right away, which is what
+    /// carries a consumer through an outage measured in minutes or hours rather than seconds.
+    /// <para>
+    /// Defaults to <see langword="false"/> because on RabbitMQ this requires the
+    /// <c>rabbitmq_delayed_message_exchange</c> plugin, and the Aspire development RabbitMQ
+    /// container does not ship it: enabling it against a plugin-less broker fails at bus start.
+    /// Set it to <see langword="true"/> only on a broker where the plugin is installed.
+    /// </para>
+    /// <para>
+    /// This flag is IGNORED by <see cref="MessageBusProvider.AzureServiceBus"/>, which supports
+    /// scheduled redelivery natively and therefore always applies
+    /// <see cref="RedeliveryIntervalsSeconds"/>.
+    /// </para>
+    /// </summary>
+    public bool EnableDelayedRedelivery { get; init; }
+
+    /// <summary>
+    /// Gets the second-level redelivery intervals, in seconds. Each entry is one scheduled
+    /// redelivery attempt after the in-process retry policy is exhausted; the message
+    /// dead-letters only after the last interval also fails. Defaults to
+    /// <c>[60, 600, 3600]</c> (one minute, ten minutes, one hour), a spread wide enough to ride
+    /// out a dependency restart, a failover and a short incident without an operator replaying
+    /// the error queue by hand.
+    /// <para>
+    /// Applied unconditionally on <see cref="MessageBusProvider.AzureServiceBus"/> (native
+    /// scheduled delivery) and only when <see cref="EnableDelayedRedelivery"/> is
+    /// <see langword="true"/> on <see cref="MessageBusProvider.RabbitMq"/> (needs the
+    /// delayed-message-exchange plugin).
+    /// </para>
+    /// </summary>
+    public IReadOnlyList<int> RedeliveryIntervalsSeconds { get; init; } = [60, 600, 3600];
 }
 
 /// <summary>Available message bus transports.</summary>

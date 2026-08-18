@@ -182,7 +182,7 @@
       },
       "xunit.v3.extensibility.core": {
         "type": "CentralTransitive",
-        "requested": "[3.2.2, )",
+        "requested": "[4.0.0, )",
         "resolved": "4.0.0",
         "contentHash": "+tTe9VX2vwrUHGI48FE4ly956Ry084wPH4I/7g5D36AkAMGjQRZZDVz8eH2GwX/CLS9PDQRSca534WyrAYsyzw==",
         "dependencies": {

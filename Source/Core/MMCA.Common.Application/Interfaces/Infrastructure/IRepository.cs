@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.Application.Interfaces.Infrastructure;
@@ -120,6 +122,91 @@ public interface IEntityQuerier<TEntity, TIdentifierType>
     /// <summary>Returns the count of entities matching the predicate.</summary>
     Task<int> CountAsync(
         Expression<Func<TEntity, bool>> where,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the rows a specification matches. Ordering and paging on the specification are ignored
+    /// deliberately: a count of "page 3 of the matches" is never what a caller means.
+    /// </summary>
+    /// <param name="specification">The specification describing the read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of matching rows.</returns>
+    Task<int> CountAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a specification and returns the matching entities.
+    /// </summary>
+    /// <remarks>
+    /// A plain <see cref="ISpecification{TEntity, TIdentifierType}"/> contributes its
+    /// <c>Criteria</c> only. A
+    /// <see cref="Domain.Specifications.QuerySpecification{TEntity, TIdentifierType}"/> also
+    /// contributes its includes, ordering, paging, tracking, and soft-delete scope, so the whole
+    /// read is described by one object instead of five loose arguments.
+    /// </remarks>
+    /// <param name="specification">The specification describing the read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The matching entities.</returns>
+    Task<IReadOnlyCollection<TEntity>> ListAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a specification and projects the matching entities server-side, so only the selected
+    /// columns leave the database (projection pushdown).
+    /// </summary>
+    /// <remarks>
+    /// The projection is applied AFTER the specification's ordering and paging, so a paged
+    /// specification still pages over entity rows and projects only that page. Includes on the
+    /// specification are redundant on this overload (the projection decides what is loaded) but not
+    /// harmful.
+    /// </remarks>
+    /// <typeparam name="TResult">The projected result type.</typeparam>
+    /// <param name="specification">The specification describing the read.</param>
+    /// <param name="select">The projection expression (must be translatable by the provider).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The projected results.</returns>
+    Task<IReadOnlyCollection<TResult>> ListAsync<TResult>(
+        ISpecification<TEntity, TIdentifierType> specification,
+        Expression<Func<TEntity, TResult>> select,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks whether a specification matches any row. Ordering and paging are ignored, as for
+    /// <see cref="CountAsync(ISpecification{TEntity, TIdentifierType}, CancellationToken)"/>.
+    /// </summary>
+    /// <param name="specification">The specification describing the read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when at least one row matches.</returns>
+    Task<bool> AnyAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads one keyset ("seek") page: the rows strictly after the request's cursor, ordered by the
+    /// requested sort column with <c>Id</c> as tie-break, plus the cursor for the next page.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Unlike offset paging this costs one index seek regardless of how deep the caller has scrolled,
+    /// and it never skips or repeats a row when the underlying set changes between pages. The trade
+    /// is no random page access and no total count.
+    /// </para>
+    /// <para>
+    /// Exactly one sort key is supported. A null <see cref="KeysetPageRequest.SortColumn"/> keys the
+    /// page on <c>Id</c> alone. The sort column must name a real public property of the entity: an
+    /// unknown name and a malformed cursor both come back as a validation failure, never as a silent
+    /// first page.
+    /// </para>
+    /// </remarks>
+    /// <param name="request">The page size, sort key, direction, and cursor.</param>
+    /// <param name="specification">Optional specification whose <c>Criteria</c> scopes the page.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The page and its next cursor, or a validation failure.</returns>
+    Task<Result<KeysetCollectionResult<TEntity>>> GetPageByCursorAsync(
+        KeysetPageRequest request,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         CancellationToken cancellationToken = default);
 }
 

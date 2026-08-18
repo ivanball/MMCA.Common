@@ -4,6 +4,14 @@
     <Description>MMCA framework: DDD base entities, aggregate roots, domain events, specifications</Description>
   </PropertyGroup>
   <ItemGroup>
+    <!-- The Application layer's CrossSourceSpecification builds its criteria with the same
+         parameter-substitution visitor the Domain composers use (ParameterReplacer). Sharing the
+         internal visitor keeps one implementation instead of a private copy per layer, without
+         widening the framework's public surface. -->
+    <InternalsVisibleTo Include="MMCA.Common.Application" />
+    <InternalsVisibleTo Include="MMCA.Common.Domain.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>

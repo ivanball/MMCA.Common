@@ -44,7 +44,12 @@ public sealed class NotificationHub(IOptions<PushNotificationSettings> settings)
     public async Task JoinChannelAsync(string channelKey)
     {
         EnsureValidChannelKey(channelKey);
-        await Groups.AddToGroupAsync(Context.ConnectionId, channelKey).ConfigureAwait(false);
+
+        // The cancellation token comes from the connection rather than a method parameter: the hub
+        // method signature is the client-visible RPC contract, bound by SignalR's dispatcher, so it
+        // carries no CancellationToken argument (see CancellationTokenConventionTests' exemption).
+        await Groups.AddToGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted)
+            .ConfigureAwait(false);
     }
 
     /// <summary>Removes the calling connection from a channel (SignalR group).</summary>
@@ -55,7 +60,10 @@ public sealed class NotificationHub(IOptions<PushNotificationSettings> settings)
     public async Task LeaveChannelAsync(string channelKey)
     {
         EnsureValidChannelKey(channelKey);
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey).ConfigureAwait(false);
+
+        // Same as JoinChannelAsync: the token is the connection's, not a parameter on the RPC contract.
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted)
+            .ConfigureAwait(false);
     }
 
     private void EnsureValidChannelKey(string channelKey)

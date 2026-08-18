@@ -268,7 +268,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     [Fact]
     public async Task CountAsync_WithNullPredicate_Throws()
     {
-        var act = () => _sut.CountAsync(null!);
+        var act = () => _sut.CountAsync((System.Linq.Expressions.Expression<Func<TestEntity, bool>>)null!);
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 

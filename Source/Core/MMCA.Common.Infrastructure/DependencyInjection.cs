@@ -690,6 +690,11 @@ public static class DependencyInjection
             else
             {
                 services.TryAddSingleton<Persistence.Inbox.IInboxStore, Persistence.Inbox.NoOpInboxStore>();
+
+                // Loudly off: a disabled dedup store looks exactly like an enabled one until a
+                // duplicate side effect reaches a customer. One startup Warning makes the posture
+                // visible for the cost of a single log line.
+                services.AddHostedService<Persistence.Inbox.InboxDisabledWarningService>();
             }
 
             return services;
@@ -767,10 +772,20 @@ public static class DependencyInjection
     /// below the analyzer threshold.
     /// </summary>
     /// <remarks>
-    /// Only in-process retry (<c>UseMessageRetry</c>) is configured — not <c>UseDelayedRedelivery</c>,
-    /// which on RabbitMQ requires the delayed-message-exchange plugin that the Aspire RabbitMQ
-    /// container does not ship. A consumer that needs broker-level delayed redelivery can layer it
-    /// on per-endpoint after installing the plugin (or on Azure Service Bus, which supports it natively).
+    /// Second-level redelivery (<c>UseDelayedRedelivery</c>) sits ABOVE the in-process retry policy:
+    /// in-process retry absorbs a blip measured in seconds, delayed redelivery reschedules the
+    /// message through the broker over <see cref="MessageBusSettings.RedeliveryIntervalsSeconds"/>
+    /// (one minute, ten minutes, one hour by default) so an outage measured in minutes or hours
+    /// does not dead-letter the event. It is registered before <c>UseMessageRetry</c> so the retry
+    /// filter runs innermost: every immediate attempt is exhausted before a redelivery is scheduled.
+    /// <para>
+    /// The two transports differ in posture. Azure Service Bus schedules messages natively, so
+    /// redelivery is applied UNCONDITIONALLY there. RabbitMQ needs the
+    /// <c>rabbitmq_delayed_message_exchange</c> plugin, which the Aspire development container does
+    /// not ship, so it is gated behind <see cref="MessageBusSettings.EnableDelayedRedelivery"/>
+    /// (default <see langword="false"/>) and must only be turned on against a broker that has the
+    /// plugin installed.
+    /// </para>
     /// </remarks>
     [SuppressMessage(
         "Style",
@@ -791,6 +806,19 @@ public static class DependencyInjection
                         cfg.Host(new Uri(connectionString));
                     }
 
+                    // Opt-in: needs the rabbitmq_delayed_message_exchange plugin, which the Aspire
+                    // development container does not ship. Registered before UseMessageRetry so the
+                    // retry filter stays innermost (all immediate attempts first, then a scheduled
+                    // redelivery).
+                    if (settings.EnableDelayedRedelivery)
+                    {
+                        TimeSpan[] intervals = BuildRedeliveryIntervals(settings);
+                        if (intervals.Length > 0)
+                        {
+                            cfg.UseDelayedRedelivery(r => r.Intervals(intervals));
+                        }
+                    }
+
                     cfg.UseMessageRetry(r => r.Exponential(
                         settings.RetryLimit,
                         TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
@@ -808,6 +836,16 @@ public static class DependencyInjection
                         cfg.Host(connectionString);
                     }
 
+                    // Unconditional: Azure Service Bus schedules messages natively, so there is no
+                    // plugin to install and no configuration in which this can fail at bus start.
+                    // The EnableDelayedRedelivery flag is deliberately not consulted on this
+                    // transport, because it exists only to gate the RabbitMQ plugin requirement.
+                    TimeSpan[] intervals = BuildRedeliveryIntervals(settings);
+                    if (intervals.Length > 0)
+                    {
+                        cfg.UseDelayedRedelivery(r => r.Intervals(intervals));
+                    }
+
                     cfg.UseMessageRetry(r => r.Exponential(
                         settings.RetryLimit,
                         TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
@@ -823,4 +861,17 @@ public static class DependencyInjection
                 break;
         }
     }
+
+    /// <summary>
+    /// Maps <see cref="MessageBusSettings.RedeliveryIntervalsSeconds"/> to the
+    /// <see cref="TimeSpan"/> array MassTransit's redelivery configurator expects. Non-positive
+    /// entries are dropped: a zero or negative interval schedules an immediate redelivery, which
+    /// is what <c>UseMessageRetry</c> already does and would turn the second level into a hot loop.
+    /// Returns an empty array when nothing survives, and the caller then skips the filter entirely
+    /// rather than registering a redelivery policy with no attempts.
+    /// </summary>
+    private static TimeSpan[] BuildRedeliveryIntervals(MessageBusSettings settings) =>
+        [.. (settings.RedeliveryIntervalsSeconds ?? [])
+            .Where(seconds => seconds > 0)
+            .Select(seconds => TimeSpan.FromSeconds(seconds))];
 }

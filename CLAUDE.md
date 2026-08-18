@@ -75,14 +75,16 @@ Downstream apps register `AddApplicationDecorators()` **last**: Scrutor `TryDeco
 `ICommandHandler<TCmd, TResult>` / `IQueryHandler<TQuery, TResult>` with decorators registered in `AddApplicationDecorators()` and applied by Scrutor `TryDecorate` in reverse registration order (last registered = outermost). Execution order, outermost to innermost (ADR-014):
 
 ```
-Commands: FeatureGate -> Logging -> Caching -> Validating -> Transactional -> Handler
-Queries:  FeatureGate -> Logging -> Caching -> Handler
+Commands: FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Transactional -> Handler
+Queries:  FeatureGate -> Authorization -> Logging -> Caching -> Timeout -> Handler
 ```
 
 - **FeatureGate**: short-circuits when the command/query's feature flag is off.
+- **Authorization**: `IRequiresPermission` commands/queries are checked against `IPermissionRegistry.HasPermission(ICurrentUserService.Roles, ...)`; a denial short-circuits with a `Forbidden` error and increments `cqrs.authorization.denied.count`. Sits outside caching on purpose, so a denied query never reads or populates the cache.
 - **Logging**: full pipeline duration via `ICorrelationContext`.
 - **Caching**: `ICacheInvalidating` commands invalidate on success (outside the transaction); `IQueryCacheable` queries (with `CacheKey` + `CacheDuration`) cache results.
 - **Validating**: FluentValidation before the transaction opens; queries have no Validating or Transactional decorator.
+- **Timeout**: `IHasTimeout` commands/queries run under a linked token cancelled after their own budget; expiry returns a `Request.TimedOut` failure and increments `cqrs.timeout.count`, while caller cancellation still propagates as an exception. A budget of zero or less passes through.
 - **Transactional**: `ITransactional` commands get a DB transaction; exceptions AND business failures (`Result.Failure`) roll back (atomicity over partial persistence). In-process domain event dispatch is deferred until after a successful commit (`DbContextFactory.ExecuteInTransactionAsync` flushes it post-commit and drops it on rollback), so handlers never act on state that could still roll back; cache invalidation still runs only on success, outside the transaction.
 
 An optional `Profiling` decorator pair is registered by a separate opt-in `AddApplicationProfiling()` call and is not wired by any host today.

@@ -1,8 +1,12 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Domain.Specifications;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
@@ -207,6 +211,19 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         return await Entities.CountAsync(where, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public virtual async Task<int> CountAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+
+        return await SpecificationEvaluator
+            .Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification, applyShape: false)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Checks whether an entity with the given ID exists.
     /// </summary>
@@ -271,53 +288,175 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     public virtual IQueryable<TEntity> TableNoTrackingSplitQuery => TableNoTracking.AsSplitQuery();
 
     /// <summary>
-    /// Applies string-based eager loading includes to the query. Skips empty/whitespace entries.
-    /// Mirrors the query pipeline's heuristic: when any include targets a collection navigation,
-    /// the query opts into split-query mode so sibling collections don't multiply rows
-    /// (cartesian explosion) under EF's default single-query JOIN strategy.
+    /// Applies string-based eager loading includes to the query, including the collection-navigation
+    /// split-query auto-switch. The logic itself lives once in
+    /// <see cref="SpecificationEvaluator"/>, which the specification path uses as well, so the two
+    /// entry points can never drift apart.
     /// </summary>
+    /// <param name="query">The queryable to apply the includes to.</param>
+    /// <param name="includes">The dot-separated navigation paths.</param>
+    /// <returns>The queryable with the includes applied.</returns>
     protected static IQueryable<TEntity> ApplyIncludes(
         IQueryable<TEntity> query,
         IEnumerable<string> includes)
+        => SpecificationEvaluator.ApplyIncludes(query, includes);
+
+    // ── Specification-driven reads ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Chooses the base queryable a specification runs on: tracked or not, with or without the named
+    /// soft-delete filter dropped. Only a
+    /// <see cref="QuerySpecification{TEntity, TIdentifierType}"/> carries those choices; a plain
+    /// specification gets the untracked, filtered default.
+    /// </summary>
+    private IQueryable<TEntity> BaseQueryFor(ISpecification<TEntity, TIdentifierType> specification)
     {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(includes);
+        var querySpecification = specification as QuerySpecification<TEntity, TIdentifierType>;
 
-        var hasCollectionInclude = false;
+        var query = querySpecification?.AsTracking == true ? Table : TableNoTracking;
 
-        foreach (string include in includes.Where(i => !string.IsNullOrWhiteSpace(i)))
+        return querySpecification?.IgnoreQueryFilters == true
+            ? query.IgnoreQueryFilters(SoftDeleteFilterOnly)
+            : query;
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<IReadOnlyCollection<TEntity>> ListAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+
+        return await SpecificationEvaluator
+            .Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<IReadOnlyCollection<TResult>> ListAsync<TResult>(
+        ISpecification<TEntity, TIdentifierType> specification,
+        Expression<Func<TEntity, TResult>> select,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+        ArgumentNullException.ThrowIfNull(select);
+
+        // Select last: ordering and paging must run over entity rows, so a paged specification pages
+        // the rows it means to page and only that page is projected.
+        return await SpecificationEvaluator
+            .Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification)
+            .Select(select)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<bool> AnyAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+
+        // Criteria only, and through the same Cosmos-aware existence check the predicate overloads use.
+        return await AnyAsync(
+            BaseQueryFor(specification),
+            specification.Criteria,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<Result<KeysetCollectionResult<TEntity>>> GetPageByCursorAsync(
+        KeysetPageRequest request,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!KeysetQueryBuilder.TryResolveSortProperty<TEntity>(request.SortColumn, out var sortProperty))
         {
-            query = query.Include(include);
-            hasCollectionInclude = hasCollectionInclude || IsCollectionNavigationPath(include);
+            return Result.Failure<KeysetCollectionResult<TEntity>>(
+                Error.InvalidEntityField with
+                {
+                    Message = $"Sort column '{request.SortColumn}' does not exist on type '{typeof(TEntity).Name}'.",
+                    Source = nameof(GetPageByCursorAsync),
+                    Target = typeof(TEntity).Name,
+                });
         }
 
-        return hasCollectionInclude ? query.AsSplitQuery() : query;
+        var query = specification is null
+            ? TableNoTracking
+            : SpecificationEvaluator.Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification, applyShape: false);
+
+        if (request.Cursor is not null)
+        {
+            if (!TryBuildSeekPredicate(request, sortProperty, out var seek))
+            {
+                return Result.Failure<KeysetCollectionResult<TEntity>>(
+                    Error.Validation(
+                        "Error.InvalidCursor",
+                        "The supplied pagination cursor isn't valid.",
+                        nameof(GetPageByCursorAsync),
+                        typeof(TEntity).Name));
+            }
+
+            query = query.Where(seek);
+        }
+
+        query = KeysetQueryBuilder.ApplyOrdering<TEntity, TIdentifierType>(query, sortProperty, request.Descending);
+
+        // One extra row is the next-page probe: it is never returned, it only says whether a next
+        // page exists, which is cheaper and more honest than a COUNT over the whole set.
+        var rows = await query.Take(request.PageSize + 1).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var hasMore = rows.Count > request.PageSize;
+        if (hasMore)
+            rows.RemoveAt(rows.Count - 1);
+
+        string? nextCursor = null;
+        if (hasMore && rows.Count != 0)
+        {
+            var last = rows[^1];
+            nextCursor = KeysetCursor.Encode(
+                KeysetQueryBuilder.ToInvariantString(sortProperty?.GetValue(last)),
+                KeysetQueryBuilder.ToInvariantString(last.Id) ?? string.Empty);
+        }
+
+        return Result.Success(new KeysetCollectionResult<TEntity>(rows, nextCursor));
     }
 
     /// <summary>
-    /// Caches, per include path, whether any segment of the path is a collection navigation.
-    /// The reflection walk runs once per distinct path; dispatch afterwards is a dictionary hit.
+    /// Decodes the request's cursor and turns it into the seek predicate, or reports that the cursor
+    /// is malformed (bad encoding, wrong version, or values that do not parse as this entity's key
+    /// and sort types).
     /// </summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> CollectionIncludeCache =
-        new(StringComparer.Ordinal);
+    private static bool TryBuildSeekPredicate(
+        KeysetPageRequest request,
+        PropertyInfo? sortProperty,
+        out Expression<Func<TEntity, bool>> seek)
+    {
+        seek = null!;
 
-    private static bool IsCollectionNavigationPath(string includePath)
-        => CollectionIncludeCache.GetOrAdd(includePath, static path =>
-        {
-            var type = typeof(TEntity);
-            foreach (var segment in path.Split('.'))
-            {
-                var property = type.GetProperty(segment, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (property is null)
-                    return false; // unknown segment: leave the split decision to EF's own include validation
-
-                var propertyType = property.PropertyType;
-                if (propertyType != typeof(string) && typeof(System.Collections.IEnumerable).IsAssignableFrom(propertyType))
-                    return true;
-
-                type = propertyType;
-            }
-
+        if (!KeysetCursor.TryDecode(request.Cursor, out var sortText, out var idText))
             return false;
-        });
+
+        if (!KeysetQueryBuilder.TryFromInvariantString(typeof(TIdentifierType), idText, out var id)
+            || id is not TIdentifierType typedId)
+        {
+            return false;
+        }
+
+        object? sortValue = null;
+        if (sortProperty is not null
+            && sortText is not null
+            && !KeysetQueryBuilder.TryFromInvariantString(sortProperty.PropertyType, sortText, out sortValue))
+        {
+            return false;
+        }
+
+        seek = KeysetQueryBuilder.BuildSeekPredicate<TEntity, TIdentifierType>(
+            sortProperty, sortValue, typedId, request.Descending);
+
+        return true;
+    }
 }

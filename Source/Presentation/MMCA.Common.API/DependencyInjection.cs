@@ -80,7 +80,16 @@ public static class DependencyInjection
             // Feature Management — registers IFeatureManager, IFeatureManagerSnapshot,
             // and built-in filters (Percentage, TimeWindow, Targeting).
             // Feature flags are read from the "FeatureManagement" configuration section.
-            services.AddFeatureManagement();
+            //
+            // WithTargeting supplies the Targeting filter's audience from the current request's
+            // principal (see CurrentUserTargetingContextAccessor), which is what makes a percentage
+            // rollout sticky per user instead of random per request. The accessor is registered as
+            // a singleton by WithTargeting, so it reads IHttpContextAccessor rather than the scoped
+            // ICurrentUserService; AddHttpContextAccessor is TryAdd-based and therefore safe to
+            // call here as well as in AddServerAuthSessionCookie.
+            services.AddHttpContextAccessor();
+            services.AddFeatureManagement()
+                .WithTargeting<CurrentUserTargetingContextAccessor>();
             services.AddSingleton<IDisabledFeaturesHandler, DisabledFeatureHandler>();
 
             // Server-side error-message localization at the HTTP edge, keyed by Error.Code (ADR-027).

@@ -971,11 +971,6 @@
         "resolved": "2.2.16",
         "contentHash": "nonu9l0YrZH6krVYbskBjE7uG0VMAnvOQ9PU+RmzUsy+++vHkqzzCkHRoP877OiA3iRTxJyNDLfpcU8hrJ3/YQ=="
       },
-      "Polly.Core": {
-        "type": "Transitive",
-        "resolved": "8.7.0",
-        "contentHash": "BS2t+nsBer16PIebCEPNBK5fgMisADQyRCd7K+BgkMWpFmSaiYE+rVVNpFhGRqUkJmNSLmw0uCNzHHWfgml28Q=="
-      },
       "Polly.Extensions": {
         "type": "Transitive",
         "resolved": "8.4.2",
@@ -1171,7 +1166,7 @@
           "Microsoft.AspNetCore.OpenApi": "[10.0.11, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.6.0, )",
           "Microsoft.OpenApi": "[2.12.0, )",
-          "Scalar.AspNetCore": "[2.16.18, )"
+          "Scalar.AspNetCore": "[2.16.20, )"
         }
       },
       "mmca.common.application": {
@@ -1221,6 +1216,7 @@
           "Microsoft.Extensions.Caching.Hybrid": "[10.9.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.9.0, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
+          "Polly.Core": "[8.7.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
           "StackExchange.Redis": "[2.13.17, )"
@@ -1234,7 +1230,7 @@
         "dependencies": {
           "AwesomeAssertions": "[9.5.0, )",
           "NetArchTest.eNhancedEdition": "[1.4.5, )",
-          "xunit.v3.extensibility.core": "[3.2.2, )"
+          "xunit.v3.extensibility.core": "[4.0.0, )"
         }
       },
       "mmca.common.ui": {
@@ -1720,6 +1716,12 @@
           "Polly.Core": "8.7.0"
         }
       },
+      "Polly.Core": {
+        "type": "CentralTransitive",
+        "requested": "[8.7.0, )",
+        "resolved": "8.7.0",
+        "contentHash": "BS2t+nsBer16PIebCEPNBK5fgMisADQyRCd7K+BgkMWpFmSaiYE+rVVNpFhGRqUkJmNSLmw0uCNzHHWfgml28Q=="
+      },
       "QRCoder": {
         "type": "CentralTransitive",
         "requested": "[1.8.0, )",
@@ -1731,9 +1733,9 @@
       },
       "Scalar.AspNetCore": {
         "type": "CentralTransitive",
-        "requested": "[2.16.18, )",
-        "resolved": "2.16.18",
-        "contentHash": "R/S9FSpMLjdd75uOe22YPNnfDtPYygK31feG6XJ9BLjX/y4WM8cGRzwT49iEBKhnJB2CnWUnfLlWGV7TsVDk+Q=="
+        "requested": "[2.16.20, )",
+        "resolved": "2.16.20",
+        "contentHash": "pSmyME4FCnYocbLmn9lmAUTVVSEPb5E6noqRcmJYpO65eaum68gw17yMORbeckW+gMksiL04m+zXoTxOKv0+kQ=="
       },
       "Scrutor": {
         "type": "CentralTransitive",
@@ -1790,7 +1792,7 @@
       },
       "xunit.v3.extensibility.core": {
         "type": "CentralTransitive",
-        "requested": "[3.2.2, )",
+        "requested": "[4.0.0, )",
         "resolved": "4.0.0",
         "contentHash": "+tTe9VX2vwrUHGI48FE4ly956Ry084wPH4I/7g5D36AkAMGjQRZZDVz8eH2GwX/CLS9PDQRSca534WyrAYsyzw==",
         "dependencies": {

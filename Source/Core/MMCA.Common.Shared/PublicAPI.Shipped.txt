@@ -1,0 +1,718 @@
+#nullable enable
+MMCA.Common.Shared.Abstractions.CollectionResult<T>
+MMCA.Common.Shared.Abstractions.CollectionResult<T>.CollectionResult() -> void
+MMCA.Common.Shared.Abstractions.CollectionResult<T>.CollectionResult(MMCA.Common.Shared.Abstractions.CollectionResult<T>! original) -> void
+MMCA.Common.Shared.Abstractions.CollectionResult<T>.CollectionResult(System.Collections.Generic.IReadOnlyCollection<T>! items) -> void
+MMCA.Common.Shared.Abstractions.CollectionResult<T>.Items.get -> System.Collections.Generic.ICollection<T>!
+MMCA.Common.Shared.Abstractions.CollectionResult<T>.Items.init -> void
+MMCA.Common.Shared.Abstractions.Error
+MMCA.Common.Shared.Abstractions.Error.Code.get -> string!
+MMCA.Common.Shared.Abstractions.Error.Code.init -> void
+MMCA.Common.Shared.Abstractions.Error.Deconstruct(out string! Code, out string! Message, out MMCA.Common.Shared.Abstractions.ErrorType Type, out string? Source, out string? Target) -> void
+MMCA.Common.Shared.Abstractions.Error.Error(MMCA.Common.Shared.Abstractions.Error! original) -> void
+MMCA.Common.Shared.Abstractions.Error.Error(string! Code, string! Message, MMCA.Common.Shared.Abstractions.ErrorType Type, string? Source = null, string? Target = null) -> void
+MMCA.Common.Shared.Abstractions.Error.Message.get -> string!
+MMCA.Common.Shared.Abstractions.Error.Message.init -> void
+MMCA.Common.Shared.Abstractions.Error.Source.get -> string?
+MMCA.Common.Shared.Abstractions.Error.Source.init -> void
+MMCA.Common.Shared.Abstractions.Error.Target.get -> string?
+MMCA.Common.Shared.Abstractions.Error.Target.init -> void
+MMCA.Common.Shared.Abstractions.Error.Type.get -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.Error.Type.init -> void
+MMCA.Common.Shared.Abstractions.Error.WithSource(string! source) -> MMCA.Common.Shared.Abstractions.Error!
+MMCA.Common.Shared.Abstractions.Error.WithTarget(string! target) -> MMCA.Common.Shared.Abstractions.Error!
+MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.Conflict = 3 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.Failure = 7 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.Forbidden = 5 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.Invariant = 1 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.NotFound = 2 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.Unauthorized = 4 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.UnprocessableEntity = 6 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.Validation = 0 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>
+MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>? other) -> bool
+MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.KeysetCollectionResult() -> void
+MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.KeysetCollectionResult(System.Collections.Generic.IReadOnlyCollection<T>! items, string? nextCursor) -> void
+MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.NextCursor.get -> string?
+MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.NextCursor.init -> void
+MMCA.Common.Shared.Abstractions.KeysetCursor
+MMCA.Common.Shared.Abstractions.KeysetPageRequest
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.<Clone>$() -> MMCA.Common.Shared.Abstractions.KeysetPageRequest!
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.Cursor.get -> string?
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.Cursor.init -> void
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.Descending.get -> bool
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.Descending.init -> void
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.Equals(MMCA.Common.Shared.Abstractions.KeysetPageRequest? other) -> bool
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.KeysetPageRequest() -> void
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.KeysetPageRequest(int pageSize, string? sortColumn = null, bool descending = false, string? cursor = null) -> void
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.PageSize.get -> int
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.PageSize.init -> void
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.SortColumn.get -> string?
+MMCA.Common.Shared.Abstractions.KeysetPageRequest.SortColumn.init -> void
+MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>
+MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>? other) -> bool
+MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.PagedCollectionResult() -> void
+MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.PagedCollectionResult(System.Collections.Generic.IReadOnlyCollection<T>! items, MMCA.Common.Shared.Abstractions.PaginationMetadata! paginationMetadata) -> void
+MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.PaginationMetadata.get -> MMCA.Common.Shared.Abstractions.PaginationMetadata!
+MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.PaginationMetadata.init -> void
+MMCA.Common.Shared.Abstractions.PaginationMetadata
+MMCA.Common.Shared.Abstractions.PaginationMetadata.<Clone>$() -> MMCA.Common.Shared.Abstractions.PaginationMetadata!
+MMCA.Common.Shared.Abstractions.PaginationMetadata.CurrentPage.get -> int
+MMCA.Common.Shared.Abstractions.PaginationMetadata.CurrentPage.init -> void
+MMCA.Common.Shared.Abstractions.PaginationMetadata.Equals(MMCA.Common.Shared.Abstractions.PaginationMetadata? other) -> bool
+MMCA.Common.Shared.Abstractions.PaginationMetadata.FirstRowOnPage.get -> int
+MMCA.Common.Shared.Abstractions.PaginationMetadata.LastRowOnPage.get -> int
+MMCA.Common.Shared.Abstractions.PaginationMetadata.PageSize.get -> int
+MMCA.Common.Shared.Abstractions.PaginationMetadata.PageSize.init -> void
+MMCA.Common.Shared.Abstractions.PaginationMetadata.PaginationMetadata() -> void
+MMCA.Common.Shared.Abstractions.PaginationMetadata.PaginationMetadata(int totalItemCount, int pageSize, int currentPage) -> void
+MMCA.Common.Shared.Abstractions.PaginationMetadata.TotalItemCount.get -> int
+MMCA.Common.Shared.Abstractions.PaginationMetadata.TotalItemCount.init -> void
+MMCA.Common.Shared.Abstractions.PaginationMetadata.TotalPageCount.get -> int
+MMCA.Common.Shared.Abstractions.Result
+MMCA.Common.Shared.Abstractions.Result.AddErrors(System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>! errors) -> void
+MMCA.Common.Shared.Abstractions.Result.Errors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Shared.Abstractions.Result.IsFailure.get -> bool
+MMCA.Common.Shared.Abstractions.Result.IsSuccess.get -> bool
+MMCA.Common.Shared.Abstractions.Result.Result() -> void
+MMCA.Common.Shared.Abstractions.Result<T>
+MMCA.Common.Shared.Abstractions.Result<T>.BindAsync<TOut>(System.Func<T, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TOut>!>!>! binder) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TOut>!>!
+MMCA.Common.Shared.Abstractions.Result<T>.Map<TOut>(System.Func<T, TOut>! mapper) -> MMCA.Common.Shared.Abstractions.Result<TOut>!
+MMCA.Common.Shared.Abstractions.Result<T>.Match<TResult>(System.Func<T, TResult>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, TResult>! onFailure) -> TResult
+MMCA.Common.Shared.Abstractions.Result<T>.Value.get -> T?
+MMCA.Common.Shared.Abstractions.ServiceContractAttribute
+MMCA.Common.Shared.Abstractions.ServiceContractAttribute.ServiceContractAttribute() -> void
+MMCA.Common.Shared.Abstractions.ServiceContractAttribute.ServiceContractAttribute(string! version) -> void
+MMCA.Common.Shared.Abstractions.ServiceContractAttribute.Version.get -> string!
+MMCA.Common.Shared.Auth.AuthClaimTypes
+MMCA.Common.Shared.Auth.AuthenticationResponse
+MMCA.Common.Shared.Auth.AuthenticationResponse.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.AuthenticationResponse.AccessToken.init -> void
+MMCA.Common.Shared.Auth.AuthenticationResponse.AccessTokenExpiry.get -> System.DateTime
+MMCA.Common.Shared.Auth.AuthenticationResponse.AccessTokenExpiry.init -> void
+MMCA.Common.Shared.Auth.AuthenticationResponse.AuthenticationResponse() -> void
+MMCA.Common.Shared.Auth.AuthenticationResponse.AuthenticationResponse(string! AccessToken, string! RefreshToken, System.DateTime AccessTokenExpiry) -> void
+MMCA.Common.Shared.Auth.AuthenticationResponse.Deconstruct(out string! AccessToken, out string! RefreshToken, out System.DateTime AccessTokenExpiry) -> void
+MMCA.Common.Shared.Auth.AuthenticationResponse.Equals(MMCA.Common.Shared.Auth.AuthenticationResponse other) -> bool
+MMCA.Common.Shared.Auth.AuthenticationResponse.RefreshToken.get -> string!
+MMCA.Common.Shared.Auth.AuthenticationResponse.RefreshToken.init -> void
+MMCA.Common.Shared.Auth.ChangePasswordRequest
+MMCA.Common.Shared.Auth.ChangePasswordRequest.ChangePasswordRequest() -> void
+MMCA.Common.Shared.Auth.ChangePasswordRequest.ChangePasswordRequest(string! CurrentPassword, string! NewPassword) -> void
+MMCA.Common.Shared.Auth.ChangePasswordRequest.CurrentPassword.get -> string!
+MMCA.Common.Shared.Auth.ChangePasswordRequest.CurrentPassword.init -> void
+MMCA.Common.Shared.Auth.ChangePasswordRequest.Deconstruct(out string! CurrentPassword, out string! NewPassword) -> void
+MMCA.Common.Shared.Auth.ChangePasswordRequest.Equals(MMCA.Common.Shared.Auth.ChangePasswordRequest other) -> bool
+MMCA.Common.Shared.Auth.ChangePasswordRequest.NewPassword.get -> string!
+MMCA.Common.Shared.Auth.ChangePasswordRequest.NewPassword.init -> void
+MMCA.Common.Shared.Auth.ChangePreferencesRequest
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.<Clone>$() -> MMCA.Common.Shared.Auth.ChangePreferencesRequest!
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.ChangePreferencesRequest(string? Culture, string? Theme) -> void
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.Culture.get -> string?
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.Culture.init -> void
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.Deconstruct(out string? Culture, out string? Theme) -> void
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.Equals(MMCA.Common.Shared.Auth.ChangePreferencesRequest? other) -> bool
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.Theme.get -> string?
+MMCA.Common.Shared.Auth.ChangePreferencesRequest.Theme.init -> void
+MMCA.Common.Shared.Auth.IPermissionRegistry
+MMCA.Common.Shared.Auth.IPermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
+MMCA.Common.Shared.Auth.IPermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
+MMCA.Common.Shared.Auth.LoginRequest
+MMCA.Common.Shared.Auth.LoginRequest.Deconstruct(out string! Email, out string! Password) -> void
+MMCA.Common.Shared.Auth.LoginRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.LoginRequest.Email.init -> void
+MMCA.Common.Shared.Auth.LoginRequest.Equals(MMCA.Common.Shared.Auth.LoginRequest other) -> bool
+MMCA.Common.Shared.Auth.LoginRequest.LoginRequest() -> void
+MMCA.Common.Shared.Auth.LoginRequest.LoginRequest(string! Email, string! Password) -> void
+MMCA.Common.Shared.Auth.LoginRequest.Password.get -> string!
+MMCA.Common.Shared.Auth.LoginRequest.Password.init -> void
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Code.get -> string!
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Code.init -> void
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Deconstruct(out string! Code) -> void
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Equals(MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest other) -> bool
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest() -> void
+MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest(string! Code) -> void
+MMCA.Common.Shared.Auth.PermissionRegistry
+MMCA.Common.Shared.Auth.PermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
+MMCA.Common.Shared.Auth.PermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
+MMCA.Common.Shared.Auth.PermissionRegistry.PermissionRegistry(System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlySet<string!>!>! rolePermissions) -> void
+MMCA.Common.Shared.Auth.PermissionRegistryBuilder
+MMCA.Common.Shared.Auth.PermissionRegistryBuilder.Build() -> MMCA.Common.Shared.Auth.PermissionRegistry!
+MMCA.Common.Shared.Auth.PermissionRegistryBuilder.Grant(string! role, params string![]! permissions) -> MMCA.Common.Shared.Auth.PermissionRegistryBuilder!
+MMCA.Common.Shared.Auth.PermissionRegistryBuilder.PermissionRegistryBuilder() -> void
+MMCA.Common.Shared.Auth.RefreshTokenRequest
+MMCA.Common.Shared.Auth.RefreshTokenRequest.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.RefreshTokenRequest.AccessToken.init -> void
+MMCA.Common.Shared.Auth.RefreshTokenRequest.Deconstruct(out string! AccessToken, out string! RefreshToken) -> void
+MMCA.Common.Shared.Auth.RefreshTokenRequest.Equals(MMCA.Common.Shared.Auth.RefreshTokenRequest other) -> bool
+MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshToken.get -> string!
+MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshToken.init -> void
+MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshTokenRequest() -> void
+MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshTokenRequest(string! AccessToken, string! RefreshToken) -> void
+MMCA.Common.Shared.Auth.RegisterRequest
+MMCA.Common.Shared.Auth.RegisterRequest.Address.get -> MMCA.Common.Shared.ValueObjects.Address?
+MMCA.Common.Shared.Auth.RegisterRequest.Address.init -> void
+MMCA.Common.Shared.Auth.RegisterRequest.Deconstruct(out string! Email, out string! Password, out string! FirstName, out string! LastName, out MMCA.Common.Shared.ValueObjects.Address? Address) -> void
+MMCA.Common.Shared.Auth.RegisterRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.RegisterRequest.Email.init -> void
+MMCA.Common.Shared.Auth.RegisterRequest.Equals(MMCA.Common.Shared.Auth.RegisterRequest other) -> bool
+MMCA.Common.Shared.Auth.RegisterRequest.FirstName.get -> string!
+MMCA.Common.Shared.Auth.RegisterRequest.FirstName.init -> void
+MMCA.Common.Shared.Auth.RegisterRequest.LastName.get -> string!
+MMCA.Common.Shared.Auth.RegisterRequest.LastName.init -> void
+MMCA.Common.Shared.Auth.RegisterRequest.Password.get -> string!
+MMCA.Common.Shared.Auth.RegisterRequest.Password.init -> void
+MMCA.Common.Shared.Auth.RegisterRequest.RegisterRequest() -> void
+MMCA.Common.Shared.Auth.RegisterRequest.RegisterRequest(string! Email, string! Password, string! FirstName, string! LastName, MMCA.Common.Shared.ValueObjects.Address? Address = null) -> void
+MMCA.Common.Shared.Auth.RoleNames
+MMCA.Common.Shared.Auth.RoleValue
+MMCA.Common.Shared.Auth.RoleValue.RoleValue(string! value) -> void
+MMCA.Common.Shared.Auth.RoleValue.Value.get -> string!
+MMCA.Common.Shared.Auth.UserPreferencesResponse
+MMCA.Common.Shared.Auth.UserPreferencesResponse.<Clone>$() -> MMCA.Common.Shared.Auth.UserPreferencesResponse!
+MMCA.Common.Shared.Auth.UserPreferencesResponse.Culture.get -> string?
+MMCA.Common.Shared.Auth.UserPreferencesResponse.Culture.init -> void
+MMCA.Common.Shared.Auth.UserPreferencesResponse.Deconstruct(out string? Culture, out string? Theme) -> void
+MMCA.Common.Shared.Auth.UserPreferencesResponse.Equals(MMCA.Common.Shared.Auth.UserPreferencesResponse? other) -> bool
+MMCA.Common.Shared.Auth.UserPreferencesResponse.Theme.get -> string?
+MMCA.Common.Shared.Auth.UserPreferencesResponse.Theme.init -> void
+MMCA.Common.Shared.Auth.UserPreferencesResponse.UserPreferencesResponse(string? Culture, string? Theme) -> void
+MMCA.Common.Shared.AuthenticationRequest
+MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest() -> void
+MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest(string! DeviceId, string! Email, string! DeviceFormFactor, string! DevicePlatform, string! DeviceModel, string! DeviceManufacturer, string! DeviceName, string! DeviceType) -> void
+MMCA.Common.Shared.AuthenticationRequest.Deconstruct(out string! DeviceId, out string! Email, out string! DeviceFormFactor, out string! DevicePlatform, out string! DeviceModel, out string! DeviceManufacturer, out string! DeviceName, out string! DeviceType) -> void
+MMCA.Common.Shared.AuthenticationRequest.DeviceFormFactor.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DeviceFormFactor.init -> void
+MMCA.Common.Shared.AuthenticationRequest.DeviceId.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DeviceId.init -> void
+MMCA.Common.Shared.AuthenticationRequest.DeviceManufacturer.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DeviceManufacturer.init -> void
+MMCA.Common.Shared.AuthenticationRequest.DeviceModel.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DeviceModel.init -> void
+MMCA.Common.Shared.AuthenticationRequest.DeviceName.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DeviceName.init -> void
+MMCA.Common.Shared.AuthenticationRequest.DevicePlatform.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DevicePlatform.init -> void
+MMCA.Common.Shared.AuthenticationRequest.DeviceType.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.DeviceType.init -> void
+MMCA.Common.Shared.AuthenticationRequest.Email.get -> string!
+MMCA.Common.Shared.AuthenticationRequest.Email.init -> void
+MMCA.Common.Shared.AuthenticationRequest.Equals(MMCA.Common.Shared.AuthenticationRequest other) -> bool
+MMCA.Common.Shared.Calendars.IcsCalendarBuilder
+MMCA.Common.Shared.Calendars.IcsEvent
+MMCA.Common.Shared.Calendars.IcsEvent.<Clone>$() -> MMCA.Common.Shared.Calendars.IcsEvent!
+MMCA.Common.Shared.Calendars.IcsEvent.Deconstruct(out string! Uid, out string! Summary, out System.DateTimeOffset StartsAtUtc, out System.DateTimeOffset EndsAtUtc, out string? Description, out string? Location) -> void
+MMCA.Common.Shared.Calendars.IcsEvent.Description.get -> string?
+MMCA.Common.Shared.Calendars.IcsEvent.Description.init -> void
+MMCA.Common.Shared.Calendars.IcsEvent.EndsAtUtc.get -> System.DateTimeOffset
+MMCA.Common.Shared.Calendars.IcsEvent.EndsAtUtc.init -> void
+MMCA.Common.Shared.Calendars.IcsEvent.Equals(MMCA.Common.Shared.Calendars.IcsEvent? other) -> bool
+MMCA.Common.Shared.Calendars.IcsEvent.IcsEvent(string! Uid, string! Summary, System.DateTimeOffset StartsAtUtc, System.DateTimeOffset EndsAtUtc, string? Description = null, string? Location = null) -> void
+MMCA.Common.Shared.Calendars.IcsEvent.Location.get -> string?
+MMCA.Common.Shared.Calendars.IcsEvent.Location.init -> void
+MMCA.Common.Shared.Calendars.IcsEvent.StartsAtUtc.get -> System.DateTimeOffset
+MMCA.Common.Shared.Calendars.IcsEvent.StartsAtUtc.init -> void
+MMCA.Common.Shared.Calendars.IcsEvent.Summary.get -> string!
+MMCA.Common.Shared.Calendars.IcsEvent.Summary.init -> void
+MMCA.Common.Shared.Calendars.IcsEvent.Uid.get -> string!
+MMCA.Common.Shared.Calendars.IcsEvent.Uid.init -> void
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.AcquireAsync(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser>!
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.KeyedSemaphoreStripe() -> void
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.KeyedSemaphoreStripe(int width) -> void
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Dispose() -> void
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Equals(MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser other) -> bool
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Releaser() -> void
+MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Width.get -> int
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.BaseLookup() -> void
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.BaseLookup(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>! original) -> void
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Id.init -> void
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Name.get -> string!
+MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Name.init -> void
+MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest
+MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.<Clone>$() -> MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest!
+MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.ConcurrencyTokenRequest() -> void
+MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.Equals(MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? other) -> bool
+MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.RowVersion.get -> byte[]?
+MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.RowVersion.init -> void
+MMCA.Common.Shared.DTOs.IBaseDTO<TIdentifierType>
+MMCA.Common.Shared.DTOs.IBaseDTO<TIdentifierType>.Id.get -> TIdentifierType
+MMCA.Common.Shared.DTOs.IBaseDTO<TIdentifierType>.Id.init -> void
+MMCA.Common.Shared.DTOs.IConcurrencyAware
+MMCA.Common.Shared.DTOs.IConcurrencyAware.RowVersion.get -> byte[]?
+MMCA.Common.Shared.DTOs.IConcurrencyAware.RowVersion.init -> void
+MMCA.Common.Shared.Exceptions.DomainException
+MMCA.Common.Shared.Exceptions.DomainException.DomainException() -> void
+MMCA.Common.Shared.Exceptions.DomainException.DomainException(string! message) -> void
+MMCA.Common.Shared.Exceptions.DomainException.DomainException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Shared.Exceptions.DomainInvariantViolationException
+MMCA.Common.Shared.Exceptions.DomainInvariantViolationException.DomainInvariantViolationException() -> void
+MMCA.Common.Shared.Exceptions.DomainInvariantViolationException.DomainInvariantViolationException(string! message) -> void
+MMCA.Common.Shared.Exceptions.DomainInvariantViolationException.DomainInvariantViolationException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Shared.Extensions.DomainHelper
+MMCA.Common.Shared.Extensions.DomainHelper.extension(string?)
+MMCA.Common.Shared.Extensions.DomainHelper.extension(string?).Parse<TIdentifier>() -> TIdentifier
+MMCA.Common.Shared.Extensions.DomainHelper.extension(string?).TryParse<TIdentifier>(out TIdentifier result) -> bool
+MMCA.Common.Shared.Globalization.SupportedCultures
+MMCA.Common.Shared.Http.IdempotencyHeaders
+MMCA.Common.Shared.Notifications.NotificationFeatures
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.<Clone>$() -> MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest!
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.DeviceInstallationRequest() -> void
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.Equals(MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest? other) -> bool
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.InstallationId.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.InstallationId.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.Platform.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.Platform.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.PushChannel.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.PushChannel.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Body.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Body.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.CreatedOn.get -> System.DateTime
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.CreatedOn.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Id.get -> int
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Id.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.PushNotificationDTO() -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.PushNotificationDTO(MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO! original) -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.RecipientCount.get -> int
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.RecipientCount.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.ScopeKey.get -> string?
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.ScopeKey.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.SentByUserId.get -> int
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.SentByUserId.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Status.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Status.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Title.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Title.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.<Clone>$() -> MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest!
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Body.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Body.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Deconstruct(out string! Title, out string! Body) -> void
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Equals(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest? other) -> bool
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.ScopeKey.get -> string?
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.ScopeKey.init -> void
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.SendPushNotificationRequest(string! Title, string! Body) -> void
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Title.get -> string!
+MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Title.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.<Clone>$() -> MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Body.get -> string!
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Body.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Equals(MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO? other) -> bool
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Id.get -> int
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Id.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.IsRead.get -> bool
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.IsRead.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.PushNotificationId.get -> int
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.PushNotificationId.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.ReadOn.get -> System.DateTime?
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.ReadOn.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.SentOn.get -> System.DateTime
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.SentOn.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Title.get -> string!
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Title.init -> void
+MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.UserNotificationDTO() -> void
+MMCA.Common.Shared.Privacy.PrivacyFeatures
+MMCA.Common.Shared.Privacy.UserDataExportDTO
+MMCA.Common.Shared.Privacy.UserDataExportDTO.<Clone>$() -> MMCA.Common.Shared.Privacy.UserDataExportDTO!
+MMCA.Common.Shared.Privacy.UserDataExportDTO.Equals(MMCA.Common.Shared.Privacy.UserDataExportDTO? other) -> bool
+MMCA.Common.Shared.Privacy.UserDataExportDTO.FormatVersion.get -> string!
+MMCA.Common.Shared.Privacy.UserDataExportDTO.FormatVersion.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportDTO.GeneratedOn.get -> System.DateTimeOffset
+MMCA.Common.Shared.Privacy.UserDataExportDTO.GeneratedOn.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportDTO.Sections.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Privacy.UserDataExportSectionDTO!>!
+MMCA.Common.Shared.Privacy.UserDataExportDTO.Sections.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportDTO.Subject.get -> object?
+MMCA.Common.Shared.Privacy.UserDataExportDTO.Subject.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportDTO.UserDataExportDTO() -> void
+MMCA.Common.Shared.Privacy.UserDataExportDTO.UserId.get -> int
+MMCA.Common.Shared.Privacy.UserDataExportDTO.UserId.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.<Clone>$() -> MMCA.Common.Shared.Privacy.UserDataExportSectionDTO!
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.Available.get -> bool
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.Available.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.Data.get -> object?
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.Data.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.Equals(MMCA.Common.Shared.Privacy.UserDataExportSectionDTO? other) -> bool
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.SectionName.get -> string!
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.SectionName.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UnavailableReason.get -> string?
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UnavailableReason.init -> void
+MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.UserDataExportSectionDTO() -> void
+MMCA.Common.Shared.Resilience.BrokerResilienceDefaults
+MMCA.Common.Shared.Resilience.HttpResilienceDefaults
+MMCA.Common.Shared.Serialization.ResultJsonConverterFactory
+MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.ResultJsonConverterFactory() -> void
+MMCA.Common.Shared.ValueObjects.Address
+MMCA.Common.Shared.ValueObjects.Address.AddressLine1.get -> string!
+MMCA.Common.Shared.ValueObjects.Address.AddressLine2.get -> string?
+MMCA.Common.Shared.ValueObjects.Address.City.get -> string?
+MMCA.Common.Shared.ValueObjects.Address.Country.get -> string?
+MMCA.Common.Shared.ValueObjects.Address.Equals(MMCA.Common.Shared.ValueObjects.Address? other) -> bool
+MMCA.Common.Shared.ValueObjects.Address.State.get -> string?
+MMCA.Common.Shared.ValueObjects.Address.ZipCode.get -> string?
+MMCA.Common.Shared.ValueObjects.AddressInvariants
+MMCA.Common.Shared.ValueObjects.Currency
+MMCA.Common.Shared.ValueObjects.Currency.Code.get -> string!
+MMCA.Common.Shared.ValueObjects.Currency.Code.init -> void
+MMCA.Common.Shared.ValueObjects.Currency.Equals(MMCA.Common.Shared.ValueObjects.Currency? other) -> bool
+MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter
+MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter.CurrencyJsonConverter() -> void
+MMCA.Common.Shared.ValueObjects.DateRange
+MMCA.Common.Shared.ValueObjects.DateRange.Contains(System.DateOnly instant) -> bool
+MMCA.Common.Shared.ValueObjects.DateRange.Deconstruct(out System.DateOnly start, out System.DateOnly end) -> void
+MMCA.Common.Shared.ValueObjects.DateRange.End.get -> System.DateOnly
+MMCA.Common.Shared.ValueObjects.DateRange.Equals(MMCA.Common.Shared.ValueObjects.DateRange? other) -> bool
+MMCA.Common.Shared.ValueObjects.DateRange.LengthInDays.get -> int
+MMCA.Common.Shared.ValueObjects.DateRange.Overlaps(MMCA.Common.Shared.ValueObjects.DateRange! other) -> bool
+MMCA.Common.Shared.ValueObjects.DateRange.Start.get -> System.DateOnly
+MMCA.Common.Shared.ValueObjects.DateTimeRange
+MMCA.Common.Shared.ValueObjects.DateTimeRange.Contains(System.DateTime instant) -> bool
+MMCA.Common.Shared.ValueObjects.DateTimeRange.Deconstruct(out System.DateTime start, out System.DateTime end) -> void
+MMCA.Common.Shared.ValueObjects.DateTimeRange.Duration.get -> System.TimeSpan
+MMCA.Common.Shared.ValueObjects.DateTimeRange.End.get -> System.DateTime
+MMCA.Common.Shared.ValueObjects.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.DateTimeRange? other) -> bool
+MMCA.Common.Shared.ValueObjects.DateTimeRange.Overlaps(MMCA.Common.Shared.ValueObjects.DateTimeRange! other) -> bool
+MMCA.Common.Shared.ValueObjects.DateTimeRange.Start.get -> System.DateTime
+MMCA.Common.Shared.ValueObjects.Email
+MMCA.Common.Shared.ValueObjects.Email.Equals(MMCA.Common.Shared.ValueObjects.Email? other) -> bool
+MMCA.Common.Shared.ValueObjects.Email.Value.get -> string!
+MMCA.Common.Shared.ValueObjects.EmailInvariants
+MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>
+MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Enumeration(int value, string! name) -> void
+MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Name.get -> string!
+MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Value.get -> int
+MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory
+MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory.EnumerationJsonConverterFactory() -> void
+MMCA.Common.Shared.ValueObjects.Money
+MMCA.Common.Shared.ValueObjects.Money.Amount.get -> decimal
+MMCA.Common.Shared.ValueObjects.Money.Amount.init -> void
+MMCA.Common.Shared.ValueObjects.Money.Currency.get -> MMCA.Common.Shared.ValueObjects.Currency!
+MMCA.Common.Shared.ValueObjects.Money.Currency.init -> void
+MMCA.Common.Shared.ValueObjects.Money.Equals(MMCA.Common.Shared.ValueObjects.Money? other) -> bool
+MMCA.Common.Shared.ValueObjects.Money.IsNegative.get -> bool
+MMCA.Common.Shared.ValueObjects.Money.IsZero() -> bool
+MMCA.Common.Shared.ValueObjects.PhoneNumber
+MMCA.Common.Shared.ValueObjects.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.PhoneNumber? other) -> bool
+MMCA.Common.Shared.ValueObjects.PhoneNumber.Value.get -> string!
+MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants
+MMCA.Common.Shared.ValueObjects.ValueObject
+MMCA.Common.Shared.ValueObjects.ValueObject.ValueObject() -> void
+MMCA.Common.Shared.ValueObjects.ValueObject.ValueObject(MMCA.Common.Shared.ValueObjects.ValueObject! original) -> void
+abstract MMCA.Common.Shared.ValueObjects.ValueObject.<Clone>$() -> MMCA.Common.Shared.ValueObjects.ValueObject!
+const MMCA.Common.Shared.Abstractions.KeysetPageRequest.MaxPageSize = 1000 -> int
+const MMCA.Common.Shared.Auth.AuthClaimTypes.Permission = "permission" -> string!
+const MMCA.Common.Shared.Auth.RoleNames.Admin = "Admin" -> string!
+const MMCA.Common.Shared.Auth.RoleNames.Attendee = "Attendee" -> string!
+const MMCA.Common.Shared.Auth.RoleNames.ContentEditor = "ContentEditor" -> string!
+const MMCA.Common.Shared.Auth.RoleNames.Customer = "Customer" -> string!
+const MMCA.Common.Shared.Auth.RoleNames.Organizer = "Organizer" -> string!
+const MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.DefaultWidth = 256 -> int
+const MMCA.Common.Shared.Globalization.SupportedCultures.Default = "en-US" -> string!
+const MMCA.Common.Shared.Globalization.SupportedCultures.PseudoLocale = "qps-Ploc" -> string!
+const MMCA.Common.Shared.Http.IdempotencyHeaders.IdempotencyKey = "Idempotency-Key" -> string!
+const MMCA.Common.Shared.Http.IdempotencyHeaders.IdempotentReplay = "X-Idempotent-Replay" -> string!
+const MMCA.Common.Shared.Notifications.NotificationFeatures.PushNotifications = "Notification.PushNotifications" -> string!
+const MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.ApnsPlatform = "apns" -> string!
+const MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.FcmV1Platform = "fcmv1" -> string!
+const MMCA.Common.Shared.Privacy.PrivacyFeatures.DataExport = "Privacy.DataExport" -> string!
+override MMCA.Common.Shared.Abstractions.CollectionResult<T>.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.CollectionResult<T>.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.CollectionResult<T>.ToString() -> string!
+override MMCA.Common.Shared.Abstractions.Error.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.Error.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.Error.ToString() -> string!
+override MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.<Clone>$() -> MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>!
+override MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.ToString() -> string!
+override MMCA.Common.Shared.Abstractions.KeysetPageRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.KeysetPageRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.KeysetPageRequest.ToString() -> string!
+override MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.<Clone>$() -> MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>!
+override MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.ToString() -> string!
+override MMCA.Common.Shared.Abstractions.PaginationMetadata.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Abstractions.PaginationMetadata.GetHashCode() -> int
+override MMCA.Common.Shared.Abstractions.PaginationMetadata.ToString() -> string!
+override MMCA.Common.Shared.Auth.AuthenticationResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.ChangePasswordRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.ChangePreferencesRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.ChangePreferencesRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.ChangePreferencesRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.LoginRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.RefreshTokenRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.RegisterRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.RoleValue.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.RoleValue.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.RoleValue.ToString() -> string!
+override MMCA.Common.Shared.Auth.UserPreferencesResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.UserPreferencesResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.UserPreferencesResponse.ToString() -> string!
+override MMCA.Common.Shared.AuthenticationRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Calendars.IcsEvent.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Calendars.IcsEvent.GetHashCode() -> int
+override MMCA.Common.Shared.Calendars.IcsEvent.ToString() -> string!
+override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.GetHashCode() -> int
+override MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Equals(object? obj) -> bool
+override MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.GetHashCode() -> int
+override MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.ToString() -> string!
+override MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.GetHashCode() -> int
+override MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.ToString() -> string!
+override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.ToString() -> string!
+override MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.ToString() -> string!
+override MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.ToString() -> string!
+override MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.ToString() -> string!
+override MMCA.Common.Shared.Privacy.UserDataExportDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Privacy.UserDataExportDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Privacy.UserDataExportDTO.ToString() -> string!
+override MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.GetHashCode() -> int
+override MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.ToString() -> string!
+override MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.CanConvert(System.Type! typeToConvert) -> bool
+override MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.CreateConverter(System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> System.Text.Json.Serialization.JsonConverter?
+override MMCA.Common.Shared.ValueObjects.Address.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Address!
+override MMCA.Common.Shared.ValueObjects.Address.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Address.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Address.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Currency.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Currency!
+override MMCA.Common.Shared.ValueObjects.Currency.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Currency.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Currency.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> MMCA.Common.Shared.ValueObjects.Currency?
+override MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, MMCA.Common.Shared.ValueObjects.Currency! value, System.Text.Json.JsonSerializerOptions! options) -> void
+override MMCA.Common.Shared.ValueObjects.DateRange.<Clone>$() -> MMCA.Common.Shared.ValueObjects.DateRange!
+override MMCA.Common.Shared.ValueObjects.DateRange.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.DateRange.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.DateRange.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.DateTimeRange.<Clone>$() -> MMCA.Common.Shared.ValueObjects.DateTimeRange!
+override MMCA.Common.Shared.ValueObjects.DateTimeRange.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.DateTimeRange.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.DateTimeRange.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Email.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Email!
+override MMCA.Common.Shared.ValueObjects.Email.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Email.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Email.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory.CanConvert(System.Type! typeToConvert) -> bool
+override MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory.CreateConverter(System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> System.Text.Json.Serialization.JsonConverter?
+override MMCA.Common.Shared.ValueObjects.Money.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Money!
+override MMCA.Common.Shared.ValueObjects.Money.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Money.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Money.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.PhoneNumber.<Clone>$() -> MMCA.Common.Shared.ValueObjects.PhoneNumber!
+override MMCA.Common.Shared.ValueObjects.PhoneNumber.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.PhoneNumber.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.PhoneNumber.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.ValueObject.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.ValueObject.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.ValueObject.ToString() -> string!
+override sealed MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
+override sealed MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Address.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Currency.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.DateRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Email.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Money.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+static MMCA.Common.Shared.Abstractions.CollectionResult<T>.operator !=(MMCA.Common.Shared.Abstractions.CollectionResult<T>? left, MMCA.Common.Shared.Abstractions.CollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.CollectionResult<T>.operator ==(MMCA.Common.Shared.Abstractions.CollectionResult<T>? left, MMCA.Common.Shared.Abstractions.CollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.Error.Conflict(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.Failure(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.Forbidden(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.Invariant(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.NotFoundError(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.Unauthorized(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.UnprocessableEntity(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.Validation(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.operator !=(MMCA.Common.Shared.Abstractions.Error? left, MMCA.Common.Shared.Abstractions.Error? right) -> bool
+static MMCA.Common.Shared.Abstractions.Error.operator ==(MMCA.Common.Shared.Abstractions.Error? left, MMCA.Common.Shared.Abstractions.Error? right) -> bool
+static MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.operator !=(MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>? left, MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.operator ==(MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>? left, MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.KeysetCursor.Encode(string? sortValue, string! id) -> string!
+static MMCA.Common.Shared.Abstractions.KeysetCursor.TryDecode(string? cursor, out string? sortValue, out string! id) -> bool
+static MMCA.Common.Shared.Abstractions.KeysetPageRequest.operator !=(MMCA.Common.Shared.Abstractions.KeysetPageRequest? left, MMCA.Common.Shared.Abstractions.KeysetPageRequest? right) -> bool
+static MMCA.Common.Shared.Abstractions.KeysetPageRequest.operator ==(MMCA.Common.Shared.Abstractions.KeysetPageRequest? left, MMCA.Common.Shared.Abstractions.KeysetPageRequest? right) -> bool
+static MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.operator !=(MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>? left, MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.operator ==(MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>? left, MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>? right) -> bool
+static MMCA.Common.Shared.Abstractions.PaginationMetadata.operator !=(MMCA.Common.Shared.Abstractions.PaginationMetadata? left, MMCA.Common.Shared.Abstractions.PaginationMetadata? right) -> bool
+static MMCA.Common.Shared.Abstractions.PaginationMetadata.operator ==(MMCA.Common.Shared.Abstractions.PaginationMetadata? left, MMCA.Common.Shared.Abstractions.PaginationMetadata? right) -> bool
+static MMCA.Common.Shared.Abstractions.Result.Combine(params System.ReadOnlySpan<MMCA.Common.Shared.Abstractions.Result!> results) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.Abstractions.Result.Failure(MMCA.Common.Shared.Abstractions.Error! error) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.Abstractions.Result.Failure(System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>! errors) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.Abstractions.Result.Failure<T>(MMCA.Common.Shared.Abstractions.Error! error) -> MMCA.Common.Shared.Abstractions.Result<T>!
+static MMCA.Common.Shared.Abstractions.Result.Failure<T>(System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>! errors) -> MMCA.Common.Shared.Abstractions.Result<T>!
+static MMCA.Common.Shared.Abstractions.Result.Success() -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.Abstractions.Result.Success<T>(T value) -> MMCA.Common.Shared.Abstractions.Result<T>!
+static MMCA.Common.Shared.Auth.AuthenticationResponse.operator !=(MMCA.Common.Shared.Auth.AuthenticationResponse left, MMCA.Common.Shared.Auth.AuthenticationResponse right) -> bool
+static MMCA.Common.Shared.Auth.AuthenticationResponse.operator ==(MMCA.Common.Shared.Auth.AuthenticationResponse left, MMCA.Common.Shared.Auth.AuthenticationResponse right) -> bool
+static MMCA.Common.Shared.Auth.ChangePasswordRequest.operator !=(MMCA.Common.Shared.Auth.ChangePasswordRequest left, MMCA.Common.Shared.Auth.ChangePasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.ChangePasswordRequest.operator ==(MMCA.Common.Shared.Auth.ChangePasswordRequest left, MMCA.Common.Shared.Auth.ChangePasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.ChangePreferencesRequest.operator !=(MMCA.Common.Shared.Auth.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.ChangePreferencesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.ChangePreferencesRequest.operator ==(MMCA.Common.Shared.Auth.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.ChangePreferencesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.LoginRequest.operator !=(MMCA.Common.Shared.Auth.LoginRequest left, MMCA.Common.Shared.Auth.LoginRequest right) -> bool
+static MMCA.Common.Shared.Auth.LoginRequest.operator ==(MMCA.Common.Shared.Auth.LoginRequest left, MMCA.Common.Shared.Auth.LoginRequest right) -> bool
+static MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.operator !=(MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest right) -> bool
+static MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.operator ==(MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest right) -> bool
+static MMCA.Common.Shared.Auth.RefreshTokenRequest.operator !=(MMCA.Common.Shared.Auth.RefreshTokenRequest left, MMCA.Common.Shared.Auth.RefreshTokenRequest right) -> bool
+static MMCA.Common.Shared.Auth.RefreshTokenRequest.operator ==(MMCA.Common.Shared.Auth.RefreshTokenRequest left, MMCA.Common.Shared.Auth.RefreshTokenRequest right) -> bool
+static MMCA.Common.Shared.Auth.RegisterRequest.operator !=(MMCA.Common.Shared.Auth.RegisterRequest left, MMCA.Common.Shared.Auth.RegisterRequest right) -> bool
+static MMCA.Common.Shared.Auth.RegisterRequest.operator ==(MMCA.Common.Shared.Auth.RegisterRequest left, MMCA.Common.Shared.Auth.RegisterRequest right) -> bool
+static MMCA.Common.Shared.Auth.RoleValue.BuildLookup<TRole>(params TRole![]! roles) -> System.Collections.Frozen.FrozenDictionary<string!, TRole!>!
+static MMCA.Common.Shared.Auth.RoleValue.Validate(string! role, System.Collections.Generic.IReadOnlySet<string!>! knownRoles, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.Auth.UserPreferencesResponse.operator !=(MMCA.Common.Shared.Auth.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.UserPreferencesResponse? right) -> bool
+static MMCA.Common.Shared.Auth.UserPreferencesResponse.operator ==(MMCA.Common.Shared.Auth.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.UserPreferencesResponse? right) -> bool
+static MMCA.Common.Shared.AuthenticationRequest.operator !=(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
+static MMCA.Common.Shared.AuthenticationRequest.operator ==(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
+static MMCA.Common.Shared.Calendars.IcsCalendarBuilder.Build(string! productId, System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.Calendars.IcsEvent!>! events, System.DateTimeOffset dtStamp) -> string!
+static MMCA.Common.Shared.Calendars.IcsEvent.operator !=(MMCA.Common.Shared.Calendars.IcsEvent? left, MMCA.Common.Shared.Calendars.IcsEvent? right) -> bool
+static MMCA.Common.Shared.Calendars.IcsEvent.operator ==(MMCA.Common.Shared.Calendars.IcsEvent? left, MMCA.Common.Shared.Calendars.IcsEvent? right) -> bool
+static MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.operator !=(MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser left, MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser right) -> bool
+static MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.operator ==(MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser left, MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser right) -> bool
+static MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.operator !=(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? left, MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? right) -> bool
+static MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.operator ==(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? left, MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? right) -> bool
+static MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.operator !=(MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? left, MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? right) -> bool
+static MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.operator ==(MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? left, MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? right) -> bool
+static MMCA.Common.Shared.Extensions.DomainHelper.Parse<TIdentifier>(this string? id) -> TIdentifier
+static MMCA.Common.Shared.Extensions.DomainHelper.TryParse<TIdentifier>(this string? id, out TIdentifier result) -> bool
+static MMCA.Common.Shared.Globalization.SupportedCultures.All.get -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.Shared.Globalization.SupportedCultures.IsPseudoLocale(string? culture) -> bool
+static MMCA.Common.Shared.Globalization.SupportedCultures.IsSupported(string? culture) -> bool
+static MMCA.Common.Shared.Globalization.SupportedCultures.ResolveClosest(string? culture) -> string!
+static MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.operator !=(MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest? left, MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest? right) -> bool
+static MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.operator ==(MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest? left, MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest? right) -> bool
+static MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.operator !=(MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO? left, MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO? right) -> bool
+static MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.operator ==(MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO? left, MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO? right) -> bool
+static MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.operator !=(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest? left, MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest? right) -> bool
+static MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.operator ==(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest? left, MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest? right) -> bool
+static MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.operator !=(MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO? left, MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO? right) -> bool
+static MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO.operator ==(MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO? left, MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO? right) -> bool
+static MMCA.Common.Shared.Privacy.UserDataExportDTO.operator !=(MMCA.Common.Shared.Privacy.UserDataExportDTO? left, MMCA.Common.Shared.Privacy.UserDataExportDTO? right) -> bool
+static MMCA.Common.Shared.Privacy.UserDataExportDTO.operator ==(MMCA.Common.Shared.Privacy.UserDataExportDTO? left, MMCA.Common.Shared.Privacy.UserDataExportDTO? right) -> bool
+static MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.operator !=(MMCA.Common.Shared.Privacy.UserDataExportSectionDTO? left, MMCA.Common.Shared.Privacy.UserDataExportSectionDTO? right) -> bool
+static MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.operator ==(MMCA.Common.Shared.Privacy.UserDataExportSectionDTO? left, MMCA.Common.Shared.Privacy.UserDataExportSectionDTO? right) -> bool
+static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.BreakDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.FailureRatio.get -> double
+static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.MinimumThroughput.get -> int
+static MMCA.Common.Shared.Resilience.BrokerResilienceDefaults.SamplingDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.AttemptTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.CircuitBreakerSamplingDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.KeepAlivePingDelay.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.KeepAlivePingTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.MaxRetryAttempts.get -> int
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.PooledConnectionIdleTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.PooledConnectionLifetime.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.TotalRequestTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.ValueObjects.Address.Create(string! addressLine1, string? addressLine2, string? city, string? state, string? zipCode, string? country) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Address!>!
+static MMCA.Common.Shared.ValueObjects.Address.operator !=(MMCA.Common.Shared.ValueObjects.Address? left, MMCA.Common.Shared.ValueObjects.Address? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Address.operator ==(MMCA.Common.Shared.ValueObjects.Address? left, MMCA.Common.Shared.ValueObjects.Address? right) -> bool
+static MMCA.Common.Shared.ValueObjects.AddressInvariants.EnsureAddressIsValid(MMCA.Common.Shared.ValueObjects.Address? address, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.AddressInvariants.EnsureAddressLine1IsValid(string! addressLine1, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Currency.FromCode(string! code) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Currency!>!
+static MMCA.Common.Shared.ValueObjects.Currency.operator !=(MMCA.Common.Shared.ValueObjects.Currency? left, MMCA.Common.Shared.ValueObjects.Currency? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Currency.operator ==(MMCA.Common.Shared.ValueObjects.Currency? left, MMCA.Common.Shared.ValueObjects.Currency? right) -> bool
+static MMCA.Common.Shared.ValueObjects.DateRange.Create(System.DateOnly start, System.DateOnly end) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.DateRange!>!
+static MMCA.Common.Shared.ValueObjects.DateRange.operator !=(MMCA.Common.Shared.ValueObjects.DateRange? left, MMCA.Common.Shared.ValueObjects.DateRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.DateRange.operator ==(MMCA.Common.Shared.ValueObjects.DateRange? left, MMCA.Common.Shared.ValueObjects.DateRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.DateTimeRange.Create(System.DateTime start, System.DateTime end) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.DateTimeRange!>!
+static MMCA.Common.Shared.ValueObjects.DateTimeRange.operator !=(MMCA.Common.Shared.ValueObjects.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.DateTimeRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.DateTimeRange.operator ==(MMCA.Common.Shared.ValueObjects.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.DateTimeRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Email.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Email!>!
+static MMCA.Common.Shared.ValueObjects.Email.implicit operator string!(MMCA.Common.Shared.ValueObjects.Email! email) -> string!
+static MMCA.Common.Shared.ValueObjects.Email.operator !=(MMCA.Common.Shared.ValueObjects.Email? left, MMCA.Common.Shared.ValueObjects.Email? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Email.operator ==(MMCA.Common.Shared.ValueObjects.Email? left, MMCA.Common.Shared.ValueObjects.Email? right) -> bool
+static MMCA.Common.Shared.ValueObjects.EmailInvariants.EnsureEmailIsValid(string! email, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.All.get -> System.Collections.Generic.IReadOnlyCollection<TEnumeration!>!
+static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.FromName(string! name) -> MMCA.Common.Shared.Abstractions.Result<TEnumeration!>!
+static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.FromValue(int value) -> MMCA.Common.Shared.Abstractions.Result<TEnumeration!>!
+static MMCA.Common.Shared.ValueObjects.Money.Add(MMCA.Common.Shared.ValueObjects.Money! first, MMCA.Common.Shared.ValueObjects.Money! second) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Money!>!
+static MMCA.Common.Shared.ValueObjects.Money.Create(decimal amount, MMCA.Common.Shared.ValueObjects.Currency! currency) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Money!>!
+static MMCA.Common.Shared.ValueObjects.Money.Multiply(MMCA.Common.Shared.ValueObjects.Money! first, int quantity) -> MMCA.Common.Shared.ValueObjects.Money!
+static MMCA.Common.Shared.ValueObjects.Money.Zero() -> MMCA.Common.Shared.ValueObjects.Money!
+static MMCA.Common.Shared.ValueObjects.Money.Zero(MMCA.Common.Shared.ValueObjects.Currency! currency) -> MMCA.Common.Shared.ValueObjects.Money!
+static MMCA.Common.Shared.ValueObjects.Money.operator !=(MMCA.Common.Shared.ValueObjects.Money? left, MMCA.Common.Shared.ValueObjects.Money? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Money.operator *(MMCA.Common.Shared.ValueObjects.Money! first, int quantity) -> MMCA.Common.Shared.ValueObjects.Money!
+static MMCA.Common.Shared.ValueObjects.Money.operator +(MMCA.Common.Shared.ValueObjects.Money! first, MMCA.Common.Shared.ValueObjects.Money! second) -> MMCA.Common.Shared.ValueObjects.Money!
+static MMCA.Common.Shared.ValueObjects.Money.operator ==(MMCA.Common.Shared.ValueObjects.Money? left, MMCA.Common.Shared.ValueObjects.Money? right) -> bool
+static MMCA.Common.Shared.ValueObjects.PhoneNumber.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.PhoneNumber!>!
+static MMCA.Common.Shared.ValueObjects.PhoneNumber.implicit operator string!(MMCA.Common.Shared.ValueObjects.PhoneNumber! phoneNumber) -> string!
+static MMCA.Common.Shared.ValueObjects.PhoneNumber.operator !=(MMCA.Common.Shared.ValueObjects.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.PhoneNumber? right) -> bool
+static MMCA.Common.Shared.ValueObjects.PhoneNumber.operator ==(MMCA.Common.Shared.ValueObjects.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.PhoneNumber? right) -> bool
+static MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.EnsurePhoneNumberIsValid(string! phoneNumber, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.ValueObject.operator !=(MMCA.Common.Shared.ValueObjects.ValueObject? left, MMCA.Common.Shared.ValueObjects.ValueObject? right) -> bool
+static MMCA.Common.Shared.ValueObjects.ValueObject.operator ==(MMCA.Common.Shared.ValueObjects.ValueObject? left, MMCA.Common.Shared.ValueObjects.ValueObject? right) -> bool
+static readonly MMCA.Common.Shared.Abstractions.Error.AlreadyDeleted -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.Abstractions.Error.InvalidEntityField -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.Abstractions.Error.NotFound -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.AddressLine1MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.AddressLine2MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.CityMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.CountryMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.StateMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.ZipCodeMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Currency.All -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Currency!>!
+static readonly MMCA.Common.Shared.ValueObjects.Currency.EmptyCurrency -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Currency.Eur -> MMCA.Common.Shared.ValueObjects.Currency!
+static readonly MMCA.Common.Shared.ValueObjects.Currency.InvalidCurrency -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Currency.Usd -> MMCA.Common.Shared.ValueObjects.Currency!
+static readonly MMCA.Common.Shared.ValueObjects.EmailInvariants.MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Money.CurrencyMismatch -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Money.NoCurrency -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.MinLength -> int
+virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.<Clone>$() -> MMCA.Common.Shared.Abstractions.CollectionResult<T>!
+virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
+virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.Shared.Abstractions.Error.<Clone>$() -> MMCA.Common.Shared.Abstractions.Error!
+virtual MMCA.Common.Shared.Abstractions.Error.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Shared.Abstractions.Error.Equals(MMCA.Common.Shared.Abstractions.Error? other) -> bool
+virtual MMCA.Common.Shared.Abstractions.Error.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.<Clone>$() -> MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!
+virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Equals(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? other) -> bool
+virtual MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.<Clone>$() -> MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!
+virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.Equals(MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO? other) -> bool
+virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual MMCA.Common.Shared.ValueObjects.ValueObject.EqualityContract.get -> System.Type!
+virtual MMCA.Common.Shared.ValueObjects.ValueObject.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.StringBuilder! builder) -> bool
+~override MMCA.Common.Shared.Auth.AuthenticationResponse.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.AuthenticationResponse.ToString() -> string
+~override MMCA.Common.Shared.Auth.ChangePasswordRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.ChangePasswordRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.LoginRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.LoginRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.RefreshTokenRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.RefreshTokenRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.RegisterRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.RegisterRequest.ToString() -> string
+~override MMCA.Common.Shared.AuthenticationRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.AuthenticationRequest.ToString() -> string
+~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.ToString() -> string

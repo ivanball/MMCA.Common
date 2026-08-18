@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using MMCA.Common.Domain.Entities;
-using MMCA.Common.Domain.Specifications;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
@@ -37,7 +37,7 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default);
@@ -60,7 +60,7 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
     Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         Dictionary<string, (string Operator, string Value)>? filters = null,
         string? sortColumn = null,
         string? sortDirection = null,
@@ -107,7 +107,7 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
         string? idField = null,
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default);
@@ -128,7 +128,7 @@ public interface IEntityQueryService<TEntity, TEntityDTO, TIdentifierType>
         TIdentifierType id,
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default);

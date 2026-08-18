@@ -12,6 +12,11 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// The caching query decorator adds the cache hit/miss counters below, so a host can chart the
 /// hit ratio per query and spot a cache that has stopped serving reads.
 /// </para>
+/// <para>
+/// The authorization and timeout decorators add two short-circuit counters, so a permission that
+/// is denying far more traffic than expected, or a handler that keeps exhausting its execution
+/// budget, is visible as a metric rather than only as a client-side error rate.
+/// </para>
 /// </summary>
 internal static class CqrsMetrics
 {
@@ -44,6 +49,18 @@ internal static class CqrsMetrics
         unit: "{query}",
         description: "Count of cacheable queries that executed the handler because the cache did not serve them, tagged by query name.");
 
+    /// <summary>Requests short-circuited by the authorization decorators, tagged by <c>request_type</c>.</summary>
+    internal static readonly Counter<long> AuthorizationDenied = Meter.CreateCounter<long>(
+        "cqrs.authorization.denied.count",
+        unit: "{request}",
+        description: "Count of commands and queries denied by the authorization decorators, tagged by request type name.");
+
+    /// <summary>Requests abandoned because their own execution budget expired, tagged by <c>request_type</c>.</summary>
+    internal static readonly Counter<long> TimeoutExpired = Meter.CreateCounter<long>(
+        "cqrs.timeout.count",
+        unit: "{request}",
+        description: "Count of commands and queries whose IHasTimeout budget expired before the handler completed, tagged by request type name.");
+
     /// <summary>Records one cache hit for the named query.</summary>
     /// <param name="queryName">The query type name.</param>
     internal static void RecordCacheHit(string queryName) =>
@@ -53,4 +70,14 @@ internal static class CqrsMetrics
     /// <param name="queryName">The query type name.</param>
     internal static void RecordCacheMiss(string queryName) =>
         QueryCacheMisses.Add(1, new KeyValuePair<string, object?>("query", queryName));
+
+    /// <summary>Records one authorization denial for the named command or query.</summary>
+    /// <param name="requestTypeName">The command or query type name.</param>
+    internal static void RecordAuthorizationDenied(string requestTypeName) =>
+        AuthorizationDenied.Add(1, new KeyValuePair<string, object?>("request_type", requestTypeName));
+
+    /// <summary>Records one expired execution budget for the named command or query.</summary>
+    /// <param name="requestTypeName">The command or query type name.</param>
+    internal static void RecordTimeout(string requestTypeName) =>
+        TimeoutExpired.Add(1, new KeyValuePair<string, object?>("request_type", requestTypeName));
 }

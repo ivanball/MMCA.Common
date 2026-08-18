@@ -44,6 +44,13 @@ public static class DependencyInjection
             services.TryAddScoped<IEntityDTOMapper<PushNotification, PushNotificationDTO, PushNotificationIdentifierType>,
                 PushNotificationDTOMapper>();
 
+            // DTO projector: registering it is what switches notification list reads onto the
+            // server-side projection path (the query service resolves it through its longer
+            // constructor). The projected values are pinned equal to the mapper's by test.
+            services.TryAddScoped<PushNotificationDTOProjector>();
+            services.TryAddScoped<IEntityDTOProjector<PushNotification, PushNotificationDTO, PushNotificationIdentifierType>,
+                PushNotificationDTOProjector>();
+
             // Command handlers
             services.TryAddScoped<ICommandHandler<SendPushNotificationCommand, Result<PushNotificationDTO>>,
                 SendPushNotificationHandler>();

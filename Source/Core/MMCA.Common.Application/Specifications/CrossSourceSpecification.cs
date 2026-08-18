@@ -81,18 +81,12 @@ public static class CrossSourceSpecification
         if (localPredicate is not null)
         {
             // Rebind the local predicate onto the FK selector's parameter, then AND (no Expression.Invoke,
-            // so the combined predicate stays translatable on every provider).
-            var reboundLocal = new ParameterReplacer(localPredicate.Parameters[0], parameter)
-                .Visit(localPredicate.Body);
+            // so the combined predicate stays translatable on every provider). The visitor is the one
+            // the Domain composers use, shared through InternalsVisibleTo rather than duplicated here.
+            var reboundLocal = ParameterReplacer.Replace(localPredicate.Body, localPredicate.Parameters[0], parameter);
             body = Expression.AndAlso(reboundLocal, body);
         }
 
         return Expression.Lambda<Func<TDependent, bool>>(body, parameter);
-    }
-
-    private sealed class ParameterReplacer(ParameterExpression from, ParameterExpression to) : ExpressionVisitor
-    {
-        protected override Expression VisitParameter(ParameterExpression node) =>
-            node == from ? to : base.VisitParameter(node);
     }
 }

@@ -52,33 +52,46 @@ public static class DependencyInjection
         /// <para>
         /// <b>Command pipeline (nesting from outermost to innermost):</b>
         /// <code>
-        ///   FeatureGateCommandDecorator          ← outermost: short-circuits if feature flag disabled
-        ///     → LoggingCommandDecorator           ← logs start/end, captures full pipeline duration
-        ///       → CachingCommandDecorator         ← invalidates cache AFTER transaction commits
-        ///         → ValidatingCommandDecorator    ← short-circuits with Result.Failure on validation errors
-        ///           → TransactionalCommandDecorator ← wraps handler in DB transaction (if ITransactional)
-        ///             → ConcreteHandler            ← the actual business logic
+        ///   FeatureGateCommandDecorator              ← outermost: short-circuits if feature flag disabled
+        ///     → AuthorizationCommandDecorator         ← short-circuits with Forbidden (if IRequiresPermission)
+        ///       → LoggingCommandDecorator             ← logs start/end, captures full pipeline duration
+        ///         → CachingCommandDecorator           ← invalidates cache AFTER transaction commits
+        ///           → ValidatingCommandDecorator      ← short-circuits with Result.Failure on validation errors
+        ///             → TimeoutCommandDecorator       ← applies the command's own budget (if IHasTimeout)
+        ///               → TransactionalCommandDecorator ← wraps handler in DB transaction (if ITransactional)
+        ///                 → ConcreteHandler            ← the actual business logic
         /// </code>
         /// </para>
         /// <para>
         /// <b>Query pipeline (nesting from outermost to innermost):</b>
         /// <code>
-        ///   FeatureGateQueryDecorator         ← outermost: short-circuits if feature flag disabled
-        ///     → LoggingQueryDecorator          ← logs start/end, captures full pipeline duration
-        ///       → CachingQueryDecorator        ← innermost: caches results (if IQueryCacheable)
-        ///         → ConcreteHandler            ← the actual query logic
+        ///   FeatureGateQueryDecorator           ← outermost: short-circuits if feature flag disabled
+        ///     → AuthorizationQueryDecorator      ← short-circuits with Forbidden (if IRequiresPermission)
+        ///       → LoggingQueryDecorator          ← logs start/end, captures full pipeline duration
+        ///         → CachingQueryDecorator        ← caches results (if IQueryCacheable)
+        ///           → TimeoutQueryDecorator      ← innermost: applies the query's own budget (if IHasTimeout)
+        ///             → ConcreteHandler          ← the actual query logic
         /// </code>
         /// </para>
         /// <para>
         /// <b>Design rationale:</b>
         /// <list type="bullet">
         /// <item>Feature gating is outermost so disabled features are rejected immediately with zero
-        /// overhead — no logging, caching, validation, or transaction work.</item>
+        /// overhead: no authorization, logging, caching, validation, or transaction work. It also
+        /// sits outside authorization deliberately: a feature that is off must answer the same way
+        /// for every caller rather than leaking which permission guards it.</item>
+        /// <item>Authorization sits directly inside feature gating and outside caching, so a denied
+        /// request neither reads nor populates the cache: a cache lookup ahead of the permission
+        /// check would serve another caller's rows to a principal not allowed to run the query.</item>
         /// <item>Logging sits inside feature gating so it only measures enabled feature executions.</item>
         /// <item>Validation sits outside the transaction boundary so invalid commands never start
         /// a database transaction — saving resources on malformed requests.</item>
         /// <item>Cache invalidation sits outside validation so cache is only cleared after a valid,
         /// committed mutation — a rollback or validation failure leaves cache intact.</item>
+        /// <item>The timeout budget sits inside validation and outside the transaction, so it covers
+        /// the database work that actually hangs, does not charge the caller for validation, and
+        /// cancels the transaction instead of leaving it open. On the query side it is innermost, so
+        /// a cache hit is served without starting a budget at all.</item>
         /// <item>On business failure (<see cref="Result"/>.<c>IsFailure</c>), the transaction is rolled
         /// back (atomicity over partial persistence) and cache invalidation is skipped.</item>
         /// <item>On exception, the transaction rolls back and the exception propagates through all decorators.</item>
@@ -92,14 +105,18 @@ public static class DependencyInjection
             // Registered first = innermost (wraps the concrete handler directly).
             // Registered last  = outermost (wraps all other decorators).
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(TransactionalCommandDecorator<,>));   // innermost
-            services.TryDecorate(typeof(ICommandHandler<,>), typeof(ValidatingCommandDecorator<,>));      // validates before transaction
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(TimeoutCommandDecorator<,>));         // per-command execution budget
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(ValidatingCommandDecorator<,>));      // validates before the budget and transaction
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(CachingCommandDecorator<,>));         // cache invalidation
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(LoggingCommandDecorator<,>));         // logging
+            services.TryDecorate(typeof(ICommandHandler<,>), typeof(AuthorizationCommandDecorator<,>));   // permission check
             services.TryDecorate(typeof(ICommandHandler<,>), typeof(FeatureGateCommandDecorator<,>));     // outermost — feature flag check
 
             // ── Query decorators ────────────────────────────────────────
-            services.TryDecorate(typeof(IQueryHandler<,>), typeof(CachingQueryDecorator<,>));             // innermost
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(TimeoutQueryDecorator<,>));             // innermost: per-query execution budget
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(CachingQueryDecorator<,>));             // caching
             services.TryDecorate(typeof(IQueryHandler<,>), typeof(LoggingQueryDecorator<,>));             // logging
+            services.TryDecorate(typeof(IQueryHandler<,>), typeof(AuthorizationQueryDecorator<,>));       // permission check
             services.TryDecorate(typeof(IQueryHandler<,>), typeof(FeatureGateQueryDecorator<,>));         // outermost — feature flag check
 
             return services;
@@ -132,6 +149,15 @@ public static class DependencyInjection
             services.Scan(scan => scan
                 .FromAssemblyOf<TAssemblyMarker>()
                 .AddClasses(classes => classes.AssignableTo(typeof(IEntityDTOMapper<,,>)))
+                .AsSelfWithInterfaces()
+                .WithScopedLifetime());
+
+            // DTO projectors are optional and opt-in: an entity that has one gets server-side
+            // projection on its list reads, an entity that has none keeps materialize-then-map. They
+            // are scanned beside the mappers so a module only has to write the projector class.
+            services.Scan(scan => scan
+                .FromAssemblyOf<TAssemblyMarker>()
+                .AddClasses(classes => classes.AssignableTo(typeof(IEntityDTOProjector<,,>)))
                 .AsSelfWithInterfaces()
                 .WithScopedLifetime());
 

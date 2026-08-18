@@ -54,6 +54,11 @@
          Referenced unconditionally so the types are available to hosts that call AddScheduledJobs;
          a host that does not call it registers no runner and maps no table. -->
     <PackageReference Include="Cronos" />
+    <!-- Circuit breaker guarding the OutboxProcessor's broker-publish call: on a dead broker the
+         processor fails fast instead of stacking a publish timeout per row. Polly.Core only (the
+         v8 resilience-pipeline API); the v7 compatibility shim in the Polly meta-package is not
+         used here. -->
+    <PackageReference Include="Polly.Core" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.Application\MMCA.Common.Application.csproj" />

@@ -61,6 +61,12 @@
           "Microsoft.AspNetCore.SignalR.Client.Core": "10.0.11"
         }
       },
+      "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
+        "type": "Direct",
+        "requested": "[5.6.0, )",
+        "resolved": "5.6.0",
+        "contentHash": "W4kJGezNIKLzo0Ak5FAQDFvkMf2U7DtGL4THmHyRSApfKsKt5V+eX/bU0ZLKAt/uf9Bb2o1bi0YDKj/GRB/vYQ=="
+      },
       "Microsoft.Extensions.Configuration.Abstractions": {
         "type": "Direct",
         "requested": "[10.0.11, )",
@@ -647,11 +653,6 @@
         "resolved": "6.0.0",
         "contentHash": "hqTM5628jSsQiv+HGpiq3WKBl2c8v1KZfby2J6Pr7pEPlK9waPdgEO6b8A/+/xn/yZ9ulv8HuqK71ONy2tg67A=="
       },
-      "Polly.Core": {
-        "type": "Transitive",
-        "resolved": "8.7.0",
-        "contentHash": "BS2t+nsBer16PIebCEPNBK5fgMisADQyRCd7K+BgkMWpFmSaiYE+rVVNpFhGRqUkJmNSLmw0uCNzHHWfgml28Q=="
-      },
       "StyleCop.Analyzers.Unstable": {
         "type": "Transitive",
         "resolved": "1.2.0.556",
@@ -667,6 +668,12 @@
       },
       "mmca.common.shared": {
         "type": "Project"
+      },
+      "Polly.Core": {
+        "type": "CentralTransitive",
+        "requested": "[8.7.0, )",
+        "resolved": "8.7.0",
+        "contentHash": "BS2t+nsBer16PIebCEPNBK5fgMisADQyRCd7K+BgkMWpFmSaiYE+rVVNpFhGRqUkJmNSLmw0uCNzHHWfgml28Q=="
       }
     }
   }

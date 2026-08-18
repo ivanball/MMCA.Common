@@ -1,6 +1,8 @@
 using System.Linq.Expressions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
@@ -73,6 +75,12 @@ internal class EFReadRepositoryDecorator<TEntity, TIdentifierType>(IReadReposito
         ProfilingHelper.ProfileAsync(ClassName, nameof(CountAsync),
             () => _inner.CountAsync(where, cancellationToken));
 
+    public Task<int> CountAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(CountAsync),
+            () => _inner.CountAsync(specification, cancellationToken));
+
     public Task<bool> ExistsAsync(TIdentifierType id, bool ignoreQueryFilters = false, CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(ExistsAsync),
             () => _inner.ExistsAsync(id, ignoreQueryFilters, cancellationToken));
@@ -80,6 +88,32 @@ internal class EFReadRepositoryDecorator<TEntity, TIdentifierType>(IReadReposito
     public Task<bool> ExistsAsync(Expression<Func<TEntity, bool>> where, bool ignoreQueryFilters = false, CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(ExistsAsync),
             () => _inner.ExistsAsync(where, ignoreQueryFilters, cancellationToken));
+
+    public Task<IReadOnlyCollection<TEntity>> ListAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(ListAsync),
+            () => _inner.ListAsync(specification, cancellationToken));
+
+    public Task<IReadOnlyCollection<TResult>> ListAsync<TResult>(
+        ISpecification<TEntity, TIdentifierType> specification,
+        Expression<Func<TEntity, TResult>> select,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(ListAsync),
+            () => _inner.ListAsync(specification, select, cancellationToken));
+
+    public Task<bool> AnyAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(AnyAsync),
+            () => _inner.AnyAsync(specification, cancellationToken));
+
+    public Task<Result<KeysetCollectionResult<TEntity>>> GetPageByCursorAsync(
+        KeysetPageRequest request,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(GetPageByCursorAsync),
+            () => _inner.GetPageByCursorAsync(request, specification, cancellationToken));
 
     public IQueryable<TEntity> Table => _inner.Table;
     public IQueryable<TEntity> TableNoTracking => _inner.TableNoTracking;

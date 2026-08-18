@@ -697,11 +697,6 @@
         "resolved": "2.2.16",
         "contentHash": "nonu9l0YrZH6krVYbskBjE7uG0VMAnvOQ9PU+RmzUsy+++vHkqzzCkHRoP877OiA3iRTxJyNDLfpcU8hrJ3/YQ=="
       },
-      "Polly.Core": {
-        "type": "Transitive",
-        "resolved": "8.4.2",
-        "contentHash": "BpE2I6HBYYA5tF0Vn4eoQOGYTYIK1BlF5EXVgkWGn3mqUUjbXAr13J6fZVbp7Q3epRR8yshacBMlsHMhpOiV3g=="
-      },
       "Polly.Extensions": {
         "type": "Transitive",
         "resolved": "8.4.2",
@@ -911,6 +906,7 @@
           "Microsoft.Extensions.Caching.Hybrid": "[10.9.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.9.0, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
+          "Polly.Core": "[8.7.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
           "StackExchange.Redis": "[2.13.17, )"
@@ -1135,6 +1131,12 @@
           "MiniProfiler.Shared": "4.5.4"
         }
       },
+      "Polly.Core": {
+        "type": "CentralTransitive",
+        "requested": "[8.7.0, )",
+        "resolved": "8.7.0",
+        "contentHash": "BS2t+nsBer16PIebCEPNBK5fgMisADQyRCd7K+BgkMWpFmSaiYE+rVVNpFhGRqUkJmNSLmw0uCNzHHWfgml28Q=="
+      },
       "Scrutor": {
         "type": "CentralTransitive",
         "requested": "[7.0.0, )",
@@ -1190,7 +1192,7 @@
       },
       "xunit.v3.extensibility.core": {
         "type": "CentralTransitive",
-        "requested": "[3.2.2, )",
+        "requested": "[4.0.0, )",
         "resolved": "4.0.0",
         "contentHash": "+tTe9VX2vwrUHGI48FE4ly956Ry084wPH4I/7g5D36AkAMGjQRZZDVz8eH2GwX/CLS9PDQRSca534WyrAYsyzw==",
         "dependencies": {
