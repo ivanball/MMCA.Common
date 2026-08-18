@@ -100,6 +100,9 @@ MMCA.Common.Testing.Architecture.IArchitectureMap.OfLayer(MMCA.Common.Testing.Ar
 MMCA.Common.Testing.Architecture.IArchitectureMap.OtherModuleNamespaces(string! module, MMCA.Common.Testing.Architecture.Layer layer) -> string![]!
 MMCA.Common.Testing.Architecture.IArchitectureMap.RepoToken.get -> string!
 MMCA.Common.Testing.Architecture.IArchitectureMap.RootNamespace(string! module, MMCA.Common.Testing.Architecture.Layer layer) -> string!
+MMCA.Common.Testing.Architecture.IdempotencyConventionTestsBase
+MMCA.Common.Testing.Architecture.IdempotencyConventionTestsBase.IdempotencyConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.IdempotencyConventionTestsBase.PostActions_ShouldDeclare_IdempotencyIntent() -> void
 MMCA.Common.Testing.Architecture.ImmutabilityTestsBase
 MMCA.Common.Testing.Architecture.ImmutabilityTestsBase.CommandsAndQueries_ShouldBe_Immutable() -> void
 MMCA.Common.Testing.Architecture.ImmutabilityTestsBase.DomainEvents_ShouldBe_Immutable() -> void
@@ -196,6 +199,9 @@ MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.SloAlertSpecs_
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase.EntitiesWithPiiProperties_ShouldImplement_IAnonymizable() -> void
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase.PiiConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.ProtoContractTestsBase
+MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoContractTestsBase() -> void
+MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoContracts_ShouldMatch_TheFrozenSnapshot() -> void
 MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase
 MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.ApplicationLayer_DoesNotUseRawQueryableSurfaces() -> void
 MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.RawQueryableConventionTestsBase() -> void
@@ -241,6 +247,7 @@ abstract MMCA.Common.Testing.Architecture.FormsConventionTestsBase.Map.get -> MM
 abstract MMCA.Common.Testing.Architecture.FrameworkVersionConsistencyTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.HandlerConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.HandlerResultConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.IdempotencyConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ImmutabilityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.IntegrationEventContractTestsBase.ExpectedContract.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.IntegrationEventContractTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -253,6 +260,9 @@ abstract MMCA.Common.Testing.Architecture.ModuleIsolationTestsBase.Map.get -> MM
 abstract MMCA.Common.Testing.Architecture.NamespaceCycleTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.NamingConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.PiiConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.FrozenProtoContracts.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.ProtoFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Architecture.ProtoContractTestsBase.SolutionFileName.get -> string!
 abstract MMCA.Common.Testing.Architecture.RawQueryableConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.IsGovernedPage(System.Type! pageType) -> bool
 abstract MMCA.Common.Testing.Architecture.RouteAuthorizationTestsBase.RequiredRole.get -> string!
@@ -278,8 +288,10 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationDoesNotDepe
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationLayersDeclareHandlers(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationServicesDoNotInjectHandlers(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ApplicationServicesRespectConstructorArity(MMCA.Common.Testing.Architecture.IArchitectureMap! map, int maxParameters = 8) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.AssertProtoContract(System.Collections.Generic.IEnumerable<string!>! absoluteProtoPaths, System.Collections.Generic.IReadOnlyCollection<string!>! frozenContracts) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.AsyncMethodsDeclareTrailingCancellationToken(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? exemptMethods = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.BuildIntegrationEventContract(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> System.Collections.Generic.List<string!>!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.BuildProtoContract(System.Collections.Generic.IEnumerable<string!>! absoluteProtoPaths) -> System.Collections.Generic.List<string!>!
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandHandlersReturnResult(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandsAndQueriesAreImmutable(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandsHaveCommandOrRequestSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
@@ -326,6 +338,8 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleSharedIsFramewor
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.NamespacesHaveNoDependencyCycles(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>? allowedCycleNamespaces = null) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.PinnedPackageMajorBelow(string! packageId, int exclusiveMajorCeiling, string! reason) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.PostActionsDeclareIdempotencyIntent(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ProtoContractsMatchFrozenList(System.Collections.Generic.IReadOnlyCollection<string!>! protoRelativePaths, System.Collections.Generic.IReadOnlyCollection<string!>! frozenContracts, string! repoRootSolutionFileName) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueriesHaveQuerySuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueryHandlersReturnResult(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.RepositoriesHaveRepositorySuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

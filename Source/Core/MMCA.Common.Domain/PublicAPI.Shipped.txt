@@ -66,6 +66,11 @@ MMCA.Common.Domain.Enums.DomainEntityState.Updated = 2 -> MMCA.Common.Domain.Enu
 MMCA.Common.Domain.Extensions.EntityTypeExtensions
 MMCA.Common.Domain.Extensions.EntityTypeExtensions.extension(System.Type!)
 MMCA.Common.Domain.Extensions.EntityTypeExtensions.extension(System.Type!).IsIdValueGenerated.get -> bool
+MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested
+MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Equals(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? other) -> bool
+MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.OutputCacheEvictionRequested() -> void
+MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Tags.init -> void
 MMCA.Common.Domain.Interfaces.IAggregateRoot
 MMCA.Common.Domain.Interfaces.IAggregateRoot.AddDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent) -> void
 MMCA.Common.Domain.Interfaces.IAggregateRoot.ClearDomainEvents() -> void
@@ -187,6 +192,10 @@ override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Equ
 override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.GetHashCode() -> int
 override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.ToString() -> string!
+override MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.<Clone>$() -> MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested!
+override MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Equals(object? obj) -> bool
+override MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.GetHashCode() -> int
+override MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.ToString() -> string!
 override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.<Clone>$() -> MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated!
 override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Equals(object? obj) -> bool
 override MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.GetHashCode() -> int
@@ -203,6 +212,7 @@ override abstract MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.<Clone>$(
 override abstract MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.<Clone>$() -> MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>!
 override sealed MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
 override sealed MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
+override sealed MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.Equals(MMCA.Common.Domain.DomainEvents.BaseIntegrationEvent? other) -> bool
 override sealed MMCA.Common.Domain.Notifications.PushNotifications.DomainEvents.PushNotificationCreated.Equals(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? other) -> bool
 static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator !=(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
 static MMCA.Common.Domain.DomainEvents.BaseDomainEvent.operator ==(MMCA.Common.Domain.DomainEvents.BaseDomainEvent? left, MMCA.Common.Domain.DomainEvents.BaseDomainEvent? right) -> bool
@@ -212,6 +222,8 @@ static MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.opera
 static MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>.operator ==(MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? left, MMCA.Common.Domain.DomainEvents.EntityChangedEvent<TIdentifierType>? right) -> bool
 static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.GetChildOrNotFound<TChild, TChildId>(System.Collections.Generic.IEnumerable<TChild!>! collection, TChildId childId, string! source) -> MMCA.Common.Shared.Abstractions.Result<TChild!>!
 static MMCA.Common.Domain.Extensions.EntityTypeExtensions.get_IsIdValueGenerated(System.Type! entityType) -> bool
+static MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.operator !=(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? left, MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? right) -> bool
+static MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested.operator ==(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? left, MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested? right) -> bool
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureBytesAreNotEmpty(byte[]! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureCollectionIsNotEmpty<T>(System.Collections.Generic.IReadOnlyCollection<T>! value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureIdIsNotDefault<TId>(TId id, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!

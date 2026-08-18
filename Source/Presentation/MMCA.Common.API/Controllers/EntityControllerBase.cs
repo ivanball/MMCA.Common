@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Export;
 using MMCA.Common.API.ModelBinders;
 using MMCA.Common.Application.Interfaces;
@@ -395,9 +396,62 @@ public abstract class EntityControllerBase<
             asTracking: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return result.IsFailure
-            ? HandleFailure(result.Errors)
-            : Ok(result.Value);
+        if (result.IsFailure)
+            return HandleFailure(result.Errors);
+
+        SetConcurrencyETag(result.Value);
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// The DTO's <c>RowVersion</c> property when it carries one, resolved once per closed controller
+    /// type because a DTO's shape cannot change at runtime. Null for a DTO with no concurrency token,
+    /// which makes <see cref="SetConcurrencyETag"/> a no-op with no per-request reflection at all.
+    /// </summary>
+    private static readonly PropertyInfo? RowVersionProperty = typeof(TEntityDTO)
+        .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        .FirstOrDefault(p => p.CanRead
+            && p.PropertyType == typeof(byte[])
+            && string.Equals(p.Name, "RowVersion", StringComparison.Ordinal));
+
+    /// <summary>
+    /// Emits the read's concurrency token as a weak <c>ETag</c>, so a client can hand it straight back
+    /// as an <c>If-Match</c> precondition on the next write (see
+    /// <see cref="Concurrency.SupportsIfMatchAttribute"/>) instead of round-tripping it through the
+    /// request body.
+    /// </summary>
+    /// <param name="dto">The DTO just served, or null.</param>
+    /// <remarks>
+    /// A DTO without a <c>RowVersion</c> gets no header: absent is the correct answer for a resource
+    /// that has no version to condition on, and a fabricated tag would invite preconditions the write
+    /// side cannot honour.
+    /// </remarks>
+    private void SetConcurrencyETag(object? dto)
+    {
+        if (RowVersionProperty is null || dto is null)
+            return;
+
+        if (ReadRowVersion(dto) is not { Length: > 0 } rowVersion)
+            return;
+
+        Response.Headers[ConcurrencyETag.ETagHeaderName] = ConcurrencyETag.Format(rowVersion);
+    }
+
+    /// <summary>
+    /// Reads the concurrency token off a served row, which is a typed DTO on an ordinary read and a
+    /// shaped dictionary keyed by JSON names when the caller asked for a field projection.
+    /// </summary>
+    /// <param name="dto">The row just served.</param>
+    /// <returns>The token, or null when this row carries none.</returns>
+    private static byte[]? ReadRowVersion(object dto)
+    {
+        if (RowVersionProperty!.DeclaringType!.IsInstanceOfType(dto))
+            return RowVersionProperty.GetValue(dto) as byte[];
+
+        return dto is IDictionary<string, object?> shaped
+            && (shaped.TryGetValue("rowVersion", out var value) || shaped.TryGetValue("RowVersion", out value))
+            ? value as byte[]
+            : null;
     }
 
     /// <summary>

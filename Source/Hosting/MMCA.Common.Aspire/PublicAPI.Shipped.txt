@@ -13,6 +13,31 @@ MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHea
 MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddServiceDefaults() -> TBuilder
 MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddWarmupReadiness() -> TBuilder
 MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).ConfigureOpenTelemetry() -> TBuilder
+MMCA.Common.Aspire.Gateway.GatewayCorrelationExtensions
+MMCA.Common.Aspire.Gateway.GatewayCorrelationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+MMCA.Common.Aspire.Gateway.GatewayCorrelationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseGatewayCorrelation() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+MMCA.Common.Aspire.Gateway.GatewayCorrelationMiddleware
+MMCA.Common.Aspire.Gateway.GatewayCorrelationMiddleware.GatewayCorrelationMiddleware(Microsoft.AspNetCore.Http.RequestDelegate! next) -> void
+MMCA.Common.Aspire.Gateway.GatewayCorrelationMiddleware.InvokeAsync(Microsoft.AspNetCore.Http.HttpContext! context) -> System.Threading.Tasks.Task!
+MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions
+MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayDownstreamHealthChecks(params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseGatewayRateLimiting() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayRateLimiting(MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayRateLimiting(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.BypassPathPrefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.BypassPathPrefixes.init -> void
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.GatewayRateLimitingSettings() -> void
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.GlobalConcurrencyLimit.get -> int
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.GlobalConcurrencyLimit.init -> void
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.PermitLimit.get -> int
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.PermitLimit.init -> void
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.WindowSeconds.get -> int
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.WindowSeconds.init -> void
 MMCA.Common.Aspire.GatewayCorsExtensions
 MMCA.Common.Aspire.GatewayCorsExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
 MMCA.Common.Aspire.GatewayCorsExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonGatewayCors(Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
@@ -71,6 +96,7 @@ MMCA.Common.Aspire.Warmup.WarmupReadinessGate.IsReady.get -> bool
 MMCA.Common.Aspire.Warmup.WarmupReadinessGate.WarmupReadinessGate() -> void
 abstract MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.Name.get -> string!
 abstract MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.WarmupPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+const MMCA.Common.Aspire.Gateway.GatewayCorrelationMiddleware.HeaderName = "X-Correlation-ID" -> string!
 const MMCA.Common.Aspire.HealthCheckTags.Live = "live" -> string!
 const MMCA.Common.Aspire.HealthCheckTags.Optional = "optional" -> string!
 const MMCA.Common.Aspire.HealthCheckTags.Ready = "ready" -> string!
@@ -90,6 +116,11 @@ static MMCA.Common.Aspire.Extensions.AddWarmupReadiness<TBuilder>(this TBuilder 
 static MMCA.Common.Aspire.Extensions.AddWarmupTask<TTask>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aspire.Extensions.ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) -> TBuilder
 static MMCA.Common.Aspire.Extensions.MapDefaultEndpoints(this Microsoft.AspNetCore.Builder.WebApplication! app) -> Microsoft.AspNetCore.Builder.WebApplication!
+static MMCA.Common.Aspire.Gateway.GatewayCorrelationExtensions.UseGatewayCorrelation(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+static MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.AddGatewayDownstreamHealthChecks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.AddGatewayRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.AddGatewayRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Gateway.GatewayRateLimitingExtensions.UseGatewayRateLimiting(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.Aspire.GatewayCorsExtensions.AddCommonGatewayCors(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aspire.Kestrel.KestrelEndpointExtensions.ConfigureEndpointsWithHealthProbe(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols defaultProtocols, bool redeclareCleartextEndpoint = true, int cleartextPort = 8080) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
 static MMCA.Common.Aspire.KeyVaultConfigurationExtensions.AddCommonKeyVaultConfiguration<TBuilder>(this TBuilder builder) -> TBuilder
@@ -97,6 +128,7 @@ static MMCA.Common.Aspire.Security.CspPolicy.operator !=(MMCA.Common.Aspire.Secu
 static MMCA.Common.Aspire.Security.CspPolicy.operator ==(MMCA.Common.Aspire.Security.CspPolicy? left, MMCA.Common.Aspire.Security.CspPolicy? right) -> bool
 static MMCA.Common.Aspire.Security.SecurityHeadersExtensions.AddCommonSecurityHeaders(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration? configuration = null, System.Action<MMCA.Common.Aspire.Security.SecurityHeadersSettings!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aspire.Security.SecurityHeadersExtensions.UseCommonSecurityHeaders(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+static readonly MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.SectionName -> string!
 virtual MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.RequestVersion.get -> System.Version!
 virtual MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.RequestVersionPolicy.get -> System.Net.Http.HttpVersionPolicy
 virtual MMCA.Common.Aspire.Warmup.SelfHttpWarmupTaskBase.RequireSuccessStatusCode.get -> bool

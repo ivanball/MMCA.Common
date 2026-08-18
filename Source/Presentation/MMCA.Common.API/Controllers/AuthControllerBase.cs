@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -51,6 +52,7 @@ public abstract class AuthControllerBase(
     /// Authenticates a user with email and password, returning access and refresh tokens.
     /// </summary>
     [HttpPost("login")]
+    [NonIdempotent("Login issues a token pair. A replayed response would hand a retrying client the tokens minted for an earlier call, extending the lifetime of credentials the caller may already have discarded.")]
     [AllowAnonymous]
     [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
@@ -72,6 +74,7 @@ public abstract class AuthControllerBase(
     /// Override in derived controllers to pass additional context (e.g., client IP).
     /// </summary>
     [HttpPost("register")]
+    [Idempotent]
     [AllowAnonymous]
     [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status201Created)]
@@ -93,6 +96,7 @@ public abstract class AuthControllerBase(
     /// Exchanges an expired access token and valid refresh token for a new token pair.
     /// </summary>
     [HttpPost("refresh")]
+    [NonIdempotent("Refresh rotates the refresh token and issues a new pair. Replaying a stored response would return a token the rotation has already invalidated, so the client would be handed dead credentials instead of live ones.")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
@@ -111,6 +115,7 @@ public abstract class AuthControllerBase(
     /// Revokes the current user's refresh token, effectively logging them out.
     /// </summary>
     [HttpPost("revoke")]
+    [NonIdempotent("Revocation must reach the store on every call. Replaying a cached 204 would report success for a revoke that never ran, leaving a refresh token live after the user asked for it to be killed.")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

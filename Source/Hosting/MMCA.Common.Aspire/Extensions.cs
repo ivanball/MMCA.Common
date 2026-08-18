@@ -156,14 +156,18 @@ public static class Extensions
                     // defining assemblies): outbox counters and dispatch lag, CQRS RED histograms
                     // plus query cache hit/miss, the idempotency filter's replay, conflict and
                     // degraded counters, the recurring scheduler's run outcomes, duration and
-                    // schedule lag (inert in a host that never enables Scheduler:Enabled), and the
+                    // schedule lag (inert in a host that never enables Scheduler:Enabled), the
                     // broker transport's consumer faults plus outbox circuit-breaker openings
-                    // (inert in a host that stays on the in-process bus).
+                    // (inert in a host that stays on the in-process bus), the output-cache
+                    // eviction consumer's failed tag evictions, and the swallowed failures of
+                    // best-effort side effects (both inert until a host opts into them).
                     metrics.AddMeter("MMCA.Common.Outbox")
                         .AddMeter("MMCA.Common.Cqrs")
                         .AddMeter("MMCA.Common.Idempotency")
                         .AddMeter("MMCA.Common.Scheduler")
-                        .AddMeter("MMCA.Common.Broker");
+                        .AddMeter("MMCA.Common.Broker")
+                        .AddMeter("MMCA.Common.OutputCache")
+                        .AddMeter("MMCA.Common.BestEffort");
                 })
                 .WithTracing(tracing =>
                 {

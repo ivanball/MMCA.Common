@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package mmca.fitness;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "MMCA.Common.Architecture.Tests.Fitness";
+
+// Fixture only: exercises the proto contract parser (services, unary and streaming rpcs,
+// labelled fields, nested messages, nested enums). Not compiled by any project.
+service CatalogService {
+  rpc GetProduct (GetProductRequest) returns (ProductReply);
+  rpc StreamProducts (GetProductRequest) returns (stream ProductReply);
+}
+
+message GetProductRequest {
+  int32 product_id = 1;
+  optional string culture = 2;
+}
+
+message ProductReply {
+  int32 product_id = 1;
+  string name = 2;
+  repeated string tags = 3;
+  Availability availability = 4;
+
+  message Dimensions {
+    double width = 1;
+    double height = 2;
+  }
+
+  enum Availability {
+    AVAILABILITY_UNSPECIFIED = 0;
+    AVAILABILITY_IN_STOCK = 1;
+  }
+}
