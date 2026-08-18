@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using MMCA.Common.API.Authentication;
+using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
@@ -133,6 +134,7 @@ public abstract class OAuthControllerBase(
     /// <param name="request">The exchange request carrying the single-use code.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("exchange")]
+    [NonIdempotent("The exchange burns a single-use code and hands back a token pair. Replaying the stored response would defeat the burn, letting a leaked code mint the same tokens again for the whole retention window.")]
     [AllowAnonymous]
     [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> ExchangeAsync(

@@ -51,6 +51,10 @@ MMCA.Common.API.Caching.PublicEndpointOutputCachePolicy.PublicEndpointOutputCach
 MMCA.Common.API.Caching.PublicEndpointOutputCachePolicy.PublicEndpointOutputCachePolicy(System.TimeSpan expiration, string![]! bypassRoles, string![]! tags) -> void
 MMCA.Common.API.ClassReference
 MMCA.Common.API.ClassReference.ClassReference() -> void
+MMCA.Common.API.Concurrency.ConcurrencyETag
+MMCA.Common.API.Concurrency.SupportsIfMatchAttribute
+MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.OnActionExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext! context, Microsoft.AspNetCore.Mvc.Filters.ActionExecutionDelegate! next) -> System.Threading.Tasks.Task!
+MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.SupportsIfMatchAttribute() -> void
 MMCA.Common.API.Controllers.AggregateRootEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest>
 MMCA.Common.API.Controllers.AggregateRootEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest>.AggregateRootEntityControllerBase(MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity!, TEntityDTO, TIdentifierType>! queryService, MMCA.Common.Application.UseCases.ICommandHandler<TCreateRequest, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! createHandler, MMCA.Common.Application.UseCases.ICommandHandler<MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity!, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result!>! deleteHandler, Microsoft.Extensions.Logging.ILogger<MMCA.Common.API.Controllers.EntityControllerBase<TEntity!, TEntityDTO, TIdentifierType>!>! logger) -> void
 MMCA.Common.API.Controllers.AggregateRootEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest>.CreateHandler.get -> MMCA.Common.Application.UseCases.ICommandHandler<TCreateRequest, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
@@ -164,6 +168,9 @@ MMCA.Common.API.Idempotency.IdempotencySettings.CacheExpirationHours.init -> voi
 MMCA.Common.API.Idempotency.IdempotencySettings.IdempotencySettings() -> void
 MMCA.Common.API.Idempotency.IdempotentAttribute
 MMCA.Common.API.Idempotency.IdempotentAttribute.IdempotentAttribute() -> void
+MMCA.Common.API.Idempotency.NonIdempotentAttribute
+MMCA.Common.API.Idempotency.NonIdempotentAttribute.Justification.get -> string!
+MMCA.Common.API.Idempotency.NonIdempotentAttribute.NonIdempotentAttribute(string! justification) -> void
 MMCA.Common.API.JsonConverters.CurrencyJsonConverter
 MMCA.Common.API.JsonConverters.CurrencyJsonConverter.CurrencyJsonConverter() -> void
 MMCA.Common.API.Localization.ErrorResourceSource
@@ -338,6 +345,10 @@ const MMCA.Common.API.Authorization.AuthorizationPolicies.RequireAttendee = "Req
 const MMCA.Common.API.Authorization.AuthorizationPolicies.RequireAuthenticated = "RequireAuthenticated" -> string!
 const MMCA.Common.API.Authorization.AuthorizationPolicies.RequireOrganizer = "RequireOrganizer" -> string!
 const MMCA.Common.API.Authorization.PermissionPolicy.Prefix = "perm:" -> string!
+const MMCA.Common.API.Concurrency.ConcurrencyETag.ETagHeaderName = "ETag" -> string!
+const MMCA.Common.API.Concurrency.ConcurrencyETag.IfMatchHeaderName = "If-Match" -> string!
+const MMCA.Common.API.Concurrency.ConcurrencyETag.Wildcard = "*" -> string!
+const MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.HeaderSourcedItemKey = "MMCA.Common.API.Concurrency.IfMatchApplied" -> string!
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.CsvContentType = "text/csv; charset=utf-8" -> string!
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.DefaultMaxExportRows = 100000 -> int
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowLimitHeaderName = "X-Export-Row-Limit" -> string!
@@ -385,6 +396,8 @@ static MMCA.Common.API.Authorization.PermissionPolicy.NameFor(string! permission
 static MMCA.Common.API.Caching.OutputCacheEvictionExtensions.AddOutputCacheEvictionHandler(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Caching.OutputCacheOptionsExtensions.AddPublicEndpointPolicy(this Microsoft.AspNetCore.OutputCaching.OutputCacheOptions! options, string! name, System.TimeSpan expiration, params string![]! tags) -> void
 static MMCA.Common.API.Caching.OutputCacheOptionsExtensions.AddPublicEndpointPolicy(this Microsoft.AspNetCore.OutputCaching.OutputCacheOptions! options, string! name, System.TimeSpan expiration, string![]! bypassRoles, params string![]! tags) -> void
+static MMCA.Common.API.Concurrency.ConcurrencyETag.Format(byte[]! rowVersion) -> string!
+static MMCA.Common.API.Concurrency.ConcurrencyETag.TryParse(string? value, out byte[]? rowVersion) -> bool
 static MMCA.Common.API.Controllers.Privacy.DataExportControllerBase<TQuery>.BuildFileName(int userId, System.DateTimeOffset generatedOn) -> string!
 static MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoResponse.operator !=(MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoResponse? left, MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoResponse? right) -> bool
 static MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoResponse.operator ==(MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoResponse? left, MMCA.Common.API.Controllers.ServiceInfoControllerBase.ServiceInfoResponse? right) -> bool

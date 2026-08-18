@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package mmca.fitness;
+
+option csharp_namespace = "MMCA.Common.Architecture.Tests.Fitness";
+
+// Fixture only: fitness-catalog.proto with two breaking changes, a renumbered field and an added
+// rpc, so the gate can be shown to catch both. Not compiled by any project.
+service CatalogService {
+  rpc GetProduct (GetProductRequest) returns (ProductReply);
+  rpc StreamProducts (GetProductRequest) returns (stream ProductReply);
+  rpc DeleteProduct (GetProductRequest) returns (ProductReply);
+}
+
+message GetProductRequest {
+  int32 product_id = 7;
+  optional string culture = 2;
+}
+
+message ProductReply {
+  int32 product_id = 1;
+  string name = 2;
+  repeated string tags = 3;
+  Availability availability = 4;
+
+  message Dimensions {
+    double width = 1;
+    double height = 2;
+  }
+
+  enum Availability {
+    AVAILABILITY_UNSPECIFIED = 0;
+    AVAILABILITY_IN_STOCK = 1;
+  }
+}
