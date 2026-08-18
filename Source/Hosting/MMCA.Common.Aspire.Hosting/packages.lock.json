@@ -177,9 +177,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.141, )",
-        "resolved": "3.0.141",
-        "contentHash": "p0mtUYG/36FEnU6P5GovB82mVH4DoWGdHYjePkLnIeTNI0LQfmvjGj2twQEBTosw6/YTTnk8Fknu2VvaFybECA=="
+        "requested": "[3.0.163, )",
+        "resolved": "3.0.163",
+        "contentHash": "l9iZ+OXBGlAFEKH1y4BSKPXHcmpJmikysSm0brjTau8fR7Qm7IVGLVig+dh0RH9mq4s3neZayuPQrHRweOpxxw=="
       },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
@@ -195,9 +195,9 @@
       },
       "Roslynator.Analyzers": {
         "type": "Direct",
-        "requested": "[4.16.0, )",
-        "resolved": "4.16.0",
-        "contentHash": "/EZ1HVILd9jPdXquT03vBawvAuGNotmf+r/GBiVfPj9BdUyn/olOdjF9BqqjIK5Cyq3pdBDL/qMuJEGtBLMaZA=="
+        "requested": "[4.16.1, )",
+        "resolved": "4.16.1",
+        "contentHash": "AGzq3UZvIwTGSh9xyIna+Q9F666S8UaLlX/Pk3Iz21qIAWjL8iYporVCcX1k/oi5chrRZ8VJRahup4me4HZptw=="
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
@@ -1153,7 +1153,7 @@
       },
       "Microsoft.Extensions.Configuration.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.10, )",
+        "requested": "[10.0.11, )",
         "resolved": "10.0.8",
         "contentHash": "I63esIFbL3h5pSt7gXpXOlmcwDmYBUoYNEglKfDPFUqtYvSV84f2l28hO2lfVXsV0wdlplgAM7IVz16matapSg==",
         "dependencies": {
@@ -1162,7 +1162,7 @@
       },
       "Microsoft.Extensions.Configuration.Json": {
         "type": "CentralTransitive",
-        "requested": "[10.0.10, )",
+        "requested": "[10.0.11, )",
         "resolved": "10.0.8",
         "contentHash": "KLtAZ6A38s1pIfCO2ns6aG14NNGMYNZ4PBYfFK4M+R4A+xuSc6oklhqDcpHZxvDpyBWeFtR5C8iQBw2ng8tUHQ==",
         "dependencies": {
@@ -1174,7 +1174,7 @@
       },
       "Microsoft.Extensions.Http": {
         "type": "CentralTransitive",
-        "requested": "[10.0.10, )",
+        "requested": "[10.0.11, )",
         "resolved": "10.0.8",
         "contentHash": "/9LU/KWJOrtZJB9ymPjcARDyjp679BvBA/aSncv2Kt84WlSKz767HtxHg8EFsu8n21BMLZi+5XxlkKbLwfn4iA==",
         "dependencies": {
