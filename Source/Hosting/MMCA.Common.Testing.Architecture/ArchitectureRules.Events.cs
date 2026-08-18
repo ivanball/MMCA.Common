@@ -57,10 +57,24 @@ public static partial class ArchitectureRules
         return $"{eventType.FullName} {{ {string.Join(", ", properties)} }}";
     }
 
-    private static IEnumerable<Type> IntegrationEvents(IArchitectureMap map) =>
-        map.Layers.Select(l => l.Assembly).Distinct()
+    /// <summary>
+    /// Enumerates the integration events the map OWNS. In a module-bearing (consumer) map only
+    /// module assemblies are scanned: events shipped by the framework itself (for example
+    /// <c>OutputCacheEvictionRequested</c>) are the framework's contract, gated by the framework's
+    /// own conventions and public API baseline, so consumer residency rules and frozen snapshots
+    /// neither police nor churn on them. The framework's own map has no modules and therefore
+    /// scans every layer, keeping those same events covered at their source.
+    /// </summary>
+    private static IEnumerable<Type> IntegrationEvents(IArchitectureMap map)
+    {
+        var includeFrameworkLayers = map.ModuleNames.Count == 0;
+        return map.Layers
+            .Where(l => includeFrameworkLayers || l.Module.Length > 0)
+            .Select(l => l.Assembly)
+            .Distinct()
             .SelectMany(a => a.ConcreteClasses)
             .Where(IsIntegrationEvent);
+    }
 
     private static bool IsIntegrationEvent(Type type) =>
         type.GetInterfaces().Any(i => string.Equals(i.Name, "IIntegrationEvent", StringComparison.Ordinal));
