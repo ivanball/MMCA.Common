@@ -152,6 +152,15 @@ public static class DependencyInjection
                 .AsSelfWithInterfaces()
                 .WithScopedLifetime());
 
+            // DTO projectors are optional and opt-in: an entity that has one gets server-side
+            // projection on its list reads, an entity that has none keeps materialize-then-map. They
+            // are scanned beside the mappers so a module only has to write the projector class.
+            services.Scan(scan => scan
+                .FromAssemblyOf<TAssemblyMarker>()
+                .AddClasses(classes => classes.AssignableTo(typeof(IEntityDTOProjector<,,>)))
+                .AsSelfWithInterfaces()
+                .WithScopedLifetime());
+
             services.Scan(scan => scan
                 .FromAssemblyOf<TAssemblyMarker>()
                 .AddClasses(classes => classes.AssignableTo(typeof(IEntityRequestMapper<,,>)))

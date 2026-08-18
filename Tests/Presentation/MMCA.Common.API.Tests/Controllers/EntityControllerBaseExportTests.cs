@@ -12,6 +12,7 @@ using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
@@ -520,14 +521,14 @@ public sealed class SpecificationHonoringQueryService(IEnumerable<int> ids)
     private readonly List<ExportTestEntity> _rows = [.. ids.Select(id => new ExportTestEntity { Id = id })];
 
     /// <summary>Gets the specification passed to each page query, in call order.</summary>
-    public List<Specification<ExportTestEntity, int>?> SpecificationsSeen { get; } = [];
+    public List<ISpecification<ExportTestEntity, int>?> SpecificationsSeen { get; } = [];
 
     public IEntityDTOMapper<ExportTestEntity, ExportTestDTO, int> DTOMapper => throw new NotSupportedException();
 
     public Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<ExportTestEntity, int>? specification = null,
+        ISpecification<ExportTestEntity, int>? specification = null,
         Dictionary<string, (string Operator, string Value)>? filters = null,
         string? sortColumn = null,
         string? sortDirection = null,
@@ -564,7 +565,7 @@ public sealed class SpecificationHonoringQueryService(IEnumerable<int> ids)
     public Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<ExportTestEntity, int>? specification = null,
+        ISpecification<ExportTestEntity, int>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -580,7 +581,7 @@ public sealed class SpecificationHonoringQueryService(IEnumerable<int> ids)
         string? idField = null,
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<ExportTestEntity, int>? specification = null,
+        ISpecification<ExportTestEntity, int>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -589,7 +590,7 @@ public sealed class SpecificationHonoringQueryService(IEnumerable<int> ids)
         int id,
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<ExportTestEntity, int>? specification = null,
+        ISpecification<ExportTestEntity, int>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default) => throw new NotSupportedException();

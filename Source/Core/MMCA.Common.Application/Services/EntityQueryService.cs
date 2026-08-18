@@ -7,7 +7,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Services.Filtering;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
-using MMCA.Common.Domain.Specifications;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
@@ -43,6 +43,45 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     protected IUnitOfWork UnitOfWork { get; } = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     private INavigationMetadataProvider NavigationMetadataProvider { get; } = navigationMetadataProvider ?? throw new ArgumentNullException(nameof(navigationMetadataProvider));
     private IEntityQueryPipeline QueryPipeline { get; } = queryPipeline ?? throw new ArgumentNullException(nameof(queryPipeline));
+
+    /// <summary>
+    /// Initializes the service with a DTO projector, enabling the server-side projection path for
+    /// list reads.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// It is a second constructor rather than an optional parameter on the first because
+    /// <c>Microsoft.Extensions.DependencyInjection</c> has no notion of an optional dependency: a
+    /// single constructor naming a service nobody registered fails to resolve, default value or not.
+    /// With two constructors the container picks the longer one when an
+    /// <see cref="IEntityDTOProjector{TEntity, TEntityDTO, TIdentifierType}"/> is registered and the
+    /// shorter one when it is not, and there is no ambiguity because one parameter set is a strict
+    /// superset of the other. Existing subclasses that chain to the five-argument constructor keep
+    /// compiling untouched.
+    /// </para>
+    /// </remarks>
+    /// <param name="unitOfWork">The unit of work.</param>
+    /// <param name="navigationMetadataProvider">The navigation metadata provider.</param>
+    /// <param name="queryPipeline">The query pipeline.</param>
+    /// <param name="dtoMapper">The DTO mapper (still used for by-id reads and the fallback path).</param>
+    /// <param name="navigationPopulator">The navigation populator.</param>
+    /// <param name="dtoProjector">The DTO projector enabling projection pushdown on list reads.</param>
+    public EntityQueryService(
+        IUnitOfWork unitOfWork,
+        INavigationMetadataProvider navigationMetadataProvider,
+        IEntityQueryPipeline queryPipeline,
+        IEntityDTOMapper<TEntity, TEntityDTO, TIdentifierType> dtoMapper,
+        INavigationPopulator<TEntity> navigationPopulator,
+        IEntityDTOProjector<TEntity, TEntityDTO, TIdentifierType> dtoProjector)
+        : this(unitOfWork, navigationMetadataProvider, queryPipeline, dtoMapper, navigationPopulator)
+        => DTOProjector = dtoProjector ?? throw new ArgumentNullException(nameof(dtoProjector));
+
+    /// <summary>
+    /// Gets the optional DTO projector. When present, list reads that qualify are served by
+    /// server-side projection instead of materialize-then-map; when null every read uses
+    /// <see cref="DTOMapper"/>.
+    /// </summary>
+    protected IEntityDTOProjector<TEntity, TEntityDTO, TIdentifierType>? DTOProjector { get; }
 
     /// <summary>Gets the read repository. Override to provide a custom repository (e.g. with query filters).</summary>
     protected virtual IReadRepository<TEntity, TIdentifierType> Repository { get; } = unitOfWork.GetReadRepository<TEntity, TIdentifierType>();
@@ -82,7 +121,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         string? idField,
         bool includeFKs,
         bool includeChildren,
-        Specification<TEntity, TIdentifierType>? specification,
+        ISpecification<TEntity, TIdentifierType>? specification,
         string? fields,
         bool asTracking,
         CancellationToken cancellationToken)
@@ -123,7 +162,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         string? idField,
         bool includeFKs,
         bool includeChildren,
-        Specification<TEntity, TIdentifierType>? specification,
+        ISpecification<TEntity, TIdentifierType>? specification,
         string? fields,
         out IReadOnlyList<string> includes)
     {
@@ -188,7 +227,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default)
@@ -209,7 +248,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     public virtual async Task<Result<PagedCollectionResult<object>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         Dictionary<string, (string Operator, string Value)>? filters = null,
         string? sortColumn = null,
         string? sortDirection = null,
@@ -240,26 +279,57 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         }
 
         // Step 2: Execute the query pipeline (includes, criteria, filters, sort, pagination, field selection)
-        var (entities, totalItemCount) = await BuildQueryAsync(
-            includeFKs: includeFKs,
-            includeChildren: includeChildren,
-            specification: specification,
-            filters: filters,
-            sortColumn: sortColumn,
-            sortDirection: sortDirection,
-            fields: fields,
-            pageNumber: pageNumber,
-            pageSize: pageSize,
-            asTracking: asTracking,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var navigationMetadata = NavigationMetadataProvider.BuildIncludes<TEntity>(includeFKs, includeChildren);
 
-        // Step 3: Map entities to DTOs and shape output to requested fields.
+        var parameters = new EntityQueryParameters<TEntity>
+        {
+            Criteria = specification?.Criteria,
+            Filters = filters,
+            SortColumn = sortColumn,
+            SortDirection = sortDirection,
+            Fields = fields,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            IncludeFKs = includeFKs,
+            IncludeChildren = includeChildren,
+            DTOToEntityPropertyMap = DTOToEntityPropertyMap
+        };
+
+        var baseQuery = asTracking ? Repository.Table : Repository.TableNoTracking;
+
+        IReadOnlyCollection<TEntityDTO> pagedDTOs;
+        int totalItemCount;
+
+        if (CanProject(navigationMetadata, asTracking))
+        {
+            // Projection pushdown: the provider selects the DTO's columns directly, so nothing is
+            // materialized as an entity and DTOMapper is never involved.
+            (pagedDTOs, totalItemCount) = await QueryPipeline
+                .ExecuteProjectedAsync<TEntity, TEntityDTO, TIdentifierType>(
+                    baseQuery,
+                    parameters,
+                    DTOProjector!.ProjectTo,
+                    cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var (entities, entityTotal) = await QueryPipeline.ExecuteAsync<TEntity, TIdentifierType>(
+                baseQuery,
+                navigationMetadata,
+                parameters,
+                NavigationPopulator.PopulateAsync,
+                cancellationToken).ConfigureAwait(false);
+
+            totalItemCount = entityTotal;
+            pagedDTOs = DTOMapper.MapToDTOs(entities);
+        }
+
+        // Step 3: Shape output to requested fields.
         // Shaping into dynamic objects only pays off when a field subset was requested;
         // otherwise the typed DTOs are returned as-is and serialize to the same camelCase
-        // JSON without the per-row ExpandoObject allocation and boxing.
+        // JSON without the per-row ExpandoObject allocation and boxing. It reflects over the runtime
+        // object, so it works identically on a mapped DTO and a projected one.
         var paginationMetadata = BuildPaginationMetadata(totalItemCount, pageNumber, pageSize);
-
-        var pagedDTOs = DTOMapper.MapToDTOs(entities);
 
         ICollection<object> items = string.IsNullOrWhiteSpace(fields)
             ? [.. pagedDTOs.Cast<object>()]
@@ -308,7 +378,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         string? idField = null,
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default)
@@ -368,7 +438,7 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         TIdentifierType id,
         bool includeFKs = false,
         bool includeChildren = false,
-        Specification<TEntity, TIdentifierType>? specification = null,
+        ISpecification<TEntity, TIdentifierType>? specification = null,
         string? fields = null,
         bool asTracking = false,
         CancellationToken cancellationToken = default)
@@ -401,12 +471,33 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         => Repository.ExistsAsync(where, ignoreQueryFilters, cancellationToken);
 
     /// <summary>
+    /// Whether this read can be served by the server-side projection path.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Three conditions. A projector must be registered at all. There must be no unsupported
+    /// (cross-source) includes: those are loaded row by row after materialization by the navigation
+    /// populator, which a projection has no rows to hand it. And the caller must not have asked for
+    /// tracking: a projection produces DTOs, which the change tracker has nothing to do with, so
+    /// honoring <c>asTracking</c> means staying on the entity path.
+    /// </para>
+    /// <para>
+    /// Field shaping deliberately does NOT disqualify: shaping runs after materialization, over
+    /// whatever object the pipeline produced, so it behaves the same on a projected DTO.
+    /// </para>
+    /// </remarks>
+    private bool CanProject(NavigationMetadata navigationMetadata, bool asTracking)
+        => DTOProjector is not null
+            && !asTracking
+            && navigationMetadata.UnsupportedIncludes.Count == 0;
+
+    /// <summary>
     /// Assembles the query parameters and delegates execution to the <see cref="IEntityQueryPipeline"/>.
     /// </summary>
     private async Task<(IReadOnlyCollection<TEntity> Items, int TotalCount)> BuildQueryAsync(
         bool includeFKs,
         bool includeChildren,
-        Specification<TEntity, TIdentifierType>? specification,
+        ISpecification<TEntity, TIdentifierType>? specification,
         Dictionary<string, (string Operator, string Value)>? filters,
         string? sortColumn,
         string? sortDirection,

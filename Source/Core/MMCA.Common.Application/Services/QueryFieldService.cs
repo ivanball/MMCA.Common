@@ -131,30 +131,90 @@ public sealed class QueryFieldService
     /// <param name="sortDirection">"asc" or "desc".</param>
     /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored; entries may be navigation paths or expressions).</param>
     /// <param name="defaultSort">Fallback sort expression when no valid sort column is specified.</param>
+    /// <param name="tieBreakProperty">
+    /// Optional server-supplied property name appended as a final ascending key, making the order
+    /// total. Pass it whenever the caller pages: see the remarks.
+    /// </param>
     /// <returns>The sorted queryable.</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>Why the tie-break matters.</b> <c>Skip</c>/<c>Take</c> over a query whose ORDER BY is not
+    /// total is undefined: rows sharing the sort value may come back in any order, and the database
+    /// is free to choose a different one per statement. The same row could then appear on two
+    /// consecutive pages while another appeared on neither, from data that never changed. Sorting on
+    /// a non-unique column (a status, a name) makes that the common case rather than the corner
+    /// case, and paging with NO sort column at all leaves the entire order undefined.
+    /// </para>
+    /// <para>
+    /// Passing the entity's key as <paramref name="tieBreakProperty"/> fixes both shapes: it is
+    /// appended after the requested sort, or used alone when no valid sort column was given. The
+    /// value is server-supplied (the pipeline passes <c>"Id"</c>), never client input, so it does not
+    /// widen what a caller can order by.
+    /// </para>
+    /// </remarks>
     public static IQueryable<TEntity> ApplySorting<TEntity>(
         IQueryable<TEntity> query,
         string? sortColumn,
         string? sortDirection,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
-        Expression<Func<TEntity, object>>? defaultSort = null)
+        Expression<Func<TEntity, object>>? defaultSort = null,
+        string? tieBreakProperty = null)
     {
-        if (!string.IsNullOrWhiteSpace(sortColumn))
-        {
-            var sortExpr = dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped)
-                ? mapped
-                : typeof(TEntity).GetProperty(
-                    sortColumn,
-                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name;
+        var sortExpr = ResolveSortExpression<TEntity>(sortColumn, dtoToEntityPropertyMap);
 
-            if (sortExpr is not null)
-            {
-                var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-                return query.OrderBy(Filtering.DynamicQueryConfig.Parameterized, $"{sortExpr} {(descending ? "descending" : "ascending")}");
-            }
+        if (sortExpr is not null)
+        {
+            return query.OrderBy(
+                Filtering.DynamicQueryConfig.Parameterized,
+                BuildOrdering(sortExpr, sortDirection, tieBreakProperty));
         }
 
-        return defaultSort is not null ? query.OrderBy(defaultSort) : query;
+        if (defaultSort is not null)
+        {
+            var ordered = query.OrderBy(defaultSort);
+            return string.IsNullOrWhiteSpace(tieBreakProperty)
+                ? ordered
+                : ordered.ThenBy(Filtering.DynamicQueryConfig.Parameterized, $"{tieBreakProperty} ascending");
+        }
+
+        return string.IsNullOrWhiteSpace(tieBreakProperty)
+            ? query
+            : query.OrderBy(Filtering.DynamicQueryConfig.Parameterized, $"{tieBreakProperty} ascending");
+    }
+
+    /// <summary>
+    /// Resolves a client-supplied sort column to the expression Dynamic LINQ will parse: the
+    /// server-authored map entry when there is one, otherwise the name of a real public property of
+    /// the entity, otherwise <see langword="null"/> (the caller falls back).
+    /// </summary>
+    private static string? ResolveSortExpression<TEntity>(
+        string? sortColumn,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap)
+    {
+        if (string.IsNullOrWhiteSpace(sortColumn))
+            return null;
+
+        return dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped)
+            ? mapped
+            : typeof(TEntity).GetProperty(
+                sortColumn,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name;
+    }
+
+    /// <summary>
+    /// Builds the Dynamic LINQ ordering clause, appending the tie-break key unless the caller
+    /// already sorted by that very column (repeating a key in an ORDER BY is redundant, and some
+    /// providers reject it outright).
+    /// </summary>
+    private static string BuildOrdering(string sortExpr, string? sortDirection, string? tieBreakProperty)
+    {
+        var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        var ordering = $"{sortExpr} {(descending ? "descending" : "ascending")}";
+
+        return string.IsNullOrWhiteSpace(tieBreakProperty)
+            || string.Equals(sortExpr, tieBreakProperty, StringComparison.OrdinalIgnoreCase)
+            ? ordering
+            : $"{ordering}, {tieBreakProperty} ascending";
     }
 
     /// <summary>
