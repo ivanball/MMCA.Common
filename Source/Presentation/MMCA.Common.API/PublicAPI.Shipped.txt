@@ -36,6 +36,12 @@ MMCA.Common.API.Authorization.PermissionPolicyProvider.PermissionPolicyProvider(
 MMCA.Common.API.Authorization.PermissionRequirement
 MMCA.Common.API.Authorization.PermissionRequirement.Permission.get -> string!
 MMCA.Common.API.Authorization.PermissionRequirement.PermissionRequirement(string! permission) -> void
+MMCA.Common.API.Caching.OutputCacheEvictionExtensions
+MMCA.Common.API.Caching.OutputCacheEvictionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.API.Caching.OutputCacheEvictionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddOutputCacheEvictionHandler() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.API.Caching.OutputCacheEvictionHandler
+MMCA.Common.API.Caching.OutputCacheEvictionHandler.HandleAsync(MMCA.Common.Domain.IntegrationEvents.OutputCacheEvictionRequested! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.API.Caching.OutputCacheEvictionHandler.OutputCacheEvictionHandler(Microsoft.AspNetCore.OutputCaching.IOutputCacheStore! outputCacheStore, Microsoft.Extensions.Logging.ILogger<MMCA.Common.API.Caching.OutputCacheEvictionHandler!>! logger) -> void
 MMCA.Common.API.Caching.OutputCacheOptionsExtensions
 MMCA.Common.API.Caching.OutputCacheOptionsExtensions.extension(Microsoft.AspNetCore.OutputCaching.OutputCacheOptions!)
 MMCA.Common.API.Caching.OutputCacheOptionsExtensions.extension(Microsoft.AspNetCore.OutputCaching.OutputCacheOptions!).AddPublicEndpointPolicy(string! name, System.TimeSpan expiration, params string![]! tags) -> void
@@ -376,6 +382,7 @@ static MMCA.Common.API.Authorization.OwnershipHelper.GetOwnershipSpecification<T
 static MMCA.Common.API.Authorization.OwnershipHelper.GetOwnershipSpecification<TSpec>(MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService! currentUserService, System.Func<int, TSpec!>! specFactory) -> TSpec?
 static MMCA.Common.API.Authorization.OwnershipHelper.IsAdmin(MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService! currentUserService, string! bypassRole = "Admin") -> bool
 static MMCA.Common.API.Authorization.PermissionPolicy.NameFor(string! permission) -> string!
+static MMCA.Common.API.Caching.OutputCacheEvictionExtensions.AddOutputCacheEvictionHandler(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Caching.OutputCacheOptionsExtensions.AddPublicEndpointPolicy(this Microsoft.AspNetCore.OutputCaching.OutputCacheOptions! options, string! name, System.TimeSpan expiration, params string![]! tags) -> void
 static MMCA.Common.API.Caching.OutputCacheOptionsExtensions.AddPublicEndpointPolicy(this Microsoft.AspNetCore.OutputCaching.OutputCacheOptions! options, string! name, System.TimeSpan expiration, string![]! bypassRoles, params string![]! tags) -> void
 static MMCA.Common.API.Controllers.Privacy.DataExportControllerBase<TQuery>.BuildFileName(int userId, System.DateTimeOffset generatedOn) -> string!

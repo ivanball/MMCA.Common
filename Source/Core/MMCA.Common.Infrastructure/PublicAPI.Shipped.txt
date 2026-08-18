@@ -430,6 +430,7 @@ MMCA.Common.Infrastructure.Services.IntegrationEventConsumer<TEvent>.Integration
 MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions
 MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!)
 MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
+MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterOutputCacheEvictionConsumer(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
 MMCA.Common.Infrastructure.Services.NullFileStorageService
 MMCA.Common.Infrastructure.Services.NullFileStorageService.DeleteAsync(string! blobName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Infrastructure.Services.NullFileStorageService.IsConfigured.get -> bool
@@ -820,6 +821,7 @@ static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.ope
 static MMCA.Common.Infrastructure.Persistence.Encryption.EncryptedStringConverter.GenerateKey() -> byte[]!
 static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.FromDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent) -> MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage!
 static MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.RegisterIntegrationEventConsumer<TEvent>(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
+static MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.RegisterOutputCacheEvictionConsumer(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
 static readonly MMCA.Common.Infrastructure.AssemblyReference.Assembly -> System.Reflection.Assembly!
 static readonly MMCA.Common.Infrastructure.AssemblyReference.AssemblyName -> string!
 static readonly MMCA.Common.Infrastructure.Settings.AuditTrailSettings.SectionName -> string!

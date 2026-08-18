@@ -1,4 +1,5 @@
 using MassTransit;
+using MMCA.Common.Domain.IntegrationEvents;
 using MMCA.Common.Domain.Interfaces;
 
 namespace MMCA.Common.Infrastructure.Services;
@@ -47,5 +48,25 @@ public static class IntegrationEventConsumerExtensions
 
             return x;
         }
+
+        /// <summary>
+        /// Registers the consumer for <see cref="OutputCacheEvictionRequested"/>, the framework's
+        /// cross-service output-cache eviction broadcast. Shorthand for
+        /// <c>RegisterIntegrationEventConsumer&lt;OutputCacheEvictionRequested&gt;()</c>, named so the
+        /// wiring reads as an intention rather than a type argument.
+        /// <para>
+        /// Pair it with <c>services.AddOutputCacheEvictionHandler()</c> from MMCA.Common.API, which
+        /// registers the handler this consumer resolves. Registering the consumer without the
+        /// handler is harmless but pointless: the messages are acked with a "no handler registered"
+        /// log and nothing is evicted.
+        /// </para>
+        /// </summary>
+        /// <param name="registerFaultConsumer">
+        /// Whether to also register the fault consumer for the event. Same meaning as on
+        /// <c>RegisterIntegrationEventConsumer&lt;TEvent&gt;</c>; defaults to <see langword="true"/>.
+        /// </param>
+        public IBusRegistrationConfigurator RegisterOutputCacheEvictionConsumer(
+            bool registerFaultConsumer = true) =>
+            x.RegisterIntegrationEventConsumer<OutputCacheEvictionRequested>(registerFaultConsumer);
     }
 }
