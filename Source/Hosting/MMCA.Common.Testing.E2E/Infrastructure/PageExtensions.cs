@@ -310,6 +310,6 @@ public static class PageExtensions
         }
 
         var collapsed = string.Join(' ', html.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
-        return collapsed.Length > 220 ? collapsed[..220] + "…" : collapsed;
+        return collapsed.Length > 220 ? string.Concat(collapsed.AsSpan(0, 220), "…") : collapsed;
     }
 }
