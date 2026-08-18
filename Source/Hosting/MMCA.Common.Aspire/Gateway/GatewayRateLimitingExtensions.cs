@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
@@ -144,7 +145,10 @@ public static class GatewayRateLimitingExtensions
             ArgumentNullException.ThrowIfNull(configuration);
 
             var section = configuration.GetSection(GatewayRateLimitingSettings.SectionName);
-            services.Configure<GatewayRateLimitingSettings>(section);
+            services.AddOptions<GatewayRateLimitingSettings>()
+                .Bind(section)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
 
             return services.AddGatewayRateLimiting(
                 section.Get<GatewayRateLimitingSettings>() ?? new GatewayRateLimitingSettings());
@@ -161,6 +165,11 @@ public static class GatewayRateLimitingExtensions
         {
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(settings);
+
+            // The limiter closes over this settings instance rather than resolving IOptions per
+            // request, so the fail-fast contract (ADR-070) is honored here directly: an
+            // out-of-range value throws at registration, not at first throttle.
+            Validator.ValidateObject(settings, new ValidationContext(settings), validateAllProperties: true);
 
             return services.AddRateLimiter(options =>
             {
