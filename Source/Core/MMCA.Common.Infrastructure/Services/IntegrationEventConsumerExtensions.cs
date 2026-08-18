@@ -32,9 +32,7 @@ public static class IntegrationEventConsumerExtensions
         /// event. Defaults to <see langword="true"/>. Pass <see langword="false"/> for an event
         /// whose faults a host routes itself (a dedicated fault service, or a custom
         /// <c>IConsumer&lt;Fault&lt;TEvent&gt;&gt;</c>), so two consumers do not compete for the
-        /// same fault topic. This parameter is the per-event switch; the host-wide default is
-        /// <c>MessageBus:RegisterFaultConsumers</c>, which callers read themselves because this
-        /// extension has no access to configuration.
+        /// same fault topic.
         /// </param>
         public IBusRegistrationConfigurator RegisterIntegrationEventConsumer<TEvent>(
             bool registerFaultConsumer = true)

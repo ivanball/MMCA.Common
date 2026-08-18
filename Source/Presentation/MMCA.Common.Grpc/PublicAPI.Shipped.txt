@@ -1,0 +1,39 @@
+#nullable enable
+MMCA.Common.Grpc.DependencyInjection
+MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGrpcServiceDefaults() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Grpc.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTypedGrpcClient<TClient>(string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+MMCA.Common.Grpc.Exceptions.ResultFailureException
+MMCA.Common.Grpc.Exceptions.ResultFailureException.Errors.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException() -> void
+MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> void
+MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException(string! message) -> void
+MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor
+MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.GrpcResultExceptionInterceptor(Microsoft.Extensions.Logging.ILogger<MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor!>! logger) -> void
+MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor
+MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.JwtForwardingClientInterceptor(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor) -> void
+MMCA.Common.Grpc.ResultGrpcExtensions
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.ErrorType)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.ErrorType).ToGrpcStatusCode() -> Grpc.Core.StatusCode
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.Result!)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.Result!).ThrowIfFailure() -> void
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!).ToRpcException() -> Grpc.Core.RpcException!
+MMCA.Common.Grpc.ResultGrpcExtensions.extension<T>(MMCA.Common.Shared.Abstractions.Result<T>!)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension<T>(MMCA.Common.Shared.Abstractions.Result<T>!).UnwrapOrThrow() -> T
+override MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.ClientStreamingServerHandler<TRequest, TResponse>(Grpc.Core.IAsyncStreamReader<TRequest!>! requestStream, Grpc.Core.ServerCallContext! context, Grpc.Core.ClientStreamingServerMethod<TRequest!, TResponse!>! continuation) -> System.Threading.Tasks.Task<TResponse!>!
+override MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.DuplexStreamingServerHandler<TRequest, TResponse>(Grpc.Core.IAsyncStreamReader<TRequest!>! requestStream, Grpc.Core.IServerStreamWriter<TResponse!>! responseStream, Grpc.Core.ServerCallContext! context, Grpc.Core.DuplexStreamingServerMethod<TRequest!, TResponse!>! continuation) -> System.Threading.Tasks.Task!
+override MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.ServerStreamingServerHandler<TRequest, TResponse>(TRequest! request, Grpc.Core.IServerStreamWriter<TResponse!>! responseStream, Grpc.Core.ServerCallContext! context, Grpc.Core.ServerStreamingServerMethod<TRequest!, TResponse!>! continuation) -> System.Threading.Tasks.Task!
+override MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.UnaryServerHandler<TRequest, TResponse>(TRequest! request, Grpc.Core.ServerCallContext! context, Grpc.Core.UnaryServerMethod<TRequest!, TResponse!>! continuation) -> System.Threading.Tasks.Task<TResponse!>!
+override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.AsyncClientStreamingCall<TRequest, TResponse>(Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.AsyncClientStreamingCallContinuation<TRequest!, TResponse!>! continuation) -> Grpc.Core.AsyncClientStreamingCall<TRequest!, TResponse!>!
+override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.AsyncDuplexStreamingCall<TRequest, TResponse>(Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.AsyncDuplexStreamingCallContinuation<TRequest!, TResponse!>! continuation) -> Grpc.Core.AsyncDuplexStreamingCall<TRequest!, TResponse!>!
+override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.AsyncServerStreamingCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.AsyncServerStreamingCallContinuation<TRequest!, TResponse!>! continuation) -> Grpc.Core.AsyncServerStreamingCall<TResponse!>!
+override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.AsyncUnaryCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.AsyncUnaryCallContinuation<TRequest!, TResponse!>! continuation) -> Grpc.Core.AsyncUnaryCall<TResponse!>!
+override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.BlockingUnaryCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.BlockingUnaryCallContinuation<TRequest!, TResponse!>! continuation) -> TResponse!
+static MMCA.Common.Grpc.DependencyInjection.AddGrpcServiceDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Grpc.DependencyInjection.AddTypedGrpcClient<TClient>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+static MMCA.Common.Grpc.ResultGrpcExtensions.ThrowIfFailure(this MMCA.Common.Shared.Abstractions.Result! result) -> void
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToGrpcStatusCode(this MMCA.Common.Shared.Abstractions.ErrorType errorType) -> Grpc.Core.StatusCode
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToRpcException(this System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> Grpc.Core.RpcException!
+static MMCA.Common.Grpc.ResultGrpcExtensions.UnwrapOrThrow<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result) -> T

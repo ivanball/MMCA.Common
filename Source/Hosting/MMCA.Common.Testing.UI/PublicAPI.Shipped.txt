@@ -1,0 +1,110 @@
+#nullable enable
+MMCA.Common.Testing.UI.BunitComponentTestBase
+MMCA.Common.Testing.UI.BunitComponentTestBase.BunitComponentTestBase() -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.<Clone>$() -> MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles!
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Deconstruct(out Bunit.IRenderedComponent<MudBlazor.MudPopoverProvider!>! Popover, out Bunit.IRenderedComponent<MudBlazor.MudDialogProvider!>! Dialog, out Bunit.IRenderedComponent<MudBlazor.MudSnackbarProvider!>! Snackbar) -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Dialog.get -> Bunit.IRenderedComponent<MudBlazor.MudDialogProvider!>!
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Dialog.init -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Equals(MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles? other) -> bool
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.MudProviderHandles(Bunit.IRenderedComponent<MudBlazor.MudPopoverProvider!>! Popover, Bunit.IRenderedComponent<MudBlazor.MudDialogProvider!>! Dialog, Bunit.IRenderedComponent<MudBlazor.MudSnackbarProvider!>! Snackbar) -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Popover.get -> Bunit.IRenderedComponent<MudBlazor.MudPopoverProvider!>!
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Popover.init -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Snackbar.get -> Bunit.IRenderedComponent<MudBlazor.MudSnackbarProvider!>!
+MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Snackbar.init -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.RenderAs<TComponent>(System.Security.Claims.ClaimsPrincipal! principal, System.Action<Bunit.ComponentParameterCollectionBuilder<TComponent>!>! parameters) -> Bunit.IRenderedComponent<TComponent>!
+MMCA.Common.Testing.UI.BunitComponentTestBase.RenderMudProviders() -> MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles!
+MMCA.Common.Testing.UI.BunitComponentTestBase.RenderUnderTest<TComponent>(System.Action<Bunit.ComponentParameterCollectionBuilder<TComponent>!>! parameters) -> Bunit.IRenderedComponent<TComponent>!
+MMCA.Common.Testing.UI.BunitComponentTestBase.SetUser(System.Security.Claims.ClaimsPrincipal! principal) -> void
+MMCA.Common.Testing.UI.BunitInteractionExtensions
+MMCA.Common.Testing.UI.BunitInteractionExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!)
+MMCA.Common.Testing.UI.BunitInteractionExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ClickButtonByText(string! text) -> void
+MMCA.Common.Testing.UI.BunitInteractionExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).FindButtonByText(string! text) -> AngleSharp.Dom.IElement!
+MMCA.Common.Testing.UI.BunitInteractionExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).HasText(string! text) -> bool
+MMCA.Common.Testing.UI.CapturedRequest
+MMCA.Common.Testing.UI.CapturedRequest.<Clone>$() -> MMCA.Common.Testing.UI.CapturedRequest!
+MMCA.Common.Testing.UI.CapturedRequest.Authorization.get -> string?
+MMCA.Common.Testing.UI.CapturedRequest.Authorization.init -> void
+MMCA.Common.Testing.UI.CapturedRequest.Body.get -> string?
+MMCA.Common.Testing.UI.CapturedRequest.Body.init -> void
+MMCA.Common.Testing.UI.CapturedRequest.CapturedRequest(System.Net.Http.HttpMethod! Method, System.Uri? Uri, string! Path, string! PathAndQuery, string? Authorization, string? Body) -> void
+MMCA.Common.Testing.UI.CapturedRequest.Deconstruct(out System.Net.Http.HttpMethod! Method, out System.Uri? Uri, out string! Path, out string! PathAndQuery, out string? Authorization, out string? Body) -> void
+MMCA.Common.Testing.UI.CapturedRequest.Equals(MMCA.Common.Testing.UI.CapturedRequest? other) -> bool
+MMCA.Common.Testing.UI.CapturedRequest.Method.get -> System.Net.Http.HttpMethod!
+MMCA.Common.Testing.UI.CapturedRequest.Method.init -> void
+MMCA.Common.Testing.UI.CapturedRequest.Path.get -> string!
+MMCA.Common.Testing.UI.CapturedRequest.Path.init -> void
+MMCA.Common.Testing.UI.CapturedRequest.PathAndQuery.get -> string!
+MMCA.Common.Testing.UI.CapturedRequest.PathAndQuery.init -> void
+MMCA.Common.Testing.UI.CapturedRequest.Uri.get -> System.Uri?
+MMCA.Common.Testing.UI.CapturedRequest.Uri.init -> void
+MMCA.Common.Testing.UI.CapturingHttpMessageHandler
+MMCA.Common.Testing.UI.CapturingHttpMessageHandler.CapturingHttpMessageHandler() -> void
+MMCA.Common.Testing.UI.CapturingHttpMessageHandler.CapturingHttpMessageHandler(System.Func<System.Net.Http.HttpRequestMessage!, System.Net.Http.HttpResponseMessage!>! respond) -> void
+MMCA.Common.Testing.UI.CapturingHttpMessageHandler.Requests.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.UI.CapturedRequest!>!
+MMCA.Common.Testing.UI.CapturingHttpMessageHandler.RequestsFor(System.Net.Http.HttpMethod! method, string! absolutePath) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.UI.CapturedRequest!>!
+MMCA.Common.Testing.UI.CapturingHttpMessageHandler.SetResponse(System.Net.Http.HttpMethod! method, string! absolutePath, System.Net.HttpStatusCode statusCode, object? body = null) -> void
+MMCA.Common.Testing.UI.FreshApiClientFactory
+MMCA.Common.Testing.UI.FreshApiClientFactory.CreateClient(string! name) -> System.Net.Http.HttpClient!
+MMCA.Common.Testing.UI.FreshApiClientFactory.FreshApiClientFactory(System.Net.Http.HttpMessageHandler! handler, System.Uri! baseAddress) -> void
+MMCA.Common.Testing.UI.HttpTestDoubles
+MMCA.Common.Testing.UI.MarkupSnapshot
+MMCA.Common.Testing.UI.MarkupSnapshotResult
+MMCA.Common.Testing.UI.MarkupSnapshotResult.Deconstruct(out bool IsMatch, out string! Message) -> void
+MMCA.Common.Testing.UI.MarkupSnapshotResult.Equals(MMCA.Common.Testing.UI.MarkupSnapshotResult other) -> bool
+MMCA.Common.Testing.UI.MarkupSnapshotResult.IsMatch.get -> bool
+MMCA.Common.Testing.UI.MarkupSnapshotResult.IsMatch.init -> void
+MMCA.Common.Testing.UI.MarkupSnapshotResult.MarkupSnapshotResult() -> void
+MMCA.Common.Testing.UI.MarkupSnapshotResult.MarkupSnapshotResult(bool IsMatch, string! Message) -> void
+MMCA.Common.Testing.UI.MarkupSnapshotResult.Message.get -> string!
+MMCA.Common.Testing.UI.MarkupSnapshotResult.Message.init -> void
+MMCA.Common.Testing.UI.StubTokenStorageService
+MMCA.Common.Testing.UI.StubTokenStorageService.AccessToken.get -> string?
+MMCA.Common.Testing.UI.StubTokenStorageService.AccessToken.set -> void
+MMCA.Common.Testing.UI.StubTokenStorageService.AccessTokenProvider.get -> System.Func<System.Threading.Tasks.Task<string?>!>!
+MMCA.Common.Testing.UI.StubTokenStorageService.AccessTokenProvider.set -> void
+MMCA.Common.Testing.UI.StubTokenStorageService.ClearTokensAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.UI.StubTokenStorageService.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.Testing.UI.StubTokenStorageService.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.Testing.UI.StubTokenStorageService.RefreshToken.get -> string?
+MMCA.Common.Testing.UI.StubTokenStorageService.RefreshToken.set -> void
+MMCA.Common.Testing.UI.StubTokenStorageService.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.UI.StubTokenStorageService.StubTokenStorageService(string? accessToken = "test-token", string? refreshToken = "test-refresh-token") -> void
+MMCA.Common.Testing.UI.TestPrincipal
+MMCA.Common.Testing.UI.UiHttpServiceHarness
+MMCA.Common.Testing.UI.UiHttpServiceHarness.BaseAddress.get -> System.Uri!
+MMCA.Common.Testing.UI.UiHttpServiceHarness.ClientFactory.get -> System.Net.Http.IHttpClientFactory!
+MMCA.Common.Testing.UI.UiHttpServiceHarness.Dispose() -> void
+MMCA.Common.Testing.UI.UiHttpServiceHarness.Handler.get -> MMCA.Common.Testing.UI.CapturingHttpMessageHandler!
+MMCA.Common.Testing.UI.UiHttpServiceHarness.TokenStorage.get -> MMCA.Common.Testing.UI.StubTokenStorageService!
+MMCA.Common.Testing.UI.UiHttpServiceHarness.UiHttpServiceHarness(System.Func<System.Net.Http.HttpRequestMessage!, System.Net.Http.HttpResponseMessage!>! respond, string? accessToken = "test-token", System.Uri? baseAddress = null) -> void
+MMCA.Common.Testing.UI.UiHttpServiceHarness.UiHttpServiceHarness(string? accessToken = "test-token", System.Uri? baseAddress = null) -> void
+override MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Equals(object? obj) -> bool
+override MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.GetHashCode() -> int
+override MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.ToString() -> string!
+override MMCA.Common.Testing.UI.CapturedRequest.Equals(object? obj) -> bool
+override MMCA.Common.Testing.UI.CapturedRequest.GetHashCode() -> int
+override MMCA.Common.Testing.UI.CapturedRequest.ToString() -> string!
+override MMCA.Common.Testing.UI.MarkupSnapshotResult.GetHashCode() -> int
+static MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.operator !=(MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles? left, MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles? right) -> bool
+static MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.operator ==(MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles? left, MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles? right) -> bool
+static MMCA.Common.Testing.UI.BunitInteractionExtensions.ClickButtonByText<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut, string! text) -> void
+static MMCA.Common.Testing.UI.BunitInteractionExtensions.FindButtonByText<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut, string! text) -> AngleSharp.Dom.IElement!
+static MMCA.Common.Testing.UI.BunitInteractionExtensions.HasText<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut, string! text) -> bool
+static MMCA.Common.Testing.UI.CapturedRequest.operator !=(MMCA.Common.Testing.UI.CapturedRequest? left, MMCA.Common.Testing.UI.CapturedRequest? right) -> bool
+static MMCA.Common.Testing.UI.CapturedRequest.operator ==(MMCA.Common.Testing.UI.CapturedRequest? left, MMCA.Common.Testing.UI.CapturedRequest? right) -> bool
+static MMCA.Common.Testing.UI.HttpTestDoubles.ClientFactory(System.Net.Http.HttpMessageHandler! handler, System.Uri? baseAddress = null) -> System.Net.Http.IHttpClientFactory!
+static MMCA.Common.Testing.UI.HttpTestDoubles.EmptyResponse(System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.NoContent) -> System.Net.Http.HttpResponseMessage!
+static MMCA.Common.Testing.UI.HttpTestDoubles.JsonResponse<T>(T payload, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK) -> System.Net.Http.HttpResponseMessage!
+static MMCA.Common.Testing.UI.HttpTestDoubles.ProblemResponse(string! detail, string! title = "Domain Exception", System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.BadRequest) -> System.Net.Http.HttpResponseMessage!
+static MMCA.Common.Testing.UI.HttpTestDoubles.TokenStorage(string? accessToken = "test-token") -> MMCA.Common.UI.Services.Auth.ITokenStorageService!
+static MMCA.Common.Testing.UI.MarkupSnapshot.Match(string! markup, string! snapshotName, string! callerFilePath = "") -> MMCA.Common.Testing.UI.MarkupSnapshotResult
+static MMCA.Common.Testing.UI.MarkupSnapshotResult.operator !=(MMCA.Common.Testing.UI.MarkupSnapshotResult left, MMCA.Common.Testing.UI.MarkupSnapshotResult right) -> bool
+static MMCA.Common.Testing.UI.MarkupSnapshotResult.operator ==(MMCA.Common.Testing.UI.MarkupSnapshotResult left, MMCA.Common.Testing.UI.MarkupSnapshotResult right) -> bool
+static MMCA.Common.Testing.UI.TestPrincipal.AuthenticatedUser(string! userId = "1", string! name = "Test User", params string![]! roles) -> System.Security.Claims.ClaimsPrincipal!
+static MMCA.Common.Testing.UI.TestPrincipal.Organizer(string! userId = "1") -> System.Security.Claims.ClaimsPrincipal!
+static readonly MMCA.Common.Testing.UI.BunitComponentTestBase.Anonymous -> System.Security.Claims.ClaimsPrincipal!
+static readonly MMCA.Common.Testing.UI.HttpTestDoubles.BaseAddress -> System.Uri!
+static readonly MMCA.Common.Testing.UI.UiHttpServiceHarness.DefaultBaseAddress -> System.Uri!
+~override MMCA.Common.Testing.UI.MarkupSnapshotResult.Equals(object obj) -> bool
+~override MMCA.Common.Testing.UI.MarkupSnapshotResult.ToString() -> string

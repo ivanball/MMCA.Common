@@ -249,12 +249,6 @@ public class MessageBusSettingsTests
     public void Default_RedeliveryIntervalsSeconds_IsOneMinuteTenMinutesOneHour() =>
         new MessageBusSettings().RedeliveryIntervalsSeconds.Should().Equal(60, 600, 3600);
 
-    // Default-ON: a faulted event with no fault consumer leaves no trace outside the broker's
-    // error queue, which is the failure mode this consumer exists to close.
-    [Fact]
-    public void Default_RegisterFaultConsumers_IsTrue() =>
-        new MessageBusSettings().RegisterFaultConsumers.Should().BeTrue();
-
     [Fact]
     public void ResilienceProperties_RoundTrip()
     {
@@ -263,13 +257,11 @@ public class MessageBusSettingsTests
             EnableInbox = true,
             EnableDelayedRedelivery = true,
             RedeliveryIntervalsSeconds = [5, 15],
-            RegisterFaultConsumers = false,
         };
 
         sut.EnableInbox.Should().BeTrue();
         sut.EnableDelayedRedelivery.Should().BeTrue();
         sut.RedeliveryIntervalsSeconds.Should().Equal(5, 15);
-        sut.RegisterFaultConsumers.Should().BeFalse();
     }
 }
 

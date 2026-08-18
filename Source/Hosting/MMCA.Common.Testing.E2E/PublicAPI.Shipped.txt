@@ -1,0 +1,224 @@
+#nullable enable
+MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException
+MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException.AccessibilityViolationException() -> void
+MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException.AccessibilityViolationException(string! message) -> void
+MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException.AccessibilityViolationException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Testing.E2E.Infrastructure.AxeOptions
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.E2ETestBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.LoginAsAdminAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.LoginAsUserAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.LoginAsync(string! email, string! password) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.NavigateAndWaitAsync(string! path) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.Page.get -> Microsoft.Playwright.IPage!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.RegisterNewUserAsync(string? firstName = null, string? lastName = null) -> System.Threading.Tasks.Task<(string! Email, string! Password)>!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.ScanAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.ScanGridAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestCollection
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestCollection.E2ETestCollection() -> void
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.ILocator!)
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.ILocator!).ClickAndVerifyAsync(Microsoft.Playwright.ILocator! expected, float timeout = 15000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.ILocator!).ClickAndWaitForUrlAsync(Microsoft.Playwright.IPage! page, string! urlPattern) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.ILocator!).FillAndVerifyAsync(string! value, float timeout = 10000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!)
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).AssertNoAccessibilityViolationsAsync(Deque.AxeCore.Commons.AxeRunOptions? options = null) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).BlazorNavigateAsync(string! path) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).GotoAndWaitForBlazorAsync(string! path) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).GotoProtectedAsync(string! path) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).WaitForBlazorAsync(float timeout = 30000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).WaitForPageAndBlazorAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture
+MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture.Browser.get -> Microsoft.Playwright.IBrowser!
+MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture.Playwright.get -> Microsoft.Playwright.IPlaywright!
+MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture.PlaywrightFixture() -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.<Clone>$() -> MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Deconstruct(out string! Label, out string! Path, out MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample! Vitals) -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Equals(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact? other) -> bool
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Label.get -> string!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Label.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Path.get -> string!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Path.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Vitals.get -> MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Vitals.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.WebVitalsArtifact(string! Label, string! Path, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample! Vitals) -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.<Clone>$() -> MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.AssertWithinBudget(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample! sample, string! label, string! path, System.Action<string!>? writeLine = null) -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Cls.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Cls.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Deconstruct(out double Lcp, out double Fcp, out double Ttfb, out double Cls, out double Inp) -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Equals(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget? other) -> bool
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Fcp.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Fcp.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Inp.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Inp.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Lcp.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Lcp.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Ttfb.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Ttfb.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.WebVitalsBudget(double Lcp = 2500, double Fcp = 1800, double Ttfb = 800, double Cls = 0.1, double Inp = 500) -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsCollector
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.<Clone>$() -> MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Cls.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Cls.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Equals(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? other) -> bool
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Fcp.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Fcp.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Inp.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Inp.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Lcp.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Lcp.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Ttfb.get -> double
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Ttfb.init -> void
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.WebVitalsSample() -> void
+MMCA.Common.Testing.E2E.PageObjects.LoginPage
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.CreateAccountLink.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.EmailField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.ErrorAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.GotoAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.LoginAsync(string! email, string! password) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.LoginButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.LoginPage(Microsoft.Playwright.IPage! page) -> void
+MMCA.Common.Testing.E2E.PageObjects.LoginPage.PasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.AddressLine1Field.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.AddressLine2Field.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.ChangePasswordButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.CityField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.ConfirmNewPasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.CountryField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.CurrentPasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.ErrorAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.FirstNameField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.GotoAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.LastNameField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.NewPasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.ProfilePage(Microsoft.Playwright.IPage! page) -> void
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.SaveAddressButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.SaveNameButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.StateField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ProfilePage.ZipCodeField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AddressLine1Field.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AddressPanel.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AlreadyHaveAccountLink.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.CityField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.ConfirmPasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.CountryField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.EmailField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.ErrorAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.FirstNameField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.GotoAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.LastNameField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.PasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.RegisterAsync(string! firstName, string! lastName, string! email, string! password) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.RegisterButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.RegisterPage(Microsoft.Playwright.IPage! page) -> void
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.StateField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.ZipCodeField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AnonymousUser_ProtectedPages_ShouldRedirectToLogin() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AnonymousUser_PublicPages_ShouldBeAccessible() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AuthorizationTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.RegisteredUser_AdminPages_ShouldBeForbidden() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.RegisteredUser_AuthenticatedPage_ShouldBeAccessible() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.LogoutTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.LogoutTestsBase.LogoutTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.LogoutTestsBase.Logout_ShouldPreventAccessToProtectedPages() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.LogoutTestsBase.Logout_ShouldRedirectToLoginPage() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ChangeAddress_ShouldUpdateProfileAddress() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ChangeEmail_ShouldUpdateEmail() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ChangeName_ShouldUpdateProfileName() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ChangePassword_WithValidCurrentPassword_ShouldSucceed() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ProfileManagementTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ProfilePage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ProfilePage_ShouldLoadWithUserData() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.LoginPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.Login_NavigateToCreateAccount_ShouldGoToRegisterPage() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.Login_WithInvalidPassword_ShouldShowError() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.Login_WithValidCredentials_ShouldNavigateToHomePage() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserLoginTestsBase.UserLoginTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.RegisterPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithMismatchedPasswords_ShouldShowError() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.Register_WithValidData_ShouldNavigateToHomePage() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.UserRegistrationTestsBase.UserRegistrationTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase
+MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.CultureSwitch_ToSpanish_ShouldLocalizeAndPersist() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.MobileViewport_CultureAndTheme_ShouldBeReachable() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.ThemeToggle_ToDark_ShouldApplyAndPersist() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Preferences.UserPreferencesTestsBase.UserPreferencesTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.ProtectedPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.PublicPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+const MMCA.Common.Testing.E2E.Infrastructure.E2ETestCollection.Name = "E2E" -> string!
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.Equals(object? obj) -> bool
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.GetHashCode() -> int
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.ToString() -> string!
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Equals(object? obj) -> bool
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.GetHashCode() -> int
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.ToString() -> string!
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.Equals(object? obj) -> bool
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.GetHashCode() -> int
+override MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.ToString() -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.AxeOptions.Wcag21Aa.get -> Deque.AxeCore.Commons.AxeRunOptions!
+static MMCA.Common.Testing.E2E.Infrastructure.AxeOptions.Wcag21AaExceptMudPagerCombobox.get -> Deque.AxeCore.Commons.AxeRunOptions!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.BaseUrl.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.FillFieldAsync(Microsoft.Playwright.ILocator! field, string! value) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.UniqueId() -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.DefaultEmail.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.DefaultEmail.set -> void
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.DefaultPassword.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.DefaultPassword.set -> void
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.Email.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AdminCredentials.Password.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AuthGraceTimeout.get -> float
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.AuthTimeout.get -> float
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.BaseUrl.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.Browser.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.DefaultBaseUrl.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.DefaultBaseUrl.set -> void
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.DefaultTimeout.get -> float
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.Headless.get -> bool
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.SlowMo.get -> float
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.TracePath.get -> string?
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.DefaultEmail.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.DefaultEmail.set -> void
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.DefaultPassword.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.DefaultPassword.set -> void
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.Email.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.E2ETestConfiguration.UserCredentials.Password.get -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.AssertNoAccessibilityViolationsAsync(this Microsoft.Playwright.IPage! page, Deque.AxeCore.Commons.AxeRunOptions? options = null) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.BlazorNavigateAsync(this Microsoft.Playwright.IPage! page, string! path) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ClickAndVerifyAsync(this Microsoft.Playwright.ILocator! locator, Microsoft.Playwright.ILocator! expected, float timeout = 15000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ClickAndWaitForUrlAsync(this Microsoft.Playwright.ILocator! locator, Microsoft.Playwright.IPage! page, string! urlPattern) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.FillAndVerifyAsync(this Microsoft.Playwright.ILocator! locator, string! value, float timeout = 10000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.GotoAndWaitForBlazorAsync(this Microsoft.Playwright.IPage! page, string! path) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.GotoProtectedAsync(this Microsoft.Playwright.IPage! page, string! path) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.WaitForBlazorAsync(this Microsoft.Playwright.IPage! page, float timeout = 30000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.WaitForPageAndBlazorAsync(this Microsoft.Playwright.IPage! page) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.operator !=(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact? right) -> bool
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact.operator ==(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsArtifact? right) -> bool
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.Describe(string! label, string! path, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample! sample) -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.operator !=(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget? right) -> bool
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget.operator ==(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget? right) -> bool
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsCollector.CollectAsync(Microsoft.Playwright.IPage! page) -> System.Threading.Tasks.Task<MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample!>!
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsCollector.InstallAsync(Microsoft.Playwright.IPage! page) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsCollector.WriteArtifactAsync(string! label, string! path, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample! sample) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.operator !=(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? right) -> bool
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample.operator ==(MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? left, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample? right) -> bool
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AdminPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.AuthorizationTestsBase.AuthenticatedUserPath.get -> string?
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.ProfileSupportsEmailChange.get -> bool

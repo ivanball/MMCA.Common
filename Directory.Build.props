@@ -19,7 +19,12 @@
          operator immediately fails the build with CS8625/CS8604. Suppressed HERE rather than in
          .editorconfig because a `dotnet_diagnostic` severity does not reach Razor-generated code.
          The compiler is the authority on nullability, not the analyzer. -->
-    <NoWarn>$(NoWarn);CS1591;RMG020;S8970</NoWarn>
+    <!-- RS0041 ("public members should not use oblivious reference types") fires only on Razor
+         generated code (BuildRenderTree and the component parameter surface), which is not
+         nullable-annotated and is not ours to annotate. Suppressed HERE rather than in .editorconfig
+         for the same reason as S8970 above: a `dotnet_diagnostic` severity does not reach generated
+         code. The two rules that make the public API gate a gate, RS0016 and RS0017, stay at error. -->
+    <NoWarn>$(NoWarn);CS1591;RMG020;S8970;RS0041</NoWarn>
   </PropertyGroup>
 
   <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
@@ -58,6 +63,25 @@
        in fifteen csproj files (each of which still packs README.md individually). -->
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
     <None Include="$(MSBuildThisFileDirectory)assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    Public API surface gate. Every packable Source project declares its public surface in
+    PublicAPI.Shipped.txt; RS0016 fails the build on a public member that is not declared and RS0017 on a
+    declared member that disappeared, so widening or breaking the shipped API of a NuGet package becomes a
+    reviewable diff in a text file instead of something a consumer discovers after the release.
+    Source-only (tests have no shipped surface) and never on a .dcproj, mirroring the analyzer group below.
+    MMCA.Common.UI.Maui is deliberately excluded: it lives outside MMCA.Common.slnx and builds only on the
+    windows build-maui job across four MAUI TFMs (ADR-042), so its baseline could neither be bootstrapped
+    nor kept honest from the normal build.
+  -->
+  <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Source')) AND '$(MSBuildProjectExtension)' != '.dcproj' AND '$(MSBuildProjectName)' != 'MMCA.Common.UI.Maui'">
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" Condition="Exists('PublicAPI.Shipped.txt')" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" Condition="Exists('PublicAPI.Unshipped.txt')" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">

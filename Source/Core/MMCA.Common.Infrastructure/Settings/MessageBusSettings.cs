@@ -58,8 +58,9 @@ public sealed class MessageBusSettings
     /// <summary>
     /// Gets a value indicating whether the consumer-side idempotency inbox is enabled. When
     /// <see langword="true"/>, <c>IntegrationEventConsumer</c> dedups already-processed messages via
-    /// an <c>InboxMessages</c> table in the consumer's database — which requires that table to exist
-    /// (apply the <c>AddInboxMessages</c> migration). Defaults to <see langword="false"/>.
+    /// the <c>InboxMessages</c> table in the consumer's database. The table is part of the shared
+    /// relational model (created by the standard migrations; Cosmos hosts skip it), so enabling
+    /// this on a migrated relational host needs no schema work. Defaults to <see langword="false"/>.
     /// <para>
     /// RECOMMENDED <see langword="true"/> for any broker-connected host. Broker delivery is
     /// at-least-once by contract: a consumer that acks after a network blip, a redelivered message
@@ -109,23 +110,6 @@ public sealed class MessageBusSettings
     /// </para>
     /// </summary>
     public IReadOnlyList<int> RedeliveryIntervalsSeconds { get; init; } = [60, 600, 3600];
-
-    /// <summary>
-    /// Gets a value indicating whether a <c>FaultIntegrationEventConsumer&lt;TEvent&gt;</c> is
-    /// registered alongside each integration-event consumer. MassTransit publishes a
-    /// <c>Fault&lt;TEvent&gt;</c> message when a consumer exhausts its retries, and with nothing
-    /// subscribed to that topic the only trace of an undelivered event is a row in the broker's
-    /// <c>_error</c> queue that no dashboard is watching. The fault consumer turns that into one
-    /// structured Error log plus a <c>broker.fault.count</c> metric. Defaults to
-    /// <see langword="true"/>.
-    /// <para>
-    /// Hosts that route faults themselves (a dedicated fault service, or a per-event opt-out via
-    /// the <c>registerFaultConsumer</c> parameter on
-    /// <c>RegisterIntegrationEventConsumer&lt;TEvent&gt;</c>) can set this to
-    /// <see langword="false"/> to document the intent.
-    /// </para>
-    /// </summary>
-    public bool RegisterFaultConsumers { get; init; } = true;
 }
 
 /// <summary>Available message bus transports.</summary>

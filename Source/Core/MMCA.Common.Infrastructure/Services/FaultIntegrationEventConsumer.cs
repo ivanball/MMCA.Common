@@ -13,8 +13,7 @@ namespace MMCA.Common.Infrastructure.Services;
 /// <para>
 /// Registered automatically alongside every consumer wired through
 /// <c>RegisterIntegrationEventConsumer&lt;TEvent&gt;</c> (opt out per event with its
-/// <c>registerFaultConsumer</c> parameter, or globally with
-/// <c>MessageBus:RegisterFaultConsumers=false</c>).
+/// <c>registerFaultConsumer</c> parameter).
 /// </para>
 /// <para>
 /// This consumer never throws. A fault consumer that faults would publish
