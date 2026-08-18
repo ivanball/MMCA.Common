@@ -11,15 +11,17 @@ namespace MMCA.Common.Testing;
 /// <see cref="ServiceCollection"/> through the repo's own registration sequence, resolves the
 /// decorated command/query handlers from the built provider, and asserts the runtime nesting order
 /// is exactly the documented pipeline —
-/// commands: FeatureGate → Logging → Caching → Validating → Transactional → Handler;
-/// queries: FeatureGate → Logging → Caching → Handler. Because Scrutor's <c>TryDecorate</c> applies
-/// decorators in reverse registration order, an innocent-looking reorder of the
-/// <c>AddApplicationDecorators()</c> lines (or a module scan registered after it) silently changes
-/// runtime behavior; this base turns that into a test failure.
+/// commands: FeatureGate → Authorization → Logging → Caching → Validating → Timeout → Transactional
+/// → Handler;
+/// queries: FeatureGate → Authorization → Logging → Caching → Timeout → Handler. Because Scrutor's
+/// <c>TryDecorate</c> applies decorators in reverse registration order, an innocent-looking reorder
+/// of the <c>AddApplicationDecorators()</c> lines (or a module scan registered after it) silently
+/// changes runtime behavior; this base turns that into a test failure.
 /// <para>
 /// Subclass with one representative command/query pair and implement
 /// <see cref="ConfigureServices"/> to (1) register test doubles for the decorator dependencies
-/// (<c>IFeatureManager</c>, <c>ICorrelationContext</c>, <c>ICacheService</c>, <c>IUnitOfWork</c>,
+/// (<c>IFeatureManager</c>, <c>ICurrentUserService</c>, <c>IPermissionRegistry</c>,
+/// <c>ICorrelationContext</c>, <c>ICacheService</c>, <c>IUnitOfWork</c>,
 /// <c>ILogger&lt;&gt;</c>), then (2) run the repo's real registration sequence, e.g.
 /// <c>services.AddApplication().ScanModuleApplicationServices&lt;MyMarker&gt;().AddApplicationDecorators()</c>,
 /// where the scanned assembly contains a concrete handler for each of the four type parameters.
@@ -47,9 +49,11 @@ public abstract class DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, 
     protected virtual IReadOnlyList<string> ExpectedCommandDecorators =>
     [
         "FeatureGateCommandDecorator",
+        "AuthorizationCommandDecorator",
         "LoggingCommandDecorator",
         "CachingCommandDecorator",
         "ValidatingCommandDecorator",
+        "TimeoutCommandDecorator",
         "TransactionalCommandDecorator",
     ];
 
@@ -57,8 +61,10 @@ public abstract class DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, 
     protected virtual IReadOnlyList<string> ExpectedQueryDecorators =>
     [
         "FeatureGateQueryDecorator",
+        "AuthorizationQueryDecorator",
         "LoggingQueryDecorator",
         "CachingQueryDecorator",
+        "TimeoutQueryDecorator",
     ];
 
     [Fact]

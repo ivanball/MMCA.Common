@@ -7,6 +7,7 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 using Moq;
 
 namespace MMCA.Common.Testing.Tests;
@@ -24,6 +25,8 @@ public sealed class DecoratorPipelineOrderTests
     {
         // Test doubles for the decorator constructor dependencies.
         services.AddSingleton(Mock.Of<IFeatureManager>());
+        services.AddScoped(_ => Mock.Of<ICurrentUserService>());
+        services.AddSingleton(Mock.Of<IPermissionRegistry>());
         services.AddSingleton(Mock.Of<ICorrelationContext>());
         services.AddSingleton(Mock.Of<ICacheService>());
         services.AddScoped(_ => Mock.Of<IUnitOfWork>());
