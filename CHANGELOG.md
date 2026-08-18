@@ -14,6 +14,52 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.154.0] - 2026-08-18
+
+The Section B application-wave framework halves: a gateway edge kit, an idempotency-intent
+convention gate, an HTTP ETag/If-Match concurrency surface, cross-service output-cache eviction,
+a best-effort dispatch helper, and a proto contract gate. Consumers move from 1.152.0 directly to
+this version; 1.153.0 was never pinned by any consumer (same deliberate-skip pattern as
+1.128-1.130, recorded under Unreleased).
+
+### Added
+
+- **Gateway edge kit (ADR-088).** New `MMCA.Common.Aspire` Gateway namespace for YARP hosts that
+  reference only the Aspire package: a context-free correlation middleware (ensures and echoes
+  `X-Correlation-ID`, so downstream services' `CorrelationIdMiddleware` joins one trace),
+  `AddGatewayRateLimiting` (per-client-IP fixed window that includes anonymous traffic, chained
+  with a global concurrency cap; `GatewayRateLimiting` settings section with configurable bypass
+  prefixes; health endpoints and `/.well-known` always bypassed; unknown IP fails open; in-memory
+  per replica by design), and `AddGatewayDownstreamHealthChecks` (per-service `/alive` probes on
+  the Ready tag so `/health/ready` reflects downstream reachability while the ACA `/alive` probe
+  stays process-local).
+- **Idempotency-intent convention (ADR-017 revision).** `[NonIdempotent(justification)]` marks a
+  POST as deliberately outside the idempotency-key contract, and the new
+  `IdempotencyConventionTestsBase` fitness base fails any `[HttpPost]` action declaring neither
+  `[Idempotent]` nor `[NonIdempotent]` (inherit-aware). `AuthControllerBase.Register` is now
+  `[Idempotent]`; Login/Refresh/Revoke and OAuth exchange are declared `[NonIdempotent]` because
+  token issuance must never be replay-cached. The idempotency filter's no-op-without-a-key
+  behavior is pinned by tests, so adopting `[Idempotent]` broadly is client-compatible.
+- **ETag / If-Match concurrency surface (ADR-035 revision).** `EntityControllerBase.GetByIdAsync`
+  emits a weak ETag from the DTO's RowVersion; the new `[SupportsIfMatch]` action filter parses
+  `If-Match` into request models implementing the existing `IConcurrencyAware` contract (body
+  value wins when both are present) and rewrites header-sourced concurrency conflicts to 412
+  Precondition Failed while body-sourced round-trips keep their 409 semantics.
+- **Cross-service output-cache eviction (ADR-026/077 revision).** `OutputCacheEvictionRequested`
+  (the framework's first shipped integration event; frozen wire shape) plus an API-side handler
+  that evicts each tag best-effort (`cache.eviction.failed` on the new `MMCA.Common.OutputCache`
+  meter) and `RegisterOutputCacheEvictionConsumer` / `AddOutputCacheEvictionHandler` wiring, so a
+  mutation in one service can evict another service's output cache through the standard outbox,
+  broker and inbox path.
+- **Best-effort dispatch helper.** `BestEffort.ExecuteAsync(operation, logger, action, ct)` wraps
+  fire-and-forget side effects: non-cancellation failures are logged once and counted
+  (`besteffort.dispatch.failed`, tag `operation`, new `MMCA.Common.BestEffort` meter);
+  cancellation always propagates. Replaces hand-rolled catch-all blocks at call sites.
+- **Proto contract gate.** `ProtoContractTestsBase` pins a repo's `.proto` surface (package,
+  services, rpcs, messages, fields with numbers, enums) against a frozen list, closing the gap
+  where only integration-event payloads were contract-gated. Consumer-facing; the framework
+  ships no protos.
+
 ## [1.153.0] - 2026-08-18
 
 The Section A architecture wave: broker poison-message handling, pipeline authorization and
