@@ -1,8 +1,8 @@
 @inject IStringLocalizer<SharedResource> L
 
-<div class="d-flex flex-column align-center pa-6">
-    <MudIcon Icon="@Icon" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
-    <MudText Typo="Typo.subtitle1" Color="Color.Secondary"><em>@(Message ?? L["Common.EmptyState.NoRecords"])</em></MudText>
+<div class="d-flex flex-column align-center justify-center pa-8 mmca-empty-state">
+    <MudIcon Icon="@Icon" Size="Size.Large" Color="Color.Secondary" Class="mb-3 mmca-empty-state-icon" />
+    <MudText Typo="Typo.subtitle1" Color="Color.Secondary" Align="Align.Center" Class="mmca-empty-state-text">@(Message ?? L["Common.EmptyState.NoRecords"])</MudText>
 </div>
 
 @code {

@@ -8,12 +8,19 @@
    SSR prerender), and re-render on changes. Root layouts render this component once instead of
    duplicating the provider block and its wiring. *@
 
-<MudThemeProvider Theme="MMCATheme.Instance" @bind-IsDarkMode="_isDarkMode" />
+<MudThemeProvider Theme="@Theme" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 @code {
+    /// <summary>
+    /// The MudBlazor theme handed to the root <c>MudThemeProvider</c>. Defaults to the framework
+    /// theme (<see cref="MMCATheme.Instance"/>); an app that needs its own brand passes a derived
+    /// <c>MudTheme</c> here instead of duplicating the whole provider block.
+    /// </summary>
+    [Parameter] public MudTheme Theme { get; set; } = MMCATheme.Instance;
+
     private bool _isDarkMode;
     private bool _disposed;
 

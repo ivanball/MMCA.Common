@@ -102,6 +102,34 @@ public sealed class NavMenuTests : BunitTestBase
         cut.Markup.Should().Contain("Manage Events");
     }
 
+    [Fact]
+    public void WithoutBrandLogoUrl_RendersTheTextOnlyBrand()
+    {
+        RenderMudProviders();
+        var cut = RenderUnderTest<NavMenu>(_ => { });
+
+        cut.FindAll(".navbar-brand-logo").Should().BeEmpty(
+            "LayoutSettings.BrandLogoUrl defaults to empty, so the brand stays text-only");
+        cut.Find(".navbar-brand-text").TextContent.Should().Be("TestBrand");
+    }
+
+    [Fact]
+    public void WithBrandLogoUrl_RendersADecorativeLogoBesideTheBrandText()
+    {
+        // Last registration wins, so this replaces the text-only settings from the constructor.
+        Services.AddSingleton<IOptions<LayoutSettings>>(Options.Create(
+            new LayoutSettings { BrandName = "TestBrand", BrandLogoUrl = "/img/brand.svg" }));
+
+        RenderMudProviders();
+        var cut = RenderUnderTest<NavMenu>(_ => { });
+
+        var logo = cut.Find(".navbar-brand .navbar-brand-logo");
+        logo.GetAttribute("src").Should().Be("/img/brand.svg");
+        logo.GetAttribute("alt").Should().BeEmpty(
+            "the logo is decorative: the brand link already carries its own accessible name");
+        cut.Find(".navbar-brand-text").TextContent.Should().Be("TestBrand");
+    }
+
     private void RegisterModule(params NavItem[] navItems)
         => Services.AddSingleton<IUIModule>(new StubUiModule(navItems));
 

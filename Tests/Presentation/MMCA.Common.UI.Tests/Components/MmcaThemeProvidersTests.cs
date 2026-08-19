@@ -37,6 +37,19 @@ public sealed class MmcaThemeProvidersTests : BunitTestBase
     }
 
     [Fact]
+    public void Render_HonoursAnAppSuppliedThemeOverride()
+    {
+        // The Theme parameter is the extension point for a downstream brand: an app passes its own
+        // derived MudTheme instead of duplicating the whole provider block. Defaulting to
+        // MMCATheme.Instance (asserted above) keeps that addition non-breaking.
+        var appTheme = new MudTheme();
+
+        var cut = RenderUnderTest<MmcaThemeProviders>(p => p.Add(c => c.Theme, appTheme));
+
+        cut.FindComponent<MudThemeProvider>().Instance.Theme.Should().BeSameAs(appTheme);
+    }
+
+    [Fact]
     public void FirstInteractiveRender_InitializesTheThemeService()
     {
         var themeService = Services.GetRequiredService<ThemeService>();

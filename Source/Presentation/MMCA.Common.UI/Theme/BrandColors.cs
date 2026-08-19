@@ -15,7 +15,7 @@ public static class BrandColors
     /// <summary>Darkened primary (CSS: <c>--mmca-primary-dark</c>).</summary>
     public const string PrimaryDark = "#0D47A1";
 
-    /// <summary>Lightened primary, used for accents and dark-mode contrast.</summary>
+    /// <summary>Lightened primary, used for accents and dark-mode contrast (CSS: <c>--mmca-primary-light</c>).</summary>
     public const string PrimaryLight = "#42A5F5";
 
     /// <summary>

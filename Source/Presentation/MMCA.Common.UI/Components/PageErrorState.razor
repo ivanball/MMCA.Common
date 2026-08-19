@@ -1,6 +1,8 @@
 @inject IStringLocalizer<SharedResource> L
 
-<MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="my-4">@(Message ?? L["Common.ErrorState.Generic"])</MudAlert>
+@* Elevation 1 lifts the alert off the page surface; the filled error variant and its icon (and so
+   the contrast fixes in the dark palette) are unchanged. *@
+<MudAlert Severity="Severity.Error" Variant="Variant.Filled" Elevation="1" Class="my-6 mmca-error-alert">@(Message ?? L["Common.ErrorState.Generic"])</MudAlert>
 
 @code {
     /// <summary>Error text; defaults to the localized "An error occurred." (ADR-027).</summary>

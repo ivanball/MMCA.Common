@@ -34,6 +34,7 @@ public sealed class BrandColorTokenTests
     [Theory]
     [InlineData("--mmca-primary", nameof(BrandColors.Primary))]
     [InlineData("--mmca-primary-dark", nameof(BrandColors.PrimaryDark))]
+    [InlineData("--mmca-primary-light", nameof(BrandColors.PrimaryLight))]
     [InlineData("--mmca-secondary", nameof(BrandColors.Secondary))]
     [InlineData("--mmca-secondary-dark", nameof(BrandColors.SecondaryDark))]
     public void CssBrandToken_MatchesBrandColorsConstant(string cssVariable, string brandConstantName)

@@ -15,7 +15,16 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="@L["Nav.BrandHome.Aria", LayoutSettingsOptions.Value.BrandName]">@LayoutSettingsOptions.Value.BrandName</a>
+        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="@L["Nav.BrandHome.Aria", LayoutSettingsOptions.Value.BrandName]">
+            @* Decorative logo: alt="" keeps it out of the accessibility tree, because the link
+               already announces itself through its aria-label (axe image-redundant-alt). Rendered
+               only when the host configures Layout:BrandLogoUrl, so the text-only brand is unchanged. *@
+            @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.BrandLogoUrl))
+            {
+                <img class="navbar-brand-logo" src="@LayoutSettingsOptions.Value.BrandLogoUrl" alt="" aria-hidden="true" />
+            }
+            <span class="navbar-brand-text">@LayoutSettingsOptions.Value.BrandName</span>
+        </a>
     </div>
     @* Mobile-only quick actions (CSS hides this row at >=1024px, where the MudAppBar takes over; the
        app bar itself is hidden below 1024px). Culture + theme must be available to everyone here,

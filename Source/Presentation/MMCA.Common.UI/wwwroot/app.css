@@ -1,3 +1,51 @@
+/* ── Web font: Inter (self-hosted) ──
+   The MudBlazor theme (Theme/MMCATheme.cs) and the html/body rule below both name Inter first.
+   Without these faces the stack silently fell through to Segoe UI on Windows and to a generic
+   sans-serif everywhere else, so the "professional" typography never actually shipped. The files
+   are the unmodified Fontsource latin subsets (SIL OFL 1.1, see fonts/LICENSE-Inter.txt) vendored
+   into this RCL, so they are served same-origin from _content/MMCA.Common.UI/fonts/ and satisfy the
+   host CSP's `font-src 'self'` with no CDN allowance. font-display: swap keeps first paint on the
+   fallback face instead of blocking text (Core Web Vitals FCP/LCP, WebVitalsE2ETests). */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('fonts/inter-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('fonts/inter-latin-500-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('fonts/inter-latin-600-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('fonts/inter-latin-700-normal.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 800;
+    font-display: swap;
+    src: url('fonts/inter-latin-800-normal.woff2') format('woff2');
+}
+
 /* ── Design Tokens ── */
 :root {
     /* Layout */
@@ -12,6 +60,7 @@
        BrandColorTokenTests enforces that these stay in sync. */
     --mmca-primary: #1565C0;
     --mmca-primary-dark: #0D47A1;
+    --mmca-primary-light: #42A5F5;
     --mmca-secondary: #00796B;
     --mmca-secondary-dark: #00695C;
 
@@ -186,8 +235,42 @@ h1:focus {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
     flex-wrap: wrap;
+}
+
+/* Tightens the page title optically at h4 size. Typography only: the element stays the <h1>
+   PageHeader emits for axe page-has-heading-one. */
+.mmca-page-title {
+    font-weight: 700;
+    letter-spacing: -0.015em;
+}
+
+/* ── Shared primitive polish (EmptyState / PageLoadingState / PageErrorState) ── */
+.mmca-empty-state {
+    color: var(--mud-palette-text-secondary);
+    text-align: center;
+}
+
+.mmca-empty-state-icon {
+    opacity: 0.55;
+}
+
+.mmca-empty-state-text {
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    max-width: 32rem;
+}
+
+.mmca-loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 8rem;
+}
+
+.mmca-error-alert {
+    font-weight: 500;
 }
 
 /* ── Detail card standard ── */
@@ -263,12 +346,53 @@ h1:focus {
     }
 }
 
+/* ── Eyebrow (small label above a section title) ──
+   Deliberately palette-driven (--mud-palette-primary) rather than the raw --mmca-primary token so it
+   follows the active light/dark palette; BrandColorTokenTests only guards the --mmca-* duplication,
+   and adding a token here would mean adding a matching C# constant for no gain. */
+.mmca-eyebrow {
+    display: block;
+    color: var(--mud-palette-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    margin-bottom: var(--mmca-space-sm, 0.5rem);
+}
+
+/* ── Stat tile (compact numeral + label block) ── */
+.mmca-stat-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: var(--mmca-space-md, 1rem) var(--mmca-space-lg, 1.5rem);
+    text-align: center;
+}
+
+.mmca-stat-tile-value {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--mud-palette-text-primary);
+}
+
+.mmca-stat-tile-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mud-palette-text-secondary);
+}
+
 /* ── Section heading ── */
 .mmca-section-heading {
     text-align: center;
     position: relative;
-    margin-bottom: var(--mmca-space-xl, 2.5rem);
-    padding-top: var(--mmca-space-md, 1rem);
+    margin-bottom: var(--mmca-space-2xl, 3rem);
+    padding-top: var(--mmca-space-lg, 1.5rem);
+    padding-bottom: var(--mmca-space-xs, 0.25rem);
 }
 
 .mmca-section-heading .mud-icon {
@@ -294,6 +418,7 @@ h1:focus {
 .mmca-section-heading .mud-typography {
     position: relative;
     font-weight: 700;
+    letter-spacing: -0.015em;
     z-index: 1;
 }
 
