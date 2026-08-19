@@ -1,9 +1,9 @@
 @inject IStringLocalizer<SharedResource> L
 
-<div role="status" aria-live="polite" aria-busy="true">
+<div role="status" aria-live="polite" aria-busy="true" class="mmca-loading-state">
     @* role="status" makes this a live region (a bare div may not carry aria-label, WCAG 4.1.2); the
        spinner itself carries the accessible name so the progressbar is not anonymous. *@
-    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" Class="my-4"
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" Class="my-6"
                          aria-label="@(Label ?? L["Loading.Label"])" />
 </div>
 

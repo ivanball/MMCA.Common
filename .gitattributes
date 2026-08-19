@@ -30,3 +30,6 @@
 *.exe  binary
 *.pdb  binary
 *.snk  binary
+# Vendored web fonts (Source/Presentation/MMCA.Common.UI/wwwroot/fonts).
+*.woff  binary
+*.woff2 binary

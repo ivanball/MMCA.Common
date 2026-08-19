@@ -86,37 +86,54 @@ public static class MMCATheme
         {
             Default = new DefaultTypography
             {
+                // Inter is self-hosted by this RCL (wwwroot/fonts + the @font-face block in
+                // wwwroot/app.css). Before those faces existed this stack silently fell through to
+                // Segoe UI, so keep the two in step when the family here changes.
                 FontFamily = ["Inter", "Segoe UI", "Helvetica Neue", "Arial", "sans-serif"],
             },
+            // Heading scale: display weights (700-800) on h1-h4 with a slight negative tracking, which
+            // is how Inter is meant to be set at large sizes (its default spacing is tuned for body
+            // text and reads loose in a headline). h5/h6 stay at 600, close enough to body size that
+            // negative tracking would only cost legibility.
             H1 = new H1Typography
             {
                 FontSize = "2.5rem",
-                FontWeight = "700",
+                FontWeight = "800",
+                LetterSpacing = "-0.025em",
+                LineHeight = "1.15",
             },
             H2 = new H2Typography
             {
                 FontSize = "2rem",
-                FontWeight = "700",
+                FontWeight = "800",
+                LetterSpacing = "-0.02em",
+                LineHeight = "1.2",
             },
             H3 = new H3Typography
             {
                 FontSize = "1.75rem",
-                FontWeight = "600",
+                FontWeight = "700",
+                LetterSpacing = "-0.015em",
+                LineHeight = "1.25",
             },
             H4 = new H4Typography
             {
                 FontSize = "1.5rem",
-                FontWeight = "600",
+                FontWeight = "700",
+                LetterSpacing = "-0.01em",
+                LineHeight = "1.3",
             },
             H5 = new H5Typography
             {
                 FontSize = "1.25rem",
                 FontWeight = "600",
+                LineHeight = "1.35",
             },
             H6 = new H6Typography
             {
                 FontSize = "1.0625rem",
                 FontWeight = "600",
+                LineHeight = "1.4",
             },
             Subtitle1 = new Subtitle1Typography
             {
@@ -133,6 +150,15 @@ public static class MMCATheme
             Body2 = new Body2Typography
             {
                 LineHeight = "1.5",
+            },
+            // Sentence-case buttons: MudBlazor's default UPPERCASES every label, which wrecks
+            // localized strings (German compounds, accented capitals) and reads dated next to the
+            // rest of the scale. Weight 600 keeps the label as prominent as the shouting did.
+            Button = new ButtonTypography
+            {
+                FontWeight = "600",
+                LetterSpacing = "0.01em",
+                TextTransform = "none",
             },
         },
         LayoutProperties = new LayoutProperties

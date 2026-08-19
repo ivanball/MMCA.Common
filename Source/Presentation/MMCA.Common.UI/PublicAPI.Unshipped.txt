@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.init -> void
+MMCA.Common.UI.Components.MmcaThemeProviders.Theme.get -> MudBlazor.MudTheme!
+MMCA.Common.UI.Components.MmcaThemeProviders.Theme.set -> void

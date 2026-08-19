@@ -14,6 +14,45 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.155.0] - 2026-08-19
+
+Shared UI theme refresh: the framework look-and-feel that every consumer app inherits is
+professionalized in one pass. Purely visual; no palette color values, layout structure, or
+component semantics changed.
+
+### Added
+
+- **Self-hosted Inter web font.** The theme has always named Inter first in its font stack but no
+  web font was ever loaded, so every app silently fell back to Segoe UI/Arial. `MMCA.Common.UI`
+  now vendors the Inter woff2 files (weights 400, 500, 600, 700, 800, latin subset, SIL OFL 1.1
+  notice included) under `wwwroot/fonts/` and declares them with `font-display: swap`. Served
+  same-origin via `_content/MMCA.Common.UI/`, so the existing `font-src 'self'` CSP already
+  permits them. Consumers can preload the critical weights from their host page.
+- **Theme override extension point.** `MmcaThemeProviders` gains an optional `Theme` parameter
+  (defaults to `MMCATheme.Instance`), so an app can supply a derived `MudTheme` without forking
+  the providers component. Non-breaking.
+- **Brand logo slot.** `LayoutSettings.BrandLogoUrl` (default empty); when set, `NavMenu` renders
+  a decorative logo image beside the brand text.
+- **Section primitives** in `app.css`: `.mmca-eyebrow` (uppercase, letter-spaced section label),
+  `.mmca-stat-tile` (large numeral + small label stat block), and refined
+  `.mmca-section-heading` spacing. New `--mmca-primary-light` token mirrors
+  `BrandColors.PrimaryLight` (`BrandColorTokenTests` extended to pin the sync).
+
+### Changed
+
+- **Typography scale** (`MMCATheme`): h1/h2 weight 800 and h3/h4 weight 700 with slightly
+  negative tracking and tightened line heights; h5/h6 weight 600; buttons move to sentence case
+  (`TextTransform: none`) at weight 600. Consumer-visible on purpose: apps whose styling assumed
+  uppercase button labels should spot-check at pin-bump time. All hand-tuned palette contrast
+  fixes are untouched and no palette color value changed.
+- **Layout chrome polish**: hairline borders on the app bar and sidebar (rendered as box-shadows
+  so layout metrics are byte-identical), a rounded active-item pill with brand accent bar in the
+  nav, refined nav section-label, user-identity, and footer typography. The structural
+  sticky-sidebar rules, hamburger mechanism, and notification-badge positioning are untouched.
+- **Shared primitive polish**: `EmptyState`, `PageHeader`, `PageLoadingState`, and
+  `PageErrorState` get spacing/typography refinements; semantics, ARIA roles, and `PageHeader`'s
+  `h1` emission are unchanged. Markup snapshot baselines regenerated.
+
 ## [1.154.0] - 2026-08-18
 
 The Section B application-wave framework halves: a gateway edge kit, an idempotency-intent
