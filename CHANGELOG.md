@@ -14,6 +14,41 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 > ADR-016. An audit that reports the consumers as "several versions behind" for that window is
 > reading history, not a gap.
 
+## [1.157.0] - 2026-08-20
+
+Notification UI reliability release: fixes the bell badge and Notifications inbox going stale
+until logout/login in consumer apps.
+
+### Fixed
+
+- **Poller slot leak in `NotificationState`.** `TryRegisterPoller` incremented an internal counter
+  unconditionally while `NotificationBell` unregistered only when it held the active slot. Hosts
+  rendering more than one bell (desktop app bar plus mobile nav) inside an `AuthorizeView` leaked
+  one registration per authentication-state rebuild (every access-token refresh), after which no
+  bell instance polled again for the life of the circuit: no initial unread-count fetch, no 30s
+  poll, no navigation refresh. The counter is replaced by an owner-based slot; the bell always
+  unregisters on dispose, and surviving bells take over polling when the active one goes away.
+- **401 on the unread-count fetch no longer collapses to 0.** `NotificationInboxService` mapped any
+  non-success response, including 401 from a stale in-memory token, to a count of 0, wiping the
+  badge right after a push had optimistically incremented it. Both inbox reads now force one token
+  refresh and replay on 401; a still-failing count reports unknown (`null`) and the bell leaves the
+  badge untouched instead of zeroing it.
+- **Push-triggered inbox refresh no longer dropped.** `NotificationInbox` discarded a refresh
+  request that arrived while a load was in flight; it now queues exactly one trailing reload.
+
+### Changed
+
+- `INotificationInboxUIService.GetUnreadCountAsync` returns `Task<int?>` (null means unknown, never
+  0 on failure). `NotificationState.TryRegisterPoller`/`UnregisterPoller` now take the registering
+  owner, and `NotificationState` raises `OnPollerSlotFreed` when the polling slot frees up.
+  `AuthenticatedServiceBase` gains a protected `CreateClientWithToken(string)` helper; its
+  constructor is unchanged.
+
+## [1.156.0] - 2026-08-20
+
+Maintenance only: synced the out-of-slnx `MMCA.Common.UI.Maui` `packages.lock.json` with the
+current pins. No source or behavioral changes.
+
 ## [1.155.0] - 2026-08-19
 
 Shared UI theme refresh: the framework look-and-feel that every consumer app inherits is
