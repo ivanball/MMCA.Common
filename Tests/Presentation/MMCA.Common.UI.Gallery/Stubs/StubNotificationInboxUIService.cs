@@ -31,7 +31,7 @@ internal sealed class StubNotificationInboxUIService : INotificationInboxUIServi
             new PagedCollectionResult<UserNotificationDTO>(items, new PaginationMetadata(items.Length, pageSize, pageNumber)));
     }
 
-    public Task<int> GetUnreadCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(3);
+    public Task<int?> GetUnreadCountAsync(CancellationToken cancellationToken = default) => Task.FromResult<int?>(3);
 
     public Task MarkReadAsync(UserNotificationIdentifierType id, CancellationToken cancellationToken = default)
         => Task.CompletedTask;

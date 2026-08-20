@@ -1,5 +1,17 @@
 #nullable enable
+*REMOVED*MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInboxService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider) -> void
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller() -> bool
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller() -> void
 MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.get -> string!
 MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.init -> void
 MMCA.Common.UI.Components.MmcaThemeProviders.Theme.get -> MudBlazor.MudTheme!
 MMCA.Common.UI.Components.MmcaThemeProviders.Theme.set -> void
+MMCA.Common.UI.Services.AuthenticatedServiceBase.CreateClientWithToken(string! accessToken) -> System.Net.Http.HttpClient!
+MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int?>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int?>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInboxService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider, MMCA.Common.UI.Services.Auth.ITokenRefresher? tokenRefresher = null) -> void
+MMCA.Common.UI.Services.Notifications.NotificationState.OnPollerSlotFreed -> System.EventHandler?
+MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller(object! owner) -> bool
+MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller(object! owner) -> void
