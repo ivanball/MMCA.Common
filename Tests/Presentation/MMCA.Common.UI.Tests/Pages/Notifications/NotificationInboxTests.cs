@@ -109,6 +109,29 @@ public sealed class NotificationInboxTests : BunitTestBase
     }
 
     [Fact]
+    public async Task WhenRefreshRequestedDuringAnInFlightLoad_RunsExactlyOneTrailingReload()
+    {
+        // The push used to be dropped outright whenever a load was already running, which left the
+        // inbox showing stale contents until the next navigation.
+        var firstLoad = new TaskCompletionSource<PagedCollectionResult<UserNotificationDTO>?>();
+        _inbox
+            .SetupSequence(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(firstLoad.Task)
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+
+        // Raised on the renderer, so the page observes the push while IsLoading is still true.
+        await cut.InvokeAsync(_state.RequestRefresh);
+        firstLoad.SetResult(Inbox(Unread(1)));
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Notice 2"));
+        _inbox.Verify(
+            x => x.GetInboxAsync(1, It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
     public async Task WhenRefreshRequestedAfterDispose_DoesNotReload()
     {
         _inbox

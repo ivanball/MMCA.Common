@@ -32,6 +32,8 @@ public abstract class AuthenticatedServiceBase(
                 + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000)));
 #pragma warning restore S2245
 
+    private const string ApiClientName = "APIClient";
+
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly ITokenStorageService _tokenStorageService = tokenStorageService ?? throw new ArgumentNullException(nameof(tokenStorageService));
 
@@ -56,7 +58,7 @@ public abstract class AuthenticatedServiceBase(
     /// </summary>
     protected async Task<HttpClient> CreateAuthenticatedClientAsync()
     {
-        var httpClient = _httpClientFactory.CreateClient("APIClient");
+        var httpClient = _httpClientFactory.CreateClient(ApiClientName);
 
         try
         {
@@ -72,6 +74,23 @@ public abstract class AuthenticatedServiceBase(
             // JS interop not available during SSR prerender: proceed without token
         }
 
+        return httpClient;
+    }
+
+    /// <summary>
+    /// Creates an APIClient carrying an explicit bearer token rather than the one currently held by
+    /// <see cref="Auth.ITokenStorageService"/>. Used to replay a request the API answered
+    /// <c>401 Unauthorized</c> with a token acquired straight from
+    /// <see cref="Auth.ITokenRefresher"/>: the stored token still looks fresh by the client clock,
+    /// so re-reading storage would just resend the token the server has already rejected.
+    /// </summary>
+    /// <param name="accessToken">The freshly acquired access token.</param>
+    protected HttpClient CreateClientWithToken(string accessToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+
+        var httpClient = _httpClientFactory.CreateClient(ApiClientName);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         return httpClient;
     }
 

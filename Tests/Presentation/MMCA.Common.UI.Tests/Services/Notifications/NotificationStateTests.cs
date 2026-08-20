@@ -84,31 +84,93 @@ public sealed class NotificationStateTests
     }
 
     // == Poller registration ==
+    // The slot is owner-based rather than counted: a counter leaked one increment per teardown that
+    // never unregistered, and after the first leak no bell could ever win the slot again.
     [Fact]
-    public void TryRegisterPoller_FirstCallerBecomesActive_SubsequentCallersDoNot()
+    public void TryRegisterPoller_FirstOwnerClaimsSlot_SecondOwnerRejected()
     {
-        _sut.TryRegisterPoller().Should().BeTrue("the first bell instance should start polling");
-        _sut.TryRegisterPoller().Should().BeFalse("duplicate bell renders must not double-poll");
+        var first = new object();
+        var second = new object();
+
+        _sut.TryRegisterPoller(first).Should().BeTrue("the first bell instance should start polling");
+        _sut.TryRegisterPoller(second).Should().BeFalse("duplicate bell renders must not double-poll");
     }
 
     [Fact]
-    public void TryRegisterPoller_AfterAllPollersUnregister_NextCallerBecomesActive()
+    public void TryRegisterPoller_SameOwnerTwice_StillHoldsTheSlot()
     {
-        _sut.TryRegisterPoller();
-        _sut.UnregisterPoller();
+        var owner = new object();
 
-        _sut.TryRegisterPoller().Should().BeTrue();
+        _sut.TryRegisterPoller(owner).Should().BeTrue();
+        _sut.TryRegisterPoller(owner).Should().BeTrue("re-claiming by the holder is idempotent");
     }
 
     [Fact]
-    public void TryRegisterPoller_WhileAnotherPollerRemainsRegistered_ReturnsFalse()
+    public void UnregisterPoller_ByTheOwner_FreesSlotAndRaisesOnPollerSlotFreed()
     {
-        // Two bells registered, one leaves: the survivor is still counted, so a newcomer must not
-        // become a second active poller.
-        _sut.TryRegisterPoller();
-        _sut.TryRegisterPoller();
-        _sut.UnregisterPoller();
+        var owner = new object();
+        var freed = 0;
+        _sut.OnPollerSlotFreed += (_, _) => freed++;
+        _sut.TryRegisterPoller(owner);
 
-        _sut.TryRegisterPoller().Should().BeFalse();
+        _sut.UnregisterPoller(owner);
+
+        freed.Should().Be(1);
+        _sut.TryRegisterPoller(new object()).Should().BeTrue();
+    }
+
+    [Fact]
+    public void UnregisterPoller_ByANonOwner_LeavesTheSlotHeld()
+    {
+        var owner = new object();
+        var stranger = new object();
+        var freed = 0;
+        _sut.TryRegisterPoller(owner);
+        _sut.OnPollerSlotFreed += (_, _) => freed++;
+
+        _sut.UnregisterPoller(stranger);
+
+        freed.Should().Be(0);
+        _sut.TryRegisterPoller(new object()).Should().BeFalse("the live poller must not be evicted by a non-owner");
+    }
+
+    [Fact]
+    public void UnregisterPoller_WhenSlotIsFree_DoesNotRaiseOnPollerSlotFreed()
+    {
+        var freed = 0;
+        _sut.OnPollerSlotFreed += (_, _) => freed++;
+
+        _sut.UnregisterPoller(new object());
+
+        freed.Should().Be(0);
+    }
+
+    [Fact]
+    public void TwoOwnersTornDownAndRebuilt_LeavesTheSlotClaimable()
+    {
+        // The regression: two bells inside <AuthorizeView> are torn down and rebuilt on every
+        // authentication-state change (every access-token refresh). Each cycle must end with the
+        // slot claimable, not leaked.
+        for (var cycle = 0; cycle < 3; cycle++)
+        {
+            var desktop = new object();
+            var mobile = new object();
+
+            _sut.TryRegisterPoller(desktop).Should().BeTrue();
+            _sut.TryRegisterPoller(mobile).Should().BeFalse();
+
+            _sut.UnregisterPoller(desktop);
+            _sut.UnregisterPoller(mobile);
+        }
+
+        _sut.TryRegisterPoller(new object()).Should().BeTrue("no teardown cycle may leak the slot");
+    }
+
+    [Fact]
+    public void TryRegisterPoller_WithNullOwner_Throws()
+    {
+        var act = () => _sut.TryRegisterPoller(null!);
+
+        act.Should().Throw<ArgumentNullException>();
     }
 }

@@ -15,7 +15,8 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// <summary>
 /// Verifies <see cref="NotificationInboxService"/>: the inbox REST contract (paged GET, unread-count
 /// GET, per-item and bulk mark-read PUTs) on the named APIClient with the stored bearer token, plus
-/// the failure shapes (domain ProblemDetails re-thrown, unread-count degrading to zero).
+/// the failure shapes (domain ProblemDetails re-thrown, a 401 refresh-and-replay on the reads, and an
+/// unestablished unread count reported as null rather than zero).
 /// Failure-path responses use 4xx codes only; 5xx would engage the class-level Polly retry backoff.
 /// </summary>
 public sealed class NotificationInboxServiceTests
@@ -30,16 +31,33 @@ public sealed class NotificationInboxServiceTests
 
     private static (NotificationInboxService Sut, Mocks Mocks) CreateSut(
         Func<HttpRequestMessage, HttpResponseMessage> responder,
-        string? scopeKey = null)
+        string? scopeKey = null,
+        ITokenRefresher? tokenRefresher = null)
     {
         var handler = new StubHttpMessageHandler(responder);
         var factory = new StubHttpClientFactory(handler);
         var tokenStorage = new Mock<ITokenStorageService>();
         tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync("stored-access-token");
         return (
-            new NotificationInboxService(factory, tokenStorage.Object, new StubScopeProvider(scopeKey)),
+            new NotificationInboxService(factory, tokenStorage.Object, new StubScopeProvider(scopeKey), tokenRefresher),
             new Mocks(handler, factory));
     }
+
+    /// <summary>A refresher that hands back <paramref name="token"/> (null = the session is gone).</summary>
+    private static ITokenRefresher Refresher(string? token)
+    {
+        var refresher = new Mock<ITokenRefresher>();
+        refresher.Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync(token);
+        return refresher.Object;
+    }
+
+    /// <summary>Answers 401 until the caller presents <paramref name="acceptedToken"/>.</summary>
+    private static Func<HttpRequestMessage, HttpResponseMessage> AcceptingOnly(
+        string acceptedToken,
+        Func<HttpResponseMessage> onAccepted) =>
+        request => request.Headers.Authorization?.Parameter == acceptedToken
+            ? onAccepted()
+            : new HttpResponseMessage(HttpStatusCode.Unauthorized);
 
     private static UserNotificationDTO Notification(int id, bool isRead = false) => new()
     {
@@ -112,14 +130,70 @@ public sealed class NotificationInboxServiceTests
     }
 
     [Fact]
-    public async Task GetUnreadCountAsync_OnFailure_ReturnsZeroWithoutThrowing()
+    public async Task GetUnreadCountAsync_OnFailure_ReturnsNullWithoutThrowing()
     {
-        // The badge must never break the page; any failure degrades to "no unread notifications".
-        var (sut, _) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized));
+        // The badge must never break the page, but "unknown" is not "zero": reporting zero erased a
+        // badge that a real-time push had just incremented.
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
 
         var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
 
-        result.Should().Be(0);
+        result.Should().BeNull();
+        mocks.Handler.CallCount.Should().Be(1, "only a 401 is worth replaying");
+    }
+
+    [Fact]
+    public async Task GetUnreadCountAsync_On401_RefreshesTheTokenAndReplaysTheRead()
+    {
+        var (sut, mocks) = CreateSut(
+            AcceptingOnly("refreshed-access-token", () => StubHttpMessageHandler.CreateResponse(HttpStatusCode.OK, "7")),
+            tokenRefresher: Refresher("refreshed-access-token"));
+
+        var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
+
+        result.Should().Be(7);
+        mocks.Handler.CallCount.Should().Be(2);
+        mocks.Handler.LastRequest.Authorization!.Parameter.Should().Be("refreshed-access-token");
+    }
+
+    [Fact]
+    public async Task GetUnreadCountAsync_WhenTheRefreshedTokenIsAlsoRejected_ReturnsNullNotZero()
+    {
+        var (sut, mocks) = CreateSut(
+            _ => new HttpResponseMessage(HttpStatusCode.Unauthorized),
+            tokenRefresher: Refresher("refreshed-access-token"));
+
+        var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+        mocks.Handler.CallCount.Should().Be(2, "the read is replayed exactly once, never in a loop");
+    }
+
+    [Fact]
+    public async Task GetUnreadCountAsync_WhenTheSessionCannotBeRefreshed_ReturnsNullWithoutReplaying()
+    {
+        var (sut, mocks) = CreateSut(
+            _ => new HttpResponseMessage(HttpStatusCode.Unauthorized),
+            tokenRefresher: Refresher(null));
+
+        var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
+
+        result.Should().BeNull();
+        mocks.Handler.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetInboxAsync_On401_RefreshesTheTokenAndReplaysTheRead()
+    {
+        var (sut, mocks) = CreateSut(
+            AcceptingOnly("refreshed-access-token", () => InboxResponse(Notification(1))),
+            tokenRefresher: Refresher("refreshed-access-token"));
+
+        var result = await sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.Items.Should().HaveCount(1);
+        mocks.Handler.CallCount.Should().Be(2);
     }
 
     // == MarkReadAsync ==

@@ -36,6 +36,9 @@ public partial class NotificationInbox : IDisposable
     private int _currentPage = 1;
     private int _totalPages = 1;
 
+    /// <summary>A push arrived while a load was in flight and still owes the list one reload.</summary>
+    private bool _refreshPending;
+
     protected override async Task OnInitializedAsync()
     {
         // Breadcrumbs are built here (not in a field initializer) so the injected localizer is
@@ -63,10 +66,16 @@ public partial class NotificationInbox : IDisposable
 
     private async Task RefreshFromPushAsync()
     {
-        // Coalesce overlapping refreshes: the toast and bell badge still signal the push,
-        // and the next push or navigation reconciles the list.
-        if (_disposed || IsLoading)
+        if (_disposed)
         {
+            return;
+        }
+
+        if (IsLoading)
+        {
+            // Never drop the push: the in-flight load drains this flag when it completes, so
+            // overlapping pushes coalesce into exactly one trailing reload instead of vanishing.
+            _refreshPending = true;
             return;
         }
 
@@ -102,6 +111,15 @@ public partial class NotificationInbox : IDisposable
         {
             IsLoading = false;
         }
+
+        // Trailing reload for any push that arrived while the load above was in flight. The flag is
+        // cleared first, so a push arriving during THIS reload queues one more and no further:
+        // recursion is bounded by the pushes actually received, never self-sustaining.
+        if (_refreshPending && !_disposed)
+        {
+            _refreshPending = false;
+            await RefreshFromPushAsync();
+        }
     }
 
     private async Task OnPageChangedAsync(int page)
@@ -124,9 +142,12 @@ public partial class NotificationInbox : IDisposable
                 _notifications[index] = notification with { IsRead = true, ReadOn = DateTime.UtcNow };
             }
 
-            // Refresh the unread count
-            int count = await InboxService.GetUnreadCountAsync(_cts.Token);
-            NotificationState.SetUnreadCount(count);
+            // Refresh the unread count; a null count means "unknown", so the badge keeps its value.
+            int? count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            if (count is not null)
+            {
+                NotificationState.SetUnreadCount(count.Value);
+            }
         }
         catch (OperationCanceledException)
         {

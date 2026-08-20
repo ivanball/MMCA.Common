@@ -7,7 +7,15 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// </summary>
 public sealed class NotificationState
 {
-    private int _pollerCount;
+    private readonly Lock _pollerSync = new();
+
+    /// <summary>
+    /// The component that currently holds the single active-poller slot, or <see langword="null"/>
+    /// when the slot is free. An owner reference (rather than a counter) is what makes register and
+    /// unregister symmetric: a counter leaks one increment per teardown that never unregisters, and
+    /// once it leaks no bell can ever win the slot again for the life of the circuit.
+    /// </summary>
+    private object? _pollerOwner;
 
     /// <summary>Gets the current unread notification count.</summary>
     public int UnreadCount { get; private set; }
@@ -20,6 +28,13 @@ public sealed class NotificationState
     /// Subscribers (e.g., <c>NotificationBell</c>) use this to fetch the authoritative count.
     /// </summary>
     public event EventHandler? OnRefreshRequested;
+
+    /// <summary>
+    /// Raised when the active-poller slot becomes free. A surviving <c>NotificationBell</c> uses this
+    /// to take over polling when the bell that held the slot is torn down (the desktop and mobile
+    /// placements are rebuilt independently whenever the authentication state changes).
+    /// </summary>
+    public event EventHandler? OnPollerSlotFreed;
 
     /// <summary>Sets the unread count to an absolute value (e.g., after fetching from API).</summary>
     public void SetUnreadCount(int count)
@@ -44,12 +59,50 @@ public sealed class NotificationState
     public void RequestRefresh() => OnRefreshRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
-    /// Registers a poller instance. Returns <see langword="true"/> if this is the first (active) poller,
-    /// meaning it should start polling. Subsequent callers receive <see langword="false"/> and should skip polling.
-    /// Used to prevent duplicate API polling when <c>NotificationBell</c> renders in multiple DOM locations.
+    /// Claims the single active-poller slot for <paramref name="owner"/>. Returns
+    /// <see langword="true"/> when the caller now holds the slot (including a caller that already
+    /// held it, so the call is idempotent) and should poll; <see langword="false"/> when another
+    /// owner holds it, which is how duplicate <c>NotificationBell</c> placements avoid double-polling.
     /// </summary>
-    public bool TryRegisterPoller() => Interlocked.Increment(ref _pollerCount) == 1;
+    /// <param name="owner">The claiming component instance.</param>
+    public bool TryRegisterPoller(object owner)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
 
-    /// <summary>Unregisters a poller instance so the next <c>NotificationBell</c> to register can become the active poller.</summary>
-    public void UnregisterPoller() => Interlocked.Decrement(ref _pollerCount);
+        lock (_pollerSync)
+        {
+            if (_pollerOwner is not null && !ReferenceEquals(_pollerOwner, owner))
+            {
+                return false;
+            }
+
+            _pollerOwner = owner;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Releases the active-poller slot, but only when <paramref name="owner"/> is the component that
+    /// holds it, so a non-owner disposing cannot evict the live poller. Freeing the slot raises
+    /// <see cref="OnPollerSlotFreed"/> so a surviving bell can take polling over.
+    /// </summary>
+    /// <param name="owner">The component releasing the slot.</param>
+    public void UnregisterPoller(object owner)
+    {
+        ArgumentNullException.ThrowIfNull(owner);
+
+        lock (_pollerSync)
+        {
+            if (!ReferenceEquals(_pollerOwner, owner))
+            {
+                return;
+            }
+
+            _pollerOwner = null;
+        }
+
+        // Raised outside the lock: a subscriber claims the slot from its handler, which would
+        // otherwise re-enter the lock on the disposing component's thread.
+        OnPollerSlotFreed?.Invoke(this, EventArgs.Empty);
+    }
 }

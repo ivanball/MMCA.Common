@@ -8,9 +8,17 @@ namespace MMCA.Common.UI.Components.Notifications;
 
 /// <summary>
 /// Code-behind for the notification bell: renders the unread badge from the scoped
-/// <see cref="NotificationState"/>, and the first rendered instance registers as the single active
-/// poller (periodic + on-navigation refresh) so duplicate bell placements never duplicate API calls.
+/// <see cref="NotificationState"/>, and one instance at a time holds the single active-poller slot
+/// (periodic + on-navigation refresh) so duplicate bell placements never duplicate API calls.
 /// </summary>
+/// <remarks>
+/// Hosts commonly render the bell twice (a desktop app bar and a mobile nav) inside
+/// <c>&lt;AuthorizeView&gt;</c>, which tears the children down and rebuilds them on every
+/// authentication-state change, including a routine access-token refresh. Registration is therefore
+/// strictly symmetric (every instance unregisters on dispose, whether or not it was polling) and the
+/// surviving instance takes the slot over through <see cref="NotificationState.OnPollerSlotFreed"/>,
+/// so the circuit never ends up with a badge that no one refreshes.
+/// </remarks>
 public partial class NotificationBell : IDisposable
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
@@ -34,17 +42,60 @@ public partial class NotificationBell : IDisposable
 
         State.OnChange += HandleStateChanged;
         State.OnRefreshRequested += HandleRefreshRequested;
+        State.OnPollerSlotFreed += HandlePollerSlotFreed;
 
-        // Only the first instance registers as the active poller to prevent
-        // duplicate API calls when NotificationBell renders in multiple DOM locations.
-        _isActivePoller = State.TryRegisterPoller();
-        if (_isActivePoller)
+        // Only the slot holder polls, so duplicate bell placements do not duplicate API calls.
+        if (State.TryRegisterPoller(this))
         {
-            NavigationManager.LocationChanged += OnLocationChanged;
-            await RefreshUnreadCountAsync();
+            await BecomeActivePollerAsync();
+        }
+    }
 
-            _pollTimer = new PeriodicTimer(PollInterval);
-            _ = PollLoopAsync();
+    /// <summary>
+    /// Starts this instance's polling once it holds the slot: an immediate authoritative refresh,
+    /// then the periodic timer and the on-navigation refresh. Runs on the renderer's synchronization
+    /// context (first render, or marshalled by <see cref="TryTakeOverPollingAsync"/>), which is what
+    /// makes the <see cref="_isActivePoller"/> double-start guard sufficient.
+    /// </summary>
+    private async Task BecomeActivePollerAsync()
+    {
+        if (_disposed || _isActivePoller)
+        {
+            return;
+        }
+
+        _isActivePoller = true;
+        NavigationManager.LocationChanged += OnLocationChanged;
+        await RefreshUnreadCountAsync();
+
+        _pollTimer = new PeriodicTimer(PollInterval);
+        _ = PollLoopAsync();
+    }
+
+    // Event-handler signature; the takeover task observes its own failures internally, so the
+    // explicit discard is safe and avoids the async-void crash-the-process mode (VSTHRD100).
+    private void HandlePollerSlotFreed(object? sender, EventArgs e) =>
+        _ = TryTakeOverPollingAsync();
+
+    /// <summary>
+    /// Claims the freed slot and starts polling. Raised synchronously from the disposing bell's
+    /// thread, so the actual start is marshalled onto this component's renderer.
+    /// </summary>
+    private async Task TryTakeOverPollingAsync()
+    {
+        if (_disposed || _isActivePoller || !State.TryRegisterPoller(this))
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(BecomeActivePollerAsync);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposed during the dispatch: hand the slot straight back so another bell can claim it.
+            State.UnregisterPoller(this);
         }
     }
 
@@ -85,12 +136,19 @@ public partial class NotificationBell : IDisposable
 
         try
         {
-            int count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            int? count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            if (count is null)
+            {
+                // The authoritative count is unknown (expired session, transient failure). Leave the
+                // badge exactly as it is: zeroing it here is what used to erase a push increment.
+                return;
+            }
+
             if (!_disposed)
             {
                 await InvokeAsync(() =>
                 {
-                    State.SetUnreadCount(count);
+                    State.SetUnreadCount(count.Value);
                     StateHasChanged();
                 });
             }
@@ -105,7 +163,7 @@ public partial class NotificationBell : IDisposable
         }
         catch
         {
-            // Network or deserialization error — badge stays at current value
+            // Network or deserialization error - badge stays at current value
         }
     }
 
@@ -141,12 +199,13 @@ public partial class NotificationBell : IDisposable
         _disposed = true;
         State.OnChange -= HandleStateChanged;
         State.OnRefreshRequested -= HandleRefreshRequested;
+        State.OnPollerSlotFreed -= HandlePollerSlotFreed;
+        NavigationManager.LocationChanged -= OnLocationChanged;
 
-        if (_isActivePoller)
-        {
-            NavigationManager.LocationChanged -= OnLocationChanged;
-            State.UnregisterPoller();
-        }
+        // Unconditional, and the slot is only released when this instance actually holds it: a bell
+        // that claimed the slot but was torn down before it started polling still frees it, and a
+        // bell that never held it cannot evict the live poller.
+        State.UnregisterPoller(this);
 
         _pollTimer?.Dispose();
         _cts.Cancel();
