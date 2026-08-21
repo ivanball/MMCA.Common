@@ -6,6 +6,38 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Named-step HTTP edge pipeline.** The shared middleware pipeline that `UseCommonMiddlewarePipeline()`
+  applies is now modeled as an ordered list of named steps rather than a straight-line method body:
+  `MiddlewarePipelineStepNames` (one constant per step), `MiddlewarePipelineStep` (name plus the
+  delegate that registers the step), and `MiddlewarePipelineBuilder` (`CreateDefault()` seeding the
+  18 framework steps, `StepNames`, and `Build()`). The order is data now, so it can be asserted
+  without starting a host.
+- **Scoped extension point: `UseCommonMiddlewarePipeline(Action<MiddlewarePipelineBuilder> configure)`.**
+  A host can `InsertBefore`, `InsertAfter`, `Replace`, or `Remove` steps by name instead of the
+  previous all-or-nothing choice between the framework pipeline and composing its own. Unknown
+  anchors and duplicate step names throw `ArgumentException`.
+- **Startup-validated invariants.** `Build()` runs before any step is applied and throws
+  `InvalidOperationException` naming the violated invariant when the pre-forwarded capture is not
+  immediately before `UseForwardedHeaders`, authentication is not immediately before tenant
+  resolution, authentication does not precede the rate limiter (ADR-019), or forwarded headers do
+  not precede the HTTPS redirect. An invariant binds only when both of the steps it names are
+  present, so removing a whole capability stays legal.
+- **`MiddlewarePipelineOrderTestsBase` (MMCA.Common.Testing).** The edge counterpart of
+  `DecoratorPipelineOrderTestsBase`: two facts that assert the step order matches the documented one
+  and that `Build()` raises no invariant. Subclass it with an empty body for a host on the default
+  pipeline, or override `Configure`/`ExpectedStepNames` for a host that customizes it. No database
+  and no `WebApplication`, so it runs in the fast unit tier.
+
+### Changed
+
+- `MMCA.Common.Testing` now depends on `MMCA.Common.API` (same lockstep version) so the new test base
+  can see the pipeline builder.
+- `UseCommonMiddlewarePipeline()` keeps its signature and behavior exactly: it delegates to the
+  validated default step list, applying the same middleware in the same order under the same
+  conditionals. No host code changes.
+
 > **Consumer versions skipped deliberately (historical note).** MMCA.ADC, MMCA.Store and MMCA.Helpdesk went from
 > 1.127.0 straight to 1.131.0 on 2026-07-28. They never pinned 1.128.0, 1.129.0 or 1.130.0, and that
 > is intentional, not drift. 1.128.0 was distribution-only (assemblies byte-identical to 1.127.0), so

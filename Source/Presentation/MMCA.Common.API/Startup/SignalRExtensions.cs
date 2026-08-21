@@ -16,7 +16,7 @@ public static class SignalRExtensions
         /// <summary>
         /// Maps the <see cref="NotificationHub"/> endpoint using the path configured in
         /// <see cref="PushNotificationSettings"/>. This should be called after
-        /// <see cref="WebApplicationExtensions.UseCommonMiddlewarePipeline"/>.
+        /// <c>WebApplicationExtensions.UseCommonMiddlewarePipeline</c>.
         /// No-ops gracefully when push notification settings are not registered.
         /// </summary>
         public WebApplication MapNotificationHub()

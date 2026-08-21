@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
-using MMCA.Common.API.Middleware;
 using MMCA.Common.Shared.Globalization;
 
 namespace MMCA.Common.API.Startup;
@@ -37,95 +35,35 @@ public static class WebApplicationExtensions
     extension(WebApplication app)
     {
         /// <summary>
-        /// Configures the standard MMCA middleware pipeline in the correct order:
-        /// exception handling → correlation ID → forwarded headers → HTTPS →
-        /// response compression → routing → CORS → auth → tenant resolution →
-        /// rate limiting → soft-delete user filter → authorization → output cache → controllers.
+        /// Configures the standard MMCA middleware pipeline. The order is the contract and it is
+        /// data, not prose: the steps are the defaults of
+        /// <see cref="MiddlewarePipelineBuilder.CreateDefault"/>, named in application order by
+        /// <see cref="MiddlewarePipelineStepNames"/> and frozen by the
+        /// <c>MiddlewarePipelineOrderTestsBase</c> fitness function. Use the
+        /// <c>UseCommonMiddlewarePipeline(Action&lt;MiddlewarePipelineBuilder&gt;)</c>
+        /// overload to customize them.
         /// </summary>
-        public WebApplication UseCommonMiddlewarePipeline()
+        public WebApplication UseCommonMiddlewarePipeline() => ApplyPipeline(app, configure: null);
+
+        /// <summary>
+        /// Configures the standard MMCA middleware pipeline after letting the host adjust it: the
+        /// default steps are seeded first, <paramref name="configure"/> may insert, replace, or
+        /// remove steps by name, and the load-bearing adjacencies are re-checked before anything is
+        /// applied (see <see cref="MiddlewarePipelineBuilder.Build"/>), so a misordered pipeline
+        /// fails at startup instead of at the first misrouted request.
+        /// </summary>
+        /// <param name="configure">Adjusts the seeded default pipeline. Runs before any step is applied.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="configure"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">The customized pipeline violates an invariant.</exception>
+        public WebApplication UseCommonMiddlewarePipeline(Action<MiddlewarePipelineBuilder> configure)
         {
-            app.UseExceptionHandler();
-            app.UseMiddleware<CorrelationIdMiddleware>();
-
-            // Set CurrentUICulture for the request (ADR-027) so edge error localization and any
-            // culture-aware formatting run under the caller's culture. The UI forwards the active
-            // culture as Accept-Language (the default providers include that header + the cookie).
-            app.UseCommonRequestLocalization();
-
-            var forwardedHeadersOptions = new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
-            };
-
-            // Cloud reverse proxies (Azure Container Apps, AWS ALB, etc.) use internal
-            // IPs that are not in the default KnownProxies/KnownNetworks allow-lists.
-            // Clear them so forwarded headers are trusted regardless of proxy IP.
-            forwardedHeadersOptions.KnownProxies.Clear();
-            forwardedHeadersOptions.KnownIPNetworks.Clear();
-
-            // Capture the actual transport scheme + host before UseForwardedHeaders rewrites
-            // Request.Scheme and Request.Host from the X-Forwarded-* headers. The OIDC discovery
-            // endpoint needs the original values for jwks_uri — internal services fetch JWKS
-            // over cleartext HTTP using the Aspire-resolved DNS name, but envoy/DCP forwards
-            // X-Forwarded-Proto: https and X-Forwarded-Host pointing at the canonical
-            // launchSettings URL (e.g. localhost:56003) which the caller cannot reach.
-            app.Use(static (context, next) =>
-            {
-                context.Items[PreForwardedSchemeKey] = context.Request.Scheme;
-                context.Items[PreForwardedHostKey] = context.Request.Host.Value;
-                return next(context);
-            });
-
-            app.UseForwardedHeaders(forwardedHeadersOptions);
-
-            // HTTPS redirect runs for browser/REST traffic only. gRPC clients use HTTP/2
-            // cleartext (h2c) on the HTTP endpoint of extracted services — Aspire's project-
-            // resource service discovery doesn't reliably expose an https key, so the resolver
-            // hands out the http URL. Issuing a 307 redirect on those requests breaks the gRPC
-            // call (the client retries against HTTPS, which then has its own issues). Skip
-            // HTTPS redirect for any request whose Content-Type starts with "application/grpc".
-            app.UseWhen(
-                ctx => !(ctx.Request.ContentType?.StartsWith("application/grpc", StringComparison.OrdinalIgnoreCase) ?? false),
-                builder => builder.UseHttpsRedirection());
-
-            app.UseResponseCompression();
-            app.UseRouting();
-            app.UseCors(app.Environment.IsDevelopment()
-                ? WebApplicationBuilderExtensions.CorsPolicyAllowAll
-                : WebApplicationBuilderExtensions.CorsPolicyAllowSpecificOrigins);
-            app.UseAuthentication();
-
-            // Immediately after authentication, and that order is load-bearing: the claim strategy
-            // reads HttpContext.User, which carries the token's claims only once authentication has
-            // run. Registered unconditionally and inert unless the host called AddMultiTenancy and
-            // set Tenancy:Enabled (the SoftDeletedUserMiddleware precedent).
-            app.UseMiddleware<TenantResolutionMiddleware>();
-
-            // Rate limiting runs AFTER authentication on purpose (ADR-019): GlobalRateLimitPartition
-            // partitions by the authenticated principal and routes anonymous traffic down a NoLimiter
-            // branch, so HttpContext.User must already be populated here — otherwise every request
-            // looks anonymous and the per-user cap never engages.
-            app.UseRateLimiter();
-            app.UseMiddleware<SoftDeletedUserMiddleware>();
-            app.UseAuthorization();
-            app.UseOutputCache();
-
-            // Always-mapped JWKS + OIDC discovery endpoints. Returns an empty key set
-            // (JWKS) or 404 (OIDC discovery) when the Identity service's RSA publishing
-            // is not configured, so non-Identity services incur no behavior change.
-            // Identity services flip JwksSettings.Enabled = true and provide RsaPublicKeyPem
-            // to publish their signing key for downstream services to fetch via AddForwardedJwtBearer.
-            app.MapJwksEndpoint();
-            app.MapOidcDiscoveryEndpoint();
-
-            app.MapControllers();
-
-            return app;
+            ArgumentNullException.ThrowIfNull(configure);
+            return ApplyPipeline(app, configure);
         }
 
         /// <summary>
         /// Adds <c>RequestLocalization</c> for the framework's supported cultures
-        /// (<see cref="SupportedCultures"/>, ADR-027). Wired into <see cref="UseCommonMiddlewarePipeline"/>
+        /// (<see cref="SupportedCultures"/>, ADR-027). Wired into <c>UseCommonMiddlewarePipeline</c>
         /// for REST/gRPC service hosts; Blazor UI hosts call this explicitly before <c>MapRazorComponents</c>
         /// so SSR prerender runs under the right culture. The default providers resolve culture from the
         /// query string, the ASP.NET culture cookie, then the <c>Accept-Language</c> header.
@@ -190,5 +128,23 @@ public static class WebApplicationExtensions
 
             return app;
         }
+    }
+
+    /// <summary>
+    /// Seeds the default steps, lets the host adjust them, validates the load-bearing adjacencies,
+    /// then applies every step in order. Both <c>UseCommonMiddlewarePipeline</c> overloads route
+    /// through here, so the zero-argument path is exactly the validated default pipeline.
+    /// </summary>
+    private static WebApplication ApplyPipeline(WebApplication app, Action<MiddlewarePipelineBuilder>? configure)
+    {
+        var builder = MiddlewarePipelineBuilder.CreateDefault();
+        configure?.Invoke(builder);
+
+        foreach (var step in builder.Build())
+        {
+            step.Configure(app);
+        }
+
+        return app;
     }
 }

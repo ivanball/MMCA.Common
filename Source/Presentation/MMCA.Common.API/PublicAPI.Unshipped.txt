@@ -1,1 +1,44 @@
 #nullable enable
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder.Build() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.API.Startup.MiddlewarePipelineStep!>!
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder.InsertAfter(string! anchor, MMCA.Common.API.Startup.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder.InsertBefore(string! anchor, MMCA.Common.API.Startup.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder.Remove(string! name) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder.Replace(string! name, MMCA.Common.API.Startup.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.MiddlewarePipelineBuilder.StepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.API.Startup.MiddlewarePipelineStep
+MMCA.Common.API.Startup.MiddlewarePipelineStep.<Clone>$() -> MMCA.Common.API.Startup.MiddlewarePipelineStep!
+MMCA.Common.API.Startup.MiddlewarePipelineStep.Configure.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplication!>!
+MMCA.Common.API.Startup.MiddlewarePipelineStep.Configure.init -> void
+MMCA.Common.API.Startup.MiddlewarePipelineStep.Deconstruct(out string! Name, out System.Action<Microsoft.AspNetCore.Builder.WebApplication!>! Configure) -> void
+MMCA.Common.API.Startup.MiddlewarePipelineStep.Equals(MMCA.Common.API.Startup.MiddlewarePipelineStep? other) -> bool
+MMCA.Common.API.Startup.MiddlewarePipelineStep.MiddlewarePipelineStep(string! Name, System.Action<Microsoft.AspNetCore.Builder.WebApplication!>! Configure) -> void
+MMCA.Common.API.Startup.MiddlewarePipelineStep.Name.get -> string!
+MMCA.Common.API.Startup.MiddlewarePipelineStep.Name.init -> void
+MMCA.Common.API.Startup.MiddlewarePipelineStepNames
+MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline(System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Authentication = "Authentication" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Authorization = "Authorization" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Controllers = "Controllers" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.CorrelationId = "CorrelationId" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Cors = "Cors" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ExceptionHandler = "ExceptionHandler" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ForwardedHeaders = "ForwardedHeaders" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.HttpsRedirection = "HttpsRedirection" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.JwksEndpoint = "JwksEndpoint" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.OidcDiscoveryEndpoint = "OidcDiscoveryEndpoint" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.OutputCache = "OutputCache" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.PreForwardedCapture = "PreForwardedCapture" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.RateLimiting = "RateLimiting" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.RequestLocalization = "RequestLocalization" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ResponseCompression = "ResponseCompression" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Routing = "Routing" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.SoftDeletedUserFilter = "SoftDeletedUserFilter" -> string!
+const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.TenantResolution = "TenantResolution" -> string!
+override MMCA.Common.API.Startup.MiddlewarePipelineStep.Equals(object? obj) -> bool
+override MMCA.Common.API.Startup.MiddlewarePipelineStep.GetHashCode() -> int
+override MMCA.Common.API.Startup.MiddlewarePipelineStep.ToString() -> string!
+static MMCA.Common.API.Startup.MiddlewarePipelineBuilder.CreateDefault() -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
+static MMCA.Common.API.Startup.MiddlewarePipelineStep.operator !=(MMCA.Common.API.Startup.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.MiddlewarePipelineStep? right) -> bool
+static MMCA.Common.API.Startup.MiddlewarePipelineStep.operator ==(MMCA.Common.API.Startup.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.MiddlewarePipelineStep? right) -> bool
+static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
