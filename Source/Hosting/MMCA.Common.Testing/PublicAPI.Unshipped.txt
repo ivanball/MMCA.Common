@@ -1,1 +1,7 @@
 #nullable enable
+MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase
+MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.EdgePipeline_OrdersSteps_InDocumentedOrder() -> void
+MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.EdgePipeline_SatisfiesLoadBearingInvariants() -> void
+MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.MiddlewarePipelineOrderTestsBase() -> void
+virtual MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.Configure.get -> System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>?
+virtual MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.ExpectedStepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
