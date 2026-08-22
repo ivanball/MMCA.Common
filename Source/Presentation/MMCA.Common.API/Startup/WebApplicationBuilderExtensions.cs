@@ -466,27 +466,6 @@ public static class WebApplicationBuilderExtensions
             return services.AddForwardedJwtBearerCore(authority, audience, resolvedRequireHttpsMetadata);
         }
 
-        /// <summary>
-        /// Transitional overload preserving the pre-configuration-aware signature, with the
-        /// historical behavior (no HTTPS requirement unless requested, no startup warning).
-        /// The cross-repo source-build canary compiles consumer <c>main</c> against this
-        /// source, so this form must keep compiling until every consumer call site has moved
-        /// to the overload above. Delete it once the consumer sweep lands.
-        /// </summary>
-        /// <param name="authority">The Identity service base URL (no trailing slash).</param>
-        /// <param name="audience">The expected JWT audience claim.</param>
-        /// <param name="requireHttpsMetadata">Whether the metadata fetch must use HTTPS.</param>
-        public IServiceCollection AddForwardedJwtBearer(
-            string authority,
-            string audience,
-            bool requireHttpsMetadata = false)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(authority);
-            ArgumentException.ThrowIfNullOrWhiteSpace(audience);
-
-            return services.AddForwardedJwtBearerCore(authority, audience, requireHttpsMetadata);
-        }
-
         private IServiceCollection AddForwardedJwtBearerCore(
             string authority,
             string audience,
