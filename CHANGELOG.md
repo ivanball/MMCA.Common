@@ -26,6 +26,36 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - **Two new event fitness functions** in `MMCA.Common.Testing.Architecture`, inherited automatically
   by every `EventConventionTestsBase` subclass: no two upcasters may share a source type, and an
   upcaster's target must declare a strictly higher `SchemaVersion` than its source.
+- **`AnonymousEndpointTestsBase` (MMCA.Common.Testing.Architecture).** An anonymous-endpoint fitness
+  function: it scans MVC controllers and routable Blazor components by full-name reflection (no
+  ASP.NET reference) and fails on any `[AllowAnonymous]` missing from the subclass's explicit
+  allow-list, on a stale allow-list entry, and on an empty scan. Subclass it per repo with
+  `TargetAssemblies`, `AllowedAnonymousEndpoints`, and a `MinimumScannedTypes` floor. Minimal-API
+  `.AllowAnonymous()` is endpoint metadata rather than an attribute, so it stays out of reach and is
+  documented as such.
+- **Executable security invariants for the auth and CORS registrations.** New tests run the real
+  registration code and assert the produced options: RS256 stays pinned on the forwarded JWT bearer
+  path, the permissive CORS policy never supports credentials, the credentialed policy never widens
+  to any origin (service host and gateway alike) and fails closed with no configured origins, and
+  `RsaJwksProvider` publishes only public RSA parameters even when handed a private-key PEM.
+
+### Changed
+
+- **BREAKING: `AddForwardedJwtBearer` is secure by default and takes the host's configuration and
+  environment.** The signature moves from
+  `AddForwardedJwtBearer(string authority, string audience, bool requireHttpsMetadata = false)` to
+  `AddForwardedJwtBearer(string authority, string audience, IConfiguration configuration, IHostEnvironment environment, bool? requireHttpsMetadata = null)`.
+  `RequireHttpsMetadata` now resolves in three steps: the explicit argument, then the new
+  `WebApplicationBuilderExtensions.RequireHttpsMetadataConfigKey`
+  (`Authentication:JwtBearer:RequireHttpsMetadata`), then `true` everywhere except Development. The
+  old bare `false` default applied in production too. Call sites pass
+  `builder.Configuration, builder.Environment`; a deployment whose authority is genuinely plain HTTP
+  (an internal-ingress `h2c` service URL) sets the configuration key to `false`, which is honored and
+  logged once at startup by an internal `IStartupFilter` naming the key. The previous
+  `(string authority, string audience, bool requireHttpsMetadata = false)` overload is retained for
+  one release as a transitional bridge with its historical behavior, so consumer `main` branches
+  keep compiling against framework source while their call sites migrate; it is deleted once the
+  consumer sweep lands.
 
 ## [1.158.0] - 2026-08-21
 

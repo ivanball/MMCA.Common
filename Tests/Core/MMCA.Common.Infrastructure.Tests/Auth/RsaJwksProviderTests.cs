@@ -71,6 +71,39 @@ public sealed class RsaJwksProviderTests
     }
 
     [Fact]
+    public void GetJsonWebKeySet_WhenGivenAPrivateKeyPem_ExportsOnlyThePublicParameters()
+    {
+        // Arrange: a misconfiguration that hands the provider the PRIVATE half. ImportFromPem accepts
+        // it, so the only thing standing between that mistake and a signing key published on
+        // /.well-known/jwks.json is ExportParameters(includePrivateParameters: false).
+        using var rsa = RSA.Create(2048);
+        var privatePem = rsa.ExportPkcs8PrivateKeyPem();
+
+        var settings = new JwksSettings
+        {
+            Enabled = true,
+            KeyId = "private-key-1",
+            RsaPublicKeyPem = privatePem,
+        };
+        var sut = new RsaJwksProvider(Options.Create(settings));
+
+        // Act
+        var keySet = sut.GetJsonWebKeySet();
+
+        // Assert
+        keySet.Keys.Should().ContainSingle();
+        var jwk = keySet.Keys[0];
+        jwk.N.Should().NotBeNullOrEmpty("the modulus is public and must still be published");
+        jwk.E.Should().NotBeNullOrEmpty("the exponent is public and must still be published");
+        jwk.D.Should().BeNullOrEmpty("the private exponent must never leave the process");
+        jwk.P.Should().BeNullOrEmpty("the first prime factor must never leave the process");
+        jwk.Q.Should().BeNullOrEmpty("the second prime factor must never leave the process");
+        jwk.DP.Should().BeNullOrEmpty("the first CRT exponent must never leave the process");
+        jwk.DQ.Should().BeNullOrEmpty("the second CRT exponent must never leave the process");
+        jwk.QI.Should().BeNullOrEmpty("the CRT coefficient must never leave the process");
+    }
+
+    [Fact]
     public void GetJsonWebKeySet_IsCached_RepeatedCallsReturnSameInstance()
     {
         // Arrange

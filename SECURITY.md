@@ -20,8 +20,12 @@ fix before public disclosure.
 ## Security model (what the framework provides)
 
 - **Authentication:** JWT bearer with RS256 and JWKS discovery (`/.well-known/jwks.json`); the
-  signing algorithm is pinned (no `alg:none` / HS/RS confusion). `RequireHttpsMetadata` is a
-  caller-supplied setting (enable it in production).
+  signing algorithm is pinned (no `alg:none` / HS/RS confusion). `AddForwardedJwtBearer` resolves
+  `RequireHttpsMetadata` secure-by-default, in three steps: the explicit argument when the caller
+  passes one, then the `Authentication:JwtBearer:RequireHttpsMetadata` configuration key, then
+  `true` in every environment except Development. A resolved `false` outside Development stays
+  legal (an internal-ingress cleartext `h2c` authority is the reason it must) but logs one warning
+  at startup naming the configuration key, so the opt-out is auditable instead of silent.
 - **Password hashing:** PBKDF2-SHA512 with a high iteration count and constant-time comparison.
 - **Field encryption:** AES-256-GCM via `EncryptedStringConverter` for sensitive columns.
 - **Authorization:** server-side; `Result` → HTTP status mapping never leaks internal detail.
@@ -41,16 +45,36 @@ fix before public disclosure.
 - A **CycloneDX SBOM** is produced at release.
 - `MassTransit` is pinned to v8 (v9 requires a commercial license); a fitness test enforces this.
 
+## Security invariants enforced as tests
+
+These used to be listed as consumer responsibilities the framework could not check. They now run as
+executable fitness functions:
+
+- **No unintended `[AllowAnonymous]`.** `AnonymousEndpointTestsBase`
+  (`MMCA.Common.Testing.Architecture`) scans MVC controllers and routable Blazor components by
+  reflection and fails on any `[AllowAnonymous]` that is not in the subclass's explicit allow-list,
+  fails on a stale allow-list entry, and fails when the scanned set is empty. MMCA.Common runs it
+  over its own API and UI assemblies; consumers subclass it per repo. Limitation: minimal-API
+  `.AllowAnonymous()` is endpoint metadata, invisible to static reflection, so the framework's
+  intentional minimal-API anonymous surface (JWKS, OIDC discovery, app-association, session-cookie
+  refresh, health) is out of its reach.
+- **No `AllowAnyOrigin` combined with `AllowCredentials`.** Both CORS registrations execute in unit
+  tests that assert the split: the permissive allow-any policy never supports credentials, the
+  credentialed policy never widens to any origin, and a missing `Cors:AllowedOrigins` section fails
+  closed.
+- **The signature algorithm stays pinned** to RS256 on both validation paths, asserted against the
+  options the registration code actually produces.
+- **`RequireHttpsMetadata` stays secure-by-default**, with the resolution order above asserted per
+  environment.
+
 ## Consumer responsibilities (not enforceable in this framework)
 
-Some invariants depend on the consuming application's endpoints and configuration, and are best
-enforced by the consumer's own architecture tests:
+Some invariants still depend on the consuming application's own code and deployment:
 
-- No unintended `[AllowAnonymous]` on protected endpoints (the framework's anonymous endpoints —
-  login/register/refresh, JWKS, OIDC discovery — are intentional).
-- No `AllowAnyOrigin` combined with `AllowCredentials` in production CORS.
 - Server-side authorization on every non-public endpoint (UI hiding is not authorization).
 - Secrets in a vault / managed identity, never in source or plain config.
+- A justification recorded beside any `Authentication__JwtBearer__RequireHttpsMetadata=false` in a
+  deployment template.
 
 ## OWASP Top 10
 
