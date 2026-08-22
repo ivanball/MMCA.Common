@@ -26,7 +26,12 @@ fix before public disclosure.
   `true` in every environment except Development. A resolved `false` outside Development stays
   legal (an internal-ingress cleartext `h2c` authority is the reason it must) but logs one warning
   at startup naming the configuration key, so the opt-out is auditable instead of silent.
-- **Password hashing:** PBKDF2-SHA512 with a high iteration count and constant-time comparison.
+- **Password hashing:** PBKDF2-SHA512 with a high iteration count and constant-time comparison. Both
+  are build-failing invariants, not conventions: `PasswordHasherSecurityTests` recomputes the digest
+  independently (known-answer tests, plus a negative one proving the work factor participates in
+  verification) and pins the iteration count, salt size, digest size and legacy-salt discriminator by
+  reflection, while `PasswordHashingFitnessTests` asserts structurally that the hasher still depends on
+  a slow key derivation function and on the fixed-time comparison.
 - **Field encryption:** AES-256-GCM via `EncryptedStringConverter` for sensitive columns.
 - **Authorization:** server-side; `Result` → HTTP status mapping never leaks internal detail.
 - **CORS:** the permissive `AllowAnyOrigin` policy is **development-only**; production uses an
