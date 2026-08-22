@@ -4,6 +4,29 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- **Event upcaster registration extension point (ADR-010, ADR-090).** The consumer-side half of the
+  event-schema versioning policy now ships as a mechanism instead of a convention:
+  `IEventUpcaster<TSource, TTarget>` (a pure payload mapping from a retired integration-event
+  contract to its successor) plus `services.AddEventUpcaster<TSource, TTarget, TUpcaster>()`.
+  Upcasters accumulate across modules into an `IEventUpcasterRegistry` that follows chains
+  (V1 to V2 to V3) to the terminal contract and preserves `MessageId` and `DateOccurred` across
+  every hop, so inbox deduplication keys stay stable by construction. Misconfiguration (duplicate
+  source types, self-maps, cycles) fails at host startup with the offending types named, not on the
+  first message.
+- **Both delivery paths honor registered upcasters.** In-process (monolith) dispatch upcasts inside
+  `DomainEventDispatcher` before selecting integration handlers, which also covers outbox rows
+  written before an upgrade. Broker hosts drain a retired contract with
+  `RegisterUpcastedIntegrationEventConsumer<TOld>()`, a dedicated MassTransit consumer that upcasts
+  to the terminal type and dispatches its handlers; handlers are written once, against the newest
+  contract only.
+- **Two new event fitness functions** in `MMCA.Common.Testing.Architecture`, inherited automatically
+  by every `EventConventionTestsBase` subclass: no two upcasters may share a source type, and an
+  upcaster's target must declare a strictly higher `SchemaVersion` than its source.
+
 ## [1.158.0] - 2026-08-21
 
 ### Added

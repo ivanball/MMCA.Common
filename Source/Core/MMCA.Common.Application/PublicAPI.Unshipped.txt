@@ -1,1 +1,18 @@
 #nullable enable
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddEventUpcaster<TSource, TTarget, TUpcaster>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.Interfaces.IEventUpcaster
+MMCA.Common.Application.Interfaces.IEventUpcaster.SourceType.get -> System.Type!
+MMCA.Common.Application.Interfaces.IEventUpcaster.TargetType.get -> System.Type!
+MMCA.Common.Application.Interfaces.IEventUpcaster.Upcast(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent) -> MMCA.Common.Domain.Interfaces.IIntegrationEvent!
+MMCA.Common.Application.Interfaces.IEventUpcaster<TSource, TTarget>
+MMCA.Common.Application.Interfaces.IEventUpcaster<TSource, TTarget>.Upcast(TSource! integrationEvent) -> TTarget!
+MMCA.Common.Application.Interfaces.IEventUpcasterRegistry
+MMCA.Common.Application.Interfaces.IEventUpcasterRegistry.HasUpcasterFor(System.Type! eventType) -> bool
+MMCA.Common.Application.Interfaces.IEventUpcasterRegistry.ResolveTerminalType(System.Type! eventType) -> System.Type!
+MMCA.Common.Application.Interfaces.IEventUpcasterRegistry.UpcastToTerminal(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent) -> MMCA.Common.Domain.Interfaces.IIntegrationEvent!
+MMCA.Common.Application.Services.EventUpcasterRegistry
+MMCA.Common.Application.Services.EventUpcasterRegistry.EventUpcasterRegistry(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.IEventUpcaster!>! upcasters) -> void
+MMCA.Common.Application.Services.EventUpcasterRegistry.HasUpcasterFor(System.Type! eventType) -> bool
+MMCA.Common.Application.Services.EventUpcasterRegistry.ResolveTerminalType(System.Type! eventType) -> System.Type!
+MMCA.Common.Application.Services.EventUpcasterRegistry.UpcastToTerminal(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent) -> MMCA.Common.Domain.Interfaces.IIntegrationEvent!
+static MMCA.Common.Application.DependencyInjection.AddEventUpcaster<TSource, TTarget, TUpcaster>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

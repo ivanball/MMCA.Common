@@ -12,10 +12,25 @@ namespace MMCA.Common.Application.Services;
 /// and integration events to all registered <see cref="IIntegrationEventHandler{T}"/> instances.
 /// Uses compiled expression trees cached per event type to avoid repeated reflection
 /// when invoking the generic <c>HandleAsync</c> method on each handler.
+/// <para>
+/// The integration branch runs the event through <see cref="IEventUpcasterRegistry"/> first, so a
+/// retired contract reaches the handlers written against its successor (ADR-090). That also covers
+/// outbox rows written before an upgrade, which deserialize back into the old type. The
+/// <see cref="IDomainEventHandler{T}"/> branch is deliberately untouched: intra-module handlers keep
+/// receiving the original type and instance.
+/// </para>
 /// </summary>
 public sealed class DomainEventDispatcher(IServiceProvider serviceProvider, ILogger<DomainEventDispatcher> logger) : IDomainEventDispatcher
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+
+    /// <summary>
+    /// The upcaster registry, resolved on first use and cached. <c>GetService</c> rather than
+    /// <c>GetRequiredService</c>: this dispatcher is constructed directly in tests and in bare
+    /// providers that never called <c>AddApplication()</c>, and no registry simply means no upcasting.
+    /// </summary>
+    private readonly Lazy<IEventUpcasterRegistry?> _upcasterRegistry =
+        new(serviceProvider.GetService<IEventUpcasterRegistry>);
 
     /// <summary>
     /// Caches the closed handler interface type and its compiled invoker keyed by
@@ -40,8 +55,14 @@ public sealed class DomainEventDispatcher(IServiceProvider serviceProvider, ILog
             await DispatchToHandlersAsync(eventType, typeof(IDomainEventHandler<>), domainEvent, cancellationToken).ConfigureAwait(false);
 
             // If the event also implements IIntegrationEvent, dispatch to IIntegrationEventHandler<T> (cross-module handlers).
-            if (domainEvent is IIntegrationEvent)
-                await DispatchToHandlersAsync(eventType, typeof(IIntegrationEventHandler<>), domainEvent, cancellationToken).ConfigureAwait(false);
+            // A registered upcaster chain converts a retired contract to its terminal successor first,
+            // so the handlers are the ones written against the newest type.
+            if (domainEvent is IIntegrationEvent integrationEvent)
+            {
+                var terminalEvent = _upcasterRegistry.Value?.UpcastToTerminal(integrationEvent) ?? integrationEvent;
+
+                await DispatchToHandlersAsync(terminalEvent.GetType(), typeof(IIntegrationEventHandler<>), terminalEvent, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
 

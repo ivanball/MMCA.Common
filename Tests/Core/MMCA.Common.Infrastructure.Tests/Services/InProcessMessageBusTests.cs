@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Application;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.DomainEvents;
@@ -146,6 +147,84 @@ public sealed class InProcessMessageBusTests
         Func<Task> act = () => sut.PublishAsync(new TestIntegrationEvent(), CancellationToken.None);
 
         await act.Should().NotThrowAsync();
+    }
+
+    // ── Real dispatcher + AddApplication/AddEventUpcaster wiring: a retired contract published on the
+    //    in-process path reaches the handler written against its successor, envelope intact (ADR-090) ──
+    [Fact]
+    public async Task PublishAsync_WithRegisteredUpcaster_DeliversTheUpcastedEventToTheSuccessorHandler()
+    {
+        var handler = new RecordingSuccessorHandler();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddEventUpcaster<RetiredTestIntegrationEvent, TestIntegrationEventV2, RetiredToV2Upcaster>();
+        services.AddSingleton<IIntegrationEventHandler<TestIntegrationEventV2>>(handler);
+        await using ServiceProvider provider = services.BuildServiceProvider();
+        var sut = new InProcessMessageBus(provider.GetRequiredService<IDomainEventDispatcher>());
+        var retired = new RetiredTestIntegrationEvent("SKU-1");
+
+        await sut.PublishAsync(retired, CancellationToken.None);
+
+        var received = handler.HandledEvents.Should().ContainSingle().Which;
+        received.Sku.Should().Be("SKU-1");
+        received.Source.Should().Be("upcasted");
+        received.MessageId.Should().Be(retired.MessageId, "the registry preserves the envelope across the hop");
+        received.DateOccurred.Should().Be(retired.DateOccurred);
+    }
+
+    // ── Same wiring, no upcaster for the type: the original contract is delivered untouched ──
+    [Fact]
+    public async Task PublishAsync_WithUpcasterRegistryButNoUpcasterForTheType_DeliversTheOriginalEvent()
+    {
+        var handler = new RecordingOriginalHandler();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddSingleton<IIntegrationEventHandler<TestIntegrationEvent>>(handler);
+        await using ServiceProvider provider = services.BuildServiceProvider();
+        var sut = new InProcessMessageBus(provider.GetRequiredService<IDomainEventDispatcher>());
+        var integrationEvent = new TestIntegrationEvent();
+
+        await sut.PublishAsync(integrationEvent, CancellationToken.None);
+
+        handler.HandledEvents.Should().ContainSingle().Which.Should().BeSameAs(integrationEvent);
+    }
+
+    // ── Upcasting sample contracts (TEST assembly only, so the frozen event contract never churns) ──
+    public sealed record class RetiredTestIntegrationEvent(string Sku) : BaseIntegrationEvent;
+
+    public sealed record class TestIntegrationEventV2(string Sku, string Source) : BaseIntegrationEvent
+    {
+        public override int SchemaVersion => 2;
+    }
+
+    private sealed class RetiredToV2Upcaster : IEventUpcaster<RetiredTestIntegrationEvent, TestIntegrationEventV2>
+    {
+        public TestIntegrationEventV2 Upcast(RetiredTestIntegrationEvent integrationEvent) =>
+            new(integrationEvent.Sku, "upcasted");
+    }
+
+    private sealed class RecordingSuccessorHandler : IIntegrationEventHandler<TestIntegrationEventV2>
+    {
+        public List<TestIntegrationEventV2> HandledEvents { get; } = [];
+
+        public Task HandleAsync(TestIntegrationEventV2 integrationEvent, CancellationToken cancellationToken = default)
+        {
+            HandledEvents.Add(integrationEvent);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingOriginalHandler : IIntegrationEventHandler<TestIntegrationEvent>
+    {
+        public List<TestIntegrationEvent> HandledEvents { get; } = [];
+
+        public Task HandleAsync(TestIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
+        {
+            HandledEvents.Add(integrationEvent);
+            return Task.CompletedTask;
+        }
     }
 
     // ── Test handlers ──

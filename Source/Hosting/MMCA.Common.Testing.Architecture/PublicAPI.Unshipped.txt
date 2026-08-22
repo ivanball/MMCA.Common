@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldHave_UniqueSourceTypes() -> void
+MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldIncrease_SchemaVersion() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersHaveUniqueSourceTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersIncreaseSchemaVersion(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
