@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Text.Json;
 using Asp.Versioning;
 using AwesomeAssertions;
@@ -7,13 +6,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using MMCA.Common.API.OpenApi;
 using MMCA.Common.API.Startup;
 
@@ -143,50 +138,12 @@ public sealed class ApiParameterDescriptorBackfillProviderTests
     }
 
     // ── Helpers ──
-    private static async Task<WebApplication> CreateHostAsync()
-    {
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-        {
-            EnvironmentName = Environments.Development,
-        });
-
-        builder.WebHost.UseTestServer();
-        builder.Logging.ClearProviders();
-
-        // Restrict discovery to this file's probe controllers so the assertions cannot be
-        // perturbed by controllers belonging to other tests or to MMCA.Common.API itself.
-        builder.Services.AddControllers().ConfigureApplicationPartManager(manager =>
-        {
-            for (int i = manager.FeatureProviders.Count - 1; i >= 0; i--)
-            {
-                if (manager.FeatureProviders[i] is IApplicationFeatureProvider<ControllerFeature>)
-                {
-                    manager.FeatureProviders.RemoveAt(i);
-                }
-            }
-
-            manager.FeatureProviders.Add(new ProbeControllerFeatureProvider());
-        });
-
-        builder.Services.AddCommonApiVersioning();
-        builder.Services.AddCommonOpenApi();
-
-        WebApplication app = builder.Build();
-        app.MapControllers();
-        app.MapCommonOpenApi();
-        await app.StartAsync();
-
-        return app;
-    }
-
-    private sealed class ProbeControllerFeatureProvider : IApplicationFeatureProvider<ControllerFeature>
-    {
-        public void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
-        {
-            feature.Controllers.Add(typeof(SegmentVersionedProbeController).GetTypeInfo());
-            feature.Controllers.Add(typeof(UnboundRouteTokenProbeController).GetTypeInfo());
-        }
-    }
+    // Discovery is restricted to this file's probe controllers so the assertions cannot be
+    // perturbed by controllers belonging to other tests or to MMCA.Common.API itself.
+    private static Task<WebApplication> CreateHostAsync() =>
+        OpenApiProbeHost.CreateAsync(
+            typeof(SegmentVersionedProbeController),
+            typeof(UnboundRouteTokenProbeController));
 }
 
 /// <summary>
