@@ -9,9 +9,13 @@ namespace MMCA.Common.API.Startup;
 /// built-in <c>MapOpenApi()</c> so every service serves a machine-readable contract at
 /// <c>/openapi/v1.json</c> the same way; pair it with <c>AddCommonOpenApi()</c> (see
 /// <see cref="WebApplicationBuilderExtensions"/>). The document is the source of truth for the API
-/// surface and is intended to be guarded by a contract-snapshot test in the consumer integration
-/// tiers so it cannot drift silently (the framework deliberately does not duplicate that gate — the
-/// API surface lives in the consumer hosts). Mapped <b>outside Production only</b> — these are internal
+/// surface, and it is guarded at two levels so it cannot drift silently. The framework-owned part of
+/// the generated document (the versioned document naming convention, the unbound-route-token
+/// backfill, the generated <c>ProblemDetails</c> error schema) is diffed against a committed baseline
+/// in-repo by <c>OpenApiBaselineTests</c> (Tests/Presentation/MMCA.Common.API.Tests/OpenApi), which
+/// fails on any change until the baseline is regenerated deliberately in the same pull request. Each
+/// consumer's concrete API surface stays the concern of the contract-snapshot tests in that host's
+/// integration tier. Mapped <b>outside Production only</b>: these are internal
 /// services reached through the Gateway (which does not route the endpoint), so the spec is a dev/CI
 /// artifact, not a public production surface. <see cref="MapCommonScalarUi"/> optionally renders it.
 /// </summary>

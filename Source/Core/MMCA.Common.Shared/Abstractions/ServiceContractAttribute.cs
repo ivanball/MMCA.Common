@@ -3,11 +3,13 @@ namespace MMCA.Common.Shared.Abstractions;
 /// <summary>
 /// Marks an interface or DTO as part of a service contract published in a <c>*.Contracts</c>
 /// NuGet package, identifying the wire surface of an extracted microservice (see ADR-007).
-/// The intended invariant (contract types must not depend on the producing service's
-/// <c>Domain</c>, <c>Application</c>, or <c>Infrastructure</c>) is currently upheld by the
-/// transport- and layer-purity fitness rules (ADR-015), not by a dedicated <c>[ServiceContract]</c>
-/// architecture test. This attribute is an available documentation marker that no contract type
-/// carries yet (MMCA.Common itself ships no <c>[ServiceContract]</c> types).
+/// The invariant (contract types must not depend on the producing service's <c>Domain</c>,
+/// <c>Application</c>, or <c>Infrastructure</c>) is enforced directly by the dedicated
+/// <c>ServiceContractPurityTestsBase</c> fitness rule, which scans every mapped assembly for types
+/// carrying this attribute, alongside the transport- and layer-purity rules that guard the same
+/// boundary from the layer side (ADR-015). The attribute is an adoptable marker that MMCA.Common
+/// itself applies to no type (the framework ships no <c>[ServiceContract]</c> types), so the rule is
+/// a ratchet here and bites in a repo the moment its first contract type is marked.
 /// <para>
 /// Apply to the C# interface that consumers depend on (e.g. <c>IProductVariantService</c>),
 /// the integration event records that flow over the message bus (e.g. <c>ProductVariantChanged</c>),
