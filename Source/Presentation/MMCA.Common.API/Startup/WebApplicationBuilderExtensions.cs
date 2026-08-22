@@ -5,12 +5,14 @@ using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
@@ -42,6 +44,14 @@ public static class WebApplicationBuilderExtensions
     /// password, many emails) from a single source otherwise unthrottled.
     /// </summary>
     public const string RateLimitPolicyAuthIp = "auth-ip";
+
+    /// <summary>
+    /// Configuration key that overrides <c>AddForwardedJwtBearer</c>'s secure-by-default
+    /// <c>RequireHttpsMetadata</c>. Set it to <see langword="false"/> only for a deployment whose
+    /// authority is genuinely plain HTTP (an internal-ingress h2c service URL), and record the
+    /// justification beside the setting in the deployment template.
+    /// </summary>
+    public const string RequireHttpsMetadataConfigKey = "Authentication:JwtBearer:RequireHttpsMetadata";
 
     /// <summary>True for traffic that must bypass rate limiting: health/liveness probes, JWKS
     /// discovery, and gRPC inter-service calls — all legitimately high-frequency.</summary>
@@ -422,11 +432,50 @@ public static class WebApplicationBuilderExtensions
         /// </summary>
         /// <param name="authority">The Identity service base URL (no trailing slash).</param>
         /// <param name="audience">The expected JWT audience claim.</param>
+        /// <param name="configuration">The application configuration, read for <see cref="RequireHttpsMetadataConfigKey"/>.</param>
+        /// <param name="environment">The host environment, which decides the default when nothing overrides it.</param>
         /// <param name="requireHttpsMetadata">
-        /// Whether the metadata fetch must use HTTPS. Defaults to <see langword="false"/> so
-        /// service-discovery URLs (which are <c>http://</c>) work in dev. Production deployments
-        /// should set this to <see langword="true"/>.
+        /// Whether the metadata fetch must use HTTPS. Resolved in three steps: this argument when it
+        /// is not <see langword="null"/>, then <see cref="RequireHttpsMetadataConfigKey"/>, then
+        /// <see langword="true"/> everywhere except Development. A resolved
+        /// <see langword="false"/> outside Development is legal (an internal-ingress h2c authority
+        /// is the reason it stays reachable) but logs one startup warning naming the config key.
         /// </param>
+        public IServiceCollection AddForwardedJwtBearer(
+            string authority,
+            string audience,
+            IConfiguration configuration,
+            IHostEnvironment environment,
+            bool? requireHttpsMetadata = null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(authority);
+            ArgumentException.ThrowIfNullOrWhiteSpace(audience);
+            ArgumentNullException.ThrowIfNull(configuration);
+            ArgumentNullException.ThrowIfNull(environment);
+
+            var resolvedRequireHttpsMetadata = requireHttpsMetadata
+                ?? configuration.GetValue<bool?>(RequireHttpsMetadataConfigKey)
+                ?? !environment.IsDevelopment();
+
+            if (!resolvedRequireHttpsMetadata && !environment.IsDevelopment())
+            {
+                services.TryAddEnumerable(
+                    ServiceDescriptor.Singleton<IStartupFilter, InsecureJwtMetadataWarningStartupFilter>());
+            }
+
+            return services.AddForwardedJwtBearerCore(authority, audience, resolvedRequireHttpsMetadata);
+        }
+
+        /// <summary>
+        /// Transitional overload preserving the pre-configuration-aware signature, with the
+        /// historical behavior (no HTTPS requirement unless requested, no startup warning).
+        /// The cross-repo source-build canary compiles consumer <c>main</c> against this
+        /// source, so this form must keep compiling until every consumer call site has moved
+        /// to the overload above. Delete it once the consumer sweep lands.
+        /// </summary>
+        /// <param name="authority">The Identity service base URL (no trailing slash).</param>
+        /// <param name="audience">The expected JWT audience claim.</param>
+        /// <param name="requireHttpsMetadata">Whether the metadata fetch must use HTTPS.</param>
         public IServiceCollection AddForwardedJwtBearer(
             string authority,
             string audience,
@@ -435,12 +484,20 @@ public static class WebApplicationBuilderExtensions
             ArgumentException.ThrowIfNullOrWhiteSpace(authority);
             ArgumentException.ThrowIfNullOrWhiteSpace(audience);
 
+            return services.AddForwardedJwtBearerCore(authority, audience, requireHttpsMetadata);
+        }
+
+        private IServiceCollection AddForwardedJwtBearerCore(
+            string authority,
+            string audience,
+            bool resolvedRequireHttpsMetadata)
+        {
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.Authority = authority;
                     options.Audience = audience;
-                    options.RequireHttpsMetadata = requireHttpsMetadata;
+                    options.RequireHttpsMetadata = resolvedRequireHttpsMetadata;
 
                     options.TokenValidationParameters = new()
                     {
@@ -625,7 +682,7 @@ public static class WebApplicationBuilderExtensions
             IssuerSigningKey = new SymmetricSecurityKey(
                 GetValidatedSigningKey(
                     jwtSettings.SecretForKey
-                    ?? throw new System.Collections.Generic.KeyNotFoundException("SecretForKey not found or invalid"))),
+                    ?? throw new KeyNotFoundException("SecretForKey not found or invalid"))),
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
         };
     }

@@ -1,5 +1,17 @@
 #nullable enable
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AllowList_HasNoStaleEntries() -> void
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AnonymousEndpointTestsBase() -> void
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AnonymousEndpoints() -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AnonymousEndpoints_AreAllowListed() -> void
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.ScannedEndpointSet_IsNotEmpty() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldHave_UniqueSourceTypes() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldIncrease_SchemaVersion() -> void
+abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AllowedAnonymousEndpoints.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
+static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsController(System.Type! type) -> bool
+static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsRoutableComponent(System.Type! type) -> bool
+static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsScannedEndpointType(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersHaveUniqueSourceTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersIncreaseSchemaVersion(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.MinimumScannedTypes.get -> int

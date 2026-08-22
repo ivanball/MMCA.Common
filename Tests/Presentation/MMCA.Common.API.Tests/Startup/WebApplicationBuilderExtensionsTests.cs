@@ -245,6 +245,58 @@ public sealed class WebApplicationBuilderExtensionsTests
     }
 
     [Fact]
+    public void AddCommonCors_AllowAllPolicy_NeverSupportsCredentials()
+    {
+        var services = new ServiceCollection();
+        IConfiguration configuration = CreateCorsConfiguration();
+
+        services.AddCommonCors(configuration);
+
+        ServiceProvider provider = services.BuildServiceProvider();
+        var corsOptions = provider.GetRequiredService<IOptions<CorsOptions>>();
+        CorsPolicy? policy = corsOptions.Value.GetPolicy(WebApplicationBuilderExtensions.CorsPolicyAllowAll);
+
+        policy.Should().NotBeNull();
+        policy!.SupportsCredentials.Should().BeFalse(
+            "AllowAnyOrigin combined with AllowCredentials is rejected by browsers and would expose credentialed requests to any origin");
+    }
+
+    [Fact]
+    public void AddCommonCors_AllowSpecificOriginsPolicy_NeverAllowsAnyOrigin()
+    {
+        var services = new ServiceCollection();
+        IConfiguration configuration = CreateCorsConfiguration("https://example.com");
+
+        services.AddCommonCors(configuration);
+
+        ServiceProvider provider = services.BuildServiceProvider();
+        var corsOptions = provider.GetRequiredService<IOptions<CorsOptions>>();
+        CorsPolicy? policy = corsOptions.Value.GetPolicy(WebApplicationBuilderExtensions.CorsPolicyAllowSpecificOrigins);
+
+        policy.Should().NotBeNull();
+        policy!.AllowAnyOrigin.Should().BeFalse(
+            "the credentialed policy is the one production selects, so its origin list must stay explicit");
+    }
+
+    [Fact]
+    public void AddCommonCors_WithNoConfiguredOrigins_LeavesTheCredentialedPolicyClosed()
+    {
+        var services = new ServiceCollection();
+        IConfiguration configuration = CreateCorsConfiguration();
+
+        services.AddCommonCors(configuration);
+
+        ServiceProvider provider = services.BuildServiceProvider();
+        var corsOptions = provider.GetRequiredService<IOptions<CorsOptions>>();
+        CorsPolicy? policy = corsOptions.Value.GetPolicy(WebApplicationBuilderExtensions.CorsPolicyAllowSpecificOrigins);
+
+        policy.Should().NotBeNull();
+        policy!.AllowAnyOrigin.Should().BeFalse();
+        policy.Origins.Should().BeEmpty(
+            "a missing Cors:AllowedOrigins section must fail closed rather than widening to any origin");
+    }
+
+    [Fact]
     public void AddCommonCors_ReturnsSameServiceCollection()
     {
         var services = new ServiceCollection();

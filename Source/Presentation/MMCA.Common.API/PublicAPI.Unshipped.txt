@@ -16,6 +16,7 @@ MMCA.Common.API.Startup.MiddlewarePipelineStep.MiddlewarePipelineStep(string! Na
 MMCA.Common.API.Startup.MiddlewarePipelineStep.Name.get -> string!
 MMCA.Common.API.Startup.MiddlewarePipelineStep.Name.init -> void
 MMCA.Common.API.Startup.MiddlewarePipelineStepNames
+MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddForwardedJwtBearer(string! authority, string! audience, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, bool? requireHttpsMetadata = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline(System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
 const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Authentication = "Authentication" -> string!
 const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Authorization = "Authorization" -> string!
@@ -35,10 +36,12 @@ const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ResponseCompression = 
 const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Routing = "Routing" -> string!
 const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.SoftDeletedUserFilter = "SoftDeletedUserFilter" -> string!
 const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.TenantResolution = "TenantResolution" -> string!
+const MMCA.Common.API.Startup.WebApplicationBuilderExtensions.RequireHttpsMetadataConfigKey = "Authentication:JwtBearer:RequireHttpsMetadata" -> string!
 override MMCA.Common.API.Startup.MiddlewarePipelineStep.Equals(object? obj) -> bool
 override MMCA.Common.API.Startup.MiddlewarePipelineStep.GetHashCode() -> int
 override MMCA.Common.API.Startup.MiddlewarePipelineStep.ToString() -> string!
 static MMCA.Common.API.Startup.MiddlewarePipelineBuilder.CreateDefault() -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
 static MMCA.Common.API.Startup.MiddlewarePipelineStep.operator !=(MMCA.Common.API.Startup.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.MiddlewarePipelineStep? right) -> bool
 static MMCA.Common.API.Startup.MiddlewarePipelineStep.operator ==(MMCA.Common.API.Startup.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.MiddlewarePipelineStep? right) -> bool
+static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddForwardedJwtBearer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authority, string! audience, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, bool? requireHttpsMetadata = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
