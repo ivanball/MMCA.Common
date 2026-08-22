@@ -10,6 +10,7 @@ using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Application.Validation;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application;
@@ -31,6 +32,13 @@ public static class DependencyInjection
             services.TryAddSingleton<IApplicationSettings>(sp => sp.GetRequiredService<IOptions<ApplicationSettings>>().Value);
 
             services.TryAddSingleton<IDomainEventDispatcher, DomainEventDispatcher>();
+
+            // Composed view of every AddEventUpcaster registration. Always registered: with no
+            // upcasters it is an empty registry whose operations are identity, and both delivery paths
+            // (this dispatcher and the broker-side UpcastingIntegrationEventConsumer) can then depend
+            // on it unconditionally (ADR-090).
+            services.TryAddSingleton<IEventUpcasterRegistry, EventUpcasterRegistry>();
+
             services.TryAddSingleton<INavigationMetadataProvider, NavigationMetadataProvider>();
             services.TryAddSingleton<IEntityQueryPipeline, EntityQueryPipeline>();
 
@@ -234,6 +242,50 @@ public static class DependencyInjection
         {
             services.TryAddScoped<TSection>();
             services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserDataExportSection, TSection>());
+            return services;
+        }
+
+        /// <summary>
+        /// Registers one <see cref="IEventUpcaster{TSource, TTarget}"/> implementation, so a message
+        /// still published (or still queued) as the retired contract <typeparamref name="TSource"/> is
+        /// delivered to the handlers written against its successor <typeparamref name="TTarget"/>.
+        /// </summary>
+        /// <typeparam name="TSource">The retired event contract.</typeparam>
+        /// <typeparam name="TTarget">The successor event contract. Must declare a higher <c>SchemaVersion</c>.</typeparam>
+        /// <typeparam name="TUpcaster">The upcaster implementation.</typeparam>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// ADR-010 makes a breaking event-shape change a NEW event type plus a consumer-side upcaster;
+        /// this is the registration extension point for that policy (ADR-090). Registrations accumulate
+        /// through <c>TryAddEnumerable</c>, the same idiom as <see cref="AddUserDataExportSection{TSection}"/>
+        /// and the scheduled-job registry, and the same type registered twice is added once.
+        /// </para>
+        /// <para>
+        /// <b>Singleton</b>, because upcasters are pure functions over an event instance, matching the
+        /// handler lifetimes they feed. <typeparamref name="TSource"/> and <typeparamref name="TTarget"/>
+        /// are named explicitly so the compiler checks the shape at the registration site instead of
+        /// leaving a mismatch to fail at runtime.
+        /// </para>
+        /// <para>
+        /// Chains compose: registering V1 to V2 and V2 to V3 delivers a V1 message to the V3 handler.
+        /// Registering two upcasters for one source, mapping a type onto itself, or forming a cycle
+        /// fails the host at startup with an exception naming the offenders.
+        /// </para>
+        /// <para>
+        /// A monolith host needs only this call. A host that also consumes the retired contract over a
+        /// broker adds <c>x.RegisterUpcastedIntegrationEventConsumer&lt;TSource&gt;()</c> beside its
+        /// <c>x.RegisterIntegrationEventConsumer&lt;TTarget&gt;()</c>. Once every producer publishes the
+        /// successor and the queues have drained, delete the upcaster, both registrations and
+        /// eventually the retired type.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddEventUpcaster<TSource, TTarget, TUpcaster>()
+            where TSource : class, IIntegrationEvent
+            where TTarget : class, IIntegrationEvent
+            where TUpcaster : class, IEventUpcaster<TSource, TTarget>
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IEventUpcaster, TUpcaster>());
             return services;
         }
 

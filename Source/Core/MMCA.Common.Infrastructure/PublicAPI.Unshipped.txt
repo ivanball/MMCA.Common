@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterUpcastedIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
+MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent>
+MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<TEvent!>! context) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent>.UpcastingIntegrationEventConsumer(MMCA.Common.Application.Interfaces.IEventUpcasterRegistry! upcasters, System.IServiceProvider! serviceProvider, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent!>!>! logger) -> void
+static MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.RegisterUpcastedIntegrationEventConsumer<TEvent>(this MassTransit.IBusRegistrationConfigurator! x, bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!

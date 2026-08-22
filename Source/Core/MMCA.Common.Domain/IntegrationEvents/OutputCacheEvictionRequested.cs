@@ -17,7 +17,11 @@ namespace MMCA.Common.Domain.IntegrationEvents;
 /// else. Every host that consumes it must be able to deserialize it forever, so treat any change as
 /// a versioning decision (ADR-010): additive optional fields keep <c>SchemaVersion</c> at 1, and a
 /// rename, removal or retype requires a new event type plus a consumer-side upcaster, never a
-/// silent reshape.
+/// silent reshape. That upcaster is registered with
+/// <c>services.AddEventUpcaster&lt;OutputCacheEvictionRequested, OutputCacheEvictionRequestedV2, ...&gt;()</c>,
+/// and every host still receiving the old contract over a broker adds
+/// <c>x.RegisterUpcastedIntegrationEventConsumer&lt;OutputCacheEvictionRequested&gt;()</c> until the
+/// queues drain (ADR-090).
 /// </para>
 /// </summary>
 public sealed record class OutputCacheEvictionRequested : BaseIntegrationEvent

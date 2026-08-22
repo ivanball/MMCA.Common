@@ -50,6 +50,46 @@ public static class IntegrationEventConsumerExtensions
         }
 
         /// <summary>
+        /// Registers a MassTransit consumer for a RETIRED contract <typeparamref name="TEvent"/> that
+        /// upcasts each message to its terminal successor and delegates to the
+        /// <see cref="MMCA.Common.Application.Interfaces.IIntegrationEventHandler{T}"/> implementations
+        /// registered for THAT contract. Use it while the old type is still being published or is still
+        /// sitting in a queue, so handlers only ever have to exist for the newest contract (ADR-090).
+        /// <para>
+        /// Pair it with <c>services.AddEventUpcaster&lt;TEvent, TNew, TUpcaster&gt;()</c>, which supplies
+        /// the conversion, and with a plain
+        /// <c>RegisterIntegrationEventConsumer&lt;TNew&gt;()</c> for the current contract. Do NOT also
+        /// register the plain consumer for <typeparamref name="TEvent"/>: two consumers on one event
+        /// compete for the same queue and would run the handlers twice.
+        /// </para>
+        /// <para>
+        /// With no upcaster registered for <typeparamref name="TEvent"/> this degrades to ordinary
+        /// handler dispatch on the original type, so the registration is safe to add before the
+        /// upcaster exists and safe to leave in place for one release after it is deleted. Once the
+        /// queues have drained, remove this call, the upcaster, and eventually the retired type.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TEvent">The retired integration event type to drain.</typeparam>
+        /// <param name="registerFaultConsumer">
+        /// Whether to also register <see cref="FaultIntegrationEventConsumer{TEvent}"/> for this event.
+        /// Same meaning as on <c>RegisterIntegrationEventConsumer&lt;TEvent&gt;</c>; defaults to
+        /// <see langword="true"/>.
+        /// </param>
+        public IBusRegistrationConfigurator RegisterUpcastedIntegrationEventConsumer<TEvent>(
+            bool registerFaultConsumer = true)
+            where TEvent : class, IIntegrationEvent
+        {
+            x.AddConsumer<UpcastingIntegrationEventConsumer<TEvent>>();
+
+            if (registerFaultConsumer)
+            {
+                x.AddConsumer<FaultIntegrationEventConsumer<TEvent>>();
+            }
+
+            return x;
+        }
+
+        /// <summary>
         /// Registers the consumer for <see cref="OutputCacheEvictionRequested"/>, the framework's
         /// cross-service output-cache eviction broadcast. Shorthand for
         /// <c>RegisterIntegrationEventConsumer&lt;OutputCacheEvictionRequested&gt;()</c>, named so the

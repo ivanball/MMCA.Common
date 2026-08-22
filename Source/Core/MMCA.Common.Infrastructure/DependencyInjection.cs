@@ -147,6 +147,13 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.TryAddSingleton<IJwksProvider, RsaJwksProvider>();
 
+            // Fails the host at start on a bad event-upcaster registration graph (duplicate source,
+            // self-map, cycle) instead of dead-lettering the first retired-contract message.
+            // TryAddEnumerable, not AddHostedService: two modules calling AddInfrastructure must not
+            // run the same validation twice.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, EventUpcasterStartupValidator>());
+
             services.TryAddSingleton<Persistence.Outbox.IOutboxSignal, Persistence.Outbox.OutboxSignal>();
             services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
             services.AddHostedService<Persistence.Outbox.OutboxCleanupService>();
