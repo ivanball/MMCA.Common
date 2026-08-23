@@ -29,9 +29,16 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // The OAuth completion code is the caller's only credential at this point: it is single-use
         // and burned on first exchange.
         "MMCA.Common.API.Controllers.OAuthControllerBase.ExchangeAsync",
+        // Password recovery: the caller has lost the credential, so requiring one would be circular.
+        // Both are throttled by the auth-ip policy, and forgot-password always answers 202 so it
+        // reveals nothing about which addresses hold accounts.
+        // The base is generic over the app command records, so its reflected FullName carries the
+        // arity suffix.
+        "MMCA.Common.API.Controllers.PasswordResetAuthControllerBase`2.ForgotPasswordAsync",
+        "MMCA.Common.API.Controllers.PasswordResetAuthControllerBase`2.ResetPasswordAsync",
     ];
 
-    // The exact count today (11 API controller types plus 9 routable UI pages), so removing one is a
-    // failure rather than a quietly smaller scan.
-    protected override int MinimumScannedTypes => 20;
+    // A floor, not an equality: 12 API controller types plus the routable UI pages. Removing a
+    // scanned type is a failure rather than a quietly smaller scan.
+    protected override int MinimumScannedTypes => 21;
 }

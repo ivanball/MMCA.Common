@@ -32,4 +32,18 @@ public interface IAuthUIService
 
     /// <summary>Changes the authenticated user's password via the <c>auth/password</c> endpoint.</summary>
     Task<bool> ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests a password-reset email via the anonymous <c>auth/forgot-password</c> endpoint. The
+    /// endpoint answers 202 for every well-formed address (anti-enumeration), so a <see langword="true"/>
+    /// result means "accepted", never "an account exists".
+    /// </summary>
+    Task<bool> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Completes a password reset via the anonymous <c>auth/reset-password</c> endpoint. Returns
+    /// <see langword="false"/> for an invalid, expired, or already-consumed token, with the server's
+    /// generic message in <see cref="LastError"/>.
+    /// </summary>
+    Task<bool> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default);
 }

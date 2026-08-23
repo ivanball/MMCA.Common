@@ -28,7 +28,7 @@ public sealed class PseudoLocalizationE2ETests : GalleryAxeTestBase
     {
     }
 
-    public static TheoryData<string> ScannedPaths => new("/login", "/register", "/components");
+    public static TheoryData<string> ScannedPaths => new("/login", "/register", "/forgot-password", "/reset-password", "/components");
 
     /// <summary>
     /// Bounded attempts for the sentinel render only. The <c>[!!</c> assertion flakes on webkit

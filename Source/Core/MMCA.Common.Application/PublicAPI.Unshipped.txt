@@ -1,4 +1,23 @@
 #nullable enable
+MMCA.Common.Application.Auth.IPasswordResetTokenService
+MMCA.Common.Application.Auth.IPasswordResetTokenService.IssueAsync(string! email, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<string!>!>!
+MMCA.Common.Application.Auth.IPasswordResetTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.Auth.PasswordResetSettings
+MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.get -> int
+MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.init -> void
+MMCA.Common.Application.Auth.PasswordResetSettings.MaxValidationAttempts.get -> int
+MMCA.Common.Application.Auth.PasswordResetSettings.MaxValidationAttempts.init -> void
+MMCA.Common.Application.Auth.PasswordResetSettings.PasswordResetSettings() -> void
+MMCA.Common.Application.Auth.PasswordResetSettings.RequestWindowMinutes.get -> int
+MMCA.Common.Application.Auth.PasswordResetSettings.RequestWindowMinutes.init -> void
+MMCA.Common.Application.Auth.PasswordResetSettings.ResetUrl.get -> string!
+MMCA.Common.Application.Auth.PasswordResetSettings.ResetUrl.init -> void
+MMCA.Common.Application.Auth.PasswordResetSettings.TokenLifetimeMinutes.get -> int
+MMCA.Common.Application.Auth.PasswordResetSettings.TokenLifetimeMinutes.init -> void
+MMCA.Common.Application.Auth.Validation.ForgotPasswordRequestValidator
+MMCA.Common.Application.Auth.Validation.ForgotPasswordRequestValidator.ForgotPasswordRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.ResetPasswordRequestValidator
+MMCA.Common.Application.Auth.Validation.ResetPasswordRequestValidator.ResetPasswordRequestValidator() -> void
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddEventUpcaster<TSource, TTarget, TUpcaster>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.Interfaces.IEventUpcaster
 MMCA.Common.Application.Interfaces.IEventUpcaster.SourceType.get -> System.Type!
@@ -15,4 +34,19 @@ MMCA.Common.Application.Services.EventUpcasterRegistry.EventUpcasterRegistry(Sys
 MMCA.Common.Application.Services.EventUpcasterRegistry.HasUpcasterFor(System.Type! eventType) -> bool
 MMCA.Common.Application.Services.EventUpcasterRegistry.ResolveTerminalType(System.Type! eventType) -> System.Type!
 MMCA.Common.Application.Services.EventUpcasterRegistry.UpcastToTerminal(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent) -> MMCA.Common.Domain.Interfaces.IIntegrationEvent!
+MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ForgotPasswordHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.IPasswordResetTokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.IEmailSender! emailSender, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.Settings.get -> MMCA.Common.Application.Auth.PasswordResetSettings!
+MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.ResetPasswordHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.IPasswordResetTokenService! tokenService, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+abstract MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
+const MMCA.Common.Application.Auth.PasswordResetSettings.SectionName = "PasswordReset" -> string!
 static MMCA.Common.Application.DependencyInjection.AddEventUpcaster<TSource, TTarget, TUpcaster>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeBody(string? resetLink, string! token) -> string!
+virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeResetLink(string! email, string! token) -> string?
+virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeSubject() -> string!
+virtual MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.HandlerName.get -> string!

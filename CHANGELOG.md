@@ -8,6 +8,26 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Added
 
+- **Forgot-password / reset-password vertical (opt-in).** A complete account-recovery flow ships
+  across the stack: `ForgotPasswordRequest` / `ResetPasswordRequest` wire contracts with framework
+  validators, `ForgotPasswordHandlerBase<TUser, TCommand>` and
+  `ResetPasswordHandlerBase<TUser, TCommand>` mirroring the ChangePassword vertical,
+  `IPasswordResetTokenService` backed by `ICacheService` (256-bit single-use tokens hashed at rest,
+  configurable TTL, bounded validation attempts, per-email request throttling via the new
+  `PasswordReset` settings section), and `PasswordResetAuthControllerBase<TForgot, TReset>` exposing
+  `POST forgot-password` (always 202 for well-formed input, so responses never disclose whether an
+  account exists) and `POST reset-password`, both anonymous, idempotent, and behind the `auth-ip`
+  rate-limit policy. The reset email is composed by overridable `ComposeSubject` / `ComposeBody` /
+  `ComposeResetLink` hooks and carries both a prefilled reset link and the raw token for manual
+  entry; with no `PasswordReset:ResetUrl` configured the email degrades to token-only. Apps opt in
+  with two thin command records, two handler subclasses, and a sealed controller routed at `Auth`.
+- **Shared password-recovery UI and E2E coverage.** `MMCA.Common.UI` adds `/forgot-password` and
+  `/reset-password` pages (query-string prefill, existing password-complexity validation, an
+  always-confirm submit state on the request page) plus a "Forgot password?" link on the login page,
+  with new `IAuthUIService.RequestPasswordResetAsync` / `ResetPasswordAsync` members and localized
+  en/es resources. `MMCA.Common.Testing.E2E` adds `ForgotPasswordPage` / `ResetPasswordPage` page
+  objects and `PasswordResetTestsBase` (navigation, anti-enumeration confirmation, client
+  validation, and WCAG 2.1 AA scans of both pages).
 - **Event upcaster registration extension point (ADR-010, ADR-090).** The consumer-side half of the
   event-schema versioning policy now ships as a mechanism instead of a convention:
   `IEventUpcaster<TSource, TTarget>` (a pure payload mapping from a retired integration-event
