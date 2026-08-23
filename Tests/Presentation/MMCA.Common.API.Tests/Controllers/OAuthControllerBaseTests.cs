@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AspNet.Security.OAuth.Apple;
 using AspNet.Security.OAuth.GitHub;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authentication;
@@ -133,6 +134,19 @@ public sealed class OAuthControllerBaseTests
             .Which.Should().Be(GitHubAuthenticationDefaults.AuthenticationScheme);
         result.Properties!.RedirectUri.Should().Be("/auth/oauth/complete");
         result.Properties.Items["returnUrl"].Should().Be("/");
+    }
+
+    [Fact]
+    public void AppleLogin_ReturnsChallengeForAppleSchemeCarryingReturnUrl()
+    {
+        var (sut, _) = CreateSut();
+
+        var result = sut.AppleLogin(new Uri("https://app.example.com/dashboard"));
+
+        result.AuthenticationSchemes.Should().ContainSingle()
+            .Which.Should().Be(AppleAuthenticationDefaults.AuthenticationScheme);
+        result.Properties!.RedirectUri.Should().Be("/auth/oauth/complete");
+        result.Properties.Items["returnUrl"].Should().Be("https://app.example.com/dashboard");
     }
 
     // ── CompleteAsync: error paths ──

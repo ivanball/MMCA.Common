@@ -313,6 +313,9 @@
   <data name="Notif.Send.Field.Title.Required" xml:space="preserve">
     <value>El título es obligatorio.</value>
   </data>
+  <data name="Auth.Login.SignInWithApple" xml:space="preserve">
+    <value>Iniciar sesión con Apple</value>
+  </data>
   <data name="Auth.Login.SignInWithGitHub" xml:space="preserve">
     <value>Iniciar sesión con GitHub</value>
   </data>

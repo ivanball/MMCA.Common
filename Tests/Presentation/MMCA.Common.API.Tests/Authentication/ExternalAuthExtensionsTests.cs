@@ -1,3 +1,4 @@
+using AspNet.Security.OAuth.Apple;
 using AspNet.Security.OAuth.GitHub;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authentication;
@@ -40,6 +41,14 @@ public sealed class ExternalAuthExtensionsTests
     {
         ["OAuth:GitHub:ClientId"] = "github-client-id",
         ["OAuth:GitHub:ClientSecret"] = "github-client-secret",
+    };
+
+    private static Dictionary<string, string?> AppleConfig() => new(StringComparer.Ordinal)
+    {
+        ["OAuth:Apple:ClientId"] = "com.example.app.signin",
+        ["OAuth:Apple:TeamId"] = "TEAM123456",
+        ["OAuth:Apple:KeyId"] = "KEY1234567",
+        ["OAuth:Apple:PrivateKeyPem"] = "-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----",
     };
 
     // ── No provider configured: inert ──
@@ -122,6 +131,59 @@ public sealed class ExternalAuthExtensionsTests
             "GitHub omits the email on the default scope and CompleteAsync requires the email claim");
     }
 
+    // ── Apple configured ──
+    [Fact]
+    public async Task AddExternalAuthProviders_WithAppleConfigured_RegistersAppleAndCookieSchemesOnly()
+    {
+        var services = CreateServices();
+        services.AddExternalAuthProviders(BuildConfiguration(AppleConfig()));
+        await using var provider = services.BuildServiceProvider();
+        var schemeProvider = provider.GetRequiredService<IAuthenticationSchemeProvider>();
+
+        (await schemeProvider.GetSchemeAsync(AppleAuthenticationDefaults.AuthenticationScheme)).Should().NotBeNull();
+        (await schemeProvider.GetSchemeAsync(ExternalAuthExtensions.ExternalLoginScheme)).Should().NotBeNull();
+        (await schemeProvider.GetSchemeAsync(GoogleDefaults.AuthenticationScheme)).Should().BeNull();
+        (await schemeProvider.GetSchemeAsync(GitHubAuthenticationDefaults.AuthenticationScheme)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddExternalAuthProviders_AppleOptions_AreWiredForTheExternalLoginFlow()
+    {
+        var services = CreateServices();
+        services.AddExternalAuthProviders(BuildConfiguration(AppleConfig()));
+        await using var provider = services.BuildServiceProvider();
+
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<AppleAuthenticationOptions>>()
+            .Get(AppleAuthenticationDefaults.AuthenticationScheme);
+
+        options.ClientId.Should().Be("com.example.app.signin");
+        options.TeamId.Should().Be("TEAM123456");
+        options.KeyId.Should().Be("KEY1234567");
+        options.GenerateClientSecret.Should().BeTrue(
+            "Apple has no static client secret; the handler must mint the ES256 client-secret JWT");
+        options.PrivateKey.Should().NotBeNull();
+        options.SignInScheme.Should().Be(ExternalAuthExtensions.ExternalLoginScheme);
+        options.CallbackPath.Should().Be(new PathString("/auth/callback/apple"));
+        options.SaveTokens.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AddExternalAuthProviders_ApplePrivateKeyCallback_ReturnsConfiguredPem()
+    {
+        var services = CreateServices();
+        services.AddExternalAuthProviders(BuildConfiguration(AppleConfig()));
+        await using var provider = services.BuildServiceProvider();
+
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<AppleAuthenticationOptions>>()
+            .Get(AppleAuthenticationDefaults.AuthenticationScheme);
+
+        var pem = await options.PrivateKey!("KEY1234567", CancellationToken.None);
+
+        pem.ToString().Should().Contain("BEGIN PRIVATE KEY");
+    }
+
     // ── External-login cookie hardening ──
     [Fact]
     public async Task AddExternalAuthProviders_ExternalLoginCookie_IsHttpOnlyLaxAndShortLived()
@@ -175,5 +237,25 @@ public sealed class ExternalAuthExtensionsTests
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*OAuth:GitHub:ClientSecret is required*");
+    }
+
+    [Theory]
+    [InlineData("TeamId")]
+    [InlineData("KeyId")]
+    [InlineData("PrivateKeyPem")]
+    public async Task AddExternalAuthProviders_AppleWithMissingSigningConfig_ThrowsOnOptionsResolution(string missingKey)
+    {
+        var config = AppleConfig();
+        config.Remove($"OAuth:Apple:{missingKey}");
+        var services = CreateServices();
+        services.AddExternalAuthProviders(BuildConfiguration(config));
+        await using var provider = services.BuildServiceProvider();
+
+        var act = () => provider
+            .GetRequiredService<IOptionsMonitor<AppleAuthenticationOptions>>()
+            .Get(AppleAuthenticationDefaults.AuthenticationScheme);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"*OAuth:Apple:{missingKey} is required*");
     }
 }

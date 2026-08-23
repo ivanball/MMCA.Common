@@ -1049,6 +1049,7 @@
           "Asp.Versioning.Mvc": "[10.2.1, )",
           "Asp.Versioning.Mvc.ApiExplorer": "[10.2.1, )",
           "Asp.Versioning.OpenApi": "[10.2.2, )",
+          "AspNet.Security.OAuth.Apple": "[10.0.0, )",
           "AspNet.Security.OAuth.GitHub": "[10.0.0, )",
           "MMCA.Common.Application": "[1.0.0, )",
           "MMCA.Common.Infrastructure": "[1.0.0, )",
@@ -1151,6 +1152,15 @@
           "Asp.Versioning.Mvc.ApiExplorer": "10.2.1",
           "Microsoft.AspNetCore.OpenApi": "10.0.10",
           "Microsoft.OpenApi": "[2.7.5, 3.0.0)"
+        }
+      },
+      "AspNet.Security.OAuth.Apple": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "nbZRB7YLt+cByQPZ06mRWlZYXLhqNt9KtUArOqBS1g2gJ8A9f3J5qLeTjvmzKJjXI7CCC+jGwDLrMOD9H0yYjw==",
+        "dependencies": {
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.14.0"
         }
       },
       "AspNet.Security.OAuth.GitHub": {
