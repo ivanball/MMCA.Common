@@ -463,4 +463,61 @@
   <data name="Auth.Login.ExternalSignInFailed" xml:space="preserve">
     <value>External sign-in did not complete. Please try again.</value>
   </data>
+  <data name="Auth.Login.ForgotPassword" xml:space="preserve">
+    <value>Forgot your password?</value>
+  </data>
+  <data name="Auth.Forgot.PageTitle" xml:space="preserve">
+    <value>Forgot Password</value>
+  </data>
+  <data name="Auth.Forgot.Title" xml:space="preserve">
+    <value>Forgot Your Password?</value>
+  </data>
+  <data name="Auth.Forgot.Subtitle" xml:space="preserve">
+    <value>Enter your email address and we will send you a link to reset your password</value>
+  </data>
+  <data name="Auth.Forgot.Submit" xml:space="preserve">
+    <value>Send Reset Link</value>
+  </data>
+  <data name="Auth.Forgot.Submit.Aria" xml:space="preserve">
+    <value>Send a password reset link</value>
+  </data>
+  <data name="Auth.Forgot.Confirmation" xml:space="preserve">
+    <value>If an account exists for that email address, a password reset link is on its way. Check your inbox and your spam folder.</value>
+  </data>
+  <data name="Auth.Forgot.BackToLogin" xml:space="preserve">
+    <value>Back to Sign In</value>
+  </data>
+  <data name="Auth.Reset.PageTitle" xml:space="preserve">
+    <value>Reset Password</value>
+  </data>
+  <data name="Auth.Reset.Title" xml:space="preserve">
+    <value>Reset Your Password</value>
+  </data>
+  <data name="Auth.Reset.Subtitle" xml:space="preserve">
+    <value>Enter the token from your reset email and choose a new password</value>
+  </data>
+  <data name="Auth.Reset.TokenLabel" xml:space="preserve">
+    <value>Reset Token</value>
+  </data>
+  <data name="Auth.Reset.NewPassword" xml:space="preserve">
+    <value>New Password</value>
+  </data>
+  <data name="Auth.Reset.ConfirmPassword" xml:space="preserve">
+    <value>Confirm New Password</value>
+  </data>
+  <data name="Auth.Reset.Submit" xml:space="preserve">
+    <value>Reset Password</value>
+  </data>
+  <data name="Auth.Reset.Submit.Aria" xml:space="preserve">
+    <value>Reset your password</value>
+  </data>
+  <data name="Auth.Reset.Success" xml:space="preserve">
+    <value>Your password has been reset. You can now sign in with your new password.</value>
+  </data>
+  <data name="Auth.Reset.GoToLogin" xml:space="preserve">
+    <value>Go to Sign In</value>
+  </data>
+  <data name="Auth.Reset.GenericError" xml:space="preserve">
+    <value>The password could not be reset. The link may have expired or already been used. Request a new one and try again.</value>
+  </data>
 </root>

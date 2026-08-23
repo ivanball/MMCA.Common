@@ -13,6 +13,8 @@
 | `/` | `Home` | Anonymous | Landing; consumer apps usually override. |
 | `/login` | `Auth/Login` | Anonymous | Accepts `?returnUrl=` (sanitized via `ReturnUrlProtector`). |
 | `/register` | `Auth/Register` | Anonymous | Client + server validation parity (EditForm). |
+| `/forgot-password` | `Auth/ForgotPassword` | Anonymous | Requests a reset email; always shows the same confirmation (anti-enumeration). |
+| `/reset-password` | `Auth/ResetPassword` | Anonymous | Accepts `?email=` and `?token=` prefill; the token stays editable for manual entry. |
 | `/auth/oauth-complete` | `Auth/OAuthComplete` | Anonymous | External-login callback landing. |
 | `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. Route carries `[Authorize]`. |
 | `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). Route carries `[Authorize]`. |
@@ -48,6 +50,9 @@ flowchart TD
     B -- no --> C[RedirectToLogin: /login?returnUrl=...]
     C --> D[Login or Register]
     D -->|success| E[Redirect to sanitized returnUrl]
+    D -->|forgot password| J[Request a reset: /forgot-password]
+    J -->|always confirms, email sent only if the account exists| K[Set a new password: /reset-password]
+    K -->|password reset| C
     B -- yes --> F{Authorized for route?}
     F -- yes --> G[Render page in MainLayout]
     F -- no --> H[/forbidden — 403 in app shell/]

@@ -281,4 +281,64 @@ public sealed class AuthUIService(
 
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<bool> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
+    {
+        LastError = null;
+
+        // Anonymous endpoint: no bearer header is attached, matching LoginAsync/RegisterAsync. A signed-in
+        // caller must not have the reset bound to their current session either.
+        using var httpClient = httpClientFactory.CreateClient(ApiClientName);
+        var response = await httpClient.PostAsJsonAsync(
+            new Uri("auth/forgot-password", UriKind.Relative), new ForgotPasswordRequest(email), cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return true;
+        }
+
+        // The endpoint answers 202 for every well-formed address, so a failure here is a malformed
+        // request or an outage — never a signal about whether the account exists.
+        LastError = await ReadProblemDetailAsync(response, cancellationToken);
+        LastError ??= "The password reset request could not be submitted. Please try again.";
+        return false;
+    }
+
+    public async Task<bool> ResetPasswordAsync(
+        string email,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        LastError = null;
+
+        using var httpClient = httpClientFactory.CreateClient(ApiClientName);
+        var response = await httpClient.PostAsJsonAsync(
+            new Uri("auth/reset-password", UriKind.Relative),
+            new ResetPasswordRequest(email, token, newPassword),
+            cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return true;
+        }
+
+        LastError = await ReadProblemDetailAsync(response, cancellationToken);
+        LastError ??= "The password could not be reset. Please request a new link and try again.";
+        return false;
+    }
+
+    private static async Task<string?> ReadProblemDetailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+            return problem?.Detail;
+        }
+        catch
+        {
+            // Response body may not be valid ProblemDetails
+            return null;
+        }
+    }
 }

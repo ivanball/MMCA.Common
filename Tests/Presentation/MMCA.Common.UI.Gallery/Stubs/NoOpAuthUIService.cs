@@ -29,4 +29,12 @@ internal sealed class NoOpAuthUIService : IAuthUIService
 
     public Task<bool> ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default) =>
         Task.FromResult(false);
+
+    // The Forgot Password page shows its confirmation regardless of this result (anti-enumeration),
+    // so the gallery still renders the post-submit state for scanning.
+    public Task<bool> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
+
+    public Task<bool> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default) =>
+        Task.FromResult(false);
 }

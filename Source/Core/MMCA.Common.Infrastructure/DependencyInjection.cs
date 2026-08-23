@@ -136,6 +136,12 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.TryAddScoped<Application.Auth.ILoginProtectionService, Auth.LoginProtectionService>();
 
+            services.AddOptions<Application.Auth.PasswordResetSettings>()
+                .Bind(configuration.GetSection(Application.Auth.PasswordResetSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.TryAddScoped<Application.Auth.IPasswordResetTokenService, Auth.PasswordResetTokenService>();
+
             services.AddOptions<MessageBusSettings>()
                 .Bind(configuration.GetSection(MessageBusSettings.SectionName))
                 .ValidateDataAnnotations()

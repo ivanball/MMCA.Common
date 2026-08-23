@@ -1,1 +1,29 @@
 #nullable enable
+MMCA.Common.Shared.Auth.ForgotPasswordRequest
+MMCA.Common.Shared.Auth.ForgotPasswordRequest.Deconstruct(out string! Email) -> void
+MMCA.Common.Shared.Auth.ForgotPasswordRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.ForgotPasswordRequest.Email.init -> void
+MMCA.Common.Shared.Auth.ForgotPasswordRequest.Equals(MMCA.Common.Shared.Auth.ForgotPasswordRequest other) -> bool
+MMCA.Common.Shared.Auth.ForgotPasswordRequest.ForgotPasswordRequest() -> void
+MMCA.Common.Shared.Auth.ForgotPasswordRequest.ForgotPasswordRequest(string! Email) -> void
+MMCA.Common.Shared.Auth.ResetPasswordRequest
+MMCA.Common.Shared.Auth.ResetPasswordRequest.Deconstruct(out string! Email, out string! Token, out string! NewPassword) -> void
+MMCA.Common.Shared.Auth.ResetPasswordRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.ResetPasswordRequest.Email.init -> void
+MMCA.Common.Shared.Auth.ResetPasswordRequest.Equals(MMCA.Common.Shared.Auth.ResetPasswordRequest other) -> bool
+MMCA.Common.Shared.Auth.ResetPasswordRequest.NewPassword.get -> string!
+MMCA.Common.Shared.Auth.ResetPasswordRequest.NewPassword.init -> void
+MMCA.Common.Shared.Auth.ResetPasswordRequest.ResetPasswordRequest() -> void
+MMCA.Common.Shared.Auth.ResetPasswordRequest.ResetPasswordRequest(string! Email, string! Token, string! NewPassword) -> void
+MMCA.Common.Shared.Auth.ResetPasswordRequest.Token.get -> string!
+MMCA.Common.Shared.Auth.ResetPasswordRequest.Token.init -> void
+override MMCA.Common.Shared.Auth.ForgotPasswordRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.ResetPasswordRequest.GetHashCode() -> int
+static MMCA.Common.Shared.Auth.ForgotPasswordRequest.operator !=(MMCA.Common.Shared.Auth.ForgotPasswordRequest left, MMCA.Common.Shared.Auth.ForgotPasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.ForgotPasswordRequest.operator ==(MMCA.Common.Shared.Auth.ForgotPasswordRequest left, MMCA.Common.Shared.Auth.ForgotPasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.ResetPasswordRequest.operator !=(MMCA.Common.Shared.Auth.ResetPasswordRequest left, MMCA.Common.Shared.Auth.ResetPasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.ResetPasswordRequest.operator ==(MMCA.Common.Shared.Auth.ResetPasswordRequest left, MMCA.Common.Shared.Auth.ResetPasswordRequest right) -> bool
+~override MMCA.Common.Shared.Auth.ForgotPasswordRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.ForgotPasswordRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.ResetPasswordRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.ResetPasswordRequest.ToString() -> string

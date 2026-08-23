@@ -15,3 +15,32 @@ MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInbox
 MMCA.Common.UI.Services.Notifications.NotificationState.OnPollerSlotFreed -> System.EventHandler?
 MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller(object! owner) -> bool
 MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller(object! owner) -> void
+MMCA.Common.UI.Pages.Auth.ForgotPassword
+MMCA.Common.UI.Pages.Auth.ForgotPassword.ForgotPassword() -> void
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.get -> string!
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.set -> void
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.ForgotPasswordModel() -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword
+MMCA.Common.UI.Pages.Auth.ResetPassword.Email.get -> string?
+MMCA.Common.UI.Pages.Auth.ResetPassword.Email.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword.ResetPassword() -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword.Token.get -> string?
+MMCA.Common.UI.Pages.Auth.ResetPassword.Token.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ConfirmPassword.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ConfirmPassword.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Email.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Email.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.NewPassword.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.NewPassword.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ResetPasswordModel() -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.set -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.AuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
+~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

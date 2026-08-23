@@ -463,4 +463,61 @@
   <data name="Auth.Login.ExternalSignInFailed" xml:space="preserve">
     <value>El inicio de sesión externo no se completó. Inténtalo de nuevo.</value>
   </data>
+  <data name="Auth.Login.ForgotPassword" xml:space="preserve">
+    <value>¿Olvidó su contraseña?</value>
+  </data>
+  <data name="Auth.Forgot.PageTitle" xml:space="preserve">
+    <value>Contraseña olvidada</value>
+  </data>
+  <data name="Auth.Forgot.Title" xml:space="preserve">
+    <value>¿Olvidó su contraseña?</value>
+  </data>
+  <data name="Auth.Forgot.Subtitle" xml:space="preserve">
+    <value>Escriba su correo electrónico y le enviaremos un enlace para restablecer su contraseña</value>
+  </data>
+  <data name="Auth.Forgot.Submit" xml:space="preserve">
+    <value>Enviar enlace</value>
+  </data>
+  <data name="Auth.Forgot.Submit.Aria" xml:space="preserve">
+    <value>Enviar un enlace para restablecer la contraseña</value>
+  </data>
+  <data name="Auth.Forgot.Confirmation" xml:space="preserve">
+    <value>Si existe una cuenta con ese correo electrónico, le enviaremos un enlace para restablecer la contraseña. Revise su bandeja de entrada y la carpeta de correo no deseado.</value>
+  </data>
+  <data name="Auth.Forgot.BackToLogin" xml:space="preserve">
+    <value>Volver a iniciar sesión</value>
+  </data>
+  <data name="Auth.Reset.PageTitle" xml:space="preserve">
+    <value>Restablecer contraseña</value>
+  </data>
+  <data name="Auth.Reset.Title" xml:space="preserve">
+    <value>Restablezca su contraseña</value>
+  </data>
+  <data name="Auth.Reset.Subtitle" xml:space="preserve">
+    <value>Escriba el código de su correo y elija una contraseña nueva</value>
+  </data>
+  <data name="Auth.Reset.TokenLabel" xml:space="preserve">
+    <value>Código de restablecimiento</value>
+  </data>
+  <data name="Auth.Reset.NewPassword" xml:space="preserve">
+    <value>Contraseña nueva</value>
+  </data>
+  <data name="Auth.Reset.ConfirmPassword" xml:space="preserve">
+    <value>Confirmar contraseña nueva</value>
+  </data>
+  <data name="Auth.Reset.Submit" xml:space="preserve">
+    <value>Restablecer contraseña</value>
+  </data>
+  <data name="Auth.Reset.Submit.Aria" xml:space="preserve">
+    <value>Restablecer su contraseña</value>
+  </data>
+  <data name="Auth.Reset.Success" xml:space="preserve">
+    <value>Su contraseña se ha restablecido. Ya puede iniciar sesión con su contraseña nueva.</value>
+  </data>
+  <data name="Auth.Reset.GoToLogin" xml:space="preserve">
+    <value>Ir a iniciar sesión</value>
+  </data>
+  <data name="Auth.Reset.GenericError" xml:space="preserve">
+    <value>No se pudo restablecer la contraseña. Es posible que el enlace haya caducado o que ya se haya usado. Solicite uno nuevo e inténtelo de nuevo.</value>
+  </data>
 </root>

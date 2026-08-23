@@ -1,4 +1,8 @@
 #nullable enable
+MMCA.Common.Infrastructure.Auth.PasswordResetTokenService
+MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.IssueAsync(string! email, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<string!>!>!
+MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.PasswordResetTokenService(MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings) -> void
+MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
 MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterUpcastedIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
 MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent>
 MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<TEvent!>! context) -> System.Threading.Tasks.Task!

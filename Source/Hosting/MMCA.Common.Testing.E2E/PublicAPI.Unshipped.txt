@@ -1,1 +1,29 @@
 #nullable enable
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.BackToLoginLink.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.ConfirmationAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.EmailField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.ForgotPasswordPage(Microsoft.Playwright.IPage! page) -> void
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.GotoAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.RequestResetAsync(string! email) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.SubmitButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.ConfirmPasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.EmailField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.ErrorAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.GoToLoginLink.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.GotoAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.GotoWithLinkAsync(string! email, string! token) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.NewPasswordField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.ResetAsync(string! email, string! token, string! newPassword) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.ResetPasswordPage(Microsoft.Playwright.IPage! page) -> void
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.SubmitButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.SuccessAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.TokenField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ForgotPasswordPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ForgotPassword_WithUnknownEmail_ShowsTheSameConfirmation() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.LoginPage_ForgotPasswordLink_NavigatesToForgotPasswordPage() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.PasswordResetTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ResetPasswordPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ResetPassword_WithEmptyForm_ShowsClientValidationErrors() -> System.Threading.Tasks.Task!
