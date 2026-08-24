@@ -4,6 +4,24 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.162.0] - 2026-08-24
+
+### Fixed
+
+- **Stale body scroll-lock when the mobile nav closes via a link or the backdrop.** `closeMenu()` in
+  the shared `navmenu.js` dispatched a non-bubbling synthetic `change` event, so the document-level
+  listener that clears `document.body.style.overflow` never fired: the menu closed visually but the
+  page stayed unscrollable. The MAUI `BlazorWebView` head uses the interactive router (no
+  `enhancedload` re-sync), so the stale lock persisted until app restart. The synthetic event now
+  bubbles (also restoring `aria-expanded`), and `closeMenu()` calls `syncOverflow()` directly.
+- **`MauiGeolocationService` rejected Android approximate-only location grants.** MAUI's composite
+  `LocationWhenInUse` permission reports a coarse-granted/fine-denied state (Android 12+
+  "Approximate") as `Denied` on check and `Restricted` on request, and the service accepted only
+  `Granted`, so approximate users silently lost location-based features. The service now treats
+  `Granted` or `Restricted` as success on both the check and request paths, and a new Android-only
+  coarse-location probe detects an existing approximate grant up front so those users are not
+  re-prompted with the precise-upgrade dialog on every read.
+
 ## [1.161.0] - 2026-08-23
 
 ### Added
