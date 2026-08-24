@@ -78,7 +78,31 @@
                         @L["Auth.Login.OrContinueWith"]
                     </MudText>
                     @* Native heads route external sign-in through the system-browser broker
-                       (ADR-043); web heads keep the anchor redirect flow. *@
+                       (ADR-043); web heads keep the anchor redirect flow. Apple renders first:
+                       App Store guideline 4.8 requires Sign in with Apple as an equivalent
+                       option wherever third-party login is offered, and Apple's HIG asks for
+                       at least equal prominence. *@
+                    @if (OAuthSettings.AppleEnabled)
+                    {
+                        @if (ExternalAuthBroker.IsAvailable)
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                       StartIcon="@Icons.Custom.Brands.Apple"
+                                       OnClick="@(() => SignInWithBrokerAsync("apple"))"
+                                       aria-label="@L["Auth.Login.SignInWithApple"]">
+                                @L["Auth.Login.SignInWithApple"]
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" FullWidth="true" Size="Size.Medium"
+                                       StartIcon="@Icons.Custom.Brands.Apple"
+                                       Href="@BuildOAuthUrl("apple")"
+                                       aria-label="@L["Auth.Login.SignInWithApple"]">
+                                @L["Auth.Login.SignInWithApple"]
+                            </MudButton>
+                        }
+                    }
                     @if (OAuthSettings.GoogleEnabled)
                     {
                         @if (ExternalAuthBroker.IsAvailable)
@@ -139,7 +163,7 @@
 
     protected override void OnInitialized()
     {
-        _hasExternalProviders = OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled;
+        _hasExternalProviders = OAuthSettings.AppleEnabled || OAuthSettings.GoogleEnabled || OAuthSettings.GitHubEnabled;
         _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
     }
 

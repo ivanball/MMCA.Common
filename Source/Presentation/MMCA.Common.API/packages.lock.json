@@ -31,6 +31,15 @@
           "Microsoft.OpenApi": "[2.7.5, 3.0.0)"
         }
       },
+      "AspNet.Security.OAuth.Apple": {
+        "type": "Direct",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "nbZRB7YLt+cByQPZ06mRWlZYXLhqNt9KtUArOqBS1g2gJ8A9f3J5qLeTjvmzKJjXI7CCC+jGwDLrMOD9H0yYjw==",
+        "dependencies": {
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.14.0"
+        }
+      },
       "AspNet.Security.OAuth.GitHub": {
         "type": "Direct",
         "requested": "[10.0.0, )",

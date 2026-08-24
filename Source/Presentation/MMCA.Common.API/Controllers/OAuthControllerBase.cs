@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using AspNet.Security.OAuth.Apple;
 using AspNet.Security.OAuth.GitHub;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -16,7 +17,7 @@ using IAuthenticationService = MMCA.Common.Application.Auth.IAuthenticationServi
 namespace MMCA.Common.API.Controllers;
 
 /// <summary>
-/// OAuth2 authentication flow for external providers (Google, GitHub), hoisted from the app hosts.
+/// OAuth2 authentication flow for external providers (Google, GitHub, Apple), hoisted from the app hosts.
 /// <para>
 /// Flow: challenge endpoint → provider login page → middleware handles callback at
 /// <c>/auth/callback/{provider}</c> (code exchange + state validation + cookie sign-in) →
@@ -58,6 +59,17 @@ public abstract class OAuthControllerBase(
     [HttpGet("github")]
     public ChallengeResult GitHubLogin([FromQuery] Uri? returnUrl = null) =>
         ChallengeProvider(GitHubAuthenticationDefaults.AuthenticationScheme, returnUrl);
+
+    /// <summary>
+    /// Initiates the Sign in with Apple flow by redirecting to Apple's authorization page.
+    /// Apple returns the callback as a cross-site form POST (response_mode=form_post is forced
+    /// by the name/email scopes), which the middleware handles at <c>/auth/callback/apple</c>
+    /// like any other provider callback.
+    /// </summary>
+    /// <param name="returnUrl">The URL to redirect to after successful authentication.</param>
+    [HttpGet("apple")]
+    public ChallengeResult AppleLogin([FromQuery] Uri? returnUrl = null) =>
+        ChallengeProvider(AppleAuthenticationDefaults.AuthenticationScheme, returnUrl);
 
     /// <summary>
     /// Completes the OAuth flow after the middleware has processed the provider callback.

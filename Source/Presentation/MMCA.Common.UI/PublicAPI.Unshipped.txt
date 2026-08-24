@@ -39,8 +39,10 @@ MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.get -> string!
 MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.set -> void
 MMCA.Common.UI.Services.Auth.AuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.AuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.ConfigurationOAuthUISettings.AppleEnabled.get -> bool
 MMCA.Common.UI.Services.Auth.IAuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.IOAuthUISettings.AppleEnabled.get -> bool
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
 ~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

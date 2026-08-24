@@ -18,6 +18,9 @@ public sealed class ConfigurationOAuthUISettings : IOAuthUISettings
     /// <summary>Whether GitHub login is available.</summary>
     public bool GitHubEnabled { get; }
 
+    /// <summary>Whether Sign in with Apple is available.</summary>
+    public bool AppleEnabled { get; }
+
     public ConfigurationOAuthUISettings(IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -25,6 +28,7 @@ public sealed class ConfigurationOAuthUISettings : IOAuthUISettings
         var oauth = configuration.GetSection("OAuth");
         GoogleEnabled = IsProviderEnabled(oauth, "Google");
         GitHubEnabled = IsProviderEnabled(oauth, "GitHub");
+        AppleEnabled = IsProviderEnabled(oauth, "Apple");
     }
 
     private static bool IsProviderEnabled(IConfigurationSection oauth, string provider)

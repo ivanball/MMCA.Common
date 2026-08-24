@@ -313,6 +313,9 @@
   <data name="Notif.Send.Field.Title.Required" xml:space="preserve">
     <value>Title is required.</value>
   </data>
+  <data name="Auth.Login.SignInWithApple" xml:space="preserve">
+    <value>Sign in with Apple</value>
+  </data>
   <data name="Auth.Login.SignInWithGitHub" xml:space="preserve">
     <value>Sign in with GitHub</value>
   </data>

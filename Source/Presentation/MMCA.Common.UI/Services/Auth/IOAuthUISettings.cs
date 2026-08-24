@@ -13,4 +13,7 @@ public interface IOAuthUISettings
 
     /// <summary>Whether GitHub login is available.</summary>
     bool GitHubEnabled => false;
+
+    /// <summary>Whether Sign in with Apple is available.</summary>
+    bool AppleEnabled => false;
 }
