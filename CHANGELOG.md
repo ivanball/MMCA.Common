@@ -4,7 +4,23 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.161.0] - 2026-08-23
+
+### Added
+
+- **Sign in with Apple external login provider.** Apple joins Google and GitHub in the external
+  OAuth pipeline, gated on `OAuth:Apple:ClientId` like the other providers. Apple issues no static
+  client secret, so the handler mints a short-lived ES256 client-secret JWT from
+  `OAuth:Apple:TeamId`, `OAuth:Apple:KeyId`, and `OAuth:Apple:PrivateKeyPem` (the .p8 content); the
+  middleware handles Apple's cross-site form-post callback at `/auth/callback/apple`, and the
+  single-use-code exchange flow is unchanged, so tokens never ride a redirect URL.
+  `OAuthControllerBase` gains the `GET auth/oauth/apple` challenge endpoint, `IOAuthUISettings`
+  gains `AppleEnabled` (default false, so existing consumers are untouched), and the shared login
+  page renders the Apple button first among the social buttons (App Store guideline 4.8 requires an
+  equivalent privacy-preserving option wherever third-party login is offered, and the Apple HIG asks
+  for at least equal prominence), localized in en and es.
+
+## [1.160.0] - 2026-08-22
 
 ### Added
 
@@ -28,6 +44,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   en/es resources. `MMCA.Common.Testing.E2E` adds `ForgotPasswordPage` / `ResetPasswordPage` page
   objects and `PasswordResetTestsBase` (navigation, anti-enumeration confirmation, client
   validation, and WCAG 2.1 AA scans of both pages).
+
+## [1.159.0] - 2026-08-22
+
+### Added
+
 - **Event upcaster registration extension point (ADR-010, ADR-090).** The consumer-side half of the
   event-schema versioning policy now ships as a mechanism instead of a convention:
   `IEventUpcaster<TSource, TTarget>` (a pure payload mapping from a retired integration-event
