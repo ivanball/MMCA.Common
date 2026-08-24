@@ -7,8 +7,9 @@
         var toggler = getToggler();
         if (toggler && toggler.checked) {
             toggler.checked = false;
-            toggler.dispatchEvent(new Event('change'));
+            toggler.dispatchEvent(new Event('change', { bubbles: true }));
         }
+        syncOverflow();
     }
 
     // Ensure body overflow matches the actual toggler state.

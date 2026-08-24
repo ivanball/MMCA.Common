@@ -22,13 +22,28 @@ public sealed class MauiGeolocationService : IGeolocationService
         try
         {
             var status = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>().ConfigureAwait(false);
-            if (status != PermissionStatus.Granted)
+#if ANDROID
+            // Android 12+ "Approximate only" grants coarse and denies fine, and the composite
+            // LocationWhenInUse check reports that as Denied. Probe coarse alone so an existing
+            // approximate grant is honored without re-showing the precise-upgrade prompt on
+            // every read.
+            if (status != PermissionStatus.Granted
+                && await Permissions.CheckStatusAsync<CoarseLocationOnly>().ConfigureAwait(false) == PermissionStatus.Granted)
+            {
+                status = PermissionStatus.Restricted;
+            }
+#endif
+            if (status is not (PermissionStatus.Granted or PermissionStatus.Restricted))
             {
                 status = await MainThread.InvokeOnMainThreadAsync(
                     static () => Permissions.RequestAsync<Permissions.LocationWhenInUse>()).ConfigureAwait(false);
             }
 
-            if (status != PermissionStatus.Granted)
+            // Restricted is a partial grant (Android approximate-only: RequestAsync counts one of
+            // the two runtime permissions granted). Essentials' own Geolocation calls accept
+            // Granted-or-Restricted; rejecting Restricted here would turn the deliberate coarse
+            // design into a silent no-hint for every approximate user.
+            if (status is not (PermissionStatus.Granted or PermissionStatus.Restricted))
             {
                 return null;
             }
@@ -60,4 +75,17 @@ public sealed class MauiGeolocationService : IGeolocationService
 
     private static bool IsFresh(Location location) =>
         location.Timestamp >= DateTimeOffset.UtcNow - LastKnownFreshness;
+
+#if ANDROID
+    /// <summary>
+    /// Coarse-only status probe. MAUI's <c>LocationWhenInUse</c> lists BOTH coarse and fine as
+    /// required, so its <c>CheckStatusAsync</c> can never say Granted for an approximate-only
+    /// grant; this subclass asks about coarse alone.
+    /// </summary>
+    private sealed class CoarseLocationOnly : Permissions.BasePlatformPermission
+    {
+        public override (string, bool)[] RequiredPermissions =>
+            [(global::Android.Manifest.Permission.AccessCoarseLocation, true)];
+    }
+#endif
 }
