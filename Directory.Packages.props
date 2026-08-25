@@ -14,19 +14,19 @@
     <!-- Supplies the versioning-aware OpenAPI registration (IApiVersioningBuilder.AddOpenApi) and the
          MapOpenApi().WithDocumentPerVersion() convention required by the Asp.Versioning 10.2 analyzers
          (AV0029/AV0030). -->
-    <PackageVersion Include="Asp.Versioning.OpenApi" Version="10.2.2" />
+    <PackageVersion Include="Asp.Versioning.OpenApi" Version="10.2.3" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <!-- Direct pin to bump the transitive Microsoft.OpenApi off 2.0.0 (pulled by AspNetCore.OpenApi)
          to the first patched version for GHSA-v5pm-xwqc-g5wc (circular-schema-reference DoS in OpenAPI
          parsing); referenced directly in MMCA.Common.API so the pin takes effect (no transitive pinning). -->
-    <PackageVersion Include="Microsoft.OpenApi" Version="2.12.0" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
     <!-- Application -->
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
     <PackageVersion Include="Microsoft.FeatureManagement" Version="4.6.0" />
     <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.6.0" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.16.20" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.1" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.3" />
     <!-- Infrastructure -->
@@ -88,7 +88,7 @@
          a commercial license key at build time (enforced by DependencyVersionTests, mirrored in
          the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.1" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.2" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aspire.AddCommonDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
@@ -121,7 +121,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Localization" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
-    <PackageVersion Include="MudBlazor" Version="9.8.0" />
+    <PackageVersion Include="MudBlazor" Version="9.9.0" />
     <PackageVersion Include="Polly" Version="8.7.0" />
     <!-- Circuit breaker on the outbox broker-publish path (MMCA.Common.Infrastructure). Polly.Core
          rather than the Polly meta-package: Core carries the v8 resilience-pipeline API on its own,
@@ -173,7 +173,7 @@
     <!-- Pin the transitive AngleSharp (pulled by bUnit) to the patched 1.5.2: bUnit 2.7.2 floors it at
          1.4.0, which carries CVE-2026-54570 / GHSA-pgww-w46g-26qg (mXSS via MathML annotation-xml). CPM
          does not pin transitives, so the two bUnit-referencing projects add a direct PackageReference. -->
-    <PackageVersion Include="AngleSharp" Version="1.7.1" />
+    <PackageVersion Include="AngleSharp" Version="1.7.2" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -200,7 +200,7 @@
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.10" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.5.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <!-- Benchmark smoke harness only (Tests/Performance, outside the .slnx) — rubric §12. -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.11" />
@@ -226,17 +226,17 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.9.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.4.6" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.4.6" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.4.6" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.5.2" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.2" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.2" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.2" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
   </ItemGroup>
