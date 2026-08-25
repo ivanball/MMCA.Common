@@ -4,9 +4,9 @@
     "net10.0": {
       "AwesomeAssertions": {
         "type": "Direct",
-        "requested": "[9.5.0, )",
-        "resolved": "9.5.0",
-        "contentHash": "F92MsjoF8B7IdcWETru4QGZx6VAl38qQPKNGS3kwPwlLB5lb0O4bhFqG8a8sz2estQJWkKmZkVy1r19HTaFcpg=="
+        "requested": "[9.6.0, )",
+        "resolved": "9.6.0",
+        "contentHash": "8kdtgI+tZIgP46ncnk650/dU4JSrn+n2Dkic8FvjIFn72P6Nv1Afyr5F8F3PsokHg1GBSBVo1/Z+eZOrU5esSA=="
       },
       "coverlet.collector": {
         "type": "Direct",
@@ -1229,7 +1229,7 @@
       "mmca.common.testing.architecture": {
         "type": "Project",
         "dependencies": {
-          "AwesomeAssertions": "[9.5.0, )",
+          "AwesomeAssertions": "[9.6.0, )",
           "NetArchTest.eNhancedEdition": "[1.4.5, )",
           "xunit.v3.extensibility.core": "[4.0.0, )"
         }
