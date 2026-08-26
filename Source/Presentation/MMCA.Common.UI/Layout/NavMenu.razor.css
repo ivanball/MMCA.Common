@@ -219,6 +219,11 @@
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding-top: 0.5rem;
     margin-top: auto;
+    /* This section only renders below 1024px, where Logout is the last row of the mobile menu.
+       Without bottom clearance it sits flush on the container edge, and on phones with a bottom
+       browser bar or home indicator it lands under the chrome; env() adds the device inset where
+       one exists (0 elsewhere), the 0.75rem is the breathing room on every phone. */
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .nav-user-identity {
