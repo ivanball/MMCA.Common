@@ -27,6 +27,36 @@ internal static class ErrorHttpMapping
         [ErrorType.Forbidden] = StatusCodes.Status403Forbidden,
         [ErrorType.UnprocessableEntity] = StatusCodes.Status422UnprocessableEntity,
         [ErrorType.Failure] = StatusCodes.Status400BadRequest,
+        [ErrorType.Unexpected] = StatusCodes.Status500InternalServerError,
+    }.ToFrozenDictionary();
+
+    /// <summary>
+    /// Severity rank per <see cref="ErrorType"/>, highest wins. A <see cref="Result"/> built by
+    /// <see cref="Result.Combine"/> aggregates errors in evaluation order, so picking the first
+    /// error's status would let an incidental validation failure downgrade a real 403 or 500 to a
+    /// 400. Ranking the categories instead makes the aggregate status independent of ordering.
+    /// The ranking, most to least severe:
+    /// <list type="number">
+    ///   <item><see cref="ErrorType.Unexpected"/> (500): the server itself is broken.</item>
+    ///   <item><see cref="ErrorType.Unauthorized"/> (401): the caller has not proven who they are, so nothing else can be judged.</item>
+    ///   <item><see cref="ErrorType.Forbidden"/> (403): the caller is known but not allowed.</item>
+    ///   <item><see cref="ErrorType.Conflict"/> (409): the request lost a race with the current state.</item>
+    ///   <item><see cref="ErrorType.NotFound"/> (404): the target does not exist.</item>
+    ///   <item><see cref="ErrorType.UnprocessableEntity"/> (422): well-formed but semantically rejected.</item>
+    ///   <item><see cref="ErrorType.Invariant"/>, <see cref="ErrorType.Validation"/>, <see cref="ErrorType.Failure"/> (400): the caller can fix the request.</item>
+    /// </list>
+    /// </summary>
+    private static readonly FrozenDictionary<ErrorType, int> ErrorTypeSeverityRank = new Dictionary<ErrorType, int>
+    {
+        [ErrorType.Unexpected] = 70,
+        [ErrorType.Unauthorized] = 60,
+        [ErrorType.Forbidden] = 50,
+        [ErrorType.Conflict] = 40,
+        [ErrorType.NotFound] = 30,
+        [ErrorType.UnprocessableEntity] = 20,
+        [ErrorType.Invariant] = 10,
+        [ErrorType.Validation] = 10,
+        [ErrorType.Failure] = 10,
     }.ToFrozenDictionary();
 
     /// <summary>
@@ -35,6 +65,41 @@ internal static class ErrorHttpMapping
     /// </summary>
     internal static int GetStatusCode(ErrorType errorType) =>
         ErrorTypeToStatusCode.GetValueOrDefault(errorType, StatusCodes.Status400BadRequest);
+
+    /// <summary>
+    /// Resolves the HTTP status code for a whole failure by taking the most severe
+    /// <see cref="ErrorType"/> present, per <see cref="ErrorTypeSeverityRank"/>. Ties keep the
+    /// earliest error, so a list of same-rank errors behaves exactly as before. Every error still
+    /// travels in the Problem Details "errors" array; only the status is ranked.
+    /// </summary>
+    /// <param name="errors">The errors carried by the failed result. Must not be empty.</param>
+    /// <returns>The HTTP status code of the highest-ranked error type present.</returns>
+    internal static int GetStatusCode(IReadOnlyList<Error> errors)
+    {
+        var mostSevere = errors[0].Type;
+        var highestRank = GetSeverityRank(mostSevere);
+
+        // Deliberately index-based: this runs on every failure response, and a LINQ
+        // MaxBy would allocate an enumerator plus a comparer closure per call.
+        for (var i = 1; i < errors.Count; i++)
+        {
+            var rank = GetSeverityRank(errors[i].Type);
+            if (rank > highestRank)
+            {
+                highestRank = rank;
+                mostSevere = errors[i].Type;
+            }
+        }
+
+        return GetStatusCode(mostSevere);
+    }
+
+    /// <summary>
+    /// Returns the severity rank of an error type. An unmapped type ranks lowest, so a category
+    /// added without a rank can never silently outrank a real 403 or 500.
+    /// </summary>
+    private static int GetSeverityRank(ErrorType errorType) =>
+        ErrorTypeSeverityRank.GetValueOrDefault(errorType, 0);
 
     /// <summary>
     /// Builds the "errors" extension array used in Problem Details responses. Each error is

@@ -100,6 +100,20 @@ public record Error(
     public static Error Failure(string code, string message, string? source = null, string? target = null) =>
         new(code, message, ErrorType.Failure, source, target);
 
+    /// <summary>
+    /// Creates an <see cref="ErrorType.Unexpected"/> error for a genuine server-side fault
+    /// (HTTP 500). Use it only when the caller cannot fix the request: a dependency that
+    /// failed, an unreachable branch, or a corrupt state. Business rule violations belong on
+    /// <see cref="Invariant"/> or <see cref="Failure"/>.
+    /// </summary>
+    /// <param name="code">Machine-readable error code.</param>
+    /// <param name="message">Human-readable error message.</param>
+    /// <param name="source">Optional origin context.</param>
+    /// <param name="target">Optional target field or entity.</param>
+    /// <returns>A new <see cref="Error"/> with <see cref="ErrorType.Unexpected"/>.</returns>
+    public static Error Unexpected(string code, string message, string? source = null, string? target = null) =>
+        new(code, message, ErrorType.Unexpected, source, target);
+
     /// <summary>Returns a copy of this error with the specified <paramref name="source"/>.</summary>
     /// <param name="source">The origin context to attach.</param>
     /// <returns>A new <see cref="Error"/> with the updated <see cref="Source"/>.</returns>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Gateway</PackageId>
+    <Description>MMCA framework YARP gateway building blocks: shared cluster request profiles with an h2c rollback switch, route/cluster trace headers, named per-route rate-limiter policies, and passive health-check defaults</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.Gateway.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The ONLY runtime dependency. Deliberately no reference to MMCA.Common.Aspire: this package
+         is the YARP layer and must stay usable by a gateway that has not taken the Azure Monitor /
+         OpenTelemetry / Key Vault graph that AddServiceDefaults brings. The two compose at the host
+         instead (see AddMmcaGateway's remarks on rate limiting). -->
+    <PackageReference Include="Yarp.ReverseProxy" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

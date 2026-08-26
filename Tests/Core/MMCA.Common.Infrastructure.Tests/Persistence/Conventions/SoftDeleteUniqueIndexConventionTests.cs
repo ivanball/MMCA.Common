@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Infrastructure.Persistence.Configuration;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -74,13 +75,57 @@ public sealed class SoftDeleteUniqueIndexConventionTests : IDisposable
     }
 
     [Fact]
-    public void HandAuthoredIndexFilter_IsLeftUntouched()
+    public void HandAuthoredIndexFilter_GetsTheSoftDeleteClauseAppended()
     {
         var index = _dbContext.Model.FindEntityType(typeof(FilteredIndexEntity))!
             .GetIndexes()
             .Single(i => i.IsUnique);
 
-        index.GetFilter().Should().Be("\"Name\" <> ''", "hand-authored filters win over the convention");
+        index.GetFilter().Should().Be(
+            "\"Name\" <> '' AND \"IsDeleted\" = 0",
+            "a hand-authored filter is extended, not skipped: otherwise the one unique index a model "
+                + "bothered to narrow is the only one a soft-deleted row can still block");
+    }
+
+    [Fact]
+    public async Task SoftDeletedRow_NoLongerBlocksAPreFilteredUniqueValue()
+    {
+        var original = new FilteredIndexEntity { Id = 1, Name = "X" };
+        _dbContext.Add(original);
+        await _dbContext.SaveChangesAsync();
+
+        original.Delete().IsSuccess.Should().BeTrue();
+        await _dbContext.SaveChangesAsync();
+
+        _dbContext.Add(new FilteredIndexEntity { Id = 2, Name = "X" });
+        var act = async () => await _dbContext.SaveChangesAsync();
+
+        await act.Should().NotThrowAsync(
+            "the appended clause must make the pre-filtered unique index ignore the soft-deleted row too");
+    }
+
+    [Fact]
+    public void HandAuthoredSoftDeleteFilter_IsNotAppendedTwice()
+    {
+        var index = _dbContext.Model.FindEntityType(typeof(AlreadySoftDeleteFilteredEntity))!
+            .GetIndexes()
+            .Single(i => i.IsUnique);
+
+        index.GetFilter().Should().Be(
+            "\"IsDeleted\" = 0",
+            "the convention recognizes its own predicate and leaves the filter exactly as it stands");
+    }
+
+    [Fact]
+    public void HandAuthoredSoftDeleteFilter_IsRecognizedThroughOtherQuotingAndSpacing()
+    {
+        var index = _dbContext.Model.FindEntityType(typeof(BracketQuotedFilterEntity))!
+            .GetIndexes()
+            .Single(i => i.IsUnique);
+
+        index.GetFilter().Should().Be(
+            "[IsDeleted]=0",
+            "the idempotency check normalizes quoting and whitespace, so a SQL-Server-shaped literal counts as the same clause");
     }
 
     // ── Test doubles ──
@@ -90,6 +135,18 @@ public sealed class SoftDeleteUniqueIndexConventionTests : IDisposable
     }
 
     public sealed class FilteredIndexEntity : AuditableBaseEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    /// <summary>Opts into the soft-delete predicate itself, the way PushNotificationConfiguration does.</summary>
+    public sealed class AlreadySoftDeleteFilteredEntity : AuditableBaseEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    /// <summary>Carries the SQL-Server-shaped literal on a SQLite model, to exercise the normalized match.</summary>
+    public sealed class BracketQuotedFilterEntity : AuditableBaseEntity<int>
     {
         public string Name { get; set; } = string.Empty;
     }
@@ -143,6 +200,22 @@ public sealed class SoftDeleteUniqueIndexConventionTests : IDisposable
                 e.Property(x => x.Name);
                 e.Property(x => x.RowVersion).IsConcurrencyToken();
                 e.HasIndex(x => x.Name).IsUnique().HasFilter("\"Name\" <> ''");
+            });
+            modelBuilder.Entity<AlreadySoftDeleteFilteredEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedNever();
+                e.Property(x => x.Name);
+                e.Property(x => x.RowVersion).IsConcurrencyToken();
+                e.HasIndex(x => x.Name).IsUnique().HasSoftDeleteFilter(DataSource.Sqlite);
+            });
+            modelBuilder.Entity<BracketQuotedFilterEntity>(e =>
+            {
+                e.HasKey(x => x.Id);
+                e.Property(x => x.Id).ValueGeneratedNever();
+                e.Property(x => x.Name);
+                e.Property(x => x.RowVersion).IsConcurrencyToken();
+                e.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted]=0");
             });
         }
     }

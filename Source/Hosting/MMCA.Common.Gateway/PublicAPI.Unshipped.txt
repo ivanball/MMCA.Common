@@ -1,0 +1,98 @@
+#nullable enable
+MMCA.Common.Gateway.Configuration.GatewayClusterProfileConfigFilter
+MMCA.Common.Gateway.Configuration.GatewayClusterProfileConfigFilter.ConfigureClusterAsync(Yarp.ReverseProxy.Configuration.ClusterConfig! cluster, System.Threading.CancellationToken cancel) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Configuration.ClusterConfig!>
+MMCA.Common.Gateway.Configuration.GatewayClusterProfileConfigFilter.ConfigureRouteAsync(Yarp.ReverseProxy.Configuration.RouteConfig! route, Yarp.ReverseProxy.Configuration.ClusterConfig? cluster, System.Threading.CancellationToken cancel) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Configuration.RouteConfig!>
+MMCA.Common.Gateway.Configuration.GatewayClusterProfileConfigFilter.GatewayClusterProfileConfigFilter(Microsoft.Extensions.Options.IOptions<MMCA.Common.Gateway.GatewaySettings!>! options) -> void
+MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter
+MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter.ConfigureClusterAsync(Yarp.ReverseProxy.Configuration.ClusterConfig! cluster, System.Threading.CancellationToken cancel) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Configuration.ClusterConfig!>
+MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter.ConfigureRouteAsync(Yarp.ReverseProxy.Configuration.RouteConfig! route, Yarp.ReverseProxy.Configuration.ClusterConfig? cluster, System.Threading.CancellationToken cancel) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Configuration.RouteConfig!>
+MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter.GatewayHealthCheckDefaultsConfigFilter(Microsoft.Extensions.Options.IOptions<MMCA.Common.Gateway.GatewaySettings!>! options) -> void
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Enabled.get -> bool
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Enabled.init -> void
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.GatewayActiveHealthCheckDefaults() -> void
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Interval.get -> System.TimeSpan
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Interval.init -> void
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Path.get -> string!
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Path.init -> void
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Policy.get -> string!
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Policy.init -> void
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Timeout.get -> System.TimeSpan
+MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Timeout.init -> void
+MMCA.Common.Gateway.GatewayClusterRequestProfile
+MMCA.Common.Gateway.GatewayClusterRequestProfile.ActivityTimeout.get -> System.TimeSpan?
+MMCA.Common.Gateway.GatewayClusterRequestProfile.ActivityTimeout.init -> void
+MMCA.Common.Gateway.GatewayClusterRequestProfile.AllowResponseBuffering.get -> bool?
+MMCA.Common.Gateway.GatewayClusterRequestProfile.AllowResponseBuffering.init -> void
+MMCA.Common.Gateway.GatewayClusterRequestProfile.GatewayClusterRequestProfile() -> void
+MMCA.Common.Gateway.GatewayClusterRequestProfile.Version.get -> string?
+MMCA.Common.Gateway.GatewayClusterRequestProfile.Version.init -> void
+MMCA.Common.Gateway.GatewayClusterRequestProfile.VersionPolicy.get -> string?
+MMCA.Common.Gateway.GatewayClusterRequestProfile.VersionPolicy.init -> void
+MMCA.Common.Gateway.GatewayHealthCheckDefaults
+MMCA.Common.Gateway.GatewayHealthCheckDefaults.Active.get -> MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults!
+MMCA.Common.Gateway.GatewayHealthCheckDefaults.Active.init -> void
+MMCA.Common.Gateway.GatewayHealthCheckDefaults.GatewayHealthCheckDefaults() -> void
+MMCA.Common.Gateway.GatewayHealthCheckDefaults.Passive.get -> MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults!
+MMCA.Common.Gateway.GatewayHealthCheckDefaults.Passive.init -> void
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.Enabled.get -> bool
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.Enabled.init -> void
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.GatewayPassiveHealthCheckDefaults() -> void
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.Policy.get -> string!
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.Policy.init -> void
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.ReactivationPeriod.get -> System.TimeSpan
+MMCA.Common.Gateway.GatewayPassiveHealthCheckDefaults.ReactivationPeriod.init -> void
+MMCA.Common.Gateway.GatewayReverseProxyExtensions
+MMCA.Common.Gateway.GatewayReverseProxyExtensions.extension(Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!)
+MMCA.Common.Gateway.GatewayReverseProxyExtensions.extension(Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!).AddMmcaGateway(MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
+MMCA.Common.Gateway.GatewayReverseProxyExtensions.extension(Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!).AddMmcaGateway(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
+MMCA.Common.Gateway.GatewayRoutePolicyPartition
+MMCA.Common.Gateway.GatewayRoutePolicyPartition.ClientIp = 0 -> MMCA.Common.Gateway.GatewayRoutePolicyPartition
+MMCA.Common.Gateway.GatewayRoutePolicyPartition.Global = 1 -> MMCA.Common.Gateway.GatewayRoutePolicyPartition
+MMCA.Common.Gateway.GatewayRoutePolicySettings
+MMCA.Common.Gateway.GatewayRoutePolicySettings.GatewayRoutePolicySettings() -> void
+MMCA.Common.Gateway.GatewayRoutePolicySettings.Partition.get -> MMCA.Common.Gateway.GatewayRoutePolicyPartition
+MMCA.Common.Gateway.GatewayRoutePolicySettings.Partition.init -> void
+MMCA.Common.Gateway.GatewayRoutePolicySettings.PermitLimit.get -> int
+MMCA.Common.Gateway.GatewayRoutePolicySettings.PermitLimit.init -> void
+MMCA.Common.Gateway.GatewayRoutePolicySettings.QueueLimit.get -> int
+MMCA.Common.Gateway.GatewayRoutePolicySettings.QueueLimit.init -> void
+MMCA.Common.Gateway.GatewayRoutePolicySettings.WindowSeconds.get -> int
+MMCA.Common.Gateway.GatewayRoutePolicySettings.WindowSeconds.init -> void
+MMCA.Common.Gateway.GatewaySettings
+MMCA.Common.Gateway.GatewaySettings.ClusterRequestDefaults.get -> MMCA.Common.Gateway.GatewayClusterRequestProfile?
+MMCA.Common.Gateway.GatewaySettings.ClusterRequestDefaults.init -> void
+MMCA.Common.Gateway.GatewaySettings.ClusterRequestOverrides.get -> System.Collections.Generic.IReadOnlyDictionary<string!, MMCA.Common.Gateway.GatewayClusterRequestProfile!>!
+MMCA.Common.Gateway.GatewaySettings.ClusterRequestOverrides.init -> void
+MMCA.Common.Gateway.GatewaySettings.ForwardHttp2.get -> bool
+MMCA.Common.Gateway.GatewaySettings.ForwardHttp2.init -> void
+MMCA.Common.Gateway.GatewaySettings.GatewaySettings() -> void
+MMCA.Common.Gateway.GatewaySettings.HealthCheckDefaults.get -> MMCA.Common.Gateway.GatewayHealthCheckDefaults!
+MMCA.Common.Gateway.GatewaySettings.HealthCheckDefaults.init -> void
+MMCA.Common.Gateway.GatewaySettings.RateLimiterPolicies.get -> System.Collections.Generic.IReadOnlyDictionary<string!, MMCA.Common.Gateway.GatewayRoutePolicySettings!>!
+MMCA.Common.Gateway.GatewaySettings.RateLimiterPolicies.init -> void
+MMCA.Common.Gateway.GatewaySettings.TraceHeaders.get -> MMCA.Common.Gateway.GatewayTraceHeaderSettings!
+MMCA.Common.Gateway.GatewaySettings.TraceHeaders.init -> void
+MMCA.Common.Gateway.GatewayTraceHeaderSettings
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.ClusterHeaderName.get -> string!
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.ClusterHeaderName.init -> void
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.Enabled.get -> bool
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.Enabled.init -> void
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.GatewayTraceHeaderSettings() -> void
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.RouteHeaderName.get -> string!
+MMCA.Common.Gateway.GatewayTraceHeaderSettings.RouteHeaderName.init -> void
+MMCA.Common.Gateway.RateLimiting.GatewayRoutePolicyExtensions
+MMCA.Common.Gateway.RateLimiting.GatewayRoutePolicyExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Gateway.RateLimiting.GatewayRoutePolicyExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayRoutePolicies(MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Gateway.Transforms.GatewayTraceHeaderTransformProvider
+MMCA.Common.Gateway.Transforms.GatewayTraceHeaderTransformProvider.Apply(Yarp.ReverseProxy.Transforms.Builder.TransformBuilderContext! context) -> void
+MMCA.Common.Gateway.Transforms.GatewayTraceHeaderTransformProvider.GatewayTraceHeaderTransformProvider(Microsoft.Extensions.Options.IOptions<MMCA.Common.Gateway.GatewaySettings!>! options) -> void
+MMCA.Common.Gateway.Transforms.GatewayTraceHeaderTransformProvider.ValidateCluster(Yarp.ReverseProxy.Transforms.Builder.TransformClusterValidationContext! context) -> void
+MMCA.Common.Gateway.Transforms.GatewayTraceHeaderTransformProvider.ValidateRoute(Yarp.ReverseProxy.Transforms.Builder.TransformRouteValidationContext! context) -> void
+const MMCA.Common.Gateway.GatewaySettings.SectionName = "MmcaGateway" -> string!
+const MMCA.Common.Gateway.GatewayTraceHeaderSettings.DefaultClusterHeaderName = "X-MMCA-Cluster" -> string!
+const MMCA.Common.Gateway.GatewayTraceHeaderSettings.DefaultRouteHeaderName = "X-MMCA-Route" -> string!
+static MMCA.Common.Gateway.GatewayReverseProxyExtensions.AddMmcaGateway(this Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder! builder, MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
+static MMCA.Common.Gateway.GatewayReverseProxyExtensions.AddMmcaGateway(this Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder! builder, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
+static MMCA.Common.Gateway.RateLimiting.GatewayRoutePolicyExtensions.AddGatewayRoutePolicies(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

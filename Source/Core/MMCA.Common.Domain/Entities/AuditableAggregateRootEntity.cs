@@ -118,4 +118,47 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
 
         return Result.Success(child);
     }
+
+    /// <summary>
+    /// Cascades a soft-delete across a child entity collection: every child that is still active is
+    /// deleted, and the failures (if any) are aggregated into one result. Children that are already
+    /// deleted are skipped rather than reported, so re-deleting a parent is idempotent with respect
+    /// to its children and does not surface an <c>Error.AlreadyDeleted</c> the caller cannot act on.
+    /// <para>
+    /// This replaces the loop each aggregate used to hand-roll in its own <c>Delete()</c> override
+    /// (iterate the children, call <c>Delete()</c>, collect the results, combine). Call it before
+    /// deleting the root so a failing child aborts the whole cascade:
+    /// <code>
+    /// public override Result Delete() =>
+    ///     Result.Combine(DeleteChildren&lt;OrderLine, OrderLineIdentifierType&gt;(_lines), base.Delete());
+    /// </code>
+    /// </para>
+    /// </summary>
+    /// <typeparam name="TChild">The child entity type (must be auditable and have an identifier).</typeparam>
+    /// <typeparam name="TChildId">The child entity's identifier type.</typeparam>
+    /// <param name="children">The child entities to soft-delete.</param>
+    /// <returns>
+    /// A success result when every active child was deleted (or the collection had none), otherwise
+    /// a failure carrying every child's error.
+    /// </returns>
+    protected static Result DeleteChildren<TChild, TChildId>(IEnumerable<TChild> children)
+        where TChild : AuditableBaseEntity<TChildId>
+        where TChildId : notnull
+    {
+        ArgumentNullException.ThrowIfNull(children);
+
+        List<Result>? results = null;
+
+        foreach (var child in children)
+        {
+            if (child.IsDeleted)
+            {
+                continue;
+            }
+
+            (results ??= []).Add(child.Delete());
+        }
+
+        return results is null ? Result.Success() : Result.Combine([.. results]);
+    }
 }

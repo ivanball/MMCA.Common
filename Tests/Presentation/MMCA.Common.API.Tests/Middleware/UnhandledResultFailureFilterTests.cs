@@ -62,6 +62,40 @@ public sealed class UnhandledResultFailureFilterTests
         objectResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
     }
 
+    // ── Aggregated errors use the most severe type, not the first ──
+    [Fact]
+    public void OnResultExecuting_AggregatedErrors_UsesMostSevereStatus()
+    {
+        var sut = new UnhandledResultFailureFilter(
+            NullLogger<UnhandledResultFailureFilter>.Instance);
+
+        var failedResult = Result.Combine(
+            Result.Failure(Error.Validation("test", "invalid")),
+            Result.Failure(Error.Forbidden("test.forbidden", "denied")));
+        var context = CreateContext(new ObjectResult(failedResult));
+
+        sut.OnResultExecuting(context);
+
+        var objectResult = (ObjectResult)context.Result;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    // ── Unexpected error maps to 500 ──
+    [Fact]
+    public void OnResultExecuting_UnexpectedError_Returns500()
+    {
+        var sut = new UnhandledResultFailureFilter(
+            NullLogger<UnhandledResultFailureFilter>.Instance);
+
+        var failedResult = Result.Failure(Error.Unexpected("test", "the server broke"));
+        var context = CreateContext(new ObjectResult(failedResult));
+
+        sut.OnResultExecuting(context);
+
+        var objectResult = (ObjectResult)context.Result;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
     // ── Success Result passes through ──
     [Fact]
     public void OnResultExecuting_SuccessResult_DoesNotModifyResult()

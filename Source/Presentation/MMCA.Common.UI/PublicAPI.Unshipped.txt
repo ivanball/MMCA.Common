@@ -43,6 +43,26 @@ MMCA.Common.UI.Services.Auth.ConfigurationOAuthUISettings.AppleEnabled.get -> bo
 MMCA.Common.UI.Services.Auth.IAuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.IOAuthUISettings.AppleEnabled.get -> bool
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.get -> string!
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.set -> void
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.NotificationSendModel() -> void
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.get -> string!
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.set -> void
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator.DataAnnotationsModelValidator(Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> void
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator.Validate(object! model, string! propertyPath) -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator.ValidateValue(object! model, string! propertyPath, object? value) -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.UI.Validation.IModelValidator
+MMCA.Common.UI.Validation.IModelValidator.Validate(object! model, string! propertyPath) -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.UI.Validation.ModelValidation
+const MMCA.Common.UI.Pages.Notifications.NotificationSendModel.BodyMaxLength = 2000 -> int
+const MMCA.Common.UI.Pages.Notifications.NotificationSendModel.TitleMaxLength = 200 -> int
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
+static MMCA.Common.UI.Validation.DataAnnotationsModelValidator.Instance.get -> MMCA.Common.UI.Validation.DataAnnotationsModelValidator!
+static MMCA.Common.UI.Validation.ModelValidation.For(object! model, MMCA.Common.UI.Validation.IModelValidator? validator = null) -> System.Func<object!, string!, System.Collections.Generic.IEnumerable<string!>!>!
+static MMCA.Common.UI.Validation.ModelValidation.ForProperty<TModel, TValue>(TModel! model, System.Linq.Expressions.Expression<System.Func<TModel!, TValue>!>! property, MMCA.Common.UI.Validation.DataAnnotationsModelValidator? validator = null) -> System.Func<TValue, System.Collections.Generic.IEnumerable<string!>!>!
+static MMCA.Common.UI.Validation.ModelValidation.GetPropertyPath<TModel, TValue>(System.Linq.Expressions.Expression<System.Func<TModel, TValue>!>! property) -> string!
+static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, string! propertyPath) -> bool
 ~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

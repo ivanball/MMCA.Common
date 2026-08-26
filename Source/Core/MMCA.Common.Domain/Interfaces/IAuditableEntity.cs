@@ -21,4 +21,10 @@ public interface IAuditableEntity
 
     /// <summary>Gets the identifier of the user who last modified this entity, or <see langword="null"/> if never modified.</summary>
     UserIdentifierType? LastModifiedBy { get; }
+
+    /// <summary>Gets the UTC timestamp of the soft-delete, or <see langword="null"/> while the entity is active.</summary>
+    DateTime? DeletedOn { get; }
+
+    /// <summary>Gets the identifier of the user who soft-deleted this entity, or <see langword="null"/> while the entity is active.</summary>
+    UserIdentifierType? DeletedBy { get; }
 }

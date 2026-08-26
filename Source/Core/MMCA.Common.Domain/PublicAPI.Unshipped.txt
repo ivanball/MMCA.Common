@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Domain.Interfaces.IAuditableEntity.DeletedBy.get -> int?
+MMCA.Common.Domain.Interfaces.IAuditableEntity.DeletedOn.get -> System.DateTime?
+static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.DeleteChildren<TChild, TChildId>(System.Collections.Generic.IEnumerable<TChild!>! children) -> MMCA.Common.Shared.Abstractions.Result!
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedBy.get -> int?
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedOn.get -> System.DateTime?

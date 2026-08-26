@@ -18,6 +18,7 @@ namespace MMCA.Common.Grpc;
 ///   <item><see cref="ErrorType.Unauthorized"/> → <see cref="StatusCode.Unauthenticated"/></item>
 ///   <item><see cref="ErrorType.Forbidden"/> → <see cref="StatusCode.PermissionDenied"/></item>
 ///   <item><see cref="ErrorType.UnprocessableEntity"/> → <see cref="StatusCode.FailedPrecondition"/></item>
+///   <item><see cref="ErrorType.Unexpected"/> → <see cref="StatusCode.Internal"/></item>
 /// </list>
 /// </summary>
 [SuppressMessage(
@@ -41,6 +42,7 @@ public static class ResultGrpcExtensions
             [ErrorType.Forbidden] = StatusCode.PermissionDenied,
             [ErrorType.UnprocessableEntity] = StatusCode.FailedPrecondition,
             [ErrorType.Failure] = StatusCode.InvalidArgument,
+            [ErrorType.Unexpected] = StatusCode.Internal,
         }.ToFrozenDictionary();
 
     extension(ErrorType errorType)

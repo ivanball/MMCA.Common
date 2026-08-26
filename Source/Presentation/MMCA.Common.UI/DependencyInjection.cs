@@ -62,13 +62,15 @@ public static class DependencyInjection
             // Named HttpClient used by all EntityServiceBase-derived services
             services.AddHttpClient("APIClient", (serviceProvider, client) =>
             {
+                // No endpoint guard here: resolving IOptions<ApiSettings>.Value runs the
+                // ValidateDataAnnotations rules registered above, so a missing [Required] ApiEndpoint
+                // already fails as an OptionsValidationException (at startup via ValidateOnStart, and
+                // again here for any host that skips the startup validator). A second hand-written
+                // check would only give the same failure a different, less informative exception.
                 var apiSettings = serviceProvider.GetRequiredService<IOptions<ApiSettings>>().Value;
-                if (string.IsNullOrWhiteSpace(apiSettings.ApiEndpoint))
-                {
-                    throw new InvalidOperationException("ApiEndpoint is required and cannot be null or empty.");
-                }
 
-                client.BaseAddress = new Uri(apiSettings.ApiEndpoint, UriKind.Absolute);
+                // Null-forgiving: the [Required] annotation above is what guarantees this is populated.
+                client.BaseAddress = new Uri(apiSettings.ApiEndpoint!, UriKind.Absolute);
 
                 // HttpClient's own default is 100s, chosen by the BCL with no knowledge of the
                 // resilience budget: it would cut a call off mid-policy at an arbitrary point.

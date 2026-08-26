@@ -2,8 +2,10 @@ namespace MMCA.Common.Shared.Abstractions;
 
 /// <summary>
 /// Classifies domain errors into categories that map directly to HTTP status codes
-/// via <c>ApiControllerBase</c>. The first error in a <see cref="Result"/> determines
-/// the response status code.
+/// via <c>ApiControllerBase</c>. When a <see cref="Result"/> carries several errors
+/// (typically from <see cref="Result.Combine"/>), the response status code is the one
+/// belonging to the highest-ranked category present, so an aggregate can never be
+/// downgraded by the ordering of its errors.
 /// </summary>
 public enum ErrorType
 {
@@ -29,5 +31,12 @@ public enum ErrorType
     UnprocessableEntity,
 
     /// <summary>General/unclassified failure (HTTP 400).</summary>
-    Failure
+    Failure,
+
+    /// <summary>
+    /// Genuine server-side fault: the request was well-formed and permitted, but the server
+    /// could not complete it (HTTP 500). Reserve this for faults the caller cannot fix by
+    /// changing the request, and never for business rule violations.
+    /// </summary>
+    Unexpected
 }

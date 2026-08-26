@@ -221,6 +221,10 @@
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
+    <!-- Gateway (MMCA.Common.Gateway ONLY) — the YARP reverse proxy the shared gateway building
+         blocks are written against. Deliberately not referenced from MMCA.Common.Aspire: a service
+         host that takes AddServiceDefaults must not inherit a proxy dependency it never uses. -->
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <!-- Aspire / ServiceDefaults -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.9.0" />

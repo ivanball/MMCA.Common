@@ -72,6 +72,21 @@ public sealed class AuditableBaseEntityAdditionalTests
         entity.CreatedBy.Should().Be(default);
         entity.LastModifiedOn.Should().BeNull();
         entity.LastModifiedBy.Should().BeNull();
+        entity.DeletedOn.Should().BeNull();
+        entity.DeletedBy.Should().BeNull();
         entity.RowVersion.Should().BeEmpty();
+    }
+
+    // ── Delete stamps are infrastructure's job ──
+    [Fact]
+    public void Delete_DoesNotStampDeletedOnOrDeletedBy()
+    {
+        var entity = new UndeletableEntity { Id = 1, Name = "Test" };
+
+        entity.Delete().IsSuccess.Should().BeTrue();
+
+        entity.DeletedOn.Should().BeNull(
+            "the clock and the current user live in infrastructure: the audit interceptor stamps the pair from the IsDeleted transition");
+        entity.DeletedBy.Should().BeNull();
     }
 }

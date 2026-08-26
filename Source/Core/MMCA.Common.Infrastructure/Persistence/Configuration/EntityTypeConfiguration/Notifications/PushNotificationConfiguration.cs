@@ -62,8 +62,9 @@ internal sealed class PushNotificationConfiguration
         // The IsDeleted clause follows the same precedent SoftDeleteUniqueIndexConvention applies
         // to every other unique index on a soft-deletable entity: without it a soft-deleted row
         // keeps occupying its dedup slot forever and blocks a resend under the same key (BugHunt
-        // M58). The convention leaves a hand-authored filter alone, so this index has to opt in,
-        // which HasSoftDeleteFilter does while reading the column name and quoting from the model.
+        // M58). The convention now appends its clause to a hand-authored filter too, so declaring it
+        // here is belt and braces: HasSoftDeleteFilter produces the same SQL, in the same order, from
+        // the column name and quoting read off the model, and the convention recognizes it and stops.
         builder.HasIndex(p => p.DedupKey)
             .IsUnique()
             .HasSoftDeleteFilter(additionalFilter: "[DedupKey] IS NOT NULL");
