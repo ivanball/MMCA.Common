@@ -42,4 +42,20 @@ public static class ClaimsPrincipalExtensions
         var value = principal.FindUserIdValue();
         return UserIdentifierType.TryParse(value, CultureInfo.InvariantCulture, out var userId) ? userId : null;
     }
+
+    /// <summary>
+    /// Returns the refresh-session identifier the token was minted for (the <c>sid</c> claim), or
+    /// <see langword="null"/> when the principal carries none or carries an unparsable value.
+    /// </summary>
+    /// <remarks>
+    /// Null is an ordinary answer, not an error: tokens issued before <c>sid</c> shipped carry no
+    /// such claim, and every reader treats its absence as "the caller's own session is unknown" (a
+    /// device list simply marks no row as current). Nothing authenticates on this value.
+    /// </remarks>
+    /// <param name="principal">The principal to read; a null principal yields null.</param>
+    public static Guid? FindSessionId(this ClaimsPrincipal? principal)
+    {
+        var value = principal?.FindFirst(AuthClaimTypes.SessionId)?.Value;
+        return Guid.TryParse(value, CultureInfo.InvariantCulture, out var sessionId) ? sessionId : null;
+    }
 }

@@ -69,6 +69,20 @@ internal sealed class EFRefreshSessionStore(
             .ConfigureAwait(false);
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The user is part of the predicate, not a check after the fact: the id arrives from a client, so
+    /// filtering in the query is what makes another account's session unreadable rather than merely
+    /// rejected after being read.
+    /// </remarks>
+    public async Task<RefreshSession?> FindByIdAsync(
+        Guid id,
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default) =>
+        await Sessions
+            .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId, cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         dbContextFactory.SaveChangesAsync(cancellationToken);
 

@@ -80,6 +80,43 @@ public interface IAuthenticationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the user's live sessions: one row per signed-in device, newest first, with the caller's
+    /// own device marked. Revoked and expired sessions are left out, so the list is exactly what a
+    /// "sign this device out" control can act on.
+    /// </summary>
+    /// <param name="userId">The user whose devices to list.</param>
+    /// <param name="currentSessionId">
+    /// The session the calling access token was minted for (its <c>sid</c> claim), used only to set
+    /// <see cref="RefreshSessionSummaryResponse.IsCurrent"/>. Pass <see langword="null"/> when the
+    /// caller's token carries no <c>sid</c>; no row is then marked current.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The live sessions, newest first.</returns>
+    Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+        UserIdentifierType userId,
+        Guid? currentSessionId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Signs one named device out: revokes the user's session with this identifier.
+    /// </summary>
+    /// <remarks>
+    /// A session id that is unknown, or that belongs to another account, returns <c>NotFound</c> and
+    /// is indistinguishable from the other, so a caller cannot probe for another user's sessions.
+    /// Revoking a session that is <b>already</b> revoked succeeds and changes nothing: the caller
+    /// asked for that device to be signed out and it is, and a device list a user is clicking through
+    /// is exactly where a duplicate request comes from.
+    /// </remarks>
+    /// <param name="userId">The user the session must belong to.</param>
+    /// <param name="sessionId">The session to revoke.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A success result, or a not-found error.</returns>
+    Task<Result> RevokeSessionByIdAsync(
+        UserIdentifierType userId,
+        Guid sessionId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Authenticates a user via an external OAuth provider. Finds an existing account by
     /// provider+key or creates a new one from the OAuth claims.
     /// </summary>

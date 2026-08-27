@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -56,11 +58,28 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <summary>The cap applied when <c>RefreshSessions:MaxActiveSessionsPerUser</c> is not configured.</summary>
     private const int DefaultMaxActiveSessionsPerUser = 10;
 
+    /// <summary>
+    /// The token service handed to subclasses, wrapped so that a token minted while a session is
+    /// being opened or rotated carries that session's <c>sid</c> claim without the subclass knowing
+    /// it exists. See <see cref="CreateAccessTokenForSession"/> for why the wrapper is the extension
+    /// point rather than a changed hook signature.
+    /// </summary>
+    private readonly SessionStampingTokenService _sessionStampingTokenService = new(tokenService);
+
     /// <summary>The unit of work (exposed for app-level workflows such as external login).</summary>
     protected IUnitOfWork UnitOfWork => unitOfWork;
 
-    /// <summary>The token service (exposed for app-level workflows such as external login).</summary>
-    protected ITokenService TokenService => tokenService;
+    /// <summary>
+    /// The token service (exposed for app-level workflows such as external login).
+    /// <para>
+    /// Minting through this property rather than through an injected <see cref="ITokenService"/> is
+    /// what puts the <c>sid</c> claim on the token: while the workflow is issuing or rotating a
+    /// session, this instance stamps that session's id onto every access token it mints. A subclass
+    /// that mints from its own <see cref="ITokenService"/> reference still produces a valid token,
+    /// just one with no <c>sid</c>.
+    /// </para>
+    /// </summary>
+    protected ITokenService TokenService => _sessionStampingTokenService;
 
     /// <summary>The time provider (exposed for app-level workflows such as external login).</summary>
     protected TimeProvider TimeProvider => timeProvider;
@@ -310,9 +329,12 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure<AuthenticationResponse>(rotated.Errors);
         }
 
+        // The successor session is a NEW row with a new id, so the access token handed back carries a
+        // new `sid` too: a client's current-device marker follows the rotation instead of pointing at
+        // the session the rotation just revoked.
         return Result.Success(new AuthenticationResponse(
-            CreateAccessToken(user),
-            rotated.Value!,
+            CreateAccessTokenForSession(user, rotated.Value!.SessionId),
+            rotated.Value.RefreshToken,
             now.Add(AccessTokenLifetime)));
     }
 
@@ -375,6 +397,77 @@ public abstract class AuthenticationServiceBase<TUser>(
         return Result.Success();
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Reads through the same "un-revoked sessions for this user" query the cap and family revocation
+    /// use, then drops the expired ones in memory: the store returns expired-but-unrevoked rows on
+    /// purpose (they still occupy a row against the table), and a device list must not offer a user a
+    /// device that can no longer authenticate. No user lookup is involved, so a list is one query.
+    /// </remarks>
+    public async Task<Result<IReadOnlyList<RefreshSessionSummaryResponse>>> GetSessionsAsync(
+        UserIdentifierType userId,
+        Guid? currentSessionId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var sessions = await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyList<RefreshSessionSummaryResponse> summaries =
+        [
+            .. sessions
+                .Where(s => s.IsActiveAt(now))
+                .OrderByDescending(s => s.CreatedAt)
+                .ThenByDescending(s => s.Id)
+                .Select(s => new RefreshSessionSummaryResponse(
+                    s.Id,
+                    s.CreatedAt,
+                    s.ExpiresAt,
+                    s.IpAddress,
+                    s.UserAgent,
+                    currentSessionId is { } current && s.Id == current))
+        ];
+
+        return Result.Success(summaries);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The ownership check is the store query itself (<see cref="IRefreshSessionStore.FindByIdAsync"/>
+    /// is scoped to the user), so another account's session id and an id that never existed produce
+    /// the same <c>NotFound</c> and neither confirms the other user's session exists.
+    /// <para>
+    /// An already-revoked session is a success that writes nothing. The alternative, failing it, would
+    /// turn the most ordinary duplicate in this feature (a device list clicked twice, or a session the
+    /// cap evicted between render and click) into an error for a caller whose request is already
+    /// satisfied.
+    /// </para>
+    /// </remarks>
+    public async Task<Result> RevokeSessionByIdAsync(
+        UserIdentifierType userId,
+        Guid sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = await refreshSessions.FindByIdAsync(sessionId, userId, cancellationToken).ConfigureAwait(false);
+        if (session is null)
+        {
+            return Result.Failure(Error.NotFoundError(
+                "Auth.SessionNotFound",
+                "The session was not found.",
+                nameof(RevokeSessionByIdAsync),
+                nameof(RefreshSession)));
+        }
+
+        if (session.IsRevoked)
+        {
+            return Result.Success();
+        }
+
+        session.Revoke(timeProvider.GetUtcNow().UtcDateTime, RefreshSession.ReasonSignedOut);
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
     /// <summary>
     /// Opens a refresh session for the user, persists it, and returns the token-pair response. Shared
     /// by the login/registration flows and reusable by app-level flows (e.g. external login). The
@@ -392,9 +485,10 @@ public abstract class AuthenticationServiceBase<TUser>(
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var accessToken = CreateAccessToken(user);
         var now = timeProvider.GetUtcNow().UtcDateTime;
 
+        // The session is opened BEFORE the access token is minted, because the token carries the
+        // session's id in its `sid` claim and a session only has an id once it has been created.
         var opened = await OpenSessionAsync(user.Id, now, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
         if (opened.IsFailure)
         {
@@ -404,8 +498,8 @@ public abstract class AuthenticationServiceBase<TUser>(
         await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success(new AuthenticationResponse(
-            accessToken,
-            opened.Value!,
+            CreateAccessTokenForSession(user, opened.Value!.SessionId),
+            opened.Value.RefreshToken,
             now.Add(AccessTokenLifetime)));
     }
 
@@ -427,6 +521,38 @@ public abstract class AuthenticationServiceBase<TUser>(
 
     /// <summary>Mints the access token with the app's claim set and display-name choice.</summary>
     protected abstract string CreateAccessToken(TUser user);
+
+    /// <summary>
+    /// Mints the access token for a specific refresh session, so the token can name the device it
+    /// belongs to (the standard <c>sid</c> claim).
+    /// </summary>
+    /// <remarks>
+    /// The default stamps the claim without the app hook participating: it arms
+    /// <see cref="TokenService"/> for the duration of the <see cref="CreateAccessToken"/> call, and
+    /// the wrapper appends <c>sid</c> to whatever claim set the app passed. Doing it here rather than
+    /// by changing <see cref="CreateAccessToken"/>'s signature is what makes the claim additive: every
+    /// existing subclass keeps compiling and starts emitting <c>sid</c> with no edit.
+    /// <para>
+    /// The arming is a plain field because this service is resolved per request (scoped, like the unit
+    /// of work it saves through) and one request issues one token at a time. Override this method
+    /// instead of relying on the wrapper if an app mints from its own token-service reference.
+    /// </para>
+    /// </remarks>
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="sessionId">The refresh session the token is being minted for.</param>
+    /// <returns>The signed access token.</returns>
+    protected virtual string CreateAccessTokenForSession(TUser user, Guid sessionId)
+    {
+        _sessionStampingTokenService.CurrentSessionId = sessionId;
+        try
+        {
+            return CreateAccessToken(user);
+        }
+        finally
+        {
+            _sessionStampingTokenService.CurrentSessionId = null;
+        }
+    }
 
     /// <summary>Extra login gate on the untracked candidate (default: none). Failures are returned as-is.</summary>
     protected virtual Task<Result> ValidateLoginCandidateAsync(TUser untrackedUser, CancellationToken cancellationToken) =>
@@ -499,8 +625,8 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// Mints a refresh token, opens its session, and stages the insert (without saving). Evicts the
     /// user's oldest live session first when the cap is already full.
     /// </summary>
-    /// <returns>The plaintext refresh token to hand to the client.</returns>
-    private async Task<Result<string>> OpenSessionAsync(
+    /// <returns>The plaintext refresh token to hand to the client, and the new session's id.</returns>
+    private async Task<Result<IssuedSession>> OpenSessionAsync(
         UserIdentifierType userId,
         DateTime now,
         string? ipAddress,
@@ -518,21 +644,22 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         if (sessionResult.IsFailure)
         {
-            return Result.Failure<string>(sessionResult.Errors);
+            return Result.Failure<IssuedSession>(sessionResult.Errors);
         }
 
+        var session = sessionResult.Value!;
         await EnforceSessionCapAsync(userId, now, cancellationToken).ConfigureAwait(false);
-        await refreshSessions.AddAsync(sessionResult.Value!, cancellationToken).ConfigureAwait(false);
+        await refreshSessions.AddAsync(session, cancellationToken).ConfigureAwait(false);
 
-        return Result.Success(refreshToken);
+        return Result.Success(new IssuedSession(refreshToken, session.Id));
     }
 
     /// <summary>
     /// Revokes the presented session, links it to a freshly minted successor, and stages both
     /// (BR-205 rotation). Rotation replaces one session with one, so the cap is not re-evaluated here.
     /// </summary>
-    /// <returns>The plaintext successor token to hand to the client.</returns>
-    private async Task<Result<string>> RotateAsync(
+    /// <returns>The plaintext successor token to hand to the client, and the successor's session id.</returns>
+    private async Task<Result<IssuedSession>> RotateAsync(
         RefreshSession session,
         UserIdentifierType userId,
         DateTime now,
@@ -551,7 +678,7 @@ public abstract class AuthenticationServiceBase<TUser>(
 
         if (successorResult.IsFailure)
         {
-            return Result.Failure<string>(successorResult.Errors);
+            return Result.Failure<IssuedSession>(successorResult.Errors);
         }
 
         var successor = successorResult.Value!;
@@ -559,7 +686,7 @@ public abstract class AuthenticationServiceBase<TUser>(
         await refreshSessions.AddAsync(successor, cancellationToken).ConfigureAwait(false);
         await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return Result.Success(refreshToken);
+        return Result.Success(new IssuedSession(refreshToken, successor.Id));
     }
 
     /// <summary>Revokes every un-revoked session the user holds, without saving.</summary>
@@ -579,7 +706,9 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// <summary>
     /// Makes room for one more session: while the user is at or over the cap, revokes the oldest
     /// live one. Expired-but-unrevoked rows do not count against the cap (they authenticate nobody);
-    /// they age out with the retention sweep the consumer schedules over the table.
+    /// they age out with the framework's own retention sweep over the table
+    /// (<c>RefreshSessionCleanupService</c>, window <c>RefreshSessions:RetentionDays</c>), which the
+    /// host runs automatically once <c>RefreshSessions:Enabled</c> is set.
     /// </summary>
     private async Task EnforceSessionCapAsync(UserIdentifierType userId, DateTime now, CancellationToken cancellationToken)
     {
@@ -611,4 +740,61 @@ public abstract class AuthenticationServiceBase<TUser>(
     private static Result<AuthenticationResponse> EmailAlreadyExistsFailure() =>
         Result.Failure<AuthenticationResponse>(
             Error.Conflict("Auth.EmailAlreadyExists", "An account with this email already exists.", nameof(RegisterAsync)));
+
+    /// <summary>
+    /// What opening or rotating a session produces: the plaintext token the client is handed (which
+    /// exists nowhere else, since the store keeps only its hash) and the row's id, which is what the
+    /// access token's <c>sid</c> claim carries.
+    /// </summary>
+    private sealed record IssuedSession(string RefreshToken, Guid SessionId);
+
+    /// <summary>
+    /// Pass-through <see cref="ITokenService"/> that appends the current session's <c>sid</c> claim
+    /// to every access token minted while <see cref="CurrentSessionId"/> is armed, and is the plain
+    /// inner service the rest of the time.
+    /// </summary>
+    /// <remarks>
+    /// This is what keeps the claim additive. The alternative (an extra parameter on the app's
+    /// <c>CreateAccessToken</c> hook) would be a compile break for every consumer, for a claim the
+    /// app has no decision to make about.
+    /// </remarks>
+    private sealed class SessionStampingTokenService(ITokenService inner) : ITokenService
+    {
+        /// <summary>The session whose id is stamped on the next token, or null to mint unchanged.</summary>
+        public Guid? CurrentSessionId { get; set; }
+
+        /// <inheritdoc />
+        public TimeSpan AccessTokenLifetime => inner.AccessTokenLifetime;
+
+        /// <inheritdoc />
+        public TimeSpan RefreshTokenLifetime => inner.RefreshTokenLifetime;
+
+        /// <inheritdoc />
+        public string GenerateAccessToken(
+            UserIdentifierType userId,
+            string email,
+            string role,
+            string fullName,
+            IEnumerable<Claim>? additionalClaims = null)
+        {
+            if (CurrentSessionId is not { } sessionId)
+            {
+                return inner.GenerateAccessToken(userId, email, role, fullName, additionalClaims);
+            }
+
+            // "D" (lower-case, hyphenated) is the canonical Guid text form, and the one
+            // ClaimsPrincipalExtensions.FindSessionId parses back.
+            List<Claim> claims = additionalClaims is null ? [] : [.. additionalClaims];
+            claims.Add(new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D", CultureInfo.InvariantCulture)));
+
+            return inner.GenerateAccessToken(userId, email, role, fullName, claims);
+        }
+
+        /// <inheritdoc />
+        public string GenerateRefreshToken() => inner.GenerateRefreshToken();
+
+        /// <inheritdoc />
+        public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token) =>
+            inner.GetPrincipalFromExpiredToken(token);
+    }
 }

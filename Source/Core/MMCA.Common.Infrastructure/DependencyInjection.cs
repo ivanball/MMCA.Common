@@ -150,6 +150,15 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.TryAddScoped<Application.Auth.IRefreshSessionStore, Persistence.Auth.EFRefreshSessionStore>();
 
+            // Retention sweep, gated on the same flag that maps the table. Registering it
+            // unconditionally would start an hourly sweep in every service of a modular host, all but
+            // one of which has no RefreshSessions table to sweep.
+            if (configuration.GetSection(Application.Auth.RefreshSessionSettings.SectionName)
+                    .Get<Application.Auth.RefreshSessionSettings>()?.Enabled == true)
+            {
+                services.AddHostedService<Persistence.Auth.RefreshSessionCleanupService>();
+            }
+
             services.AddOptions<MessageBusSettings>()
                 .Bind(configuration.GetSection(MessageBusSettings.SectionName))
                 .ValidateDataAnnotations()
