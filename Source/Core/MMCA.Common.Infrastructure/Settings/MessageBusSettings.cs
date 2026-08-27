@@ -56,24 +56,40 @@ public sealed class MessageBusSettings
     public int RetryMaxIntervalSeconds { get; init; } = 30;
 
     /// <summary>
-    /// Gets a value indicating whether the consumer-side idempotency inbox is enabled. When
-    /// <see langword="true"/>, <c>IntegrationEventConsumer</c> dedups already-processed messages via
-    /// the <c>InboxMessages</c> table in the consumer's database. The table is part of the shared
-    /// relational model (created by the standard migrations; Cosmos hosts skip it), so enabling
-    /// this on a migrated relational host needs no schema work. Defaults to <see langword="false"/>.
+    /// Gets the explicit override for the consumer-side idempotency inbox, or <see langword="null"/>
+    /// (the default) to let the selected transport decide. When enabled, the integration-event
+    /// consumers dedup already-processed messages via the <c>InboxMessages</c> table in the
+    /// consumer's database. The table is part of the shared relational model (created by the
+    /// standard migrations; Cosmos hosts skip it), so turning it on for a migrated relational host
+    /// needs no schema work.
     /// <para>
-    /// RECOMMENDED <see langword="true"/> for any broker-connected host. Broker delivery is
-    /// at-least-once by contract: a consumer that acks after a network blip, a redelivered message
-    /// after a lease expiry, or an outbox row republished after a crash all hand the same event to
-    /// the same handlers twice. With the inbox off, every one of those becomes a duplicate side
-    /// effect (a second email, a second charge attempt, a double decrement) unless every handler
-    /// happens to be idempotent on its own. The default stays <see langword="false"/> only so an
-    /// existing host does not start querying a table it has not migrated yet; a host that enables
-    /// broker messaging and leaves this off gets a startup warning
-    /// (<c>InboxDisabledWarningService</c>) rather than silence.
+    /// Leave it unset and <see cref="IsInboxEnabled"/> resolves it from
+    /// <see cref="Provider"/>: ON for a broker (<see cref="MessageBusProvider.RabbitMq"/>,
+    /// <see cref="MessageBusProvider.AzureServiceBus"/>), OFF for
+    /// <see cref="MessageBusProvider.InProcess"/>, which has no redelivery to dedup. Broker
+    /// delivery is at-least-once by contract: a consumer that acks after a network blip, a
+    /// redelivered message after a lease expiry, or an outbox row republished after a crash all
+    /// hand the same event to the same handlers twice, and with the inbox off every one of those
+    /// becomes a duplicate side effect (a second email, a second charge attempt, a double
+    /// decrement) unless every handler happens to be idempotent on its own. That is why the broker
+    /// default is ON rather than the safe-looking OFF.
+    /// </para>
+    /// <para>
+    /// An explicit value always wins in both directions. A host that must not query the
+    /// <c>InboxMessages</c> table (it has not run the migration yet) sets
+    /// <c>MessageBus:EnableInbox=false</c> and gets one startup Warning
+    /// (<c>InboxDisabledWarningService</c>) recording the opt-out rather than silence.
     /// </para>
     /// </summary>
-    public bool EnableInbox { get; init; }
+    public bool? EnableInbox { get; init; }
+
+    /// <summary>
+    /// Gets the RESOLVED inbox posture: the explicit <see cref="EnableInbox"/> value when the host
+    /// set one, otherwise <see langword="true"/> for a broker transport and <see langword="false"/>
+    /// for <see cref="MessageBusProvider.InProcess"/>. Every framework component reads this rather
+    /// than the raw setting.
+    /// </summary>
+    public bool IsInboxEnabled => EnableInbox ?? Provider != MessageBusProvider.InProcess;
 
     /// <summary>
     /// Gets a value indicating whether second-level (broker-scheduled) redelivery is applied on

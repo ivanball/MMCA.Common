@@ -609,19 +609,6 @@
         "resolved": "1.0.52",
         "contentHash": "oNv2JtYXhpdJrX63nibx1JT3uCESOBQ1LAk7Dtz/sr0+laW0KRM6eKp4CZ3MHDR2siIkKsY8MmUkeP5DKkQQ5w=="
       },
-      "MiniProfiler.AspNetCore": {
-        "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "meedJsjpYOeHPhE8H6t+dGQ9zLxcCQVpi4DXzmxmYAXywmTzlo6jv2IASUv5QijTU0CxsROln3FHd8RsTO8Z8A==",
-        "dependencies": {
-          "MiniProfiler.Shared": "4.5.4"
-        }
-      },
-      "MiniProfiler.Shared": {
-        "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA=="
-      },
       "Mono.TextTemplating": {
         "type": "Transitive",
         "resolved": "3.0.0",
@@ -787,7 +774,7 @@
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "MMCA.Common.Domain": "[1.0.0, )",
           "Microsoft.FeatureManagement": "[4.6.0, )",
-          "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
+          "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
           "System.Linq.Dynamic.Core": "[1.7.3, )"
         }
@@ -838,14 +825,11 @@
           "Microsoft.Bcl.TimeProvider": "8.0.1"
         }
       },
-      "MiniProfiler.AspNetCore.Mvc": {
+      "MiniProfiler.Shared": {
         "type": "CentralTransitive",
         "requested": "[4.5.4, )",
         "resolved": "4.5.4",
-        "contentHash": "+NqXyCy9aNdroPm6leW5+cpngtCnkCdoyOlJzvVN62uucSx+MYkx8jmKbgAt+aCP6aghADfHBExwrTIldHxapg==",
-        "dependencies": {
-          "MiniProfiler.AspNetCore": "4.5.4"
-        }
+        "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA=="
       },
       "Scrutor": {
         "type": "CentralTransitive",

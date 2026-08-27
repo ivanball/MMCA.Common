@@ -56,7 +56,9 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         // this is the same id a plain IntegrationEventConsumer<TEvent> would have recorded.
         var messageId = integrationEvent.MessageId;
 
-        if (await inbox.AlreadyProcessedAsync(messageId, context.CancellationToken).ConfigureAwait(false))
+        // TryBegin also stages the inbox row in the scope's unit of work, so a handler's own
+        // SaveChangesAsync commits it atomically with its mutations (see IInboxStore).
+        if (!await inbox.TryBeginAsync(messageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false))
         {
             LogDuplicateSkipped(logger, typeof(TEvent).Name, messageId);
             return;
@@ -100,6 +102,10 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                // Discard the staged inbox row so the failed attempt leaves the scope's context
+                // clean and the redelivery is reprocessed rather than skipped as a duplicate.
+                inbox.Abandon(messageId);
+
                 // Rethrow so MassTransit applies the UseMessageRetry policy configured in
                 // ConfigureBrokerTransport before the message is dead-lettered. Logging here gives
                 // operators visibility into which handler failed without losing the exception.
@@ -115,9 +121,9 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
             LogNoHandlers(logger, terminalType.Name, typeof(TEvent).Name);
         }
 
-        // Record processing AFTER handlers succeed so a handler failure (which rethrows above) leaves
-        // the message un-recorded and eligible for MassTransit redelivery.
-        await inbox.MarkProcessedAsync(messageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false);
+        // Persist the staged row unless a handler's own save already committed it. Either way the
+        // message is recorded only on a successful consume: the failure path above rethrows.
+        await inbox.CompleteAsync(messageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

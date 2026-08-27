@@ -13,7 +13,7 @@ namespace MMCA.Common.Testing;
 /// is exactly the documented pipeline —
 /// commands: FeatureGate → Authorization → Logging → Caching → Validating → Timeout → Transactional
 /// → Handler;
-/// queries: FeatureGate → Authorization → Logging → Caching → Timeout → Handler. Because Scrutor's
+/// queries: FeatureGate → Authorization → Logging → Caching → Validating → Timeout → Handler. Because Scrutor's
 /// <c>TryDecorate</c> applies decorators in reverse registration order, an innocent-looking reorder
 /// of the <c>AddApplicationDecorators()</c> lines (or a module scan registered after it) silently
 /// changes runtime behavior; this base turns that into a test failure.
@@ -64,6 +64,7 @@ public abstract class DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, 
         "AuthorizationQueryDecorator",
         "LoggingQueryDecorator",
         "CachingQueryDecorator",
+        "ValidatingQueryDecorator",
         "TimeoutQueryDecorator",
     ];
 

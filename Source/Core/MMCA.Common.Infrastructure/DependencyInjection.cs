@@ -172,6 +172,11 @@ public static class DependencyInjection
             services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
             services.AddHostedService<Persistence.Outbox.OutboxCleanupService>();
 
+            // Operator surface over the same outbox tables: list, replay and count. Scoped, because
+            // it creates one child scope per data source it visits and holds no state of its own.
+            services.TryAddScoped<Application.Interfaces.Infrastructure.IOutboxAdministration,
+                Persistence.Outbox.OutboxAdministration>();
+
             services.AddServices();
 
             return services;
@@ -702,9 +707,12 @@ public static class DependencyInjection
             // OutboxProcessor's broker-publish path becomes the only delivery channel.
             services.Replace(ServiceDescriptor.Scoped<IEventBus, BrokerEventBus>());
 
-            // Consumer-side idempotency: EfInboxStore is opt-in and requires the InboxMessages
-            // table. When disabled, the no-op store keeps consumer behavior unchanged.
-            if (settings.EnableInbox)
+            // Consumer-side idempotency. This branch only runs for a broker transport (the
+            // in-process provider returned above), and MessageBusSettings.IsInboxEnabled resolves
+            // unset to ON for a broker: at-least-once delivery without dedup is not a default worth
+            // shipping. A host that has not migrated the InboxMessages table opts out explicitly
+            // with MessageBus:EnableInbox=false and gets the startup Warning below.
+            if (settings.IsInboxEnabled)
             {
                 services.TryAddScoped<Persistence.Inbox.IInboxStore, Persistence.Inbox.EfInboxStore>();
             }

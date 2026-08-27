@@ -144,6 +144,129 @@ public sealed class EfInboxStoreTests : IDisposable
             "the row was never written, so the message must stay eligible for redelivery");
     }
 
+    // ── Staging: the row rides the handler's own unit of work ──
+    [Fact]
+    public async Task TryBegin_StagesTheRowUnsaved_AndTheHandlersOwnSaveCommitsIt()
+    {
+        // This is the whole point of staging: the inbox row and the handler's mutations are written
+        // by ONE SaveChangesAsync, so there is no instant where the handler's work is committed and
+        // the message is not yet recorded. A crash in that instant used to reprocess the event.
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        (await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None)).Should().BeTrue(
+            "an unseen message must be processed");
+
+        // Nothing is in the database yet: a second scope still sees the message as unprocessed.
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            0, "TryBegin only STAGES the row; writing it is the handler's save");
+
+        // The handler's save. It carries the staged inbox row with it.
+        await _contextA.SaveChangesAsync(CancellationToken.None);
+
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "the handler's own transaction committed the inbox row alongside its mutations");
+    }
+
+    [Fact]
+    public async Task Complete_AfterTheHandlerAlreadySavedTheRow_WritesNothingFurther()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await _contextA.SaveChangesAsync(CancellationToken.None);
+
+        var complete = async () => await store.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await complete.Should().NotThrowAsync("the row is already committed; completing must be a no-op");
+
+        (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "a second row would violate the unique index and prove the store double-wrote");
+    }
+
+    [Fact]
+    public async Task Complete_WhenNoHandlerSaved_PersistsTheStagedRowItself()
+    {
+        // An event whose handlers write nothing (a cache warm, a push notification) never issues a
+        // save, so the consume must still close out the inbox itself.
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "CacheWarmed", CancellationToken.None);
+        await store.CompleteAsync(messageId, "CacheWarmed", CancellationToken.None);
+
+        (await store.AlreadyProcessedAsync(messageId, CancellationToken.None)).Should().BeTrue();
+        (await _contextB.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TryBegin_ForAnAlreadyProcessedMessage_ReturnsFalseAndStagesNothing()
+    {
+        // The redelivery path: the previous consume committed the row (with or without a handler
+        // save), so this delivery must run no handlers and leave the context clean.
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+        await store.MarkProcessedAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        (await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None)).Should().BeFalse();
+
+        await _contextA.SaveChangesAsync(CancellationToken.None);
+        (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(
+            1, "a refused TryBegin must not leave a second insert queued on the scope's context");
+    }
+
+    [Fact]
+    public async Task Abandon_BeforeAnySave_DetachesTheStagedRow_SoTheRedeliveryReprocesses()
+    {
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        store.Abandon(messageId).Should().BeTrue("the row never reached the database, so it was discarded cleanly");
+
+        // A later save on the same (scope-lifetime) context must not resurrect the abandoned row.
+        await _contextA.SaveChangesAsync(CancellationToken.None);
+
+        (await store.AlreadyProcessedAsync(messageId, CancellationToken.None)).Should().BeFalse(
+            "an abandoned consume must leave the message eligible for redelivery");
+    }
+
+    [Fact]
+    public async Task Abandon_AfterAHandlerCommittedTheRow_ReportsThatTheRedeliveryWillBeSkipped()
+    {
+        // The sharp edge of atomicity: once one handler's save has committed the inbox row, a LATER
+        // handler's failure cannot un-commit it, and the redelivery will be deduplicated. The store
+        // reports that honestly rather than pretending the message is still open.
+        var store = CreateStore(_contextA);
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await _contextA.SaveChangesAsync(CancellationToken.None);
+
+        store.Abandon(messageId).Should().BeFalse();
+        (await store.AlreadyProcessedAsync(messageId, CancellationToken.None)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ConcurrentDelivery_StagedRowLosesToTheUniqueIndex_AndIsAbsorbedOnComplete()
+    {
+        // Two scopes consume the same redelivered message and both stage a row. The second save is
+        // rejected by the unique index on MessageId, which the store treats as already-processed.
+        var storeA = CreateStore(_contextA);
+        var storeB = CreateStore(_contextB);
+        var messageId = Guid.NewGuid();
+
+        await storeA.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await storeB.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        await storeA.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        var duplicate = async () => await storeB.CompleteAsync(messageId, "OrderPlaced", CancellationToken.None);
+        await duplicate.Should().NotThrowAsync("a concurrent duplicate delivery is idempotent, not an error");
+
+        (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(1);
+    }
+
     private static EfInboxStore CreateStore(ApplicationDbContext context)
     {
         var factory = new Mock<IDbContextFactory>();

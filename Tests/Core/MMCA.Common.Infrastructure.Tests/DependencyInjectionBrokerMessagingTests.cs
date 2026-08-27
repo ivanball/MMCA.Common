@@ -55,6 +55,27 @@ public sealed class DependencyInjectionBrokerMessagingTests
     }
 
     [Fact]
+    public void AddBrokerMessaging_InboxSettingOmitted_DefaultsToTheEfStoreUnderABroker()
+    {
+        // The default is what most hosts run, and at-least-once delivery without dedup is not a
+        // default worth shipping: leaving MessageBus:EnableInbox unset must give a broker host the
+        // real store, not the no-op one.
+        var services = new ServiceCollection();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = "RabbitMq",
+                ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
+            })
+            .Build();
+
+        services.AddBrokerMessaging(configuration);
+
+        InboxStoreImplementation(services).Should().Be<EfInboxStore>();
+        HasHostedService<InboxDisabledWarningService>(services).Should().BeFalse();
+    }
+
+    [Fact]
     public void AddBrokerMessaging_InProcessProvider_RegistersNothing()
     {
         var services = new ServiceCollection();

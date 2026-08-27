@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
@@ -234,8 +235,56 @@ public sealed class DomainEventSaveChangesInterceptorOutboxRoutingTests : IDispo
         rows.Should().ContainSingle("the abandoned attempt's row must be discarded, not duplicated");
     }
 
+    // ── Ordering key: copied onto the row when the event opts in, null otherwise ──
+    [Fact]
+    public async Task SaveChangesAsync_EventDeclaringAnOrderingKey_CopiesItOntoTheOutboxRow()
+    {
+        var entity = new TestAggregate { Id = 1, Name = "Test" };
+        entity.AddDomainEvent(new TestOrderedEvent("order-77"));
+        entity.AddDomainEvent(new TestIntegrationEvent());
+        _dbContext.TestAggregates.Add(entity);
+
+        await _dbContext.SaveChangesAsync();
+
+        var rows = await GetOutboxRowsAsync();
+        rows.Single(r => r.EventType.Contains(nameof(TestOrderedEvent), StringComparison.Ordinal))
+            .OrderingKey.Should().Be("order-77", "the processor can only serialize a stream it can see the key of");
+        rows.Single(r => r.EventType.Contains(nameof(TestIntegrationEvent), StringComparison.Ordinal))
+            .OrderingKey.Should().BeNull("ordering is opt-in per event type");
+    }
+
+    // ── Ride-along: the processed stamp comes from the injected clock, not the machine clock ──
+    [Fact]
+    public async Task SaveChangesAsync_LocalEvent_StampsProcessedOnFromTheInjectedTimeProvider()
+    {
+        var clock = new FakeTimeProvider(new DateTimeOffset(2031, 2, 3, 4, 5, 6, TimeSpan.Zero));
+        var interceptor = new DomainEventSaveChangesInterceptor(
+            Mock.Of<IDomainEventDispatcher>(),
+            NullLogger<DomainEventSaveChangesInterceptor>.Instance,
+            Mock.Of<IOutboxSignal>(),
+            clock);
+        await using var context = OutboxRoutingTestDbContext.Create(interceptor);
+
+        var entity = new TestAggregate { Id = 1, Name = "Test" };
+        entity.AddDomainEvent(new TestLocalEvent("local"));
+        context.TestAggregates.Add(entity);
+
+        await context.SaveChangesAsync();
+
+        OutboxMessage row = await context.Set<OutboxMessage>().AsNoTracking().SingleAsync();
+        row.ProcessedOn.Should().Be(
+            clock.GetUtcNow().UtcDateTime,
+            "the outbox is driven by TimeProvider end to end; a stray TimeProvider.System here made this stamp untestable");
+    }
+
     // ── Test doubles ──
     public sealed record TestLocalEvent(string Data) : BaseDomainEvent;
+
+    /// <summary>An integration event that opts into ordered delivery for one aggregate's stream.</summary>
+    public sealed record TestOrderedEvent(string Key) : BaseDomainEvent, IIntegrationEvent, IHasOrderingKey
+    {
+        public string? OrderingKey => Key;
+    }
 
     public sealed record TestIntegrationEvent : BaseDomainEvent, IIntegrationEvent;
 

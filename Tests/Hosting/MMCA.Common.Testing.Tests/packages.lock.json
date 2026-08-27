@@ -835,14 +835,6 @@
           "MiniProfiler.Shared": "4.5.4"
         }
       },
-      "MiniProfiler.Shared": {
-        "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
-        }
-      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.4",
@@ -1058,6 +1050,7 @@
           "Microsoft.AspNetCore.OpenApi": "[10.0.11, )",
           "Microsoft.FeatureManagement.AspNetCore": "[4.6.0, )",
           "Microsoft.OpenApi": "[2.12.2, )",
+          "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
           "Scalar.AspNetCore": "[2.17.1, )"
         }
       },
@@ -1066,8 +1059,9 @@
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "MMCA.Common.Domain": "[1.0.0, )",
+          "Microsoft.Extensions.Configuration.Json": "[10.0.11, )",
           "Microsoft.FeatureManagement": "[4.6.0, )",
-          "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
+          "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
           "System.Linq.Dynamic.Core": "[1.7.3, )"
         }
@@ -1469,6 +1463,15 @@
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Relational": "8.0.11",
           "MiniProfiler.Shared": "4.5.4"
+        }
+      },
+      "MiniProfiler.Shared": {
+        "type": "CentralTransitive",
+        "requested": "[4.5.4, )",
+        "resolved": "4.5.4",
+        "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
         }
       },
       "Polly.Core": {

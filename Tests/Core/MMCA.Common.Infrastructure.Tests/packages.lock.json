@@ -671,22 +671,6 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
-      "MiniProfiler.AspNetCore": {
-        "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "meedJsjpYOeHPhE8H6t+dGQ9zLxcCQVpi4DXzmxmYAXywmTzlo6jv2IASUv5QijTU0CxsROln3FHd8RsTO8Z8A==",
-        "dependencies": {
-          "MiniProfiler.Shared": "4.5.4"
-        }
-      },
-      "MiniProfiler.Shared": {
-        "type": "Transitive",
-        "resolved": "4.5.4",
-        "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
-        }
-      },
       "Newtonsoft.Json": {
         "type": "Transitive",
         "resolved": "13.0.4",
@@ -875,8 +859,9 @@
         "dependencies": {
           "FluentValidation.DependencyInjectionExtensions": "[12.1.1, )",
           "MMCA.Common.Domain": "[1.0.0, )",
+          "Microsoft.Extensions.Configuration.Json": "[10.0.11, )",
           "Microsoft.FeatureManagement": "[4.6.0, )",
-          "MiniProfiler.AspNetCore.Mvc": "[4.5.4, )",
+          "MiniProfiler.Shared": "[4.5.4, )",
           "Scrutor": "[7.0.0, )",
           "System.Linq.Dynamic.Core": "[1.7.3, )"
         }
@@ -1112,15 +1097,6 @@
           "Microsoft.Extensions.Logging": "8.0.1"
         }
       },
-      "MiniProfiler.AspNetCore.Mvc": {
-        "type": "CentralTransitive",
-        "requested": "[4.5.4, )",
-        "resolved": "4.5.4",
-        "contentHash": "+NqXyCy9aNdroPm6leW5+cpngtCnkCdoyOlJzvVN62uucSx+MYkx8jmKbgAt+aCP6aghADfHBExwrTIldHxapg==",
-        "dependencies": {
-          "MiniProfiler.AspNetCore": "4.5.4"
-        }
-      },
       "MiniProfiler.EntityFrameworkCore": {
         "type": "CentralTransitive",
         "requested": "[4.5.4, )",
@@ -1129,6 +1105,15 @@
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Relational": "8.0.11",
           "MiniProfiler.Shared": "4.5.4"
+        }
+      },
+      "MiniProfiler.Shared": {
+        "type": "CentralTransitive",
+        "requested": "[4.5.4, )",
+        "resolved": "4.5.4",
+        "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
         }
       },
       "Polly.Core": {

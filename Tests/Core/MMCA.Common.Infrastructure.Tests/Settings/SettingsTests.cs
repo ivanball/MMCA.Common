@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Configuration;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Settings;
 
@@ -221,6 +222,35 @@ public class OutboxSettingsTests
         sut.ProcessingDelaySeconds.Should().Be(60);
         sut.DataSource.Should().Be(DataSource.Sqlite);
     }
+
+    // Keeping an undelivered event is the safe default; deleting it is the irreversible one.
+    [Fact]
+    public void Default_PurgeDeadLetters_IsFalse() =>
+        new OutboxSettings().PurgeDeadLetters.Should().BeFalse();
+
+    [Fact]
+    public void Default_TypeAliases_IsEmpty() =>
+        new OutboxSettings().TypeAliases.Should().BeEmpty();
+
+    // The alias map is only useful if an operator can actually set it from appsettings, so bind it
+    // the way a host does rather than only constructing it in code.
+    [Fact]
+    public void TypeAliases_BindFromConfiguration()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["Outbox:PurgeDeadLetters"] = "true",
+                ["Outbox:TypeAliases:Old.Ns.ThingHappened"] = "New.Ns.ThingHappened, New.Assembly",
+            })
+            .Build();
+
+        var sut = configuration.GetSection(OutboxSettings.SectionName).Get<OutboxSettings>()!;
+
+        sut.PurgeDeadLetters.Should().BeTrue();
+        sut.TypeAliases.Should().ContainKey("Old.Ns.ThingHappened")
+            .WhoseValue.Should().Be("New.Ns.ThingHappened, New.Assembly");
+    }
 }
 
 // ── MessageBusSettings ──
@@ -235,8 +265,27 @@ public class MessageBusSettingsTests
         new MessageBusSettings().Provider.Should().Be(MessageBusProvider.InProcess);
 
     [Fact]
-    public void Default_EnableInbox_IsFalse() =>
-        new MessageBusSettings().EnableInbox.Should().BeFalse();
+    public void Default_EnableInbox_IsUnset_SoTheTransportDecides() =>
+        new MessageBusSettings().EnableInbox.Should().BeNull();
+
+    // Unset resolves from the transport: a broker redelivers by contract, so dedup is ON; in-process
+    // dispatch has no redelivery to dedup, so it stays OFF and the InboxMessages table is untouched.
+    [Theory]
+    [InlineData(MessageBusProvider.InProcess, false)]
+    [InlineData(MessageBusProvider.RabbitMq, true)]
+    [InlineData(MessageBusProvider.AzureServiceBus, true)]
+    public void IsInboxEnabled_Unset_ResolvesFromTheTransport(MessageBusProvider provider, bool expected) =>
+        new MessageBusSettings { Provider = provider }.IsInboxEnabled.Should().Be(expected);
+
+    // An explicit value wins in BOTH directions: a host that has not migrated InboxMessages can turn
+    // it off under a broker, and a monolith can turn it on.
+    [Theory]
+    [InlineData(MessageBusProvider.RabbitMq, false)]
+    [InlineData(MessageBusProvider.AzureServiceBus, false)]
+    [InlineData(MessageBusProvider.InProcess, true)]
+    public void IsInboxEnabled_Explicit_OverridesTheTransportDefault(MessageBusProvider provider, bool configured) =>
+        new MessageBusSettings { Provider = provider, EnableInbox = configured }
+            .IsInboxEnabled.Should().Be(configured);
 
     // Default-off is load-bearing, not incidental: RabbitMQ needs the delayed-message-exchange
     // plugin, which the Aspire development container does not ship, so a default-on flag would

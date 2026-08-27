@@ -106,4 +106,37 @@ public sealed class OutboxSettings
     /// </summary>
     [Range(0, 3650)]
     public int DeadLetterRetentionDays { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether <c>OutboxCleanupService</c> DELETES dead-lettered rows once
+    /// <see cref="DeadLetterRetentionDays"/> has elapsed. Defaults to <see langword="false"/>: an
+    /// undelivered event is evidence, and deleting it is the one cleanup action that cannot be
+    /// undone, so the sweep keeps those rows and logs a periodic Warning naming how many are past
+    /// the window. Replay them with <c>IOutboxAdministration.ReplayDeadLettersAsync</c> once the
+    /// cause is fixed. Set it to <see langword="true"/> to restore the unconditional purge.
+    /// </summary>
+    public bool PurgeDeadLetters { get; init; }
+
+    /// <summary>
+    /// Gets the map consulted when a stored <c>EventType</c> no longer resolves to a CLR type,
+    /// which is what happens to in-flight rows when an event class is renamed, moved to another
+    /// namespace, or moved to another assembly between the write and the dispatch. Keys are the
+    /// OLD name (either the full stored assembly-qualified name or just its type-full-name
+    /// portion); values are the new type's full name or assembly-qualified name. Empty by default,
+    /// so resolution behaves exactly as it did before this setting existed.
+    /// </summary>
+    /// <remarks>
+    /// Configuration example:
+    /// <code>
+    /// "Outbox": {
+    ///   "TypeAliases": {
+    ///     "Store.Sales.Events.OrderPlaced": "Store.Sales.IntegrationEvents.OrderPlacedV1, Store.Sales"
+    ///   }
+    /// }
+    /// </code>
+    /// Aliases are for MOVED contracts, not reshaped ones: a payload whose fields changed needs a
+    /// new event type and an upcaster (ADR-090), not an alias.
+    /// </remarks>
+    public IReadOnlyDictionary<string, string> TypeAliases { get; init; } =
+        new Dictionary<string, string>(StringComparer.Ordinal);
 }

@@ -48,9 +48,11 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
     private static Mock<IInboxStore> InboxFor(RetiredOrderPlaced evt, bool alreadyProcessed = false)
     {
+        // TryBegin opens the consume and also stages the inbox row in the handler's unit of work,
+        // and Complete closes it out. Both are keyed on the ORIGINAL message id, before any upcast.
         var inbox = new Mock<IInboxStore>();
-        inbox.Setup(x => x.AlreadyProcessedAsync(evt.MessageId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(alreadyProcessed);
+        inbox.Setup(x => x.TryBeginAsync(evt.MessageId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(!alreadyProcessed);
         return inbox;
     }
 
@@ -109,7 +111,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
             x => x.HandleAsync(It.IsAny<OrderPlacedV2>(), It.IsAny<CancellationToken>()),
             Times.Never);
         inbox.Verify(
-            x => x.MarkProcessedAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.CompleteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -135,7 +137,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
         var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
         thrown.Which.Should().BeSameAs(failure);
         inbox.Verify(
-            x => x.MarkProcessedAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            x => x.CompleteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -154,7 +156,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
         await sut.Consume(ContextFor(evt).Object);
 
         inbox.Verify(
-            x => x.MarkProcessedAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
+            x => x.CompleteAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -175,7 +177,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         retiredHandler.Verify(x => x.HandleAsync(evt, It.IsAny<CancellationToken>()), Times.Once);
         inbox.Verify(
-            x => x.MarkProcessedAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
+            x => x.CompleteAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -194,7 +196,7 @@ public sealed class UpcastingIntegrationEventConsumerTests
 
         await act.Should().NotThrowAsync();
         inbox.Verify(
-            x => x.MarkProcessedAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
+            x => x.CompleteAsync(evt.MessageId, nameof(RetiredOrderPlaced), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

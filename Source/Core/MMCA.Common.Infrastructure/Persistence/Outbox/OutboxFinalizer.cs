@@ -17,16 +17,22 @@ internal static class OutboxFinalizer
     /// </summary>
     /// <param name="context">The context whose outbox table holds the entries.</param>
     /// <param name="outboxEntries">The entries to mark processed.</param>
+    /// <param name="timeProvider">
+    /// Clock stamping <c>ProcessedOn</c>. Injected like the rest of the outbox rather than read from
+    /// <see cref="TimeProvider.System"/> here, so a test driving a <c>FakeTimeProvider</c> sees this
+    /// stamp move with the same clock as the processor's lease, backoff and retention arithmetic.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     internal static async Task MarkProcessedAsync(
         ApplicationDbContext context,
         IReadOnlyList<OutboxMessage> outboxEntries,
+        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         if (outboxEntries.Count == 0)
             return;
 
-        var now = TimeProvider.System.GetUtcNow().UtcDateTime;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var ids = outboxEntries.Select(e => e.Id).ToArray();
 
         await context.Set<OutboxMessage>()

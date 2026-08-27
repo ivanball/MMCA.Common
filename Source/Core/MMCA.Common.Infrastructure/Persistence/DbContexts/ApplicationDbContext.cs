@@ -490,6 +490,7 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.LastError).HasMaxLength(4000);
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.OrderingKey).HasMaxLength(200).IsUnicode(false);
             // Poll path (OutboxProcessor): pending rows, oldest first. The processor also filters on
             // RetryCount and LockedUntil, so both ride along as included columns; without them every
             // candidate row the index returns costs a key lookup back into the table.
@@ -504,6 +505,16 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.ProcessedOn)
                   .HasFilter("[ProcessedOn] IS NOT NULL")
                   .HasDatabaseName("IX_OutboxMessages_Processed");
+
+            // Ordering path (OutboxProcessor's claim predicate): for every keyed row the claim asks
+            // whether an EARLIER unprocessed row shares its key, once per candidate row. Without an
+            // index seekable by (OrderingKey, OccurredOn) that question is a scan of the pending
+            // partition per row. Filtered to keyed pending rows only, so hosts that never declare an
+            // ordering key carry an empty index.
+            entity.HasIndex(e => new { e.OrderingKey, e.OccurredOn })
+                  .IncludeProperties(e => new { e.RetryCount })
+                  .HasFilter("[OrderingKey] IS NOT NULL AND [ProcessedOn] IS NULL")
+                  .HasDatabaseName("IX_OutboxMessages_Ordering");
         });
 
     /// <summary>

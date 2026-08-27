@@ -67,6 +67,18 @@ public sealed class OutboxMessage
     public string? SpanId { get; init; }
 
     /// <summary>
+    /// Gets the ordered-delivery key copied from an event implementing
+    /// <see cref="IHasOrderingKey"/>, or <see langword="null"/> for the unordered default.
+    /// <para>
+    /// A row carrying a key is not claimed while an earlier unprocessed, non-dead-lettered row with
+    /// the same key exists in the same data source, so events for one aggregate reach the bus in the
+    /// order they were raised even across batches and across processor replicas. See
+    /// <see cref="IHasOrderingKey"/> for the head-of-line blocking this implies.
+    /// </para>
+    /// </summary>
+    public string? OrderingKey { get; init; }
+
+    /// <summary>
     /// Creates an <see cref="OutboxMessage"/> from a domain event, serializing it as JSON.
     /// </summary>
     /// <param name="domainEvent">The domain event to persist.</param>
@@ -84,6 +96,11 @@ public sealed class OutboxMessage
             OccurredOn = domainEvent.DateOccurred,
             TraceId = activity?.TraceId.ToString(),
             SpanId = activity?.SpanId.ToString(),
+
+            // Opt-in: an event that does not implement the contract keeps a null key and the
+            // unordered behavior. A null returned by an implementing event opts that one instance
+            // out, which is why the interface check cannot be replaced by a type-level flag.
+            OrderingKey = (domainEvent as IHasOrderingKey)?.OrderingKey,
         };
     }
 
@@ -91,14 +108,75 @@ public sealed class OutboxMessage
     /// Deserializes the stored payload back into a domain event instance.
     /// </summary>
     /// <returns>The deserialized domain event, or <see langword="null"/> if the type cannot be resolved.</returns>
-    public IDomainEvent? DeserializeEvent()
+    public IDomainEvent? DeserializeEvent() => DeserializeEvent(typeAliases: null);
+
+    /// <summary>
+    /// Deserializes the stored payload back into a domain event instance, consulting
+    /// <paramref name="typeAliases"/> when the stored type name no longer resolves (the event class
+    /// was renamed, moved to another namespace, or moved to another assembly after the row was
+    /// written).
+    /// </summary>
+    /// <param name="typeAliases">
+    /// Map of stored name to replacement type, keyed either by the full stored assembly-qualified
+    /// name or by its type-full-name portion (the text before the first comma). The value may be an
+    /// assembly-qualified name or a bare full name, which is then searched across the loaded
+    /// assemblies. Pass <see langword="null"/> for no aliasing.
+    /// </param>
+    /// <returns>The deserialized domain event, or <see langword="null"/> if the type cannot be resolved.</returns>
+    public IDomainEvent? DeserializeEvent(IReadOnlyDictionary<string, string>? typeAliases)
     {
-        var type = EventTypeCache.GetOrAdd(EventType, static typeName => Type.GetType(typeName));
+        var type = ResolveEventType(typeAliases);
         if (type is null)
             return null;
 
         // Deserialize with the same options used by FromDomainEvent so payloads written
         // with cycle-ignoring semantics read back symmetrically.
         return JsonSerializer.Deserialize(Payload, type, SerializerOptions) as IDomainEvent;
+    }
+
+    /// <summary>
+    /// Resolves the stored <see cref="EventType"/> to a CLR type: the stored name first, then the
+    /// alias map. Alias lookups are only paid for by rows whose stored name failed to resolve, and
+    /// the successful lookups cache under the ALIAS TARGET rather than the stored name, so two hosts
+    /// configured with different maps cannot poison each other's cache entries.
+    /// </summary>
+    private Type? ResolveEventType(IReadOnlyDictionary<string, string>? typeAliases)
+    {
+        var type = EventTypeCache.GetOrAdd(EventType, static typeName => Type.GetType(typeName));
+        if (type is not null || typeAliases is null || typeAliases.Count == 0)
+            return type;
+
+        if (!typeAliases.TryGetValue(EventType, out var target))
+        {
+            // The stored value is an assembly-qualified name, while an operator writing a
+            // configuration key naturally reaches for the type name alone. Accept both.
+            var commaIndex = EventType.IndexOf(',', StringComparison.Ordinal);
+            var fullName = commaIndex < 0 ? EventType : EventType[..commaIndex].Trim();
+            if (!typeAliases.TryGetValue(fullName, out target))
+                return null;
+        }
+
+        return string.IsNullOrWhiteSpace(target)
+            ? null
+            : EventTypeCache.GetOrAdd(target, static name => Type.GetType(name) ?? FindLoadedType(name));
+    }
+
+    /// <summary>
+    /// Last resort for an alias target written as a bare full name (no assembly): scans the loaded
+    /// assemblies for it. Only ever reached once per alias target, because the result caches.
+    /// </summary>
+    private static Type? FindLoadedType(string fullName)
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            if (assembly.IsDynamic)
+                continue;
+
+            var candidate = assembly.GetType(fullName, throwOnError: false);
+            if (candidate is not null)
+                return candidate;
+        }
+
+        return null;
     }
 }

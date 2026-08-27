@@ -237,10 +237,31 @@ public sealed class OutboxProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task UnresolvableType_FirstAttempt_RetriesInsteadOfDeadLettering()
+    {
+        // A name that does not resolve right now is not proof it never will: the assembly declaring
+        // it may load a moment later, and an operator may still be adding an Outbox:TypeAliases
+        // entry. The first attempt therefore goes through the normal retry path.
+        OutboxMessage message = CreateEligibleMessage(eventType: "NonExistent.Type, FakeAssembly");
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        await InvokeProcessPendingMessagesAsync();
+
+        OutboxMessage retried = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        retried.ProcessedOn.Should().BeNull("the first unresolved attempt is treated as transient");
+        retried.RetryCount.Should().Be(1);
+        retried.LastError.Should().Contain("Cannot resolve type");
+        retried.LockedUntil.Should().NotBeNull("the row is re-leased for its backoff like any other retry");
+    }
+
+    [Fact]
     public async Task DeadLettersUnresolvableTypes_SetsProcessedOnAndLastError()
     {
-        // Arrange: EventType references a type that does not exist
+        // Arrange: EventType references a type that does not exist, and the row has already spent
+        // its one transient attempt, so THIS cycle is the terminal one.
         OutboxMessage message = CreateEligibleMessage(eventType: "NonExistent.Type, FakeAssembly");
+        message.RetryCount = 1;
         _dbContext.Set<OutboxMessage>().Add(message);
         await _dbContext.SaveChangesAsync();
 
@@ -251,6 +272,178 @@ public sealed class OutboxProcessorTests : IDisposable
         OutboxMessage deadLettered = await _dbContext.Set<OutboxMessage>().SingleAsync();
         deadLettered.ProcessedOn.Should().NotBeNull("dead-lettered messages are marked as processed");
         deadLettered.LastError.Should().Contain("Cannot resolve type");
+    }
+
+    [Fact]
+    public async Task TypeAliases_ResolveARenamedEventType_AndDispatchIt()
+    {
+        // The event class moved after the row was written: its stored name no longer resolves, and
+        // without the alias map the row would spend its retries and dead-letter, losing an event
+        // whose only problem is a rename.
+        const string retiredName = "MMCA.Common.Tests.Retired.MovedEvent, RetiredAssembly";
+        OutboxMessage message = CreateEligibleMessage(eventType: retiredName);
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        OutboxProcessor sut = CreateProcessor(new OutboxSettings
+        {
+            TypeAliases = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [retiredName] = typeof(TestDomainEvent).AssemblyQualifiedName!,
+            },
+        });
+
+        await sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        OutboxMessage dispatched = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        dispatched.ProcessedOn.Should().NotBeNull("the alias resolved the type, so the event was delivered normally");
+        dispatched.LastError.Should().BeNull();
+        _dispatcherMock.Verify(
+            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task TypeAliases_KeyedByTypeFullNameWithoutAssembly_AlsoResolve()
+    {
+        // Operators write configuration keys as type names, not assembly-qualified names. Accepting
+        // the short form is what makes the setting usable without copying a version and token out of
+        // a database row.
+        var storedName = typeof(TestDomainEvent).AssemblyQualifiedName!.Replace(
+            nameof(TestDomainEvent),
+            "GoneEvent",
+            StringComparison.Ordinal);
+        var shortName = storedName[..storedName.IndexOf(',', StringComparison.Ordinal)];
+
+        OutboxMessage message = CreateEligibleMessage(eventType: storedName);
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        OutboxProcessor sut = CreateProcessor(new OutboxSettings
+        {
+            TypeAliases = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [shortName] = typeof(TestDomainEvent).AssemblyQualifiedName!,
+            },
+        });
+
+        await sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        (await _dbContext.Set<OutboxMessage>().SingleAsync()).ProcessedOn.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task OldestPendingAgeGauge_ReportsTheAgeOfTheOldestPendingRow_AndZeroWhenDrained()
+    {
+        // The gauge is computed from the poll's own ordered fetch, so it must move with the backlog
+        // without the processor issuing a MIN() of its own.
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        OutboxMessage message = CreateEligibleMessage(
+            occurredOn: timeProvider.GetUtcNow().UtcDateTime.AddMinutes(-30));
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        // The gauge is process-wide static state keyed by source name, so this test drives its own
+        // uniquely named source: a sibling test class polling the shared default source in parallel
+        // would otherwise overwrite the value between the act and the assert.
+        var probeSource = new DataSourceKey(DataSource.SQLServer, "GaugeProbe_" + Guid.NewGuid().ToString("N"));
+        OutboxProcessor sut = CreateProcessorForSource(probeSource, new OutboxSettings(), timeProvider);
+
+        using var listener = StartOldestPendingAgeListener(probeSource.ToString(), out var readLatestAge);
+
+        await sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        readLatestAge().Should().BeApproximately(
+            TimeSpan.FromMinutes(30).TotalSeconds,
+            precision: 1,
+            "the oldest pending row was raised half an hour before this cycle's clock");
+
+        // Second cycle: the row was dispatched above, so nothing is pending any more.
+        await sut.ProcessPendingMessagesAsync(CancellationToken.None);
+        readLatestAge().Should().Be(0, "a drained source reports zero rather than dropping out of the series");
+    }
+
+    /// <summary>
+    /// Builds a processor whose single outbox source is <paramref name="source"/>, backed by this
+    /// fixture's context, so a test can own a source name no other test publishes metrics for.
+    /// </summary>
+    private OutboxProcessor CreateProcessorForSource(
+        DataSourceKey source,
+        OutboxSettings settings,
+        TimeProvider timeProvider)
+    {
+        var contextFactory = new Mock<IDbContextFactory>();
+        contextFactory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(_dbContext);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(contextFactory.Object);
+        services.AddSingleton(_dispatcherMock.Object);
+        services.AddSingleton(_messageBusMock.Object);
+        ServiceProvider provider = services.BuildServiceProvider();
+
+        var registry = new Mock<IEntityDataSourceRegistry>();
+        registry.Setup(r => r.GetPhysicalSourcesInUse()).Returns([source]);
+
+        var resolver = new Mock<IDataSourceResolver>();
+        resolver
+            .Setup(r => r.ResolveLogical(It.IsAny<DataSource>(), It.IsAny<string>()))
+            .Returns(source);
+
+        return new OutboxProcessor(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<OutboxProcessor>.Instance,
+            Options.Create(settings),
+            Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>(),
+            registry.Object,
+            resolver.Object,
+            timeProvider);
+    }
+
+    /// <summary>
+    /// Listens for <c>outbox.oldest_pending.age</c> measurements tagged with
+    /// <paramref name="dataSourceName"/>. An observable gauge only produces a value when the
+    /// listener asks, so <paramref name="readLatestAge"/> forces a collection on each call.
+    /// </summary>
+    private static MeterListener StartOldestPendingAgeListener(
+        string dataSourceName,
+        out Func<double> readLatestAge)
+    {
+        var box = new double[] { -1 };
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (string.Equals(instrument.Meter.Name, "MMCA.Common.Outbox", StringComparison.Ordinal)
+                    && string.Equals(instrument.Name, "outbox.oldest_pending.age", StringComparison.Ordinal))
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+
+        listener.SetMeasurementEventCallback<double>((_, value, tags, _) =>
+        {
+            foreach (KeyValuePair<string, object?> tag in tags)
+            {
+                if (string.Equals(tag.Key, "data_source", StringComparison.Ordinal)
+                    && string.Equals(tag.Value as string, dataSourceName, StringComparison.Ordinal))
+                {
+                    box[0] = value;
+                }
+            }
+        });
+
+        listener.Start();
+
+        var captured = listener;
+        readLatestAge = () =>
+        {
+            box[0] = -1;
+            captured.RecordObservableInstruments();
+            return box[0];
+        };
+
+        return listener;
     }
 
     [Fact]
