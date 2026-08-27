@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
@@ -20,6 +20,7 @@ using MMCA.Common.API.Authorization;
 using MMCA.Common.API.OpenApi;
 using MMCA.Common.API.RateLimiting;
 using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Shared.Auth;
 using StackExchange.Redis;
 
 namespace MMCA.Common.API.Startup;
@@ -64,7 +65,7 @@ public static class WebApplicationBuilderExtensions
         || (httpContext.Request.ContentType?.StartsWith("application/grpc", StringComparison.OrdinalIgnoreCase) ?? false);
 
     /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests,
-    /// and limits authenticated callers per user (name → user_id → IP).</summary>
+    /// and limits authenticated callers per user (name → subject claim → IP).</summary>
     /// <remarks>Internal (not private) so the partition-key selection is unit-testable via
     /// <c>InternalsVisibleTo</c>.</remarks>
     internal static RateLimitPartition<string> GlobalRateLimitPartition(HttpContext httpContext, int globalPermitLimit) =>
@@ -88,7 +89,7 @@ public static class WebApplicationBuilderExtensions
         }
 
         var partitionKey = httpContext.User.Identity.Name
-            ?? httpContext.User.FindFirst("user_id")?.Value
+            ?? httpContext.User.FindUserIdValue()
             ?? httpContext.Connection.RemoteIpAddress?.ToString()
             ?? "authenticated";
 

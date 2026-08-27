@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.API.Controllers;
@@ -210,7 +210,7 @@ public sealed class UserAccountAuthControllerBaseTests
     {
         var authResponse = new AuthenticationResponse("access-token", "refresh-token", DateTime.UtcNow.AddHours(1));
         var request = new LoginRequest("test@example.com", "Password123!");
-        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(authResponse));
         TestUserAccountAuthController sut = CreateController();
 
@@ -225,7 +225,7 @@ public sealed class UserAccountAuthControllerBaseTests
     public async Task InheritedRevokeAsync_Success_StillReturnsNoContent()
     {
         _currentUserServiceMock.Setup(x => x.UserId).Returns(UserId);
-        _authServiceMock.Setup(x => x.RevokeTokenAsync(UserId, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RevokeAllSessionsAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         TestUserAccountAuthController sut = CreateController();
 

@@ -1,0 +1,15 @@
+@* Fixture for SortableColumnFitnessTests: the offending TemplateColumn starts on line 7. *@
+
+<MudDataGrid T="TicketRow" ServerData="LoadAsync">
+    <Columns>
+        <PropertyColumn Property="x => x.Title" Title="Title" Sortable="true" />
+
+        <TemplateColumn Title="Actions"
+                        Sortable="true"
+                        T="TicketRow">
+            <CellTemplate>
+                <MudButton>Open</MudButton>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>

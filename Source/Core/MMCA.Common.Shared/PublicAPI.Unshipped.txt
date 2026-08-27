@@ -8,6 +8,7 @@ MMCA.Common.Shared.Abstractions.Result<T>.Ensure(System.Func<T, bool>! predicate
 MMCA.Common.Shared.Abstractions.Result<T>.MatchAsync<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>!>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, System.Threading.Tasks.Task<TResult>!>! onFailure) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Shared.Abstractions.Result<T>.Tap(System.Action<T>! action) -> MMCA.Common.Shared.Abstractions.Result<T>!
 MMCA.Common.Shared.Abstractions.ResultExtensions
+MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions
 MMCA.Common.Shared.Auth.ForgotPasswordRequest
 MMCA.Common.Shared.Auth.ForgotPasswordRequest.Deconstruct(out string! Email) -> void
 MMCA.Common.Shared.Auth.ForgotPasswordRequest.Email.get -> string!
@@ -26,6 +27,7 @@ MMCA.Common.Shared.Auth.ResetPasswordRequest.ResetPasswordRequest() -> void
 MMCA.Common.Shared.Auth.ResetPasswordRequest.ResetPasswordRequest(string! Email, string! Token, string! NewPassword) -> void
 MMCA.Common.Shared.Auth.ResetPasswordRequest.Token.get -> string!
 MMCA.Common.Shared.Auth.ResetPasswordRequest.Token.init -> void
+const MMCA.Common.Shared.Auth.AuthClaimTypes.Subject = "sub" -> string!
 override MMCA.Common.Shared.Auth.ForgotPasswordRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.ResetPasswordRequest.GetHashCode() -> int
 static MMCA.Common.Shared.Abstractions.Error.Unexpected(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -38,6 +40,8 @@ static MMCA.Common.Shared.Abstractions.ResultExtensions.BindAsync<T, TOut>(this 
 static MMCA.Common.Shared.Abstractions.ResultExtensions.MapAsync<T, TOut>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, TOut>! mapper) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TOut>!>!
 static MMCA.Common.Shared.Abstractions.ResultExtensions.MatchAsync<T, TResult>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, TResult>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, TResult>! onFailure) -> System.Threading.Tasks.Task<TResult>!
 static MMCA.Common.Shared.Abstractions.ResultExtensions.TapAsync<T>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, System.Threading.Tasks.Task!>! action) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindUserIdValue(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetUserId(this System.Security.Claims.ClaimsPrincipal? principal) -> int?
 static MMCA.Common.Shared.Auth.ForgotPasswordRequest.operator !=(MMCA.Common.Shared.Auth.ForgotPasswordRequest left, MMCA.Common.Shared.Auth.ForgotPasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.ForgotPasswordRequest.operator ==(MMCA.Common.Shared.Auth.ForgotPasswordRequest left, MMCA.Common.Shared.Auth.ForgotPasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.ResetPasswordRequest.operator !=(MMCA.Common.Shared.Auth.ResetPasswordRequest left, MMCA.Common.Shared.Auth.ResetPasswordRequest right) -> bool

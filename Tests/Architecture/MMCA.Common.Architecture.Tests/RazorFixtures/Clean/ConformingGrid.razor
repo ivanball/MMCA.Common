@@ -1,0 +1,36 @@
+@* Every shape the rule must NOT flag, including the near-misses that break a naive text match. *@
+
+<MudDataGrid T="TicketRow" ServerData="LoadAsync">
+    <Columns>
+        @* A sortable column is a PropertyColumn: this is the convention, not a violation. *@
+        <PropertyColumn Property="x => x.Title" Title="Title" Sortable="true" />
+
+        @* No Sortable attribute at all. *@
+        <TemplateColumn Title="Actions" T="TicketRow">
+            <CellTemplate>
+                <MudButton>Open</MudButton>
+            </CellTemplate>
+        </TemplateColumn>
+
+        @* Explicitly not sortable. *@
+        <TemplateColumn Title="Icon" Sortable="false" T="TicketRow" />
+
+        @* Bound to a field, so the value is not knowable from the markup. *@
+        <TemplateColumn Title="Owner" Sortable="@_canSort" T="TicketRow" />
+
+        @* A longer attribute name that merely ends in Sortable. *@
+        <TemplateColumn Title="Tags" IsSortable="true" T="TicketRow" />
+
+        @* A generic argument carrying an angle bracket inside a quoted value: the tag scan must not
+           run past the element and swallow the sortable PropertyColumn below it. *@
+        <TemplateColumn Title="Meta" T="Dictionary<string, int>" />
+        <PropertyColumn Property="x => x.Count" Title="Count" Sortable="true" />
+
+        @* A longer element name that merely starts the same way. *@
+        <TemplateColumnGroup Sortable="true" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private bool _canSort;
+}

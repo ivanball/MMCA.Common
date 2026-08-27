@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Concurrency;
 using MMCA.Common.Shared.Http;
 
@@ -72,9 +73,6 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
     public static string IdempotencyKeyHeader => IdempotencyHeaders.IdempotencyKey;
 
     private static string CacheKeyPrefix => "idempotency:";
-
-    /// <summary>Claim carrying the caller's identity, matching the one <c>TokenService</c> emits.</summary>
-    private const string UserIdClaimType = "user_id";
 
     /// <summary>
     /// Default cache expiration when <see cref="IdempotencySettings"/> is not registered.
@@ -488,7 +486,7 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
     /// </summary>
     private static string BuildCacheKey(ActionExecutingContext context, string idempotencyKey)
     {
-        var subject = context.HttpContext.User?.FindFirst(UserIdClaimType)?.Value
+        var subject = context.HttpContext.User.FindUserIdValue()
             ?? string.Concat("anon:", context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
 
         var route = context.ActionDescriptor.AttributeRouteInfo?.Template

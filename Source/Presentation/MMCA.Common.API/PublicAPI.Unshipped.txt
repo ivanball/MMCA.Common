@@ -1,6 +1,8 @@
 #nullable enable
 *REMOVED*MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddForwardedJwtBearer(string! authority, string! audience, bool requireHttpsMetadata = false) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 *REMOVED*static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddForwardedJwtBearer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authority, string! audience, bool requireHttpsMetadata = false) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.API.Controllers.AuthControllerBase.ClientIpAddress.get -> string?
+MMCA.Common.API.Controllers.AuthControllerBase.ClientUserAgent.get -> string?
 MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordHandler.get -> MMCA.Common.Application.UseCases.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!

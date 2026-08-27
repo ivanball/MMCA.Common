@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.API.Controllers;
@@ -33,7 +33,7 @@ public sealed class AuthControllerBaseTests
     {
         AuthenticationResponse authResponse = CreateAuthResponse();
         var request = new LoginRequest("test@example.com", "Password123!");
-        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(authResponse));
         TestAuthController sut = CreateController();
 
@@ -49,7 +49,7 @@ public sealed class AuthControllerBaseTests
     public async Task LoginAsync_Failure_ReturnsHandleFailure()
     {
         var request = new LoginRequest("test@example.com", "wrong");
-        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid credentials")));
         TestAuthController sut = CreateController();
@@ -68,7 +68,7 @@ public sealed class AuthControllerBaseTests
     {
         AuthenticationResponse authResponse = CreateAuthResponse();
         var request = new RegisterRequest("new@example.com", "Password123!", "John", "Doe");
-        _authServiceMock.Setup(x => x.RegisterAsync(request, null, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RegisterAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(authResponse));
         TestAuthController sut = CreateController();
 
@@ -84,7 +84,7 @@ public sealed class AuthControllerBaseTests
     public async Task RegisterAsync_Failure_ReturnsHandleFailure()
     {
         var request = new RegisterRequest("existing@example.com", "Password123!", "John", "Doe");
-        _authServiceMock.Setup(x => x.RegisterAsync(request, null, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RegisterAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<AuthenticationResponse>(
                 Error.Conflict("Auth.EmailTaken", "Email already registered")));
         TestAuthController sut = CreateController();
@@ -103,7 +103,7 @@ public sealed class AuthControllerBaseTests
     {
         AuthenticationResponse authResponse = CreateAuthResponse();
         var request = new RefreshTokenRequest("expired-access-token", "valid-refresh-token");
-        _authServiceMock.Setup(x => x.RefreshTokenAsync(request, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RefreshTokenAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(authResponse));
         TestAuthController sut = CreateController();
 
@@ -119,7 +119,7 @@ public sealed class AuthControllerBaseTests
     public async Task RefreshAsync_Failure_ReturnsHandleFailure()
     {
         var request = new RefreshTokenRequest("expired-access-token", "invalid-refresh-token");
-        _authServiceMock.Setup(x => x.RefreshTokenAsync(request, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RefreshTokenAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidRefreshToken", "Refresh token is invalid")));
         TestAuthController sut = CreateController();
@@ -149,7 +149,7 @@ public sealed class AuthControllerBaseTests
     {
         const int userId = 42;
         _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
-        _authServiceMock.Setup(x => x.RevokeTokenAsync(userId, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RevokeAllSessionsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         TestAuthController sut = CreateController();
 
@@ -163,7 +163,7 @@ public sealed class AuthControllerBaseTests
     {
         const int userId = 42;
         _currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
-        _authServiceMock.Setup(x => x.RevokeTokenAsync(userId, It.IsAny<CancellationToken>()))
+        _authServiceMock.Setup(x => x.RevokeAllSessionsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure(Error.NotFoundError("Auth.UserNotFound", "User not found")));
         TestAuthController sut = CreateController();
 

@@ -1,0 +1,7 @@
+@* The same defect written as a Razor expression, on one line, with Sortable placed first. *@
+
+<MudDataGrid T="TicketRow">
+    <Columns>
+        <TemplateColumn Sortable="@(true)" Title="Owner" T="TicketRow" />
+    </Columns>
+</MudDataGrid>

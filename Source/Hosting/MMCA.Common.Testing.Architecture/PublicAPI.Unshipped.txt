@@ -10,20 +10,45 @@ MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldI
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.ServiceContractPurityTestsBase() -> void
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.ServiceContracts_ShouldNotDependOn_ServiceInternals() -> void
+MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase
+MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlerSaveTestsBase() -> void
+MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlers_ShouldNotReach_SaveChanges() -> void
+MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase
+MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCatalogTestsBase() -> void
+MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCodeCatalog_ShouldNotBe_Empty() -> void
+MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCodes_ShouldBe_Unique() -> void
+MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCodes_ShouldCarry_TheOwningModulePrefix() -> void
 MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase
 MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.HardDeletes_ShouldOnlyOccurIn_AllowedPurgeTypes() -> void
 MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.SoftDeleteEnforcementTestsBase() -> void
+MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase
+MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.SortableColumnConventionTestsBase() -> void
+MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.SortableColumns_ShouldNotBe_TemplateColumns() -> void
 abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AllowedAnonymousEndpoints.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
 abstract MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.MarkupRoots.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 const MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractAttributeFullName = "MMCA.Common.Shared.Abstractions.ServiceContractAttribute" -> string!
 static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsController(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsRoutableComponent(System.Type! type) -> bool
 static MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.IsScannedEndpointType(System.Type! type) -> bool
+static MMCA.Common.Testing.Architecture.ArchitectureRules.DistinctErrorCodeCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
+static MMCA.Common.Testing.Architecture.ArchitectureRules.DomainEventHandlersDoNotSave(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces, int maxCallDepth = 6) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ErrorCodesAreUnique(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedSharedCodes) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ErrorCodesUseAnAllowedPrefix(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Func<string!, bool>! isCodeAllowed, System.Collections.Generic.IReadOnlyCollection<string!>! allowedSharedCodes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersHaveUniqueSourceTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.SortableGridColumnsUsePropertyColumn(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HardDeletesOnlyInAllowedTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersIncreaseSchemaVersion(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractsDoNotDependOnServiceInternals(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.MinimumScannedTypes.get -> int
+virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.AllowedSavingTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.MaxCallDepth.get -> int
+virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.AllowedCodePrefixes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.AllowedSharedCodes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.IsCodePrefixAllowed(string! code) -> bool
+virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.MinimumErrorCodes.get -> int
 virtual MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.AllowedHardDeleteTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

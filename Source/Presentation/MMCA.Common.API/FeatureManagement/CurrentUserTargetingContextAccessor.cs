@@ -1,6 +1,7 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.FeatureManagement.FeatureFilters;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.FeatureManagement;
 
@@ -51,9 +52,6 @@ namespace MMCA.Common.API.FeatureManagement;
 public sealed class CurrentUserTargetingContextAccessor(IHttpContextAccessor httpContextAccessor)
     : ITargetingContextAccessor
 {
-    /// <summary>The claim type carrying the user identifier, matching <c>TokenService</c>.</summary>
-    private const string UserIdClaimType = "user_id";
-
     /// <summary>
     /// Builds the targeting context for the current request. Never returns <see langword="null"/>:
     /// a request without a principal (background work, an anonymous call) produces an empty context
@@ -83,7 +81,7 @@ public sealed class CurrentUserTargetingContextAccessor(IHttpContextAccessor htt
 
         return ValueTask.FromResult(new TargetingContext
         {
-            UserId = user.FindFirst(UserIdClaimType)?.Value ?? user.Identity.Name,
+            UserId = user.FindUserIdValue() ?? user.Identity.Name,
             Groups = groups,
         });
     }

@@ -142,6 +142,14 @@ public static class DependencyInjection
                 .ValidateOnStart();
             services.TryAddScoped<Application.Auth.IPasswordResetTokenService, Auth.PasswordResetTokenService>();
 
+            // Multi-device refresh sessions (BR-205/206). Scoped, like the unit of work it shares a
+            // DbContext with, so a login and its session insert commit together.
+            services.AddOptions<Application.Auth.RefreshSessionSettings>()
+                .Bind(configuration.GetSection(Application.Auth.RefreshSessionSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.TryAddScoped<Application.Auth.IRefreshSessionStore, Persistence.Auth.EFRefreshSessionStore>();
+
             services.AddOptions<MessageBusSettings>()
                 .Bind(configuration.GetSection(MessageBusSettings.SectionName))
                 .ValidateDataAnnotations()

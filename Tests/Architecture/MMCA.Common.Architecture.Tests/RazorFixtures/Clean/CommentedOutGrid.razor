@@ -1,0 +1,12 @@
+<MudDataGrid T="TicketRow">
+    <Columns>
+        @*
+        <TemplateColumn Title="Actions" Sortable="true" T="TicketRow">
+            <CellTemplate>
+                <MudButton>Open</MudButton>
+            </CellTemplate>
+        </TemplateColumn>
+        *@
+        <PropertyColumn Property="x => x.Title" Title="Title" Sortable="true" />
+    </Columns>
+</MudDataGrid>

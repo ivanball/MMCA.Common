@@ -1,9 +1,10 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Services;
+using MMCA.Common.Shared.Auth;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Services;
@@ -28,7 +29,7 @@ public sealed class CurrentUserServiceTests
     [Fact]
     public void UserId_WithValidClaim_ShouldReturnParsedId()
     {
-        var principal = CreatePrincipal(new Claim("user_id", "42"));
+        var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "42"));
         var sut = CreateSut(principal);
 
         sut.UserId.Should().Be(42);
@@ -64,7 +65,7 @@ public sealed class CurrentUserServiceTests
         {
             CultureInfo.CurrentCulture = new CultureInfo("de-DE");
 
-            var principal = CreatePrincipal(new Claim("user_id", "42"));
+            var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "42"));
             var sut = CreateSut(principal);
 
             sut.UserId.Should().Be(42);
@@ -73,6 +74,18 @@ public sealed class CurrentUserServiceTests
         {
             CultureInfo.CurrentCulture = original;
         }
+    }
+
+    // The JWT bearer handler maps inbound `sub` onto NameIdentifier by default, so a principal that
+    // came through it carries the identifier under that name instead. Both must resolve, or every
+    // authenticated request through the bearer pipeline reads as anonymous.
+    [Fact]
+    public void UserId_WithTheMappedNameIdentifierClaim_ShouldReturnParsedId()
+    {
+        var principal = CreatePrincipal(new Claim(ClaimTypes.NameIdentifier, "42"));
+        var sut = CreateSut(principal);
+
+        sut.UserId.Should().Be(42);
     }
 
     [Fact]
@@ -87,7 +100,7 @@ public sealed class CurrentUserServiceTests
     [Fact]
     public void UserId_WithNonNumericClaim_ShouldReturnNull()
     {
-        var principal = CreatePrincipal(new Claim("user_id", "not-a-number"));
+        var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "not-a-number"));
         var sut = CreateSut(principal);
 
         sut.UserId.Should().BeNull();
@@ -123,7 +136,7 @@ public sealed class CurrentUserServiceTests
     [Fact]
     public void User_WithHttpContext_ShouldReturnContextUser()
     {
-        var principal = CreatePrincipal(new Claim("user_id", "1"));
+        var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "1"));
         var sut = CreateSut(principal);
 
         sut.User.Should().BeSameAs(principal);
@@ -133,7 +146,7 @@ public sealed class CurrentUserServiceTests
     public void AllProperties_WithFullClaims_ShouldReturnCorrectValues()
     {
         var principal = CreatePrincipal(
-            new Claim("user_id", "10"),
+            new Claim(AuthClaimTypes.Subject, "10"),
             new Claim(ClaimTypes.Role, "Attendee"));
         var sut = CreateSut(principal);
 

@@ -1,7 +1,8 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.Infrastructure.Services;
+using MMCA.Common.Shared.Auth;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Services;
@@ -83,7 +84,7 @@ public sealed class CurrentUserServiceAdditionalTests
     [Fact]
     public void UserId_CalledMultipleTimes_ReturnsSameValue()
     {
-        var principal = CreatePrincipal(new Claim("user_id", "99"));
+        var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "99"));
         var sut = CreateSut(principal);
 
         var first = sut.UserId;
@@ -111,7 +112,7 @@ public sealed class CurrentUserServiceAdditionalTests
     [Fact]
     public void User_WithAuthentication_HasIdentity()
     {
-        var principal = CreatePrincipal(new Claim("user_id", "1"));
+        var principal = CreatePrincipal(new Claim(AuthClaimTypes.Subject, "1"));
         var sut = CreateSut(principal);
 
         sut.User.Identity.Should().NotBeNull();

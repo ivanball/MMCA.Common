@@ -49,6 +49,19 @@ public abstract class AuthControllerBase(
     protected ICurrentUserService CurrentUserService { get; } = currentUserService;
 
     /// <summary>
+    /// The caller's IP, recorded on the refresh session and used for the BR-213 registration rate
+    /// limit. Reads the connection's remote address, which behind a proxy is the forwarded value
+    /// only when the host has configured <c>UseForwardedHeaders</c>.
+    /// </summary>
+    protected string? ClientIpAddress => HttpContext?.Connection.RemoteIpAddress?.ToString();
+
+    /// <summary>
+    /// The caller's user-agent, recorded on the refresh session so a device list can name the
+    /// session a user is looking at. Purely informational: nothing validates against it.
+    /// </summary>
+    protected string? ClientUserAgent => HttpContext?.Request.Headers.UserAgent.ToString();
+
+    /// <summary>
     /// Authenticates a user with email and password, returning access and refresh tokens.
     /// </summary>
     [HttpPost("login")]
@@ -62,7 +75,9 @@ public abstract class AuthControllerBase(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await AuthenticationService.LoginAsync(request, cancellationToken).ConfigureAwait(false);
+        var result = await AuthenticationService
+            .LoginAsync(request, ClientIpAddress, ClientUserAgent, cancellationToken)
+            .ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
@@ -85,7 +100,9 @@ public abstract class AuthControllerBase(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await AuthenticationService.RegisterAsync(request, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var result = await AuthenticationService
+            .RegisterAsync(request, ClientIpAddress, ClientUserAgent, cancellationToken)
+            .ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
@@ -104,7 +121,9 @@ public abstract class AuthControllerBase(
         [FromBody] RefreshTokenRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await AuthenticationService.RefreshTokenAsync(request, cancellationToken).ConfigureAwait(false);
+        var result = await AuthenticationService
+            .RefreshTokenAsync(request, ClientIpAddress, ClientUserAgent, cancellationToken)
+            .ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
@@ -112,7 +131,14 @@ public abstract class AuthControllerBase(
     }
 
     /// <summary>
-    /// Revokes the current user's refresh token, effectively logging them out.
+    /// Revokes the current user's refresh sessions, effectively logging them out.
+    /// <para>
+    /// The endpoint carries no body, so it cannot name the device it is being called from: it signs
+    /// the user out everywhere, which is what the single-token predecessor did and what a caller with
+    /// no way to identify its own session should get. A consumer that wants per-device sign-out calls
+    /// <see cref="IAuthenticationService.RevokeTokenAsync"/> with the client's refresh token from its
+    /// own action.
+    /// </para>
     /// </summary>
     [HttpPost("revoke")]
     [NonIdempotent("Revocation must reach the store on every call. Replaying a cached 204 would report success for a revoke that never ran, leaving a refresh token live after the user asked for it to be killed.")]
@@ -125,7 +151,9 @@ public abstract class AuthControllerBase(
         if (userId is null)
             return Unauthorized();
 
-        var result = await AuthenticationService.RevokeTokenAsync(userId.Value, cancellationToken).ConfigureAwait(false);
+        var result = await AuthenticationService
+            .RevokeAllSessionsAsync(userId.Value, cancellationToken)
+            .ConfigureAwait(false);
 
         return result.IsFailure
             ? HandleFailure(result.Errors)
