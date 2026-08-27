@@ -862,6 +862,13 @@ public sealed class FakeRefreshSessionStore : IRefreshSessionStore
         Task.FromResult(_saved.Find(s => string.Equals(s.TokenHash, tokenHash, StringComparison.Ordinal)));
 
     /// <inheritdoc />
+    public Task<RefreshSession?> FindByIdAsync(
+        Guid id,
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(_saved.Find(s => s.Id == id && s.UserId == userId));
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<RefreshSession>> GetUnrevokedByUserAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken = default) =>

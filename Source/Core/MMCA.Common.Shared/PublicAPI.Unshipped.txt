@@ -1,5 +1,6 @@
 #nullable enable
 MMCA.Common.Shared.Abstractions.ErrorType.Unexpected = 8 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorTypeSeverity
 MMCA.Common.Shared.Abstractions.Result.Bind(System.Func<MMCA.Common.Shared.Abstractions.Result!>! binder) -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Shared.Abstractions.Result.Match<TResult>(System.Func<TResult>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, TResult>! onFailure) -> TResult
 MMCA.Common.Shared.Abstractions.Result.OnFailure(System.Action<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!>! action) -> MMCA.Common.Shared.Abstractions.Result!
@@ -16,6 +17,23 @@ MMCA.Common.Shared.Auth.ForgotPasswordRequest.Email.init -> void
 MMCA.Common.Shared.Auth.ForgotPasswordRequest.Equals(MMCA.Common.Shared.Auth.ForgotPasswordRequest other) -> bool
 MMCA.Common.Shared.Auth.ForgotPasswordRequest.ForgotPasswordRequest() -> void
 MMCA.Common.Shared.Auth.ForgotPasswordRequest.ForgotPasswordRequest(string! Email) -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.CreatedAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.CreatedAt.init -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.Deconstruct(out System.Guid SessionId, out System.DateTime CreatedAt, out System.DateTime ExpiresAt, out string? IpAddress, out string? UserAgent, out bool IsCurrent) -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.Equals(MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse? other) -> bool
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.ExpiresAt.get -> System.DateTime
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.ExpiresAt.init -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.IpAddress.get -> string?
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.IpAddress.init -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.IsCurrent.get -> bool
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.IsCurrent.init -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.RefreshSessionSummaryResponse(System.Guid SessionId, System.DateTime CreatedAt, System.DateTime ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent) -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.SessionId.get -> System.Guid
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.SessionId.init -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.UserAgent.get -> string?
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.UserAgent.init -> void
+MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.<Clone>$() -> MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!
 MMCA.Common.Shared.Auth.ResetPasswordRequest
 MMCA.Common.Shared.Auth.ResetPasswordRequest.Deconstruct(out string! Email, out string! Token, out string! NewPassword) -> void
 MMCA.Common.Shared.Auth.ResetPasswordRequest.Email.get -> string!
@@ -27,10 +45,17 @@ MMCA.Common.Shared.Auth.ResetPasswordRequest.ResetPasswordRequest() -> void
 MMCA.Common.Shared.Auth.ResetPasswordRequest.ResetPasswordRequest(string! Email, string! Token, string! NewPassword) -> void
 MMCA.Common.Shared.Auth.ResetPasswordRequest.Token.get -> string!
 MMCA.Common.Shared.Auth.ResetPasswordRequest.Token.init -> void
+MMCA.Common.Shared.Http.ProblemDetailsResultReader
+const MMCA.Common.Shared.Auth.AuthClaimTypes.SessionId = "sid" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Subject = "sub" -> string!
+const MMCA.Common.Shared.Http.ProblemDetailsResultReader.EmptyResponseCode = "Http.EmptyResponse" -> string!
+const MMCA.Common.Shared.Http.ProblemDetailsResultReader.MalformedResponseCode = "Http.MalformedResponse" -> string!
+const MMCA.Common.Shared.Http.ProblemDetailsResultReader.StatusErrorCodePrefix = "Http." -> string!
 override MMCA.Common.Shared.Auth.ForgotPasswordRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.ResetPasswordRequest.GetHashCode() -> int
 static MMCA.Common.Shared.Abstractions.Error.Unexpected(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.ErrorTypeSeverity.MostSevere(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.ErrorTypeSeverity.Rank(MMCA.Common.Shared.Abstractions.ErrorType errorType) -> int
 static MMCA.Common.Shared.Abstractions.Result.FromError(MMCA.Common.Shared.Abstractions.Error! error) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.Abstractions.Result.implicit operator MMCA.Common.Shared.Abstractions.Result!(MMCA.Common.Shared.Abstractions.Error! error) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.Abstractions.Result<T>.implicit operator MMCA.Common.Shared.Abstractions.Result<T>!(MMCA.Common.Shared.Abstractions.Error! error) -> MMCA.Common.Shared.Abstractions.Result<T>!
@@ -40,13 +65,26 @@ static MMCA.Common.Shared.Abstractions.ResultExtensions.BindAsync<T, TOut>(this 
 static MMCA.Common.Shared.Abstractions.ResultExtensions.MapAsync<T, TOut>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, TOut>! mapper) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TOut>!>!
 static MMCA.Common.Shared.Abstractions.ResultExtensions.MatchAsync<T, TResult>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, TResult>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, TResult>! onFailure) -> System.Threading.Tasks.Task<TResult>!
 static MMCA.Common.Shared.Abstractions.ResultExtensions.TapAsync<T>(this System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>! resultTask, System.Func<T, System.Threading.Tasks.Task!>! action) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindSessionId(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Guid?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindUserIdValue(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetUserId(this System.Security.Claims.ClaimsPrincipal? principal) -> int?
 static MMCA.Common.Shared.Auth.ForgotPasswordRequest.operator !=(MMCA.Common.Shared.Auth.ForgotPasswordRequest left, MMCA.Common.Shared.Auth.ForgotPasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.ForgotPasswordRequest.operator ==(MMCA.Common.Shared.Auth.ForgotPasswordRequest left, MMCA.Common.Shared.Auth.ForgotPasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.ResetPasswordRequest.operator !=(MMCA.Common.Shared.Auth.ResetPasswordRequest left, MMCA.Common.Shared.Auth.ResetPasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.operator !=(MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse? left, MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse? right) -> bool
+static MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.operator ==(MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse? left, MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse? right) -> bool
 static MMCA.Common.Shared.Auth.ResetPasswordRequest.operator ==(MMCA.Common.Shared.Auth.ResetPasswordRequest left, MMCA.Common.Shared.Auth.ResetPasswordRequest right) -> bool
+static MMCA.Common.Shared.Http.ProblemDetailsResultReader.FromHttpStatusCode(int statusCode) -> MMCA.Common.Shared.Abstractions.ErrorType
+static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ParseProblemDetails(int statusCode, string? jsonBody) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ReadAsync(System.Net.Http.HttpResponseMessage! response, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ReadAsync<T>(System.Net.Http.HttpResponseMessage! response, System.Text.Json.JsonSerializerOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+static MMCA.Common.Shared.Http.ProblemDetailsResultReader.ToFailureResult(int statusCode, string? jsonBody) -> MMCA.Common.Shared.Abstractions.Result!
+override MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.ToString() -> string!
 ~override MMCA.Common.Shared.Auth.ForgotPasswordRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.ForgotPasswordRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.ResetPasswordRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.ResetPasswordRequest.ToString() -> string
+const MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.BodyMaxLength = 2000 -> int
+const MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.TitleMaxLength = 200 -> int

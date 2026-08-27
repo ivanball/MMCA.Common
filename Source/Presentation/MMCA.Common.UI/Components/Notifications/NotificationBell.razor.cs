@@ -136,11 +136,12 @@ public partial class NotificationBell : IDisposable
 
         try
         {
-            int? count = await InboxService.GetUnreadCountAsync(_cts.Token);
-            if (count is null)
+            var count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            if (!count.TryGetValue(out var unread))
             {
                 // The authoritative count is unknown (expired session, transient failure). Leave the
                 // badge exactly as it is: zeroing it here is what used to erase a push increment.
+                // A failed read is silent by design; the bell has no surface to report it on.
                 return;
             }
 
@@ -148,7 +149,7 @@ public partial class NotificationBell : IDisposable
             {
                 await InvokeAsync(() =>
                 {
-                    State.SetUnreadCount(count.Value);
+                    State.SetUnreadCount(unread);
                     StateHasChanged();
                 });
             }

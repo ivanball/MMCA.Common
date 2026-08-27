@@ -23,4 +23,17 @@ public static class AuthClaimTypes
     /// and is what every framework reader uses.
     /// </summary>
     public const string Subject = "sub";
+
+    /// <summary>
+    /// The JWT <c>sid</c> claim (RFC 7519 / OpenID Connect "session id"): the identifier of the
+    /// refresh session the access token was minted for. It names the <b>device</b> behind the token,
+    /// which is what lets a "your devices" list mark the row the caller is looking at as the current
+    /// one, and what lets a per-device sign-out know which session it is signing out of.
+    /// <para>
+    /// <b>Additive, never required.</b> Rotation mints a new session and therefore a new <c>sid</c>,
+    /// and a token issued before this claim shipped simply carries none. Nothing validates it: a
+    /// missing or unparsable value degrades to "no current session known", never to a rejected token.
+    /// </para>
+    /// </summary>
+    public const string SessionId = "sid";
 }

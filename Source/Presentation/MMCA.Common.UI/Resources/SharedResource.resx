@@ -529,4 +529,73 @@
   <data name="Auth.Reset.GenericError" xml:space="preserve">
     <value>The password could not be reset. The link may have expired or already been used. Request a new one and try again.</value>
   </data>
+  <data name="Auth.Sessions.Title" xml:space="preserve">
+    <value>Signed-in devices</value>
+  </data>
+  <data name="Auth.Sessions.NavLabel" xml:space="preserve">
+    <value>Signed-in devices</value>
+  </data>
+  <data name="Auth.Sessions.Description" xml:space="preserve">
+    <value>These are the devices currently signed in to your account. Sign out any you do not recognize.</value>
+  </data>
+  <data name="Auth.Sessions.Loading" xml:space="preserve">
+    <value>Loading your signed-in devices</value>
+  </data>
+  <data name="Auth.Sessions.Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Auth.Sessions.Empty" xml:space="preserve">
+    <value>No other devices are signed in.</value>
+  </data>
+  <data name="Auth.Sessions.Column.Device" xml:space="preserve">
+    <value>Device</value>
+  </data>
+  <data name="Auth.Sessions.Column.IpAddress" xml:space="preserve">
+    <value>IP address</value>
+  </data>
+  <data name="Auth.Sessions.Column.SignedIn" xml:space="preserve">
+    <value>Signed in</value>
+  </data>
+  <data name="Auth.Sessions.Column.Expires" xml:space="preserve">
+    <value>Expires</value>
+  </data>
+  <data name="Auth.Sessions.Column.Actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="Auth.Sessions.CurrentDevice" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="Auth.Sessions.CurrentDeviceHint" xml:space="preserve">
+    <value>In use now</value>
+  </data>
+  <data name="Auth.Sessions.IpUnknown" xml:space="preserve">
+    <value>Not recorded</value>
+  </data>
+  <data name="Auth.Sessions.Device.Format" xml:space="preserve">
+    <value>{0} on {1}</value>
+  </data>
+  <data name="Auth.Sessions.Device.Unknown" xml:space="preserve">
+    <value>Unrecognized device</value>
+  </data>
+  <data name="Auth.Sessions.Revoke" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Auth.Sessions.Revoke.Aria" xml:space="preserve">
+    <value>Sign out of {0}</value>
+  </data>
+  <data name="Auth.Sessions.Revoked" xml:space="preserve">
+    <value>That device has been signed out.</value>
+  </data>
+  <data name="Auth.Sessions.AlreadyRevoked" xml:space="preserve">
+    <value>That device was already signed out.</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll" xml:space="preserve">
+    <value>Sign out everywhere</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Aria" xml:space="preserve">
+    <value>Sign out of every device, including this one</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Hint" xml:space="preserve">
+    <value>This also signs you out on this device.</value>
+  </data>
 </root>

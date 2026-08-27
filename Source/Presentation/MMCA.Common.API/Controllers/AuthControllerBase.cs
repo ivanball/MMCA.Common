@@ -135,9 +135,8 @@ public abstract class AuthControllerBase(
     /// <para>
     /// The endpoint carries no body, so it cannot name the device it is being called from: it signs
     /// the user out everywhere, which is what the single-token predecessor did and what a caller with
-    /// no way to identify its own session should get. A consumer that wants per-device sign-out calls
-    /// <see cref="IAuthenticationService.RevokeTokenAsync"/> with the client's refresh token from its
-    /// own action.
+    /// no way to identify its own session should get. Per-device sign-out is
+    /// <see cref="RevokeSessionAsync"/>, which names the session in the route.
     /// </para>
     /// </summary>
     [HttpPost("revoke")]
@@ -153,6 +152,72 @@ public abstract class AuthControllerBase(
 
         var result = await AuthenticationService
             .RevokeAllSessionsAsync(userId.Value, cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.IsFailure
+            ? HandleFailure(result.Errors)
+            : NoContent();
+    }
+
+    /// <summary>
+    /// Lists the caller's signed-in devices: one row per live refresh session, newest first, with the
+    /// device the calling token was minted for flagged <c>IsCurrent</c>.
+    /// </summary>
+    /// <remarks>
+    /// The current-device flag comes from the access token's own <c>sid</c> claim, so no client state
+    /// is involved and nothing has to send a refresh token to a read endpoint. A token issued before
+    /// <c>sid</c> shipped simply flags no row.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The caller's live sessions.</returns>
+    [HttpGet("my-sessions")]
+    [Authorize]
+    [ProducesResponseType(typeof(IReadOnlyList<RefreshSessionSummaryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public virtual async Task<ActionResult<IReadOnlyList<RefreshSessionSummaryResponse>>> GetMySessionsAsync(
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserService.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        var result = await AuthenticationService
+            .GetSessionsAsync(userId.Value, User.FindSessionId(), cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.IsFailure
+            ? HandleFailure(result.Errors)
+            : Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Signs one device out: revokes the caller's session with this identifier.
+    /// </summary>
+    /// <remarks>
+    /// The session is named in the route rather than by its refresh token, so a client can sign out a
+    /// device it does not hold the token for (which is the whole point of a device list). Ownership is
+    /// enforced in the store query, so another account's session id answers 404 exactly as a
+    /// nonexistent one does. Revoking an already-revoked session answers 204: the caller's request is
+    /// satisfied either way, and a device list is where duplicate clicks come from.
+    /// </remarks>
+    /// <param name="sessionId">The session to revoke.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    [HttpPost("revoke/{sessionId:guid}")]
+    [NonIdempotent("Revocation must reach the store on every call. Replaying a cached 204 would report success for a revoke that never ran, leaving a device signed in after the user asked for it to be signed out.")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult> RevokeSessionAsync(
+        Guid sessionId,
+        CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserService.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        var result = await AuthenticationService
+            .RevokeSessionByIdAsync(userId.Value, sessionId, cancellationToken)
             .ConfigureAwait(false);
 
         return result.IsFailure

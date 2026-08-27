@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Net;
-using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 using MMCA.Common.UI.Services.Auth;
 
@@ -35,82 +35,80 @@ public sealed class NotificationInboxService(
     private const string Endpoint = "notifications/inbox";
 
     /// <inheritdoc />
-    public async Task<PagedCollectionResult<UserNotificationDTO>?> GetInboxAsync(
+    public async Task<Result<PagedCollectionResult<UserNotificationDTO>>> GetInboxAsync(
         int pageNumber = 1,
         int pageSize = 20,
-        CancellationToken cancellationToken = default)
-    {
-        string scopeQuery = await ScopeQueryAsync("&", cancellationToken);
-        var url = new Uri(
-            string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}{scopeQuery}"),
-            UriKind.Relative);
+        CancellationToken cancellationToken = default) =>
+        await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                string scopeQuery = await ScopeQueryAsync("&", cancellationToken);
+                var url = new Uri(
+                    string.Create(CultureInfo.InvariantCulture, $"{Endpoint}?pageNumber={pageNumber}&pageSize={pageSize}{scopeQuery}"),
+                    UriKind.Relative);
 
-        using HttpResponseMessage response = await SendReadWithAuthRefreshAsync(
-            (client, ct) => client.GetAsync(url, ct), cancellationToken);
+                using HttpResponseMessage response = await SendReadWithAuthRefreshAsync(
+                    (client, ct) => client.GetAsync(url, ct), cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken);
-            response.EnsureSuccessStatusCode();
-        }
-
-        return await response.Content
-            .ReadFromJsonAsync<PagedCollectionResult<UserNotificationDTO>>(cancellationToken);
-    }
+                return await ProblemDetailsResultReader.ReadAsync<PagedCollectionResult<UserNotificationDTO>>(
+                    response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
 
     /// <inheritdoc />
-    public async Task<int?> GetUnreadCountAsync(CancellationToken cancellationToken = default)
-    {
-        string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
-        var url = new Uri($"{Endpoint}/unread-count{scopeQuery}", UriKind.Relative);
+    public async Task<Result<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default) =>
+        await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
+                var url = new Uri($"{Endpoint}/unread-count{scopeQuery}", UriKind.Relative);
 
-        using HttpResponseMessage response = await SendReadWithAuthRefreshAsync(
-            (client, ct) => client.GetAsync(url, ct), cancellationToken);
+                using HttpResponseMessage response = await SendReadWithAuthRefreshAsync(
+                    (client, ct) => client.GetAsync(url, ct), cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            // Unknown, deliberately NOT zero: reporting zero here let a rejected token or a transient
-            // failure erase a badge that a real-time push had just incremented.
-            return null;
-        }
-
-        return await response.Content.ReadFromJsonAsync<int>(cancellationToken);
-    }
+                // A failure here is "unknown", deliberately NOT zero: reporting zero let a rejected
+                // token or a transient failure erase a badge that a real-time push had just
+                // incremented. The caller keeps the displayed count on any failure.
+                return await ProblemDetailsResultReader.ReadAsync<int>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
 
     /// <inheritdoc />
-    public async Task MarkReadAsync(
+    public async Task<Result> MarkReadAsync(
         UserNotificationIdentifierType id,
-        CancellationToken cancellationToken = default)
-    {
-        using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{id}/read");
+        CancellationToken cancellationToken = default) =>
+        await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using HttpClient httpClient = await CreateAuthenticatedClientAsync();
+                var url = string.Create(CultureInfo.InvariantCulture, $"{Endpoint}/{id}/read");
 
-        HttpResponseMessage response = await RetryPolicy
-            .ExecuteAsync(() => httpClient.PutAsync(new Uri(url, UriKind.Relative), content: null, cancellationToken));
+                // The token flows into the policy as well as the request: without it an abandoned
+                // mark-read sleeps out its full backoff budget instead of aborting.
+                using HttpResponseMessage response = await RetryPolicy
+                    .ExecuteAsync(_ => httpClient.PutAsync(new Uri(url, UriKind.Relative), content: null, cancellationToken), cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken);
-            response.EnsureSuccessStatusCode();
-        }
-    }
+                return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
+            },
+            cancellationToken);
 
     /// <inheritdoc />
-    public async Task MarkAllReadAsync(CancellationToken cancellationToken = default)
-    {
-        string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
-        using HttpClient httpClient = await CreateAuthenticatedClientAsync();
-        var url = $"{Endpoint}/read-all{scopeQuery}";
+    public async Task<Result> MarkAllReadAsync(CancellationToken cancellationToken = default) =>
+        await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                string scopeQuery = await ScopeQueryAsync("?", cancellationToken);
+                using HttpClient httpClient = await CreateAuthenticatedClientAsync();
+                var url = $"{Endpoint}/read-all{scopeQuery}";
 
-        HttpResponseMessage response = await RetryPolicy
-            .ExecuteAsync(() => httpClient.PutAsync(new Uri(url, UriKind.Relative), content: null, cancellationToken));
+                // The token flows into the policy as well as the request: without it an abandoned
+                // mark-read sleeps out its full backoff budget instead of aborting.
+                using HttpResponseMessage response = await RetryPolicy
+                    .ExecuteAsync(_ => httpClient.PutAsync(new Uri(url, UriKind.Relative), content: null, cancellationToken), cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken);
-            response.EnsureSuccessStatusCode();
-        }
-    }
+                return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
+            },
+            cancellationToken);
 
     /// <summary>
     /// Runs one idempotent read under the shared retry policy and, when the API answers
@@ -130,7 +128,7 @@ public sealed class NotificationInboxService(
         HttpResponseMessage response;
         using (HttpClient httpClient = await CreateAuthenticatedClientAsync())
         {
-            response = await RetryPolicy.ExecuteAsync(() => send(httpClient, cancellationToken));
+            response = await RetryPolicy.ExecuteAsync(_ => send(httpClient, cancellationToken), cancellationToken);
         }
 
         if (response.StatusCode != HttpStatusCode.Unauthorized || tokenRefresher is null)
@@ -147,7 +145,7 @@ public sealed class NotificationInboxService(
         response.Dispose();
 
         using HttpClient retryClient = CreateClientWithToken(refreshedToken);
-        return await RetryPolicy.ExecuteAsync(() => send(retryClient, cancellationToken));
+        return await RetryPolicy.ExecuteAsync(_ => send(retryClient, cancellationToken), cancellationToken);
     }
 
     /// <summary>

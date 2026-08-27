@@ -529,4 +529,73 @@
   <data name="Auth.Reset.GenericError" xml:space="preserve">
     <value>No se pudo restablecer la contraseña. Es posible que el enlace haya caducado o que ya se haya usado. Solicite uno nuevo e inténtelo de nuevo.</value>
   </data>
+  <data name="Auth.Sessions.Title" xml:space="preserve">
+    <value>Dispositivos con sesión iniciada</value>
+  </data>
+  <data name="Auth.Sessions.NavLabel" xml:space="preserve">
+    <value>Dispositivos con sesión iniciada</value>
+  </data>
+  <data name="Auth.Sessions.Description" xml:space="preserve">
+    <value>Estos son los dispositivos con la sesión iniciada en su cuenta. Cierre la sesión en cualquiera que no reconozca.</value>
+  </data>
+  <data name="Auth.Sessions.Loading" xml:space="preserve">
+    <value>Cargando sus dispositivos con sesión iniciada</value>
+  </data>
+  <data name="Auth.Sessions.Retry" xml:space="preserve">
+    <value>Intentar de nuevo</value>
+  </data>
+  <data name="Auth.Sessions.Empty" xml:space="preserve">
+    <value>No hay otros dispositivos con la sesión iniciada.</value>
+  </data>
+  <data name="Auth.Sessions.Column.Device" xml:space="preserve">
+    <value>Dispositivo</value>
+  </data>
+  <data name="Auth.Sessions.Column.IpAddress" xml:space="preserve">
+    <value>Dirección IP</value>
+  </data>
+  <data name="Auth.Sessions.Column.SignedIn" xml:space="preserve">
+    <value>Sesión iniciada</value>
+  </data>
+  <data name="Auth.Sessions.Column.Expires" xml:space="preserve">
+    <value>Caduca</value>
+  </data>
+  <data name="Auth.Sessions.Column.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="Auth.Sessions.CurrentDevice" xml:space="preserve">
+    <value>Este dispositivo</value>
+  </data>
+  <data name="Auth.Sessions.CurrentDeviceHint" xml:space="preserve">
+    <value>En uso ahora</value>
+  </data>
+  <data name="Auth.Sessions.IpUnknown" xml:space="preserve">
+    <value>No registrada</value>
+  </data>
+  <data name="Auth.Sessions.Device.Format" xml:space="preserve">
+    <value>{0} en {1}</value>
+  </data>
+  <data name="Auth.Sessions.Device.Unknown" xml:space="preserve">
+    <value>Dispositivo no reconocido</value>
+  </data>
+  <data name="Auth.Sessions.Revoke" xml:space="preserve">
+    <value>Cerrar sesión</value>
+  </data>
+  <data name="Auth.Sessions.Revoke.Aria" xml:space="preserve">
+    <value>Cerrar la sesión de {0}</value>
+  </data>
+  <data name="Auth.Sessions.Revoked" xml:space="preserve">
+    <value>Se ha cerrado la sesión de ese dispositivo.</value>
+  </data>
+  <data name="Auth.Sessions.AlreadyRevoked" xml:space="preserve">
+    <value>La sesión de ese dispositivo ya estaba cerrada.</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll" xml:space="preserve">
+    <value>Cerrar sesión en todas partes</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Aria" xml:space="preserve">
+    <value>Cerrar la sesión en todos los dispositivos, incluido este</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Hint" xml:space="preserve">
+    <value>Esto también cierra su sesión en este dispositivo.</value>
+  </data>
 </root>

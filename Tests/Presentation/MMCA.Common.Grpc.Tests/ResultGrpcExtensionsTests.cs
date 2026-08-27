@@ -60,7 +60,7 @@ public sealed class ResultGrpcExtensionsTests
     }
 
     [Fact]
-    public void ToRpcException_PopulatesStatusAndTrailersFromFirstError()
+    public void ToRpcException_PopulatesStatusAndTrailersFromMostSevereError()
     {
         // Arrange
         IReadOnlyList<Error> errors =
@@ -72,7 +72,7 @@ public sealed class ResultGrpcExtensionsTests
         // Act
         var exception = errors.ToRpcException();
 
-        // Assert: status code derives from the FIRST error's type
+        // Assert: status code derives from the MOST SEVERE error's type, never from position
         exception.StatusCode.Should().Be(StatusCode.Aborted);
         exception.Status.Detail.Should().Contain("Test.Conflict").And.Contain("Test.Validation");
 
@@ -99,6 +99,90 @@ public sealed class ResultGrpcExtensionsTests
         // Assert
         exception.StatusCode.Should().Be(StatusCode.Internal);
         exception.Trailers.GetValue("error-0-type").Should().Be(nameof(ErrorType.Unexpected));
+    }
+
+    [Fact]
+    public void ToRpcException_UnauthorizedBehindValidation_IsNotDowngradedToInvalidArgument()
+    {
+        // Arrange: the exact ordering an aggregate from Result.Combine produces, where a
+        // positional pick would answer InvalidArgument and hide the authentication failure.
+        var combined = Result.Combine(
+            Result.Failure(Error.Validation("Test.Validation", "Bad input")),
+            Result.Failure(Error.Unauthorized("Test.Unauthorized", "Not authenticated")));
+
+        // Act
+        var exception = combined.Errors.ToRpcException();
+
+        // Assert
+        exception.StatusCode.Should().Be(StatusCode.Unauthenticated);
+    }
+
+    [Fact]
+    public void ToRpcException_RankedStatus_StillCarriesEveryErrorInTheTrailers()
+    {
+        // Arrange
+        IReadOnlyList<Error> errors =
+        [
+            Error.Validation("Test.Validation", "Bad input"),
+            Error.Unexpected("Test.Unexpected", "The server broke"),
+        ];
+
+        // Act
+        var exception = errors.ToRpcException();
+
+        // Assert: ranking picks the status only; the payload keeps every error.
+        exception.StatusCode.Should().Be(StatusCode.Internal);
+        exception.Trailers.GetValue("error-0-code").Should().Be("Test.Validation");
+        exception.Trailers.GetValue("error-1-code").Should().Be("Test.Unexpected");
+        exception.Status.Detail.Should().Contain("Test.Validation").And.Contain("Test.Unexpected");
+    }
+
+    [Fact]
+    public void ToRpcException_WithEqualRankErrors_KeepsTheEarliestError()
+    {
+        // Arrange
+        IReadOnlyList<Error> errors =
+        [
+            Error.Validation("Test.Validation", "Bad input"),
+            Error.Invariant("Test.Invariant", "Rule broken"),
+        ];
+
+        // Act
+        var exception = errors.ToRpcException();
+
+        // Assert
+        exception.StatusCode.Should().Be(StatusCode.InvalidArgument);
+    }
+
+    [Fact]
+    public void ToRpcException_ClassifiesTheSameAggregate_AsTheHttpEdgeDoes()
+    {
+        // Arrange: the shared ranking is what makes the two edges agree. Assert the gRPC status is
+        // the one belonging to the error type the ranking selects, for several orderings of the
+        // same aggregate.
+        Error[] pool =
+        [
+            Error.Validation("Test.Validation", "Bad input"),
+            Error.NotFoundError("Test.NotFound", "Missing"),
+            Error.Forbidden("Test.Forbidden", "Denied"),
+        ];
+
+        IReadOnlyList<Error>[] orderings =
+        [
+            [pool[0], pool[1], pool[2]],
+            [pool[2], pool[0], pool[1]],
+            [pool[1], pool[2], pool[0]],
+        ];
+
+        foreach (var ordering in orderings)
+        {
+            // Act
+            var exception = ordering.ToRpcException();
+
+            // Assert
+            var expected = ErrorTypeSeverity.MostSevere(ordering).Type.ToGrpcStatusCode();
+            exception.StatusCode.Should().Be(expected).And.Be(StatusCode.PermissionDenied);
+        }
     }
 
     [Fact]

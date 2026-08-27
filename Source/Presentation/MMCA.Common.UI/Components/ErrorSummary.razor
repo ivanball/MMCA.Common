@@ -1,0 +1,103 @@
+@using MMCA.Common.Shared.Abstractions
+@using MMCA.Common.UI.Common
+@inject IStringLocalizer<SharedResource> SharedLocalizer
+
+@* One deduplicated, localized error block for both failure shapes a form has: a failed Result
+   from the API, and the MudForm validation messages produced before the call was ever made.
+   Renders nothing at all when there is nothing to say, so it can sit unconditionally in markup. *@
+@if (_messages.Count > 0)
+{
+    <MudAlert Severity="@Severity" Variant="@Variant" Dense="@Dense" Class="@Class">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mmca-error-summary-title">@Title</MudText>
+        }
+        @if (_messages.Count == 1)
+        {
+            @_messages[0]
+        }
+        else
+        {
+            @* A list, not joined text: several independent failures must be readable (and
+               announced) as several items, which is also what a screen reader needs. *@
+            <ul class="mmca-error-summary-list">
+                @foreach (var message in _messages)
+                {
+                    <li>@message</li>
+                }
+            </ul>
+        }
+    </MudAlert>
+}
+
+@code {
+    private IReadOnlyList<string> _messages = [];
+
+    /// <summary>
+    /// A failed <see cref="Result"/> whose errors are rendered. A success, or
+    /// <see langword="null"/>, contributes nothing.
+    /// </summary>
+    [Parameter] public Result? Result { get; set; }
+
+    /// <summary>
+    /// Plain messages to render, typically <c>MudForm.Errors</c>. Each entry is resolved as a
+    /// resource key with pass-through, exactly like a <see cref="Result"/> error message.
+    /// <para>
+    /// Feed this only when the fields do not already render their own messages: a form that shows
+    /// per-field errors AND passes them here says everything twice. Note also that MudBlazor adds a
+    /// generic <c>"Required"</c> of its own to <c>MudForm.Errors</c> for a field marked
+    /// <c>Required</c> without a <c>RequiredError</c>, so a summary fed that list shows it alongside
+    /// the model's own wording.
+    /// </para>
+    /// </summary>
+    [Parameter] public IEnumerable<string>? Messages { get; set; }
+
+    /// <summary>
+    /// Resolves every message as a resource key, passing unknown keys through verbatim. Defaults
+    /// to the framework's own <c>SharedResource</c> localizer; a page whose keys live in its own
+    /// resource pair passes its <c>IStringLocalizer</c> here (ADR-027).
+    /// </summary>
+    [Parameter] public IStringLocalizer? Localizer { get; set; }
+
+    /// <summary>Optional heading rendered above the messages.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Alert severity; defaults to <see cref="MudBlazor.Severity.Error"/>.</summary>
+    [Parameter] public Severity Severity { get; set; } = Severity.Error;
+
+    /// <summary>Alert variant; defaults to <see cref="MudBlazor.Variant.Text"/>.</summary>
+    [Parameter] public Variant Variant { get; set; } = Variant.Text;
+
+    /// <summary>Renders the alert in its compact form. Defaults to <see langword="true"/>.</summary>
+    [Parameter] public bool Dense { get; set; } = true;
+
+    /// <summary>CSS classes applied to the alert.</summary>
+    [Parameter] public string Class { get; set; } = "mb-4";
+
+    /// <summary>
+    /// Recomputes on every parameter set rather than lazily in the render body, so the localizer
+    /// and the deduplication run once per change instead of once per render pass.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        var localizer = Localizer ?? SharedLocalizer;
+
+        IReadOnlyList<string> fromResult = Result is null ? [] : Result.LocalizedErrorMessages(localizer);
+        IReadOnlyList<string> fromMessages = ResultUiExtensions.LocalizeDistinct(Messages, localizer);
+
+        if (fromResult.Count == 0)
+        {
+            _messages = fromMessages;
+        }
+        else if (fromMessages.Count == 0)
+        {
+            _messages = fromResult;
+        }
+        else
+        {
+            // Both shapes present: the API's verdict first, then whatever the form itself rejected,
+            // with anything said twice kept once.
+            _messages = [.. fromResult.Concat(fromMessages).Distinct(StringComparer.Ordinal)];
+        }
+    }
+}

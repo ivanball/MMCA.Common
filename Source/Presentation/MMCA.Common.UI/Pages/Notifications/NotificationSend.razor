@@ -1,5 +1,6 @@
 @page "/notifications/send"
 @using Microsoft.AspNetCore.Authorization
+@using MMCA.Common.Shared.Notifications.PushNotifications
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Validation
 @attribute [Authorize]
@@ -19,18 +20,26 @@
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent>
+        @* The send attempt's failure, localized and deduplicated once instead of per call site; it
+           renders nothing until there is something to say. Deliberately NOT fed MudForm.Errors:
+           every field already renders its own message inline, and MudBlazor contributes a generic
+           "Required" of its own to that list, which would stack on top of the model's wording. A
+           consumer form whose fields do not show their own messages passes them via Messages. *@
+        <ErrorSummary Result="_sendResult" Localizer="L" />
+
         @* No rule is declared here. Model + For + the shared Validation delegate run the
            DataAnnotations declared once on NotificationSendModel, and the remaining parameters are
            affordances read off that same model: Required drives the asterisk and aria-required (its
-           message still comes from the model), MaxLength caps the input, Counter shows the budget. *@
+           message still comes from the model), MaxLength caps the input, Counter shows the budget
+           (the numbers come from the shared request contract, so they cannot drift from the server). *@
         <MudForm @ref="_form" Model="_model">
             <MudTextField @bind-Value="_model.Title"
                           For="@(() => _model.Title)"
                           Validation="@_validate"
                           Required="@ModelValidation.IsRequired(_model, nameof(NotificationSendModel.Title))"
                           Label="@L["Notif.Send.Field.Title"]"
-                          MaxLength="@NotificationSendModel.TitleMaxLength"
-                          Counter="@NotificationSendModel.TitleMaxLength"
+                          MaxLength="@SendPushNotificationRequest.TitleMaxLength"
+                          Counter="@SendPushNotificationRequest.TitleMaxLength"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Class="mb-4" />
@@ -41,8 +50,8 @@
                           Required="@ModelValidation.IsRequired(_model, nameof(NotificationSendModel.Body))"
                           Label="@L["Notif.Send.Field.Message"]"
                           Lines="5"
-                          MaxLength="@NotificationSendModel.BodyMaxLength"
-                          Counter="@NotificationSendModel.BodyMaxLength"
+                          MaxLength="@SendPushNotificationRequest.BodyMaxLength"
+                          Counter="@SendPushNotificationRequest.BodyMaxLength"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Class="mb-4" />

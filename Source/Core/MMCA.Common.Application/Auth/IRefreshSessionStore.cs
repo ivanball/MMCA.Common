@@ -44,6 +44,21 @@ public interface IRefreshSessionStore
         UserIdentifierType userId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Finds one of <paramref name="userId"/>'s sessions by its identifier, revoked and expired rows
+    /// included. The user is part of the lookup rather than a check the caller does afterwards: a
+    /// session id is a value a client hands back, so scoping the query to the owner is what makes
+    /// another account's id indistinguishable from a nonexistent one.
+    /// </summary>
+    /// <param name="id">The session identifier (the token's <c>sid</c> claim, or a row from a device list).</param>
+    /// <param name="userId">The user the session must belong to.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The tracked session, or null when no such row belongs to that user.</returns>
+    Task<RefreshSession?> FindByIdAsync(
+        Guid id,
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Persists staged inserts and revocations.</summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of rows written.</returns>

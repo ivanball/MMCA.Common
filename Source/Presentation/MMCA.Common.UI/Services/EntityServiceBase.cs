@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
@@ -15,10 +14,18 @@ namespace MMCA.Common.UI.Services;
 /// <list type="bullet">
 ///   <item>Polly exponential-backoff-with-jitter retry (3 retries) for transient/server errors</item>
 ///   <item>An <c>Idempotency-Key</c> on creates, held constant across every retry attempt</item>
-///   <item>Automatic domain exception extraction via <see cref="ServiceExceptionHelper"/></item>
+///   <item>Every outcome returned as a <see cref="Result"/>: the API's own errors are read back
+///   through <see cref="ProblemDetailsResultReader"/> with their <see cref="ErrorType"/> intact,
+///   and transport faults become failures via <see cref="HttpResultExecutor"/></item>
 ///   <item>Named <c>"APIClient"</c> HttpClient with pre-configured base address and auth handler</item>
 /// </list>
 /// Module-specific services derive from this and add domain-specific operations.
+/// <para>
+/// <b>Nothing here throws for a server answer.</b> A 404 is a <see cref="ErrorType.NotFound"/>
+/// failure, a validation rejection is a <see cref="ErrorType.Validation"/> failure, a 500 is
+/// <see cref="ErrorType.Unexpected"/>. The only exception that still escapes is the caller's own
+/// <see cref="OperationCanceledException"/>, because a page owns its cancellation.
+/// </para>
 /// </summary>
 /// <typeparam name="TEntityDTO">DTO type returned by the API.</typeparam>
 /// <typeparam name="TIdentifierType">Primary key type of the entity.</typeparam>
@@ -31,7 +38,8 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
 {
     protected string Endpoint { get; } = endpoint;
 
-    public virtual async Task<IReadOnlyList<TEntityDTO>?> GetAllAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result<IReadOnlyList<TEntityDTO>>> GetAllAsync(
         bool includeFKs = false,
         bool includeChildren = false,
         CancellationToken cancellationToken = default)
@@ -47,10 +55,12 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken
         );
-        return (IReadOnlyList<TEntityDTO>)(wrapper?.Items ?? []);
+
+        return wrapper.Map(page => AsReadOnlyList(page.Items));
     }
 
-    public virtual async Task<(IReadOnlyList<TEntityDTO> Items, int TotalItems)> GetPagedAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result<(IReadOnlyList<TEntityDTO> Items, int TotalItems)>> GetPagedAsync(
         Dictionary<string, (string Operator, string Value)> filters,
         int pageNumber,
         int pageSize,
@@ -86,10 +96,15 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken
         );
-        return ((IReadOnlyList<TEntityDTO>)(result?.Items ?? []), result?.PaginationMetadata.TotalItemCount ?? 0);
+
+        // The pagination metadata still travels with the page; only its shape is flattened, so a
+        // grid keeps binding to (Items, TotalItems) exactly as before.
+        return result.Map<(IReadOnlyList<TEntityDTO> Items, int TotalItems)>(
+            page => (AsReadOnlyList(page.Items), page.PaginationMetadata.TotalItemCount));
     }
 
-    public virtual async Task<IReadOnlyList<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result<IReadOnlyList<BaseLookup<TIdentifierType>>>> GetAllForLookupAsync(
         string nameProperty,
         CancellationToken cancellationToken = default)
     {
@@ -98,10 +113,12 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
             cancellationToken
         );
-        return (IReadOnlyList<BaseLookup<TIdentifierType>>)(result?.Items ?? []);
+
+        return result.Map(collection => AsReadOnlyList(collection.Items));
     }
 
-    public virtual async Task<TEntityDTO?> GetByIdAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result<TEntityDTO>> GetByIdAsync(
         TIdentifierType id,
         bool includeChildren = false,
         CancellationToken cancellationToken = default)
@@ -112,14 +129,18 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         };
 
         var url = $"{Endpoint}/{id}?{string.Join("&", queryParams)}";
+
+        // A missing entity is a NotFound failure rather than a null value: the caller can tell it
+        // apart from a transport failure (ResultUiExtensions.IsNotFound) instead of both arriving
+        // as the same null.
         return await SendRequestAsync<TEntityDTO>(
             httpClient => httpClient.GetAsync(new Uri(url, UriKind.Relative), cancellationToken),
-            cancellationToken,
-            treatNotFoundAsDefault: true
+            cancellationToken
         );
     }
 
-    public virtual async Task<TEntityDTO> AddAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result<TEntityDTO>> AddAsync(
         TEntityDTO entity,
         CancellationToken cancellationToken = default)
     {
@@ -131,96 +152,129 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         return await SendRequestAsync<TEntityDTO>(
             httpClient => httpClient.PostAsJsonAsync(new Uri(url, UriKind.Relative), entity, cancellationToken),
             cancellationToken,
-            throwIfNull: true,
             idempotencyKey: NewIdempotencyKey()
-        ) ?? throw new InvalidOperationException($"No {typeof(TEntityDTO).Name} returned from API.");
+        );
     }
 
-    public virtual async Task<bool> UpdateAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result> UpdateAsync(
         TEntityDTO entity,
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}/{GetEntityId(entity)}";
-        await SendRequestAsync<TEntityDTO>(
+        return await SendRequestAsync(
             httpClient => httpClient.PutAsJsonAsync(new Uri(url, UriKind.Relative), entity, cancellationToken),
-            cancellationToken,
-            expectContent: false
+            cancellationToken
         );
-        return true;
     }
 
-    public virtual async Task<bool> DeleteAsync(
+    /// <inheritdoc />
+    public virtual async Task<Result> DeleteAsync(
         TIdentifierType id,
         CancellationToken cancellationToken = default)
     {
         var url = $"{Endpoint}/{id}";
-        await SendRequestAsync<object>(
+        return await SendRequestAsync(
             httpClient => httpClient.DeleteAsync(new Uri(url, UriKind.Relative), cancellationToken),
-            cancellationToken,
-            expectContent: false
+            cancellationToken
         );
-        return true;
     }
 
     protected virtual TIdentifierType GetEntityId(TEntityDTO entity)
         => entity.Id;
 
     /// <summary>
-    /// Central HTTP dispatch: executes the given action through the Polly retry pipeline,
-    /// checks for domain-level errors in the response body, and deserializes the result.
+    /// Presents a deserialized <c>Items</c> collection as an <see cref="IReadOnlyList{T}"/> without
+    /// assuming the JSON reader produced a list: the common case casts, anything else is copied.
+    /// </summary>
+    private static IReadOnlyList<TItem> AsReadOnlyList<TItem>(ICollection<TItem>? items) =>
+        items switch
+        {
+            null => [],
+            IReadOnlyList<TItem> list => list,
+            _ => [.. items],
+        };
+
+    /// <summary>
+    /// Central HTTP dispatch for a call that returns a body: executes the action through the Polly
+    /// retry pipeline, then reads the response back into a <see cref="Result{T}"/> through
+    /// <see cref="ProblemDetailsResultReader"/>.
     /// </summary>
     /// <typeparam name="T">The type to deserialize the response body into.</typeparam>
     /// <param name="httpAction">Lambda that performs the actual HTTP call.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <param name="treatNotFoundAsDefault">When <see langword="true"/>, 404 returns default instead of throwing.</param>
-    /// <param name="throwIfNull">When <see langword="true"/>, throws if deserialized result is <see langword="null"/>.</param>
-    /// <param name="expectContent">When <see langword="false"/>, skips deserialization (PUT/DELETE with no body).</param>
+    /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
     /// <param name="idempotencyKey">
     /// Optional idempotency key sent as the <c>Idempotency-Key</c> header (see
     /// <see cref="AuthenticatedServiceBase.NewIdempotencyKey"/>). Supply one for non-idempotent
     /// writes (creates); leave <see langword="null"/> for reads and naturally idempotent writes.
     /// </param>
-    protected async Task<T?> SendRequestAsync<T>(
+    /// <returns>
+    /// The deserialized value, or a failure. A 2xx with no body fails with
+    /// <see cref="ProblemDetailsResultReader.EmptyResponseCode"/>: use the non-generic overload for
+    /// endpoints that legitimately answer without one.
+    /// </returns>
+    protected async Task<Result<T>> SendRequestAsync<T>(
         Func<HttpClient, Task<HttpResponseMessage>> httpAction,
         CancellationToken cancellationToken,
-        bool treatNotFoundAsDefault = false,
-        bool throwIfNull = false,
-        bool expectContent = true,
         string? idempotencyKey = null)
     {
-        using var httpClient = await CreateAuthenticatedClientAsync();
+        ArgumentNullException.ThrowIfNull(httpAction);
+
+        return await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                // The client stays alive across the read: HttpClient buffers the body before the send
+                // task completes, but keeping it in scope means that is a property, not a dependency.
+                using var httpClient = await CreateRequestClientAsync(idempotencyKey);
+                using var response = await RetryPolicy.ExecuteAsync(_ => httpAction(httpClient), cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync<T>(response, cancellationToken: cancellationToken);
+            },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Central HTTP dispatch for a call with no response body (a PUT or DELETE answering 204):
+    /// executes the action through the Polly retry pipeline, then classifies the response through
+    /// <see cref="ProblemDetailsResultReader"/>.
+    /// </summary>
+    /// <param name="httpAction">Lambda that performs the actual HTTP call.</param>
+    /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
+    /// <param name="idempotencyKey">Optional <c>Idempotency-Key</c> header value.</param>
+    /// <returns>Success for any 2xx, otherwise the errors the response described.</returns>
+    protected async Task<Result> SendRequestAsync(
+        Func<HttpClient, Task<HttpResponseMessage>> httpAction,
+        CancellationToken cancellationToken,
+        string? idempotencyKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(httpAction);
+
+        return await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateRequestClientAsync(idempotencyKey);
+                using var response = await RetryPolicy.ExecuteAsync(_ => httpAction(httpClient), cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
+            },
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Builds the authenticated client for one logical operation, carrying the idempotency key when
+    /// the operation needs one.
+    /// </summary>
+    private async Task<HttpClient> CreateRequestClientAsync(string? idempotencyKey)
+    {
+        var httpClient = await CreateAuthenticatedClientAsync();
 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
             // This client is created once per logical operation and then serves EVERY retry attempt
-            // made by the policy below, so a default header set here rides along on each attempt
-            // with the same value. That is exactly the property the server needs: same key across
-            // attempts means the duplicate arrivals dedup instead of creating extra records.
+            // made by the policy, so a default header set here rides along on each attempt with the
+            // same value. That is exactly the property the server needs: the same key across
+            // attempts means duplicate arrivals dedup instead of creating extra records.
             httpClient.DefaultRequestHeaders.Add(IdempotencyHeaders.IdempotencyKey, idempotencyKey);
         }
 
-        // The token flows into the policy so cancellation aborts the wait between attempts instead
-        // of letting an abandoned operation sleep out its full backoff budget.
-        var response = await RetryPolicy.ExecuteAsync(_ => httpAction(httpClient), cancellationToken);
-
-        if (treatNotFoundAsDefault && response.StatusCode == HttpStatusCode.NotFound)
-            return default;
-
-        // Extract domain/validation errors before EnsureSuccessStatusCode throws a generic exception
-        if (!response.IsSuccessStatusCode)
-            await ServiceExceptionHelper.ThrowIfDomainExceptionAsync(response, cancellationToken);
-
-        response.EnsureSuccessStatusCode();
-
-        if (!expectContent)
-            return default;
-
-        var result = await response.Content.ReadFromJsonAsync<T>(cancellationToken);
-
-        if (throwIfNull && result is null)
-            throw new InvalidOperationException($"No {typeof(T).Name} returned from API.");
-
-        return result;
+        return httpClient;
     }
-
 }

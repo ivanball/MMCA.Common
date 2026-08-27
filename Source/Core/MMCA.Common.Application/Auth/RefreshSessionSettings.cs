@@ -46,4 +46,33 @@ public sealed class RefreshSessionSettings
     /// </summary>
     [MinLength(1)]
     public string DataSourceName { get; init; } = "Default";
+
+    /// <summary>
+    /// How long a session row survives after it stops being usable, before the framework's retention
+    /// sweep hard-deletes it. The age is measured from the instant the session died (its revocation,
+    /// or its expiry when it was never revoked), so a live session is never a candidate no matter how
+    /// old it is. Defaults to 30 days.
+    /// <para>
+    /// <b>It bounds reuse detection.</b> BR-206 catches a replayed refresh token by landing on its
+    /// revoked row; once that row is swept, the same replay reads as an unknown token and fails alone
+    /// instead of revoking the family. Thirty days is far past the seven-day refresh-token lifetime,
+    /// so a token still capable of being replayed always has its row. Lower it only knowing that a
+    /// window shorter than <c>Jwt:RefreshTokenExpirationDays</c> starts deleting rows whose tokens
+    /// could still come back.
+    /// </para>
+    /// <para>
+    /// Set to <c>0</c> to keep every row forever, which is the pre-sweep behavior and makes the table
+    /// an operator's problem.
+    /// </para>
+    /// </summary>
+    [Range(0, 3650)]
+    public int RetentionDays { get; init; } = 30;
+
+    /// <summary>
+    /// How often, in hours, the retention sweep runs. Ignored when <see cref="RetentionDays"/> is
+    /// <c>0</c>. Defaults to <c>6</c>, matching the outbox sweep: the table is small and the deadline
+    /// is a retention window measured in days, so nothing is gained by sweeping more often.
+    /// </summary>
+    [Range(1, 168)]
+    public int CleanupIntervalHours { get; init; } = 6;
 }

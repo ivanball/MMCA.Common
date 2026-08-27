@@ -98,9 +98,14 @@ public static class ResultGrpcExtensions
     {
         /// <summary>
         /// Builds an <see cref="RpcException"/> from a list of <see cref="Error"/> instances.
-        /// The first error's <see cref="Error.Type"/> determines the status code; all errors are
-        /// serialized into the trailers as <c>error-{i}-code</c>, <c>error-{i}-message</c>, and
-        /// <c>error-{i}-type</c> entries for consumers that need structured access to the failure.
+        /// The <b>most severe</b> error's <see cref="Error.Type"/> determines the status code
+        /// (<see cref="ErrorTypeSeverity"/>, the same ranking the HTTP edge uses), so an aggregate
+        /// built by <see cref="Result.Combine"/> cannot be downgraded by error ordering: an
+        /// <see cref="ErrorType.Unauthorized"/> travelling behind an <see cref="ErrorType.Validation"/>
+        /// still answers <see cref="StatusCode.Unauthenticated"/>. Ties keep the earliest error.
+        /// All errors are serialized into the trailers as <c>error-{i}-code</c>,
+        /// <c>error-{i}-message</c>, and <c>error-{i}-type</c> entries for consumers that need
+        /// structured access to the failure; ranking picks the status only.
         /// </summary>
         /// <returns>An <see cref="RpcException"/> populated with status, detail, and trailing metadata.</returns>
         public RpcException ToRpcException()
@@ -108,7 +113,7 @@ public static class ResultGrpcExtensions
             ArgumentNullException.ThrowIfNull(errors);
 
             var statusCode = errors.Count > 0
-                ? errors[0].Type.ToGrpcStatusCode()
+                ? ErrorTypeSeverity.MostSevere(errors).Type.ToGrpcStatusCode()
                 : StatusCode.Internal;
 
             var detail = errors.Count > 0

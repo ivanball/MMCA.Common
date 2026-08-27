@@ -10,8 +10,17 @@ namespace MMCA.Common.UI.Pages.Common;
 /// <para>
 /// Localized (ADR-027): when a shared localizer is configured (via <see cref="Configure"/>, called once
 /// from the root layout) each message resolves from the <c>SharedResource</c> <c>.resx</c> by key against
-/// the current UI culture; until then — or for an unknown key — the English format string is the fallback.
+/// the current UI culture; until then, or for an unknown key, the English format string is the fallback.
 /// The static signatures are unchanged so existing call sites do not move.
+/// </para>
+/// <para>
+/// <b>Scope after the Result conversion.</b> The UI HTTP services no longer throw for a server answer:
+/// they return a <c>Result</c> whose errors carry the API's own text, which pages render through
+/// <c>MMCA.Common.UI.Common.ResultUiExtensions</c> (<c>NotifyOnFailure</c>, <c>OnFailureSetError</c>).
+/// These helpers remain for the exceptions a page can still see, which are its own faults rather than
+/// the server's: a JS-interop failure, a mapping bug, a callback a page supplied. The
+/// <see cref="DomainInvariantViolationException"/> branch below is kept for consumers that still raise
+/// that type from their own code.
 /// </para>
 /// </summary>
 public static class ErrorMessages
@@ -42,12 +51,10 @@ public static class ErrorMessages
     /// <summary>
     /// Load-failure message. Pass a LOCALIZED entity name (e.g. the page's localized <c>Title</c> or an
     /// <c>L["Entity.X"]</c> value). A <see cref="DomainInvariantViolationException"/> is the one exception
-    /// whose <c>Message</c> IS shown, replacing the template: <c>ServiceExceptionHelper</c> rethrows the
-    /// API's Problem Details errors as that type, and their text is curated domain wording already
-    /// localized server-side to the request culture (ADR-027 Decisions 3 and 5), so the user sees the
-    /// actual business rule that rejected the action. Every other exception's <c>Message</c> is
-    /// deliberately NOT shown (raw exception text is neither localizable nor safe to surface, ADR-027
-    /// Decision 9 / rubric §24).
+    /// whose <c>Message</c> IS shown, replacing the template: its text is curated domain wording already
+    /// localized to the request culture (ADR-027 Decisions 3 and 5), so the user sees the actual business
+    /// rule that rejected the action. Every other exception's <c>Message</c> is deliberately NOT shown
+    /// (raw exception text is neither localizable nor safe to surface, ADR-027 Decision 9 / rubric §24).
     /// </summary>
     public static string LoadError(string entityName, Exception ex) =>
         ex is DomainInvariantViolationException

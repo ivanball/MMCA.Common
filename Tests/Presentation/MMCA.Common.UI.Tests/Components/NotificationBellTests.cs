@@ -3,9 +3,11 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Components.Notifications;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
+using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Components;
 
@@ -43,21 +45,32 @@ internal sealed class NotificationBellHost : ComponentBase
 /// <summary>
 /// bUnit tests for <see cref="NotificationBell"/>: badge count, navigation on click, reaction to
 /// shared-state changes, and the single-active-poller protocol (symmetric registration, takeover by a
-/// surviving bell, and leaving the badge alone when the count cannot be established).
+/// surviving bell, and leaving the badge alone (silently) when the count cannot be established).
 /// </summary>
 public sealed class NotificationBellTests : BunitTestBase
 {
     private readonly Mock<INotificationInboxUIService> _inbox = new();
     private readonly NotificationState _state = new();
+    private readonly Mock<ISnackbar> _snackbar = new();
 
     public NotificationBellTests()
     {
         Services.AddSingleton(_state);
         Services.AddSingleton(_inbox.Object);
+        // Registered after the base class's AddMudServices, so this wins: the bell has no error
+        // surface of its own, and this is how a stray toast from it would be caught.
+        Services.AddSingleton<ISnackbar>(_snackbar.Object);
     }
 
-    private void CountIs(int? count) =>
-        _inbox.Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(count);
+    private void CountIs(int count) =>
+        _inbox.Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(count));
+
+    // A failed read means the authoritative count is UNKNOWN (expired session, transient failure),
+    // which replaced the old null int?.
+    private void CountIsUnavailable() =>
+        _inbox.Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<int>(Error.Unauthorized("Notif.Count.Unauthorized", "Your session expired.")));
 
     [Fact]
     public void RendersUnreadCount_FromService()
@@ -145,9 +158,9 @@ public sealed class NotificationBellTests : BunitTestBase
     [Fact]
     public void WhenTheCountIsUnavailable_TheBadgeKeepsItsValue()
     {
-        // A null count means "unknown" (expired session, transient failure). Zeroing the badge here
+        // A failed count means "unknown" (expired session, transient failure). Zeroing the badge here
         // is what erased the increment a real-time push had just applied.
-        CountIs(null);
+        CountIsUnavailable();
         _state.SetUnreadCount(4);
 
         var cut = RenderUnderTest<NotificationBell>(_ => { });
@@ -156,5 +169,41 @@ public sealed class NotificationBellTests : BunitTestBase
 
         _state.UnreadCount.Should().Be(4);
         cut.Markup.Should().Contain("4");
+    }
+
+    [Fact]
+    public void WhenTheCountIsUnavailable_TheBellStaysSilent()
+    {
+        // The bell is chrome: it has nowhere to report a failure, and a toast on every failed poll
+        // would fire every 30 seconds for the life of an expired session.
+        CountIsUnavailable();
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() =>
+            _inbox.Verify(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce()));
+
+        _snackbar.Verify(
+            s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public void WhenTheCountRecovers_TheBadgeCatchesUp()
+    {
+        // "Unknown" is not a terminal state: the next successful read is authoritative again.
+        _inbox
+            .SetupSequence(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<int>(Error.Unauthorized("Notif.Count.Unauthorized", "Your session expired.")))
+            .ReturnsAsync(Result.Success(7));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        // Wait for the failed first read before pushing the refresh, so the order is deterministic.
+        cut.WaitForAssertion(() =>
+            _inbox.Verify(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()), Times.Once()));
+
+        _state.RequestRefresh();
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("7"));
+        _state.UnreadCount.Should().Be(7);
     }
 }

@@ -20,7 +20,7 @@ public sealed class PushNotificationService(
         "notifications", httpClientFactory, tokenStorageService), IPushNotificationUIService
 {
     /// <inheritdoc />
-    public async Task<PushNotificationDTO?> SendAsync(
+    public async Task<Result<PushNotificationDTO>> SendAsync(
         SendPushNotificationRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -43,12 +43,11 @@ public sealed class PushNotificationService(
                 new Uri(Endpoint, UriKind.Relative),
                 scopedRequest,
                 cancellationToken),
-            cancellationToken,
-            throwIfNull: true);
+            cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<PagedCollectionResult<PushNotificationDTO>?> GetHistoryAsync(
+    public async Task<Result<PagedCollectionResult<PushNotificationDTO>>> GetHistoryAsync(
         int pageNumber = 1,
         int pageSize = 10,
         CancellationToken cancellationToken = default)

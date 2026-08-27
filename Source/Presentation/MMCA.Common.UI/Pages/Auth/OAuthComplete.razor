@@ -1,4 +1,5 @@
 @page "/auth/oauth-complete"
+@using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
 @using MMCA.Common.UI.Services.Navigation
 @attribute [StreamRendering(false)]
@@ -62,9 +63,9 @@
         try
         {
             var result = await AuthService.ExchangeOAuthCodeAsync(Code);
-            if (result is null)
+            if (result.IsFailure)
             {
-                _error = AuthService.LastError ?? L["Auth.OAuth.CompleteFailed"];
+                _error = result.LocalizedErrorMessage(L) ?? L["Auth.OAuth.CompleteFailed"];
                 StateHasChanged();
                 return;
             }
