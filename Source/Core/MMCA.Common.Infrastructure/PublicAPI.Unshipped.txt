@@ -5,6 +5,8 @@ MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.IssueAsync(string! ema
 MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.PasswordResetTokenService(MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings) -> void
 MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
 MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableRefreshSessions.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableRefreshSessions.set -> void
 MMCA.Common.Infrastructure.Services.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterUpcastedIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
 MMCA.Common.Infrastructure.Services.TokenService.TokenService(MMCA.Common.Infrastructure.Settings.IJwtSettings! jwtSettings, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.JwksSettings!>? jwksSettings = null) -> void
 MMCA.Common.Infrastructure.Services.UpcastingIntegrationEventConsumer<TEvent>
