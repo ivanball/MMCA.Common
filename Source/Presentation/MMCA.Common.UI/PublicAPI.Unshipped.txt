@@ -197,3 +197,7 @@ override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threa
 static readonly MMCA.Common.UI.Common.RoutePaths.Sessions -> string!
 virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 ~override MMCA.Common.UI.Pages.Auth.Sessions.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+*REMOVED*MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPage.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!
+MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPage.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>?
+MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!>?
+MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.set -> void

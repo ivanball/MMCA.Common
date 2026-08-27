@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
+using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Resources;
 using MudBlazor;
 
@@ -24,9 +26,27 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     [EditorRequired]
     public RenderFragment<TItem> CardTemplate { get; set; } = default!;
 
+    /// <summary>
+    /// The page fetcher, in the shape every Result-returning UI service already has
+    /// (<c>IEntityService.GetPagedAsync</c> without the filter/sort arguments): page number
+    /// (1-based), page size, cancellation token. A failure <see cref="Result"/> renders the inline
+    /// load-failure message plus its Retry button, exactly where a thrown exception used to.
+    /// Supply either this or the obsolete <see cref="FetchPage"/>, never both.
+    /// </summary>
     [Parameter]
-    [EditorRequired]
-    public Func<int, int, CancellationToken, Task<(IReadOnlyList<TItem> Items, int TotalItems)>> FetchPage { get; set; } = default!;
+    public Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TItem> Items, int TotalItems)>>>? FetchPageResult { get; set; }
+
+    /// <summary>
+    /// The pre-Result page fetcher, whose only failure signal is a thrown exception.
+    /// Kept working for call sites that have not switched yet: its tuple is lifted into a success
+    /// <see cref="Result"/> internally, so both parameters run the same single load path.
+    /// </summary>
+    [Parameter]
+#pragma warning disable S1133 // Deprecated code should be removed: the obsoletion IS the migration mechanism; it turns every remaining tuple call site into a build warning during the lockstep sweep, and the parameter is removed once all consumers are swept.
+    [Obsolete("Services no longer throw for server answers, so a failure has to reach the component as a Result to keep the inline retry affordance. Use FetchPageResult, whose delegate returns Task<Result<(IReadOnlyList<TItem> Items, int TotalItems)>>.")]
+#pragma warning restore S1133
+    public Func<int, int, CancellationToken, Task<(IReadOnlyList<TItem> Items, int TotalItems)>>? FetchPage { get; set; }
+
     [Parameter] public int PageSize { get; set; } = 10;
     [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
 
@@ -56,6 +76,14 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     private bool _isLoadingMore;
     private bool _hasMore = true;
     private bool _loadError;
+
+    /// <summary>
+    /// The localized message from a failure <see cref="Result"/>, rendered in place of the generic
+    /// load-failure text. Null when the failure carried no message or came from an exception, in
+    /// which case the generic resource string is shown instead.
+    /// </summary>
+    private string? _loadErrorMessage;
+
     private ElementReference _sentinelRef;
     private IJSObjectReference? _jsModule;
     private DotNetObjectReference<MobileInfiniteScrollList<TItem>>? _dotNetRef;
@@ -66,8 +94,47 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        ValidateFetchParameters();
+
         await LoadNextPageAsync(isInitial: true);
         _isInitialLoad = false;
+    }
+
+    /// <summary>
+    /// Exactly one fetcher must be supplied. Checked here rather than inside the load, so a
+    /// misconfigured call site fails loudly instead of rendering as a load failure with a Retry
+    /// button that can never succeed.
+    /// </summary>
+    private void ValidateFetchParameters()
+    {
+#pragma warning disable CS0618 // The obsolete parameter stays supported; reading it is the support.
+        bool hasTupleFetch = FetchPage is not null;
+#pragma warning restore CS0618
+        bool hasResultFetch = FetchPageResult is not null;
+
+        if (hasTupleFetch == hasResultFetch)
+        {
+            throw new InvalidOperationException(
+                "MobileInfiniteScrollList requires exactly one of FetchPageResult (preferred) or the obsolete FetchPage.");
+        }
+    }
+
+    /// <summary>
+    /// The single fetch path. The obsolete tuple delegate is lifted into a success
+    /// <see cref="Result"/>, so the caller below has one shape to handle regardless of which
+    /// parameter the call site supplied (an exception from it still travels as an exception).
+    /// </summary>
+    private async Task<Result<(IReadOnlyList<TItem> Items, int TotalItems)>> FetchAsync(
+        int page, CancellationToken cancellationToken)
+    {
+        if (FetchPageResult is not null)
+        {
+            return await FetchPageResult(page, PageSize, cancellationToken);
+        }
+
+#pragma warning disable CS0618 // Back-compat path for call sites still on the tuple delegate.
+        return Result.Success(await FetchPage!(page, PageSize, cancellationToken));
+#pragma warning restore CS0618
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -135,6 +202,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
         _isLoadingMore = true;
         _loadError = false;
+        _loadErrorMessage = null;
 
         // Snapshot the generation this load belongs to. Whoever supersedes it (ResetAsync) owns
         // cancelling and disposing the token source it publishes here.
@@ -149,15 +217,25 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
         try
         {
-            var (items, totalCount) = await FetchPage(targetPage, PageSize, cts.Token);
+            var fetched = await FetchAsync(targetPage, cts.Token);
 
-            // The generation, not the token, is authoritative: FetchPage is consumer-supplied and may
-            // ignore the CancellationToken entirely, so a superseded fetch can still complete
+            // The generation, not the token, is authoritative: the fetcher is consumer-supplied and
+            // may ignore the CancellationToken entirely, so a superseded fetch can still complete
             // successfully. This check is what keeps its rows out of the list ResetAsync just cleared.
             if (_disposed || generation != _generation)
             {
                 return;
             }
+
+            if (!fetched.TryGetValue(out var page))
+            {
+                // A failure Result is the answer an exception used to be: same error state, same
+                // inline Retry button, and the page counter still never advanced.
+                SetLoadFailed(isInitial, fetched);
+                return;
+            }
+
+            var (items, totalCount) = page;
 
             _currentPage = targetPage;
             _items.AddRange(items);
@@ -178,14 +256,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
                 return;
             }
 
-            _loadError = true;
-
-            if (isInitial)
-            {
-                // Localized, sanitized message: raw exception text is neither translatable nor safe to
-                // surface (ADR-027 / rubric §24).
-                Snackbar.Add(L["Grid.Snackbar.LoadFailed"], Severity.Error);
-            }
+            SetLoadFailed(isInitial, failure: null);
         }
         finally
         {
@@ -203,6 +274,28 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
                 _cts = null;
                 cts.Dispose();
             }
+        }
+    }
+
+    /// <summary>
+    /// Raises the error state both failure signals share: the inline message plus its Retry button,
+    /// and on the very first load a snackbar as well (the initial failure renders as an empty state,
+    /// so the snackbar is the only thing the user would otherwise see).
+    /// </summary>
+    /// <param name="isInitial">Whether this was the initial load.</param>
+    /// <param name="failure">
+    /// The failed result whose localized message is shown, or <see langword="null"/> for an
+    /// exception, whose raw text is neither translatable nor safe to surface (ADR-027 / rubric §24)
+    /// and which therefore falls back to the generic resource string.
+    /// </param>
+    private void SetLoadFailed(bool isInitial, Result? failure)
+    {
+        _loadError = true;
+        _loadErrorMessage = failure?.LocalizedErrorMessage(L);
+
+        if (isInitial)
+        {
+            Snackbar.Add(_loadErrorMessage ?? L["Grid.Snackbar.LoadFailed"].Value, Severity.Error);
         }
     }
 
@@ -241,6 +334,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         _totalCount = 0;
         _hasMore = true;
         _loadError = false;
+        _loadErrorMessage = null;
         _isInitialLoad = true;
 
         await DetachObserverAsync();
