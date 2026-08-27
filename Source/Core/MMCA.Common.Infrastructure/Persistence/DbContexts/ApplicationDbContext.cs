@@ -4,9 +4,11 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.Auth;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.Conventions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -72,6 +74,24 @@ public abstract class ApplicationDbContext(
     /// </para>
     /// </summary>
     private bool _auditTrailTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>RefreshSessions</c> table belongs in THIS context's model. Resolved once in
+    /// <see cref="OnConfiguring"/> from the root provider and read by
+    /// <see cref="ConfigureRefreshSessions"/>, for the same reason as
+    /// <see cref="_schedulerTableEnabled"/>.
+    /// <para>
+    /// Two conditions, like the scheduler but with a configurable source rather than a fixed one.
+    /// <c>RefreshSessions:Enabled</c> keeps the model of a host that never opted in byte-identical,
+    /// so an existing consumer sees no migration until it asks for one. The source condition keeps
+    /// the table in exactly ONE database: sessions are Identity-module data, not per-source
+    /// infrastructure like the outbox, and <c>RefreshSessions:DataSourceName</c> (default
+    /// <c>Default</c>) names which database that is. The mapping lives here rather than in a
+    /// consumer's context class because ADR-006 leaves consumers with no context class of their own
+    /// to override.
+    /// </para>
+    /// </summary>
+    private bool _refreshSessionTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -270,6 +290,13 @@ public abstract class ApplicationDbContext(
         // Same gate treatment, no source condition: see the field's remarks.
         _auditTrailTableEnabled = serviceProvider.GetService<IOptions<AuditTrailSettings>>()?.Value.Enabled == true;
 
+        // Same gate treatment as the scheduler, with the source named by configuration rather than
+        // fixed to Default: see the field's remarks.
+        var refreshSessionSettings = serviceProvider.GetService<IOptions<RefreshSessionSettings>>()?.Value;
+        _refreshSessionTableEnabled =
+            refreshSessionSettings?.Enabled == true
+            && string.Equals(physicalDataSource.Key.Name, refreshSessionSettings.DataSourceName, StringComparison.Ordinal);
+
         // Key EF's model cache by (context type, physical source name): the same context class is
         // instantiated once per database, each with a different model. Without this, the first
         // built model would silently be reused for every database.
@@ -324,6 +351,10 @@ public abstract class ApplicationDbContext(
 
         // Configure the entity change-history table (used when AuditTrail:Enabled, every source).
         ConfigureAuditTrail(modelBuilder);
+
+        // Configure the refresh-session table (used when RefreshSessions:Enabled, on that setting's
+        // data source only).
+        ConfigureRefreshSessions(modelBuilder);
     }
 
     /// <summary>
@@ -490,6 +521,7 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.LastError).HasMaxLength(4000);
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.OrderingKey).HasMaxLength(200).IsUnicode(false);
             // Poll path (OutboxProcessor): pending rows, oldest first. The processor also filters on
             // RetryCount and LockedUntil, so both ride along as included columns; without them every
             // candidate row the index returns costs a key lookup back into the table.
@@ -504,6 +536,16 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.ProcessedOn)
                   .HasFilter("[ProcessedOn] IS NOT NULL")
                   .HasDatabaseName("IX_OutboxMessages_Processed");
+
+            // Ordering path (OutboxProcessor's claim predicate): for every keyed row the claim asks
+            // whether an EARLIER unprocessed row shares its key, once per candidate row. Without an
+            // index seekable by (OrderingKey, OccurredOn) that question is a scan of the pending
+            // partition per row. Filtered to keyed pending rows only, so hosts that never declare an
+            // ordering key carry an empty index.
+            entity.HasIndex(e => new { e.OrderingKey, e.OccurredOn })
+                  .IncludeProperties(e => new { e.RetryCount })
+                  .HasFilter("[OrderingKey] IS NOT NULL AND [ProcessedOn] IS NULL")
+                  .HasDatabaseName("IX_OutboxMessages_Ordering");
         });
 
     /// <summary>
@@ -598,6 +640,30 @@ public abstract class ApplicationDbContext(
             entity.HasIndex(e => e.ChangedOn)
                   .HasDatabaseName("IX_AuditTrailEntries_ChangedOn");
         });
+    }
+
+    /// <summary>
+    /// Configures the <see cref="Domain.Auth.RefreshSession"/> entity (multi-device refresh tokens,
+    /// BR-205/206). Gated like the scheduler table, on <c>RefreshSessions:Enabled</c> AND on this
+    /// context targeting the source named by <c>RefreshSessions:DataSourceName</c>. Cosmos DB never
+    /// reaches this method (it overrides <see cref="OnModelCreating"/>).
+    /// <para>
+    /// This is the consumer path. Downstream apps run on the sealed engine contexts and have no
+    /// context class to override (ADR-006), and the session entity is not an
+    /// <c>AuditableBaseEntity</c>, so the module entity-configuration mechanism does not reach it
+    /// either. A host with its own context class can still call
+    /// <see cref="Auth.RefreshSessionModelBuilderExtensions.ApplyRefreshSessionConfiguration"/>
+    /// directly, which is what this calls.
+    /// </para>
+    /// </summary>
+    private void ConfigureRefreshSessions(ModelBuilder modelBuilder)
+    {
+        if (!_refreshSessionTableEnabled)
+        {
+            return;
+        }
+
+        modelBuilder.ApplyRefreshSessionConfiguration();
     }
 
     /// <summary>

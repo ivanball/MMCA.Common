@@ -1,1 +1,44 @@
 #nullable enable
+*REMOVED*MMCA.Common.Domain.Auth.IAuthUser.RefreshToken.get -> string?
+*REMOVED*MMCA.Common.Domain.Auth.IAuthUser.RefreshTokenExpiry.get -> System.DateTime?
+*REMOVED*MMCA.Common.Domain.Auth.IAuthUser.RevokeRefreshToken() -> void
+*REMOVED*MMCA.Common.Domain.Auth.IAuthUser.UpdateRefreshToken(string! refreshToken, System.DateTime expiry) -> void
+MMCA.Common.Domain.Auth.RefreshSession
+MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.Id.get -> System.Guid
+MMCA.Common.Domain.Auth.RefreshSession.Id.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.IpAddress.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.IpAddress.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.IsActiveAt(System.DateTime utcNow) -> bool
+MMCA.Common.Domain.Auth.RefreshSession.IsRevoked.get -> bool
+MMCA.Common.Domain.Auth.RefreshSession.ReasonRevoked.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.RefreshSession() -> void
+MMCA.Common.Domain.Auth.RefreshSession.ReplacedByTokenHash.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.Revoke(System.DateTime revokedAt, string! reason, string? replacedByTokenHash = null) -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.RefreshSession.RevokedAt.get -> System.DateTime?
+MMCA.Common.Domain.Auth.RefreshSession.TokenHash.get -> string!
+MMCA.Common.Domain.Auth.RefreshSession.TokenHash.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.UserAgent.get -> string?
+MMCA.Common.Domain.Auth.RefreshSession.UserAgent.init -> void
+MMCA.Common.Domain.Auth.RefreshSession.UserId.get -> int
+MMCA.Common.Domain.Auth.RefreshSession.UserId.init -> void
+MMCA.Common.Domain.Interfaces.IAuditableEntity.DeletedBy.get -> int?
+MMCA.Common.Domain.Interfaces.IAuditableEntity.DeletedOn.get -> System.DateTime?
+MMCA.Common.Domain.Interfaces.IHasOrderingKey
+MMCA.Common.Domain.Interfaces.IHasOrderingKey.OrderingKey.get -> string?
+const MMCA.Common.Domain.Auth.RefreshSession.IpAddressMaxLength = 45 -> int
+const MMCA.Common.Domain.Auth.RefreshSession.ReasonReuseDetected = "ReuseDetected" -> string!
+const MMCA.Common.Domain.Auth.RefreshSession.ReasonRevokedMaxLength = 64 -> int
+const MMCA.Common.Domain.Auth.RefreshSession.ReasonRotated = "Rotated" -> string!
+const MMCA.Common.Domain.Auth.RefreshSession.ReasonSessionCap = "SessionCapExceeded" -> string!
+const MMCA.Common.Domain.Auth.RefreshSession.ReasonSignedOut = "SignedOut" -> string!
+const MMCA.Common.Domain.Auth.RefreshSession.TokenHashLength = 64 -> int
+const MMCA.Common.Domain.Auth.RefreshSession.UserAgentMaxLength = 512 -> int
+static MMCA.Common.Domain.Auth.RefreshSession.Create(int userId, string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
+static MMCA.Common.Domain.Auth.RefreshSession.HashToken(string! refreshToken) -> string!
+static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.DeleteChildren<TChild, TChildId>(System.Collections.Generic.IEnumerable<TChild!>! children) -> MMCA.Common.Shared.Abstractions.Result!
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedBy.get -> int?
+virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedOn.get -> System.DateTime?

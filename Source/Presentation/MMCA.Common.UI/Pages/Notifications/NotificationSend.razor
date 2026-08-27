@@ -1,6 +1,7 @@
 @page "/notifications/send"
 @using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.UI.Common
+@using MMCA.Common.UI.Validation
 @attribute [Authorize]
 
 <PageTitle>@Title</PageTitle>
@@ -18,24 +19,30 @@
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent>
-        <MudForm @ref="_form">
-            <MudTextField @bind-Value="_notificationTitle"
+        @* No rule is declared here. Model + For + the shared Validation delegate run the
+           DataAnnotations declared once on NotificationSendModel, and the remaining parameters are
+           affordances read off that same model: Required drives the asterisk and aria-required (its
+           message still comes from the model), MaxLength caps the input, Counter shows the budget. *@
+        <MudForm @ref="_form" Model="_model">
+            <MudTextField @bind-Value="_model.Title"
+                          For="@(() => _model.Title)"
+                          Validation="@_validate"
+                          Required="@ModelValidation.IsRequired(_model, nameof(NotificationSendModel.Title))"
                           Label="@L["Notif.Send.Field.Title"]"
-                          Required="true"
-                          RequiredError="@L["Notif.Send.Field.Title.Required"]"
-                          MaxLength="200"
-                          Counter="200"
+                          MaxLength="@NotificationSendModel.TitleMaxLength"
+                          Counter="@NotificationSendModel.TitleMaxLength"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Class="mb-4" />
 
-            <MudTextField @bind-Value="_notificationBody"
+            <MudTextField @bind-Value="_model.Body"
+                          For="@(() => _model.Body)"
+                          Validation="@_validate"
+                          Required="@ModelValidation.IsRequired(_model, nameof(NotificationSendModel.Body))"
                           Label="@L["Notif.Send.Field.Message"]"
-                          Required="true"
-                          RequiredError="@L["Notif.Send.Field.Message.Required"]"
                           Lines="5"
-                          MaxLength="2000"
-                          Counter="2000"
+                          MaxLength="@NotificationSendModel.BodyMaxLength"
+                          Counter="@NotificationSendModel.BodyMaxLength"
                           Immediate="true"
                           Variant="Variant.Outlined"
                           Class="mb-4" />

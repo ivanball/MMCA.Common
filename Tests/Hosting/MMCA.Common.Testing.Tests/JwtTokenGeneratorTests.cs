@@ -1,10 +1,11 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using MMCA.Common.Shared.Auth;
 using Xunit;
 
 namespace MMCA.Common.Testing.Tests;
@@ -74,7 +75,10 @@ public class JwtTokenGeneratorTests
         var principal = new JwtSecurityTokenHandler().ValidateToken(token, options.TokenValidationParameters, out _);
 
         principal.FindFirst(ClaimTypes.Role)?.Value.Should().Be("Admin");
-        principal.FindFirst("user_id")?.Value.Should().Be("42");
+        principal.GetUserId().Should().Be(42, "a test token must identify its user the way a real one does");
+        principal.Claims.Should().NotContain(
+            c => string.Equals(c.Type, "user_id", StringComparison.Ordinal),
+            "the generator mirrors ITokenService, which emits one identifier claim, not two");
     }
 
     [Fact]

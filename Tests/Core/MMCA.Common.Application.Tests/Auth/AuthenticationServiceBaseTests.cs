@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AwesomeAssertions;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Auth;
@@ -17,11 +18,11 @@ namespace MMCA.Common.Application.Tests.Auth;
 /// <summary>
 /// Exercises the shared authentication workflow through a concrete test subclass:
 /// validate-first ordering, the ADR-029 lockout/rate-limit gates, the untracked-then-tracked
-/// dual fetch, BR-205 token rotation and BR-206 refresh-token reuse detection.
+/// dual fetch, and the multi-device refresh-session model (BR-205 rotation, BR-206 reuse detection,
+/// hash-at-rest storage and the per-user session cap).
 /// </summary>
 public sealed class AuthenticationServiceBaseTests
 {
-    private const string NewRefreshToken = "rotated-refresh-token";
     private static readonly DateTimeOffset FixedNow = new(2026, 7, 5, 12, 0, 0, TimeSpan.Zero);
     private static readonly byte[] HashedPassword = [9, 9, 9];
     private static readonly byte[] GeneratedSalt = [8, 8, 8];
@@ -132,27 +133,80 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     [Fact]
-    public async Task LoginAsync_WhenCredentialsValid_RotatesTokensAndResetsFailedAttempts()
+    public async Task LoginAsync_WhenCredentialsValid_OpensASessionAndResetsFailedAttempts()
     {
         var (sut, mocks) = CreateSut();
-        sut.UntrackedUser = CreateTestUser(id: 1);
-        var tracked = CreateTestUser(id: 1);
-        mocks.Repository
-            .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tracked);
+        ArrangeLoginFetch(sut, mocks, CreateTestUser(id: 1));
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(
+            new LoginRequest("user@example.com", "pw"), ipAddress: "10.0.0.7", userAgent: "unit-test-agent");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AccessToken.Should().Be("access-1");
+        result.Value.RefreshToken.Should().Be("refresh-1");
+        result.Value.AccessTokenExpiry.Should().Be(FixedNow.UtcDateTime.AddMinutes(15), "BR-205 access-token lifetime");
+
+        var session = mocks.Sessions.Saved.Should().ContainSingle().Subject;
+        session.UserId.Should().Be(1);
+        session.ExpiresAt.Should().Be(FixedNow.UtcDateTime.AddDays(7), "BR-205 refresh-token lifetime");
+        session.CreatedAt.Should().Be(FixedNow.UtcDateTime);
+        session.IsRevoked.Should().BeFalse();
+        session.IpAddress.Should().Be("10.0.0.7");
+        session.UserAgent.Should().Be("unit-test-agent");
+
+        mocks.LoginProtection.Verify(
+            x => x.ResetFailedAttemptsAsync("user@example.com", It.IsAny<CancellationToken>()),
+            Times.Once);
+        mocks.Sessions.SaveCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task LoginAsync_StoresOnlyTheHashOfTheRefreshToken()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeLoginFetch(sut, mocks, CreateTestUser(id: 1));
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
+
+        var session = mocks.Sessions.Saved.Should().ContainSingle().Subject;
+        session.TokenHash.Should().NotBe(result.Value.RefreshToken, "a stored plaintext token is a usable credential at rest");
+        session.TokenHash.Should().Be(RefreshSession.HashToken(result.Value.RefreshToken));
+        session.TokenHash.Should().HaveLength(RefreshSession.TokenHashLength);
+    }
+
+    [Fact]
+    public async Task LoginAsync_LeavesTheUsersOtherDeviceSessionsAlone()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeLoginFetch(sut, mocks, CreateTestUser(id: 1));
+        var phone = SeedSession(mocks, userId: 1, token: "phone-token");
+        var laptop = SeedSession(mocks, userId: 1, token: "laptop-token");
 
         Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.AccessToken.Should().Be("access-1");
-        result.Value.RefreshToken.Should().Be(NewRefreshToken);
-        result.Value.AccessTokenExpiry.Should().Be(FixedNow.UtcDateTime.AddMinutes(15), "BR-205 access-token lifetime");
-        tracked.RefreshToken.Should().Be(NewRefreshToken, "the tracked instance persists the rotation");
-        tracked.RefreshTokenExpiry.Should().Be(FixedNow.UtcDateTime.AddDays(7), "BR-205 refresh-token lifetime");
-        mocks.LoginProtection.Verify(
-            x => x.ResetFailedAttemptsAsync("user@example.com", It.IsAny<CancellationToken>()),
-            Times.Once);
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        phone.IsRevoked.Should().BeFalse("signing in on a new device must not sign the phone out");
+        laptop.IsRevoked.Should().BeFalse();
+        mocks.Sessions.Saved.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenTheSessionCapIsFull_RevokesTheOldestSession()
+    {
+        var (sut, mocks) = CreateSut(maxActiveSessionsPerUser: 3);
+        ArrangeLoginFetch(sut, mocks, CreateTestUser(id: 1));
+        var oldest = SeedSession(mocks, userId: 1, token: "oldest", createdAt: FixedNow.UtcDateTime.AddDays(-3));
+        var middle = SeedSession(mocks, userId: 1, token: "middle", createdAt: FixedNow.UtcDateTime.AddDays(-2));
+        var newest = SeedSession(mocks, userId: 1, token: "newest", createdAt: FixedNow.UtcDateTime.AddDays(-1));
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
+
+        result.IsSuccess.Should().BeTrue("the cap evicts rather than refusing a legitimate sign-in");
+        oldest.IsRevoked.Should().BeTrue();
+        oldest.ReasonRevoked.Should().Be(RefreshSession.ReasonSessionCap);
+        middle.IsRevoked.Should().BeFalse();
+        newest.IsRevoked.Should().BeFalse();
+        mocks.Sessions.Saved.Count(s => !s.IsRevoked).Should().Be(3, "the cap holds after the new session opens");
     }
 
     [Fact]
@@ -161,11 +215,7 @@ public sealed class AuthenticationServiceBaseTests
         var (sut, mocks) = CreateSut();
         mocks.TokenService.Setup(x => x.AccessTokenLifetime).Returns(TimeSpan.FromMinutes(30));
         mocks.TokenService.Setup(x => x.RefreshTokenLifetime).Returns(TimeSpan.FromDays(14));
-        sut.UntrackedUser = CreateTestUser(id: 1);
-        var tracked = CreateTestUser(id: 1);
-        mocks.Repository
-            .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(tracked);
+        ArrangeLoginFetch(sut, mocks, CreateTestUser(id: 1));
 
         Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
 
@@ -173,9 +223,10 @@ public sealed class AuthenticationServiceBaseTests
         result.Value.AccessTokenExpiry.Should().Be(
             FixedNow.UtcDateTime.AddMinutes(30),
             "Jwt:AccessTokenExpirationMinutes drives the reported expiry");
-        tracked.RefreshTokenExpiry.Should().Be(
-            FixedNow.UtcDateTime.AddDays(14),
-            "Jwt:RefreshTokenExpirationDays drives the stored refresh expiry");
+        mocks.Sessions.Saved.Should().ContainSingle()
+            .Which.ExpiresAt.Should().Be(
+                FixedNow.UtcDateTime.AddDays(14),
+                "Jwt:RefreshTokenExpirationDays drives the stored session expiry");
     }
 
     [Fact]
@@ -301,7 +352,7 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     [Fact]
-    public async Task RegisterAsync_WhenValid_PersistsUserIssuesTokensAndCountsIp()
+    public async Task RegisterAsync_WhenValid_PersistsUserOpensASessionAndCountsIp()
     {
         var (sut, mocks) = CreateSut();
         TestAuthUser? persisted = null;
@@ -315,14 +366,17 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.AccessToken.Should().Be("access-77", "the token is minted from the registered user");
-        result.Value.RefreshToken.Should().Be(NewRefreshToken);
+        result.Value.RefreshToken.Should().Be("refresh-1");
         result.Value.AccessTokenExpiry.Should().Be(FixedNow.UtcDateTime.AddMinutes(15));
 
         persisted.Should().NotBeNull();
         persisted!.PasswordHash.Should().Equal(HashedPassword, "the factory receives the hasher output");
         persisted.PasswordSalt.Should().Equal(GeneratedSalt);
-        persisted.RefreshToken.Should().Be(NewRefreshToken);
-        persisted.RefreshTokenExpiry.Should().Be(FixedNow.UtcDateTime.AddDays(7));
+
+        var session = mocks.Sessions.Saved.Should().ContainSingle().Subject;
+        session.UserId.Should().Be(77, "the session is opened after the insert assigns the id");
+        session.TokenHash.Should().Be(RefreshSession.HashToken("refresh-1"));
+        session.IpAddress.Should().Be("10.0.0.1");
 
         mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         mocks.LoginProtection.Verify(
@@ -361,7 +415,7 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_WhenUserIdClaimMissing_ReturnsInvalidTokenClaims()
+    public async Task RefreshTokenAsync_WhenSubjectClaimMissing_ReturnsInvalidTokenClaims()
     {
         var (sut, mocks) = CreateSut();
         mocks.TokenService
@@ -377,12 +431,47 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     [Fact]
+    public async Task RefreshTokenAsync_WhenSubjectClaimIsNotAnIdentifier_ReturnsInvalidTokenClaims()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.TokenService
+            .Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>()))
+            .Returns(CreatePrincipal(new Claim(AuthClaimTypes.Subject, "not-an-id")));
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "refresh"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Message == "Invalid access token claims.");
+    }
+
+    // The bearer handler maps `sub` onto NameIdentifier by default, so the same token reaches the
+    // workflow under either name depending on which pipeline produced the principal.
+    [Fact]
+    public async Task RefreshTokenAsync_AcceptsTheMappedNameIdentifierFormOfTheSubjectClaim()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var session = SeedSession(mocks, userId: 1, token: "stored-refresh");
+        mocks.TokenService
+            .Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>()))
+            .Returns(CreatePrincipal(new Claim(ClaimTypes.NameIdentifier, "1")));
+        mocks.Repository.Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsSuccess.Should().BeTrue();
+        session.IsRevoked.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RefreshTokenAsync_WhenUserMissing_ReturnsUnauthorizedByDefault()
     {
         var (sut, mocks) = CreateSut();
         mocks.TokenService
             .Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>()))
-            .Returns(CreatePrincipal(new Claim("user_id", "404")));
+            .Returns(CreatePrincipal(new Claim(AuthClaimTypes.Subject, "404")));
         mocks.Repository
             .Setup(x => x.GetByIdAsync(404, It.IsAny<CancellationToken>()))
             .ReturnsAsync((TestAuthUser?)null);
@@ -401,7 +490,7 @@ public sealed class AuthenticationServiceBaseTests
     {
         var (sut, mocks) = CreateSut();
         var user = CreateTestUser(id: 1);
-        user.SeedRefreshToken("stored-refresh", FixedNow.UtcDateTime.AddDays(1));
+        var session = SeedSession(mocks, userId: 1, token: "stored-refresh");
         ArrangeRefreshFetch(mocks, user);
         sut.RefreshCandidateResult = Result.Failure(
             Error.Unauthorized("Auth.AccountDeactivated", "Account is deactivated."));
@@ -411,48 +500,15 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Auth.AccountDeactivated");
-        user.RevokeCalled.Should().BeFalse();
+        session.IsRevoked.Should().BeFalse("a gate rejection is not a token problem");
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_WhenTokenMismatch_RevokesStoredTokenAndFails()
+    public async Task RefreshTokenAsync_WhenTokenValid_RotatesTheSession()
     {
         var (sut, mocks) = CreateSut();
         var user = CreateTestUser(id: 1);
-        user.SeedRefreshToken("stored-refresh", FixedNow.UtcDateTime.AddDays(1));
-        ArrangeRefreshFetch(mocks, user);
-
-        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
-            new RefreshTokenRequest("expired", "reused-or-stolen"));
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
-        user.RevokeCalled.Should().BeTrue("BR-206 reuse detection revokes the stored token");
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task RefreshTokenAsync_WhenStoredTokenExpired_RevokesAndFails()
-    {
-        var (sut, mocks) = CreateSut();
-        var user = CreateTestUser(id: 1);
-        user.SeedRefreshToken("stored-refresh", FixedNow.UtcDateTime.AddSeconds(-1));
-        ArrangeRefreshFetch(mocks, user);
-
-        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
-            new RefreshTokenRequest("expired", "stored-refresh"));
-
-        result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
-        user.RevokeCalled.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task RefreshTokenAsync_WhenTokenValid_RotatesPair()
-    {
-        var (sut, mocks) = CreateSut();
-        var user = CreateTestUser(id: 1);
-        user.SeedRefreshToken("stored-refresh", FixedNow.UtcDateTime.AddDays(1));
+        var session = SeedSession(mocks, userId: 1, token: "stored-refresh");
         ArrangeRefreshFetch(mocks, user);
 
         Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
@@ -460,12 +516,116 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.AccessToken.Should().Be("access-1");
-        result.Value.RefreshToken.Should().Be(NewRefreshToken);
-        user.RefreshToken.Should().Be(NewRefreshToken, "BR-205 rotates the refresh token on use");
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        result.Value.RefreshToken.Should().Be("refresh-1");
+
+        session.IsRevoked.Should().BeTrue("BR-205 rotates the presented session out of use");
+        session.RevokedAt.Should().Be(FixedNow.UtcDateTime);
+        session.ReasonRevoked.Should().Be(RefreshSession.ReasonRotated);
+        session.ReplacedByTokenHash.Should().Be(
+            RefreshSession.HashToken("refresh-1"),
+            "the rotation chain must be walkable from the retired session to its successor");
+
+        var successor = mocks.Sessions.Saved.Should().ContainSingle(s => !s.IsRevoked).Subject;
+        successor.TokenHash.Should().Be(RefreshSession.HashToken("refresh-1"));
+        successor.ExpiresAt.Should().Be(FixedNow.UtcDateTime.AddDays(7));
     }
 
-    // ── RevokeTokenAsync ──
+    [Fact]
+    public async Task RefreshTokenAsync_RotationLeavesTheUsersOtherSessionsAlone()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        SeedSession(mocks, userId: 1, token: "stored-refresh");
+        var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
+        ArrangeRefreshFetch(mocks, user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsSuccess.Should().BeTrue();
+        otherDevice.IsRevoked.Should().BeFalse();
+    }
+
+    // BR-206: a token that has already been rotated away comes back only if a copy outlived the
+    // rotation, so the whole live family goes.
+    [Fact]
+    public async Task RefreshTokenAsync_WhenARotatedTokenIsReplayed_RevokesTheWholeFamily()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        SeedSession(mocks, userId: 1, token: "stored-refresh");
+        var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
+        ArrangeRefreshFetch(mocks, user);
+
+        // First use rotates it; the replay then arrives on the revoked row.
+        await sut.RefreshTokenAsync(new RefreshTokenRequest("expired", "stored-refresh"));
+        Result<AuthenticationResponse> replay = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        replay.IsFailure.Should().BeTrue();
+        replay.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        otherDevice.IsRevoked.Should().BeTrue("reuse detection cannot tell which device was stolen");
+        otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
+        mocks.Sessions.Saved.Should().OnlyContain(s => s.IsRevoked, "the successor minted by the first call goes too");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WhenSessionExpired_FailsWithoutRevokingTheFamily()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        SeedSession(
+            mocks,
+            userId: 1,
+            token: "stored-refresh",
+            createdAt: FixedNow.UtcDateTime.AddDays(-8),
+            expiresAt: FixedNow.UtcDateTime.AddSeconds(-1));
+        var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
+        ArrangeRefreshFetch(mocks, user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        otherDevice.IsRevoked.Should().BeFalse(
+            "an expired session is an ordinary end of life, not a theft signal");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WhenTokenUnknown_FailsWithoutRevokingTheFamily()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var live = SeedSession(mocks, userId: 1, token: "stored-refresh");
+        ArrangeRefreshFetch(mocks, user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "never-issued"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        live.IsRevoked.Should().BeFalse(
+            "an unknown hash proves nothing, and revoking on it would be a sign-out-everywhere lever");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WhenTheTokenBelongsToAnotherUser_Fails()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var otherUsersSession = SeedSession(mocks, userId: 2, token: "someone-elses");
+        ArrangeRefreshFetch(mocks, user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "someone-elses"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        otherUsersSession.IsRevoked.Should().BeFalse();
+    }
+
+    // ── RevokeTokenAsync / RevokeAllSessionsAsync ──
     [Fact]
     public async Task RevokeTokenAsync_WhenUserMissing_ReturnsNotFound()
     {
@@ -478,25 +638,69 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Type == ErrorType.NotFound);
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        mocks.Sessions.SaveCount.Should().Be(0);
     }
 
     [Fact]
-    public async Task RevokeTokenAsync_WhenUserExists_RevokesAndSaves()
+    public async Task RevokeTokenAsync_WithTheDevicesToken_RevokesOnlyThatSession()
     {
         var (sut, mocks) = CreateSut();
-        var user = CreateTestUser(id: 5);
-        user.SeedRefreshToken("stored-refresh", FixedNow.UtcDateTime.AddDays(1));
-        mocks.Repository
-            .Setup(x => x.GetByIdAsync(5, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
+        mocks.Repository.Setup(x => x.GetByIdAsync(5, It.IsAny<CancellationToken>())).ReturnsAsync(CreateTestUser(id: 5));
+        var thisDevice = SeedSession(mocks, userId: 5, token: "this-device");
+        var otherDevice = SeedSession(mocks, userId: 5, token: "other-device");
+
+        Result result = await sut.RevokeTokenAsync(5, "this-device");
+
+        result.IsSuccess.Should().BeTrue();
+        thisDevice.IsRevoked.Should().BeTrue();
+        thisDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonSignedOut);
+        otherDevice.IsRevoked.Should().BeFalse("signing one device out is not signing out everywhere");
+    }
+
+    [Fact]
+    public async Task RevokeTokenAsync_WithoutAToken_RevokesEverySession()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.Repository.Setup(x => x.GetByIdAsync(5, It.IsAny<CancellationToken>())).ReturnsAsync(CreateTestUser(id: 5));
+        var first = SeedSession(mocks, userId: 5, token: "first");
+        var second = SeedSession(mocks, userId: 5, token: "second");
 
         Result result = await sut.RevokeTokenAsync(5);
 
         result.IsSuccess.Should().BeTrue();
-        user.RevokeCalled.Should().BeTrue();
-        user.RefreshToken.Should().BeNull();
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        first.IsRevoked.Should().BeTrue();
+        second.IsRevoked.Should().BeTrue();
+        mocks.Sessions.SaveCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RevokeAllSessionsAsync_RevokesEveryLiveSessionOfThatUserOnly()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.Repository.Setup(x => x.GetByIdAsync(5, It.IsAny<CancellationToken>())).ReturnsAsync(CreateTestUser(id: 5));
+        var mine = SeedSession(mocks, userId: 5, token: "mine");
+        var someoneElse = SeedSession(mocks, userId: 6, token: "theirs");
+
+        Result result = await sut.RevokeAllSessionsAsync(5);
+
+        result.IsSuccess.Should().BeTrue();
+        mine.IsRevoked.Should().BeTrue();
+        mine.ReasonRevoked.Should().Be(RefreshSession.ReasonSignedOut);
+        someoneElse.IsRevoked.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RevokeAllSessionsAsync_WhenUserMissing_ReturnsNotFound()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.Repository
+            .Setup(x => x.GetByIdAsync(404, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TestAuthUser?)null);
+
+        Result result = await sut.RevokeAllSessionsAsync(404);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Type == ErrorType.NotFound);
     }
 
     // ── Helpers ──
@@ -505,14 +709,39 @@ public sealed class AuthenticationServiceBaseTests
     private static ClaimsPrincipal CreatePrincipal(params Claim[] claims) =>
         new(new ClaimsIdentity(claims, authenticationType: "Test"));
 
+    private static void ArrangeLoginFetch(TestAuthenticationService sut, ServiceMocks mocks, TestAuthUser user)
+    {
+        sut.UntrackedUser = user;
+        mocks.Repository
+            .Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+    }
+
     private static void ArrangeRefreshFetch(ServiceMocks mocks, TestAuthUser user)
     {
         mocks.TokenService
             .Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>()))
-            .Returns(CreatePrincipal(new Claim("user_id", user.Id.ToString(CultureInfo.InvariantCulture))));
+            .Returns(CreatePrincipal(new Claim(AuthClaimTypes.Subject, user.Id.ToString(CultureInfo.InvariantCulture))));
         mocks.Repository
             .Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
+    }
+
+    private static RefreshSession SeedSession(
+        ServiceMocks mocks,
+        UserIdentifierType userId,
+        string token,
+        DateTime? createdAt = null,
+        DateTime? expiresAt = null)
+    {
+        var created = createdAt ?? FixedNow.UtcDateTime.AddHours(-1);
+        var session = RefreshSession.Create(
+            userId,
+            token,
+            created,
+            expiresAt ?? created.AddDays(7)).Value!;
+        mocks.Sessions.Seed(session);
+        return session;
     }
 
     private static Mock<IValidator<TRequest>> CreateValidatorMock<TRequest>(bool isValid)
@@ -532,18 +761,21 @@ public sealed class AuthenticationServiceBaseTests
         Mock<IRepository<TestAuthUser, UserIdentifierType>> Repository,
         Mock<ITokenService> TokenService,
         Mock<IPasswordHasher> PasswordHasher,
-        Mock<ILoginProtectionService> LoginProtection);
+        Mock<ILoginProtectionService> LoginProtection,
+        FakeRefreshSessionStore Sessions);
 
     private static (TestAuthenticationService Sut, ServiceMocks Mocks) CreateSut(
         bool loginRequestValid = true,
         bool registerRequestValid = true,
-        bool refreshRequestValid = true)
+        bool refreshRequestValid = true,
+        int maxActiveSessionsPerUser = 10)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestAuthUser, UserIdentifierType>>();
         var tokenService = new Mock<ITokenService>();
         var passwordHasher = new Mock<IPasswordHasher>();
         var loginProtection = new Mock<ILoginProtectionService>();
+        var sessions = new FakeRefreshSessionStore();
 
         unitOfWork
             .Setup(x => x.GetRepository<TestAuthUser, UserIdentifierType>())
@@ -552,7 +784,12 @@ public sealed class AuthenticationServiceBaseTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
-        tokenService.Setup(x => x.GenerateRefreshToken()).Returns(NewRefreshToken);
+        // Distinct per call: rotation mints a successor while the predecessor is still in play, so a
+        // constant would make the two sessions collide on the unique token hash.
+        var issued = 0;
+        tokenService
+            .Setup(x => x.GenerateRefreshToken())
+            .Returns(() => string.Create(CultureInfo.InvariantCulture, $"refresh-{++issued}"));
 
         passwordHasher
             .Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()))
@@ -579,15 +816,69 @@ public sealed class AuthenticationServiceBaseTests
             passwordHasher.Object,
             loginProtection.Object,
             new FixedTimeProvider(FixedNow),
-            validators);
+            validators,
+            sessions,
+            Options.Create(new RefreshSessionSettings { MaxActiveSessionsPerUser = maxActiveSessionsPerUser }));
 
-        var mocks = new ServiceMocks(unitOfWork, repository, tokenService, passwordHasher, loginProtection);
+        var mocks = new ServiceMocks(unitOfWork, repository, tokenService, passwordHasher, loginProtection, sessions);
         return (sut, mocks);
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+}
+
+/// <summary>
+/// In-memory <see cref="IRefreshSessionStore"/> mirroring the EF implementation's visibility rules:
+/// a staged insert is invisible to queries until it is saved (EF does not read the change tracker
+/// from a database query), and every read hands back the same live instance, so a revocation the
+/// workflow performs is observable in the assertions.
+/// </summary>
+public sealed class FakeRefreshSessionStore : IRefreshSessionStore
+{
+    private readonly List<RefreshSession> _staged = [];
+    private readonly List<RefreshSession> _saved = [];
+
+    /// <summary>The persisted sessions.</summary>
+    public IReadOnlyList<RefreshSession> Saved => _saved;
+
+    /// <summary>How many times the workflow flushed.</summary>
+    public int SaveCount { get; private set; }
+
+    /// <summary>Places an already-persisted session in the store.</summary>
+    public void Seed(RefreshSession session) => _saved.Add(session);
+
+    /// <inheritdoc />
+    public Task AddAsync(RefreshSession session, CancellationToken cancellationToken = default)
+    {
+        _staged.Add(session);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<RefreshSession?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_saved.Find(s => string.Equals(s.TokenHash, tokenHash, StringComparison.Ordinal)));
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<RefreshSession>> GetUnrevokedByUserAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RefreshSession>>(
+            [.. _saved
+                .Where(s => s.UserId == userId && !s.IsRevoked)
+                .OrderBy(s => s.CreatedAt)
+                .ThenBy(s => s.Id)]);
+
+    /// <inheritdoc />
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        SaveCount++;
+        var written = _staged.Count;
+        _saved.AddRange(_staged);
+        _staged.Clear();
+        return Task.FromResult(written);
     }
 }
 
@@ -600,31 +891,6 @@ public sealed class TestAuthUser : AuditableAggregateRootEntity<UserIdentifierTy
     public byte[] PasswordHash { get; set; } = [1, 2, 3];
 
     public byte[] PasswordSalt { get; set; } = [4, 5, 6];
-
-    public string? RefreshToken { get; private set; }
-
-    public DateTime? RefreshTokenExpiry { get; private set; }
-
-    public bool RevokeCalled { get; private set; }
-
-    public void UpdateRefreshToken(string refreshToken, DateTime expiry)
-    {
-        RefreshToken = refreshToken;
-        RefreshTokenExpiry = expiry;
-    }
-
-    public void RevokeRefreshToken()
-    {
-        RevokeCalled = true;
-        RefreshToken = null;
-        RefreshTokenExpiry = null;
-    }
-
-    public void SeedRefreshToken(string? refreshToken, DateTime? expiry)
-    {
-        RefreshToken = refreshToken;
-        RefreshTokenExpiry = expiry;
-    }
 }
 
 /// <summary>Concrete subclass supplying the per-app hooks the shared workflow calls.</summary>
@@ -634,9 +900,11 @@ public sealed class TestAuthenticationService(
     IPasswordHasher passwordHasher,
     ILoginProtectionService loginProtection,
     TimeProvider timeProvider,
-    AuthenticationValidators validators)
+    AuthenticationValidators validators,
+    IRefreshSessionStore refreshSessions,
+    IOptions<RefreshSessionSettings>? refreshSessionSettings = null)
     : AuthenticationServiceBase<TestAuthUser>(
-        unitOfWork, tokenService, passwordHasher, loginProtection, timeProvider, validators)
+        unitOfWork, tokenService, passwordHasher, loginProtection, timeProvider, validators, refreshSessions, refreshSessionSettings)
 {
     public TestAuthUser? UntrackedUser { get; set; }
 

@@ -1,6 +1,7 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.FeatureManagement.FeatureFilters;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.FeatureManagement;
 
@@ -12,9 +13,11 @@ namespace MMCA.Common.API.FeatureManagement;
 /// random per request: the filter hashes the user id, so the same caller keeps the same answer
 /// across requests and instances.
 /// <para>
-/// The user id is the <c>user_id</c> claim emitted by <c>TokenService</c> (the same claim
-/// <c>CurrentUserService</c> and <c>IdempotencyFilter</c> read), falling back to the principal's
-/// name when a token predates it. Groups are the caller's role claims, accepting each claim type
+/// The user id is the standard <c>sub</c> claim <c>TokenService</c> emits, read through
+/// <c>ClaimsPrincipalExtensions</c> so the <see cref="ClaimTypes.NameIdentifier"/> form the bearer
+/// handler maps it to resolves identically (the same read <c>CurrentUserService</c> and
+/// <c>IdempotencyFilter</c> perform), falling back to the principal's name when a token carries
+/// neither. Groups are the caller's role claims, accepting each claim type
 /// the JWT middleware may produce: the standard <see cref="ClaimTypes.Role"/> URI when inbound
 /// claim mapping is on, or the raw <c>role</c> / <c>roles</c> claim when it is off. That mirrors
 /// <c>ICurrentUserService.Roles</c>, which cannot be used directly here because the accessor is
@@ -51,9 +54,6 @@ namespace MMCA.Common.API.FeatureManagement;
 public sealed class CurrentUserTargetingContextAccessor(IHttpContextAccessor httpContextAccessor)
     : ITargetingContextAccessor
 {
-    /// <summary>The claim type carrying the user identifier, matching <c>TokenService</c>.</summary>
-    private const string UserIdClaimType = "user_id";
-
     /// <summary>
     /// Builds the targeting context for the current request. Never returns <see langword="null"/>:
     /// a request without a principal (background work, an anonymous call) produces an empty context
@@ -83,7 +83,7 @@ public sealed class CurrentUserTargetingContextAccessor(IHttpContextAccessor htt
 
         return ValueTask.FromResult(new TargetingContext
         {
-            UserId = user.FindFirst(UserIdClaimType)?.Value ?? user.Identity.Name,
+            UserId = user.FindUserIdValue() ?? user.Identity.Name,
             Groups = groups,
         });
     }

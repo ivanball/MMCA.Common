@@ -10,6 +10,14 @@ public sealed class AuditableAggregateRootEntityAdditionalTests
         public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>A child whose own rules refuse the delete, so the cascade has a failure to aggregate.</summary>
+    private sealed class UndeletableChildEntity : AuditableBaseEntity<int>
+    {
+        public override Shared.Abstractions.Result Delete() =>
+            Shared.Abstractions.Result.Failure(
+                Shared.Abstractions.Error.Invariant("Child.Locked", "This child cannot be deleted."));
+    }
+
     private sealed class TestAggregate : AuditableAggregateRootEntity<int>
     {
         private readonly List<ChildEntity> _children = [];
@@ -22,6 +30,14 @@ public sealed class AuditableAggregateRootEntityAdditionalTests
         public void AddChild(ChildEntity child) => _children.Add(child);
 
         public int ChildCount => _children.Count;
+
+        public IReadOnlyList<ChildEntity> Children => _children;
+
+        public Shared.Abstractions.Result CascadeDelete() =>
+            DeleteChildren<ChildEntity, int>(_children);
+
+        public static Shared.Abstractions.Result CascadeDelete(IEnumerable<UndeletableChildEntity> children) =>
+            DeleteChildren<UndeletableChildEntity, int>(children);
     }
 
     private sealed class ValidatingAggregate : AuditableAggregateRootEntity<int>
@@ -138,5 +154,76 @@ public sealed class AuditableAggregateRootEntityAdditionalTests
         var result = aggregate.FindChild(10);
 
         result.IsFailure.Should().BeTrue();
+    }
+
+    // ── DeleteChildren ──
+    [Fact]
+    public void DeleteChildren_SoftDeletesEveryActiveChild()
+    {
+        var aggregate = new TestAggregate { Id = 1 };
+        aggregate.AddChild(new ChildEntity { Id = 1, Name = "A" });
+        aggregate.AddChild(new ChildEntity { Id = 2, Name = "B" });
+
+        var result = aggregate.CascadeDelete();
+
+        result.IsSuccess.Should().BeTrue();
+        aggregate.Children.Should().OnlyContain(c => c.IsDeleted);
+        aggregate.ChildCount.Should().Be(2, "a cascade soft-deletes, it never removes rows from the collection");
+    }
+
+    [Fact]
+    public void DeleteChildren_SkipsAlreadyDeletedChildren()
+    {
+        var aggregate = new TestAggregate { Id = 1 };
+        var alreadyGone = new ChildEntity { Id = 1, Name = "A" };
+        alreadyGone.Delete();
+        aggregate.AddChild(alreadyGone);
+        aggregate.AddChild(new ChildEntity { Id = 2, Name = "B" });
+
+        var result = aggregate.CascadeDelete();
+
+        result.IsSuccess.Should().BeTrue(
+            "an already-deleted child is skipped, not reported as an Error.AlreadyDeleted the caller cannot act on");
+        aggregate.Children.Should().OnlyContain(c => c.IsDeleted);
+    }
+
+    [Fact]
+    public void DeleteChildren_WithNoChildren_ReturnsSuccess() =>
+        new TestAggregate { Id = 1 }.CascadeDelete().IsSuccess.Should().BeTrue();
+
+    [Fact]
+    public void DeleteChildren_IsIdempotentAcrossRepeatedCascades()
+    {
+        var aggregate = new TestAggregate { Id = 1 };
+        aggregate.AddChild(new ChildEntity { Id = 1, Name = "A" });
+
+        aggregate.CascadeDelete().IsSuccess.Should().BeTrue();
+
+        aggregate.CascadeDelete().IsSuccess.Should().BeTrue(
+            "re-deleting a parent must not fail on children that the first cascade already deleted");
+    }
+
+    [Fact]
+    public void DeleteChildren_AggregatesEveryChildFailure()
+    {
+        UndeletableChildEntity[] children =
+        [
+            new() { Id = 1 },
+            new() { Id = 2 },
+        ];
+
+        var result = TestAggregate.CascadeDelete(children);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().HaveCount(2, "Result.Combine carries every child's error, not just the first");
+        result.Errors.Should().OnlyContain(e => e.Code == "Child.Locked");
+    }
+
+    [Fact]
+    public void DeleteChildren_WithNullCollection_ThrowsArgumentNullException()
+    {
+        var act = () => TestAggregate.CascadeDelete(null!);
+
+        act.Should().Throw<ArgumentNullException>();
     }
 }

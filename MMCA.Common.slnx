@@ -20,6 +20,7 @@
   <Folder Name="/Source/Hosting/">
     <Project Path="Source/Hosting/MMCA.Common.Aspire/MMCA.Common.Aspire.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Aspire.Hosting/MMCA.Common.Aspire.Hosting.csproj" />
+    <Project Path="Source/Hosting/MMCA.Common.Gateway/MMCA.Common.Gateway.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing/MMCA.Common.Testing.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing.Architecture/MMCA.Common.Testing.Architecture.csproj" />
     <Project Path="Source/Hosting/MMCA.Common.Testing.E2E/MMCA.Common.Testing.E2E.csproj" />
@@ -40,6 +41,7 @@
   </Folder>
   <Folder Name="/Tests/Hosting/">
     <Project Path="Tests/Hosting/MMCA.Common.Aspire.Tests/MMCA.Common.Aspire.Tests.csproj" />
+    <Project Path="Tests/Hosting/MMCA.Common.Gateway.Tests/MMCA.Common.Gateway.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Tests/MMCA.Common.Testing.Tests.csproj" />
   </Folder>
   <Folder Name="/Tests/Architecture/">

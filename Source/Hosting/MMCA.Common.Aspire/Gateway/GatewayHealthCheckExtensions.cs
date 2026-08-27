@@ -1,8 +1,35 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace MMCA.Common.Aspire.Gateway;
+
+/// <summary>
+/// Per-call options for <c>AddGatewayDownstreamHealthChecks</c>. One instance covers every service
+/// name passed to that call, so a gateway fronting a mix of HTTP/2-only and HTTP/1.1-only heads
+/// makes one call per profile rather than carrying a per-name map.
+/// </summary>
+public sealed class GatewayDownstreamHealthCheckOptions
+{
+    /// <summary>
+    /// Whether the probe client speaks HTTP/2 over cleartext (h2c prior knowledge). Default
+    /// <see langword="true"/>.
+    /// <para>
+    /// The default exists because the services a modular-monolith gateway fronts serve h2c so that
+    /// cross-service gRPC clients can negotiate HTTP/2 without TLS/ALPN. An <c>HttpClient</c> left
+    /// on its own defaults sends HTTP/1.1, which such an endpoint refuses, so the probe fails and
+    /// the gateway reports a downstream outage that does not exist.
+    /// </para>
+    /// <para>
+    /// Set to <see langword="false"/> for a downstream whose cleartext endpoint is HTTP/1.1-only:
+    /// the probe then uses <c>1.1</c> with <see cref="HttpVersionPolicy.RequestVersionOrLower"/>,
+    /// exactly the stock <see cref="HttpClient"/> behavior. A mixed <c>Http1AndHttp2</c> endpoint
+    /// answers either way and needs no opt-out.
+    /// </para>
+    /// </summary>
+    public bool ProbeOverHttp2 { get; set; } = true;
+}
 
 /// <summary>
 /// Registers one health check per downstream service a gateway fronts, so an edge that cannot reach
@@ -72,46 +99,94 @@ public static class GatewayHealthCheckExtensions
         /// altogether.
         /// </para>
         /// </remarks>
-        public IServiceCollection AddGatewayDownstreamHealthChecks(params string[] serviceNames)
+        public IServiceCollection AddGatewayDownstreamHealthChecks(params string[] serviceNames) =>
+            Register(services, configure: null, serviceNames);
+
+        /// <summary>
+        /// Same registration as <c>AddGatewayDownstreamHealthChecks(params string[])</c>, with the
+        /// probe client's HTTP version profile under the caller's control.
+        /// </summary>
+        /// <param name="configure">
+        /// Configures the options applied to every name in THIS call. Pass
+        /// <c>o =&gt; o.ProbeOverHttp2 = false</c> for downstreams whose cleartext endpoint is
+        /// HTTP/1.1-only.
+        /// </param>
+        /// <param name="serviceNames">
+        /// The Aspire service names the gateway fronts. Duplicates and blanks are ignored, and a
+        /// name already registered by an earlier call is skipped.
+        /// </param>
+        /// <returns>The same service collection for chaining.</returns>
+        public IServiceCollection AddGatewayDownstreamHealthChecks(
+            Action<GatewayDownstreamHealthCheckOptions>? configure,
+            params string[] serviceNames) =>
+            Register(services, configure, serviceNames);
+    }
+
+    /// <summary>
+    /// The single registration body behind both public overloads.
+    /// </summary>
+    /// <param name="services">The service collection being configured.</param>
+    /// <param name="configure">Optional per-call option mutator.</param>
+    /// <param name="serviceNames">The Aspire service names the gateway fronts.</param>
+    /// <returns>The same service collection for chaining.</returns>
+    private static IServiceCollection Register(
+        IServiceCollection services,
+        Action<GatewayDownstreamHealthCheckOptions>? configure,
+        string[] serviceNames)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(serviceNames);
+
+        var options = new GatewayDownstreamHealthCheckOptions();
+        configure?.Invoke(options);
+
+        // Captured as locals so the client-configuration closure below does not hold the mutable
+        // options object: a later call reusing the same instance must not retro-change this client.
+        var probeVersion = options.ProbeOverHttp2 ? HttpVersion.Version20 : HttpVersion.Version11;
+        var probeVersionPolicy = options.ProbeOverHttp2
+            ? HttpVersionPolicy.RequestVersionExact
+            : HttpVersionPolicy.RequestVersionOrLower;
+
+        var registry = GatewayDownstreamRegistry.GetOrAdd(services);
+        var healthChecks = services.AddHealthChecks();
+
+        foreach (var serviceName in serviceNames)
         {
-            ArgumentNullException.ThrowIfNull(services);
-            ArgumentNullException.ThrowIfNull(serviceNames);
-
-            var registry = GatewayDownstreamRegistry.GetOrAdd(services);
-            var healthChecks = services.AddHealthChecks();
-
-            foreach (var serviceName in serviceNames)
+            if (string.IsNullOrWhiteSpace(serviceName) || !registry.TryClaim(serviceName))
             {
-                if (string.IsNullOrWhiteSpace(serviceName) || !registry.TryClaim(serviceName))
-                {
-                    continue;
-                }
-
-                var clientName = ClientName(serviceName);
-                var name = serviceName;
-
-                services.AddHttpClient(clientName, client =>
-                {
-                    // "http://{name}" is the service-discovery form: the resolver rewrites it to the
-                    // real endpoint. The client timeout is the real probe budget; the registration
-                    // timeout below only bounds the health-check service's own wait.
-                    client.BaseAddress = new Uri("http://" + name, UriKind.Absolute);
-                    client.Timeout = ProbeTimeout;
-                });
-
-                healthChecks.Add(new HealthCheckRegistration(
-                    CheckName(name),
-                    sp => new DownstreamServiceHealthCheck(
-                        sp.GetRequiredService<IHttpClientFactory>(),
-                        name,
-                        clientName),
-                    failureStatus: HealthStatus.Unhealthy,
-                    tags: [HealthCheckTags.Ready],
-                    timeout: ProbeTimeout));
+                continue;
             }
 
-            return services;
+            var clientName = ClientName(serviceName);
+            var name = serviceName;
+
+            services.AddHttpClient(clientName, client =>
+            {
+                // "http://{name}" is the service-discovery form: the resolver rewrites it to the
+                // real endpoint. The client timeout is the real probe budget; the registration
+                // timeout below only bounds the health-check service's own wait.
+                client.BaseAddress = new Uri("http://" + name, UriKind.Absolute);
+                client.Timeout = ProbeTimeout;
+
+                // Without this the probe goes out HTTP/1.1 and an Http2-only cleartext (h2c)
+                // downstream refuses it, so a healthy service reads as an outage. See
+                // GatewayDownstreamHealthCheckOptions.ProbeOverHttp2.
+                client.DefaultRequestVersion = probeVersion;
+                client.DefaultVersionPolicy = probeVersionPolicy;
+            });
+
+            healthChecks.Add(new HealthCheckRegistration(
+                CheckName(name),
+                sp => new DownstreamServiceHealthCheck(
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    name,
+                    clientName),
+                failureStatus: HealthStatus.Unhealthy,
+                tags: [HealthCheckTags.Ready],
+                timeout: ProbeTimeout));
         }
+
+        return services;
     }
 }
 

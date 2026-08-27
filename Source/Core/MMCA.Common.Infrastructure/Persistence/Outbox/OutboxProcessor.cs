@@ -276,6 +276,12 @@ public sealed partial class OutboxProcessor(
         var pendingDepth = await CountPendingAsync(context, sourceName, messages.Count, now, cancellationToken)
             .ConfigureAwait(false);
 
+        // The fetch is ordered by OccurredOn over exactly the pending predicate, so its first row IS
+        // the oldest pending row: the gauge costs no extra query, only a subtraction.
+        OutboxMetrics.SetOldestPendingAge(
+            sourceName,
+            messages.Count == 0 ? 0 : Math.Max((now - messages[0].OccurredOn).TotalSeconds, 0));
+
         // Split the ordered batch: the eligible prefix is processed now; the pending remainder
         // only informs how long to wait before the next cycle.
         var eligibleCount = 0;
@@ -416,6 +422,7 @@ public sealed partial class OutboxProcessor(
                 && m.RetryCount < _settings.MaxRetries
                 && (m.LockedUntil == null || m.LockedUntil < now))
             .OrderBy(m => m.OccurredOn)
+            .ThenBy(m => m.Id)
             .Take(_settings.BatchSize)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -428,7 +435,22 @@ public sealed partial class OutboxProcessor(
     /// minReplicas:1 deployment convention). A replica that dies mid-batch releases its rows
     /// implicitly when the lease expires. Returns the claimed tracked messages (empty when
     /// another replica claimed the whole prefix between fetch and claim).
+    /// <para>
+    /// Ordered delivery is enforced HERE rather than after the fetch, so it survives batching and
+    /// scale-out: the claim predicate refuses a row carrying an <c>OrderingKey</c> while any earlier
+    /// unprocessed, non-dead-lettered row shares that key (the <c>NOT EXISTS</c> below), and
+    /// <see cref="SelectOrderedCandidates"/> keeps at most one row per key in this cycle's own
+    /// candidate set. A predecessor still counts while it is retrying, which is the head-of-line
+    /// blocking documented on <see cref="IHasOrderingKey"/>; once it exhausts its retries it stops
+    /// blocking, so a poison event cannot freeze its key forever.
+    /// </para>
     /// </summary>
+    /// <remarks>
+    /// The predecessor test is on <c>OccurredOn</c> alone. Two rows sharing a key AND an exact
+    /// timestamp are ordered by <c>Id</c> within a cycle (the fetch orders by both), but neither
+    /// blocks the other in SQL, because <see cref="Guid"/> has no order that both .NET and every
+    /// provider agree on. A tie at tick resolution is not an ordering the outbox claims to observe.
+    /// </remarks>
     private async Task<List<OutboxMessage>> ClaimEligibleAsync(
         ApplicationDbContext context,
         List<OutboxMessage> messages,
@@ -438,12 +460,21 @@ public sealed partial class OutboxProcessor(
     {
         var lockToken = Guid.NewGuid();
         var leaseUntil = now.AddSeconds(_settings.LeaseSeconds);
-        var eligibleIds = messages.Take(eligibleCount).Select(m => m.Id).ToArray();
+        var candidates = SelectOrderedCandidates(messages, eligibleCount);
+        if (candidates.Count == 0)
+            return [];
 
-        var claimedCount = await context.Set<OutboxMessage>()
-            .Where(m => eligibleIds.Contains(m.Id)
-                && m.ProcessedOn == null
-                && (m.LockedUntil == null || m.LockedUntil < now))
+        var eligibleIds = candidates.Select(m => m.Id).ToArray();
+        var outbox = context.Set<OutboxMessage>();
+
+        // A batch with no keyed row runs exactly the query it always ran: hosts that never declare
+        // an ordering key pay nothing for the feature, not even a subquery the optimizer has to
+        // prove away.
+        var claim = candidates.Exists(m => m.OrderingKey is not null)
+            ? FilterUnblocked(outbox, eligibleIds, now, _settings.MaxRetries)
+            : FilterClaimable(outbox, eligibleIds, now);
+
+        var claimedCount = await claim
             .ExecuteUpdateAsync(
                 s => s.SetProperty(m => m.LockedUntil, leaseUntil).SetProperty(m => m.LockToken, lockToken),
                 cancellationToken)
@@ -453,18 +484,74 @@ public sealed partial class OutboxProcessor(
             return [];
 
         if (claimedCount == eligibleIds.Length)
-            return [.. messages.Take(eligibleCount)];
+            return candidates;
 
         // Partial claim: process only the rows carrying this replica's token.
-        var claimedIds = await context.Set<OutboxMessage>().AsNoTracking()
+        var claimedIds = await outbox.AsNoTracking()
             .Where(m => eligibleIds.Contains(m.Id) && m.LockToken == lockToken)
             .Select(m => m.Id)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         var claimedSet = claimedIds.ToHashSet();
-        return [.. messages.Take(eligibleCount).Where(m => claimedSet.Contains(m.Id))];
+        return [.. candidates.Where(m => claimedSet.Contains(m.Id))];
     }
+
+    /// <summary>
+    /// Narrows the eligible prefix to the rows this cycle may attempt: every unkeyed row, plus the
+    /// FIRST row of each ordering key. The batch is already sorted by <c>OccurredOn</c> then
+    /// <c>Id</c>, so "first" is the earliest, and dropping its key-mates here is what keeps a single
+    /// cycle from dispatching two events of one key in parallel. Their turn comes on a later cycle,
+    /// once this row is processed and stops satisfying the claim's predecessor test.
+    /// </summary>
+    private static List<OutboxMessage> SelectOrderedCandidates(List<OutboxMessage> messages, int eligibleCount)
+    {
+        List<OutboxMessage> candidates = [];
+        var keysTaken = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var i = 0; i < eligibleCount; i++)
+        {
+            var message = messages[i];
+
+            if (message.OrderingKey is { } key && !keysTaken.Add(key))
+                continue;
+
+            candidates.Add(message);
+        }
+
+        return candidates;
+    }
+
+    /// <summary>
+    /// The claim predicate every batch shares: these ids, still unprocessed, not under another
+    /// replica's unexpired lease.
+    /// </summary>
+    private static IQueryable<OutboxMessage> FilterClaimable(
+        IQueryable<OutboxMessage> outbox,
+        Guid[] eligibleIds,
+        DateTime now) =>
+        outbox.Where(m => eligibleIds.Contains(m.Id)
+            && m.ProcessedOn == null
+            && (m.LockedUntil == null || m.LockedUntil < now));
+
+    /// <summary>
+    /// The claim predicate plus the ordering guard: a keyed row is refused while any EARLIER
+    /// unprocessed, non-dead-lettered row shares its key. Expressed as a correlated <c>NOT EXISTS</c>
+    /// inside the claim itself, so the guard is evaluated by the database at the instant of the
+    /// update: a second replica racing the same key loses on the row rather than on a check it made
+    /// before the race started.
+    /// </summary>
+    private static IQueryable<OutboxMessage> FilterUnblocked(
+        IQueryable<OutboxMessage> outbox,
+        Guid[] eligibleIds,
+        DateTime now,
+        int maxRetries) =>
+        FilterClaimable(outbox, eligibleIds, now)
+            .Where(m => m.OrderingKey == null
+                || !outbox.Any(p => p.OrderingKey == m.OrderingKey
+                    && p.ProcessedOn == null
+                    && p.RetryCount < maxRetries
+                    && p.OccurredOn < m.OccurredOn));
 
     /// <summary>
     /// Dispatches each eligible message, marking successes and dead-letters as processed and
@@ -490,17 +577,13 @@ public sealed partial class OutboxProcessor(
             using var activity = StartOutboxActivity(message, source);
             try
             {
-                var domainEvent = message.DeserializeEvent();
+                // The alias map is consulted only for a name that no longer resolves, so a renamed or
+                // relocated event type costs nothing on the happy path and does not dead-letter the
+                // rows that were already in flight when it moved.
+                var domainEvent = message.DeserializeEvent(_settings.TypeAliases);
                 if (domainEvent is null)
                 {
-                    message.LastError = $"Cannot resolve type: {message.EventType}";
-                    message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
-                    processedAny = true;
-                    OutboxMetrics.DeadLetterCounter.Add(
-                        1,
-                        new KeyValuePair<string, object?>("event_type", message.EventType),
-                        new KeyValuePair<string, object?>("reason", "type_unresolvable"));
-                    LogDeadLetter(logger, message.Id, message.EventType);
+                    processedAny |= HandleUnresolvableType(message);
                     continue;
                 }
 
@@ -607,6 +690,43 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
+    /// Handles a row whose stored <c>EventType</c> resolved to nothing, even after
+    /// <c>Outbox:TypeAliases</c>. The FIRST such attempt is treated as transient and retried through
+    /// the normal backoff path: the assembly declaring the type may simply not be loaded yet (a
+    /// module assembly resolved lazily, a host still coming up), and a name that resolves one cycle
+    /// later was never a dead letter. Only the second attempt is terminal, which is also the point
+    /// at which an operator has had a Warning naming the alias setting.
+    /// </summary>
+    /// <param name="message">The row that could not be deserialized.</param>
+    /// <returns>
+    /// <see langword="true"/> when the row reached a terminal state this cycle (progress),
+    /// <see langword="false"/> when it was merely scheduled for one more attempt.
+    /// </returns>
+    private bool HandleUnresolvableType(OutboxMessage message)
+    {
+        message.LastError = $"Cannot resolve type: {message.EventType}";
+
+        // MaxRetries of 1 means the host asked for no retries at all; honor that rather than
+        // scheduling an attempt the poll's RetryCount filter would never pick up again.
+        if (message.RetryCount == 0 && _settings.MaxRetries > 1)
+        {
+            message.RetryCount++;
+            message.LockedUntil = _timeProvider.GetUtcNow().UtcDateTime
+                .AddSeconds(ComputeRetryBackoffSeconds(message.RetryCount));
+            LogTypeUnresolvableRetry(logger, message.Id, message.EventType);
+            return false;
+        }
+
+        message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
+        OutboxMetrics.DeadLetterCounter.Add(
+            1,
+            new KeyValuePair<string, object?>("event_type", message.EventType),
+            new KeyValuePair<string, object?>("reason", "type_unresolvable"));
+        LogDeadLetter(logger, message.Id, message.EventType);
+        return true;
+    }
+
+    /// <summary>
     /// Exponential backoff for a failed message: <c>base * 2^(retryCount - 1)</c>, multiplied by a
     /// random jitter factor in <c>[0.8, 1.2]</c> and then capped at the lease so a failing row never
     /// holds its claim longer than a dead replica's rows would. The jitter is what keeps a batch
@@ -701,6 +821,12 @@ public sealed partial class OutboxProcessor(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} dead-lettered: type not resolvable — {EventType}")]
     private static partial void LogDeadLetter(ILogger logger, Guid messageId, string eventType);
+
+    // Warning, not Error: one unresolved attempt is a maybe (the declaring assembly may load on a
+    // later cycle), and the terminal attempt logs at Error above. Names the setting, because the
+    // fix for a genuinely renamed type is a configuration entry rather than a code change.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} could not resolve event type {EventType}; retrying once before dead-lettering. If the type was renamed or moved, map it with Outbox:TypeAliases")]
+    private static partial void LogTypeUnresolvableRetry(ILogger logger, Guid messageId, string eventType);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} failed (attempt {RetryCount})")]
     private static partial void LogMessageRetry(ILogger logger, Guid messageId, int retryCount, Exception exception);

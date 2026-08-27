@@ -1,7 +1,8 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.API.FeatureManagement;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.Tests.FeatureManagement;
 
@@ -18,7 +19,7 @@ public sealed class CurrentUserTargetingContextAccessorTests
     {
         var sut = CreateAccessor(new ClaimsPrincipal(new ClaimsIdentity(
             [
-                new Claim("user_id", "42"),
+                new Claim(AuthClaimTypes.Subject, "42"),
                 new Claim(ClaimTypes.Role, "Organizer"),
                 new Claim(ClaimTypes.Role, "Attendee"),
             ],
@@ -39,7 +40,7 @@ public sealed class CurrentUserTargetingContextAccessorTests
     public async Task GetContextAsync_ReadsUnmappedRoleClaimTypesToo(string roleClaimType)
     {
         var sut = CreateAccessor(new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim("user_id", "42"), new Claim(roleClaimType, "Organizer")],
+            [new Claim(AuthClaimTypes.Subject, "42"), new Claim(roleClaimType, "Organizer")],
             authenticationType: "TestAuth")));
 
         var context = await sut.GetContextAsync();

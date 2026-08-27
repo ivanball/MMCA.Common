@@ -22,6 +22,7 @@ public sealed class ResultGrpcExtensionsTests
     [InlineData(ErrorType.Unauthorized, StatusCode.Unauthenticated)]
     [InlineData(ErrorType.Forbidden, StatusCode.PermissionDenied)]
     [InlineData(ErrorType.UnprocessableEntity, StatusCode.FailedPrecondition)]
+    [InlineData(ErrorType.Unexpected, StatusCode.Internal)]
     public void ErrorType_MapsToExpectedGrpcStatus(ErrorType errorType, StatusCode expected)
     {
         // Act
@@ -84,6 +85,20 @@ public sealed class ResultGrpcExtensionsTests
 
         exception.Trailers.GetValue("error-1-code").Should().Be("Test.Validation");
         exception.Trailers.GetValue("error-1-type").Should().Be(nameof(ErrorType.Validation));
+    }
+
+    [Fact]
+    public void ToRpcException_OnUnexpectedError_UsesInternalStatus()
+    {
+        // Arrange
+        IReadOnlyList<Error> errors = [Error.Unexpected("Test.Unexpected", "The server broke")];
+
+        // Act
+        var exception = errors.ToRpcException();
+
+        // Assert
+        exception.StatusCode.Should().Be(StatusCode.Internal);
+        exception.Trailers.GetValue("error-0-type").Should().Be(nameof(ErrorType.Unexpected));
     }
 
     [Fact]

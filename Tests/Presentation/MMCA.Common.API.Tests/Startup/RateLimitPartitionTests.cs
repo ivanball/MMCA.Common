@@ -1,8 +1,9 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.API.Startup;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.Tests.Startup;
 
@@ -119,7 +120,7 @@ public sealed class RateLimitPartitionTests
             if (name is not null)
                 claims.Add(new Claim(ClaimTypes.Name, name));
             if (userId is not null)
-                claims.Add(new Claim("user_id", userId));
+                claims.Add(new Claim(AuthClaimTypes.Subject, userId));
             context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "TestAuth"));
         }
 

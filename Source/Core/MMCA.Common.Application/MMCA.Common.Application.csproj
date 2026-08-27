@@ -8,9 +8,17 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <!-- ModuleLoader loads each module's modules.{name}.json via AddJsonFile. This used to arrive
+         transitively through MiniProfiler.AspNetCore.Mvc's ASP.NET Core graph: an accidental
+         dependency on a web package for a host-agnostic feature. Referenced directly now. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.FeatureManagement" />
 
-    <PackageReference Include="MiniProfiler.AspNetCore.Mvc" />
+    <!-- MiniProfiler.Shared, NOT MiniProfiler.AspNetCore.Mvc: the profiling decorators only touch
+         StackExchange.Profiling.MiniProfiler.Current/Step, which lives in the shared package. The
+         ASP.NET Core packages belong to whoever hosts the profiler UI (MMCA.Common.API), and pulling
+         them in here would drag MVC into a host-agnostic package. PackageGraphPurityTests guards it. -->
+    <PackageReference Include="MiniProfiler.Shared" />
     <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>

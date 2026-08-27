@@ -20,12 +20,21 @@ namespace MMCA.Common.Infrastructure.Services;
 /// instead of dispatching in-process.
 /// </para>
 /// </summary>
+/// <param name="dbContextFactory">Scoped factory resolving the outbox target's context.</param>
+/// <param name="domainEventDispatcher">Dispatches the published events in-process.</param>
+/// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
+/// <param name="outboxOptions">Configurable outbox settings supplying that target.</param>
+/// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on the dispatched rows; defaults to
+/// <see cref="TimeProvider.System"/> so an existing host keeps the previous constructor shape.</param>
 public sealed class InProcessEventBus(
     IDbContextFactory dbContextFactory,
     IDomainEventDispatcher domainEventDispatcher,
     IDataSourceResolver dataSourceResolver,
-    IOptions<OutboxSettings> outboxOptions) : IEventBus
+    IOptions<OutboxSettings> outboxOptions,
+    TimeProvider? timeProvider = null) : IEventBus
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     /// <inheritdoc />
     public async Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
     {
@@ -74,6 +83,6 @@ public sealed class InProcessEventBus(
 
         await domainEventDispatcher.DispatchAsync(events, cancellationToken).ConfigureAwait(false);
 
-        await OutboxFinalizer.MarkProcessedAsync(context, outboxEntries, cancellationToken).ConfigureAwait(false);
+        await OutboxFinalizer.MarkProcessedAsync(context, outboxEntries, _timeProvider, cancellationToken).ConfigureAwait(false);
     }
 }

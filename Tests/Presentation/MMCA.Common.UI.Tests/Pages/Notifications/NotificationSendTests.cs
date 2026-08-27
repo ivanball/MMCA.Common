@@ -34,6 +34,47 @@ public sealed class NotificationSendTests : BunitTestBase
     }
 
     [Fact]
+    public void RequiredFields_KeepTheirAriaRequiredAffordance()
+    {
+        // The markup no longer hard-codes Required: it is read off the model's own annotations, so
+        // this asserts the accessibility affordance survived the move to the validation adapter.
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.Find("input").OuterHtml.Should().Contain("aria-required=\"true\"");
+        cut.Find("textarea").OuterHtml.Should().Contain("aria-required=\"true\"");
+    }
+
+    [Fact]
+    public void SubmittingEmptyForm_ShowsExactlyOneMessagePerField()
+    {
+        // MudBlazor's built-in required text must not stack on top of the model's message: the
+        // adapter is the only source of the wording.
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.ClickButtonByText("Send to All Recipients");
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Title is required."));
+        cut.Markup.Should().NotContain(">Required<");
+    }
+
+    [Fact]
+    public void SubmittingAnOverlongTitle_ShowsTheMaxLengthMessageAndDoesNotCallService()
+    {
+        // The length rule lives only on NotificationSendModel: the markup declares no MaxLength rule,
+        // so seeing this message proves the model's DataAnnotations are what the field validates.
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.Find("input").Input(new string('x', NotificationSendModel.TitleMaxLength + 1));
+        cut.Find("textarea").Input("World body");
+        cut.ClickButtonByText("Send to All Recipients");
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Title cannot exceed 200 characters."));
+        _service.Verify(
+            x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
     public void SubmittingValidForm_CallsServiceAndNavigatesToList()
     {
         _service

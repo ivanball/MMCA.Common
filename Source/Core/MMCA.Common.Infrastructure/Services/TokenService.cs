@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Settings;
@@ -44,7 +45,16 @@ public sealed class TokenService : ITokenService, IDisposable
     /// can be constructed directly in tests; resolved from DI in production and defaults to
     /// <see cref="TimeProvider.System"/>.
     /// </param>
-    public TokenService(IJwtSettings jwtSettings, TimeProvider? timeProvider = null)
+    /// <param name="jwksSettings">
+    /// The bound <see cref="JwksSettings"/>, whose <see cref="JwksSettings.KeyId"/> becomes the
+    /// <c>kid</c> header of every RS256 token this service signs, so a validator reading the
+    /// published JWKS document picks the right key by name instead of guessing. Optional so the
+    /// service can be constructed directly in tests; when absent the JWKS default key id is used.
+    /// </param>
+    public TokenService(
+        IJwtSettings jwtSettings,
+        TimeProvider? timeProvider = null,
+        IOptions<JwksSettings>? jwksSettings = null)
     {
         ArgumentNullException.ThrowIfNull(jwtSettings);
         _jwtSettings = jwtSettings;
@@ -53,7 +63,7 @@ public sealed class TokenService : ITokenService, IDisposable
         if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
         {
             (_signingCredentials, _validationKey, _ownedSigningRsa, _ownedValidationRsa) =
-                BuildRsaCredentials(jwtSettings);
+                BuildRsaCredentials(jwtSettings, jwksSettings?.Value.KeyId ?? new JwksSettings().KeyId);
             _validationAlgorithm = SecurityAlgorithms.RsaSha256;
         }
         else
@@ -73,12 +83,15 @@ public sealed class TokenService : ITokenService, IDisposable
     {
         var now = _timeProvider.GetUtcNow();
 
+        // `sub` is the only carrier of the user id. A duplicate custom claim used to ride alongside
+        // it, which meant two values that could disagree and two claim names every reader had to
+        // know; ClaimsPrincipalExtensions reads `sub` (and the NameIdentifier the bearer handler
+        // maps it to) instead.
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString(CultureInfo.InvariantCulture)),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
-            new("user_id", userId.ToString(CultureInfo.InvariantCulture)),
             new(ClaimTypes.Name, fullName),
             new(ClaimTypes.Email, email),
             new(ClaimTypes.Role, role)
@@ -178,7 +191,8 @@ public sealed class TokenService : ITokenService, IDisposable
     }
 
     private static (SigningCredentials Signing, SecurityKey Validation, RSA SigningRsa, RSA ValidationRsa) BuildRsaCredentials(
-        IJwtSettings jwtSettings)
+        IJwtSettings jwtSettings,
+        string keyId)
     {
         if (string.IsNullOrWhiteSpace(jwtSettings.RsaPrivateKeyPem))
         {
@@ -190,7 +204,12 @@ public sealed class TokenService : ITokenService, IDisposable
         try
         {
             signingRsa.ImportFromPem(jwtSettings.RsaPrivateKeyPem);
-            var signingKey = new RsaSecurityKey(signingRsa);
+
+            // The key id travels into every token's `kid` header, and it is the same value
+            // RsaJwksProvider stamps on the key it publishes at /.well-known/jwks.json. A validator
+            // fetching that document can then select the key by name; without a kid it has to try
+            // every published key, which silently stops working the moment a rotation publishes two.
+            var signingKey = new RsaSecurityKey(signingRsa) { KeyId = keyId };
             var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
 
             // Validation key: prefer the configured public key. Fall back to deriving the
@@ -209,7 +228,10 @@ public sealed class TokenService : ITokenService, IDisposable
                     validationRsa.ImportParameters(publicParameters);
                 }
 
-                var validationKey = new RsaSecurityKey(validationRsa);
+                // Same key id on the validation key: the refresh flow validates this service's own
+                // tokens, and a key whose id matches the token's kid resolves on the first attempt
+                // instead of falling through the "try every configured key" path.
+                var validationKey = new RsaSecurityKey(validationRsa) { KeyId = keyId };
                 return (signingCredentials, validationKey, signingRsa, validationRsa);
             }
             catch

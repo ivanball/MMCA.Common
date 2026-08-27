@@ -38,7 +38,7 @@ public sealed class InboxDisabledWarningServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_LogsExactlyOneWarningNamingTheSettingThatTurnsTheInboxOn()
+    public async Task StartAsync_LogsExactlyOneWarningNamingTheOptOutAndItsRemedy()
     {
         var logger = new RecordingLogger();
         var sut = new InboxDisabledWarningService(logger);
@@ -47,7 +47,11 @@ public sealed class InboxDisabledWarningServiceTests
 
         logger.Entries.Should().ContainSingle("the warning is a startup posture statement, not a per-message log");
         logger.Entries[0].Level.Should().Be(LogLevel.Warning);
-        logger.Entries[0].Message.Should().Contain("MessageBus:EnableInbox=true", "the log must carry its own remedy");
+
+        // The inbox is ON by default under a broker, so reaching this service means the host opted
+        // out deliberately: the line names the setting that did it, and how to undo it.
+        logger.Entries[0].Message.Should().Contain("MessageBus:EnableInbox=false", "the log must name the opt-out");
+        logger.Entries[0].Message.Should().Contain("set it to true", "the log must carry its own remedy");
         logger.Entries[0].Message.Should().Contain("at-least-once");
     }
 

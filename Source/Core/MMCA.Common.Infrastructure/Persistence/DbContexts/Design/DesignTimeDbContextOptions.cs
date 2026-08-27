@@ -55,6 +55,24 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableAuditTrail { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the refresh-session table (<c>RefreshSessions</c>) is
+    /// part of the design-time model, mirroring <c>RefreshSessions:Enabled</c> at runtime. Defaults
+    /// to <see langword="false"/>, so <c>dotnet ef</c> keeps producing exactly the migrations it
+    /// produced before multi-device sessions shipped.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the migrations project of the <b>Identity</b> database only, like
+    /// <see cref="EnableScheduler"/> and unlike <see cref="EnableAuditTrail"/>: sessions are one
+    /// module's data, so a second migrations project that also enabled it would scaffold a second
+    /// copy of the table in another database. There is no data-source setting to match here: the
+    /// helper registers the source this context actually resolved to, so the flag opens the gate for
+    /// exactly the context <c>--datasource</c> selected. The flag must match the host's
+    /// <c>RefreshSessions:Enabled</c>, or the scaffolded migrations and the running model disagree
+    /// (which is what <c>has-pending-model-changes</c> reports).
+    /// </remarks>
+    public bool EnableRefreshSessions { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>

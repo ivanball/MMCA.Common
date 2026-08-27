@@ -61,6 +61,12 @@ public static class DesignTimeDbContextHelper
             NullLogger<DataSourceResolver>.Instance);
         var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
 
+        // Resolved before the registrations because the refresh-session gate below is keyed on the
+        // PHYSICAL source name, which is not always the logical one asked for: a logical name whose
+        // connection matches the top-level one collapses onto Default, and names sharing a
+        // connection collapse onto the alphabetically-first of them.
+        var physical = resolver.GetPhysical(resolver.ResolveLogical(DataSource.SQLServer, logicalName));
+
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
@@ -87,11 +93,20 @@ public static class DesignTimeDbContextHelper
         services.AddSingleton<IOptions<AuditTrailSettings>>(
             Options.Create(new AuditTrailSettings { Enabled = designOptions.EnableAuditTrail }));
         services.AddSingleton<AuditTrailSaveChangesInterceptor>();
+        // Same treatment again for the refresh-session table, with one twist: its runtime gate is
+        // two-part (enabled AND this context's source), so the registered source name is the one
+        // THIS context resolved to. Registering the logical name instead would silently miss on
+        // every collapse (a consumer whose Identity source shares the default connection resolves to
+        // "Default"), and the scaffold would keep omitting a table the runtime model has.
+        services.AddSingleton<IOptions<Application.Auth.RefreshSessionSettings>>(
+            Options.Create(new Application.Auth.RefreshSessionSettings
+            {
+                Enabled = designOptions.EnableRefreshSessions,
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);
-
-        var physical = resolver.GetPhysical(resolver.ResolveLogical(DataSource.SQLServer, logicalName));
 
         return new SQLServerDbContext(
             new DbContextOptionsBuilder<SQLServerDbContext>().Options,

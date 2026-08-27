@@ -304,6 +304,12 @@
   <data name="Notif.Send.Field.Message.Required" xml:space="preserve">
     <value>El mensaje es obligatorio.</value>
   </data>
+  <data name="Notif.Send.Field.Message.MaxLength" xml:space="preserve">
+    <value>El mensaje no puede superar los 2000 caracteres.</value>
+  </data>
+  <data name="Notif.Send.Field.Title.MaxLength" xml:space="preserve">
+    <value>El título no puede superar los 200 caracteres.</value>
+  </data>
   <data name="Auth.OAuth.BackToLogin" xml:space="preserve">
     <value>Volver a iniciar sesión</value>
   </data>

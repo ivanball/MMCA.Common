@@ -106,6 +106,20 @@ public sealed class ApiControllerBaseTests
     }
 
     [Fact]
+    public void HandleFailure_WithUnexpectedError_Returns500()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors = [Error.Unexpected("Test.Unexpected", "The server broke")];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        var problemDetails = result.Value as ProblemDetails;
+        problemDetails.Should().NotBeNull();
+        problemDetails!.Title.Should().Be("Operation failed");
+    }
+
+    [Fact]
     public void HandleFailure_WithNullErrors_Returns500()
     {
         TestApiController sut = CreateController();
@@ -132,7 +146,7 @@ public sealed class ApiControllerBaseTests
     }
 
     [Fact]
-    public void HandleFailure_WithMultipleErrors_UsesFirstErrorTypeForStatusCode()
+    public void HandleFailure_WithMultipleErrors_UsesMostSevereErrorTypeForStatusCode()
     {
         TestApiController sut = CreateController();
         Error[] errors =
@@ -144,7 +158,104 @@ public sealed class ApiControllerBaseTests
 
         ObjectResult result = sut.InvokeHandleFailure(errors);
 
-        result.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        // Conflict outranks NotFound, so position no longer decides the status.
+        result.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+    }
+
+    [Fact]
+    public void HandleFailure_ForbiddenBehindValidation_IsNotDowngradedTo400()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.Validation("Test.Validation", "Validation failed"),
+            Error.Forbidden("Test.Forbidden", "Access denied")
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    [Fact]
+    public void HandleFailure_UnexpectedBehindOtherErrors_Returns500()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.Validation("Test.Validation", "Validation failed"),
+            Error.Forbidden("Test.Forbidden", "Access denied"),
+            Error.Unexpected("Test.Unexpected", "The server broke")
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
+    [Fact]
+    public void HandleFailure_UnauthorizedOutranksForbidden()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.Forbidden("Test.Forbidden", "Access denied"),
+            Error.Unauthorized("Test.Unauthorized", "Not authenticated")
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    public void HandleFailure_WithEqualRankErrors_KeepsTheEarliestError()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.Validation("Test.Validation", "Validation failed"),
+            Error.Invariant("Test.Invariant", "Invariant violated"),
+            Error.Failure("Test.Failure", "General failure")
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public void HandleFailure_RankedStatus_StillListsEveryError()
+    {
+        TestApiController sut = CreateController();
+        Error[] errors =
+        [
+            Error.Validation("Test.Validation", "Validation failed"),
+            Error.Unexpected("Test.Unexpected", "The server broke")
+        ];
+
+        ObjectResult result = sut.InvokeHandleFailure(errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+
+        var problemDetails = result.Value as ProblemDetails;
+        problemDetails.Should().NotBeNull();
+        var errorEntries = problemDetails!.Extensions["errors"] as object[];
+        errorEntries.Should().NotBeNull();
+        errorEntries!.Should().HaveCount(2, "ranking only picks the status; the RFC 9457 payload keeps every error");
+    }
+
+    [Fact]
+    public void HandleFailure_AggregatedCombineResult_UsesMostSevereStatus()
+    {
+        TestApiController sut = CreateController();
+        var combined = Result.Combine(
+            Result.Failure(Error.Validation("Test.Validation", "Validation failed")),
+            Result.Failure(Error.Forbidden("Test.Forbidden", "Access denied")));
+
+        ObjectResult result = sut.InvokeHandleFailure(combined.Errors);
+
+        result.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 
     [Fact]

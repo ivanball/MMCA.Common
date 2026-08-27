@@ -35,11 +35,17 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// <param name="domainEventDispatcher">Dispatches domain events to in-process handlers.</param>
 /// <param name="logger">Logger for error diagnostics.</param>
 /// <param name="outboxSignal">Signal to wake the outbox processor for pending rows.</param>
+/// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on locally dispatched outbox rows;
+/// defaults to <see cref="TimeProvider.System"/> so an existing host keeps the previous
+/// constructor shape while tests can drive the stamp deterministically.</param>
 public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<DomainEventSaveChangesInterceptor> logger,
-    Outbox.IOutboxSignal outboxSignal) : SaveChangesInterceptor
+    Outbox.IOutboxSignal outboxSignal,
+    TimeProvider? timeProvider = null) : SaveChangesInterceptor
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     /// <summary>
     /// Per-context state captured before save and consumed after save.
     /// Uses <see cref="ConditionalWeakTable{TKey,TValue}"/> so state is automatically
@@ -307,7 +313,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
 
             ClearDomainEvents(state);
 
-            await OutboxFinalizer.MarkProcessedAsync(context, state.LocalOutboxEntries, cancellationToken).ConfigureAwait(false);
+            await OutboxFinalizer.MarkProcessedAsync(context, state.LocalOutboxEntries, _timeProvider, cancellationToken).ConfigureAwait(false);
 
             if (state.HasIntegrationEvents)
                 outboxSignal.Signal();

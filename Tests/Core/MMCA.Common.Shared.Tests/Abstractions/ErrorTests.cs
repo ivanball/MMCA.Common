@@ -34,6 +34,22 @@ public class ErrorTests
     public void Failure_CreatesErrorWithFailureType() =>
         Error.Failure("code", "msg").Type.Should().Be(ErrorType.Failure);
 
+    [Fact]
+    public void Unexpected_CreatesErrorWithUnexpectedType() =>
+        Error.Unexpected("code", "msg").Type.Should().Be(ErrorType.Unexpected);
+
+    [Fact]
+    public void Unexpected_WithSourceAndTarget_SetsProperties()
+    {
+        var error = Error.Unexpected("Payment.GatewayDown", "The gateway did not answer", "ChargeCard", "Gateway");
+
+        error.Code.Should().Be("Payment.GatewayDown");
+        error.Message.Should().Be("The gateway did not answer");
+        error.Type.Should().Be(ErrorType.Unexpected);
+        error.Source.Should().Be("ChargeCard");
+        error.Target.Should().Be("Gateway");
+    }
+
     // ── Source and Target ──
     [Fact]
     public void Validation_WithSourceAndTarget_SetsProperties()

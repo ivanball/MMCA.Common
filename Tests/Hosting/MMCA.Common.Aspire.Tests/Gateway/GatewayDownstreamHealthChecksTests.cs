@@ -67,6 +67,74 @@ public sealed class GatewayDownstreamHealthChecksTests
         client.Timeout.Should().Be(TimeSpan.FromSeconds(2));
     }
 
+    // An HttpClient left on its own defaults sends HTTP/1.1, which an Http2-only cleartext (h2c)
+    // endpoint refuses outright, so the probe fails and the gateway reports a downstream outage that
+    // does not exist. The services a modular-monolith gateway fronts serve h2c precisely so that
+    // cross-service gRPC works without TLS/ALPN, which makes HTTP/2 the right default here.
+    [Fact]
+    public void ProbeClient_SpeaksHttp2ByDefault()
+    {
+        var client = ProbeClientFor("catalog");
+
+        client.DefaultRequestVersion.Should().Be(HttpVersion.Version20);
+        client.DefaultVersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionExact,
+            because: "h2c prior knowledge means the request must go out as HTTP/2, not negotiate down");
+    }
+
+    [Fact]
+    public void ProbeClient_CanOptOutBackToHttp11PerDownstream()
+    {
+        var client = ProbeClientFor("legacy", configure: o => o.ProbeOverHttp2 = false);
+
+        client.DefaultRequestVersion.Should().Be(HttpVersion.Version11);
+        client.DefaultVersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionOrLower);
+    }
+
+    // The opt-out is per CALL, so a gateway fronting a mix of profiles registers each group once and
+    // the second call must not retro-change the first group's client.
+    [Fact]
+    public void ProbeClient_VersionProfileIsScopedToItsOwnRegistrationCall()
+    {
+        var services = new ServiceCollection();
+        services.AddGatewayDownstreamHealthChecks("catalog");
+        services.AddGatewayDownstreamHealthChecks(o => o.ProbeOverHttp2 = false, "legacy");
+
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IHttpClientFactory>();
+
+        using var http2Client = factory.CreateClient(GatewayHealthCheckExtensions.ClientName("catalog"));
+        using var http11Client = factory.CreateClient(GatewayHealthCheckExtensions.ClientName("legacy"));
+
+        http2Client.DefaultRequestVersion.Should().Be(HttpVersion.Version20);
+        http11Client.DefaultRequestVersion.Should().Be(HttpVersion.Version11);
+    }
+
+    [Fact]
+    public void AddGatewayDownstreamHealthChecks_WithOptions_RegistersTheSameChecks()
+    {
+        var services = new ServiceCollection();
+        services.AddGatewayDownstreamHealthChecks(o => o.ProbeOverHttp2 = false, "catalog", "sales");
+
+        Registrations(services).Select(r => r.Name)
+            .Should().BeEquivalentTo("downstream-catalog", "downstream-sales");
+    }
+
+    [Fact]
+    public void Options_DefaultToHttp2() =>
+        new GatewayDownstreamHealthCheckOptions().ProbeOverHttp2.Should().BeTrue();
+
+    private static HttpClient ProbeClientFor(
+        string serviceName,
+        Action<GatewayDownstreamHealthCheckOptions>? configure = null)
+    {
+        var services = new ServiceCollection();
+        services.AddGatewayDownstreamHealthChecks(configure, serviceName);
+
+        return services.BuildServiceProvider()
+            .GetRequiredService<IHttpClientFactory>()
+            .CreateClient(GatewayHealthCheckExtensions.ClientName(serviceName));
+    }
+
     // A duplicate health-check NAME is a startup exception, not a harmless second registration, so
     // a host and a module both asking for the same downstream must not compound.
     [Fact]

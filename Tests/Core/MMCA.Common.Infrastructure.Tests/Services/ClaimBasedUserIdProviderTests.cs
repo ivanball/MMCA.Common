@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Infrastructure.Services;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.Infrastructure.Tests.Services;
 
@@ -23,11 +24,11 @@ public sealed class ClaimBasedUserIdProviderTests : IAsyncDisposable
         }
     }
 
-    // ── Extracts user_id claim ──
+    // ── Extracts the subject claim ──
     [Fact]
-    public void GetUserId_WhenUserIdClaimExists_ReturnsClaimValue()
+    public void GetUserId_WhenSubjectClaimExists_ReturnsClaimValue()
     {
-        var claims = new[] { new Claim("user_id", "42") };
+        var claims = new[] { new Claim(AuthClaimTypes.Subject, "42") };
         var connection = CreateHubConnectionContext(claims);
 
         string? userId = _sut.GetUserId(connection);
@@ -35,11 +36,24 @@ public sealed class ClaimBasedUserIdProviderTests : IAsyncDisposable
         userId.Should().Be("42");
     }
 
-    // ── No user_id claim ──
+    // ── The bearer handler maps `sub` onto NameIdentifier; hub connections authenticated through it
+    //    must route to the same user, or Clients.User(id) silently reaches nobody ──
     [Fact]
-    public void GetUserId_WhenNoUserIdClaim_ReturnsNull()
+    public void GetUserId_WhenOnlyTheMappedNameIdentifierClaimExists_ReturnsClaimValue()
     {
-        var claims = new[] { new Claim("sub", "42") };
+        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, "42") };
+        var connection = CreateHubConnectionContext(claims);
+
+        string? userId = _sut.GetUserId(connection);
+
+        userId.Should().Be("42");
+    }
+
+    // ── No identity claim ──
+    [Fact]
+    public void GetUserId_WhenNoIdentityClaim_ReturnsNull()
+    {
+        var claims = new[] { new Claim(ClaimTypes.Email, "user@test.com") };
         var connection = CreateHubConnectionContext(claims);
 
         string? userId = _sut.GetUserId(connection);

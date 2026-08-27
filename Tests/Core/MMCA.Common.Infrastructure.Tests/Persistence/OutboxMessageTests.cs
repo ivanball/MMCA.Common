@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using MMCA.Common.Domain.DomainEvents;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
@@ -13,6 +14,96 @@ public sealed class OutboxMessageTests
     private sealed record TestDomainEvent : BaseDomainEvent;
 
     private sealed record TestDomainEventWithData(string Name, int Value) : BaseDomainEvent;
+
+    private sealed record OrderedDomainEvent(string? Key) : BaseDomainEvent, IHasOrderingKey
+    {
+        public string? OrderingKey => Key;
+    }
+
+    // ── Ordering key ──
+    [Fact]
+    public void FromDomainEvent_CopiesTheOrderingKey_WhenTheEventDeclaresOne()
+    {
+        var message = OutboxMessage.FromDomainEvent(new OrderedDomainEvent("cart-42"));
+
+        message.OrderingKey.Should().Be("cart-42");
+    }
+
+    [Fact]
+    public void FromDomainEvent_LeavesTheOrderingKeyNull_WhenTheEventDoesNotOptIn()
+    {
+        OutboxMessage.FromDomainEvent(new TestDomainEvent()).OrderingKey.Should().BeNull();
+
+        // An implementing event may still opt an individual instance out by returning null, which is
+        // why the row copies the VALUE rather than a type-level flag.
+        OutboxMessage.FromDomainEvent(new OrderedDomainEvent(null)).OrderingKey.Should().BeNull();
+    }
+
+    // ── Type aliases: a renamed or relocated contract still deserializes ──
+    [Fact]
+    public void DeserializeEvent_WithoutAnAlias_ReturnsNullForARetiredTypeName()
+    {
+        var message = new OutboxMessage
+        {
+            EventType = "Gone.Namespace.GoneEvent, GoneAssembly",
+            Payload = """{"Name":"Test","Value":42}""",
+        };
+
+        message.DeserializeEvent().Should().BeNull();
+    }
+
+    [Fact]
+    public void DeserializeEvent_WithAnAlias_ResolvesTheReplacementTypeAndReadsThePayload()
+    {
+        var message = new OutboxMessage
+        {
+            EventType = "Gone.Namespace.GoneEvent, GoneAssembly",
+            Payload = """{"Name":"Test","Value":42}""",
+        };
+
+        var aliases = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Gone.Namespace.GoneEvent, GoneAssembly"] = typeof(TestDomainEventWithData).AssemblyQualifiedName!,
+        };
+
+        message.DeserializeEvent(aliases).Should().BeOfType<TestDomainEventWithData>()
+            .Which.Should().BeEquivalentTo(new { Name = "Test", Value = 42 });
+    }
+
+    [Fact]
+    public void DeserializeEvent_AliasKeyedByTypeFullName_AlsoResolves()
+    {
+        // Operators write type names in configuration, not assembly-qualified names.
+        var message = new OutboxMessage
+        {
+            EventType = "Gone.Namespace.OtherGoneEvent, GoneAssembly",
+            Payload = """{"Name":"Test","Value":1}""",
+        };
+
+        var aliases = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Gone.Namespace.OtherGoneEvent"] = typeof(TestDomainEventWithData).AssemblyQualifiedName!,
+        };
+
+        message.DeserializeEvent(aliases).Should().BeOfType<TestDomainEventWithData>();
+    }
+
+    [Fact]
+    public void DeserializeEvent_AliasTargetWithoutAnAssembly_IsFoundAmongTheLoadedAssemblies()
+    {
+        var message = new OutboxMessage
+        {
+            EventType = "Gone.Namespace.BareTargetEvent, GoneAssembly",
+            Payload = """{"Name":"Test","Value":7}""",
+        };
+
+        var aliases = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Gone.Namespace.BareTargetEvent"] = typeof(TestDomainEventWithData).FullName!,
+        };
+
+        message.DeserializeEvent(aliases).Should().BeOfType<TestDomainEventWithData>();
+    }
 
     // ── FromDomainEvent ──
     [Fact]

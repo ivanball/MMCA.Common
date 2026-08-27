@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using AwesomeAssertions;
@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Auth;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Idempotency;
@@ -49,7 +50,7 @@ public sealed class IdempotencyFilterTests
         if (userId is not null)
         {
             httpContext.User = new ClaimsPrincipal(
-                new ClaimsIdentity([new Claim("user_id", userId)], "TestAuth"));
+                new ClaimsIdentity([new Claim(AuthClaimTypes.Subject, userId)], "TestAuth"));
         }
 
         var descriptor = new ActionDescriptor();

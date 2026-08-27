@@ -68,7 +68,7 @@ When moving a type between packages or changing project references, expect both 
 
 ### DI Registration Sequence
 
-Downstream apps register `AddApplicationDecorators()` **last**: Scrutor `TryDecorate` can only wrap handlers already registered, so every module's handler scan must run first. Only that ordering is load-bearing. Reference hosts use `ModuleLoader.DiscoverAndRegister`; the fluent equivalent is `AddApplication() -> AddInfrastructure(config) -> AddAPI(modulesSettings) -> ScanModuleApplicationServices<TModuleRef>() per module -> AddApplicationDecorators()`.
+Downstream apps register `AddApplicationDecorators()` **last**: Scrutor `TryDecorate` can only wrap handlers already registered, so every module's handler scan must run first. Only that ordering is load-bearing. Reference hosts use `ModuleLoader.DiscoverAndRegister`; the fluent equivalent is `AddApplication() -> AddInfrastructure(config) -> AddAPI(modulesSettings) -> ScanModuleApplicationServices<TModuleRef>() per module -> AddApplicationDecorators()`. Prefer the composition helper `AddMmcaApplicationPipeline(pipeline => ...)`: it runs the sequence in the correct order and seals the pipeline, so any handler registration after `AddApplicationDecorators()` throws instead of silently going unwrapped; `VerifyDecoratorPipeline(IServiceCollection)` exposes the same check to fitness tests.
 
 ### CQRS Decorator Pipeline
 
@@ -76,14 +76,14 @@ Downstream apps register `AddApplicationDecorators()` **last**: Scrutor `TryDeco
 
 ```
 Commands: FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Transactional -> Handler
-Queries:  FeatureGate -> Authorization -> Logging -> Caching -> Timeout -> Handler
+Queries:  FeatureGate -> Authorization -> Logging -> Caching -> Validating -> Timeout -> Handler
 ```
 
 - **FeatureGate**: short-circuits when the command/query's feature flag is off.
 - **Authorization**: `IRequiresPermission` commands/queries are checked against `IPermissionRegistry.HasPermission(ICurrentUserService.Roles, ...)`; a denial short-circuits with a `Forbidden` error and increments `cqrs.authorization.denied.count`. Sits outside caching on purpose, so a denied query never reads or populates the cache.
 - **Logging**: full pipeline duration via `ICorrelationContext`.
 - **Caching**: `ICacheInvalidating` commands invalidate on success (outside the transaction); `IQueryCacheable` queries (with `CacheKey` + `CacheDuration`) cache results.
-- **Validating**: FluentValidation before the transaction opens; queries have no Validating or Transactional decorator.
+- **Validating**: FluentValidation before the transaction opens (commands) and before the handler runs (queries). The query decorator sits inside Caching on purpose: a cached entry was already validated when first produced. Queries have no Transactional decorator.
 - **Timeout**: `IHasTimeout` commands/queries run under a linked token cancelled after their own budget; expiry returns a `Request.TimedOut` failure and increments `cqrs.timeout.count`, while caller cancellation still propagates as an exception. A budget of zero or less passes through.
 - **Transactional**: `ITransactional` commands get a DB transaction; exceptions AND business failures (`Result.Failure`) roll back (atomicity over partial persistence). In-process domain event dispatch is deferred until after a successful commit (`DbContextFactory.ExecuteInTransactionAsync` flushes it post-commit and drops it on rollback), so handlers never act on state that could still roll back; cache invalidation still runs only on success, outside the transaction.
 

@@ -77,8 +77,13 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
             return Result.Failure(Error.NotFound.WithSource(HandlerName).WithTarget(typeof(TUser).Name));
         }
 
-        // Soft-delete (sets IsDeleted = true, plus whatever the aggregate couples to deletion, e.g.
-        // revoking the refresh token so outstanding sessions die immediately).
+        // Soft-delete (sets IsDeleted = true, plus whatever the aggregate couples to deletion).
+        //
+        // Outstanding refresh sessions are not revoked here and do not need to be: the refresh flow
+        // re-fetches the user through the same soft-delete query filter, so an erased account's
+        // sessions stop working the moment this commits. An app that also wants the rows tidied
+        // revokes them from its OnAfterSoftDeleteAsync tail via IRefreshSessionStore, which enlists
+        // in this same unit of work.
         //
         // Called through IErasableUser deliberately, and the cast is load-bearing: member lookup on a
         // type parameter prefers the members of its CLASS constraint, so a bare user.Delete() would

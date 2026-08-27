@@ -15,7 +15,8 @@ namespace MMCA.Common.API.Middleware;
 /// the internal <see cref="Result"/> structure as a 200 OK JSON body — hiding the error.
 /// <para>
 /// When detected, the filter replaces the response with an RFC 9457 Problem Details response
-/// using the appropriate HTTP status code derived from the first error's <see cref="ErrorType"/>.
+/// using the HTTP status code of the most severe <see cref="ErrorType"/> present, matching
+/// <c>ApiControllerBase.HandleFailure</c>.
 /// </para>
 /// </summary>
 public sealed partial class UnhandledResultFailureFilter(
@@ -31,9 +32,8 @@ public sealed partial class UnhandledResultFailureFilter(
 
         LogUnhandledResultFailure(context.ActionDescriptor.DisplayName, result.Errors);
 
-        var firstError = result.Errors.Count > 0 ? result.Errors[0] : null;
-        var statusCode = firstError is not null
-            ? ErrorHttpMapping.GetStatusCode(firstError.Type)
+        var statusCode = result.Errors.Count > 0
+            ? ErrorHttpMapping.GetStatusCode(result.Errors)
             : StatusCodes.Status500InternalServerError;
 
         var problemDetails = new ProblemDetails

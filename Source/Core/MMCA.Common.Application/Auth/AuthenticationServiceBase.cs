@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Auth;
@@ -29,6 +30,16 @@ namespace MMCA.Common.Application.Auth;
 /// </list>
 /// <c>ExternalLoginAsync</c> stays app-level (the interface's default member rejects it), since OAuth
 /// account linking is coupled to the app's <c>User</c> factory surface.
+/// <para>
+/// <b>Refresh tokens are multi-device rows, hashed at rest.</b> Every issue opens a
+/// <see cref="RefreshSession"/> instead of overwriting one column on the user, so signing in on a
+/// second device no longer signs the first one out, and the store holds only
+/// <see cref="RefreshSession.HashToken"/> digests. Rotation revokes the presented session and links it
+/// to its successor; presenting an already-rotated token lands on that revoked row, which is the reuse
+/// signal that revokes the user's whole live family (BR-206). An expired session is not a reuse signal
+/// and fails alone. A per-user cap (<see cref="MaxActiveSessionsPerUser"/>) evicts the oldest live
+/// session on a new sign-in so one account cannot grow the table without bound.
+/// </para>
 /// </summary>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 public abstract class AuthenticationServiceBase<TUser>(
@@ -37,9 +48,14 @@ public abstract class AuthenticationServiceBase<TUser>(
     IPasswordHasher passwordHasher,
     ILoginProtectionService loginProtection,
     TimeProvider timeProvider,
-    AuthenticationValidators validators) : IAuthenticationService
+    AuthenticationValidators validators,
+    IRefreshSessionStore refreshSessions,
+    IOptions<RefreshSessionSettings>? refreshSessionSettings = null) : IAuthenticationService
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser
 {
+    /// <summary>The cap applied when <c>RefreshSessions:MaxActiveSessionsPerUser</c> is not configured.</summary>
+    private const int DefaultMaxActiveSessionsPerUser = 10;
+
     /// <summary>The unit of work (exposed for app-level workflows such as external login).</summary>
     protected IUnitOfWork UnitOfWork => unitOfWork;
 
@@ -48,6 +64,9 @@ public abstract class AuthenticationServiceBase<TUser>(
 
     /// <summary>The time provider (exposed for app-level workflows such as external login).</summary>
     protected TimeProvider TimeProvider => timeProvider;
+
+    /// <summary>The refresh-session store (exposed for app-level workflows such as external login).</summary>
+    protected IRefreshSessionStore RefreshSessions => refreshSessions;
 
     /// <summary>The user repository resolved from the unit of work.</summary>
     protected IRepository<TUser, UserIdentifierType> Repository =>
@@ -69,9 +88,27 @@ public abstract class AuthenticationServiceBase<TUser>(
     protected virtual TimeSpan RefreshTokenLifetime =>
         tokenService.RefreshTokenLifetime > TimeSpan.Zero ? tokenService.RefreshTokenLifetime : TimeSpan.FromDays(7);
 
+    /// <summary>
+    /// Maximum live sessions one user may hold (<c>RefreshSessions:MaxActiveSessionsPerUser</c>,
+    /// default 10). Opening session number cap + 1 revokes the user's oldest live session rather than
+    /// refusing the sign-in.
+    /// </summary>
+    protected virtual int MaxActiveSessionsPerUser
+    {
+        get
+        {
+            // A non-positive value (an unbound options instance in a test double, or a host that
+            // configured zero) falls back to the default rather than evicting every session.
+            var configured = refreshSessionSettings?.Value.MaxActiveSessionsPerUser ?? 0;
+            return configured > 0 ? configured : DefaultMaxActiveSessionsPerUser;
+        }
+    }
+
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> LoginAsync(
         LoginRequest request,
+        string? ipAddress = null,
+        string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
         var validationResult = await validators.Login.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
@@ -116,7 +153,10 @@ public abstract class AuthenticationServiceBase<TUser>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
         }
 
-        // Step 2: Tracked re-fetch — needed to persist the new refresh token via SaveChangesAsync.
+        // Step 2: Tracked re-fetch. The refresh token no longer lives on the user, so this is no
+        // longer about persisting one: it is the instance the app's CreateAccessToken hook mints
+        // from (apps reach linked aggregates and navigations through it), and the second lookup is
+        // what turns a race that deleted the account between the two steps into a clean 404.
         var user = await Repository.GetByIdAsync(untracked.Id, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
@@ -127,13 +167,14 @@ public abstract class AuthenticationServiceBase<TUser>(
         // Reset failed attempts and lockout on successful login.
         await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
-        return await IssueTokensAsync(user, cancellationToken).ConfigureAwait(false);
+        return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> RegisterAsync(
         RegisterRequest request,
         string? ipAddress = null,
+        string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
         var validationResult = await validators.Register.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
@@ -164,8 +205,6 @@ public abstract class AuthenticationServiceBase<TUser>(
         }
 
         var user = userResult.Value!;
-        var refreshToken = tokenService.GenerateRefreshToken();
-        user.UpdateRefreshToken(refreshToken, timeProvider.GetUtcNow().UtcDateTime.Add(RefreshTokenLifetime));
 
         await Repository.AddAsync(user, cancellationToken).ConfigureAwait(false);
 
@@ -206,17 +245,16 @@ public abstract class AuthenticationServiceBase<TUser>(
         // BR-213: count this registration against the caller's IP.
         await loginProtection.IncrementRegistrationCountAsync(ipAddress, cancellationToken).ConfigureAwait(false);
 
-        var accessToken = CreateAccessToken(tokenUser);
-
-        return Result.Success(new AuthenticationResponse(
-            accessToken,
-            refreshToken,
-            timeProvider.GetUtcNow().UtcDateTime.Add(AccessTokenLifetime)));
+        // The session is opened AFTER the user save because it carries the user id, which a
+        // store-generated key only has once the insert has run.
+        return await IssueTokensAsync(tokenUser, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> RefreshTokenAsync(
         RefreshTokenRequest request,
+        string? ipAddress = null,
+        string? userAgent = null,
         CancellationToken cancellationToken = default)
     {
         var validationResult = await validators.Refresh.ValidateAsync(request, cancellationToken).ConfigureAwait(false);
@@ -234,14 +272,17 @@ public abstract class AuthenticationServiceBase<TUser>(
                 Error.Unauthorized("Auth.InvalidToken", "Invalid access token.", nameof(RefreshTokenAsync)));
         }
 
-        var userIdClaim = principal.FindFirst("user_id")?.Value;
-        if (!int.TryParse(userIdClaim, out var userId))
+        // The identifier rides the standard `sub` claim; ClaimsPrincipalExtensions also accepts the
+        // NameIdentifier form the bearer handler maps it to, and parses through IParsable so the
+        // solution-wide identifier alias can change shape without editing this.
+        var userId = principal.GetUserId();
+        if (userId is null)
         {
             return Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidToken", "Invalid access token claims.", nameof(RefreshTokenAsync)));
         }
 
-        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        var user = await Repository.GetByIdAsync(userId.Value, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
             return Result.Failure<AuthenticationResponse>(CreateRefreshUserMissingError());
@@ -254,23 +295,31 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
         }
 
-        // Verify token match + expiry. A mismatch indicates token reuse (potential theft).
-        // BR-206: on reuse detection, revoke the stored token to force re-authentication.
-        if (user.RefreshToken != request.RefreshToken || user.RefreshTokenExpiry < timeProvider.GetUtcNow().UtcDateTime)
-        {
-            user.RevokeRefreshToken();
-            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var sessionResult = await ResolveRotatableSessionAsync(user.Id, request.RefreshToken, now, cancellationToken)
+            .ConfigureAwait(false);
 
-            return Result.Failure<AuthenticationResponse>(
-                Error.Unauthorized("Auth.InvalidRefreshToken", "Invalid or expired refresh token.", nameof(RefreshTokenAsync)));
+        if (sessionResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(sessionResult.Errors);
         }
 
-        return await IssueTokensAsync(user, cancellationToken).ConfigureAwait(false);
+        var rotated = await RotateAsync(sessionResult.Value!, user.Id, now, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        if (rotated.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(rotated.Errors);
+        }
+
+        return Result.Success(new AuthenticationResponse(
+            CreateAccessToken(user),
+            rotated.Value!,
+            now.Add(AccessTokenLifetime)));
     }
 
     /// <inheritdoc />
     public async Task<Result> RevokeTokenAsync(
         UserIdentifierType userId,
+        string? refreshToken = null,
         CancellationToken cancellationToken = default)
     {
         var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
@@ -279,30 +328,85 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure(Error.NotFound.WithSource(nameof(RevokeTokenAsync)).WithTarget(typeof(TUser).Name));
         }
 
-        user.RevokeRefreshToken();
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+
+        if (!string.IsNullOrWhiteSpace(refreshToken))
+        {
+            var session = await refreshSessions
+                .FindByTokenHashAsync(RefreshSession.HashToken(refreshToken), cancellationToken)
+                .ConfigureAwait(false);
+
+            // Only a live session of this user's identifies the device to sign out. Anything else
+            // (unknown token, another account's token, an already-revoked row) leaves the caller
+            // unidentifiable, so the request degrades to signing every device out rather than
+            // reporting success for a revocation that reached nothing.
+            if (session is not null
+                && EqualityComparer<UserIdentifierType>.Default.Equals(session.UserId, userId)
+                && !session.IsRevoked)
+            {
+                session.Revoke(now, RefreshSession.ReasonSignedOut);
+                await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                return Result.Success();
+            }
+        }
+
+        await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonSignedOut, now, cancellationToken).ConfigureAwait(false);
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<Result> RevokeAllSessionsAsync(
+        UserIdentifierType userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await Repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (user is null)
+        {
+            return Result.Failure(Error.NotFound.WithSource(nameof(RevokeAllSessionsAsync)).WithTarget(typeof(TUser).Name));
+        }
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonSignedOut, now, cancellationToken).ConfigureAwait(false);
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
     }
 
     /// <summary>
-    /// Rotates the refresh token, persists, and returns the token-pair response. Shared by the
-    /// login/refresh flows and reusable by app-level flows (e.g. external login).
+    /// Opens a refresh session for the user, persists it, and returns the token-pair response. Shared
+    /// by the login/registration flows and reusable by app-level flows (e.g. external login). The
+    /// user's other sessions are untouched, except for the oldest one when the per-user cap is full.
     /// </summary>
-    protected async Task<Result<AuthenticationResponse>> IssueTokensAsync(TUser user, CancellationToken cancellationToken)
+    /// <param name="user">The authenticated user.</param>
+    /// <param name="ipAddress">Optional client IP recorded on the new session.</param>
+    /// <param name="userAgent">Optional client user-agent recorded on the new session.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    protected async Task<Result<AuthenticationResponse>> IssueTokensAsync(
+        TUser user,
+        string? ipAddress = null,
+        string? userAgent = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
 
         var accessToken = CreateAccessToken(user);
-        var refreshToken = tokenService.GenerateRefreshToken();
-        user.UpdateRefreshToken(refreshToken, timeProvider.GetUtcNow().UtcDateTime.Add(RefreshTokenLifetime));
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var opened = await OpenSessionAsync(user.Id, now, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        if (opened.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(opened.Errors);
+        }
+
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return Result.Success(new AuthenticationResponse(
             accessToken,
-            refreshToken,
-            timeProvider.GetUtcNow().UtcDateTime.Add(AccessTokenLifetime)));
+            opened.Value!,
+            now.Add(AccessTokenLifetime)));
     }
 
     /// <summary>
@@ -346,6 +450,158 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </summary>
     protected virtual Error CreateRefreshUserMissingError() =>
         Error.Unauthorized("Auth.InvalidToken", "User not found.", nameof(RefreshTokenAsync));
+
+    /// <summary>
+    /// Resolves the session behind a presented refresh token and decides whether it may be rotated.
+    /// The three rejections are deliberately different in what they do behind an identical error:
+    /// an unknown hash (or one belonging to another account) says nothing about a live session and is
+    /// failed alone, since revoking the family on it would let anyone holding one of this user's
+    /// expired access tokens sign them out everywhere by posting a random token; a <b>revoked</b> row
+    /// means this exact token was already rotated away or signed out and has come back, which is the
+    /// BR-206 reuse signal that revokes every live session the user holds; an <b>expired</b> row is an
+    /// ordinary end of life, so that device re-authenticates and the user's other devices keep working.
+    /// </summary>
+    private async Task<Result<RefreshSession>> ResolveRotatableSessionAsync(
+        UserIdentifierType userId,
+        string refreshToken,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
+        }
+
+        var session = await refreshSessions
+            .FindByTokenHashAsync(RefreshSession.HashToken(refreshToken), cancellationToken)
+            .ConfigureAwait(false);
+
+        if (session is null || !EqualityComparer<UserIdentifierType>.Default.Equals(session.UserId, userId))
+        {
+            return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
+        }
+
+        if (session.IsRevoked)
+        {
+            await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
+                .ConfigureAwait(false);
+            await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
+        }
+
+        return session.ExpiresAt <= now
+            ? Result.Failure<RefreshSession>(InvalidRefreshTokenError())
+            : Result.Success(session);
+    }
+
+    /// <summary>
+    /// Mints a refresh token, opens its session, and stages the insert (without saving). Evicts the
+    /// user's oldest live session first when the cap is already full.
+    /// </summary>
+    /// <returns>The plaintext refresh token to hand to the client.</returns>
+    private async Task<Result<string>> OpenSessionAsync(
+        UserIdentifierType userId,
+        DateTime now,
+        string? ipAddress,
+        string? userAgent,
+        CancellationToken cancellationToken)
+    {
+        var refreshToken = tokenService.GenerateRefreshToken();
+        var sessionResult = RefreshSession.Create(
+            userId,
+            refreshToken,
+            now,
+            now.Add(RefreshTokenLifetime),
+            ipAddress,
+            userAgent);
+
+        if (sessionResult.IsFailure)
+        {
+            return Result.Failure<string>(sessionResult.Errors);
+        }
+
+        await EnforceSessionCapAsync(userId, now, cancellationToken).ConfigureAwait(false);
+        await refreshSessions.AddAsync(sessionResult.Value!, cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(refreshToken);
+    }
+
+    /// <summary>
+    /// Revokes the presented session, links it to a freshly minted successor, and stages both
+    /// (BR-205 rotation). Rotation replaces one session with one, so the cap is not re-evaluated here.
+    /// </summary>
+    /// <returns>The plaintext successor token to hand to the client.</returns>
+    private async Task<Result<string>> RotateAsync(
+        RefreshSession session,
+        UserIdentifierType userId,
+        DateTime now,
+        string? ipAddress,
+        string? userAgent,
+        CancellationToken cancellationToken)
+    {
+        var refreshToken = tokenService.GenerateRefreshToken();
+        var successorResult = RefreshSession.Create(
+            userId,
+            refreshToken,
+            now,
+            now.Add(RefreshTokenLifetime),
+            ipAddress,
+            userAgent);
+
+        if (successorResult.IsFailure)
+        {
+            return Result.Failure<string>(successorResult.Errors);
+        }
+
+        var successor = successorResult.Value!;
+        session.Revoke(now, RefreshSession.ReasonRotated, successor.TokenHash);
+        await refreshSessions.AddAsync(successor, cancellationToken).ConfigureAwait(false);
+        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success(refreshToken);
+    }
+
+    /// <summary>Revokes every un-revoked session the user holds, without saving.</summary>
+    private async Task RevokeLiveSessionsAsync(
+        UserIdentifierType userId,
+        string reason,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var sessions = await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        foreach (var session in sessions)
+        {
+            session.Revoke(now, reason);
+        }
+    }
+
+    /// <summary>
+    /// Makes room for one more session: while the user is at or over the cap, revokes the oldest
+    /// live one. Expired-but-unrevoked rows do not count against the cap (they authenticate nobody);
+    /// they age out with the retention sweep the consumer schedules over the table.
+    /// </summary>
+    private async Task EnforceSessionCapAsync(UserIdentifierType userId, DateTime now, CancellationToken cancellationToken)
+    {
+        var cap = MaxActiveSessionsPerUser;
+        var live = (await refreshSessions.GetUnrevokedByUserAsync(userId, cancellationToken).ConfigureAwait(false))
+            .Where(s => s.IsActiveAt(now))
+            .OrderBy(s => s.CreatedAt)
+            .ThenBy(s => s.Id)
+            .ToList();
+
+        for (var index = 0; index <= live.Count - cap; index++)
+        {
+            live[index].Revoke(now, RefreshSession.ReasonSessionCap);
+        }
+    }
+
+    /// <summary>
+    /// The refresh rejection, shared by every failing branch so a caller cannot tell an unknown token
+    /// from an expired one from a replayed one (the reuse case still revokes the family internally).
+    /// </summary>
+    private static Error InvalidRefreshTokenError() =>
+        Error.Unauthorized("Auth.InvalidRefreshToken", "Invalid or expired refresh token.", nameof(RefreshTokenAsync));
 
     /// <summary>
     /// The registration conflict, returned both by the up-front email check and by the

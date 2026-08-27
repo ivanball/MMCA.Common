@@ -5,6 +5,7 @@ using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
+using MMCA.Common.UI.Validation;
 using MudBlazor;
 
 namespace MMCA.Common.UI.Pages.Notifications;
@@ -28,12 +29,15 @@ public partial class NotificationSend : IDisposable
 
     protected bool IsSaving { get; private set; }
 
-    // Named to avoid colliding with the localized Title page property (SonarAnalyzer S4275).
-    private string _notificationTitle = string.Empty;
-    private string _notificationBody = string.Empty;
+    private readonly NotificationSendModel _model = new();
     private MudForm? _form;
 
-    protected override void OnInitialized() =>
+    // One delegate for every field on the form: MudBlazor calls it with (model, member path) and the
+    // model's own DataAnnotations decide the outcome, so no rule is written twice.
+    private Func<object, string, IEnumerable<string>> _validate = default!;
+
+    protected override void OnInitialized()
+    {
         // Built here (not in a field initializer) so the injected localizer is available (ADR-027).
         _breadcrumbs =
         [
@@ -42,11 +46,17 @@ public partial class NotificationSend : IDisposable
             new(L["Notif.Breadcrumb.Send"].Value, href: null, disabled: true),
         ];
 
+        // The model's ErrorMessage values are resource keys; the localizer resolves them (ADR-027).
+        _validate = ModelValidation.For(_model, new DataAnnotationsModelValidator(L));
+    }
+
     private async Task SendNotificationAsync()
     {
         if (_form is null)
             return;
 
+        // MudForm has no OnValidSubmit, so the submit still triggers a pass; WHAT it checks comes from
+        // the model's annotations, not from per-field attributes in the markup.
         await _form.ValidateAsync();
         if (!_form.IsValid)
         {
@@ -57,7 +67,7 @@ public partial class NotificationSend : IDisposable
         IsSaving = true;
         try
         {
-            var request = new SendPushNotificationRequest(_notificationTitle, _notificationBody);
+            var request = new SendPushNotificationRequest(_model.Title, _model.Body);
             PushNotificationDTO? result = await NotificationService.SendAsync(request, _cts.Token);
 
             if (result is not null)

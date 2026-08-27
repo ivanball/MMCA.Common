@@ -1,10 +1,13 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using AwesomeAssertions;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.Infrastructure.Tests.Services;
 
@@ -37,7 +40,6 @@ public sealed class TokenServiceTests : IDisposable
         var jwt = handler.ReadJwtToken(token);
         jwt.Issuer.Should().Be(Settings.Issuer);
         jwt.Audiences.Should().Contain(Settings.Audience);
-        jwt.Claims.Should().Contain(c => c.Type == "user_id" && c.Value == "1");
         jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.Email && c.Value == "user@test.com");
         jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == "Organizer");
         jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Sub && c.Value == "1");
@@ -124,7 +126,9 @@ public sealed class TokenServiceTests : IDisposable
         var principal = _sut.GetPrincipalFromExpiredToken(token);
 
         principal.Should().NotBeNull();
-        principal!.Claims.Should().Contain(c => c.Type == "user_id" && c.Value == "42");
+        // JwtSecurityTokenHandler maps the inbound `sub` onto NameIdentifier, which is exactly
+        // why every framework reader goes through ClaimsPrincipalExtensions, not one claim name.
+        principal!.GetUserId().Should().Be(42);
     }
 
     [Fact]
@@ -234,7 +238,7 @@ public sealed class TokenServiceTests : IDisposable
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Header.Alg.Should().Be(SecurityAlgorithms.RsaSha256);
         jwt.Issuer.Should().Be("https://test-issuer");
-        jwt.Claims.Should().Contain(c => c.Type == "user_id" && c.Value == "1");
+        jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Sub && c.Value == "1");
     }
 
     [Fact]
@@ -247,7 +251,9 @@ public sealed class TokenServiceTests : IDisposable
         var principal = sut.GetPrincipalFromExpiredToken(token);
 
         principal.Should().NotBeNull();
-        principal!.Claims.Should().Contain(c => c.Type == "user_id" && c.Value == "42");
+        // JwtSecurityTokenHandler maps the inbound `sub` onto NameIdentifier, which is exactly
+        // why every framework reader goes through ClaimsPrincipalExtensions, not one claim name.
+        principal!.GetUserId().Should().Be(42);
     }
 
     [Fact]
@@ -272,6 +278,100 @@ public sealed class TokenServiceTests : IDisposable
         var principal = rsaService.GetPrincipalFromExpiredToken(hmacToken);
 
         principal.Should().BeNull();
+    }
+
+    // ── sub is the only identifier claim ──
+    [Fact]
+    public void GenerateAccessToken_EmitsNoDuplicateUserIdClaim()
+    {
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        jwt.Claims.Should().NotContain(
+            c => string.Equals(c.Type, "user_id", StringComparison.Ordinal),
+            "two claims carrying one identity can disagree, and every reader then has to know both names");
+        jwt.Claims.Should().ContainSingle(c => c.Type == JwtRegisteredClaimNames.Sub);
+    }
+
+    // ── kid ──
+    [Fact]
+    public void GenerateAccessToken_Rs256_StampsTheJwksKeyIdOnTheHeader()
+    {
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), null, Options.Create(jwks));
+
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        jwt.Header.Kid.Should().Be("identity-2026-07");
+    }
+
+    // The point of the kid is that it names a key in the document the JWKS endpoint publishes. A
+    // mismatch between the two is invisible until a cross-service validator cannot resolve the key.
+    [Fact]
+    public void GenerateAccessToken_Rs256_KeyIdMatchesTheKeyThePublishedJwksAdvertises()
+    {
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), null, Options.Create(jwks));
+        var provider = new RsaJwksProvider(Options.Create(jwks));
+
+        var jwt = new JwtSecurityTokenHandler()
+            .ReadJwtToken(sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User"));
+
+        var published = provider.GetJsonWebKeySet().Keys.Should().ContainSingle().Subject;
+        jwt.Header.Kid.Should().Be(published.Kid);
+    }
+
+    [Fact]
+    public void GenerateAccessToken_Hs256_EmitsNoKeyId()
+    {
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        jwt.Header.Kid.Should().BeNull("a symmetric deployment publishes no key set to select from");
+    }
+
+    [Fact]
+    public void GetPrincipalFromExpiredToken_Rs256_StillValidatesAKidCarryingToken()
+    {
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), null, Options.Create(jwks));
+
+        var token = sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+
+        sut.GetPrincipalFromExpiredToken(token).Should().NotBeNull("the refresh flow is one of the validation paths");
+    }
+
+    // The in-process validator (AddCommonAuthentication) builds its RsaSecurityKey from the public
+    // PEM alone, so it carries no key id. A token that now names one must still validate against it,
+    // or every deployed API would start rejecting its own issuer's tokens.
+    [Fact]
+    public void AKidCarryingToken_ValidatesAgainstAKeyWithNoKeyId()
+    {
+        var (privatePem, publicPem) = GenerateRsaKeyPair();
+        var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), null, Options.Create(jwks));
+        var token = sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+
+        using var validationRsa = RSA.Create();
+        validationRsa.ImportFromPem(publicPem);
+        var parameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "https://test-issuer",
+            ValidAudience = "test-audience",
+            IssuerSigningKey = new RsaSecurityKey(validationRsa),
+            ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
+        };
+
+        var act = () => new JwtSecurityTokenHandler().ValidateToken(token, parameters, out _);
+
+        act.Should().NotThrow();
     }
 
     [Fact]

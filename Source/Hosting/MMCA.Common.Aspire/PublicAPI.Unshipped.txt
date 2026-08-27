@@ -1,1 +1,7 @@
 #nullable enable
+MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions
+MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.GatewayDownstreamHealthCheckOptions() -> void
+MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeOverHttp2.get -> bool
+MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeOverHttp2.set -> void
+MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayDownstreamHealthChecks(System.Action<MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions!>? configure, params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.AddGatewayDownstreamHealthChecks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions!>? configure, params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

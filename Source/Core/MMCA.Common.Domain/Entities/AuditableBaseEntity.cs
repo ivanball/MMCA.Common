@@ -31,6 +31,20 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
     public virtual UserIdentifierType? LastModifiedBy { get; private set; }
 
     /// <summary>
+    /// Gets the UTC timestamp of the soft-delete, or <see langword="null"/> while the entity is
+    /// active. Stamped by the audit interceptor when <see cref="IsDeleted"/> transitions to
+    /// <see langword="true"/> and cleared again on <see cref="Undelete"/>, so the pair answers
+    /// "when was this deleted, and by whom" without a separate audit-trail lookup.
+    /// </summary>
+    public virtual DateTime? DeletedOn { get; private set; }
+
+    /// <summary>
+    /// Gets the identifier of the user who soft-deleted this entity, or <see langword="null"/>
+    /// while the entity is active. Stamped and cleared alongside <see cref="DeletedOn"/>.
+    /// </summary>
+    public virtual UserIdentifierType? DeletedBy { get; private set; }
+
+    /// <summary>
     /// Optimistic concurrency token managed by the database. EF Core automatically includes
     /// this value in UPDATE/DELETE WHERE clauses and throws <c>DbUpdateConcurrencyException</c>
     /// if the row was modified by another transaction since it was read.
@@ -42,6 +56,12 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
     /// <summary>
     /// Marks this entity as soft-deleted. Idempotency is enforced — calling
     /// <see cref="Delete"/> on an already-deleted entity returns a failure result.
+    /// <para>
+    /// <see cref="DeletedOn"/> and <see cref="DeletedBy"/> are NOT set here: the clock and the
+    /// current user live in infrastructure, so the audit interceptor stamps them from the
+    /// <see cref="IsDeleted"/> transition during <c>SaveChangesAsync</c>, exactly as it does for
+    /// <see cref="CreatedOn"/>/<see cref="CreatedBy"/>.
+    /// </para>
     /// </summary>
     /// <returns>A success result, or a failure if the entity is already deleted.</returns>
     public virtual Result Delete()
@@ -62,6 +82,8 @@ public abstract class AuditableBaseEntity<TIdentifierType> : BaseEntity<TIdentif
     /// <summary>
     /// Reverses a soft-delete, restoring the entity to an active state (BR-135).
     /// Only callable from derived classes that explicitly support reactivation.
+    /// The audit interceptor clears <see cref="DeletedOn"/>/<see cref="DeletedBy"/> from the
+    /// reverse transition on the next save.
     /// </summary>
     /// <returns>A success result, or a failure if the entity is not deleted.</returns>
     protected Result Undelete()

@@ -16,6 +16,9 @@
          (pulled by AspNetCore.OpenApi) up to the GHSA-v5pm-xwqc-g5wc-patched 2.7.5. -->
     <PackageReference Include="Microsoft.OpenApi" />
     <PackageReference Include="Microsoft.FeatureManagement.AspNetCore" />
+    <!-- The profiler UI + middleware live here (MiniProfilerExtensions). MMCA.Common.Application
+         deliberately references only MiniProfiler.Shared, so this reference is direct, not inherited. -->
+    <PackageReference Include="MiniProfiler.AspNetCore.Mvc" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

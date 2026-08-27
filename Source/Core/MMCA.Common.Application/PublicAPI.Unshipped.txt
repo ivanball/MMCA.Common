@@ -1,7 +1,35 @@
 #nullable enable
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.ITokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.AuthenticationValidators! validators) -> void
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.IssueTokensAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RefreshTokenAsync(MMCA.Common.Shared.Auth.RefreshTokenRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, string? ipAddress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeTokenAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+*REMOVED*MMCA.Common.Application.Auth.IAuthenticationService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.IAuthenticationService.RefreshTokenAsync(MMCA.Common.Shared.Auth.RefreshTokenRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.IAuthenticationService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, string? ipAddress = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+*REMOVED*MMCA.Common.Application.Auth.IAuthenticationService.RevokeTokenAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.ITokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.AuthenticationValidators! validators, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>? refreshSessionSettings = null) -> void
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.IssueTokensAsync(TUser! user, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RefreshSessions.get -> MMCA.Common.Application.Auth.IRefreshSessionStore!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RefreshTokenAsync(MMCA.Common.Shared.Auth.RefreshTokenRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeAllSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.RevokeTokenAsync(int userId, string? refreshToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.IAuthenticationService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RefreshTokenAsync(MMCA.Common.Shared.Auth.RefreshTokenRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RevokeAllSessionsAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.IAuthenticationService.RevokeTokenAsync(int userId, string? refreshToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Auth.IPasswordResetTokenService
 MMCA.Common.Application.Auth.IPasswordResetTokenService.IssueAsync(string! email, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<string!>!>!
 MMCA.Common.Application.Auth.IPasswordResetTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.Auth.IRefreshSessionStore
+MMCA.Common.Application.Auth.IRefreshSessionStore.AddAsync(MMCA.Common.Domain.Auth.RefreshSession! session, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.IRefreshSessionStore.FindByTokenHashAsync(string! tokenHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
+MMCA.Common.Application.Auth.IRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
+MMCA.Common.Application.Auth.IRefreshSessionStore.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Application.Auth.PasswordResetSettings
 MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.get -> int
 MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.init -> void
@@ -14,11 +42,22 @@ MMCA.Common.Application.Auth.PasswordResetSettings.ResetUrl.get -> string!
 MMCA.Common.Application.Auth.PasswordResetSettings.ResetUrl.init -> void
 MMCA.Common.Application.Auth.PasswordResetSettings.TokenLifetimeMinutes.get -> int
 MMCA.Common.Application.Auth.PasswordResetSettings.TokenLifetimeMinutes.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings
+MMCA.Common.Application.Auth.RefreshSessionSettings.DataSourceName.get -> string!
+MMCA.Common.Application.Auth.RefreshSessionSettings.DataSourceName.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.Enabled.get -> bool
+MMCA.Common.Application.Auth.RefreshSessionSettings.Enabled.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.get -> int
+MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.RefreshSessionSettings() -> void
 MMCA.Common.Application.Auth.Validation.ForgotPasswordRequestValidator
 MMCA.Common.Application.Auth.Validation.ForgotPasswordRequestValidator.ForgotPasswordRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.ResetPasswordRequestValidator
 MMCA.Common.Application.Auth.Validation.ResetPasswordRequestValidator.ResetPasswordRequestValidator() -> void
 MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddEventUpcaster<TSource, TTarget, TUpcaster>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddMmcaApplicationPipeline(System.Action<MMCA.Common.Application.MmcaApplicationPipelineBuilder!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ScanModuleApplicationServices(System.Reflection.Assembly! moduleAssembly) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Application.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).VerifyDecoratorPipeline() -> void
 MMCA.Common.Application.Interfaces.IEventUpcaster
 MMCA.Common.Application.Interfaces.IEventUpcaster.SourceType.get -> System.Type!
 MMCA.Common.Application.Interfaces.IEventUpcaster.TargetType.get -> System.Type!
@@ -29,11 +68,64 @@ MMCA.Common.Application.Interfaces.IEventUpcasterRegistry
 MMCA.Common.Application.Interfaces.IEventUpcasterRegistry.HasUpcasterFor(System.Type! eventType) -> bool
 MMCA.Common.Application.Interfaces.IEventUpcasterRegistry.ResolveTerminalType(System.Type! eventType) -> System.Type!
 MMCA.Common.Application.Interfaces.IEventUpcasterRegistry.UpcastToTerminal(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent) -> MMCA.Common.Domain.Interfaces.IIntegrationEvent!
+MMCA.Common.Application.Interfaces.Infrastructure.IOutboxAdministration
+MMCA.Common.Application.Interfaces.Infrastructure.IOutboxAdministration.CountPendingAsync(string? dataSource, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<long>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IOutboxAdministration.ListDeadLettersAsync(string? dataSource, int skip, int take, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter!>!>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.IOutboxAdministration.ReplayDeadLettersAsync(string? dataSource, System.Collections.Generic.IReadOnlyCollection<System.Guid>? ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.<Clone>$() -> MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter!
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.DataSource.get -> string!
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.DataSource.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.Deconstruct(out System.Guid Id, out string! DataSource, out string! EventType, out System.DateTime OccurredOn, out int RetryCount, out string? LastError, out string? OrderingKey) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.Equals(MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter? other) -> bool
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.EventType.get -> string!
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.EventType.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.Id.get -> System.Guid
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.Id.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.LastError.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.LastError.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.OccurredOn.get -> System.DateTime
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.OccurredOn.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.OrderingKey.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.OrderingKey.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.OutboxDeadLetter(System.Guid Id, string! DataSource, string! EventType, System.DateTime OccurredOn, int RetryCount, string? LastError, string? OrderingKey) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.RetryCount.get -> int
+MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.RetryCount.init -> void
+MMCA.Common.Application.MmcaApplicationPipelineBuilder
+MMCA.Common.Application.MmcaApplicationPipelineBuilder.Register(System.Action<Microsoft.Extensions.DependencyInjection.IServiceCollection!>! register) -> MMCA.Common.Application.MmcaApplicationPipelineBuilder!
+MMCA.Common.Application.MmcaApplicationPipelineBuilder.ScanModule<TAssemblyMarker>() -> MMCA.Common.Application.MmcaApplicationPipelineBuilder!
+MMCA.Common.Application.MmcaApplicationPipelineBuilder.ScanModules(params System.Reflection.Assembly![]! moduleAssemblies) -> MMCA.Common.Application.MmcaApplicationPipelineBuilder!
+MMCA.Common.Application.MmcaApplicationPipelineBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Application.Services.EventUpcasterRegistry
 MMCA.Common.Application.Services.EventUpcasterRegistry.EventUpcasterRegistry(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.IEventUpcaster!>! upcasters) -> void
 MMCA.Common.Application.Services.EventUpcasterRegistry.HasUpcasterFor(System.Type! eventType) -> bool
 MMCA.Common.Application.Services.EventUpcasterRegistry.ResolveTerminalType(System.Type! eventType) -> System.Type!
 MMCA.Common.Application.Services.EventUpcasterRegistry.UpcastToTerminal(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent) -> MMCA.Common.Domain.Interfaces.IIntegrationEvent!
+MMCA.Common.Application.UseCases.CqrsContractInspector
+MMCA.Common.Application.UseCases.CqrsContractMismatch
+MMCA.Common.Application.UseCases.CqrsContractMismatch.<Clone>$() -> MMCA.Common.Application.UseCases.CqrsContractMismatch!
+MMCA.Common.Application.UseCases.CqrsContractMismatch.CqrsContractMismatch(System.Type! RequestType, System.Type! HandlerType, System.Type! DeclaredResultType, System.Type! HandlerResultType, MMCA.Common.Application.UseCases.CqrsContractMismatchKind Kind) -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatch.DeclaredResultType.get -> System.Type!
+MMCA.Common.Application.UseCases.CqrsContractMismatch.DeclaredResultType.init -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatch.Deconstruct(out System.Type! RequestType, out System.Type! HandlerType, out System.Type! DeclaredResultType, out System.Type! HandlerResultType, out MMCA.Common.Application.UseCases.CqrsContractMismatchKind Kind) -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatch.Describe() -> string!
+MMCA.Common.Application.UseCases.CqrsContractMismatch.Equals(MMCA.Common.Application.UseCases.CqrsContractMismatch? other) -> bool
+MMCA.Common.Application.UseCases.CqrsContractMismatch.HandlerResultType.get -> System.Type!
+MMCA.Common.Application.UseCases.CqrsContractMismatch.HandlerResultType.init -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatch.HandlerType.get -> System.Type!
+MMCA.Common.Application.UseCases.CqrsContractMismatch.HandlerType.init -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatch.Kind.get -> MMCA.Common.Application.UseCases.CqrsContractMismatchKind
+MMCA.Common.Application.UseCases.CqrsContractMismatch.Kind.init -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatch.RequestType.get -> System.Type!
+MMCA.Common.Application.UseCases.CqrsContractMismatch.RequestType.init -> void
+MMCA.Common.Application.UseCases.CqrsContractMismatchKind
+MMCA.Common.Application.UseCases.CqrsContractMismatchKind.HandlerKind = 1 -> MMCA.Common.Application.UseCases.CqrsContractMismatchKind
+MMCA.Common.Application.UseCases.CqrsContractMismatchKind.ResultType = 0 -> MMCA.Common.Application.UseCases.CqrsContractMismatchKind
+MMCA.Common.Application.UseCases.Decorators.ValidatingQueryDecorator<TQuery, TResult>
+MMCA.Common.Application.UseCases.Decorators.ValidatingQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
+MMCA.Common.Application.UseCases.Decorators.ValidatingQueryDecorator<TQuery, TResult>.ValidatingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, System.Collections.Generic.IEnumerable<FluentValidation.IValidator<TQuery>!>! validators, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.ValidatingQueryDecorator<TQuery, TResult>!>! logger) -> void
+MMCA.Common.Application.UseCases.ICommand<TResult>
+MMCA.Common.Application.UseCases.IQuery<TResult>
 MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>
 MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ForgotPasswordHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.IPasswordResetTokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.IEmailSender! emailSender, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings, Microsoft.Extensions.Logging.ILogger! logger) -> void
 MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
@@ -45,7 +137,23 @@ MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TU
 MMCA.Common.Application.Users.UseCases.ResetPassword.ResetPasswordHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
 abstract MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
 const MMCA.Common.Application.Auth.PasswordResetSettings.SectionName = "PasswordReset" -> string!
+const MMCA.Common.Application.Auth.RefreshSessionSettings.SectionName = "RefreshSessions" -> string!
+override MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.Equals(object? obj) -> bool
+override MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.GetHashCode() -> int
+override MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.ToString() -> string!
+override MMCA.Common.Application.UseCases.CqrsContractMismatch.Equals(object? obj) -> bool
+override MMCA.Common.Application.UseCases.CqrsContractMismatch.GetHashCode() -> int
+override MMCA.Common.Application.UseCases.CqrsContractMismatch.ToString() -> string!
 static MMCA.Common.Application.DependencyInjection.AddEventUpcaster<TSource, TTarget, TUpcaster>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.AddMmcaApplicationPipeline(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.Application.MmcaApplicationPipelineBuilder!>? configure = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.ScanModuleApplicationServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Reflection.Assembly! moduleAssembly) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Application.DependencyInjection.VerifyDecoratorPipeline(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+static MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.operator !=(MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter? left, MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter? right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter.operator ==(MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter? left, MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter? right) -> bool
+static MMCA.Common.Application.UseCases.CqrsContractInspector.FindContractMismatches(params System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.UseCases.CqrsContractMismatch!>!
+static MMCA.Common.Application.UseCases.CqrsContractMismatch.operator !=(MMCA.Common.Application.UseCases.CqrsContractMismatch? left, MMCA.Common.Application.UseCases.CqrsContractMismatch? right) -> bool
+static MMCA.Common.Application.UseCases.CqrsContractMismatch.operator ==(MMCA.Common.Application.UseCases.CqrsContractMismatch? left, MMCA.Common.Application.UseCases.CqrsContractMismatch? right) -> bool
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.MaxActiveSessionsPerUser.get -> int
 virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeBody(string? resetLink, string! token) -> string!
 virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeResetLink(string! email, string! token) -> string?
 virtual MMCA.Common.Application.Users.UseCases.ForgotPassword.ForgotPasswordHandlerBase<TUser, TCommand>.ComposeSubject() -> string!

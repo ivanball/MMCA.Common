@@ -130,10 +130,13 @@ public static class JwtTokenGenerator
         var key = new RsaSecurityKey(parameters) { KeyId = keyId };
         var credentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256);
 
+        // NameIdentifier is what the JWT bearer handler produces for a real token's `sub` under its
+        // default inbound mapping, so a test token carrying it reaches every reader the same way a
+        // production one does. The duplicate custom claim that used to ride alongside it is gone,
+        // matching ITokenService: two claims for one identity can disagree.
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId.ToString(CultureInfo.InvariantCulture)),
-            new("user_id", userId.ToString(CultureInfo.InvariantCulture)),
             new(ClaimTypes.Role, role),
         };
 

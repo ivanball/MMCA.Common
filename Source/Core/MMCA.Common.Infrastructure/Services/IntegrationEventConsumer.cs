@@ -35,13 +35,20 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
         ArgumentNullException.ThrowIfNull(context);
 
         var integrationEvent = context.Message;
+        var eventTypeName = typeof(TEvent).Name;
 
         // Consumer-side idempotency: at-least-once broker delivery can redeliver the same message.
-        // If the inbox already recorded it, skip the handlers and ack. (No-op when the inbox is
-        // disabled.)
-        if (await inbox.AlreadyProcessedAsync(integrationEvent.MessageId, context.CancellationToken).ConfigureAwait(false))
+        // If the inbox already recorded it, skip the handlers and ack. (Always true when the inbox
+        // is disabled, so the handlers run exactly as they did before the inbox existed.)
+        //
+        // TryBegin also STAGES the inbox row in the scope's unit of work, unsaved. A handler that
+        // calls SaveChangesAsync on that same scope therefore commits the row in the same
+        // transaction as its own mutations: the window where a crash between "handler committed"
+        // and "inbox written" reprocessed the whole event is closed by construction rather than by
+        // asking every handler to be idempotent.
+        if (!await inbox.TryBeginAsync(integrationEvent.MessageId, eventTypeName, context.CancellationToken).ConfigureAwait(false))
         {
-            LogDuplicateSkipped(logger, typeof(TEvent).Name, integrationEvent.MessageId);
+            LogDuplicateSkipped(logger, eventTypeName, integrationEvent.MessageId);
             return;
         }
 
@@ -56,26 +63,31 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                // Discard the staged row first, so the failed attempt leaves neither a rejected
+                // insert on the scope's context nor an inbox row that would make the redelivery
+                // look like a duplicate.
+                inbox.Abandon(integrationEvent.MessageId);
+
                 // Rethrow so MassTransit applies the UseMessageRetry policy configured in
                 // ConfigureBrokerTransport (exponential backoff, MessageBusSettings.RetryLimit
                 // attempts) before the message is dead-lettered. Logging here gives operators
                 // visibility into which handler failed without losing the exception.
-                LogHandlerFailure(logger, ex, typeof(TEvent).Name, handler.GetType().FullName ?? "<unknown>");
+                LogHandlerFailure(logger, ex, eventTypeName, handler.GetType().FullName ?? "<unknown>");
                 throw;
             }
         }
 
         if (handlerCount == 0)
         {
-            // No handler registered for this event in this process — log a warning so a
+            // No handler registered for this event in this process: log a warning so a
             // misconfigured consumer service is visible. Returning normally lets MassTransit
             // ack the message; the broker won't retry.
-            LogNoHandlers(logger, typeof(TEvent).Name);
+            LogNoHandlers(logger, eventTypeName);
         }
 
-        // Record processing AFTER handlers succeed so a handler failure (which rethrows above)
-        // leaves the message un-recorded and eligible for MassTransit redelivery.
-        await inbox.MarkProcessedAsync(integrationEvent.MessageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false);
+        // Persist the staged row unless a handler's own save already committed it. Either way the
+        // message is recorded only on a successful consume: the failure path above rethrows.
+        await inbox.CompleteAsync(integrationEvent.MessageId, eventTypeName, context.CancellationToken).ConfigureAwait(false);
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Integration event {EventType} (message {MessageId}) already processed — skipping (idempotent inbox)")]

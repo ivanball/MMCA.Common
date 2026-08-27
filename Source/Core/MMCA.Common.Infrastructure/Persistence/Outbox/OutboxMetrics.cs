@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -24,6 +25,14 @@ internal static class OutboxMetrics
     /// start of its most recent processing cycle, summed across every outbox source it drains.
     /// </summary>
     private static long _pendingDepth;
+
+    /// <summary>
+    /// Backing store for <see cref="OldestPendingAgeGauge"/>: the age in seconds of the oldest
+    /// pending row each source showed on its most recent cycle, keyed by the source name used as
+    /// the gauge's <c>data_source</c> tag.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, double> OldestPendingAgeSeconds =
+        new(StringComparer.Ordinal);
 
     /// <summary>
     /// Messages dead-lettered, tagged by <c>event_type</c> and by <c>reason</c>
@@ -70,8 +79,49 @@ internal static class OutboxMetrics
         description: "Outbox rows awaiting dispatch, as observed by this processor instance on its last cycle.");
 
     /// <summary>
+    /// Age in SECONDS of the oldest row still awaiting dispatch, per <c>data_source</c>, as observed
+    /// at the start of that source's most recent cycle. Where <c>outbox.dispatch.lag</c> reports how
+    /// late the messages that DID get delivered were, this one reports how late the backlog already
+    /// is while it is still stuck, which is the number an alert on a wedged outbox fires on.
+    /// </summary>
+    /// <remarks>
+    /// Costs nothing extra to compute: the poll already fetches pending rows ordered by
+    /// <c>OccurredOn</c>, so the first row of that fetch IS the minimum, and no separate
+    /// <c>MIN()</c> query is ever issued (the same discipline the depth gauge applies to its
+    /// <c>COUNT</c>). Two consequences follow from reusing the poll's predicate: rows held under
+    /// another replica's unexpired lease are excluded, and rows that have exhausted their retries
+    /// (dead letters) are excluded, so this measures deliverable backlog rather than table age.
+    /// A source with nothing pending reports <c>0</c> rather than dropping out of the series, so a
+    /// drained outbox is visibly drained instead of indistinguishable from a stopped host; a source
+    /// whose database was unreachable keeps its previous value until its next successful cycle.
+    /// </remarks>
+    internal static readonly ObservableGauge<double> OldestPendingAgeGauge = Meter.CreateObservableGauge(
+        "outbox.oldest_pending.age",
+        ObserveOldestPendingAge,
+        unit: "s",
+        description: "Age in seconds of the oldest outbox row awaiting dispatch, tagged by data source.");
+
+    /// <summary>
     /// Publishes the backlog depth observed by the processor for the cycle that just ran.
     /// </summary>
     /// <param name="depth">Pending rows summed across every source drained this cycle.</param>
     internal static void SetPendingDepth(long depth) => Interlocked.Exchange(ref _pendingDepth, depth);
+
+    /// <summary>
+    /// Publishes the age of the oldest pending row for one source, for the cycle that just ran.
+    /// </summary>
+    /// <param name="dataSourceName">The source name, emitted as the <c>data_source</c> tag.</param>
+    /// <param name="ageSeconds">Age of the oldest pending row in seconds; <c>0</c> when none is pending.</param>
+    internal static void SetOldestPendingAge(string dataSourceName, double ageSeconds) =>
+        OldestPendingAgeSeconds[dataSourceName] = ageSeconds;
+
+    private static IEnumerable<Measurement<double>> ObserveOldestPendingAge()
+    {
+        foreach (KeyValuePair<string, double> entry in OldestPendingAgeSeconds)
+        {
+            yield return new Measurement<double>(
+                entry.Value,
+                new KeyValuePair<string, object?>("data_source", entry.Key));
+        }
+    }
 }
