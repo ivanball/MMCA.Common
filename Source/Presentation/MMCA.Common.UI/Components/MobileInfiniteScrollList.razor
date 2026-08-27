@@ -36,7 +36,7 @@ else
     @if (_loadError && _hasMore)
     {
         <div class="d-flex flex-column align-center pa-4 gap-2">
-            <MudText Typo="Typo.body2" Color="Color.Error">@L["Grid.LoadMoreFailed"]</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Error">@(_loadErrorMessage ?? L["Grid.LoadMoreFailed"].Value)</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">@L["Common.Button.Retry"]</MudButton>
         </div>
     }

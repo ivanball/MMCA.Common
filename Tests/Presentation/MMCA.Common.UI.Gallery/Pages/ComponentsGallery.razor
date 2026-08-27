@@ -1,4 +1,5 @@
 @page "/components"
+@using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.UI.Components.Notifications
 
 <PageTitle>Components</PageTitle>
@@ -53,7 +54,7 @@
     <UnsavedChangesGuard IsDirty="_isDirty" />
 
     <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile infinite-scroll list</MudText>
-    <MobileInfiniteScrollList TItem="SampleItem" FetchPage="FetchSamplePageAsync" PageSize="3"
+    <MobileInfiniteScrollList TItem="SampleItem" FetchPageResult="FetchSamplePageAsync" PageSize="3"
                               EmptyMessage="No items to show.">
         <CardTemplate>
             <MudText Typo="Typo.subtitle2">@context.Name</MudText>
@@ -93,7 +94,7 @@
 
     private Task ShowDeleteConfirmationAsync() => _deleteConfirmation.ShowAsync("First item");
 
-    private Task<(IReadOnlyList<SampleItem> Items, int TotalItems)> FetchSamplePageAsync(
+    private Task<Result<(IReadOnlyList<SampleItem> Items, int TotalItems)>> FetchSamplePageAsync(
         int page, int pageSize, CancellationToken cancellationToken)
-        => Task.FromResult<(IReadOnlyList<SampleItem>, int)>((_items, _items.Count));
+        => Task.FromResult(Result.Success<(IReadOnlyList<SampleItem>, int)>((_items, _items.Count)));
 }
