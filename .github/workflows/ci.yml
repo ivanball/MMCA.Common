@@ -452,11 +452,27 @@ jobs:
           path: MMCA.Common
           fetch-depth: 0 # MinVer needs full history
 
+      # Coordinated-break support: a deliberate breaking framework change cannot land while the
+      # canary pins Helpdesk main (Helpdesk cannot adapt first, because its own CI builds against
+      # THIS repo's main: a mutual deadlock). Convention: push the Helpdesk adaptation to a branch
+      # with the SAME NAME as this PR's head branch; the canary then builds that pair together.
+      # No matching branch means main, i.e. the original behavior.
+      - name: Resolve Helpdesk canary ref (same-name branch, else main)
+        id: helpdesk-ref
+        run: |
+          ref=main
+          head='${{ github.head_ref }}'
+          if [ -n "$head" ] && git ls-remote --exit-code --heads https://github.com/ivanball/MMCA.Helpdesk.git "$head" >/dev/null 2>&1; then
+            ref="$head"
+          fi
+          echo "Using MMCA.Helpdesk ref: $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
       - name: Checkout MMCA.Helpdesk (consumer canary)
         uses: actions/checkout@v7
         with:
           repository: ivanball/MMCA.Helpdesk
-          ref: main
+          ref: ${{ steps.helpdesk-ref.outputs.ref }}
           path: MMCA.Helpdesk
           fetch-depth: 0
           # Public repo builds with the default token; if Helpdesk is private, set a
