@@ -104,6 +104,11 @@ public static class DependencyInjection
 
             services.TryAddSingleton<IQueryableExecutor, EFQueryableExecutor>();
 
+            // Stateless classifier for a save rejected by a unique index, so a handler that lost an
+            // insert race can answer with its own conflict instead of a raw 500. TryAdd, so a host
+            // on another engine can register its own implementation first and keep it.
+            services.TryAddSingleton<IUniqueConstraintViolationDetector, Persistence.SqlServerUniqueConstraintViolationDetector>();
+
             services.TryAddScoped(typeof(IRepository<,>), typeof(EFRepository<,>));
             services.TryAddScoped<IRepositoryFactory, RepositoryFactory>();
             services.TryAddScoped<IUnitOfWork, UnitOfWork>();

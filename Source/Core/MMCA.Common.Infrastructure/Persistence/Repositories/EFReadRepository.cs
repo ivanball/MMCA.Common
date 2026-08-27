@@ -87,6 +87,133 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    public virtual async Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>> where,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        bool ignoreQueryFilters = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(where);
+
+        var query = asTracking ? Table : TableNoTracking;
+
+        if (ignoreQueryFilters)
+            query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
+
+        if (includes is not null)
+            query = ApplyIncludes(query, includes);
+
+        // TOP 1 at the database, not a materialized set narrowed in memory afterwards.
+        return await query.FirstOrDefaultAsync(where, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<TEntity?> FirstOrDefaultAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(specification);
+
+        // The full shape, ordering included: "first" is only meaningful against a defined order, and
+        // the specification is where that order is declared.
+        return await SpecificationEvaluator
+            .Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<IReadOnlyDictionary<TKey, int>> CountByAsync<TKey>(
+        Expression<Func<TEntity, TKey>> keySelector,
+        Expression<Func<TEntity, bool>>? where = null,
+        CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+
+        var query = TableNoTracking;
+
+        if (where is not null)
+            query = query.Where(where);
+
+        var groups = await query
+            .GroupBy(keySelector)
+            .Select(group => new GroupedCount<TKey>(group.Key, group.Count()))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return groups.ToDictionary(group => group.Key, group => group.Value);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task<IReadOnlyDictionary<TKey, decimal>> SumByAsync<TKey>(
+        Expression<Func<TEntity, TKey>> keySelector,
+        Expression<Func<TEntity, decimal>> sumSelector,
+        Expression<Func<TEntity, bool>>? where = null,
+        CancellationToken cancellationToken = default)
+        where TKey : notnull
+    {
+        ArgumentNullException.ThrowIfNull(keySelector);
+        ArgumentNullException.ThrowIfNull(sumSelector);
+
+        var query = TableNoTracking;
+
+        if (where is not null)
+            query = query.Where(where);
+
+        // GroupBy with an ELEMENT selector: the summed column is chosen inside the grouping, so the
+        // caller's expression tree reaches the provider intact. Summing over the grouping with a
+        // separately supplied expression would need the tree spliced in by hand.
+        var groups = await query
+            .GroupBy(keySelector, sumSelector)
+            .Select(group => new GroupedSum<TKey>(group.Key, group.Sum()))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return groups.ToDictionary(group => group.Key, group => group.Value);
+    }
+
+    /// <summary>One <c>GROUP BY</c> row of <see cref="CountByAsync{TKey}"/>.</summary>
+    /// <param name="Key">The grouping key.</param>
+    /// <param name="Value">The number of rows carrying that key.</param>
+    private sealed record class GroupedCount<TKey>(TKey Key, int Value);
+
+    /// <summary>One <c>GROUP BY</c> row of <see cref="SumByAsync{TKey}"/>.</summary>
+    /// <param name="Key">The grouping key.</param>
+    /// <param name="Value">The summed value for that key.</param>
+    private sealed record class GroupedSum<TKey>(TKey Key, decimal Value);
+
+    /// <inheritdoc />
+    public virtual async Task<(IReadOnlyCollection<TEntity> Active, IReadOnlyCollection<TEntity> SoftDeleted)> FindIncludingDeletedAsync(
+        Expression<Func<TEntity, bool>> where,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(where);
+
+        // One round trip with the soft-delete filter dropped, split afterwards: two queries would
+        // let a concurrent delete land between them and report the same row in neither half.
+        var query = (asTracking ? Table : TableNoTracking).IgnoreQueryFilters(SoftDeleteFilterOnly);
+
+        if (includes is not null)
+            query = ApplyIncludes(query, includes);
+
+        var rows = await query.Where(where).ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        List<TEntity> active = [];
+        List<TEntity> softDeleted = [];
+
+        foreach (var row in rows)
+        {
+            (row.IsDeleted ? softDeleted : active).Add(row);
+        }
+
+        return (active, softDeleted);
+    }
+
+    /// <inheritdoc />
     public virtual async Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
         string nameProperty,
         Expression<Func<TEntity, bool>>? where = null,

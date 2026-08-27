@@ -29,6 +29,8 @@ MMCA.Common.Domain.Interfaces.IAuditableEntity.DeletedBy.get -> int?
 MMCA.Common.Domain.Interfaces.IAuditableEntity.DeletedOn.get -> System.DateTime?
 MMCA.Common.Domain.Interfaces.IHasOrderingKey
 MMCA.Common.Domain.Interfaces.IHasOrderingKey.OrderingKey.get -> string?
+MMCA.Common.Domain.Interfaces.IReactivatable
+MMCA.Common.Domain.Interfaces.IReactivatable.Reactivate() -> MMCA.Common.Shared.Abstractions.Result!
 const MMCA.Common.Domain.Auth.RefreshSession.IpAddressMaxLength = 45 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonReuseDetected = "ReuseDetected" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonRevokedMaxLength = 64 -> int
@@ -40,5 +42,7 @@ const MMCA.Common.Domain.Auth.RefreshSession.UserAgentMaxLength = 512 -> int
 static MMCA.Common.Domain.Auth.RefreshSession.Create(int userId, string! refreshToken, System.DateTime createdAt, System.DateTime expiresAt, string? ipAddress = null, string? userAgent = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.RefreshSession!>!
 static MMCA.Common.Domain.Auth.RefreshSession.HashToken(string! refreshToken) -> string!
 static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.DeleteChildren<TChild, TChildId>(System.Collections.Generic.IEnumerable<TChild!>! children) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.RemoveChildOrNotFound<TChild, TChildId>(System.Collections.Generic.IEnumerable<TChild!>! collection, TChildId childId, string! source) -> MMCA.Common.Shared.Abstractions.Result<TChild!>!
+static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.RestoreChild<TChild, TChildId>(System.Collections.Generic.List<TChild!>! collection, TChild! child, string! notDeletedErrorCode, string! source) -> MMCA.Common.Shared.Abstractions.Result<TChild!>!
 virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedBy.get -> int?
 virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedOn.get -> System.DateTime?

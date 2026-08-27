@@ -109,6 +109,115 @@ public interface IEntityQuerier<TEntity, TIdentifierType>
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Reads the FIRST entity matching a predicate, or <see langword="null"/> when none does.
+    /// </summary>
+    /// <remarks>
+    /// The point is that the database returns one row. The alternative a caller reaches for without
+    /// this member is <c>GetAllAsync</c> followed by an in-memory <c>FirstOrDefault</c>, which
+    /// materializes the whole matching set to keep one entity. No ordering is applied, so the "first"
+    /// row is whatever the provider returns first: use
+    /// <see cref="FirstOrDefaultAsync(ISpecification{TEntity, TIdentifierType}, CancellationToken)"/>
+    /// when the choice among several matches has to be deterministic.
+    /// </remarks>
+    /// <param name="where">The filter predicate.</param>
+    /// <param name="includes">Navigation properties to eager-load.</param>
+    /// <param name="asTracking">Whether to track the returned entity for changes.</param>
+    /// <param name="ignoreQueryFilters">
+    /// Whether to include soft-deleted rows. It drops the <c>SoftDelete</c> global query filter and
+    /// <b>only</b> that one: the <c>Tenant</c> filter stays in force, so a caller asking for deleted
+    /// rows can never read another tenant's data.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The first matching entity, or <see langword="null"/>.</returns>
+    Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>> where,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        bool ignoreQueryFilters = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the first entity a specification matches, or <see langword="null"/> when none does.
+    /// Unlike the predicate overload this honors the specification's ORDERING, so "first" means what
+    /// the specification says it means.
+    /// </summary>
+    /// <param name="specification">The specification describing the read.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The first matching entity, or <see langword="null"/>.</returns>
+    Task<TEntity?> FirstOrDefaultAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the matching rows PER KEY in the database (a <c>GROUP BY</c>), returning one entry per
+    /// key that has at least one row.
+    /// </summary>
+    /// <remarks>
+    /// The Application layer references no EF Core, so a handler that needs a grouped count has no
+    /// <c>IQueryable</c> to group and folds the rows in memory instead: it projects every matching
+    /// row out of the database and groups them client-side. This member is the persistence-neutral
+    /// way to ask the database the same question, so only the aggregate crosses the wire.
+    /// </remarks>
+    /// <typeparam name="TKey">The grouping key type (must be translatable by the provider).</typeparam>
+    /// <param name="keySelector">Selects the value to group by.</param>
+    /// <param name="where">Optional filter applied before grouping.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A dictionary of key to row count; keys with no matching rows are absent.</returns>
+    Task<IReadOnlyDictionary<TKey, int>> CountByAsync<TKey>(
+        Expression<Func<TEntity, TKey>> keySelector,
+        Expression<Func<TEntity, bool>>? where = null,
+        CancellationToken cancellationToken = default)
+        where TKey : notnull;
+
+    /// <summary>
+    /// Sums a value PER KEY in the database (a <c>GROUP BY</c> with <c>SUM</c>), returning one entry
+    /// per key that has at least one row. The grouped counterpart of
+    /// <see cref="CountByAsync{TKey}"/>.
+    /// </summary>
+    /// <typeparam name="TKey">The grouping key type (must be translatable by the provider).</typeparam>
+    /// <param name="keySelector">Selects the value to group by.</param>
+    /// <param name="sumSelector">Selects the value to sum within each group.</param>
+    /// <param name="where">Optional filter applied before grouping.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A dictionary of key to summed value; keys with no matching rows are absent.</returns>
+    Task<IReadOnlyDictionary<TKey, decimal>> SumByAsync<TKey>(
+        Expression<Func<TEntity, TKey>> keySelector,
+        Expression<Func<TEntity, decimal>> sumSelector,
+        Expression<Func<TEntity, bool>>? where = null,
+        CancellationToken cancellationToken = default)
+        where TKey : notnull;
+
+    /// <summary>
+    /// Reads the rows matching a predicate INCLUDING soft-deleted ones, split into the active rows
+    /// and the soft-deleted rows.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the resurrection read (BR-135): a create handler whose natural key already exists as a
+    /// soft-deleted row must reactivate that row rather than insert a duplicate the unique index will
+    /// reject, and it needs both halves of the answer in one round trip: an active match is a
+    /// conflict, a soft-deleted match is the row to bring back, neither is a plain insert.
+    /// </para>
+    /// <para>
+    /// As everywhere on this interface, dropping the query filter means "include soft-deleted rows"
+    /// and nothing more: the <c>Tenant</c> filter stays in force.
+    /// </para>
+    /// </remarks>
+    /// <param name="where">The filter predicate.</param>
+    /// <param name="includes">Navigation properties to eager-load.</param>
+    /// <param name="asTracking">
+    /// Whether to track the returned entities. A caller that intends to reactivate a soft-deleted row
+    /// wants <see langword="true"/>, otherwise the reactivation saves nothing.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The matching rows, partitioned into active and soft-deleted.</returns>
+    Task<(IReadOnlyCollection<TEntity> Active, IReadOnlyCollection<TEntity> SoftDeleted)> FindIncludingDeletedAsync(
+        Expression<Func<TEntity, bool>> where,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Retrieves entities as lightweight id/name pairs for lookup scenarios.</summary>
     Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
         string nameProperty,

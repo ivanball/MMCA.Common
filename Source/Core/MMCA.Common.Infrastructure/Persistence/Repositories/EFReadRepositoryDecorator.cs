@@ -42,6 +42,46 @@ internal class EFReadRepositoryDecorator<TEntity, TIdentifierType>(IReadReposito
         ProfilingHelper.ProfileAsync(ClassName, nameof(GetProjectedAsync),
             () => _inner.GetProjectedAsync(select, where, asTracking, ignoreQueryFilters, cancellationToken));
 
+    public Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>> where,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        bool ignoreQueryFilters = false,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(FirstOrDefaultAsync),
+            () => _inner.FirstOrDefaultAsync(where, includes, asTracking, ignoreQueryFilters, cancellationToken));
+
+    public Task<TEntity?> FirstOrDefaultAsync(
+        ISpecification<TEntity, TIdentifierType> specification,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(FirstOrDefaultAsync),
+            () => _inner.FirstOrDefaultAsync(specification, cancellationToken));
+
+    public Task<IReadOnlyDictionary<TKey, int>> CountByAsync<TKey>(
+        Expression<Func<TEntity, TKey>> keySelector,
+        Expression<Func<TEntity, bool>>? where = null,
+        CancellationToken cancellationToken = default)
+        where TKey : notnull =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(CountByAsync),
+            () => _inner.CountByAsync(keySelector, where, cancellationToken));
+
+    public Task<IReadOnlyDictionary<TKey, decimal>> SumByAsync<TKey>(
+        Expression<Func<TEntity, TKey>> keySelector,
+        Expression<Func<TEntity, decimal>> sumSelector,
+        Expression<Func<TEntity, bool>>? where = null,
+        CancellationToken cancellationToken = default)
+        where TKey : notnull =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(SumByAsync),
+            () => _inner.SumByAsync(keySelector, sumSelector, where, cancellationToken));
+
+    public Task<(IReadOnlyCollection<TEntity> Active, IReadOnlyCollection<TEntity> SoftDeleted)> FindIncludingDeletedAsync(
+        Expression<Func<TEntity, bool>> where,
+        IEnumerable<string>? includes = null,
+        bool asTracking = false,
+        CancellationToken cancellationToken = default) =>
+        ProfilingHelper.ProfileAsync(ClassName, nameof(FindIncludingDeletedAsync),
+            () => _inner.FindIncludingDeletedAsync(where, includes, asTracking, cancellationToken));
+
     public Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> GetAllForLookupAsync(
         string nameProperty,
         Expression<Func<TEntity, bool>>? where = null,
