@@ -86,3 +86,5 @@ override MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse.ToString() -> str
 ~override MMCA.Common.Shared.Auth.ForgotPasswordRequest.ToString() -> string
 ~override MMCA.Common.Shared.Auth.ResetPasswordRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.Auth.ResetPasswordRequest.ToString() -> string
+const MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.BodyMaxLength = 2000 -> int
+const MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest.TitleMaxLength = 200 -> int

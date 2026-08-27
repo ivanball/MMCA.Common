@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Notifications;
@@ -13,8 +14,9 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// <summary>
 /// Verifies <see cref="PushNotificationService"/>'s two service-specific operations on top of
 /// <c>EntityServiceBase</c>: send (POST to <c>notifications</c>, created DTO required back) and
-/// paginated history (GET with page parameters). The inherited CRUD contract is pinned separately
-/// in <c>EntityServiceBaseTests</c>.
+/// paginated history (GET with page parameters). Both answer with a <see cref="Result{T}"/>, so a
+/// rejected send reaches the caller as the API's own errors instead of an exception. The inherited
+/// CRUD contract is pinned separately in <c>EntityServiceBaseTests</c>.
 /// </summary>
 public sealed class PushNotificationServiceTests
 {
@@ -61,8 +63,8 @@ public sealed class PushNotificationServiceTests
             new SendPushNotificationRequest("Maintenance window", "The site goes down at midnight."),
             TestContext.Current.CancellationToken);
 
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(7);
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Id.Should().Be(7);
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Post);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications");
         mocks.Handler.LastRequest.Body.Should().Contain("Maintenance window");
@@ -70,15 +72,36 @@ public sealed class PushNotificationServiceTests
     }
 
     [Fact]
-    public async Task SendAsync_WhenApiReturnsNullBody_ThrowsInvalidOperation()
+    public async Task SendAsync_WhenApiReturnsNullBody_FailsAsEmptyResponse()
     {
+        // A send that answers 200 without the created notification leaves the admin page with
+        // nothing to show, so it is reported rather than passed off as a success.
         var (sut, _) = CreateSut(_ => StubHttpMessageHandler.CreateResponse(HttpStatusCode.OK, "null"));
 
-        var act = () => sut.SendAsync(
+        var result = await sut.SendAsync(
             new SendPushNotificationRequest("Title", "Body"),
             TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be(ProblemDetailsResultReader.EmptyResponseCode);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenServerRejects_CarriesTheServersErrors()
+    {
+        var (sut, _) = CreateSut(_ => StubHttpMessageHandler.CreateResponse(
+            HttpStatusCode.BadRequest,
+            """{"title":"Validation Exception","errors":{"Title":["Title is required."]}}"""));
+
+        var result = await sut.SendAsync(
+            new SendPushNotificationRequest(string.Empty, "Body"),
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Validation.Title");
+        error.Target.Should().Be("Title");
+        error.Type.Should().Be(ErrorType.Validation);
     }
 
     // == Scope stamping ==
@@ -140,8 +163,9 @@ public sealed class PushNotificationServiceTests
 
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Get);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications?pageNumber=3&pageSize=25");
-        result.Should().NotBeNull();
-        result!.Items.Should().HaveCount(2);
-        result.PaginationMetadata.TotalItemCount.Should().Be(12);
+        result.IsSuccess.Should().BeTrue();
+        var page = result.Value!;
+        page.Items.Should().HaveCount(2);
+        page.PaginationMetadata.TotalItemCount.Should().Be(12);
     }
 }

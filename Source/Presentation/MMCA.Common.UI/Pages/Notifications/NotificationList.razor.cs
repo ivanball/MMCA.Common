@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
-using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
@@ -55,15 +54,18 @@ public partial class NotificationList : IDisposable
         try
         {
             var result = await NotificationService.GetHistoryAsync(pageNumber: 1, pageSize: 50, _cts.Token);
-            _notifications = result?.Items is not null ? [.. result.Items] : [];
+            if (result.TryGetValue(out var history))
+            {
+                _notifications = [.. history.Items];
+            }
+            else
+            {
+                result.NotifyOnFailure(Snackbar, L);
+            }
         }
         catch (OperationCanceledException)
         {
             // Expected during component disposal
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ErrorMessages.LoadError(L["Entity.Notifications"], ex), Severity.Error);
         }
         finally
         {

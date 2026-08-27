@@ -15,8 +15,8 @@ using Moq;
 namespace MMCA.Common.UI.Tests.Layout;
 
 /// <summary>
-/// bUnit tests for <see cref="NavMenu"/> — auth-aware rendering (login/register vs. logout), the
-/// logout interaction, and role-gated nav-item filtering.
+/// bUnit tests for <see cref="NavMenu"/>: auth-aware rendering (login/register vs. the signed-in
+/// devices link and logout), the logout interaction, and role-gated nav-item filtering.
 /// </summary>
 public sealed class NavMenuTests : BunitTestBase
 {
@@ -56,6 +56,37 @@ public sealed class NavMenuTests : BunitTestBase
         cut.FindAll(".nav-user-identity").Should().ContainSingle();
         cut.FindAll(".toprow-actions").Should().ContainSingle();
         cut.Find(".toprow-actions").TextContent.Should().NotContain("Ada Lovelace");
+    }
+
+    [Fact]
+    public void WhenAuthenticated_ShowsTheSignedInDevicesLinkAboveLogout()
+    {
+        // The sessions page is framework-owned: every host that renders this menu gets the
+        // signed-in devices list without wiring a NavItem of its own.
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
+
+        var sessions = cut.Find($".nav-auth-section a[href='{RoutePaths.Sessions}']");
+        sessions.TextContent.Should().Contain("Signed-in devices");
+
+        // Immediately above Logout: the account link comes first, the way out comes last.
+        var authLinks = cut.FindAll(".nav-auth-section .mud-nav-link").ToList();
+        var sessionsIndex = authLinks.FindIndex(e => e.GetAttribute("href") == RoutePaths.Sessions);
+        var logoutIndex = authLinks.FindIndex(
+            e => e.TextContent.Contains("Logout", StringComparison.OrdinalIgnoreCase));
+        sessionsIndex.Should().BeGreaterThanOrEqualTo(0);
+        logoutIndex.Should().Be(sessionsIndex + 1);
+    }
+
+    [Fact]
+    public void WhenAnonymous_HidesTheSignedInDevicesLink()
+    {
+        RenderMudProviders();
+        var cut = RenderUnderTest<NavMenu>(_ => { });
+
+        cut.FindAll($"a[href='{RoutePaths.Sessions}']").Should().BeEmpty(
+            "the sessions page belongs to a signed-in account");
+        cut.Markup.Should().NotContain("Signed-in devices");
     }
 
     [Fact]

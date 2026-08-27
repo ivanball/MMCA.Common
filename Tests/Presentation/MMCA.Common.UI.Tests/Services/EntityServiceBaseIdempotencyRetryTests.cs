@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using AwesomeAssertions;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.Testing.UI;
@@ -20,6 +21,10 @@ namespace MMCA.Common.UI.Tests.Services;
 public sealed class EntityServiceBaseIdempotencyRetryTests
 {
     private const string WidgetJson = """{"id":7,"name":"Blue"}""";
+
+    /// <summary>An empty page, so a read under test succeeds instead of failing on an absent body.</summary>
+    private const string EmptyPageJson =
+        """{"items":[],"paginationMetadata":{"totalItemCount":0,"pageSize":10,"currentPage":1}}""";
 
     private sealed record WidgetDto : IBaseDTO<int>
     {
@@ -99,7 +104,8 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
         var result = await sut.AddAsync(NewWidget(), TestContext.Current.CancellationToken);
 
         var firstKey = handler.CapturedKeys[0];
-        result.Id.Should().Be(7);
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Id.Should().Be(7);
         handler.AttemptCount.Should().Be(3);
         firstKey.Should().MatchRegex("^[0-9a-f]{32}$");
         handler.CapturedKeys.Should().OnlyContain(
@@ -111,10 +117,11 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
     [Fact]
     public async Task GetAllAsync_SendsNoIdempotencyKey()
     {
-        var (sut, handler) = CreateSut("null", HttpStatusCode.OK);
+        var (sut, handler) = CreateSut(EmptyPageJson, HttpStatusCode.OK);
 
-        await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var result = await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
 
+        result.IsSuccess.Should().BeTrue();
         handler.AttemptCount.Should().Be(1);
         handler.CapturedKeys[0].Should().BeNull("a read changes nothing, so it needs no dedup key");
     }
@@ -124,8 +131,10 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
     {
         var (sut, handler) = CreateSut(null, HttpStatusCode.NoContent);
 
-        await sut.UpdateAsync(new WidgetDto { Id = 7, Name = "Renamed" }, TestContext.Current.CancellationToken);
+        var result = await sut.UpdateAsync(
+            new WidgetDto { Id = 7, Name = "Renamed" }, TestContext.Current.CancellationToken);
 
+        result.IsSuccess.Should().BeTrue();
         handler.AttemptCount.Should().Be(1);
         handler.CapturedKeys[0].Should().BeNull("a full PUT is already idempotent");
     }
@@ -135,8 +144,9 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
     {
         var (sut, handler) = CreateSut(null, HttpStatusCode.NoContent);
 
-        await sut.DeleteAsync(7, TestContext.Current.CancellationToken);
+        var result = await sut.DeleteAsync(7, TestContext.Current.CancellationToken);
 
+        result.IsSuccess.Should().BeTrue();
         handler.AttemptCount.Should().Be(1);
         handler.CapturedKeys[0].Should().BeNull("a repeated DELETE of the same id is already idempotent");
     }
@@ -147,9 +157,12 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
     {
         var (sut, handler) = CreateSut(null, HttpStatusCode.NotImplemented);
 
-        var act = () => sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var result = await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        result.IsFailure.Should().BeTrue();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Http.501");
+        error.Type.Should().Be(ErrorType.Unexpected);
         handler.AttemptCount.Should().Be(
             1, "501 is a permanent verdict, so retrying only burns the budget and delays the error");
     }
@@ -157,10 +170,11 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
     [Fact]
     public async Task TooManyRequestsResponse_IsRetried()
     {
-        var (sut, handler) = CreateSut("null", HttpStatusCode.TooManyRequests, HttpStatusCode.OK);
+        var (sut, handler) = CreateSut(EmptyPageJson, HttpStatusCode.TooManyRequests, HttpStatusCode.OK);
 
-        await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var result = await sut.GetAllAsync(cancellationToken: TestContext.Current.CancellationToken);
 
+        result.IsSuccess.Should().BeTrue();
         handler.AttemptCount.Should().Be(2, "429 is the server explicitly inviting a later attempt");
     }
 
@@ -174,6 +188,8 @@ public sealed class EntityServiceBaseIdempotencyRetryTests
 
         var act = () => sut.AddAsync(NewWidget(), cts.Token);
 
+        // The caller's own cancellation is the one outcome that is still an exception rather than a
+        // failed Result: the page asked for the operation to stop, so it has nothing to render.
         await act.Should().ThrowAsync<OperationCanceledException>();
         handler.AttemptCount.Should().Be(
             0, "the token reaches the policy, so an abandoned operation never sleeps out its backoff budget");

@@ -4,13 +4,14 @@ using MMCA.Common.Shared.Notifications.PushNotifications;
 namespace MMCA.Common.UI.Services.Notifications;
 
 /// <summary>
-/// UI service contract for push notification operations.
+/// UI service contract for push notification operations. Every member returns a
+/// <see cref="Result"/> carrying the API's own errors.
 /// </summary>
 public interface IPushNotificationUIService
 {
     /// <summary>Sends a push notification to all recipients.</summary>
-    Task<PushNotificationDTO?> SendAsync(SendPushNotificationRequest request, CancellationToken cancellationToken = default);
+    Task<Result<PushNotificationDTO>> SendAsync(SendPushNotificationRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Gets paginated notification history.</summary>
-    Task<PagedCollectionResult<PushNotificationDTO>?> GetHistoryAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
+    Task<Result<PagedCollectionResult<PushNotificationDTO>>> GetHistoryAsync(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default);
 }

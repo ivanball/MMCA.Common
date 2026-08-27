@@ -1,7 +1,7 @@
 # MMCA.Common.UI — Navigation & Information Architecture
 
 > The shared Blazor UI surface that `MMCA.Common.UI` ships to every consumer app (Login, Register,
-> the notifications inbox/history, and the app-shell error pages). Consumer apps (MMCA.ADC,
+> the signed-in devices page, the notifications inbox/history, and the app-shell error pages). Consumer apps (MMCA.ADC,
 > MMCA.Store) add their own module pages on top of this and document their per-actor flows in their
 > own `NavigationFlow.md`; this file is the source of truth for the framework-provided routes and the
 > role/claim model that gates them (rubric §25). It must match `Source/Presentation/MMCA.Common.UI`.
@@ -19,6 +19,7 @@
 | `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. Route carries `[Authorize]`. |
 | `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). Route carries `[Authorize]`. |
 | `/notifications/send` | `Notifications/NotificationSend` | Authenticated | Admin/sender surface. Route carries `[Authorize]`; the sender role/claim gate is consumer-declared (NavItem filter) and enforced server-side by the send API. |
+| `/profile/sessions` | `Auth/Sessions` | Authenticated | Signed-in devices: one row per live refresh session, with a per-device sign-out and a sign-out-everywhere. Route carries `[Authorize]`; reachable from the shared nav menu's account section. |
 | `/not-found` | `NotFound` | Any | 404 within the app shell (`Router.NotFoundPage`). |
 | `/forbidden` | `Forbidden` | Any | 403 within the app shell (see below); rendered for authenticated-but-unauthorized hits via `AuthorizeRouteView`, but the route itself is open (a direct anonymous visit just shows the 403 page). |
 
@@ -65,13 +66,23 @@ flowchart TD
 flowchart LR
     H[Home /] --> N[Notifications history /notifications]
     H --> X[Inbox /notifications/inbox]
+    H --> D[Signed-in devices /profile/sessions]
     N -->|admin/sender role or claim| S[Send /notifications/send]
     X -->|mark read / mark all read| X
+    D -->|sign out one device| D
+    D -->|sign out everywhere| L[Login /login]
     subgraph Shell error states
       F[/forbidden 403/]
       NF[/not-found 404/]
     end
 ```
+
+- **Two sign-out paths, and they differ.** A row's button on `/profile/sessions` revokes one OTHER
+  session (`POST auth/revoke/{sessionId}`) and leaves this device signed in; the page-level button is
+  the account-wide `POST auth/revoke`, which also ends the caller's own session, so it is followed by
+  the local sign-out and a redirect to `/login`. The current device's row therefore offers no revoke
+  button at all: revoking it from a row would leave the app on a dead session until the access token
+  expired.
 
 ## Role/claim model
 

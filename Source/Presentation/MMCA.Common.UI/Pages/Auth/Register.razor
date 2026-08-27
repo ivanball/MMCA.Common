@@ -2,6 +2,7 @@
 @using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.Shared.Auth
 @using MMCA.Common.Shared.ValueObjects
+@using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
@@ -159,14 +160,13 @@
         {
             var result = await AuthService.RegisterAsync(
                 new RegisterRequest(_model.Email, _model.Password, _model.FirstName, _model.LastName, addressResult?.Value));
-            if (result is not null)
+            if (result.IsFailure)
             {
-                Navigation.NavigateTo("/", forceLoad: true);
+                _errorMessage = result.LocalizedErrorMessage(L) ?? L["Auth.Register.Failed"];
+                return;
             }
-            else
-            {
-                _errorMessage = AuthService.LastError ?? L["Auth.Register.Failed"];
-            }
+
+            Navigation.NavigateTo("/", forceLoad: true);
         }
         catch
         {

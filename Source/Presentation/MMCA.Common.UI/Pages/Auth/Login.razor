@@ -1,6 +1,7 @@
 @page "/login"
 @using Microsoft.Extensions.Options
 @using MMCA.Common.Shared.Auth
+@using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Common.Settings
 @using MMCA.Common.UI.Services.Auth
 @using MMCA.Common.UI.Services.Capabilities
@@ -198,15 +199,18 @@
 
         try
         {
+            // The service reports every outcome as a Result, so the only catch left is for a
+            // genuine fault in the navigation/preference tail below.
             var result = await AuthService.LoginAsync(new LoginRequest(_model.Email, _model.Password));
-            if (result is not null)
+            if (result.IsFailure)
             {
-                await ApplyStoredPreferencesAndNavigateAsync(ReturnUrlProtector.Sanitize(ReturnUrl, "/"));
+                // The API's own message when it sent one; the generic invalid-credentials wording
+                // when the failure carried nothing renderable.
+                _errorMessage = result.LocalizedErrorMessage(L) ?? L["Auth.Login.InvalidCredentials"];
+                return;
             }
-            else
-            {
-                _errorMessage = AuthService.LastError ?? L["Auth.Login.InvalidCredentials"];
-            }
+
+            await ApplyStoredPreferencesAndNavigateAsync(ReturnUrlProtector.Sanitize(ReturnUrl, "/"));
         }
         catch
         {

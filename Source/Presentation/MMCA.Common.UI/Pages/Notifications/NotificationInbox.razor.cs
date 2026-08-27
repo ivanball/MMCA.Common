@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Notifications.UserNotifications;
-using MMCA.Common.UI.Pages.Common;
+using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
@@ -89,23 +89,25 @@ public partial class NotificationInbox : IDisposable
         try
         {
             var result = await InboxService.GetInboxAsync(_currentPage, PageSize, _cts.Token);
-            if (result is not null)
+            if (result.TryGetValue(out var page))
             {
-                _notifications = [.. result.Items];
-                _totalPages = (int)Math.Ceiling((double)result.PaginationMetadata.TotalItemCount / PageSize);
+                _notifications = [.. page.Items];
+                _totalPages = (int)Math.Ceiling((double)page.PaginationMetadata.TotalItemCount / PageSize);
                 if (_totalPages < 1)
                 {
                     _totalPages = 1;
                 }
             }
+            else
+            {
+                // Same surface as the exception path it replaces: one snackbar, the list left as it
+                // was rather than blanked, so a transient failure does not erase what is on screen.
+                result.NotifyOnFailure(Snackbar, L);
+            }
         }
         catch (OperationCanceledException)
         {
             // Expected during component disposal
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ErrorMessages.LoadError(L["Entity.Notifications"], ex), Severity.Error);
         }
         finally
         {
@@ -133,7 +135,12 @@ public partial class NotificationInbox : IDisposable
         IsSaving = true;
         try
         {
-            await InboxService.MarkReadAsync(notification.Id, _cts.Token);
+            var markRead = await InboxService.MarkReadAsync(notification.Id, _cts.Token);
+            if (markRead.IsFailure)
+            {
+                markRead.NotifyOnFailure(Snackbar, L);
+                return;
+            }
 
             // Update local state
             int index = _notifications.FindIndex(n => n.Id == notification.Id);
@@ -142,20 +149,16 @@ public partial class NotificationInbox : IDisposable
                 _notifications[index] = notification with { IsRead = true, ReadOn = DateTime.UtcNow };
             }
 
-            // Refresh the unread count; a null count means "unknown", so the badge keeps its value.
-            int? count = await InboxService.GetUnreadCountAsync(_cts.Token);
-            if (count is not null)
+            // Refresh the unread count; a failed count means "unknown", so the badge keeps its value.
+            var count = await InboxService.GetUnreadCountAsync(_cts.Token);
+            if (count.TryGetValue(out var unread))
             {
-                NotificationState.SetUnreadCount(count.Value);
+                NotificationState.SetUnreadCount(unread);
             }
         }
         catch (OperationCanceledException)
         {
             // Expected during component disposal
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notification"], ex), Severity.Error);
         }
         finally
         {
@@ -168,7 +171,12 @@ public partial class NotificationInbox : IDisposable
         IsSaving = true;
         try
         {
-            await InboxService.MarkAllReadAsync(_cts.Token);
+            var markAllRead = await InboxService.MarkAllReadAsync(_cts.Token);
+            if (markAllRead.IsFailure)
+            {
+                markAllRead.NotifyOnFailure(Snackbar, L);
+                return;
+            }
 
             // Update local state
             for (int i = 0; i < _notifications.Count; i++)
@@ -185,10 +193,6 @@ public partial class NotificationInbox : IDisposable
         catch (OperationCanceledException)
         {
             // Expected during component disposal
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notifications"], ex), Severity.Error);
         }
         finally
         {

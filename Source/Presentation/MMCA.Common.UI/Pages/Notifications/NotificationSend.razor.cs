@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Pages.Common;
@@ -32,6 +33,12 @@ public partial class NotificationSend : IDisposable
     private readonly NotificationSendModel _model = new();
     private MudForm? _form;
 
+    /// <summary>
+    /// The last send attempt's outcome, rendered inline by the shared <c>ErrorSummary</c>. Null
+    /// before the first attempt and cleared at the start of every new one.
+    /// </summary>
+    private Result? _sendResult;
+
     // One delegate for every field on the form: MudBlazor calls it with (model, member path) and the
     // model's own DataAnnotations decide the outcome, so no rule is written twice.
     private Func<object, string, IEnumerable<string>> _validate = default!;
@@ -55,11 +62,15 @@ public partial class NotificationSend : IDisposable
         if (_form is null)
             return;
 
+        _sendResult = null;
+
         // MudForm has no OnValidSubmit, so the submit still triggers a pass; WHAT it checks comes from
         // the model's annotations, not from per-field attributes in the markup.
         await _form.ValidateAsync();
         if (!_form.IsValid)
         {
+            // The per-field messages are already on screen; the ErrorSummary above the form collects
+            // them in one place (deduplicated) and the snackbar stays the summary cue it always was.
             Snackbar.Add(ErrorMessages.ValidationError, Severity.Warning);
             return;
         }
@@ -68,21 +79,24 @@ public partial class NotificationSend : IDisposable
         try
         {
             var request = new SendPushNotificationRequest(_model.Title, _model.Body);
-            PushNotificationDTO? result = await NotificationService.SendAsync(request, _cts.Token);
+            var result = await NotificationService.SendAsync(request, _cts.Token);
+            _sendResult = result;
 
-            if (result is not null)
+            if (result.TryGetValue(out PushNotificationDTO? sent))
             {
-                Snackbar.Add(L["Notif.Send.SentTo", result.RecipientCount], Severity.Success);
+                Snackbar.Add(L["Notif.Send.SentTo", sent.RecipientCount], Severity.Success);
                 NavigationManager.NavigateTo(NotificationRoutePaths.Notifications);
+            }
+            else
+            {
+                // Rendered inline by the ErrorSummary as well, so the wording survives the snackbar
+                // timing out on a long form.
+                result.NotifyOnFailure(Snackbar, L);
             }
         }
         catch (OperationCanceledException)
         {
             // Expected during component disposal or InteractiveAuto render mode transition
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notification"], ex), Severity.Error);
         }
         finally
         {

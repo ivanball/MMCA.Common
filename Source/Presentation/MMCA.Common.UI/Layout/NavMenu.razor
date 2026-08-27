@@ -134,6 +134,9 @@
                     <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
                 </div>
                 <MudNavMenu Color="Color.Default">
+                    @* Framework-owned account page: every host that renders this menu gets the
+                       signed-in devices list without wiring a NavItem of its own. *@
+                    <MudNavLink Href="@RoutePaths.Sessions" Icon="@Icons.Material.Filled.Devices">@L["Auth.Sessions.NavLabel"]</MudNavLink>
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">@L["Common.Button.Logout"]</MudNavLink>
                 </MudNavMenu>
             </Authorized>

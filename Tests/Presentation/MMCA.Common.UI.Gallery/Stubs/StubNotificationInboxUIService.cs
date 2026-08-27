@@ -10,7 +10,7 @@ namespace MMCA.Common.UI.Gallery.Stubs;
 /// </summary>
 internal sealed class StubNotificationInboxUIService : INotificationInboxUIService
 {
-    public Task<PagedCollectionResult<UserNotificationDTO>?> GetInboxAsync(
+    public Task<Result<PagedCollectionResult<UserNotificationDTO>>> GetInboxAsync(
         int pageNumber = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
         UserNotificationDTO[] items =
@@ -27,14 +27,16 @@ internal sealed class StubNotificationInboxUIService : INotificationInboxUIServi
                 SentOn = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
             },
         ];
-        return Task.FromResult<PagedCollectionResult<UserNotificationDTO>?>(
-            new PagedCollectionResult<UserNotificationDTO>(items, new PaginationMetadata(items.Length, pageSize, pageNumber)));
+        return Task.FromResult(Result.Success(
+            new PagedCollectionResult<UserNotificationDTO>(items, new PaginationMetadata(items.Length, pageSize, pageNumber))));
     }
 
-    public Task<int?> GetUnreadCountAsync(CancellationToken cancellationToken = default) => Task.FromResult<int?>(3);
+    public Task<Result<int>> GetUnreadCountAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Success(3));
 
-    public Task MarkReadAsync(UserNotificationIdentifierType id, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    public Task<Result> MarkReadAsync(UserNotificationIdentifierType id, CancellationToken cancellationToken = default)
+        => Task.FromResult(Result.Success());
 
-    public Task MarkAllReadAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<Result> MarkAllReadAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Success());
 }

@@ -10,15 +10,15 @@ namespace MMCA.Common.UI.Gallery.Stubs;
 /// </summary>
 internal sealed class StubPushNotificationUIService : IPushNotificationUIService
 {
-    public Task<PushNotificationDTO?> SendAsync(
+    public Task<Result<PushNotificationDTO>> SendAsync(
         SendPushNotificationRequest request, CancellationToken cancellationToken = default)
-        => Task.FromResult<PushNotificationDTO?>(new PushNotificationDTO
+        => Task.FromResult(Result.Success(new PushNotificationDTO
         {
             Id = 99, Title = request.Title, Body = request.Body, SentByUserId = 1,
             RecipientCount = 42, Status = "Sent", CreatedOn = new DateTime(2026, 1, 4, 10, 0, 0, DateTimeKind.Utc),
-        });
+        }));
 
-    public Task<PagedCollectionResult<PushNotificationDTO>?> GetHistoryAsync(
+    public Task<Result<PagedCollectionResult<PushNotificationDTO>>> GetHistoryAsync(
         int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
     {
         PushNotificationDTO[] items =
@@ -34,7 +34,7 @@ internal sealed class StubPushNotificationUIService : IPushNotificationUIService
                 RecipientCount = 128, Status = "Failed", CreatedOn = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
             },
         ];
-        return Task.FromResult<PagedCollectionResult<PushNotificationDTO>?>(
-            new PagedCollectionResult<PushNotificationDTO>(items, new PaginationMetadata(items.Length, pageSize, pageNumber)));
+        return Task.FromResult(Result.Success(
+            new PagedCollectionResult<PushNotificationDTO>(items, new PaginationMetadata(items.Length, pageSize, pageNumber))));
     }
 }

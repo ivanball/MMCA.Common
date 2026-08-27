@@ -8,26 +8,38 @@ using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Pages.Notifications;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
+using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Pages.Notifications;
 
 /// <summary>
-/// bUnit tests for the <see cref="NotificationInbox"/> page — load/empty states and the mark-one /
-/// mark-all interactions (service calls + shared unread-count update).
+/// bUnit tests for the <see cref="NotificationInbox"/> page: load/empty states, the mark-one /
+/// mark-all interactions (service calls + shared unread-count update), and the failure surfaces:
+/// every failed call raises exactly one snackbar and leaves what is already on screen alone rather
+/// than blanking the list or zeroing the badge.
 /// </summary>
 public sealed class NotificationInboxTests : BunitTestBase
 {
     private readonly Mock<INotificationInboxUIService> _inbox = new();
     private readonly NotificationState _state = new();
+    private readonly Mock<ISnackbar> _snackbar = new();
 
     public NotificationInboxTests()
     {
         Services.AddSingleton(_inbox.Object);
         Services.AddSingleton(_state);
+        // Registered after the base class's AddMudServices, so this wins and the page's snackbar
+        // surface can be counted without rendering a snackbar provider.
+        Services.AddSingleton<ISnackbar>(_snackbar.Object);
     }
 
-    private static PagedCollectionResult<UserNotificationDTO> Inbox(params UserNotificationDTO[] items)
-        => new(items, new PaginationMetadata(items.Length, 20, 1));
+    private static Result<PagedCollectionResult<UserNotificationDTO>> Inbox(params UserNotificationDTO[] items)
+        => Result.Success(new PagedCollectionResult<UserNotificationDTO>(items, new PaginationMetadata(items.Length, 20, 1)));
+
+    // A failed call. The message is not a resource key, so the localizer passes it through verbatim
+    // and the snackbar text can be asserted exactly.
+    private static Result<T> LoadFailure<T>(string message)
+        => Result.Failure<T>(Error.Failure("Notif.Inbox.LoadFailed", message));
 
     private static UserNotificationDTO Unread(int id)
         => new()
@@ -39,6 +51,11 @@ public sealed class NotificationInboxTests : BunitTestBase
             IsRead = false,
             SentOn = new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc),
         };
+
+    private void VerifyOneSnackbar(string message) =>
+        _snackbar.Verify(
+            s => s.Add(message, Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once());
 
     [Fact]
     public void WhenInboxEmpty_RendersEmptyState()
@@ -70,14 +87,55 @@ public sealed class NotificationInboxTests : BunitTestBase
     }
 
     [Fact]
+    public void WhenTheInboxLoadFails_RaisesOneSnackbarAndLeavesTheListAsItWas()
+    {
+        // The failure surface replaced a catch: a transient failure must not erase what the user is
+        // already reading, so the loaded page keeps its rows and only the snackbar reports the fault.
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1)));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 1"));
+
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LoadFailure<PagedCollectionResult<UserNotificationDTO>>("The inbox is unavailable."));
+
+        _state.RequestRefresh();
+
+        cut.WaitForAssertion(() => VerifyOneSnackbar("The inbox is unavailable."));
+        cut.Markup.Should().Contain("Notice 1", "a failed reload leaves the current list untouched");
+        cut.Markup.Should().NotContain("You have no notifications.");
+    }
+
+    [Fact]
+    public void WhenTheFirstInboxLoadFails_RaisesOneSnackbar()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LoadFailure<PagedCollectionResult<UserNotificationDTO>>("The inbox is unavailable."));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+
+        cut.WaitForAssertion(() => VerifyOneSnackbar("The inbox is unavailable."));
+        _snackbar.Verify(
+            s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once());
+    }
+
+    [Fact]
     public void ClickingMarkAsRead_MarksThatNotificationRead()
     {
         _inbox
             .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Inbox(Unread(7)));
         _inbox
+            .Setup(x => x.MarkReadAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        _inbox
             .Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
+            .ReturnsAsync(Result.Success(0));
 
         var cut = RenderUnderTest<NotificationInbox>(_ => { });
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 7"));
@@ -86,6 +144,58 @@ public sealed class NotificationInboxTests : BunitTestBase
 
         cut.WaitForAssertion(() =>
             _inbox.Verify(x => x.MarkReadAsync(7, It.IsAny<CancellationToken>()), Times.Once()));
+        cut.WaitForAssertion(() => cut.FindAll(".notification-card.read").Should().ContainSingle());
+    }
+
+    [Fact]
+    public void WhenMarkAsReadFails_RaisesOneSnackbarAndSkipsTheOptimisticUpdate()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(7)));
+        _inbox
+            .Setup(x => x.MarkReadAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Failure("Notif.MarkRead.Failed", "That notification could not be marked read.")));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 7"));
+
+        cut.Find("button[aria-label=\"Mark as read\"]").Click();
+
+        cut.WaitForAssertion(() => VerifyOneSnackbar("That notification could not be marked read."));
+        cut.FindAll(".notification-card.unread").Should().ContainSingle(
+            "the row must not claim to be read when the server refused");
+        cut.FindAll(".notification-card.read").Should().BeEmpty();
+        _inbox.Verify(
+            x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()),
+            Times.Never(),
+            "the badge refresh belongs to the success path only");
+    }
+
+    [Fact]
+    public void WhenTheUnreadCountFails_AfterMarkingRead_TheSharedCountKeepsItsValue()
+    {
+        // A failed count means "unknown", not zero: reporting zero here is what erased the badge a
+        // real-time push had just incremented.
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(7)));
+        _inbox
+            .Setup(x => x.MarkReadAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        _inbox
+            .Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LoadFailure<int>("The count is unavailable."));
+        _state.SetUnreadCount(4);
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 7"));
+
+        cut.Find("button[aria-label=\"Mark as read\"]").Click();
+
+        cut.WaitForAssertion(() =>
+            _inbox.Verify(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()), Times.Once()));
+        _state.UnreadCount.Should().Be(4);
     }
 
     [Fact]
@@ -113,7 +223,7 @@ public sealed class NotificationInboxTests : BunitTestBase
     {
         // The push used to be dropped outright whenever a load was already running, which left the
         // inbox showing stale contents until the next navigation.
-        var firstLoad = new TaskCompletionSource<PagedCollectionResult<UserNotificationDTO>?>();
+        var firstLoad = new TaskCompletionSource<Result<PagedCollectionResult<UserNotificationDTO>>>();
         _inbox
             .SetupSequence(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(firstLoad.Task)
@@ -153,6 +263,9 @@ public sealed class NotificationInboxTests : BunitTestBase
         _inbox
             .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+        _inbox
+            .Setup(x => x.MarkAllReadAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
         _state.SetUnreadCount(2);
 
         var cut = RenderUnderTest<NotificationInbox>(_ => { });
@@ -163,5 +276,26 @@ public sealed class NotificationInboxTests : BunitTestBase
         cut.WaitForAssertion(() =>
             _inbox.Verify(x => x.MarkAllReadAsync(It.IsAny<CancellationToken>()), Times.Once()));
         _state.UnreadCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void WhenMarkAllAsReadFails_RaisesOneSnackbarAndLeavesTheSharedCountAlone()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+        _inbox
+            .Setup(x => x.MarkAllReadAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Failure("Notif.MarkAllRead.Failed", "Nothing could be marked read.")));
+        _state.SetUnreadCount(2);
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Mark All as Read"));
+
+        cut.ClickButtonByText("Mark All as Read");
+
+        cut.WaitForAssertion(() => VerifyOneSnackbar("Nothing could be marked read."));
+        _state.UnreadCount.Should().Be(2, "the optimistic zeroing belongs to the success path only");
+        cut.FindAll(".notification-card.unread").Should().HaveCount(2);
     }
 }

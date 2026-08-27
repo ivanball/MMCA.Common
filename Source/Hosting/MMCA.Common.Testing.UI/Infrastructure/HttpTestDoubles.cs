@@ -39,7 +39,10 @@ public static class HttpTestDoubles
 
     /// <summary>
     /// Creates a ProblemDetails-style error response the way the WebAPI emits domain failures, so the
-    /// UI-side error mapping (e.g. a ServiceExceptionHelper) sees the shape it expects.
+    /// UI-side error mapping (<c>MMCA.Common.Shared.Http.ProblemDetailsResultReader</c>) sees the
+    /// shape it expects. This is the plain-ProblemDetails shape, which the reader turns into a single
+    /// error coded <c>"Http.{status}"</c> typed from the status code; pass an <c>errors</c> array
+    /// through <see cref="JsonResponse{T}"/> instead when a test needs the error codes preserved.
     /// </summary>
     public static HttpResponseMessage ProblemResponse(
         string detail,

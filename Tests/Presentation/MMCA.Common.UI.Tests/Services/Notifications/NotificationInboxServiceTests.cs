@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Exceptions;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Notifications;
@@ -15,8 +14,8 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// <summary>
 /// Verifies <see cref="NotificationInboxService"/>: the inbox REST contract (paged GET, unread-count
 /// GET, per-item and bulk mark-read PUTs) on the named APIClient with the stored bearer token, plus
-/// the failure shapes (domain ProblemDetails re-thrown, a 401 refresh-and-replay on the reads, and an
-/// unestablished unread count reported as null rather than zero).
+/// the failure shapes (domain ProblemDetails read back as errors, a 401 refresh-and-replay on the
+/// reads, and an unestablished unread count reported as a failure rather than zero).
 /// Failure-path responses use 4xx codes only; 5xx would engage the class-level Polly retry backoff.
 /// </summary>
 public sealed class NotificationInboxServiceTests
@@ -28,6 +27,9 @@ public sealed class NotificationInboxServiceTests
     {
         public Task<string?> GetCurrentScopeKeyAsync(CancellationToken ct = default) => Task.FromResult(scopeKey);
     }
+
+    private const string DomainErrorJson =
+        """{"title":"Domain Exception","detail":"Notification is already read."}""";
 
     private static (NotificationInboxService Sut, Mocks Mocks) CreateSut(
         Func<HttpRequestMessage, HttpResponseMessage> responder,
@@ -75,9 +77,6 @@ public sealed class NotificationInboxServiceTests
                 new PagedCollectionResult<UserNotificationDTO>(items, new PaginationMetadata(37, 5, 2))),
         };
 
-    private const string DomainErrorJson =
-        """{"title":"Domain Exception","detail":"Notification is already read."}""";
-
     // == GetInboxAsync ==
     [Fact]
     public async Task GetInboxAsync_RequestsPagedInboxWithBearerToken_AndDeserializes()
@@ -90,30 +89,35 @@ public sealed class NotificationInboxServiceTests
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Get);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox?pageNumber=2&pageSize=5");
         mocks.Handler.LastRequest.Authorization!.ToString().Should().Be("Bearer stored-access-token");
-        result.Should().NotBeNull();
-        result!.Items.Should().HaveCount(2);
-        result.PaginationMetadata.TotalItemCount.Should().Be(37);
+        result.IsSuccess.Should().BeTrue();
+        var page = result.Value!;
+        page.Items.Should().HaveCount(2);
+        page.PaginationMetadata.TotalItemCount.Should().Be(37);
     }
 
     [Fact]
-    public async Task GetInboxAsync_WithDomainErrorPayload_ThrowsDomainInvariantViolation()
+    public async Task GetInboxAsync_WithDomainErrorPayload_FailsWithTheDetailAsMessage()
     {
         var (sut, _) = CreateSut(_ => StubHttpMessageHandler.CreateResponse(HttpStatusCode.BadRequest, DomainErrorJson));
 
-        var act = () => sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var result = await sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<DomainInvariantViolationException>()
-            .WithMessage("Notification is already read.");
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Message.Should().Be("Notification is already read.");
     }
 
     [Fact]
-    public async Task GetInboxAsync_WithUnrecognizedFailure_ThrowsHttpRequestException()
+    public async Task GetInboxAsync_WithUnrecognizedFailure_FailsWithTheStatusCode()
     {
-        var (sut, _) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
 
-        var act = () => sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var result = await sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<HttpRequestException>();
+        result.IsFailure.Should().BeTrue();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Http.404");
+        error.Type.Should().Be(ErrorType.NotFound);
+        mocks.Handler.CallCount.Should().Be(1, "only a 401 is worth replaying");
     }
 
     // == GetUnreadCountAsync ==
@@ -124,21 +128,24 @@ public sealed class NotificationInboxServiceTests
 
         var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
 
-        result.Should().Be(7);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(7);
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Get);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox/unread-count");
     }
 
     [Fact]
-    public async Task GetUnreadCountAsync_OnFailure_ReturnsNullWithoutThrowing()
+    public async Task GetUnreadCountAsync_OnFailure_ReportsUnknownRatherThanZero()
     {
         // The badge must never break the page, but "unknown" is not "zero": reporting zero erased a
-        // badge that a real-time push had just incremented.
+        // badge that a real-time push had just incremented. A failed Result carries no count at all,
+        // so the caller keeps whatever it was already showing.
         var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
 
         var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Type.Should().Be(ErrorType.NotFound);
         mocks.Handler.CallCount.Should().Be(1, "only a 401 is worth replaying");
     }
 
@@ -151,13 +158,14 @@ public sealed class NotificationInboxServiceTests
 
         var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
 
-        result.Should().Be(7);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(7);
         mocks.Handler.CallCount.Should().Be(2);
         mocks.Handler.LastRequest.Authorization!.Parameter.Should().Be("refreshed-access-token");
     }
 
     [Fact]
-    public async Task GetUnreadCountAsync_WhenTheRefreshedTokenIsAlsoRejected_ReturnsNullNotZero()
+    public async Task GetUnreadCountAsync_WhenTheRefreshedTokenIsAlsoRejected_FailsAsUnauthorized()
     {
         var (sut, mocks) = CreateSut(
             _ => new HttpResponseMessage(HttpStatusCode.Unauthorized),
@@ -165,12 +173,17 @@ public sealed class NotificationInboxServiceTests
 
         var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeNull();
+        // Once the replay path is exhausted the 401 is the answer, and it reaches the caller typed:
+        // a badge that cannot be established is a failure, never a zero.
+        result.IsFailure.Should().BeTrue();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Http.401");
+        error.Type.Should().Be(ErrorType.Unauthorized);
         mocks.Handler.CallCount.Should().Be(2, "the read is replayed exactly once, never in a loop");
     }
 
     [Fact]
-    public async Task GetUnreadCountAsync_WhenTheSessionCannotBeRefreshed_ReturnsNullWithoutReplaying()
+    public async Task GetUnreadCountAsync_WhenTheSessionCannotBeRefreshed_FailsWithoutReplaying()
     {
         var (sut, mocks) = CreateSut(
             _ => new HttpResponseMessage(HttpStatusCode.Unauthorized),
@@ -178,7 +191,8 @@ public sealed class NotificationInboxServiceTests
 
         var result = await sut.GetUnreadCountAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Type.Should().Be(ErrorType.Unauthorized);
         mocks.Handler.CallCount.Should().Be(1);
     }
 
@@ -191,8 +205,8 @@ public sealed class NotificationInboxServiceTests
 
         var result = await sut.GetInboxAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        result.Should().NotBeNull();
-        result!.Items.Should().HaveCount(1);
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Items.Should().HaveCount(1);
         mocks.Handler.CallCount.Should().Be(2);
     }
 
@@ -202,20 +216,22 @@ public sealed class NotificationInboxServiceTests
     {
         var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
 
-        await sut.MarkReadAsync(42, TestContext.Current.CancellationToken);
+        var result = await sut.MarkReadAsync(42, TestContext.Current.CancellationToken);
 
+        result.IsSuccess.Should().BeTrue();
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Put);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox/42/read");
     }
 
     [Fact]
-    public async Task MarkReadAsync_WithDomainErrorPayload_ThrowsDomainInvariantViolation()
+    public async Task MarkReadAsync_WithDomainErrorPayload_ReturnsTheDescribedFailure()
     {
         var (sut, _) = CreateSut(_ => StubHttpMessageHandler.CreateResponse(HttpStatusCode.BadRequest, DomainErrorJson));
 
-        var act = () => sut.MarkReadAsync(42, TestContext.Current.CancellationToken);
+        var result = await sut.MarkReadAsync(42, TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<DomainInvariantViolationException>();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Message.Should().Be("Notification is already read.");
     }
 
     // == MarkAllReadAsync ==
@@ -224,10 +240,26 @@ public sealed class NotificationInboxServiceTests
     {
         var (sut, mocks) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
 
-        await sut.MarkAllReadAsync(TestContext.Current.CancellationToken);
+        var result = await sut.MarkAllReadAsync(TestContext.Current.CancellationToken);
 
+        result.IsSuccess.Should().BeTrue();
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Put);
         mocks.Handler.LastRequest.Uri!.PathAndQuery.Should().Be("/notifications/inbox/read-all");
+    }
+
+    [Fact]
+    public async Task MarkAllReadAsync_WhenServerRejects_CarriesTheServersErrors()
+    {
+        var (sut, _) = CreateSut(_ => new HttpResponseMessage(HttpStatusCode.Conflict));
+
+        var result = await sut.MarkAllReadAsync(TestContext.Current.CancellationToken);
+
+        // The bulk PUT answers through the valueless overload, so a 2xx is a bare success and
+        // anything else arrives as the errors the response described.
+        result.IsFailure.Should().BeTrue();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.Code.Should().Be("Http.409");
+        error.Type.Should().Be(ErrorType.Conflict);
     }
 
     // == Scope key ==

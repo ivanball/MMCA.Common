@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services;
@@ -431,9 +432,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// Optional action to inject extra filters (e.g., search string, status dropdown) before the fetch.
     /// </param>
     /// <param name="showCancelSnackbar">Whether to show a snackbar on cancellation (organizer pages do, public pages don't).</param>
+    /// <remarks>
+    /// The delegate's shape mirrors <c>IEntityService.GetPagedAsync</c> exactly, so a page still
+    /// passes the method group. A failed <see cref="Result"/> is handled here the same way an
+    /// exception used to be: the localized message goes to the snackbar, <see cref="LoadFailed"/>
+    /// is set, and the grid renders zero rows.
+    /// </remarks>
     protected async Task<GridData<TDto>> LoadServerDataAsync(
         GridState<TDto> state,
-        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<(IReadOnlyList<TDto> Items, int TotalItems)>> fetchAsync,
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null,
         bool showCancelSnackbar = true)
     {
@@ -447,13 +454,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             _persistedGridData = null;
             _lastSuccessfulGridData = cached;
 
-            var (sc, sd) = ExtractSortParameters(state);
-            if (string.IsNullOrEmpty(sc) && !string.IsNullOrEmpty(_savedSortColumn))
-            {
-                sc = _savedSortColumn;
-                sd = _savedSortDescending ? "desc" : "asc";
-            }
-
+            var (sc, sd) = ResolveSortParameters(state);
             SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase));
             return cached;
         }
@@ -476,19 +477,17 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             var filters = ExtractGridFilters(state);
             additionalFilters?.Invoke(filters);
 
-            var (sortColumn, sortDirection) = ExtractSortParameters(state);
+            var (sortColumn, sortDirection) = ResolveSortParameters(state);
 
-            // First-fetch fallback: when MudDataGrid hasn't yet picked up a SortDefinition
-            // (typical on initial load with a URL-driven sort), use the sort restored from
-            // the query string so the data lands sorted from the very first request.
-            if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
+            var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
+            if (!fetched.TryGetValue(out var page))
             {
-                sortColumn = _savedSortColumn;
-                sortDirection = _savedSortDescending ? "desc" : "asc";
+                fetched.NotifyOnFailure(Snackbar, Localizer);
+                LoadFailed = true;
+                return new GridData<TDto> { Items = [], TotalItems = 0 };
             }
 
-            var (items, totalItems) = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
-            var gridData = new GridData<TDto> { Items = items, TotalItems = totalItems };
+            var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
             _lastSuccessfulGridData = gridData;
             SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
             return gridData;
@@ -496,13 +495,15 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         catch (OperationCanceledException)
         {
             // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
-            // snackbar is a no-op (separate render — no JS toast host), so no special-casing is needed.
+            // snackbar is a no-op (separate render: no JS toast host), so no special-casing is needed.
             if (showCancelSnackbar)
                 Snackbar.Add(Localizer["Grid.Snackbar.LoadCancelled"], Severity.Info);
             return new GridData<TDto> { Items = [], TotalItems = 0 };
         }
         catch (Exception ex)
         {
+            // Still guarded: the caller's additionalFilters callback and the grid-state extraction
+            // above are arbitrary page code, and a throw from either must not strand IsLoading.
             Snackbar.Add(ErrorMessages.LoadError(Title, ex), Severity.Error);
             LoadFailed = true;
             return new GridData<TDto> { Items = [], TotalItems = 0 };
@@ -536,7 +537,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// and error handling identically to <see cref="LoadServerDataAsync"/>.
     /// </summary>
     protected async Task LoadMobileDataAsync(
-        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<(IReadOnlyList<TDto> Items, int TotalItems)>> fetchAsync,
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null)
     {
         await ResetCancellationTokenAsync();
@@ -550,9 +551,18 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         try
         {
-            var (items, totalItems) = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
-            MobileItems = items;
-            MobileTotalItems = totalItems;
+            var fetched = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
+            if (!fetched.TryGetValue(out var page))
+            {
+                fetched.NotifyOnFailure(Snackbar, Localizer);
+                LoadFailed = true;
+                MobileItems = [];
+                MobileTotalItems = 0;
+                return;
+            }
+
+            MobileItems = page.Items;
+            MobileTotalItems = page.TotalItems;
             SaveCurrentState(0, MobilePageSize, _savedSortColumn, _savedSortDescending);
         }
         catch (OperationCanceledException)
@@ -620,6 +630,24 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     {
         var sort = state.SortDefinitions?.FirstOrDefault();
         return (sort?.SortBy, sort?.Descending == true ? "desc" : "asc");
+    }
+
+    /// <summary>
+    /// The grid's own sort, with a first-fetch fallback: when MudDataGrid has not yet picked up a
+    /// SortDefinition (typical on initial load with a URL-driven sort), the sort restored from the
+    /// query string is used instead, so the data lands sorted from the very first request.
+    /// </summary>
+    private (string? SortColumn, string? SortDirection) ResolveSortParameters(GridState<TDto> state)
+    {
+        var (sortColumn, sortDirection) = ExtractSortParameters(state);
+
+        if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
+        {
+            sortColumn = _savedSortColumn;
+            sortDirection = _savedSortDescending ? "desc" : "asc";
+        }
+
+        return (sortColumn, sortDirection);
     }
 
     private void SaveCurrentState(int page, int pageSize, string? sortColumn, bool sortDescending)

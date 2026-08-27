@@ -1,0 +1,102 @@
+@page "/profile/sessions"
+@using Microsoft.AspNetCore.Authorization
+@using MMCA.Common.Shared.Auth
+@using MMCA.Common.UI.Common
+@attribute [Authorize]
+@attribute [StreamRendering(false)]
+
+<PageTitle>@Title</PageTitle>
+
+<MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
+<MudText Typo="Typo.h4" Class="mb-2">@Title</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@L["Auth.Sessions.Description"]</MudText>
+
+@* The load failure is rendered inline rather than as a snackbar: an empty table and a failed load
+   look identical once a toast expires, and this one has a retry. *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+
+@if (IsLoading)
+{
+    <PageLoadingState Label="@L["Auth.Sessions.Loading"]" />
+}
+else if (_loadResult is { IsFailure: true })
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="LoadSessionsAsync">
+        @L["Auth.Sessions.Retry"]
+    </MudButton>
+}
+else if (_sessions.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Devices" Message="@L["Auth.Sessions.Empty"]" />
+}
+else
+{
+    <MudTable Items="_sessions" T="RefreshSessionSummaryResponse" Hover="true" Elevation="1"
+              Breakpoint="Breakpoint.Sm" Class="mb-4">
+        <HeaderContent>
+            <MudTh>@L["Auth.Sessions.Column.Device"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.IpAddress"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.SignedIn"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.Expires"]</MudTh>
+            <MudTh>@L["Auth.Sessions.Column.Actions"]</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.Device"]">
+                @DescribeDevice(context)
+                @if (context.IsCurrent)
+                {
+                    @* Text variant, not a colour-only marker: the badge has to read as "this device"
+                       without relying on colour (WCAG 1.4.1). *@
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text"
+                             Class="ml-2 mmca-current-device">@L["Auth.Sessions.CurrentDevice"]</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.IpAddress"]">
+                @(string.IsNullOrWhiteSpace(context.IpAddress) ? L["Auth.Sessions.IpUnknown"].Value : context.IpAddress)
+            </MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.SignedIn"]">@FormatInstant(context.CreatedAt)</MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.Expires"]">@FormatInstant(context.ExpiresAt)</MudTd>
+            <MudTd DataLabel="@L["Auth.Sessions.Column.Actions"]">
+                @if (context.IsCurrent)
+                {
+                    @* No per-row revoke for the device you are using: killing this session would
+                       leave the page signed in until the access token expired, which reads as a
+                       broken sign-out. The whole-account button below does it properly, ending
+                       with the local sign-out this page cannot do from a row. *@
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@L["Auth.Sessions.CurrentDeviceHint"]</MudText>
+                }
+                else
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.Logout"
+                               Disabled="@IsBusy"
+                               OnClick="@(() => RevokeSessionAsync(context))"
+                               aria-label="@L["Auth.Sessions.Revoke.Aria", DescribeDevice(context)]">
+                        @if (_revokingSessionId == context.SessionId)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        @L["Auth.Sessions.Revoke"]
+                    </MudButton>
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Error"
+               StartIcon="@Icons.Material.Filled.PowerSettingsNew"
+               Disabled="@IsBusy"
+               OnClick="RevokeAllAsync"
+               aria-label="@L["Auth.Sessions.RevokeAll.Aria"]">
+        @if (IsRevokingAll)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+        }
+        @L["Auth.Sessions.RevokeAll"]
+    </MudButton>
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-2">
+        @L["Auth.Sessions.RevokeAll.Hint"]
+    </MudText>
+}
