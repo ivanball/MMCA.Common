@@ -13,6 +13,9 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.Auth;
 /// </summary>
 public sealed class RefreshSessionModelBuilderExtensionsTests
 {
+    /// <summary>A schema other than the default, to prove the parameter reaches the mapping.</summary>
+    private const string CustomSchema = "identity";
+
     [Fact]
     public void ApplyRefreshSessionConfiguration_MapsTheTableKeyedOnItsId()
     {
@@ -92,16 +95,22 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
     [Fact]
     public void ApplyRefreshSessionConfiguration_HonorsACustomSchema()
     {
-        using var context = new RefreshSessionOnlyContext("identity");
+        using var context = new CustomSchemaContext();
 
-        context.Model.FindEntityType(typeof(RefreshSession))!.GetSchema().Should().Be("identity");
+        context.Model.FindEntityType(typeof(RefreshSession))!.GetSchema().Should().Be(CustomSchema);
     }
 
     /// <summary>
-    /// A bare context that maps nothing but the session table, so the assertions above see exactly
-    /// what the extension configures. Never connects: model building needs no server.
+    /// A bare context that maps nothing but the session table, so the assertions see exactly what the
+    /// extension configures. Never connects: model building needs no server.
     /// </summary>
-    private sealed class RefreshSessionOnlyContext(string? schema = "dbo") : DbContext
+    /// <remarks>
+    /// The schema is baked into the TYPE rather than passed in, and each schema gets its own type,
+    /// because EF caches a built model per context type for the life of the process: one type taking
+    /// a schema argument would hand every case whichever model was built first, so the custom-schema
+    /// assertion would pass or fail by test order (it did, on CI, where the order differs).
+    /// </remarks>
+    private abstract class SessionOnlyContextBase(string? schema) : DbContext
     {
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
             optionsBuilder.UseSqlServer("Server=(local);Database=model-only;Trusted_Connection=True;");
@@ -109,4 +118,8 @@ public sealed class RefreshSessionModelBuilderExtensionsTests
         protected override void OnModelCreating(ModelBuilder modelBuilder) =>
             modelBuilder.ApplyRefreshSessionConfiguration(schema);
     }
+
+    private sealed class RefreshSessionOnlyContext() : SessionOnlyContextBase("dbo");
+
+    private sealed class CustomSchemaContext() : SessionOnlyContextBase(CustomSchema);
 }

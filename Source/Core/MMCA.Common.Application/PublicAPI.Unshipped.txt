@@ -45,6 +45,8 @@ MMCA.Common.Application.Auth.PasswordResetSettings.TokenLifetimeMinutes.init -> 
 MMCA.Common.Application.Auth.RefreshSessionSettings
 MMCA.Common.Application.Auth.RefreshSessionSettings.DataSourceName.get -> string!
 MMCA.Common.Application.Auth.RefreshSessionSettings.DataSourceName.init -> void
+MMCA.Common.Application.Auth.RefreshSessionSettings.Enabled.get -> bool
+MMCA.Common.Application.Auth.RefreshSessionSettings.Enabled.init -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.get -> int
 MMCA.Common.Application.Auth.RefreshSessionSettings.MaxActiveSessionsPerUser.init -> void
 MMCA.Common.Application.Auth.RefreshSessionSettings.RefreshSessionSettings() -> void

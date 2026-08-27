@@ -79,6 +79,7 @@ public static partial class ArchitectureRules
             "an error code is the module's public vocabulary, so one code must mean one thing across "
                 + "the repo. Rename the collision, or add the code to the allowed shared codes when "
                 + "the sharing is deliberate",
+            "the code argument is not a literal",
             unverifiable));
     }
 
@@ -120,6 +121,7 @@ public static partial class ArchitectureRules
         ArchitectureAssert.NoViolations(violations, WithUnverifiable(
             "an error code must be prefixed with the module that owns it, so the code alone says "
                 + "where it came from and two modules cannot collide by accident",
+            "the code argument is not a literal",
             unverifiable));
     }
 
@@ -142,12 +144,15 @@ public static partial class ArchitectureRules
     private static List<string> DistinctOwners(IEnumerable<(string Code, string Owner)> group) =>
         [.. group.Select(site => site.Owner).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
 
-    /// <summary>Appends the UNVERIFIABLE construction sites to a rule's failure reason.</summary>
-    private static string WithUnverifiable(string reason, List<string> unverifiable) =>
+    /// <summary>
+    /// Appends the sites a rule could not judge statically to its failure reason. Shared by every
+    /// IL-reading rule that has a blind spot worth naming instead of silently passing.
+    /// </summary>
+    private static string WithUnverifiable(string reason, string explanation, List<string> unverifiable) =>
         unverifiable.Count == 0
             ? reason
-            : $"{reason}.{Environment.NewLine}UNVERIFIABLE (the code argument is not a literal, so it "
-                + $"was neither passed nor failed):{Environment.NewLine}{string.Join(Environment.NewLine, unverifiable)}";
+            : $"{reason}.{Environment.NewLine}UNVERIFIABLE ({explanation}, so these were neither "
+                + $"passed nor failed):{Environment.NewLine}{string.Join(Environment.NewLine, unverifiable)}";
 
     /// <summary>
     /// Every literal error code constructed in the repo's module Domain and Application assemblies,
