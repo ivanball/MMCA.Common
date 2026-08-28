@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -84,7 +84,7 @@ public sealed partial class ScheduledJobRunner(
 
         try
         {
-            await _timeProvider.Delay(StartupDelay, stoppingToken).ConfigureAwait(false);
+            await Task.Delay(StartupDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -117,7 +117,7 @@ public sealed partial class ScheduledJobRunner(
 
             try
             {
-                await _timeProvider.Delay(wait, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(wait, _timeProvider, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

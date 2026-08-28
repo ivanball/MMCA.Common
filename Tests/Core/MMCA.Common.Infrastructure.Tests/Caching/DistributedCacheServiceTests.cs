@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
@@ -290,7 +290,7 @@ public class DistributedCacheServiceTests
                 It.IsAny<long>(),
                 It.IsAny<int>(),
                 It.IsAny<CommandFlags>()))
-            .Throws(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "node unreachable"));
+            .Throws(new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "node unreachable", innerException: null, CommandStatus.Unknown));
 
         // Broken first, so a fault that aborted the loop would take the healthy server with it.
         connectionMock.Setup(c => c.GetServers()).Returns([broken.Object, healthy.Object]);
@@ -319,8 +319,12 @@ public class DistributedCacheServiceTests
         connectionMock.Setup(c => c.GetServers()).Returns([failing.Object, healthy.Object]);
         connectionMock.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(dbMock.Object);
         dbMock.Setup(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>())).ReturnsAsync(true);
+        // SER007: RedisErrorKind is marked experimental by StackExchange.Redis 3.x, but the only
+        // non-obsolete RedisServerException constructor takes it. Scoped to this test double.
+#pragma warning disable SER007
         dbMock.Setup(d => d.KeyDeleteAsync(It.Is<RedisKey>(k => k == (RedisKey)"prefix:bad1"), It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisServerException("CROSSSLOT Keys in request don't hash to the same slot"));
+            .ThrowsAsync(new RedisServerException(RedisErrorKind.CrossSlot, CommandFlags.None, "CROSSSLOT Keys in request don't hash to the same slot"));
+#pragma warning restore SER007
 
         var logger = new WarningCountingLogger();
         var sut = new DistributedCacheService(new Mock<IDistributedCache>().Object, logger, connectionMock.Object);

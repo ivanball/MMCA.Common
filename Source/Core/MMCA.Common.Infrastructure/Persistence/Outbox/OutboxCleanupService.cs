@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -72,7 +72,7 @@ public sealed partial class OutboxCleanupService(
         {
             try
             {
-                await _timeProvider.Delay(interval, stoppingToken).ConfigureAwait(false);
+                await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
                 await PurgeAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
