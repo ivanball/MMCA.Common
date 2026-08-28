@@ -60,6 +60,10 @@
 
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
     <PackageReference Include="Xamarin.AndroidX.Biometric" />
+    <!-- FCM registration token for native push (ADR-044): Android-only; iOS registers with APNs
+         through the OS and needs no SDK. Firebase is initialized from configuration, so no
+         google-services.json build item is required in this package or in the consuming head. -->
+    <PackageReference Include="Xamarin.Firebase.Messaging" />
   </ItemGroup>
 
   <ItemGroup>

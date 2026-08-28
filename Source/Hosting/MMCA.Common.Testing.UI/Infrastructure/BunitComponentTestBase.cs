@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using MMCA.Common.UI.Services;
+using Moq;
 using MudBlazor;
 using MudBlazor.Services;
 
@@ -50,6 +53,53 @@ public abstract class BunitComponentTestBase : BunitContext
         // resources in the component's own assembly) without per-test setup.
         Services.AddLogging();
         Services.AddLocalization();
+    }
+
+    /// <summary>
+    /// Wires the services a <c>DataGridListPageBase</c> page needs in bUnit and puts the renderer into
+    /// the mode the page's load path branches on. Call it LAST in a test class constructor, after every
+    /// <c>Services.Add*</c> call the test makes (its own and the base's).
+    /// <para>
+    /// The ordering is load-bearing, which is the whole reason this exists as one helper:
+    /// <c>SetRendererInfo</c> builds and FREEZES the bUnit service provider, so any registration made
+    /// after it is silently ignored, and the page then resolves the framework default instead of the
+    /// test's double. Fifteen call sites across the MMCA repos hand-rolled this block and each one had
+    /// to remember that rule.
+    /// </para>
+    /// <para>
+    /// <paramref name="stubViewport"/> substitutes MudBlazor's <see cref="IBrowserViewportService"/>
+    /// with an inert double so <c>IsMobile</c> stays deterministically false: in bUnit no browser
+    /// answers the breakpoint subscription, so the real service would leave the card/grid choice up to
+    /// timing. Pass false to exercise the real one. Registered with a plain Add (not TryAdd) on
+    /// purpose: <c>AddMudServices</c> already registered the real implementation, and last
+    /// registration wins.
+    /// </para>
+    /// </summary>
+    /// <param name="isInteractive">
+    /// Whether the renderer reports as interactive. True is the usual choice: list pages bound their
+    /// SSR prerender fetches on <c>RendererInfo.IsInteractive</c>, so a non-interactive renderer means
+    /// no data ever loads. Pass false to assert the prerender branch.
+    /// </param>
+    /// <param name="rendererName">The renderer name bUnit reports, matching the host under test.</param>
+    /// <param name="stubViewport">Whether to substitute an inert <see cref="IBrowserViewportService"/>.</param>
+    protected void ConfigureDataGridListPageHost(
+        bool isInteractive = true,
+        string rendererName = "Server",
+        bool stubViewport = true)
+    {
+        Services.TryAddScoped<ListPageStateService>();
+        Services.TryAddScoped<ListPageQueryStateService>();
+
+        if (stubViewport)
+        {
+            Services.AddSingleton(Mock.Of<IBrowserViewportService>());
+        }
+
+        // The list-page base persists its grid state across the prerender/interactive boundary.
+        AddBunitPersistentComponentState();
+
+        // MUST be last: this freezes the service provider.
+        SetRendererInfo(new RendererInfo(rendererName, isInteractive));
     }
 
     /// <summary>Sets the principal the injected <see cref="AuthenticationStateProvider"/> returns (and notifies listeners) without re-rendering a new root — useful for mid-test auth changes.</summary>

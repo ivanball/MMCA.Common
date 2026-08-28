@@ -7,6 +7,9 @@ MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter
 MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter.ConfigureClusterAsync(Yarp.ReverseProxy.Configuration.ClusterConfig! cluster, System.Threading.CancellationToken cancel) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Configuration.ClusterConfig!>
 MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter.ConfigureRouteAsync(Yarp.ReverseProxy.Configuration.RouteConfig! route, Yarp.ReverseProxy.Configuration.ClusterConfig? cluster, System.Threading.CancellationToken cancel) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Configuration.RouteConfig!>
 MMCA.Common.Gateway.Configuration.GatewayHealthCheckDefaultsConfigFilter.GatewayHealthCheckDefaultsConfigFilter(Microsoft.Extensions.Options.IOptions<MMCA.Common.Gateway.GatewaySettings!>! options) -> void
+MMCA.Common.Gateway.ForwardedHeadersExtensions
+MMCA.Common.Gateway.ForwardedHeadersExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+MMCA.Common.Gateway.ForwardedHeadersExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseCommonForwardedHeaders() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults
 MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Enabled.get -> bool
 MMCA.Common.Gateway.GatewayActiveHealthCheckDefaults.Enabled.init -> void
@@ -93,6 +96,8 @@ MMCA.Common.Gateway.Transforms.GatewayTraceHeaderTransformProvider.ValidateRoute
 const MMCA.Common.Gateway.GatewaySettings.SectionName = "MmcaGateway" -> string!
 const MMCA.Common.Gateway.GatewayTraceHeaderSettings.DefaultClusterHeaderName = "X-MMCA-Cluster" -> string!
 const MMCA.Common.Gateway.GatewayTraceHeaderSettings.DefaultRouteHeaderName = "X-MMCA-Route" -> string!
+static MMCA.Common.Gateway.ForwardedHeadersExtensions.CreateForwardedHeadersOptions() -> Microsoft.AspNetCore.Builder.ForwardedHeadersOptions!
+static MMCA.Common.Gateway.ForwardedHeadersExtensions.UseCommonForwardedHeaders(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.Gateway.GatewayReverseProxyExtensions.AddMmcaGateway(this Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder! builder, MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
 static MMCA.Common.Gateway.GatewayReverseProxyExtensions.AddMmcaGateway(this Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder! builder, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IReverseProxyBuilder!
 static MMCA.Common.Gateway.RateLimiting.GatewayRoutePolicyExtensions.AddGatewayRoutePolicies(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, MMCA.Common.Gateway.GatewaySettings! settings) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -1,1 +1,7 @@
 #nullable enable
+MMCA.Common.Testing.UI.BunitComponentTestBase.ConfigureDataGridListPageHost(bool isInteractive = true, string! rendererName = "Server", bool stubViewport = true) -> void
+MMCA.Common.Testing.UI.ErrorSummaryExtensions
+MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!)
+MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ErrorSummaryMessages() -> System.Collections.Generic.IReadOnlyList<string!>!
+const MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryTitleClass = "mmca-error-summary-title" -> string!
+static MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryMessages<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut) -> System.Collections.Generic.IReadOnlyList<string!>!

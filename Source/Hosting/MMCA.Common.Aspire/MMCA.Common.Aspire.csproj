@@ -47,6 +47,13 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <!-- Host logging bootstrap (Logging/SerilogHostExtensions.AddCommonSerilog). Serilog lands on
+         this package rather than MMCA.Common.API because the bootstrap runs on the
+         WebApplicationBuilder immediately before AddServiceDefaults, alongside the other host-wiring
+         extensions here, and it needs no Application/Infrastructure type. -->
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
   <ItemGroup>
     <!-- Shared holds HttpResilienceDefaults — the single source of truth for the resilience

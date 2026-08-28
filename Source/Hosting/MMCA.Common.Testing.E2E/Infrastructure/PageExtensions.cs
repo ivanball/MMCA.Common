@@ -18,6 +18,12 @@ namespace MMCA.Common.Testing.E2E.Infrastructure;
     Justification = "False positive: with multiple extension(T) blocks in one static class, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
 public static class PageExtensions
 {
+    /// <summary>
+    /// The data-row selector of a MudDataGrid rendered in its table (non-card) layout. The default for
+    /// the list-page helpers here; a page with its own grid markup passes its own.
+    /// </summary>
+    public const string MudDataGridRowSelector = ".mud-table-body .mud-table-row";
+
     extension(IPage page)
     {
         /// <summary>
@@ -146,6 +152,99 @@ public static class PageExtensions
             // Wait for Blazor render cycle — covers both full-page and enhanced navigation.
             await page.EvaluateAsync(
                 "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))").ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Types <paramref name="text"/> into a list page's search field and waits for the debounced
+        /// server filter to surface a matching grid row. The single search helper shared by every
+        /// consumer list-page object; it replaces the per-page copies, one of which slept a fixed
+        /// 1.5 seconds and hoped.
+        /// </summary>
+        /// <remarks>
+        /// Three things make this reliable where the hand-rolled versions were not.
+        /// <list type="number">
+        /// <item><description>It waits for the grid's own loading indicator to clear rather than for a
+        /// row to exist. Filling the field while the first ServerData page is still arriving loses the
+        /// term to the re-render, but preconditioning on a ROW hangs on a list that is legitimately
+        /// empty (and on a filtered list whose default filter excludes the fixture's own
+        /// data).</description></item>
+        /// <item><description>It fills through <see cref="FillAndVerifyAsync"/>, which re-types when a
+        /// re-render wipes the value, so a grid that re-renders mid-fill cannot silently swallow the
+        /// search term.</description></item>
+        /// <item><description>It waits for the EFFECT (the matching row) instead of sleeping a fixed
+        /// interval: web-first, so it is both faster on a quick host and correct on a slow one.</description></item>
+        /// </list>
+        /// </remarks>
+        /// <param name="searchField">The list page's search input.</param>
+        /// <param name="text">The term to search for, which must also appear in the expected row.</param>
+        /// <param name="rowSelector">The grid's data-row selector.</param>
+        /// <param name="timeout">Per-step budget in milliseconds.</param>
+        public async Task SearchAndWaitForRowAsync(
+            ILocator searchField,
+            string text,
+            string rowSelector = MudDataGridRowSelector,
+            float timeout = 15_000)
+        {
+            ArgumentNullException.ThrowIfNull(page);
+            ArgumentNullException.ThrowIfNull(searchField);
+
+            await page.WaitForGridToSettleAsync(timeout).ConfigureAwait(false);
+            await searchField.FillAndVerifyAsync(text).ConfigureAwait(false);
+
+            await page.Locator(rowSelector).Filter(new() { HasText = text }).First
+                .WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout }).ConfigureAwait(false);
+
+            await page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Clicks a delete affordance, confirms the dialog it opens, and waits for the resulting grid
+        /// reload to settle. Targets the confirmation button by TEST ID rather than by a MudBlazor
+        /// class: <c>.mud-message-box .mud-button-filled</c> matches whichever filled button the
+        /// message box renders first, which silently changed meaning when a dialog gained a second
+        /// filled action.
+        /// </summary>
+        /// <remarks>
+        /// The settle at the end is the part that is easy to leave out and expensive to debug: a
+        /// MudDataGrid reloads its page asynchronously after a delete, and an assertion issued against
+        /// the pre-reload DOM still sees the deleted row.
+        /// </remarks>
+        /// <param name="deleteButton">The row's (or detail page's) delete button.</param>
+        /// <param name="confirmTestId">The <c>data-testid</c> of the confirm button inside the dialog.</param>
+        /// <param name="timeout">Per-step budget in milliseconds.</param>
+        public async Task ConfirmDeleteAsync(
+            ILocator deleteButton,
+            string confirmTestId = "confirm-delete",
+            float timeout = 10_000)
+        {
+            ArgumentNullException.ThrowIfNull(page);
+            ArgumentNullException.ThrowIfNull(deleteButton);
+
+            await deleteButton
+                .WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout }).ConfigureAwait(false);
+            await deleteButton.ClickAsync().ConfigureAwait(false);
+
+            var confirmButton = page.GetByTestId(confirmTestId);
+            await confirmButton
+                .WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout }).ConfigureAwait(false);
+            await confirmButton.ClickAsync().ConfigureAwait(false);
+
+            await page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+            await page.WaitForGridToSettleAsync(timeout).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Waits for a MudDataGrid page's async load to finish, WITHOUT requiring the grid to have
+        /// produced any rows. Deliberately not a wait for a row: an empty result set is a legitimate
+        /// state, and a helper that preconditions on rows turns it into a timeout.
+        /// </summary>
+        /// <param name="timeout">Budget in milliseconds.</param>
+        public async Task WaitForGridToSettleAsync(float timeout = 15_000)
+        {
+            ArgumentNullException.ThrowIfNull(page);
+
+            await Assertions.Expect(page.Locator("[role='progressbar']"))
+                .ToHaveCountAsync(0, new() { Timeout = timeout }).ConfigureAwait(false);
         }
 
         /// <summary>

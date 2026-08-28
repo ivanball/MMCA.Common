@@ -314,6 +314,185 @@ public sealed class CommonValidationRulesTests
 
         result.ShouldNotHaveValidationErrorFor(x => x.Name);
     }
+
+    // ── Optional errorCode: omitted leaves the existing behaviour untouched ──
+    [Fact]
+    public void RequiredStringRules_WhenErrorCodeOmitted_UsesFluentValidationDefaultCode()
+    {
+        var validator = new RequiredStringRules<TestStringModel>(x => x.Name, "Name", 50);
+        var model = new TestStringModel { Name = string.Empty };
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Name)
+            .WithErrorCode("NotEmptyValidator");
+    }
+
+    [Fact]
+    public void RequiredStringRules_WhenErrorCodeSupplied_AppliesItToTheNotEmptyRule()
+    {
+        var validator = new RequiredStringRules<TestStringModel>(x => x.Name, "Name", 50, "Question.QuestionText.Required");
+        var model = new TestStringModel { Name = string.Empty };
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Name)
+            .WithErrorCode("Question.QuestionText.Required")
+            .WithErrorMessage("You must enter a Name");
+    }
+
+    [Fact]
+    public void RequiredStringRules_WhenErrorCodeSupplied_AppliesItToTheMaxLengthRuleToo()
+    {
+        var validator = new RequiredStringRules<TestStringModel>(x => x.Name, "Name", 5, "Question.QuestionText.Invalid");
+        var model = new TestStringModel { Name = "123456" };
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Name)
+            .WithErrorCode("Question.QuestionText.Invalid");
+    }
+
+    [Fact]
+    public void OptionalStringRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new OptionalStringRules<TestOptionalStringModel>(x => x.Description, "Description", 5, "Activity.VenueUrl.MaxLength");
+        var model = new TestOptionalStringModel { Description = "123456" };
+
+        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Description)
+            .WithErrorCode("Activity.VenueUrl.MaxLength");
+    }
+
+    [Fact]
+    public void EmailRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new EmailRules<TestStringModel>(x => x.Name, "Email", 100, "User.Email.Invalid");
+        var model = new TestStringModel { Name = "not-an-email" };
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Name)
+            .WithErrorCode("User.Email.Invalid");
+    }
+
+    [Fact]
+    public void PositiveIntRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new PositiveIntRules<TestIntModel>(x => x.Quantity, "Sponsor ID", "CheckIn.SponsorId.Required");
+        var model = new TestIntModel { Quantity = 0 };
+
+        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Quantity)
+            .WithErrorCode("CheckIn.SponsorId.Required")
+            .WithErrorMessage("Sponsor ID must be a positive value");
+    }
+
+    [Fact]
+    public void PositiveDecimalRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new PositiveDecimalRules<TestDecimalModel>(x => x.Price, "Price", "Product.Price.NotPositive");
+        var model = new TestDecimalModel { Price = 0m };
+
+        TestValidationResult<TestDecimalModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Price)
+            .WithErrorCode("Product.Price.NotPositive");
+    }
+
+    [Fact]
+    public void NonNegativeIntRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new NonNegativeIntRules<TestIntModel>(x => x.Quantity, "Sort Order", "Activity.SortOrder.Negative");
+        var model = new TestIntModel { Quantity = -1 };
+
+        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Quantity)
+            .WithErrorCode("Activity.SortOrder.Negative");
+    }
+
+    [Fact]
+    public void PasswordRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new PasswordRules<TestStringModel>(x => x.Name, "User.CurrentPassword.Required");
+        var model = new TestStringModel { Name = string.Empty };
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Name)
+            .WithErrorCode("User.CurrentPassword.Required");
+    }
+
+    [Fact]
+    public void StrongPasswordRules_WhenErrorCodeSupplied_AppliesItToEveryComplexityRule()
+    {
+        var validator = new StrongPasswordRules<TestStringModel>(x => x.Name, "User.NewPassword.Weak");
+        var model = new TestStringModel { Name = "nospecial1" };
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Name)
+            .WithErrorCode("User.NewPassword.Weak");
+    }
+
+    // ── AbsoluteUrlRules ──
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("https://example.com/logo.png")]
+    [InlineData("http://example.com")]
+    public void AbsoluteUrlRules_WhenAbsentOrAbsoluteHttp_NoErrors(string? url)
+    {
+        var validator = new AbsoluteUrlRules<TestOptionalStringModel>(x => x.Description, "Logo URL", 200);
+        var model = new TestOptionalStringModel { Description = url };
+
+        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.Description);
+    }
+
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html;base64,PHNjcmlwdD4=")]
+    [InlineData("/relative/path")]
+    [InlineData("example.com")]
+    public void AbsoluteUrlRules_WhenNotAbsoluteHttp_HasValidationError(string url)
+    {
+        var validator = new AbsoluteUrlRules<TestOptionalStringModel>(x => x.Description, "Logo URL", 200);
+        var model = new TestOptionalStringModel { Description = url };
+
+        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Description)
+            .WithErrorMessage("Logo URL must be an absolute http or https URL");
+    }
+
+    [Fact]
+    public void AbsoluteUrlRules_WhenTooLong_HasValidationError()
+    {
+        var validator = new AbsoluteUrlRules<TestOptionalStringModel>(x => x.Description, "Logo URL", 20);
+        var model = new TestOptionalStringModel { Description = "https://example.com/a-very-long-path/logo.png" };
+
+        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Description)
+            .WithErrorMessage("Logo URL cannot be longer than 20 characters");
+    }
+
+    [Fact]
+    public void AbsoluteUrlRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new AbsoluteUrlRules<TestOptionalStringModel>(x => x.Description, "Logo URL", 200, "Sponsor.LogoUrl.Invalid");
+        var model = new TestOptionalStringModel { Description = "javascript:alert(1)" };
+
+        TestValidationResult<TestOptionalStringModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Description)
+            .WithErrorCode("Sponsor.LogoUrl.Invalid");
+    }
 }
 
 // ── Test models ──

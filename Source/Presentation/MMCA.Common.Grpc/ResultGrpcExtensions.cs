@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Grpc.Core;
 using MMCA.Common.Grpc.Exceptions;
 using MMCA.Common.Shared.Abstractions;
@@ -141,4 +142,149 @@ public static class ResultGrpcExtensions
             return new RpcException(new Status(statusCode, detail), trailers);
         }
     }
+
+    extension(Metadata? trailers)
+    {
+        /// <summary>
+        /// Reconstructs the <see cref="Error"/> list from the <c>error-{i}-*</c> trailers written by
+        /// <see cref="ToRpcException"/>, the exact inverse of the encoder. Index-based iteration
+        /// starts at zero and stops at the first missing <c>error-{i}-code</c>, matching the
+        /// contiguous layout the encoder writes.
+        /// <para>
+        /// A missing <c>error-{i}-message</c> decodes as the empty string and a missing
+        /// <c>error-{i}-source</c>/<c>error-{i}-target</c> as <see langword="null"/>, mirroring the
+        /// encoder's decision to omit an empty source or target entirely. An unrecognized
+        /// <c>error-{i}-type</c> falls back to <see cref="ErrorType.Failure"/> rather than throwing,
+        /// so a newer peer that adds an error type cannot break an older client.
+        /// </para>
+        /// </summary>
+        /// <returns>
+        /// The decoded errors, empty when the trailers carry no structured failure (a pure
+        /// transport fault such as a reset connection or an exceeded deadline).
+        /// </returns>
+        public IReadOnlyList<Error> ToErrors()
+        {
+            if (trailers is null || trailers.Count == 0)
+            {
+                return [];
+            }
+
+            var errors = new List<Error>();
+            var index = 0;
+            while (true)
+            {
+                var indexText = index.ToString(CultureInfo.InvariantCulture);
+                var code = trailers.GetValue($"error-{indexText}-code");
+                if (code is null)
+                {
+                    break;
+                }
+
+                var message = trailers.GetValue($"error-{indexText}-message") ?? string.Empty;
+                var typeText = trailers.GetValue($"error-{indexText}-type");
+                var source = trailers.GetValue($"error-{indexText}-source");
+                var target = trailers.GetValue($"error-{indexText}-target");
+
+                errors.Add(BuildError(ParseErrorType(typeText), code, message, source, target));
+                index++;
+            }
+
+            return errors;
+        }
+    }
+
+    extension(RpcException exception)
+    {
+        /// <summary>
+        /// Converts a caught <see cref="RpcException"/> back into a failed <see cref="Result"/>,
+        /// closing the round trip opened by <see cref="ToRpcException"/>. The structured
+        /// <c>error-{i}-*</c> trailers win when present; a transport-level fault that carries none
+        /// degrades to a single <see cref="ErrorType.Failure"/> error coded
+        /// <c>Grpc.{StatusCode}</c> carrying the RPC detail.
+        /// </summary>
+        /// <param name="source">
+        /// Origin context stamped on the synthesized transport error. Defaults to the calling
+        /// member's name.
+        /// </param>
+        /// <returns>A failed <see cref="Result"/>; never a success.</returns>
+        public Result ToResult([CallerMemberName] string source = "")
+        {
+            ArgumentNullException.ThrowIfNull(exception);
+
+            var errors = exception.Trailers.ToErrors();
+
+            return errors.Count > 0
+                ? Result.Failure(errors)
+                : Result.Failure(TransportError(exception, source));
+        }
+
+        /// <summary>
+        /// Converts a caught <see cref="RpcException"/> back into a failed <see cref="Result{T}"/>,
+        /// closing the round trip opened by <see cref="ToRpcException"/>. The structured
+        /// <c>error-{i}-*</c> trailers win when present; a transport-level fault that carries none
+        /// degrades to a single <see cref="ErrorType.Failure"/> error coded
+        /// <c>Grpc.{StatusCode}</c> carrying the RPC detail.
+        /// </summary>
+        /// <typeparam name="T">The value type the failed result stands in for.</typeparam>
+        /// <param name="source">
+        /// Origin context stamped on the synthesized transport error. Defaults to the calling
+        /// member's name.
+        /// </param>
+        /// <returns>A failed <see cref="Result{T}"/>; never a success.</returns>
+        public Result<T> ToResult<T>([CallerMemberName] string source = "")
+        {
+            ArgumentNullException.ThrowIfNull(exception);
+
+            var errors = exception.Trailers.ToErrors();
+
+            return errors.Count > 0
+                ? Result.Failure<T>(errors)
+                : Result.Failure<T>(TransportError(exception, source));
+        }
+    }
+
+    /// <summary>
+    /// The <see cref="Error"/> factory per <see cref="ErrorType"/>. A lookup table rather than a
+    /// switch so adding an error type stays a one-line entry instead of pushing the decoder past
+    /// the cyclomatic-complexity ceiling.
+    /// </summary>
+    private static readonly FrozenDictionary<ErrorType, Func<string, string, string?, string?, Error>> ErrorFactories =
+        new Dictionary<ErrorType, Func<string, string, string?, string?, Error>>
+        {
+            [ErrorType.Validation] = Error.Validation,
+            [ErrorType.Invariant] = Error.Invariant,
+            [ErrorType.NotFound] = Error.NotFoundError,
+            [ErrorType.Conflict] = Error.Conflict,
+            [ErrorType.Unauthorized] = Error.Unauthorized,
+            [ErrorType.Forbidden] = Error.Forbidden,
+            [ErrorType.UnprocessableEntity] = Error.UnprocessableEntity,
+            [ErrorType.Failure] = Error.Failure,
+            [ErrorType.Unexpected] = Error.Unexpected,
+        }.ToFrozenDictionary();
+
+    /// <summary>
+    /// Parses the <see cref="ErrorType"/> from the enum-name wire form the encoder writes,
+    /// defaulting to <see cref="ErrorType.Failure"/> on any mismatch.
+    /// </summary>
+    private static ErrorType ParseErrorType(string? typeText) =>
+        Enum.TryParse<ErrorType>(typeText, ignoreCase: false, out var errorType)
+            ? errorType
+            : ErrorType.Failure;
+
+    /// <summary>Builds an <see cref="Error"/> from the trailer fields via the factory for its type.</summary>
+    private static Error BuildError(ErrorType errorType, string code, string message, string? source, string? target) =>
+        ErrorFactories.TryGetValue(errorType, out var factory)
+            ? factory(code, message, source, target)
+            : Error.Failure(code, message, source, target);
+
+    /// <summary>
+    /// Builds the stand-in error for an <see cref="RpcException"/> that carries no structured
+    /// trailers, so a connection reset or an exceeded deadline still reaches the caller as a
+    /// <see cref="Result"/> failure rather than an exception.
+    /// </summary>
+    private static Error TransportError(RpcException exception, string source) =>
+        Error.Failure(
+            code: $"Grpc.{exception.StatusCode}",
+            message: exception.Status.Detail,
+            source: source);
 }

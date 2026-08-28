@@ -201,3 +201,82 @@ virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPage.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>?
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!>?
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.set -> void
+MMCA.Common.UI.Services.Capabilities.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddDeviceCapabilityDefaults() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddDeviceCapabilityDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Components.ApiFileDownloadButton
+MMCA.Common.UI.Components.ApiFileDownloadButton.ApiFileDownloadButton() -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.AriaLabel.get -> string?
+MMCA.Common.UI.Components.ApiFileDownloadButton.AriaLabel.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.ContentType.get -> string!
+MMCA.Common.UI.Components.ApiFileDownloadButton.ContentType.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.FailureMessage.get -> string?
+MMCA.Common.UI.Components.ApiFileDownloadButton.FailureMessage.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.FileName.get -> string!
+MMCA.Common.UI.Components.ApiFileDownloadButton.FileName.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.HttpClientName.get -> string!
+MMCA.Common.UI.Components.ApiFileDownloadButton.HttpClientName.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.Icon.get -> string!
+MMCA.Common.UI.Components.ApiFileDownloadButton.Icon.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.RelativeApiPath.get -> string!
+MMCA.Common.UI.Components.ApiFileDownloadButton.RelativeApiPath.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.ShareTitle.get -> string!
+MMCA.Common.UI.Components.ApiFileDownloadButton.ShareTitle.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.Size.get -> MudBlazor.Size
+MMCA.Common.UI.Components.ApiFileDownloadButton.Size.set -> void
+MMCA.Common.UI.Components.ApiFileDownloadButton.UnavailableMessage.get -> string?
+MMCA.Common.UI.Components.ApiFileDownloadButton.UnavailableMessage.set -> void
+MMCA.Common.UI.Components.InfiniteScrollSentinel
+MMCA.Common.UI.Components.InfiniteScrollSentinel.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Components.InfiniteScrollSentinel.InfiniteScrollSentinel() -> void
+MMCA.Common.UI.Components.InfiniteScrollSentinel.IsLoading.get -> bool
+MMCA.Common.UI.Components.InfiniteScrollSentinel.IsLoading.set -> void
+MMCA.Common.UI.Components.InfiniteScrollSentinel.LoadingLabel.get -> string?
+MMCA.Common.UI.Components.InfiniteScrollSentinel.LoadingLabel.set -> void
+MMCA.Common.UI.Components.InfiniteScrollSentinel.OnSentinelVisible() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Components.InfiniteScrollSentinel.OnVisible.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.InfiniteScrollSentinel.OnVisible.set -> void
+MMCA.Common.UI.Components.ListNoRecordsContent
+MMCA.Common.UI.Components.ListNoRecordsContent.EmptyIcon.get -> string?
+MMCA.Common.UI.Components.ListNoRecordsContent.EmptyIcon.set -> void
+MMCA.Common.UI.Components.ListNoRecordsContent.EmptyMessage.get -> string?
+MMCA.Common.UI.Components.ListNoRecordsContent.EmptyMessage.set -> void
+MMCA.Common.UI.Components.ListNoRecordsContent.ListNoRecordsContent() -> void
+MMCA.Common.UI.Components.ListNoRecordsContent.LoadFailed.get -> bool
+MMCA.Common.UI.Components.ListNoRecordsContent.LoadFailed.set -> void
+MMCA.Common.UI.Components.ListNoRecordsContent.OnRetry.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.ListNoRecordsContent.OnRetry.set -> void
+MMCA.Common.UI.Components.QrCodeButton
+MMCA.Common.UI.Components.QrCodeButton.ErrorCorrection.get -> MMCA.Common.UI.Components.QrErrorCorrectionLevel
+MMCA.Common.UI.Components.QrCodeButton.ErrorCorrection.set -> void
+MMCA.Common.UI.Components.QrCodeButton.PixelsPerModule.get -> int
+MMCA.Common.UI.Components.QrCodeButton.PixelsPerModule.set -> void
+MMCA.Common.UI.Components.QrCodeButton.QrCodeButton() -> void
+MMCA.Common.UI.Components.QrCodeButton.QrTitle.get -> string!
+MMCA.Common.UI.Components.QrCodeButton.QrTitle.set -> void
+MMCA.Common.UI.Components.QrCodeButton.RelativePath.get -> string!
+MMCA.Common.UI.Components.QrCodeButton.RelativePath.set -> void
+MMCA.Common.UI.Components.SharePageButton
+MMCA.Common.UI.Components.SharePageButton.RelativePath.get -> string!
+MMCA.Common.UI.Components.SharePageButton.RelativePath.set -> void
+MMCA.Common.UI.Components.SharePageButton.SharePageButton() -> void
+MMCA.Common.UI.Components.SharePageButton.ShareTitle.get -> string!
+MMCA.Common.UI.Components.SharePageButton.ShareTitle.set -> void
+MMCA.Common.UI.Pages.Common.ListPageActions
+MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>
+MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.CanServe(int page) -> bool
+MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.OfflineFirstPageSnapshot(MMCA.Common.UI.Services.Capabilities.ILocalCacheStore! store, MMCA.Common.UI.Services.Capabilities.IConnectivityStatusService! connectivity, string! cacheKey) -> void
+MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.RememberAsync((System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems) fetched, int page, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.TryReadAsync(int page, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)?>!
+MMCA.Common.UI.Services.IPublicLinkBuilder
+MMCA.Common.UI.Services.IPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
+MMCA.Common.UI.Services.NavigationPublicLinkBuilder
+MMCA.Common.UI.Services.NavigationPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
+MMCA.Common.UI.Services.NavigationPublicLinkBuilder.NavigationPublicLinkBuilder(Microsoft.AspNetCore.Components.NavigationManager! navigationManager) -> void
+override MMCA.Common.UI.Components.InfiniteScrollSentinel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Pages.Common.ListPageActions.DeleteWithConfirmationAsync(MMCA.Common.UI.Components.DeleteConfirmation! deleteConfirm, string? entityName, System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! deleteAsync, MudBlazor.ISnackbar! snackbar, string! successMessage, System.Func<MMCA.Common.Shared.Abstractions.Result!, string!>! errorMessage, System.Func<System.Threading.Tasks.Task!>! reloadAsync) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Pages.Common.ListPageActions.ReloadActiveLayoutAsync<TDto>(bool isMobile, MMCA.Common.UI.Components.MobileInfiniteScrollList<TDto>? mobileList, MudBlazor.MudDataGrid<TDto>? dataGrid) -> System.Threading.Tasks.Task!
+~override MMCA.Common.UI.Components.ApiFileDownloadButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.InfiniteScrollSentinel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.ListNoRecordsContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.QrCodeButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.SharePageButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

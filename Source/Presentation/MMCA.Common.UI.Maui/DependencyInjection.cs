@@ -74,6 +74,40 @@ public static class DependencyInjection
             services.AddScoped<ITokenStorageService, MauiTokenStorageService>();
 
         /// <summary>
+        /// Registers this platform's credentialed <see cref="IPushDeviceTokenProvider"/> (ADR-044):
+        /// the FCM registration token on Android, the APNs device token on iOS/MacCatalyst. The
+        /// windows TFM registers nothing and keeps the framework's null default, so the pipeline
+        /// stays inert there.
+        /// <para>
+        /// Call it AFTER <c>AddUIShared</c>: that is where the null default is TryAdd-registered,
+        /// and a plain Add only beats it by being the last registration. Both providers are
+        /// configuration-gated (<c>Push:Fcm</c> credentials / <c>Push:Apns:Enabled</c>), so a head
+        /// with no push configuration stays inert even after calling this. The platform wiring the
+        /// providers depend on stays app-side: the Android POST_NOTIFICATIONS declaration and
+        /// credentials, and on iOS the aps-environment entitlement plus the two AppDelegate
+        /// callbacks that publish into <c>ApnsTokenBridge</c>.
+        /// </para>
+        /// </summary>
+        public IServiceCollection AddMauiPushDeviceTokenProvider()
+        {
+#if ANDROID
+            services.AddSingleton<IPushDeviceTokenProvider, FcmPushDeviceTokenProvider>();
+#elif IOS || MACCATALYST
+            services.AddSingleton<IPushDeviceTokenProvider, ApnsPushDeviceTokenProvider>();
+#endif
+            return services;
+        }
+
+        /// <summary>
+        /// Registers <see cref="MauiPublicLinkBuilder"/> as the <c>IPublicLinkBuilder</c>, so share,
+        /// copy-link and QR affordances emit the public web URL (<c>PublicSite:BaseUrl</c>) instead
+        /// of the WebView's internal origin. Call it AFTER <c>AddUIShared</c> and after any module
+        /// registration that registers a builder of its own: last registration wins.
+        /// </summary>
+        public IServiceCollection AddCommonMauiPublicLinkBuilder() =>
+            services.AddScoped<IPublicLinkBuilder, MauiPublicLinkBuilder>();
+
+        /// <summary>
         /// Registers the native <see cref="IFormFactor"/> (<see cref="MauiFormFactor"/>: DeviceInfo
         /// idiom plus platform and version). Deliberately separate from
         /// <see cref="AddMauiDeviceCapabilities"/> so heads that still register their own

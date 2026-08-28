@@ -1,1 +1,9 @@
 #nullable enable
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.Metadata?)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.Metadata?).ToErrors() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!).ToResult(string! source = "") -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!).ToResult<T>(string! source = "") -> MMCA.Common.Shared.Abstractions.Result<T>!
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToErrors(this Grpc.Core.Metadata? trailers) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToResult(this Grpc.Core.RpcException! exception, string! source = "") -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToResult<T>(this Grpc.Core.RpcException! exception, string! source = "") -> MMCA.Common.Shared.Abstractions.Result<T>!

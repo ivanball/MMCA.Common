@@ -1,0 +1,38 @@
+@inject IStringLocalizer<ListNoRecordsContent> L
+
+@* Shared NoRecordsContent body for list pages built on DataGridListPageBase: branches on the base's
+   LoadFailed flag so a failed fetch renders an inline error-with-retry instead of the
+   indistinguishable "no records" empty state. *@
+
+@if (LoadFailed)
+{
+    <div class="d-flex flex-column align-center pa-6" role="alert">
+        <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large" Color="Color.Error" Class="mb-2" />
+        <MudText Typo="Typo.subtitle1" Color="Color.Error" Class="mb-2">@L["Error.LoadFailed"]</MudText>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="OnRetry">@L["Button.Retry"]</MudButton>
+    </div>
+}
+else if (EmptyIcon is not null)
+{
+    <EmptyState Icon="@EmptyIcon" Message="@EmptyMessage" />
+}
+else
+{
+    <EmptyState Message="@EmptyMessage" />
+}
+
+@code {
+    /// <summary>Whether the most recent grid fetch failed (the page's <c>DataGridListPageBase.LoadFailed</c>).</summary>
+    [Parameter] public bool LoadFailed { get; set; }
+
+    /// <summary>Localized empty-state text shown when the list is genuinely empty.</summary>
+    [Parameter] public string? EmptyMessage { get; set; }
+
+    /// <summary>Optional empty-state icon override; when null <c>EmptyState</c> keeps its default.</summary>
+    [Parameter] public string? EmptyIcon { get; set; }
+
+    /// <summary>Retries the failed fetch (typically reloads the grid's server data).</summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+}

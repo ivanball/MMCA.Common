@@ -32,5 +32,10 @@ public abstract class BunitTestBase : BunitComponentTestBase
         // cannot register these (it deliberately does not reference MMCA.Common.UI).
         Services.AddSingleton<IExternalAuthBroker, UnavailableExternalAuthBroker>();
         Services.AddSingleton<IConnectivityStatusService, AlwaysOnlineConnectivityStatusService>();
+
+        // Shareable public links (share/copy-link/QR components). The browser-origin default, which
+        // resolves against bUnit's http://localhost/ base uri; a test that cares about the MAUI
+        // public-site behaviour substitutes its own builder.
+        Services.AddScoped<IPublicLinkBuilder, NavigationPublicLinkBuilder>();
     }
 }
