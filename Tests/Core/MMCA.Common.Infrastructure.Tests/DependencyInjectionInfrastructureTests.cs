@@ -286,4 +286,22 @@ public sealed class DependencyInjectionInfrastructureTests
         descriptor.Should().NotBeNull();
         descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
     }
+
+    [Fact]
+    public void AddInfrastructure_RegistersTheUniqueConstraintViolationDetector()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = CreateMinimalConfiguration();
+
+        services.AddInfrastructure(config);
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IUniqueConstraintViolationDetector));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.ImplementationType.Should().Be<Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetector>();
+        descriptor.Lifetime.Should().Be(
+            ServiceLifetime.Singleton,
+            "the detector holds nothing between calls and reads only the exception handed to it");
+    }
 }

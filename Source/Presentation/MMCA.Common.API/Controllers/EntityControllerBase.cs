@@ -98,6 +98,10 @@ public abstract class EntityControllerBase<
     /// <param name="includeChildren">When true, eagerly loads child collection navigation properties.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of entity DTOs.</returns>
+    /// <remarks>
+    /// The rows are scoped by <see cref="GetReadSpecificationAsync"/>, which returns
+    /// <see langword="null"/> by default and so queries unscoped exactly as this endpoint always has.
+    /// </remarks>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ProblemDetails))]
@@ -107,10 +111,12 @@ public abstract class EntityControllerBase<
         bool includeChildren = false,
         CancellationToken cancellationToken = default)
     {
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
         var result = await QueryService.GetAllAsync(
             includeFKs: includeFKs,
             includeChildren: includeChildren,
-            specification: null,
+            specification: specification,
             fields: fields,
             pageNumber: 1,
             pageSize: MaxPageSize,
@@ -127,6 +133,12 @@ public abstract class EntityControllerBase<
     /// in the <c>X-Pagination</c> response header as JSON. The requested page size is clamped to
     /// <see cref="MaxPageSize"/> to prevent excessive result sets.
     /// </summary>
+    /// <remarks>
+    /// The rows are scoped by <see cref="GetReadSpecificationAsync"/>. The specification is ANDed
+    /// with the caller's <paramref name="filters"/> by the query service rather than replacing them,
+    /// so a caller cannot widen the scope by filtering: a filter naming rows the specification
+    /// excludes yields an empty page instead of leaking them.
+    /// </remarks>
     /// <param name="includeFKs">When true, eagerly loads foreign key navigation properties.</param>
     /// <param name="includeChildren">When true, eagerly loads child collection navigation properties.</param>
     /// <param name="sortColumn">DTO property name to sort by.</param>
@@ -154,10 +166,12 @@ public abstract class EntityControllerBase<
     {
         pageSize = Math.Min(pageSize, MaxPageSize);
 
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
         var result = await QueryService.GetAllAsync(
             includeFKs: includeFKs,
             includeChildren: includeChildren,
-            specification: null,
+            specification: specification,
             filters: filters,
             sortColumn: sortColumn,
             sortDirection: sortDirection,
@@ -213,9 +227,10 @@ public abstract class EntityControllerBase<
     /// </para>
     /// <para>
     /// <b>Row scoping.</b> The rows queried here are whatever
-    /// <see cref="GetExportSpecification"/> allows. The default returns null, so an export is
-    /// unscoped unless the concrete controller says otherwise; a controller whose list endpoints
-    /// row-scope reads must override that hook.
+    /// <see cref="GetReadSpecificationAsync"/> allows, which is the same hook the list endpoints
+    /// read, so an export can no longer drift wider than the list it mirrors. The default returns
+    /// <see cref="GetExportSpecification"/>, itself null by default, so an export is unscoped unless
+    /// the concrete controller overrides one of the two.
     /// </para>
     /// </remarks>
     /// <param name="includeFKs">When true, eagerly loads foreign key navigation properties.</param>
@@ -245,7 +260,7 @@ public abstract class EntityControllerBase<
             return HandleFailure(unexportableFieldErrors);
 
         // Resolved once, so every page of the loop is filtered by the same instance.
-        var specification = GetExportSpecification();
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
 
         var maxExportRows = MaxExportRows;
         var pageSize = Math.Max(1, MaxPageSize);
@@ -345,6 +360,13 @@ public abstract class EntityControllerBase<
     /// <param name="nameProperty">The DTO property name to use as the display label in each lookup entry.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A collection of <see cref="BaseLookup{TIdentifierType}"/> entries.</returns>
+    /// <remarks>
+    /// The lookup contract takes a predicate rather than a specification, so the scope from
+    /// <see cref="GetReadSpecificationAsync"/> travels as its <c>Criteria</c> expression. A null
+    /// specification passes a null predicate, which is exactly the unscoped query this endpoint has
+    /// always issued. A dropdown that lists what the list endpoint hides would be an existence
+    /// oracle of its own, which is why this action reads the same hook as the rest.
+    /// </remarks>
     [HttpGet("lookup")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ProblemDetails))]
@@ -352,8 +374,11 @@ public abstract class EntityControllerBase<
         [Required] string nameProperty,
         CancellationToken cancellationToken = default)
     {
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
         var result = await QueryService.GetAllForLookupAsync(
             nameProperty,
+            where: specification?.Criteria,
             asTracking: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -375,6 +400,12 @@ public abstract class EntityControllerBase<
     /// <param name="fields">Comma-separated list of DTO property names for field projection.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The entity DTO if found; otherwise a 404 Problem Details response.</returns>
+    /// <remarks>
+    /// The read is scoped by <see cref="GetReadSpecificationAsync"/>, and a row the specification
+    /// excludes is a <b>404</b>, not a 403: the specification narrows the query, so the row is
+    /// simply not there to find. Answering "forbidden" would confirm that the id exists, turning a
+    /// scoped read into an existence oracle a caller could walk.
+    /// </remarks>
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
@@ -387,11 +418,13 @@ public abstract class EntityControllerBase<
         [FromQuery] string? fields = null,
         CancellationToken cancellationToken = default)
     {
+        var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
         var result = await QueryService.GetByIdAsync(
             id,
             includeFKs,
             includeChildren,
-            specification: null,
+            specification: specification,
             fields: fields,
             asTracking: false,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -420,13 +453,22 @@ public abstract class EntityControllerBase<
     /// <see cref="Concurrency.SupportsIfMatchAttribute"/>) instead of round-tripping it through the
     /// request body.
     /// </summary>
-    /// <param name="dto">The DTO just served, or null.</param>
+    /// <param name="dto">The DTO just served, or null: a typed DTO on an ordinary read, or a shaped
+    /// dictionary keyed by JSON names when the caller asked for a field projection.</param>
     /// <remarks>
+    /// <para>
     /// A DTO without a <c>RowVersion</c> gets no header: absent is the correct answer for a resource
     /// that has no version to condition on, and a fabricated tag would invite preconditions the write
     /// side cannot honour.
+    /// </para>
+    /// <para>
+    /// Protected rather than private so a derived controller that serves a row from somewhere other
+    /// than <see cref="GetByIdAsync"/> (a custom read action, a projection built by hand) can emit
+    /// the same header instead of re-implementing the reflection and the base64 format, which is
+    /// where the two drift apart and an <c>If-Match</c> precondition quietly stops working.
+    /// </para>
     /// </remarks>
-    private void SetConcurrencyETag(object? dto)
+    protected void SetConcurrencyETag(object? dto)
     {
         if (RowVersionProperty is null || dto is null)
             return;
@@ -518,25 +560,67 @@ public abstract class EntityControllerBase<
     }
 
     /// <summary>
+    /// Gets the specification every read action applies: both <see cref="GetAllAsync(string, bool, bool, CancellationToken)"/>
+    /// overloads, <see cref="GetAllForLookupAsync"/>, <see cref="GetByIdAsync"/> and
+    /// <see cref="ExportAsync"/>. Returns <see cref="GetExportSpecification"/> by default, itself
+    /// <see langword="null"/>, so a controller that overrides neither queries unscoped exactly as
+    /// these endpoints always have.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The specification the read is filtered by, or <see langword="null"/> for an unscoped read.</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>Why asynchronous.</b> Row scoping is rarely a pure function of the current principal: it
+    /// is resolved through a query handler, a claim lookup that hits a store, a tenancy read. A
+    /// synchronous hook forced every such controller to override all five actions by hand purely to
+    /// get an <c>await</c> in before the query, which is exactly the duplication (and the
+    /// export-drifts-from-the-list hazard) this hook removes. An override that has nothing to await
+    /// returns <c>ValueTask.FromResult(...)</c> and allocates nothing.
+    /// </para>
+    /// <para>
+    /// <b>How it composes.</b> The specification never replaces the caller's own filtering: the
+    /// query service ANDs it with the <c>filters</c> dictionary and the <c>fields</c> projection, so
+    /// a caller can only narrow what the specification already allows. The lookup endpoint has no
+    /// specification parameter, so it receives the same scope as the specification's <c>Criteria</c>
+    /// predicate.
+    /// </para>
+    /// <para>
+    /// <b>What a rejected row looks like.</b> A scoped <see cref="GetByIdAsync"/> that filters the
+    /// row out returns <b>404</b>, not 403: the row is absent from the query, and a "forbidden"
+    /// answer would confirm the id exists.
+    /// </para>
+    /// <para>
+    /// Called once per request, before the first query, so one instance filters every page of an
+    /// export loop. Return a specification that is safe to reuse across those queries.
+    /// </para>
+    /// </remarks>
+    protected virtual ValueTask<Specification<TEntity, TIdentifierType>?> GetReadSpecificationAsync(
+        CancellationToken cancellationToken) =>
+        ValueTask.FromResult(GetExportSpecification());
+
+    /// <summary>
     /// Gets the specification <see cref="ExportAsync"/> applies to every page it streams. Returns
     /// <see langword="null"/> by default, which queries unscoped exactly as the endpoint always has.
     /// </summary>
     /// <returns>The specification every export page is filtered by, or <see langword="null"/> for an unscoped export.</returns>
     /// <remarks>
     /// <para>
+    /// The synchronous half of <see cref="GetReadSpecificationAsync"/>, which returns this by
+    /// default. A controller that can build its scope without awaiting anything overrides this one
+    /// and gets all five read actions scoped; a controller that needs an <c>await</c> overrides
+    /// <see cref="GetReadSpecificationAsync"/> instead, and then this hook is no longer consulted
+    /// (the override replaces the default that called it).
+    /// </para>
+    /// <para>
     /// A controller whose list endpoints row-scope reads (an ownership specification, a tenancy
-    /// predicate, anything that decides which rows this caller may see) MUST override this with the
-    /// same specification, so <c>/export</c> shows exactly what the list shows. Leaving it at the
-    /// default on such a controller hands every caller the whole table in one request.
+    /// predicate, anything that decides which rows this caller may see) MUST override one of the two,
+    /// so <c>/export</c> shows exactly what the list shows. Leaving both at the default on such a
+    /// controller hands every caller the whole table in one request.
     /// </para>
     /// <para>
     /// A controller that overrides this can then relax any privileged-role gate it put on the export
     /// as an interim mitigation: with the specification in force it is the query, not the role, that
     /// keeps one caller out of another caller's rows, and an owner can export their own data again.
-    /// </para>
-    /// <para>
-    /// Called once per request, before the first page, so the same instance filters every page of
-    /// the loop. Return a specification that is safe to reuse across those queries.
     /// </para>
     /// </remarks>
     protected virtual Specification<TEntity, TIdentifierType>? GetExportSpecification() => null;

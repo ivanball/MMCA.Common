@@ -3,6 +3,7 @@
 *REMOVED*static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddForwardedJwtBearer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authority, string! audience, bool requireHttpsMetadata = false) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Controllers.AuthControllerBase.ClientIpAddress.get -> string?
 MMCA.Common.API.Controllers.AuthControllerBase.ClientUserAgent.get -> string?
+MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.SetConcurrencyETag(object? dto) -> void
 MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordHandler.get -> MMCA.Common.Application.UseCases.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!
@@ -58,5 +59,6 @@ static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddForwardedJwtBe
 static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.GetMySessionsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!>!>!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetReadSpecificationAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.Domain.Specifications.Specification<TEntity!, TIdentifierType>?>
 virtual MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordAsync(MMCA.Common.Shared.Auth.ForgotPasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ResetPasswordAsync(MMCA.Common.Shared.Auth.ResetPasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!

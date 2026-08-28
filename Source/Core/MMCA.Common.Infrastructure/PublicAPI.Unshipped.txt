@@ -36,6 +36,9 @@ MMCA.Common.Infrastructure.Persistence.Outbox.OutboxAdministration.ReplayDeadLet
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.DeserializeEvent(System.Collections.Generic.IReadOnlyDictionary<string!, string!>? typeAliases) -> MMCA.Common.Domain.Interfaces.IDomainEvent?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.OrderingKey.get -> string?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.OrderingKey.init -> void
+MMCA.Common.Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetector
+MMCA.Common.Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetector.IsUniqueConstraintViolation(System.Exception! exception) -> bool
+MMCA.Common.Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetector.SqlServerUniqueConstraintViolationDetector() -> void
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableInbox.get -> bool?
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.IsInboxEnabled.get -> bool
 MMCA.Common.Infrastructure.Settings.OutboxSettings.PurgeDeadLetters.get -> bool
