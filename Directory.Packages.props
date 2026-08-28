@@ -19,17 +19,20 @@
     <!-- Direct pin to bump the transitive Microsoft.OpenApi off 2.0.0 (pulled by AspNetCore.OpenApi)
          to the first patched version for GHSA-v5pm-xwqc-g5wc (circular-schema-reference DoS in OpenAPI
          parsing); referenced directly in MMCA.Common.API so the pin takes effect (no transitive pinning). -->
+    <!-- HELD at 2.12.2 2026-08-28: NU1608 vs Microsoft.AspNetCore.OpenApi 10.0.11 and
+         Asp.Versioning.OpenApi 10.2.3, which both constrain Microsoft.OpenApi to (>= 2.7.5 && < 3.0.0).
+         The 3.x line cannot be taken until the ASP.NET Core 10 OpenAPI stack moves off the 2.x range. -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.12.2" />
     <!-- Application -->
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
-    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.6.0" />
-    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.6.0" />
+    <PackageVersion Include="Microsoft.FeatureManagement" Version="4.7.0" />
+    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="4.7.0" />
     <!-- Application references MiniProfiler.Shared only (host-agnostic); the ASP.NET Core / MVC
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.1" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.2" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.3" />
     <!-- Infrastructure -->
@@ -38,8 +41,10 @@
          SignalR.StackExchangeRedis (2.5.187) and Aspire.Hosting (2.5.192). GHSA-hv8m-jj95-wg3x /
          CVE-2026-48109 (high, CVSS 8.2 — LZ4 decompression OOB read); fixed in 2.5.301. Forced via a
          direct PackageReference in MMCA.Common.Infrastructure + .Aspire.Hosting (same pattern as
-         OpenTelemetry.Api below) so the fix flows to consumers through the published package graph. -->
-    <PackageVersion Include="MessagePack" Version="2.5.302" />
+         OpenTelemetry.Api below) so the fix flows to consumers through the published package graph.
+         Moved to the 3.x line on 2026-08-28: both dependents constrain MessagePack with a lower
+         bound only, so the major bump restores and builds clean and carries the same fix. -->
+    <PackageVersion Include="MessagePack" Version="3.1.8" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Cosmos" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
@@ -51,7 +56,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.11" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
-    <PackageVersion Include="StackExchange.Redis" Version="2.13.17" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.1.31" />
     <!-- Two-level cache (L1 in-process + L2 distributed) behind the opt-in AddCommonHybridCache
          (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
          never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
@@ -92,6 +97,9 @@
          the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.2" />
+    <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
+         workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
+         ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <!-- Shared DataProtection key ring (MMCA.Common.Aspire.AddCommonDataProtection). Blobs persists
          the key ring so every replica decrypts the same auth cookies and antiforgery tokens; Keys is
@@ -111,7 +119,7 @@
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
     <!-- gRPC -->
     <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
-    <PackageVersion Include="Grpc.AspNetCore" Version="2.80.0" />
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.83.0" />
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.82.0" />
@@ -137,35 +145,41 @@
          including Blazor WebAssembly. -->
     <PackageVersion Include="QRCoder" Version="1.8.0" />
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
-         (ADC/Store pin 10.0.70); MAUI plugin/toolkit packages bind to the MAUI minor, so
-         bump them together, never independently. -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.80" />
+         (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
+         so bump them together, never independently. -->
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.100" />
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
     <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (requires Controls >= 10.0.60),
          bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="CommunityToolkit.Maui" Version="14.2.2" />
+    <PackageVersion Include="CommunityToolkit.Maui" Version="15.0.1" />
     <!-- Android-only biometric prompt binding for UI.Maui (platform-direct, ADR-042 Wave 4).
          Pinned to the release built against MAUI 10.0.70's AndroidX train (Fragment 1.8.8.x /
          Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
          upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
+    <!-- HELD at 1.1.0.30 2026-08-28: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
+         10.0.100 (Fragment 1.8.9.3 / Activity 1.13.0.1 / Lifecycle 2.11.0.1 / SavedState 1.5.0.1 /
+         Collection.Jvm 1.6.0.1 resolved past the .Ktx packages' upper bounds). -->
     <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
     <!-- Android-only Firebase Cloud Messaging binding for UI.Maui's FCM device-token provider
          (ADR-044). Bindings track the Google Play services train, not the MAUI one, but they pull
          AndroidX packages: verify a restore of the android TFM after any bump (the Biometric pin
          above is the one that reacts first, with NU1608). -->
+    <!-- HELD at 124.1.2 2026-08-28: 125.1.1 pulls the newer AndroidX train (Lifecycle 2.11.0.1,
+         Activity 1.13.0.1, Fragment 1.8.9.3, SavedState 1.5.0.1, Collection.Jvm 1.6.0.1) past the
+         .Ktx packages' upper bounds and fails the android restore with NU1608. -->
     <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.80" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.100" />
     <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
          Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
          -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.3" />
+    <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.177" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.190" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -220,10 +234,13 @@
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.0" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase):
-         in-process host boot + throwaway SQL database + Respawn reset. SqlClient matches the version EF
-         Core SqlServer already resolves transitively so the pin cannot skew the graph. -->
+         in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
+         only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
+         resolving the 6.1.6 that EF Core SqlServer 10.0.11 floors. On the 7.0 line since 2026-08-28:
+         Aspire.Hosting 13.5.3 already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
+         the same major the hosting stack does. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.6" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <!-- Health Checks -->
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
@@ -256,10 +273,10 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.5.2" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.2" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.2" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.2" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
   </ItemGroup>

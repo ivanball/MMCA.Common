@@ -78,6 +78,36 @@ Wave 6 extraction release: framework surface hoisted from duplicated ADC/Store/H
   parameter: source-compatible for subclasses, binary-breaking for the superseded signatures (the
   PublicAPI log records the removals). Omitting the parameter is behavior-identical to before.
 
+### Dependencies
+
+- Aspire.Hosting (and `.Azure.CosmosDB` / `.RabbitMQ` / `.SqlServer`) 13.5.2 -> 13.5.3.
+- `Grpc.AspNetCore` 2.80.0 -> 2.83.0, aligning it with the `Grpc.AspNetCore.Server.Reflection` and
+  `Grpc.Net.ClientFactory` pins.
+- `Microsoft.FeatureManagement` + `.AspNetCore` 4.6.0 -> 4.7.0. 4.7.0 drops the transitive
+  `Microsoft.Bcl.TimeProvider` shim, so the four hosted services that called its
+  `TimeProvider.Delay` extension now call the BCL `Task.Delay(TimeSpan, TimeProvider,
+  CancellationToken)` overload directly (identical semantics).
+- `Meziantou.Analyzer` 3.0.177 -> 3.0.190; new rule MA0219 (language attribute on XML `<c>`
+  elements) is set to `none` in the shared `.editorconfig` baseline.
+- `Scalar.AspNetCore` 2.17.1 -> 2.17.2.
+- `MessagePack` 2.5.302 -> 3.1.8. No framework code uses it: the pin exists to lift the transitive
+  the SignalR Redis backplane and Aspire.Hosting pull, and both constrain it with a lower bound
+  only.
+- `StackExchange.Redis` 2.13.17 -> 3.1.31 (major). The Redis Testcontainers tier passes against a
+  real server; two test doubles moved off constructors 3.x deprecates.
+- `Microsoft.Data.SqlClient` 6.1.6 -> 7.0.2 in the test-tier pin (`MMCA.Common.Testing` is its only
+  direct reference; other projects keep resolving the 6.1.6 EF Core SqlServer floors).
+- MAUI train (`MMCA.Common.UI.Maui`): `Microsoft.Maui.Controls` +
+  `Microsoft.AspNetCore.Components.WebView.Maui` 10.0.80 -> 10.0.100, `CommunityToolkit.Maui`
+  14.2.2 -> 15.0.1 (major), `ZXing.Net.Maui.Controls` 0.10.3 -> 0.10.4. All four TFMs build clean.
+- Held at their current versions: `MassTransit` (+ `.RabbitMQ` / `.Azure.ServiceBus.Core`) 8.5.10,
+  the standing v8 ceiling because v9 requires a commercial license; `SixLabors.ImageSharp` 3.1.12,
+  whose Six Labors Split License is treated as within the same commercial exclusion;
+  `Microsoft.OpenApi` 2.12.2, because `Microsoft.AspNetCore.OpenApi` 10.0.11 and
+  `Asp.Versioning.OpenApi` 10.2.3 both constrain it below 3.0.0 (NU1608); and the two Android
+  bindings `Xamarin.Firebase.Messaging` 124.1.2 and `Xamarin.AndroidX.Biometric` 1.1.0.30, whose
+  newer builds resolve AndroidX past the `.Ktx` packages' upper bounds (NU1608).
+
 ## [1.164.1] - 2026-08-27
 
 ### Fixed

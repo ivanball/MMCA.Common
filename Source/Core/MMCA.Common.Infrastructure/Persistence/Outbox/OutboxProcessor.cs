@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -102,7 +102,7 @@ public sealed partial class OutboxProcessor(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Brief startup delay so the application finishes initializing before we start polling.
-        await _timeProvider.Delay(TimeSpan.FromSeconds(5), stoppingToken).ConfigureAwait(false);
+        await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken).ConfigureAwait(false);
 
         if (GetOutboxTargets().Count == 0)
         {

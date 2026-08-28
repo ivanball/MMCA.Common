@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
@@ -119,7 +119,7 @@ public sealed class RedisFixedWindowRateLimiterTests
     {
         var database = new Mock<IDatabase>();
         database.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "down"));
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "down", innerException: null, CommandStatus.Unknown));
 
         var connection = new Mock<IConnectionMultiplexer>();
         connection.Setup(c => c.GetDatabase(It.IsAny<int>(), It.IsAny<object?>())).Returns(database.Object);
