@@ -4,6 +4,175 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.165.0] - 2026-08-28
+
+Wave 6 extraction release: framework surface hoisted from duplicated ADC/Store/Helpdesk code
+(Tier 1 items 6.1-6.7 and Tier 2 items 6.8-6.15 of the extraction plan), all additive and opt-in.
+
+### Added
+
+- **Read-scoping hook on `EntityControllerBase`.** An async `GetReadSpecificationAsync` hook is
+  honored by all five read actions (both `GetAll` overloads, lookup, `GetById`, and export), closing
+  the unscoped-export hazard class at the base; the sync `GetExportSpecification` folds in as the
+  default, and `SetConcurrencyETag` widens to `protected`.
+- **CRUD handler bases.** `CreateEntityHandlerBase`, `MutateEntityHandlerCore`/`Base` (Result and
+  DTO shapes, with the load / NotFound / `SetOriginalRowVersion` / mutate / save sequence and
+  EntityId/RowVersion/include/log extension points), and `AddChildEntityHandlerBase` /
+  `RemoveChildEntityHandlerBase` join `DeleteEntityHandler`, collapsing roughly fifty near-identical
+  per-app handlers.
+- **Persistence read surface.** `IEntityQuerier` gains `FirstOrDefaultAsync` (predicate and
+  specification overloads), `CountByAsync`/`SumByAsync` grouped aggregates, and
+  `FindIncludingDeletedAsync` (active vs soft-deleted split), with `EFReadRepository` and decorator
+  implementations, retiring the materialize-all-then-filter call sites.
+- **Unique-constraint violation detection.** `IUniqueConstraintViolationDetector` with a
+  `SqlServerUniqueConstraintViolationDetector` (SQL 2601/2627 plus message fallback), registered by
+  `AddInfrastructure`.
+- **Aggregate child helpers.** `RemoveChildOrNotFound` and `RestoreChild` beside the shipped
+  `GetChildOrNotFound`, plus `IReactivatable`.
+- **`ScopedIntegrationEventHandlerBase<TEvent>`.** The `CreateAsyncScope` preamble and
+  log-and-rethrow envelope (cancellation excluded, mirroring `SafeDomainEventHandler`) hoisted from
+  eighteen per-app integration-event handlers; `HandleScopedAsync` and `LogHandlerFailure` are the
+  extension points.
+- **gRPC Result trailer decoder.** `Metadata.ToErrors()` and `RpcException.ToResult`/`ToResult<T>`,
+  the exact inverse of the shipped `ToRpcException` and living in the same file so encoder and
+  decoder cannot drift; unstructured RPC failures synthesize a `Grpc.{StatusCode}` error.
+- **Opt-in service-host extensions.** `AddCommonSerilog(logFilePath)` (the identical Serilog
+  bootstrap all seven consumer hosts repeat, with a post-defaults configure hook) and
+  `AddModuleHost()` (settings binding, `ModuleLoader` construction, and a `RegisterModules` method
+  group the host drops into its own pipeline call), leaving `Program.cs` orchestration and the
+  `AddApplicationDecorators()`-last ordering host-owned.
+- **Push device-token providers (MMCA.Common.UI.Maui).** Both halves: the FCM provider plus
+  `MauiFirebaseMessagingService` (Android) and the APNs provider plus a now-public
+  `ApnsTokenBridge` (iOS/MacCatalyst), registered by `AddMauiPushDeviceTokenProvider()`; AppDelegate
+  hooks, manifest/plist entries, and credentials stay app-side. Adds the `Xamarin.Firebase.Messaging`
+  dependency to the MAUI package.
+- **`MmcaGatewayHardeningTestsBase<TEntryPoint>`** (MMCA.Common.Testing) with eight gateway gates
+  (rate-limit window, named policy, bypass paths, correlation-id generation and echo, per-downstream
+  readiness, active health-check probes, forwarded-client-IP partitioning) over abstract
+  route/limit/downstream inputs, plus a public `RecordingHttpForwarder` and
+  `NeutralizeGlobalRateLimiter()`. Adds the `Yarp.ReverseProxy` dependency to Testing.
+- **UI component bundle.** `ListPageActions`, `ListNoRecordsContent`, `InfiniteScrollSentinel`,
+  `SharePageButton` + `QrCodeButton` over a new `IPublicLinkBuilder` (browser implementation
+  registered by default, MAUI implementation via `AddCommonMauiPublicLinkBuilder()`),
+  `ApiFileDownloadButton` (the generalized download-from-endpoint button), and
+  `OfflineFirstPageSnapshot<TItem>` over `ILocalCacheStore`, all localized en+es and independently
+  consumable.
+- **Testing bundle.** bUnit `ConfigureDataGridListPageHost()` (encoding the load-bearing
+  `SetRendererInfo`-last ordering), `ErrorSummaryMessages()`, a now-public
+  `AddDeviceCapabilityDefaults()`, and E2E `SearchAndWaitForRowAsync` (deterministic waits, no
+  sleeps), `ConfirmDeleteAsync`, `WaitForGridToSettleAsync`, `MeasureWebVitalsAsync`, and
+  `PseudoLocalizationTestsBase`.
+- **Leaf additions.** `CommonInvariants` bundle 2 (enum-defined, end-not-before-start, string
+  length windows, optional max length, time-zone validity, URL well-formedness, count/uniqueness/
+  flag/nullable-int members), an optional `errorCode` parameter on every `CommonValidationRules`
+  rule class plus `AbsoluteUrlRules` (rejecting `javascript:`/`data:`/relative values),
+  `RequireUserId()` on `ICurrentUserService`, `NotificationScopeKey` (formatter and validation
+  pattern in one place, now the `ChannelKeyPattern` default), `AddMailDev()` for AppHosts,
+  `GetRequiredJwtAuthority()`, `EvictTagsAsync`/`TryEvictTagsAsync` output-cache params extensions
+  (throwing and best-effort variants), and `UseCommonForwardedHeaders()` reachable from the Gateway
+  package.
+
+### Changed
+
+- **`CommonValidationRules` rule-class constructors** gained a trailing optional `errorCode`
+  parameter: source-compatible for subclasses, binary-breaking for the superseded signatures (the
+  PublicAPI log records the removals). Omitting the parameter is behavior-identical to before.
+
+## [1.164.1] - 2026-08-27
+
+### Fixed
+
+- **`MobileInfiniteScrollList` regained its inline retry affordance under the Result contract.**
+  v1.164.0 converted the UI HTTP services to Result-returning, but the infinite-scroll component
+  still signaled failure by caught exception, so converted consumers lost the inline
+  failure-message-plus-Retry rendering. A new `FetchPageResult` parameter accepts the
+  Result-returning fetcher and renders the failure's localized message with a Retry button; the
+  tuple-returning `FetchPage` parameter keeps working but is `[Obsolete]`. Exactly one fetcher must
+  be supplied (misconfiguration throws at initialization), and cancellation semantics are unchanged.
+
+## [1.164.0] - 2026-08-27
+
+### Added
+
+- **Per-device session management surface.** Issued and rotated refresh sessions now stamp a `sid`
+  claim (additive), and `AuthControllerBase` gains `GET my-sessions` plus `POST revoke/{sessionId}`
+  backed by `RefreshSessionSummaryResponse`, an ownership-scoped `FindByIdAsync`, and
+  `GetSessionsAsync`/`RevokeSessionByIdAsync` on the authentication service, so a user can review
+  devices and sign out one of them or everywhere.
+- **Refresh-session retention sweep.** `RefreshSessionCleanupService` purges session rows that
+  stopped being usable more than `RefreshSessions:RetentionDays` (default 30) ago, gated on
+  `RefreshSessions:Enabled`, with the reuse-detection-window trade-off documented on the setting.
+- **Shared severity ranking and ProblemDetails reader.** `ErrorTypeSeverity` is hoisted so the HTTP
+  and gRPC edges classify multi-error aggregates identically (gRPC no longer picks the first error
+  positionally), and `ProblemDetailsResultReader` converts RFC 9457 payloads back into typed `Error`
+  lists (`ErrorType` preserved on the MMCA error-array shape; the lossy plain-400 reverse mapping is
+  documented), forming the foundation of the UI Result conversion below.
+- **Result ergonomics for pages.** `ResultUiExtensions` (`TryGetValue`, `OnFailureSetError`,
+  `NotifyOnFailure` with localization, deduplication, and severity ordering, plus `HasErrorType`
+  helpers) and a shared deduplicating `ErrorSummary` alert component, so consumer pages convert to
+  the Result contract uniformly.
+- **Sessions page.** A `/profile/sessions` page (device list with a current-device badge, per-row
+  revoke, sign-out-everywhere), its nav entry, and 23 localized keys in en and es, axe-scanned in
+  the gallery; `NavigationFlow.md` updated.
+
+### Changed
+
+- **BREAKING: every `MMCA.Common.UI` HTTP-typed-client service returns `Result`/`Result<T>` instead
+  of throwing `DomainInvariantViolationException`.** `ServiceExceptionHelper` is deleted;
+  `HttpResultExecutor` and `ProblemDetailsResultReader` preserve `ErrorType` end to end, and
+  `OperationCanceledException` still propagates for cancellation.
+  `EntityServiceBase`/`ChildEntityServiceBase`/`AuthUIService` and the notification services are all
+  converted (41 removals and 98 additions in the public API surface). Consumer pages migrate onto
+  `ResultUiExtensions`/`ErrorSummary` rather than try/catch blocks.
+
+## [1.163.0] - 2026-08-26
+
+### Added
+
+- **`MMCA.Common.Gateway` package.** The YARP gateway pieces both consumers hand-rolled now ship as
+  a package: cluster profile defaults, passive health-check defaults, a route/cluster trace-header
+  transform, and per-route rate-limiter policies. Route tables stay app-side by design.
+- **Soft-delete completion.** `DeletedOn`/`DeletedBy` audit columns are stamped on the `IsDeleted`
+  transition, the unique-index convention now appends the soft-delete clause to hand-authored
+  filters instead of skipping them, a `DeleteChildren` cascade helper joins the aggregate base, and
+  `SoftDeleteEnforcementTestsBase` adds a hard-delete fitness rule.
+- **Result combinators.** `Bind`/`Tap`/`Ensure`/`MatchAsync` with `Task<Result<T>>` overloads and
+  implicit conversions, so handler and service code chains Results without ceremony.
+- **MudForm validation bridge.** An `IModelValidator`/DataAnnotations adapter for MudBlazor forms
+  with localization support (`NotificationSend` converted as the reference page), and the duplicate
+  `ApiEndpoint` guard removed.
+- **Three new fitness rules** in `MMCA.Common.Testing.Architecture`:
+  `DomainEventHandlerSaveTestsBase` (transitive IL call-graph walk proving no `SaveChanges` under an
+  `IDomainEventHandler`), `ErrorCatalogTestsBase` (error-code uniqueness plus module prefix), and
+  `SortableColumnConventionTestsBase` (no `TemplateColumn` with `Sortable="true"`).
+
+### Changed
+
+- **BREAKING: multi-device refresh sessions.** `IAuthUser` loses
+  `RefreshToken`/`RefreshTokenExpiry`/`UpdateRefreshToken`/`RevokeRefreshToken`; refresh tokens now
+  live in a per-user `RefreshSessions` table, SHA-256 hashed at rest, with rotation chains
+  (`ReplacedByTokenHash`), reuse-detection family revocation, per-device or all-device sign-out, a
+  configurable session cap, and IP/UserAgent capture. Mapping is opt-in via
+  `ApplyRefreshSessionConfiguration` on the Identity context only. `AuthenticationServiceBase`
+  signatures gain `ipAddress`/`userAgent`, the duplicate `user_id` claim is dropped in favor of
+  `sub` only (`ClaimsPrincipalExtensions` and `AuthClaimTypes.Subject` added), and RS256 tokens now
+  emit the JWKS `kid` header.
+- **`ErrorType.Unexpected` maps to 500 on both edges**, and HTTP/gRPC status selection is
+  severity-ranked instead of first-error-positional, so a validation error can no longer mask an
+  unexpected failure in an aggregate Result.
+- **h2c health probes default to HTTP/2 exact** on gateway cluster destinations, with a
+  per-downstream opt-out for mixed-protocol services.
+
+### Fixed
+
+- **Mobile nav Logout row clearance.** The `.nav-auth-section` pinned at the bottom of the mobile
+  menu had no bottom inset, so the Logout row could land under the bottom browser bar or home
+  indicator; it now adds 0.75rem plus `env(safe-area-inset-bottom)`.
+
+### Dependencies
+
+- AngleSharp and 16 other package bumps, plus the analyzers group (3 updates).
+
 ## [1.162.0] - 2026-08-24
 
 ### Fixed

@@ -1,0 +1,82 @@
+@inject IPublicLinkBuilder LinkBuilder
+@inject IStringLocalizer<QrCodeButton> L
+
+@* QR affordance for public detail pages (ADR-042): shows the page's PUBLIC web URL as a scannable
+   code (a printed door sheet or another attendee's screen). Scanning needs no in-app scanner: the
+   OS camera opens the URL, and App Links / Universal Links (ADR-043) route it into the installed
+   app. Rendering goes through the shared QrCodeImage component, which encodes the payload locally,
+   so there is still no network round trip. *@
+
+<MudIconButton Icon="@Icons.Material.Filled.QrCode2"
+               Size="Size.Small"
+               aria-label="@L["Button.ShowQr.Aria"]"
+               title="@L["Button.ShowQr.Aria"]"
+               OnClick="ShowQr" />
+
+<MudDialog @bind-Visible="_visible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@QrTitle</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_url is not null)
+        {
+            <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                @* QrCodeImage sizes itself from PixelsPerModule, so the bitmap grows with the payload
+                   length. The scoped .qr-frame rule pins the rendered square to a fixed 260px, so
+                   every code fills the same space regardless of how long the url is. *@
+                <div class="qr-frame">
+                    <QrCodeImage Payload="@_url"
+                                 AltText="@L["Image.Qr.Alt", QrTitle]"
+                                 PixelsPerModule="@PixelsPerModule"
+                                 ErrorCorrection="@ErrorCorrection" />
+                </div>
+                <MudText Typo="Typo.caption" Style="word-break: break-all;">@_url</MudText>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _visible = false)">@L["Button.Close"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private static readonly DialogOptions _dialogOptions = new() { CloseOnEscapeKey = true, CloseButton = true };
+
+    /// <summary>App-relative route the QR should open, e.g. <c>/sessions/42</c>.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string RelativePath { get; set; } = string.Empty;
+
+    /// <summary>Dialog title (the entity name).</summary>
+    [Parameter]
+    [EditorRequired]
+    public string QrTitle { get; set; } = string.Empty;
+
+    /// <summary>Rendered pixels per QR module, forwarded to <see cref="QrCodeImage"/>. Defaults to 10.</summary>
+    [Parameter]
+    public int PixelsPerModule { get; set; } = 10;
+
+    /// <summary>
+    /// Error-correction strength, forwarded to <see cref="QrCodeImage"/>. Defaults to
+    /// <see cref="QrErrorCorrectionLevel.Quartile"/>: these codes are read off screens and printed
+    /// sheets, where the extra redundancy pays for itself.
+    /// </summary>
+    [Parameter]
+    public QrErrorCorrectionLevel ErrorCorrection { get; set; } = QrErrorCorrectionLevel.Quartile;
+
+    private bool _visible;
+    private string? _url;
+
+    private void ShowQr()
+    {
+        if (string.IsNullOrWhiteSpace(RelativePath))
+        {
+            return;
+        }
+
+        // Always encode the WEB url (IPublicLinkBuilder), never the WebView-internal origin,
+        // so a code scanned from the app opens for anyone.
+        _url = LinkBuilder.BuildAbsolute(RelativePath).ToString();
+        _visible = true;
+    }
+}

@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Aspire.Hosting.Extensions.extension(Aspire.Hosting.IDistributedApplicationBuilder!).AddMailDev(string! name = "maildev") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ContainerResource!>!
+const MMCA.Common.Aspire.Hosting.Extensions.DefaultMailDevResourceName = "maildev" -> string!
+const MMCA.Common.Aspire.Hosting.Extensions.MailDevHttpPort = 1080 -> int
+const MMCA.Common.Aspire.Hosting.Extensions.MailDevSmtpPort = 1025 -> int
+static MMCA.Common.Aspire.Hosting.Extensions.AddMailDev(this Aspire.Hosting.IDistributedApplicationBuilder! builder, string! name = "maildev") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ContainerResource!>!

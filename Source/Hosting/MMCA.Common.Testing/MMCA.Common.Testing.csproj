@@ -33,6 +33,10 @@
          (GHSA-q939-rpr3-3284); no code here uses it. See the pin comment in Directory.Packages.props. -->
     <PackageReference Include="SSH.NET" />
     <PackageReference Include="xunit.v3.extensibility.core" />
+    <!-- MmcaGatewayHardeningTestsBase asserts YARP cluster/health-check config and RecordingHttpForwarder
+         implements IHttpForwarder, so the gateway hardening base needs the proxy types here rather than
+         in every gateway test project (same precedent as the JwtBearer reference above). -->
+    <PackageReference Include="Yarp.ReverseProxy" />
   </ItemGroup>
   <ItemGroup>
     <!-- HandlerTestBase mocks the framework's IUnitOfWork/IRepository contracts and

@@ -1,4 +1,10 @@
 #nullable enable
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).ConfirmDeleteAsync(Microsoft.Playwright.ILocator! deleteButton, string! confirmTestId = "confirm-delete", float timeout = 10000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).SearchAndWaitForRowAsync(Microsoft.Playwright.ILocator! searchField, string! text, string! rowSelector = ".mud-table-body .mud-table-row", float timeout = 15000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.extension(Microsoft.Playwright.IPage!).WaitForGridToSettleAsync(float timeout = 15000) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsPageExtensions
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsPageExtensions.extension(Microsoft.Playwright.IPage!)
+MMCA.Common.Testing.E2E.Infrastructure.WebVitalsPageExtensions.extension(Microsoft.Playwright.IPage!).MeasureWebVitalsAsync(string! label, string! path, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget! budget, System.Action<string!>? writeLine = null, string? interactionPlaceholder = null, string! interactionText = "test") -> System.Threading.Tasks.Task<MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample!>!
 MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage
 MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.BackToLoginLink.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ForgotPasswordPage.ConfirmationAlert.get -> Microsoft.Playwright.ILocator!
@@ -20,6 +26,21 @@ MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.ResetPasswordPage(Microsof
 MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.SubmitButton.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.SuccessAlert.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.TokenField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.DefaultCulture_DoesNotLeakPseudoSentinel() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.PseudoLocale_RendersSentinel_WithoutEnUsLeak_AndDoesNotOverflowHorizontally() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.PseudoLocalizationTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.<Clone>$() -> MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage!
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Deconstruct(out string! Path, out string! EnglishProbe, out string? SettleSelector) -> void
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.EnglishProbe.get -> string!
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.EnglishProbe.init -> void
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Equals(MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? other) -> bool
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Path.get -> string!
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Path.init -> void
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.PseudoLocalizedPage(string! Path, string! EnglishProbe, string? SettleSelector = null) -> void
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.SettleSelector.get -> string?
+MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.SettleSelector.init -> void
 MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase
 MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ForgotPasswordPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ForgotPassword_WithUnknownEmail_ShowsTheSameConfirmation() -> System.Threading.Tasks.Task!
@@ -27,3 +48,20 @@ MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.LoginPage_Forg
 MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.PasswordResetTestsBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
 MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ResetPasswordPage_ShouldHaveNoAccessibilityViolations() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Workflows.Identity.PasswordResetTestsBase.ResetPassword_WithEmptyForm_ShowsClientValidationErrors() -> System.Threading.Tasks.Task!
+abstract MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.ScannedPages.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage!>!
+const MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.MudDataGridRowSelector = ".mud-table-body .mud-table-row" -> string!
+override MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.Equals(object? obj) -> bool
+override MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.GetHashCode() -> int
+override MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.ToString() -> string!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.ConfirmDeleteAsync(this Microsoft.Playwright.IPage! page, Microsoft.Playwright.ILocator! deleteButton, string! confirmTestId = "confirm-delete", float timeout = 10000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.SearchAndWaitForRowAsync(this Microsoft.Playwright.IPage! page, Microsoft.Playwright.ILocator! searchField, string! text, string! rowSelector = ".mud-table-body .mud-table-row", float timeout = 15000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.PageExtensions.WaitForGridToSettleAsync(this Microsoft.Playwright.IPage! page, float timeout = 15000) -> System.Threading.Tasks.Task!
+static MMCA.Common.Testing.E2E.Infrastructure.WebVitalsPageExtensions.MeasureWebVitalsAsync(this Microsoft.Playwright.IPage! page, string! label, string! path, MMCA.Common.Testing.E2E.Infrastructure.WebVitalsBudget! budget, System.Action<string!>? writeLine = null, string? interactionPlaceholder = null, string! interactionText = "test") -> System.Threading.Tasks.Task<MMCA.Common.Testing.E2E.Infrastructure.WebVitalsSample!>!
+static MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.operator !=(MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? left, MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? right) -> bool
+static MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.operator ==(MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? left, MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? right) -> bool
+virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.AssertProbePresentUnderDefaultCulture.get -> bool
+virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.OverflowTolerancePx.get -> int
+virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.ProbeVisibleTextOnly.get -> bool
+virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.PseudoLocale.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Sentinel.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Timeout.get -> float

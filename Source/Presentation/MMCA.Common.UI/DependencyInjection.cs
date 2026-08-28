@@ -98,6 +98,12 @@ public static class DependencyInjection
             // ASP.NET pipeline and the endpoint URL would resolve to the Blazor not-found page.
             services.TryAddScoped<ICultureApplier, EndpointCultureApplier>();
 
+            // Shareable public links (share sheet, copy-link, QR). The default resolves against the
+            // browser origin, which is correct for the Server and WebAssembly heads; a MAUI Blazor
+            // Hybrid head overrides it AFTER AddUIShared with AddCommonMauiPublicLinkBuilder(),
+            // because its WebView origin is a virtual host nobody else can open.
+            services.TryAddScoped<IPublicLinkBuilder, NavigationPublicLinkBuilder>();
+
             // Per-user culture/theme persistence to the backend (ADR-027/028) — best-effort, anon no-op.
             services.TryAddScoped<IUserPreferenceWriter, ApiUserPreferenceWriter>();
             services.TryAddScoped<IUserPreferenceReader, ApiUserPreferenceReader>();

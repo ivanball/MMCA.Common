@@ -1,0 +1,9 @@
+/* The shared QrCodeImage emits a bare <img> whose natural size follows PixelsPerModule and the
+   payload length, so a long url would render a bigger code than a short one. Pinning the square
+   here keeps the dialog layout stable across every entity the button is used on.
+   ::deep is required: the img belongs to the child component, so it never carries this
+   component's scope attribute. The wrapping div does. */
+.qr-frame ::deep img {
+    width: 260px;
+    height: 260px;
+}

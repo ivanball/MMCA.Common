@@ -754,6 +754,7 @@
         "dependencies": {
           "AngleSharp": "[1.7.2, )",
           "MMCA.Common.UI": "[1.0.0, )",
+          "Moq": "[4.20.72, )",
           "MudBlazor": "[9.9.0, )",
           "bunit": "[2.9.0, )"
         }

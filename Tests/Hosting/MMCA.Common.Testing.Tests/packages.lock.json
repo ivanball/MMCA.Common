@@ -1116,6 +1116,7 @@
           "System.IdentityModel.Tokens.Jwt": "[8.22.0, )",
           "Testcontainers.MsSql": "[4.14.0, )",
           "Testcontainers.RabbitMq": "[4.14.0, )",
+          "Yarp.ReverseProxy": "[2.3.0, )",
           "xunit.v3.extensibility.core": "[4.0.0, )"
         }
       },
@@ -1580,6 +1581,15 @@
         "contentHash": "+tTe9VX2vwrUHGI48FE4ly956Ry084wPH4I/7g5D36AkAMGjQRZZDVz8eH2GwX/CLS9PDQRSca534WyrAYsyzw==",
         "dependencies": {
           "xunit.v3.common": "[4.0.0]"
+        }
+      },
+      "Yarp.ReverseProxy": {
+        "type": "CentralTransitive",
+        "requested": "[2.3.0, )",
+        "resolved": "2.3.0",
+        "contentHash": "gxtkN3a+9biu9V9Zd5NaTO6VZWXAnS2mhQ0R/VXmSPoTuiQNZsakKikrKpDtKxrL5nUYzbRsHtl40WNq+ZBKKg==",
+        "dependencies": {
+          "System.IO.Hashing": "8.0.0"
         }
       }
     }

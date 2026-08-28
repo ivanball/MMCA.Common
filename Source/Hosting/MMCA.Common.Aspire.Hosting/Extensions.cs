@@ -34,8 +34,49 @@ public static class Extensions
     /// </summary>
     public const int E2eRegistrationsPerIpPerHour = 1000;
 
+    /// <summary>
+    /// Default Aspire resource name used for the MailDev container.
+    /// </summary>
+    public const string DefaultMailDevResourceName = "maildev";
+
+    /// <summary>
+    /// Fixed host port MailDev's web UI is published on. Fixed rather than dynamic because a
+    /// developer opens it by hand and the appsettings SMTP defaults are written against the pair.
+    /// </summary>
+    public const int MailDevHttpPort = 1080;
+
+    /// <summary>
+    /// Fixed host port MailDev's SMTP listener is published on, matching the <c>Smtp:Port</c>
+    /// every consumer's appsettings declares.
+    /// </summary>
+    public const int MailDevSmtpPort = 1025;
+
     extension(IDistributedApplicationBuilder builder)
     {
+        /// <summary>
+        /// Provisions the local MailDev container: an SMTP sink for development email testing whose
+        /// web UI (<c>http://localhost:1080</c>) shows every message the app sent, so a host can run
+        /// its real mail path without a relay and without delivering anything.
+        /// <para>
+        /// Both ports are published on fixed host ports rather than Aspire's dynamic ones: the web UI
+        /// is opened by hand and the SMTP port is what each consumer's <c>Smtp:Port</c> setting
+        /// names. The container lifetime is persistent so the captured inbox survives an AppHost
+        /// restart.
+        /// </para>
+        /// </summary>
+        /// <param name="name">The resource name (defaults to <see cref="DefaultMailDevResourceName"/>).</param>
+        /// <returns>The MailDev container resource builder, for <c>WaitFor</c> wiring.</returns>
+        public IResourceBuilder<ContainerResource> AddMailDev(
+            string name = DefaultMailDevResourceName)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+
+            return builder.AddContainer(name, "maildev/maildev")
+                .WithLifetime(ContainerLifetime.Persistent)
+                .WithHttpEndpoint(targetPort: MailDevHttpPort, port: MailDevHttpPort, name: "http")
+                .WithEndpoint(targetPort: MailDevSmtpPort, port: MailDevSmtpPort, name: "smtp", scheme: "tcp");
+        }
+
         /// <summary>
         /// Provisions a RabbitMQ container resource with the management plugin enabled and
         /// returns the resource builder for further wiring. Production deployments should

@@ -46,3 +46,16 @@ static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>
 static MMCA.Common.Domain.Entities.AuditableAggregateRootEntity<TIdentifierType>.RestoreChild<TChild, TChildId>(System.Collections.Generic.List<TChild!>! collection, TChild! child, string! notDeletedErrorCode, string! source) -> MMCA.Common.Shared.Abstractions.Result<TChild!>!
 virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedBy.get -> int?
 virtual MMCA.Common.Domain.Entities.AuditableBaseEntity<TIdentifierType>.DeletedOn.get -> System.DateTime?
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureCollectionIsEmpty<T>(System.Collections.Generic.IReadOnlyCollection<T>? value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureCountIsWithin(int count, int minCount, int maxCount, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureEndIsNotBeforeStart<T>(T start, T end, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureEnumIsDefined<TEnum>(TEnum value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureFlagIsFalse(bool value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureFlagIsTrue(bool value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureIntIsNotNegative(int value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureNullableIntIsPositive(int? value, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureOptionalStringMaxLength(string? value, int maxLength, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureStringLengthIsWithin(string? value, int minLength, int maxLength, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureTimeZoneIsValid(string? timeZone, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureUrlIsWellFormed(string? url, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureValuesAreUnique<T>(System.Collections.Generic.IEnumerable<T>? values, System.Collections.Generic.IEqualityComparer<T>? comparer, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!

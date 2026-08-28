@@ -14,6 +14,11 @@
     <!-- Direct pin so the transitive AngleSharp resolves to the patched 1.5.0 (CVE-2026-54570). -->
     <PackageReference Include="AngleSharp" />
     <PackageReference Include="MudBlazor" />
+    <!-- ConfigureDataGridListPageHost substitutes MudBlazor's IBrowserViewportService so the shared
+         list-page base resolves a deterministic (never-mobile) viewport in bUnit, where no browser
+         answers the JS breakpoint query. A hand-written stub would have to track every member
+         MudBlazor adds to that interface. -->
+    <PackageReference Include="Moq" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

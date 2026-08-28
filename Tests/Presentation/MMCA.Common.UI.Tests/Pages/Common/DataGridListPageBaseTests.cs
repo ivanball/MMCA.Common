@@ -24,14 +24,14 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
     public DataGridListPageBaseTests()
     {
-        Services.AddScoped<ListPageStateService>();
-        Services.AddScoped<ListPageQueryStateService>();
         // Last registration wins over the SnackbarService that AddMudServices registered, so the
         // page's error/cancel surface can be asserted without rendering a snackbar provider.
         Services.AddSingleton<ISnackbar>(_snackbar.Object);
-        AddBunitPersistentComponentState();
-        // LoadServerDataAsync consults RendererInfo.IsInteractive to bound SSR prerender fetches.
-        SetRendererInfo(new RendererInfo("Server", isInteractive: true));
+
+        // The shared list-page host block: state services, an inert viewport, persistent component
+        // state, and (LAST, because it freezes the provider) the interactive renderer info that
+        // LoadServerDataAsync consults to bound SSR prerender fetches.
+        ConfigureDataGridListPageHost();
     }
 
     // Public so Moq can proxy MudBlazor's Column&lt;WidgetRow&gt; over it (Castle cannot subclass a

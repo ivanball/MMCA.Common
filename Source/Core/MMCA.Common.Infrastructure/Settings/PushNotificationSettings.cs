@@ -1,3 +1,5 @@
+using MMCA.Common.Shared.Notifications;
+
 namespace MMCA.Common.Infrastructure.Settings;
 
 /// <summary>
@@ -19,6 +21,12 @@ public sealed class PushNotificationSettings : IPushNotificationSettings
     /// channel via the notification hub. Guards SignalR group names against arbitrary client input.
     /// Deliberately declared on the concrete settings class only so that
     /// <see cref="IPushNotificationSettings"/> stays unchanged (no breaking change for implementers).
+    /// <para>
+    /// The default is <see cref="NotificationScopeKey.Pattern"/>, the same constant
+    /// <see cref="NotificationScopeKey.ForEvent"/> and <see cref="NotificationScopeKey.ForSession"/>
+    /// format against, so the producer and the guard cannot drift apart. A host that overrides the
+    /// pattern from configuration takes on that alignment itself.
+    /// </para>
     /// </summary>
-    public string ChannelKeyPattern { get; init; } = "^(event|session):[0-9]+$";
+    public string ChannelKeyPattern { get; init; } = NotificationScopeKey.Pattern;
 }

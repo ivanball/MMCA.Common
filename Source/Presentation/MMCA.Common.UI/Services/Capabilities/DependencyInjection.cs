@@ -20,8 +20,14 @@ public static class DependencyInjection
         /// <summary>
         /// Registers the null/neutral default for every capability contract. Called by
         /// <c>AddUIShared</c>; TryAdd keeps repeated host calls idempotent.
+        /// <para>
+        /// Public so a consumer's bUnit test base can register the same set the production host gets
+        /// instead of mirroring it by hand: a hand-mirrored list silently rots the moment a new
+        /// capability contract ships here, and the component test that needed it fails with a DI
+        /// resolution error rather than a useful one.
+        /// </para>
         /// </summary>
-        internal IServiceCollection AddDeviceCapabilityDefaults()
+        public IServiceCollection AddDeviceCapabilityDefaults()
         {
             // Stateless no-op defaults — singletons.
             services.TryAddSingleton<IConnectivityStatusService, AlwaysOnlineConnectivityStatusService>();
