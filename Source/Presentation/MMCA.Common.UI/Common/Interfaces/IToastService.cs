@@ -70,4 +70,33 @@ public interface IToastService
     /// <param name="body">The already-localized body text, rendered below the title.</param>
     /// <param name="severity">The level to render at; defaults to <see cref="ToastSeverity.Info"/>.</param>
     void ShowPersistent(string title, string body, ToastSeverity severity = ToastSeverity.Info);
+
+    /// <summary>
+    /// Raises a toast carrying a button the user can click: the "undo", "view it", "retry" shape a
+    /// bare message cannot express. The toast renders a button labelled
+    /// <paramref name="actionText"/>, and <paramref name="onAction"/> runs when it is clicked.
+    /// <para>
+    /// The callback runs outside any render callback, so nothing catches what it throws: a caller
+    /// whose work can fail must guard it itself (and raise its own failure toast) rather than
+    /// letting the exception escape into the toast host.
+    /// </para>
+    /// </summary>
+    /// <param name="message">The already-localized sentence to show.</param>
+    /// <param name="actionText">The already-localized button label.</param>
+    /// <param name="onAction">
+    /// The work to run when the button is clicked. Exceptions are the caller's to handle.
+    /// </param>
+    /// <param name="severity">The level to render at; defaults to <see cref="ToastSeverity.Info"/>.</param>
+    /// <param name="requireInteraction">
+    /// When true the toast is pinned open until the user dismisses it (or takes the action) instead
+    /// of expiring on the host's default timer, and the MudBlazor implementation renders it filled:
+    /// the same emphasis convention <see cref="ShowPersistent"/> uses, because a toast that waits for
+    /// the user has to look like it is waiting.
+    /// </param>
+    void ShowAction(
+        string message,
+        string actionText,
+        Func<Task> onAction,
+        ToastSeverity severity = ToastSeverity.Info,
+        bool requireInteraction = false);
 }

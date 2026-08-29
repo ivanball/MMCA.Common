@@ -83,13 +83,9 @@ public static class DependencyInjection
                 .AddHttpMessageHandler<AuthDelegatingHandler>()
                 .AddHttpMessageHandler<CultureDelegatingHandler>();
 
-            // Toast and confirm-dialog facades. These two implementations are the ONLY types in the
-            // framework that name MudBlazor's ISnackbar / IDialogService: every page, component and
-            // Result helper depends on IToastService / IAppDialogService instead, so the component
-            // library stays swappable and a test can record toasts without a rendered snackbar host.
-            // Scoped to match the MudBlazor services they wrap.
-            services.TryAddScoped<IToastService, MudToastService>();
-            services.TryAddScoped<IAppDialogService, MudAppDialogService>();
+            // Toast and confirm-dialog facades, factored out so a bUnit harness can register exactly
+            // these two without pulling in the whole shared-UI surface.
+            services.AddCommonUiFacades();
 
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
@@ -124,6 +120,27 @@ public static class DependencyInjection
             // MAUI/browser hosts override AFTER this call (last registration wins).
             services.AddDeviceCapabilityDefaults();
 
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the vendor-neutral toast and confirm-dialog facades over MudBlazor:
+        /// <c>IToastService</c> and <c>IAppDialogService</c>. These two implementations are the ONLY
+        /// types in the framework that name MudBlazor's <c>ISnackbar</c> / <c>IDialogService</c>:
+        /// every page, component and <c>Result</c> helper depends on the contracts instead, so the
+        /// component library stays swappable and a test can record toasts without a rendered
+        /// snackbar host. Scoped, to match the MudBlazor services they wrap.
+        /// <para>
+        /// Called by <c>AddUIShared</c>, and separately by the shipped bUnit base
+        /// (<c>MMCA.Common.Testing.UI</c>) so a component test resolves the facades without the rest
+        /// of the shared-UI surface. Registered with TryAdd, so a host or test that pre-registers a
+        /// substitute keeps it.
+        /// </para>
+        /// </summary>
+        public IServiceCollection AddCommonUiFacades()
+        {
+            services.TryAddScoped<IToastService, MudToastService>();
+            services.TryAddScoped<IAppDialogService, MudAppDialogService>();
             return services;
         }
 

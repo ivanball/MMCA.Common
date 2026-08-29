@@ -4,6 +4,39 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.169.0] - 2026-08-29
+
+Follow-up to the 1.168.0 facade work: the two gaps the downstream migration surfaced. Interactive
+snackbars get a contract of their own, and the shipped bUnit base registers the facades so consumer
+component tests resolve them without a local workaround.
+
+### Added
+
+- **`IToastService.ShowAction`** (`MMCA.Common.UI`). Raises a toast carrying a button
+  (`ShowAction(message, actionText, onAction, severity, requireInteraction)`): the "undo", "view it",
+  "retry" shape the facade could not express, so consumers no longer have to drop back to MudBlazor's
+  `ISnackbar` to keep an interactive snackbar. `requireInteraction: true` pins the toast open until
+  the user dismisses it and renders it filled, the same emphasis convention `ShowPersistent` uses. The
+  callback runs outside any render callback, so a caller whose work can fail guards it itself.
+- **`AddCommonUiFacades()`** (`MMCA.Common.UI`). The toast/confirm-dialog facade registration pair as
+  its own extension, so a test harness can register exactly those two over MudBlazor without the rest
+  of the shared-UI surface. `AddUIShared` calls it, so host behaviour is unchanged; TryAdd means a
+  host or test that pre-registers a substitute keeps it.
+
+### Changed
+
+- **BREAKING for implementors: `IToastService` gains a member.** `ShowAction` is a new interface
+  method, so a type outside the framework that implements `IToastService` must add it. Per the
+  [versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html) an
+  implementor-breaking interface addition ships as a MINOR release; callers and the framework's own
+  Mud-backed implementation are unaffected.
+- **`BunitComponentTestBase` registers the UI facades** (`MMCA.Common.Testing.UI`). The shipped base
+  now calls `AddCommonUiFacades()` right after `AddMudServices()`, so a consumer component test that
+  renders a page injecting `IToastService` / `IAppDialogService` resolves them from the harness.
+  Consumer test bases that added the pair locally can drop those registrations.
+- **The localized-text fitness rule covers `ShowAction`** (`MMCA.Common.Testing.Architecture`): a
+  literal first argument to it fails the gate like every other toast method (ADR-027).
+
 ## [1.168.0] - 2026-08-29
 
 Adherence release: the patterns the framework asks consumers to follow are applied to the framework
