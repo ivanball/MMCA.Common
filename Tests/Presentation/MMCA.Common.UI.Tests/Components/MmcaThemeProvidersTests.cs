@@ -1,6 +1,7 @@
 using System.Reflection;
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Components;
 using MMCA.Common.UI.Services;
@@ -15,14 +16,27 @@ namespace MMCA.Common.UI.Tests.Components;
 /// MMCA theme, the first interactive render initializes <see cref="ThemeService"/> (JS interop is
 /// unavailable during SSR prerender), <c>OnChange</c> flips the theme provider's dark mode, and
 /// disposal unsubscribes so a long-lived scoped service never calls back into a dead component.
+/// The non-interactive (prerender) half of the E2E interactivity marker lives in
+/// <see cref="MmcaThemeProvidersPrerenderTests"/>, because <c>SetRendererInfo</c> is a per-context
+/// setting.
 /// </summary>
 public sealed class MmcaThemeProvidersTests : BunitTestBase
 {
+    /// <summary>The RCL module the component imports to stamp the E2E interactivity marker.</summary>
+    internal const string ThemeModulePath = "./_content/MMCA.Common.UI/theme.js";
+
     private static readonly FieldInfo OnChangeField = typeof(ThemeService)
         .GetField("OnChange", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     private static readonly FieldInfo IsDarkModeField = typeof(MmcaThemeProviders)
         .GetField("_isDarkMode", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    // The component reads RendererInfo on its first render (it stamps the E2E interactivity marker only
+    // on an interactive one), and bUnit throws MissingRendererInfoException when nothing has declared
+    // it. Set once here so it covers every test in this class; it must run after the base constructors'
+    // Services.Add calls (it freezes the service provider), which it does.
+    public MmcaThemeProvidersTests()
+        => SetRendererInfo(new RendererInfo("Server", isInteractive: true));
 
     [Fact]
     public void Render_ProducesAllFourMudProviders_WithTheMmcaTheme()
@@ -61,6 +75,22 @@ public sealed class MmcaThemeProvidersTests : BunitTestBase
             "OnAfterRenderAsync(firstRender) must resolve the stored/OS preference"));
         themeService.IsDarkMode.Should().BeFalse(
             "loose JSInterop reports no stored value and no OS dark preference");
+    }
+
+    [Fact]
+    public void FirstInteractiveRender_StampsTheE2eInteractivityMarker()
+    {
+        // The marker (data-mmca-interactive on the document element) is what
+        // MMCA.Common.Testing.E2E's WaitForBlazorAsync gates on: blazor.web.js populates
+        // window.Blazor._internal BEFORE components attach their event handlers, so a test gated on
+        // that alone clicks prerendered-but-dead controls. Keep the identifier in step with theme.js
+        // and PageExtensions.InteractiveMarkerPredicate.
+        var themeModule = JSInterop.SetupModule(ThemeModulePath);
+
+        var cut = RenderUnderTest<MmcaThemeProviders>(_ => { });
+
+        cut.WaitForAssertion(() => themeModule.Invocations["markInteractive"].Should().ContainSingle(
+            "an interactive first render must stamp the marker the E2E interactivity gate waits on"));
     }
 
     [Fact]

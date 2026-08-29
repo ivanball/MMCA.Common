@@ -1,5 +1,6 @@
 @using MMCA.Common.UI.Theme
 @inject ThemeService ThemeService
+@inject IJSRuntime JS
 @implements IDisposable
 
 @* The four Mud providers every root layout needs (theme, popover, dialog, snackbar) plus the
@@ -34,6 +35,46 @@
             await ThemeService.InitializeAsync();
             _isDarkMode = ThemeService.IsDarkMode;
             StateHasChanged();
+
+            await MarkInteractiveAsync();
+        }
+    }
+
+    // Stamps <html data-mmca-interactive="true"> once this component has actually rendered
+    // interactively. That attribute is the interactivity signal MMCA.Common.Testing.E2E's
+    // WaitForBlazorAsync waits on: blazor.web.js sets window.Blazor._internal BEFORE the WASM runtime
+    // (or the circuit) has attached event handlers, so gating a test on that alone lets it click a
+    // prerendered-but-dead control. Keep the attribute name in step with the E2E-side constant
+    // (PageExtensions.InteractiveMarkerPredicate) and with theme.js's markInteractive.
+    //
+    // The RendererInfo guard is defensive on a real host (OnAfterRenderAsync never runs during a
+    // static prerender), but bUnit DOES run it, so the guard is what keeps a test that declares
+    // SetRendererInfo(isInteractive: false) honest.
+    private async Task MarkInteractiveAsync()
+    {
+        if (!RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        // Best-effort only: the marker is test infrastructure, so nothing here may break theme init.
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>(
+                "import", "./_content/MMCA.Common.UI/theme.js");
+            await module.InvokeVoidAsync("markInteractive");
+        }
+        catch (JSException)
+        {
+            // Asset missing or the call failed in the browser.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit torn down between the render and this call.
+        }
+        catch (InvalidOperationException)
+        {
+            // Interop unavailable on this renderer (prerender race / disposed dispatcher).
         }
     }
 

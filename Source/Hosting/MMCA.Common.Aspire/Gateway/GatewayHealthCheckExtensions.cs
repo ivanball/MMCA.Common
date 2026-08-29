@@ -1,34 +1,79 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace MMCA.Common.Aspire.Gateway;
 
 /// <summary>
+/// Which HTTP version a downstream <c>/alive</c> probe asks for.
+/// </summary>
+public enum DownstreamProbeVersion
+{
+    /// <summary>
+    /// Try HTTP/2 (h2c prior knowledge) first and, when the downstream refuses the protocol rather
+    /// than the connection, fall back to HTTP/1.1 inside the SAME check, so a single readiness poll
+    /// still produces one verdict. The version that answered is then latched for the life of the
+    /// process, making the fallback a one-time cost per downstream rather than a per-poll one.
+    /// </summary>
+    Auto,
+
+    /// <summary>
+    /// Always send HTTP/2 over cleartext (h2c prior knowledge), with
+    /// <see cref="HttpVersionPolicy.RequestVersionExact"/> so the request never negotiates down.
+    /// Pin this only for a downstream known to be HTTP/2-only, to skip the one-time negotiation.
+    /// </summary>
+    Http2,
+
+    /// <summary>
+    /// Always send HTTP/1.1 with <see cref="HttpVersionPolicy.RequestVersionOrLower"/>, exactly the
+    /// stock <see cref="HttpClient"/> behavior. Pin this only for a downstream known to be
+    /// HTTP/1.1-only, to skip the one-time negotiation.
+    /// </summary>
+    Http11
+}
+
+/// <summary>
 /// Per-call options for <c>AddGatewayDownstreamHealthChecks</c>. One instance covers every service
-/// name passed to that call, so a gateway fronting a mix of HTTP/2-only and HTTP/1.1-only heads
-/// makes one call per profile rather than carrying a per-name map.
+/// name passed to that call, so a gateway pinning a version profile for some of its heads makes one
+/// call per profile rather than carrying a per-name map.
 /// </summary>
 public sealed class GatewayDownstreamHealthCheckOptions
 {
     /// <summary>
-    /// Whether the probe client speaks HTTP/2 over cleartext (h2c prior knowledge). Default
-    /// <see langword="true"/>.
+    /// Which HTTP version the probe requests. Default <see cref="DownstreamProbeVersion.Auto"/>,
+    /// which settles the question per downstream and needs no per-service configuration.
     /// <para>
-    /// The default exists because the services a modular-monolith gateway fronts serve h2c so that
-    /// cross-service gRPC clients can negotiate HTTP/2 without TLS/ALPN. An <c>HttpClient</c> left
-    /// on its own defaults sends HTTP/1.1, which such an endpoint refuses, so the probe fails and
-    /// the gateway reports a downstream outage that does not exist.
+    /// Negotiating is necessary because neither fixed answer is right for every head. The services
+    /// a modular-monolith gateway fronts serve h2c so cross-service gRPC clients reach HTTP/2
+    /// without TLS/ALPN, and an <see cref="HttpClient"/> left on its own defaults sends HTTP/1.1,
+    /// which an HTTP/2-only cleartext endpoint refuses. Sending HTTP/2 unconditionally has the
+    /// mirror-image failure: an HTTP/1.1-only endpoint, or a mixed <c>Http1AndHttp2</c> one serving
+    /// cleartext h2 without ALPN, answers <c>HTTP_1_1_REQUIRED</c> forever. Either way the gateway
+    /// reports a downstream outage that does not exist.
     /// </para>
     /// <para>
-    /// Set to <see langword="false"/> for a downstream whose cleartext endpoint is HTTP/1.1-only:
-    /// the probe then uses <c>1.1</c> with <see cref="HttpVersionPolicy.RequestVersionOrLower"/>,
-    /// exactly the stock <see cref="HttpClient"/> behavior. A mixed <c>Http1AndHttp2</c> endpoint
-    /// answers either way and needs no opt-out.
+    /// Pin <see cref="DownstreamProbeVersion.Http2"/> or <see cref="DownstreamProbeVersion.Http11"/>
+    /// only for a downstream whose profile is known and fixed, to skip the one-time negotiation.
     /// </para>
     /// </summary>
-    public bool ProbeOverHttp2 { get; set; } = true;
+    public DownstreamProbeVersion ProbeVersion { get; set; } = DownstreamProbeVersion.Auto;
+
+    /// <summary>
+    /// Whether the probe speaks HTTP/2 over cleartext (h2c prior knowledge). A compatibility facade
+    /// over <see cref="ProbeVersion"/>: reading it reports whether the pinned mode is
+    /// <see cref="DownstreamProbeVersion.Http2"/> (so it reads <see langword="false"/> under the
+    /// <see cref="DownstreamProbeVersion.Auto"/> default, which has not chosen a version yet), and
+    /// writing it pins <see cref="DownstreamProbeVersion.Http2"/> or
+    /// <see cref="DownstreamProbeVersion.Http11"/>, giving up the negotiation.
+    /// </summary>
+#pragma warning disable S1133 // Deprecated code should be removed: the obsoletion IS the migration mechanism; it flags every remaining consumer opt-out during the lockstep sweep, and the facade is removed once all consumers are swept.
+    [Obsolete("Use ProbeVersion; the Auto default negotiates the protocol per downstream.")]
+    public bool ProbeOverHttp2
+    {
+        get => ProbeVersion == DownstreamProbeVersion.Http2;
+        set => ProbeVersion = value ? DownstreamProbeVersion.Http2 : DownstreamProbeVersion.Http11;
+    }
+#pragma warning restore S1133
 }
 
 /// <summary>
@@ -104,12 +149,13 @@ public static class GatewayHealthCheckExtensions
 
         /// <summary>
         /// Same registration as <c>AddGatewayDownstreamHealthChecks(params string[])</c>, with the
-        /// probe client's HTTP version profile under the caller's control.
+        /// probe's HTTP version profile under the caller's control.
         /// </summary>
         /// <param name="configure">
-        /// Configures the options applied to every name in THIS call. Pass
-        /// <c>o =&gt; o.ProbeOverHttp2 = false</c> for downstreams whose cleartext endpoint is
-        /// HTTP/1.1-only.
+        /// Configures the options applied to every name in THIS call. The
+        /// <see cref="DownstreamProbeVersion.Auto"/> default fits every downstream; pass
+        /// <c>o =&gt; o.ProbeVersion = DownstreamProbeVersion.Http11</c> only to pin a head whose
+        /// profile is already known and skip its one-time negotiation.
         /// </param>
         /// <param name="serviceNames">
         /// The Aspire service names the gateway fronts. Duplicates and blanks are ignored, and a
@@ -140,12 +186,9 @@ public static class GatewayHealthCheckExtensions
         var options = new GatewayDownstreamHealthCheckOptions();
         configure?.Invoke(options);
 
-        // Captured as locals so the client-configuration closure below does not hold the mutable
-        // options object: a later call reusing the same instance must not retro-change this client.
-        var probeVersion = options.ProbeOverHttp2 ? HttpVersion.Version20 : HttpVersion.Version11;
-        var probeVersionPolicy = options.ProbeOverHttp2
-            ? HttpVersionPolicy.RequestVersionExact
-            : HttpVersionPolicy.RequestVersionOrLower;
+        // Captured as a local so the registration closure below does not hold the mutable options
+        // object: a later call reusing the same instance must not retro-change these checks.
+        var probeVersion = options.ProbeVersion;
 
         var registry = GatewayDownstreamRegistry.GetOrAdd(services);
         var healthChecks = services.AddHealthChecks();
@@ -168,11 +211,10 @@ public static class GatewayHealthCheckExtensions
                 client.BaseAddress = new Uri("http://" + name, UriKind.Absolute);
                 client.Timeout = ProbeTimeout;
 
-                // Without this the probe goes out HTTP/1.1 and an Http2-only cleartext (h2c)
-                // downstream refuses it, so a healthy service reads as an outage. See
-                // GatewayDownstreamHealthCheckOptions.ProbeOverHttp2.
-                client.DefaultRequestVersion = probeVersion;
-                client.DefaultVersionPolicy = probeVersionPolicy;
+                // The HTTP version is deliberately NOT pinned on the client. It belongs to the
+                // request, because under DownstreamProbeVersion.Auto the check discovers which
+                // version this downstream speaks and may send both on one poll. See
+                // GatewayDownstreamHealthCheckOptions.ProbeVersion.
             });
 
             healthChecks.Add(new HealthCheckRegistration(
@@ -180,7 +222,8 @@ public static class GatewayHealthCheckExtensions
                 sp => new DownstreamServiceHealthCheck(
                     sp.GetRequiredService<IHttpClientFactory>(),
                     name,
-                    clientName),
+                    clientName,
+                    probeVersion),
                 failureStatus: HealthStatus.Unhealthy,
                 tags: [HealthCheckTags.Ready],
                 timeout: ProbeTimeout));

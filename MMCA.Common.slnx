@@ -41,6 +41,7 @@
   </Folder>
   <Folder Name="/Tests/Hosting/">
     <Project Path="Tests/Hosting/MMCA.Common.Aspire.Tests/MMCA.Common.Aspire.Tests.csproj" />
+    <Project Path="Tests/Hosting/MMCA.Common.Aspire.Hosting.Tests/MMCA.Common.Aspire.Hosting.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Gateway.Tests/MMCA.Common.Gateway.Tests.csproj" />
     <Project Path="Tests/Hosting/MMCA.Common.Testing.Tests/MMCA.Common.Testing.Tests.csproj" />
   </Folder>
