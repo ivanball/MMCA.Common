@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Testing.UI;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Fallbacks;
@@ -37,5 +38,13 @@ public abstract class BunitTestBase : BunitComponentTestBase
         // resolves against bUnit's http://localhost/ base uri; a test that cares about the MAUI
         // public-site behaviour substitutes its own builder.
         Services.AddScoped<IPublicLinkBuilder, NavigationPublicLinkBuilder>();
+
+        // Toast and confirm-dialog facades. Pages and components inject the vendor-neutral
+        // IToastService / IAppDialogService, and AddUIShared registers exactly these two Mud-backed
+        // implementations over the MudBlazor services the shared harness already added, so a
+        // component test exercises the real path. A test that asserts on toasts (or answers a
+        // confirm) registers its own double afterwards: last registration wins.
+        Services.AddScoped<IToastService, MudToastService>();
+        Services.AddScoped<IAppDialogService, MudAppDialogService>();
     }
 }

@@ -8,8 +8,9 @@ using ZXing.Net.Maui.Controls;
 namespace MMCA.Common.UI.Maui;
 
 /// <summary>
-/// <see cref="MauiAppBuilder"/>-level entry point for the device-capability layer (ADR-042) and the
-/// hybrid culture wiring (ADR-027). Call AFTER <c>AddUIShared</c> in <c>MauiProgram.CreateMauiApp</c>.
+/// <see cref="MauiAppBuilder"/>-level entry point for the device-capability layer (ADR-042), the
+/// hybrid culture wiring (ADR-027), and the process-wide unhandled-exception hook. Call AFTER
+/// <c>AddUIShared</c> in <c>MauiProgram.CreateMauiApp</c>.
 /// </summary>
 public static class HostingDependencyInjection
 {
@@ -38,6 +39,43 @@ public static class HostingDependencyInjection
             // here means no head can be left half-configured. UseMauiCulture() stays separately
             // callable for a head that composes its registrations by hand.
             builder.UseMauiCulture();
+            return builder;
+        }
+
+        /// <summary>
+        /// Installs the two process-wide last-chance exception handlers,
+        /// <see cref="AppDomain.UnhandledException"/> and
+        /// <see cref="TaskScheduler.UnobservedTaskException"/>, so a throw on a background thread
+        /// or a faulted fire-and-forget task is written to the app's logger (category
+        /// <c>MMCA.Common.UI.Maui.UnhandledException</c>, level Critical) instead of vanishing. The
+        /// unobserved-task handler marks the exception observed, which is what stops the finalizer
+        /// thread from escalating a task nobody awaited into a process kill at the next collection.
+        /// <para>
+        /// <b>What it cannot catch.</b> Anything that never becomes a CLR exception: a native
+        /// crash (SIGSEGV, an Objective-C NSException on iOS, an Android ANR), a stack overflow, or
+        /// a fail-fast. Those tear the process down below the runtime and no managed handler runs,
+        /// so a head that needs full crash coverage still pairs this with a platform crash
+        /// reporter. Handler bodies swallow their own failures on purpose: a reporter that throws
+        /// on the last-chance path replaces one crash with a worse one.
+        /// </para>
+        /// <para>
+        /// Call it ONCE, in <c>MauiProgram.CreateMauiApp</c>. The handlers are process-wide, so a
+        /// second call is ignored rather than doubling every report. Unlike the other calls here,
+        /// ordering does not matter: the handlers are installed when the app is built (through
+        /// <see cref="MauiErrorHandlingInitializer"/>), so a logging provider registered after this
+        /// call is still picked up.
+        /// </para>
+        /// </summary>
+        /// <param name="onUnhandled">
+        /// Optional crash-reporter hook, invoked with the exception and a source tag
+        /// (<see cref="MauiErrorHandlingInitializer.AppDomainSource"/> or
+        /// <see cref="MauiErrorHandlingInitializer.TaskSchedulerSource"/>). It runs inside the
+        /// handler's own guard, so a throw from it cannot make the crash worse; keep it fast and
+        /// non-blocking, because the AppDomain path is usually milliseconds from process death.
+        /// </param>
+        public MauiAppBuilder UseMmcaMauiErrorHandling(Action<Exception, string>? onUnhandled = null)
+        {
+            builder.Services.AddSingleton<IMauiInitializeService>(new MauiErrorHandlingInitializer(onUnhandled));
             return builder;
         }
 

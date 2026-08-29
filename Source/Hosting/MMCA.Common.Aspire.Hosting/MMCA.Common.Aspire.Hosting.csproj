@@ -22,9 +22,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="OpenTelemetry.Api" VersionOverride="1.18.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" VersionOverride="1.18.0" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" VersionOverride="1.18.0" />
+    <PackageReference Include="OpenTelemetry.Api" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />

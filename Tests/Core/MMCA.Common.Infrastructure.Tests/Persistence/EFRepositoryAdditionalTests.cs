@@ -44,7 +44,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
         };
 
         await _sut.AddRangeAsync(entities);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var count = await _sut.CountAsync();
         count.Should().Be(3);
@@ -65,12 +65,12 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
         var entity2 = TestEntity.Create(2, "Original2");
         await _sut.AddAsync(entity1);
         await _sut.AddAsync(entity2);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         entity1.Name = "Updated1";
         entity2.Name = "Updated2";
         _sut.UpdateRange([entity1, entity2]);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var found1 = await _sut.GetByIdAsync(1);
         var found2 = await _sut.GetByIdAsync(2);
@@ -92,7 +92,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
         await _sut.AddAsync(TestEntity.Create(1, "Keep"));
         await _sut.AddAsync(TestEntity.Create(2, "Delete"));
         await _sut.AddAsync(TestEntity.Create(3, "Delete"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var deletedCount = await _sut.ExecuteDeleteAsync(e => e.Name == "Delete");
 
@@ -115,7 +115,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
         await _sut.AddAsync(TestEntity.Create(1, "A"));
         await _sut.AddAsync(TestEntity.Create(2, "B"));
         await _sut.AddAsync(TestEntity.Create(3, "C"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetByIdsAsync([1, 3]);
 
@@ -128,7 +128,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
     public async Task GetByIdsAsync_EmptyIds_ReturnsEmptyCollection()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetByIdsAsync([]);
 
@@ -147,7 +147,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
     public async Task GetProjectedAsync_ProjectsCorrectly()
     {
         await _sut.AddAsync(TestEntity.Create(1, "Projected"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetProjectedAsync(
             select: e => e.Name,
@@ -169,7 +169,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
         await _sut.AddAsync(TestEntity.Create(2, "B"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetProjectedAsync(select: e => e.Name);
 
@@ -181,7 +181,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
     public async Task GetByIdAsync_WithIncludes_ReturnsEntity()
     {
         await _sut.AddAsync(TestEntity.Create(1, "WithIncludes"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         // No actual navigations in TestEntity, but verifies the code path
         var result = await _sut.GetByIdAsync(1, []);
@@ -210,7 +210,7 @@ public sealed class EFRepositoryAdditionalTests : IDisposable
     public async Task GetAllAsync_WithIgnoreQueryFilters_DoesNotThrow()
     {
         await _sut.AddAsync(TestEntity.Create(1, "Filtered"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync([], ignoreQueryFilters: true);
 

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Settings;
 using MMCA.Common.Shared.Concurrency;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
@@ -28,6 +30,12 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// stampede lock) with <c>t:{tenantId}:</c>; when none is, keys are exactly what they were before
 /// tenancy shipped.
 /// </para>
+/// <para>
+/// The wait on that stampede lock is bounded by
+/// <see cref="QueryCachePipelineSettings.PopulateLockTimeout"/> (<c>Cache:PopulateLockTimeout</c>),
+/// which is unbounded by default. A waiter that gives up is fail-open like every other cache
+/// failure here: it runs the inner handler and returns its result uncached.
+/// </para>
 /// </summary>
 /// <typeparam name="TQuery">The query type.</typeparam>
 /// <typeparam name="TResult">The result type returned by the handler.</typeparam>
@@ -35,7 +43,8 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     IQueryHandler<TQuery, TResult> inner,
     ICacheService cacheService,
     ILogger<CachingQueryDecorator<TQuery, TResult>> logger,
-    ITenantContext? tenantContext = null) : IQueryHandler<TQuery, TResult>
+    ITenantContext? tenantContext = null,
+    IOptions<QueryCachePipelineSettings>? pipelineSettings = null) : IQueryHandler<TQuery, TResult>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CachingQueryDecorator{TQuery, TResult}"/> class
@@ -86,7 +95,21 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
         // Slow path: per-key double-check locking (same pattern as IdempotencyFilter). On
         // expiry of a hot key only one concurrent request runs the handler; the rest wait
         // and are served the freshly cached entry.
-        using (await QueryCacheKeyLocks.Locks.AcquireAsync(cacheKey, cancellationToken).ConfigureAwait(false))
+        var populateLockTimeout = pipelineSettings?.Value.PopulateLockTimeout
+            ?? QueryCachePipelineSettings.DefaultPopulateLockTimeout;
+
+        if (await TryAcquirePopulateLockAsync(cacheKey, populateLockTimeout, cancellationToken)
+                .ConfigureAwait(false) is not { } stripe)
+        {
+            // Fail-open: stampede protection is an optimization, so a waiter that exhausts its
+            // budget runs the query itself rather than failing. The result is deliberately NOT
+            // cached here; the request holding the lock is the one that populates the entry.
+            LogPopulateLockTimedOut(logger, cacheKey, queryName, populateLockTimeout.TotalSeconds);
+            CqrsMetrics.RecordCacheMiss(queryName);
+            return await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
+        }
+
+        using (stripe)
         {
             cached = await TryReadAsync(cacheKey, queryName, cancellationToken).ConfigureAwait(false);
             if (cached is not null)
@@ -143,6 +166,50 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
         string cacheKey,
         string queryName,
         Exception exception);
+
+    [LoggerMessage(
+        Level = LogLevel.Debug,
+        Message = "Populate lock for key '{CacheKey}' on query '{QueryName}' was not acquired within {TimeoutSeconds}s; the query runs uncached")]
+    private static partial void LogPopulateLockTimedOut(
+        ILogger logger,
+        string cacheKey,
+        string queryName,
+        double timeoutSeconds);
+
+    /// <summary>
+    /// Acquires the per-key populate lock, giving up once <paramref name="timeout"/> elapses.
+    /// </summary>
+    /// <remarks>
+    /// The budget is armed on a LINKED source rather than the caller's token, so an expired budget
+    /// is distinguishable from a genuinely cancelled request: the former returns
+    /// <see langword="null"/> and the caller degrades to an uncached read, the latter still throws
+    /// (the same split <see cref="TimeoutQueryDecorator{TQuery, TResult}"/> makes). A non-positive
+    /// timeout means no bound and allocates nothing, which is the default path.
+    /// </remarks>
+    /// <param name="cacheKey">The tenant-scoped cache key the lock is striped on.</param>
+    /// <param name="timeout">The wait budget; zero or less waits indefinitely.</param>
+    /// <param name="cancellationToken">The caller's cancellation token.</param>
+    /// <returns>The stripe handle, or <see langword="null"/> when the budget elapsed first.</returns>
+    private static async Task<KeyedSemaphoreStripe.Releaser?> TryAcquirePopulateLockAsync(
+        string cacheKey,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        if (timeout <= TimeSpan.Zero)
+            return await QueryCacheKeyLocks.Locks.AcquireAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(timeout);
+
+        try
+        {
+            return await QueryCacheKeyLocks.Locks.AcquireAsync(cacheKey, budget.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (budget.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// Reads the cache fail-open: a cache fault is logged at warning level and reported as a miss

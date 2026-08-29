@@ -2,10 +2,10 @@ using AwesomeAssertions;
 using Bunit;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Testing.UI;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components;
 using MMCA.Common.UI.Pages.Common;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Pages.Common;
 
@@ -18,10 +18,10 @@ namespace MMCA.Common.UI.Tests.Pages.Common;
 /// </summary>
 public sealed class ListPageActionsTests : BunitTestBase
 {
-    // Deliberately NOT registered in DI: DeleteWithConfirmationAsync takes the snackbar as an
-    // argument, and substituting the container's ISnackbar would break MudSnackbarProvider, which
-    // RenderMudProviders needs in order to host the confirmation dialog.
-    private readonly Mock<ISnackbar> _snackbar = new();
+    // Deliberately NOT registered in DI: DeleteWithConfirmationAsync takes the toast service as
+    // an argument, so the flow's own toasts are asserted here while the components rendered by
+    // RenderMudProviders keep the base class's real Mud-backed facade.
+    private readonly Mock<IToastService> _toast = new();
 
     [Fact]
     public async Task ReloadActiveLayout_OnMobile_ResetsTheMobileList()
@@ -76,7 +76,7 @@ public sealed class ListPageActionsTests : BunitTestBase
                     deleted++;
                     return Task.FromResult(Result.Success());
                 },
-                _snackbar.Object,
+                _toast.Object,
                 "Session deleted",
                 _ => "unused",
                 () =>
@@ -92,7 +92,7 @@ public sealed class ListPageActionsTests : BunitTestBase
 
         deleted.Should().Be(1);
         reloaded.Should().Be(1);
-        VerifyToast("Session deleted", Severity.Success);
+        _toast.Verify(t => t.Success("Session deleted"), Times.Once);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class ListPageActionsTests : BunitTestBase
                     deleted++;
                     return Task.FromResult(Result.Success());
                 },
-                _snackbar.Object,
+                _toast.Object,
                 "Session deleted",
                 _ => "unused",
                 () =>
@@ -130,7 +130,7 @@ public sealed class ListPageActionsTests : BunitTestBase
 
         deleted.Should().Be(0);
         reloaded.Should().Be(0);
-        _snackbar.VerifyNoOtherCalls();
+        _toast.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class ListPageActionsTests : BunitTestBase
                 "Intro to Blazor",
                 () => Task.FromResult(
                     Result.Failure(Error.Conflict("Session.InUse", "Session is on the schedule"))),
-                _snackbar.Object,
+                _toast.Object,
                 "Session deleted",
                 result => result.Errors[0].Message,
                 () =>
@@ -163,7 +163,7 @@ public sealed class ListPageActionsTests : BunitTestBase
         await flow!;
 
         reloaded.Should().Be(0);
-        VerifyToast("Session is on the schedule", Severity.Error);
+        _toast.Verify(t => t.Error("Session is on the schedule"), Times.Once);
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public sealed class ListPageActionsTests : BunitTestBase
                 confirm.Instance,
                 "Intro to Blazor",
                 () => throw new OperationCanceledException(),
-                _snackbar.Object,
+                _toast.Object,
                 "Session deleted",
                 _ => "unused",
                 () => Task.CompletedTask);
@@ -192,7 +192,7 @@ public sealed class ListPageActionsTests : BunitTestBase
 
         var act = async () => await flow!;
         await act.Should().NotThrowAsync();
-        _snackbar.VerifyNoOtherCalls();
+        _toast.VerifyNoOtherCalls();
     }
 
     private IRenderedComponent<MobileInfiniteScrollList<string>> RenderMobileList(Action onFetch) =>
@@ -204,9 +204,4 @@ public sealed class ListPageActionsTests : BunitTestBase
                 return Task.FromResult(
                     Result.Success<(IReadOnlyList<string> Items, int TotalItems)>((["Alpha"], 1)));
             }));
-
-    private void VerifyToast(string message, Severity severity) =>
-        _snackbar.Verify(
-            s => s.Add(message, severity, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Once);
 }

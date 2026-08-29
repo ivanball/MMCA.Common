@@ -2,6 +2,13 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
+  <!--
+    CentralPackageTransitivePinningEnabled is deliberately NOT set in this workspace: CPM pins DIRECT
+    PackageReferences only. So lifting a transitive package (a security bump, most often) takes TWO
+    edits, never one: a PackageVersion entry here AND a direct PackageReference in a project that
+    flows that package onward, otherwise the pin is inert and the vulnerable version still resolves.
+    Worked exemplars below: the Microsoft.OpenApi and MessagePack pins, each with its own note.
+  -->
   <ItemGroup>
     <!-- API -->
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />

@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Testing.UI;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Components;
 using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Fallbacks;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Components;
 
@@ -99,7 +99,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
     [Fact]
     public async Task OnNativeHead_WhenNoShareSurfaceAccepts_WarnsWithTheCallersMessage()
     {
-        var snackbar = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        var toast = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(PayloadBytes),
         });
@@ -118,7 +118,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
             .Add(c => c.UnavailableMessage, "Calendar export is not available on this device"));
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
-        VerifyToast(snackbar, "Calendar export is not available on this device");
+        VerifyToast(toast, "Calendar export is not available on this device");
         File.Delete(Path.Combine(Path.GetTempPath(), "session-43.ics"));
     }
 
@@ -128,23 +128,23 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
         // No token is passed to GetByteArrayAsync, so an HttpClient timeout surfaces as an
         // OperationCanceledException. This is an OnClick callback, and on the native heads an
         // escaping exception is fatal to the host.
-        var snackbar = ArrangeNativeHead(_ => throw new TaskCanceledException("timeout"));
+        var toast = ArrangeNativeHead(_ => throw new TaskCanceledException("timeout"));
 
         var cut = RenderButton();
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
-        VerifyToast(snackbar, "Could not download the file");
+        VerifyToast(toast, "Could not download the file");
     }
 
     [Fact]
     public async Task OnNativeHead_WhenTheServerFails_WarnsInsteadOfKillingTheHost()
     {
-        var snackbar = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var toast = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
         var cut = RenderButton();
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
-        VerifyToast(snackbar, "Could not download the file");
+        VerifyToast(toast, "Could not download the file");
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
     {
         // An IOException from the temp-file write escaped the HttpRequestException-only catch.
         // A file name that is a directory separator makes the write fail deterministically.
-        var snackbar = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        var toast = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(PayloadBytes),
         });
@@ -163,7 +163,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
             .Add(c => c.ShareTitle, "Intro to Blazor"));
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
-        VerifyToast(snackbar, "Could not download the file");
+        VerifyToast(toast, "Could not download the file");
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
         Services.AddSingleton(externalLink.Object);
     }
 
-    private Mock<ISnackbar> ArrangeNativeHead(Func<HttpRequestMessage, HttpResponseMessage> respond)
+    private Mock<IToastService> ArrangeNativeHead(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
         ArrangeWebHead();
         ArrangeLinkInterceptingHead();
@@ -266,19 +266,13 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
         var handler = new CapturingHttpMessageHandler(respond);
         Services.AddSingleton(HttpTestDoubles.ClientFactory(handler));
 
-        // Last registration wins, so this recording double replaces the base's real snackbar.
-        var snackbar = new Mock<ISnackbar>();
-        Services.AddSingleton(snackbar.Object);
+        // Last registration wins, so this recording double replaces the base's real toast service.
+        var toast = new Mock<IToastService>();
+        Services.AddSingleton(toast.Object);
 
-        return snackbar;
+        return toast;
     }
 
-    private static void VerifyToast(Mock<ISnackbar> snackbar, string message) =>
-        snackbar.Verify(
-            s => s.Add(
-                message,
-                Severity.Warning,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
-            Times.Once);
+    private static void VerifyToast(Mock<IToastService> toast, string message) =>
+        toast.Verify(t => t.Warning(message), Times.Once);
 }

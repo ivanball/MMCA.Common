@@ -823,9 +823,10 @@ public sealed partial class OutboxProcessor(
     private static partial void LogDeadLetter(ILogger logger, Guid messageId, string eventType);
 
     // Warning, not Error: one unresolved attempt is a maybe (the declaring assembly may load on a
-    // later cycle), and the terminal attempt logs at Error above. Names the setting, because the
-    // fix for a genuinely renamed type is a configuration entry rather than a code change.
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} could not resolve event type {EventType}; retrying once before dead-lettering. If the type was renamed or moved, map it with Outbox:TypeAliases")]
+    // later cycle), and the terminal attempt logs at Error above. Names both fixes, because the one
+    // that repairs THIS row is configuration while the one that prevents the next occurrence is a
+    // one-line code change on the event.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} could not resolve event type {EventType}; retrying once before dead-lettering. If the type was renamed or moved, map the stored name with Outbox:TypeAliases to recover the rows already written, and give the event an [EventName] so future rows carry an identity a rename cannot break")]
     private static partial void LogTypeUnresolvableRetry(ILogger logger, Guid messageId, string eventType);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} failed (attempt {RetryCount})")]

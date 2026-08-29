@@ -1,4 +1,5 @@
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components;
 using MudBlazor;
 
@@ -44,7 +45,7 @@ public static class ListPageActions
     /// <param name="deleteConfirm">The page's delete-confirmation dialog ref.</param>
     /// <param name="entityName">The display name of the entity being deleted.</param>
     /// <param name="deleteAsync">The delete call, which reports its outcome as a <see cref="Result"/>.</param>
-    /// <param name="snackbar">The page's snackbar service.</param>
+    /// <param name="toast">The toast service (see <see cref="IToastService"/>).</param>
     /// <param name="successMessage">The localized success message.</param>
     /// <param name="errorMessage">
     /// Maps the failed result to the localized error message. Pages that show a fixed sentence
@@ -56,14 +57,14 @@ public static class ListPageActions
         DeleteConfirmation deleteConfirm,
         string? entityName,
         Func<Task<Result>> deleteAsync,
-        ISnackbar snackbar,
+        IToastService toast,
         string successMessage,
         Func<Result, string> errorMessage,
         Func<Task> reloadAsync)
     {
         ArgumentNullException.ThrowIfNull(deleteConfirm);
         ArgumentNullException.ThrowIfNull(deleteAsync);
-        ArgumentNullException.ThrowIfNull(snackbar);
+        ArgumentNullException.ThrowIfNull(toast);
         ArgumentNullException.ThrowIfNull(errorMessage);
         ArgumentNullException.ThrowIfNull(reloadAsync);
 
@@ -78,11 +79,11 @@ public static class ListPageActions
             var result = await deleteAsync();
             if (result.IsFailure)
             {
-                snackbar.Add(errorMessage(result), Severity.Error);
+                toast.Error(errorMessage(result));
                 return;
             }
 
-            snackbar.Add(successMessage, Severity.Success);
+            toast.Success(successMessage);
             await reloadAsync();
         }
         catch (OperationCanceledException)

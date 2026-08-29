@@ -2,8 +2,8 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Common;
 
@@ -12,7 +12,7 @@ namespace MMCA.Common.UI.Tests.Common;
 /// The behaviors pinned here are the ones a page silently depends on: a failure never unwraps
 /// (including value-type payloads, whose default is not null), messages are deduplicated and
 /// ordered most severe first, localization is key lookup with pass-through, and a failure raises
-/// exactly one snackbar rather than one per error.
+/// exactly one toast rather than one per error.
 /// </summary>
 public sealed class ResultUiExtensionsTests
 {
@@ -25,7 +25,7 @@ public sealed class ResultUiExtensionsTests
             ["Alias.Two"] = "Same wording.",
         };
 
-    private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IToastService> _toast = new();
 
     // == TryGetValue ==
     [Fact]
@@ -402,49 +402,43 @@ public sealed class ResultUiExtensionsTests
 
     // == NotifyOnFailure ==
     [Fact]
-    public void NotifyOnFailure_RaisesExactlyOneSnackbar_ForSeveralErrors()
+    public void NotifyOnFailure_RaisesExactlyOneToast_ForSeveralErrors()
     {
         var result = Failure(
             MakeError(ErrorType.Validation, "Name is required.", "A"),
             MakeError(ErrorType.Validation, "Email is required.", "B"),
             MakeError(ErrorType.Validation, "Phone is required.", "C"));
 
-        var returned = result.NotifyOnFailure(_snackbar.Object);
+        var returned = result.NotifyOnFailure(_toast.Object);
 
-        _snackbar.Verify(
-            s => s.Add(
-                "Name is required. Email is required. Phone is required.",
-                Severity.Error,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
+        _toast.Verify(
+            t => t.Show("Name is required. Email is required. Phone is required.", ToastSeverity.Error),
             Times.Once);
-        VerifyAnySnackbar(Times.Once());
+        VerifyAnyToast(Times.Once());
         returned.Should().BeSameAs(result, "the call has to sit inline in a chain");
     }
 
     [Fact]
     public void NotifyOnFailure_StaysQuiet_OnSuccess()
     {
-        Result.Success().NotifyOnFailure(_snackbar.Object);
+        Result.Success().NotifyOnFailure(_toast.Object);
 
-        VerifyAnySnackbar(Times.Never());
+        VerifyAnyToast(Times.Never());
     }
 
     [Theory]
-    [InlineData(Severity.Normal)]
-    [InlineData(Severity.Info)]
-    [InlineData(Severity.Success)]
-    [InlineData(Severity.Warning)]
-    [InlineData(Severity.Error)]
-    public void NotifyOnFailure_UsesTheRequestedSeverity(Severity severity)
+    [InlineData(ToastSeverity.Normal)]
+    [InlineData(ToastSeverity.Info)]
+    [InlineData(ToastSeverity.Success)]
+    [InlineData(ToastSeverity.Warning)]
+    [InlineData(ToastSeverity.Error)]
+    public void NotifyOnFailure_UsesTheRequestedSeverity(ToastSeverity severity)
     {
         var result = Result.Failure(MakeError(ErrorType.Failure, "boom"));
 
-        result.NotifyOnFailure(_snackbar.Object, localizer: null, severity);
+        result.NotifyOnFailure(_toast.Object, localizer: null, severity);
 
-        _snackbar.Verify(
-            s => s.Add("boom", severity, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Show("boom", severity), Times.Once);
     }
 
     [Fact]
@@ -452,30 +446,24 @@ public sealed class ResultUiExtensionsTests
     {
         var result = Result.Failure(MakeError(ErrorType.NotFound, "Order.NotFound"));
 
-        result.NotifyOnFailure(_snackbar.Object, Localizer());
+        result.NotifyOnFailure(_toast.Object, Localizer());
 
-        _snackbar.Verify(
-            s => s.Add(
-                "That order no longer exists.",
-                Severity.Error,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Show("That order no longer exists.", ToastSeverity.Error), Times.Once);
     }
 
     [Fact]
-    public void NotifyOnFailure_Generic_RaisesOneSnackbarAndReturnsTheSameTypedInstance()
+    public void NotifyOnFailure_Generic_RaisesOneToastAndReturnsTheSameTypedInstance()
     {
         var result = Result.Failure<int>(MakeError(ErrorType.Unexpected, "boom"));
 
-        var returned = result.NotifyOnFailure(_snackbar.Object);
+        var returned = result.NotifyOnFailure(_toast.Object);
 
         returned.Should().BeSameAs(result);
-        VerifyAnySnackbar(Times.Once());
+        VerifyAnyToast(Times.Once());
     }
 
     [Fact]
-    public void NotifyOnFailure_Throws_ForANullSnackbar()
+    public void NotifyOnFailure_Throws_ForANullToastService()
     {
         var result = Result.Failure(MakeError(ErrorType.Failure, "boom"));
 
@@ -565,14 +553,8 @@ public sealed class ResultUiExtensionsTests
 
     private static StubLocalizer Localizer() => new(Translations);
 
-    private void VerifyAnySnackbar(Times times) =>
-        _snackbar.Verify(
-            s => s.Add(
-                It.IsAny<string>(),
-                It.IsAny<Severity>(),
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
-            times);
+    private void VerifyAnyToast(Times times) =>
+        _toast.Verify(t => t.Show(It.IsAny<string>(), It.IsAny<ToastSeverity>()), times);
 
     /// <summary>
     /// Hand-written localizer: a known key resolves, an unknown one comes back with

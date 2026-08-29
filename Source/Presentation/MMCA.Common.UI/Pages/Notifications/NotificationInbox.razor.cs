@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Notifications.UserNotifications;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
@@ -20,7 +21,7 @@ public partial class NotificationInbox : IDisposable
 
     [Inject] private INotificationInboxUIService InboxService { get; set; } = default!;
     [Inject] private NotificationState NotificationState { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
@@ -102,7 +103,7 @@ public partial class NotificationInbox : IDisposable
             {
                 // Same surface as the exception path it replaces: one snackbar, the list left as it
                 // was rather than blanked, so a transient failure does not erase what is on screen.
-                result.NotifyOnFailure(Snackbar, L);
+                result.NotifyOnFailure(Toast, L);
             }
         }
         catch (OperationCanceledException)
@@ -138,7 +139,7 @@ public partial class NotificationInbox : IDisposable
             var markRead = await InboxService.MarkReadAsync(notification.Id, _cts.Token);
             if (markRead.IsFailure)
             {
-                markRead.NotifyOnFailure(Snackbar, L);
+                markRead.NotifyOnFailure(Toast, L);
                 return;
             }
 
@@ -174,7 +175,7 @@ public partial class NotificationInbox : IDisposable
             var markAllRead = await InboxService.MarkAllReadAsync(_cts.Token);
             if (markAllRead.IsFailure)
             {
-                markAllRead.NotifyOnFailure(Snackbar, L);
+                markAllRead.NotifyOnFailure(Toast, L);
                 return;
             }
 
@@ -188,7 +189,7 @@ public partial class NotificationInbox : IDisposable
             }
 
             NotificationState.SetUnreadCount(0);
-            Snackbar.Add(L["Notif.AllMarkedRead"], Severity.Success);
+            Toast.Success(L["Notif.AllMarkedRead"]);
         }
         catch (OperationCanceledException)
         {

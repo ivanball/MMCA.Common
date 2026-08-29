@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Conventions;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
 
@@ -22,7 +23,7 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
         var commandName = typeof(TCommand).Name;
         var correlationId = correlationContext.CorrelationId;
 
-        using (BeginCommandScope(logger, commandName, correlationId))
+        using (BeginCommandScope(logger, commandName, ModuleName, correlationId))
         {
             LogCommandStarted(logger, commandName, correlationId);
 
@@ -63,8 +64,16 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
     /// Source-generated scope: avoids the per-command dictionary/boxing allocation of an
     /// anonymous <c>BeginScope</c> payload while keeping the same structured keys.
     /// </summary>
-    private static readonly Func<ILogger, string, string, IDisposable?> BeginCommandScope =
-        LoggerMessage.DefineScope<string, string>("Command {CommandName} [CorrelationId: {CorrelationId}]");
+    private static readonly Func<ILogger, string, string, string, IDisposable?> BeginCommandScope =
+        LoggerMessage.DefineScope<string, string, string>(
+            "Command {CommandName} [Module: {ModuleName}] [CorrelationId: {CorrelationId}]");
+
+    /// <summary>
+    /// Owning module of the command, derived once per closed generic type (the static field is
+    /// per <c>TCommand</c>), so every log line a handler emits can be filtered by module without
+    /// paying for the namespace parse per execution.
+    /// </summary>
+    private static readonly string ModuleName = ModuleNameConventions.GetModuleName(typeof(TCommand)) ?? "unknown";
 
     private static void RecordDuration(string commandName, TimeSpan elapsed, string outcome) =>
         CqrsMetrics.CommandDuration.Record(

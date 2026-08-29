@@ -356,6 +356,11 @@ public interface IReadRepository<TEntity, TIdentifierType>
 /// saw. Reading a child directly is harmless and stays supported through
 /// <see cref="IReadRepository{TEntity, TIdentifierType}"/>. This mirrors the constraint on
 /// <c>IUnitOfWork.GetRepository</c>, which is how a handler is meant to obtain one.
+/// <para>
+/// The repository stages changes; it never flushes them. Persisting is the unit of work's job
+/// (<see cref="IUnitOfWork.SaveChangesAsync"/>), so that every repository touched in a scope is
+/// written as one unit under one audit stamp.
+/// </para>
 /// </remarks>
 /// <typeparam name="TEntity">The aggregate root entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
@@ -448,15 +453,6 @@ public interface IWriteRepository<TEntity, TIdentifierType>
         Expression<Func<TEntity, bool>> where,
         Action<IUpdatePropertySetter<TEntity>> setProperties,
         CancellationToken cancellationToken = default);
-
-    /// <summary>Synchronous save. Prefer <see cref="SaveChangesAsync"/> in async code paths.</summary>
-    /// <returns>The number of state entries written.</returns>
-    int Save();
-
-    /// <summary>Persists all pending changes asynchronously.</summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The number of state entries written.</returns>
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>

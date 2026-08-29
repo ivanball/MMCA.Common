@@ -119,25 +119,25 @@ public partial class ApiFileDownloadButton
 
             if (!await Share.ShareFileAsync(ShareTitle, filePath, ContentType))
             {
-                Snackbar.Add(UnavailableMessage ?? L["Snackbar.ShareUnavailable"].Value, Severity.Warning);
+                Toast.Warning(UnavailableMessage ?? L["Snackbar.ShareUnavailable"].Value);
             }
         }
         catch (HttpRequestException)
         {
-            Snackbar.Add(FailureMessage ?? L["Snackbar.DownloadFailed"].Value, Severity.Warning);
+            Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
         }
         catch (OperationCanceledException)
         {
             // No token is passed to the download, so this is the HttpClient timeout, not a
             // disposal. Report it rather than swallowing it: the user tapped and got nothing.
-            Snackbar.Add(FailureMessage ?? L["Snackbar.DownloadFailed"].Value, Severity.Warning);
+            Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
         }
         catch (Exception)
         {
             // The staging write (IOException, UnauthorizedAccessException) and the share sheet
             // itself run here too. This is an OnClick callback on the native heads, where an
             // unhandled exception is fatal to the host, so nothing may escape.
-            Snackbar.Add(FailureMessage ?? L["Snackbar.DownloadFailed"].Value, Severity.Warning);
+            Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
         }
         finally
         {

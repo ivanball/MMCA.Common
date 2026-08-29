@@ -4,6 +4,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services;
 using MudBlazor;
@@ -20,7 +21,7 @@ namespace MMCA.Common.UI.Pages.Common;
 /// <typeparam name="TDto">The DTO type displayed in the grid.</typeparam>
 public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewportObserver, IAsyncDisposable, IDisposable
 {
-    [Inject] protected ISnackbar Snackbar { get; set; } = default!;
+    [Inject] protected IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> Localizer { get; set; } = default!;
     [Inject] private IBrowserViewportService BrowserViewportService { get; set; } = default!;
     [Inject] private ListPageStateService ListPageStateService { get; set; } = default!;
@@ -34,7 +35,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <summary>
     /// Gets a value indicating whether the most recent grid/mobile fetch failed. On failure the
     /// grid renders with zero rows, which is visually identical to a genuinely empty list once
-    /// the error snackbar expires — pages should therefore branch on this flag in
+    /// the error toast expires, so pages should branch on this flag in
     /// <c>NoRecordsContent</c> (or above the mobile list) to show an inline
     /// error-with-retry instead of the "no records" empty state. Reset by the next fetch.
     /// </summary>
@@ -435,7 +436,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <remarks>
     /// The delegate's shape mirrors <c>IEntityService.GetPagedAsync</c> exactly, so a page still
     /// passes the method group. A failed <see cref="Result"/> is handled here the same way an
-    /// exception used to be: the localized message goes to the snackbar, <see cref="LoadFailed"/>
+    /// exception used to be: the localized message goes to the toast, <see cref="LoadFailed"/>
     /// is set, and the grid renders zero rows.
     /// </remarks>
     protected async Task<GridData<TDto>> LoadServerDataAsync(
@@ -482,7 +483,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
             if (!fetched.TryGetValue(out var page))
             {
-                fetched.NotifyOnFailure(Snackbar, Localizer);
+                fetched.NotifyOnFailure(Toast, Localizer);
                 LoadFailed = true;
                 return new GridData<TDto> { Items = [], TotalItems = 0 };
             }
@@ -495,16 +496,16 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         catch (OperationCanceledException)
         {
             // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
-            // snackbar is a no-op (separate render: no JS toast host), so no special-casing is needed.
+            // toast is a no-op (separate render: no JS toast host), so no special-casing is needed.
             if (showCancelSnackbar)
-                Snackbar.Add(Localizer["Grid.Snackbar.LoadCancelled"], Severity.Info);
+                Toast.Info(Localizer["Grid.Snackbar.LoadCancelled"]);
             return new GridData<TDto> { Items = [], TotalItems = 0 };
         }
         catch (Exception ex)
         {
             // Still guarded: the caller's additionalFilters callback and the grid-state extraction
             // above are arbitrary page code, and a throw from either must not strand IsLoading.
-            Snackbar.Add(ErrorMessages.LoadError(Title, ex), Severity.Error);
+            Toast.Error(ErrorMessages.LoadError(Title, ex));
             LoadFailed = true;
             return new GridData<TDto> { Items = [], TotalItems = 0 };
         }
@@ -554,7 +555,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             var fetched = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
             if (!fetched.TryGetValue(out var page))
             {
-                fetched.NotifyOnFailure(Snackbar, Localizer);
+                fetched.NotifyOnFailure(Toast, Localizer);
                 LoadFailed = true;
                 MobileItems = [];
                 MobileTotalItems = 0;
@@ -571,7 +572,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         catch (Exception ex)
         {
-            Snackbar.Add(ErrorMessages.LoadError(Title, ex), Severity.Error);
+            Toast.Error(ErrorMessages.LoadError(Title, ex));
             LoadFailed = true;
             MobileItems = [];
             MobileTotalItems = 0;

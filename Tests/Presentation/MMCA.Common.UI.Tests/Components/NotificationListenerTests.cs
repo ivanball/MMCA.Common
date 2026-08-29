@@ -1,37 +1,36 @@
 using AwesomeAssertions;
 using Bunit;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Testing.UI;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Components.Notifications;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Components;
 
 /// <summary>
 /// Covers <see cref="NotificationListener"/>, the invisible component that turns hub notifications
-/// into badge state and a snackbar. The regression these lock down (M54): the callback dispatched a
+/// into badge state and a toast. The regression these lock down (M54): the callback dispatched a
 /// render without guarding the disposed-component race, so an event arriving after the page had
 /// navigated away threw back into the hub service's own receive handler.
 /// </summary>
 public sealed class NotificationListenerTests : BunitTestBase
 {
     private readonly NotificationState _state = new();
-    private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IToastService> _toast = new();
 
     public NotificationListenerTests()
     {
         Services.AddSingleton(_state);
 
-        // Registered after the base class's AddMudServices, so this wins: it is the only way to make
+        // Registered after the base class's default facade, so this wins: it is the only way to make
         // the dispatched body throw the way a torn-down circuit does.
-        Services.AddSingleton(_snackbar.Object);
+        Services.AddSingleton(_toast.Object);
         Services.AddSingleton(_ =>
         {
             var tokenStorage = new Mock<ITokenStorageService>();
@@ -78,12 +77,8 @@ public sealed class NotificationListenerTests : BunitTestBase
 
     private async Task AssertDispatchExceptionIsSwallowedAsync(Exception raised)
     {
-        _snackbar
-            .Setup(s => s.Add(
-                It.IsAny<RenderFragment>(),
-                It.IsAny<Severity>(),
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()))
+        _toast
+            .Setup(t => t.ShowPersistent(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToastSeverity>()))
             .Throws(raised);
         Func<string, string, Task> callback = await RenderAndCaptureCallbackAsync();
 

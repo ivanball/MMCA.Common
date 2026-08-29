@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -35,14 +36,14 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         _connection.Dispose();
     }
 
-    // ── AddAsync + SaveChangesAsync ──
+    // ── AddAsync ──
     [Fact]
     public async Task AddAsync_PersistsEntity()
     {
         var entity = TestEntity.Create(1, "Test Item");
 
         await _sut.AddAsync(entity);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var found = await _sut.GetByIdAsync(1);
         found.Should().NotBeNull();
@@ -62,11 +63,11 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         var entity = TestEntity.Create(1, "Original");
         await _sut.AddAsync(entity);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         entity.Name = "Updated";
         await _sut.UpdateAsync(entity);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var found = await _sut.GetByIdAsync(1);
         found!.Name.Should().Be("Updated");
@@ -84,13 +85,13 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         var entity = TestEntity.Create(1, "Original");
         await _sut.AddAsync(entity);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         _context.ChangeTracker.Clear();
 
         var detached = TestEntity.Create(1, "Detached Update");
         await _sut.UpdateAsync(detached);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         _context.ChangeTracker.Clear();
         var found = await _sut.GetByIdAsync(1);
@@ -103,7 +104,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         var entity = TestEntity.Create(1, "Item");
         await _sut.AddAsync(entity);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetByIdAsync(1);
 
@@ -124,7 +125,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
         await _sut.AddAsync(TestEntity.Create(2, "B"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync([]);
 
@@ -136,7 +137,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "Alpha"));
         await _sut.AddAsync(TestEntity.Create(2, "Beta"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync([], where: e => e.Name == "Alpha");
 
@@ -149,7 +150,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "Zebra"));
         await _sut.AddAsync(TestEntity.Create(2, "Apple"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync([], orderBy: e => e.Name);
 
@@ -162,7 +163,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task GetAllAsync_WithSelect_ProjectsCorrectly()
     {
         await _sut.AddAsync(TestEntity.Create(1, "Selected"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync(
             [],
@@ -176,7 +177,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task GetAllAsync_WithAsTracking_ReturnsTrackedEntities()
     {
         await _sut.AddAsync(TestEntity.Create(1, "Tracked"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync([], asTracking: true);
 
@@ -191,7 +192,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "LookupItem"));
         await _sut.AddAsync(TestEntity.Create(2, "AnotherItem"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllForLookupAsync("Name");
 
@@ -205,7 +206,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "Keep"));
         await _sut.AddAsync(TestEntity.Create(2, "Discard"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllForLookupAsync(
             "Name",
@@ -220,7 +221,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "Zebra"));
         await _sut.AddAsync(TestEntity.Create(2, "Apple"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllForLookupAsync("Name");
 
@@ -232,7 +233,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task GetAllForLookupAsync_WithNonStringProperty_UsesToString()
     {
         await _sut.AddAsync(TestEntity.Create(1, "Item"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllForLookupAsync("Id");
 
@@ -246,7 +247,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
         await _sut.AddAsync(TestEntity.Create(2, "B"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var count = await _sut.CountAsync();
 
@@ -258,7 +259,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
         await _sut.AddAsync(TestEntity.Create(2, "B"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var count = await _sut.CountAsync(e => e.Name == "A");
 
@@ -277,7 +278,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task ExistsAsync_ExistingEntity_ReturnsTrue()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var exists = await _sut.ExistsAsync(1);
 
@@ -295,7 +296,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task ExistsAsync_WithPredicate_Works()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var exists = await _sut.ExistsAsync(e => e.Name == "A");
 
@@ -320,7 +321,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task ExistsAsync_ById_WithIgnoreQueryFilters_ReturnsTrue()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var exists = await _sut.ExistsAsync(1, ignoreQueryFilters: true);
 
@@ -338,7 +339,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task ExistsAsync_WithPredicate_IgnoreQueryFilters_Works()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var exists = await _sut.ExistsAsync(e => e.Name == "A", ignoreQueryFilters: true);
 
@@ -352,12 +353,20 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         exists.Should().BeFalse();
     }
 
-    // ── Save (sync) ──
+    // ── Staged adds flushed by the owning context's synchronous save ──
     [Fact]
-    public async Task Save_PersistsChanges()
+    [SuppressMessage(
+        "Performance",
+        "CA1849:Call async methods when in an async method",
+        Justification = "The synchronous ApplicationDbContext.SaveChanges path is the subject under test.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S6966:Awaitable method should be used",
+        Justification = "The synchronous ApplicationDbContext.SaveChanges path is the subject under test.")]
+    public async Task AddAsync_WithSynchronousContextSave_PersistsChanges()
     {
         await _sut.AddAsync(TestEntity.Create(1, "Sync"));
-        var count = _sut.Save();
+        var count = _context.SaveChanges();
 
         count.Should().BeGreaterThan(0);
         var found = await _sut.GetByIdAsync(1);
@@ -379,7 +388,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     public async Task GetAllAsync_WithEmptyIncludes_DoesNotThrow()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         var result = await _sut.GetAllAsync([string.Empty, "  "]);
 
@@ -394,14 +403,14 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         act.Should().Throw<ArgumentNullException>();
     }
 
-    // ── SaveChangesAsync returns count ──
+    // ── Every staged add reaches the database in one flush ──
     [Fact]
-    public async Task SaveChangesAsync_ReturnsAffectedCount()
+    public async Task AddAsync_MultipleEntities_ContextSaveReturnsAffectedCount()
     {
         await _sut.AddAsync(TestEntity.Create(1, "A"));
         await _sut.AddAsync(TestEntity.Create(2, "B"));
 
-        var count = await _sut.SaveChangesAsync();
+        var count = await _context.SaveChangesAsync();
 
         count.Should().Be(2);
     }
@@ -415,7 +424,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         var entity2 = TestEntity.Create(2, "Second");
         await _sut.AddAsync(entity1);
         await _sut.AddAsync(entity2);
-        await _sut.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
         // Act: update tracked entity with same values as another entity (no unique constraint, so this succeeds)
         var updatedEntity = TestEntity.Create(1, "Second");

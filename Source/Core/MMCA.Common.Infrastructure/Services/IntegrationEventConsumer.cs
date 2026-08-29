@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox;
 
 namespace MMCA.Common.Infrastructure.Services;
 
@@ -35,7 +36,11 @@ public sealed partial class IntegrationEventConsumer<TEvent>(
         ArgumentNullException.ThrowIfNull(context);
 
         var integrationEvent = context.Message;
-        var eventTypeName = typeof(TEvent).Name;
+
+        // The inbox key is the event's [EventName] identity when it declares one, and its short type
+        // name otherwise, which is what every row written so far holds. An unannotated event
+        // therefore keeps matching its existing rows exactly.
+        var eventTypeName = EventNameResolver.GetInboxName(typeof(TEvent));
 
         // Consumer-side idempotency: at-least-once broker delivery can redeliver the same message.
         // If the inbox already recorded it, skip the handlers and ack. (Always true when the inbox

@@ -111,6 +111,58 @@ public static partial class ArchitectureRules
             "domain entities must be sealed — only abstract framework base entities are inheritable");
     }
 
+    /// <summary>
+    /// Every public instance property on a module domain entity is closed for outside assignment: it
+    /// has no setter, an <c>init</c>-only setter, or a non-public one.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why.</b> An aggregate that hands out public setters is a data bag with a factory bolted on.
+    /// The static <c>Create(...)</c> factory and its invariants can only guarantee the state they
+    /// build; a public setter lets any caller move the aggregate to a state no invariant ever saw,
+    /// which is exactly the encapsulation the DDD rules in this file exist to hold. Mutation
+    /// therefore goes through NAMED domain methods on the aggregate (<c>Rename</c>, <c>Deactivate</c>,
+    /// <c>SetPrice</c>), which is also where the domain event belongs, so a state change and its
+    /// announcement cannot drift apart.
+    /// </para>
+    /// <para>
+    /// <b>What counts as compliant.</b> A get-only property, a computed property, an
+    /// <c>init</c>-only property (construction-time assignment is what the factory already governs),
+    /// and any property whose setter is <see langword="private"/>, <see langword="protected"/> or
+    /// <see langword="internal"/>. Only a
+    /// genuinely public, non-<c>init</c> setter is a violation. Navigation properties are included
+    /// rather than exempted: assigning a child collection or a related aggregate from outside is the
+    /// same invariant hole, so navigation assignment goes through a <c>SetXxx</c> method too (the
+    /// framework's <c>SetItems&lt;T&gt;</c> is that method for the collection case).
+    /// </para>
+    /// <para>
+    /// <b>Limits.</b> Reflection sees accessor visibility, not intent, so a public setter that is
+    /// only ever called from inside the aggregate still fails: make it private and the compiler
+    /// agrees. The rule scopes to <see cref="IArchitectureMap.ModuleDomain"/> and to types inheriting
+    /// the auditable entity base, the same filter <see cref="DomainEntitiesAreSealed"/> uses, so DTOs,
+    /// value objects and framework base entities are out of scope, and the rule is vacuous in a
+    /// module-less framework repo. Fields are not inspected: the entity model is property-based, and a
+    /// public mutable field is already caught by the analyzer set.
+    /// </para>
+    /// </remarks>
+    /// <param name="map">The repo's architecture map.</param>
+    public static void EntityPropertySettersAreNonPublic(IArchitectureMap map)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+
+        var violations = map.ModuleDomain()
+            .SelectMany(a => a.ConcreteClasses)
+            .Where(t => t.InheritsAuditableEntity)
+            .SelectMany(t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.HasPublicMutableSetter)
+                .Select(p => $"  - {t.Name}.{p.Name}"));
+
+        ArchitectureAssert.NoViolations(violations,
+            "domain entity properties must not have a public setter: mutation goes through named "
+                + "domain methods (including SetXxx for navigations), so no caller can move an "
+                + "aggregate to a state its invariants never validated");
+    }
+
     /// <summary>Aggregate roots expose no public constructor — construction goes through the factory.</summary>
     public static void AggregateRootsHaveNoPublicConstructors(IArchitectureMap map)
     {

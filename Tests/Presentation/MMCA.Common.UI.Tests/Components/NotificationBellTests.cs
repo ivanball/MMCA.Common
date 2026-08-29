@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components.Notifications;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Components;
 
@@ -51,15 +51,15 @@ public sealed class NotificationBellTests : BunitTestBase
 {
     private readonly Mock<INotificationInboxUIService> _inbox = new();
     private readonly NotificationState _state = new();
-    private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IToastService> _toast = new();
 
     public NotificationBellTests()
     {
         Services.AddSingleton(_state);
         Services.AddSingleton(_inbox.Object);
-        // Registered after the base class's AddMudServices, so this wins: the bell has no error
+        // Registered after the base class's default facade, so this wins: the bell has no error
         // surface of its own, and this is how a stray toast from it would be caught.
-        Services.AddSingleton<ISnackbar>(_snackbar.Object);
+        Services.AddSingleton<IToastService>(_toast.Object);
     }
 
     private void CountIs(int count) =>
@@ -182,9 +182,7 @@ public sealed class NotificationBellTests : BunitTestBase
         cut.WaitForAssertion(() =>
             _inbox.Verify(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce()));
 
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Never());
+        _toast.VerifyNoOtherCalls();
     }
 
     [Fact]

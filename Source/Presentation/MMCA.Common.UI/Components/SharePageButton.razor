@@ -2,7 +2,7 @@
 @inject IShareService Share
 @inject IClipboardService Clipboard
 @inject IPublicLinkBuilder LinkBuilder
-@inject ISnackbar Snackbar
+@inject IToastService Toast
 @inject IStringLocalizer<SharePageButton> L
 
 @* Share affordance for public detail pages (ADR-042). Native heads open the OS share sheet;
@@ -49,11 +49,11 @@
             // No share surface (desktop browsers, null fallback): copy the link instead.
             if (await Clipboard.SetTextAsync(url.ToString()))
             {
-                Snackbar.Add(L["Snackbar.LinkCopied"].Value, Severity.Success);
+                Toast.Success(L["Snackbar.LinkCopied"].Value);
             }
             else
             {
-                Snackbar.Add(L["Snackbar.ShareFailed"].Value, Severity.Warning);
+                Toast.Warning(L["Snackbar.ShareFailed"].Value);
             }
         }
         finally

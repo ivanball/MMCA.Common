@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Infrastructure.Settings;
 using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure.Caching;
@@ -28,17 +30,18 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// window.
 /// </para>
 /// <para>
-/// Replica L1 staleness after an invalidation is bounded by the local expiration (30 seconds), not
-/// by the eviction: only the evicting process's L1 is cleared. That is the accepted cost of the L1
-/// hit rate, and it is the same order as the delayed re-invalidation the caching command decorator
-/// already performs.
+/// Replica L1 staleness after an invalidation is bounded by the local expiration (30 seconds by
+/// default, <c>Cache:LocalCacheDuration</c> to change it), not by the eviction: only the evicting
+/// process's L1 is cleared. That is the accepted cost of the L1 hit rate, and it is the same order
+/// as the delayed re-invalidation the caching command decorator already performs.
 /// </para>
 /// </remarks>
 internal sealed partial class HybridCacheService(
     HybridCache hybrid,
     ILogger<HybridCacheService> logger,
     IConnectionMultiplexer? connectionMultiplexer = null,
-    CacheKeyNamespace? keyNamespace = null) : ICacheService
+    CacheKeyNamespace? keyNamespace = null,
+    IOptions<CacheSettings>? cacheSettings = null) : ICacheService
 {
     /// <summary>
     /// Segment separating this service's keyspace from the one <see cref="DistributedCacheService"/>
@@ -81,6 +84,13 @@ internal sealed partial class HybridCacheService(
     /// </summary>
     private readonly CacheKeyNamespace _keys = keyNamespace ?? CacheKeyNamespace.None;
 
+    /// <summary>
+    /// Bound <c>Cache</c> section, or the framework defaults when a host builds this service without
+    /// one (direct construction in tests). The defaults reproduce
+    /// <see cref="CacheOptions.DefaultDuration"/> and <see cref="LocalCacheDefault"/> exactly.
+    /// </summary>
+    private readonly CacheSettings _settings = cacheSettings?.Value ?? new CacheSettings();
+
     /// <summary>Set once (via <see cref="Interlocked"/>) after the missing-multiplexer no-op is logged, so the steady state warns once rather than on every command.</summary>
     private int _noMultiplexerWarned;
 
@@ -116,11 +126,11 @@ internal sealed partial class HybridCacheService(
 
     /// <inheritdoc />
     /// <remarks>
-    /// The absolute expiration is the caller's, or the framework default when omitted (the same
-    /// <see cref="CacheOptions.DefaultDuration"/> <see cref="DistributedCacheService"/> applies). The
-    /// L1 copy is capped at the shorter of that TTL and <see cref="LocalCacheDefault"/>, so a
-    /// long-lived entry does not sit in another replica's memory for its whole TTL after an
-    /// invalidation this process cannot see.
+    /// The absolute expiration is the caller's, or <see cref="CacheSettings.DefaultDuration"/> when
+    /// omitted (the same default <see cref="DistributedCacheService"/> applies). The L1 copy is
+    /// capped at the shorter of that TTL and <see cref="CacheSettings.LocalCacheDuration"/>
+    /// (<see cref="LocalCacheDefault"/> when unset), so a long-lived entry does not sit in another
+    /// replica's memory for its whole TTL after an invalidation this process cannot see.
     /// </remarks>
     public Task SetAsync<T>(
         string key,
@@ -286,20 +296,21 @@ internal sealed partial class HybridCacheService(
     private string HybridKey(string key) => _keys.Qualify(string.Concat(KeyspaceSegment, key));
 
     /// <summary>
-    /// Builds the entry options for a write: the caller's TTL (or the framework default), with the
-    /// L1 copy capped at <see cref="LocalCacheDefault"/> or the TTL, whichever is shorter.
+    /// Builds the entry options for a write: the caller's TTL (or the configured default), with the
+    /// L1 copy capped at the configured local ceiling or the TTL, whichever is shorter.
     /// </summary>
     /// <param name="expiration">The caller-supplied expiration, if any.</param>
     /// <param name="flags">Optional flags; <see langword="null"/> inherits the configured defaults.</param>
     /// <returns>The entry options to pass to <see cref="HybridCache"/>.</returns>
-    private static HybridCacheEntryOptions WriteOptions(TimeSpan? expiration, HybridCacheEntryFlags? flags = null)
+    private HybridCacheEntryOptions WriteOptions(TimeSpan? expiration, HybridCacheEntryFlags? flags = null)
     {
-        var ttl = expiration ?? CacheOptions.DefaultDuration;
+        var ttl = expiration ?? _settings.DefaultDuration;
+        var localCeiling = _settings.LocalCacheDuration ?? LocalCacheDefault;
 
         return new HybridCacheEntryOptions
         {
             Expiration = ttl,
-            LocalCacheExpiration = ttl < LocalCacheDefault ? ttl : LocalCacheDefault,
+            LocalCacheExpiration = ttl < localCeiling ? ttl : localCeiling,
             Flags = flags,
         };
     }

@@ -18,6 +18,7 @@ MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHand
 MMCA.Common.Testing.Architecture.DomainThrowTestsBase
 MMCA.Common.Testing.Architecture.DomainThrowTestsBase.DomainThrowTestsBase() -> void
 MMCA.Common.Testing.Architecture.DomainThrowTestsBase.Domain_ShouldNotThrow_ExceptArgumentGuards() -> void
+MMCA.Common.Testing.Architecture.EntityConventionTestsBase.DomainEntityProperties_ShouldNotHave_PublicSetters() -> void
 MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase
 MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCatalogTestsBase() -> void
 MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCodeCatalog_ShouldNotBe_Empty() -> void
@@ -52,6 +53,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.CommandsHaveValidators
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DistinctErrorCodeCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DomainEventHandlersDoNotSave(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces, int maxCallDepth = 6) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.DomainThrowsOnlyArgumentGuards(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.EntityPropertySettersAreNonPublic(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ErrorCodesAreUnique(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedSharedCodes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ErrorCodesUseAnAllowedPrefix(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Func<string!, bool>! isCodeAllowed, System.Collections.Generic.IReadOnlyCollection<string!>! allowedSharedCodes) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersHaveUniqueSourceTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

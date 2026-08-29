@@ -3,6 +3,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MudBlazor;
 
@@ -19,7 +20,7 @@ namespace MMCA.Common.UI.Components;
 public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     [Parameter]
@@ -295,7 +296,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
         if (isInitial)
         {
-            Snackbar.Add(_loadErrorMessage ?? L["Grid.Snackbar.LoadFailed"].Value, Severity.Error);
+            Toast.Error(_loadErrorMessage ?? L["Grid.Snackbar.LoadFailed"].Value);
         }
     }
 

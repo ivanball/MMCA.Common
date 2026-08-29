@@ -57,23 +57,6 @@ public sealed class GatewayDownstreamHealthCheckOptions
     /// </para>
     /// </summary>
     public DownstreamProbeVersion ProbeVersion { get; set; } = DownstreamProbeVersion.Auto;
-
-    /// <summary>
-    /// Whether the probe speaks HTTP/2 over cleartext (h2c prior knowledge). A compatibility facade
-    /// over <see cref="ProbeVersion"/>: reading it reports whether the pinned mode is
-    /// <see cref="DownstreamProbeVersion.Http2"/> (so it reads <see langword="false"/> under the
-    /// <see cref="DownstreamProbeVersion.Auto"/> default, which has not chosen a version yet), and
-    /// writing it pins <see cref="DownstreamProbeVersion.Http2"/> or
-    /// <see cref="DownstreamProbeVersion.Http11"/>, giving up the negotiation.
-    /// </summary>
-#pragma warning disable S1133 // Deprecated code should be removed: the obsoletion IS the migration mechanism; it flags every remaining consumer opt-out during the lockstep sweep, and the facade is removed once all consumers are swept.
-    [Obsolete("Use ProbeVersion; the Auto default negotiates the protocol per downstream.")]
-    public bool ProbeOverHttp2
-    {
-        get => ProbeVersion == DownstreamProbeVersion.Http2;
-        set => ProbeVersion = value ? DownstreamProbeVersion.Http2 : DownstreamProbeVersion.Http11;
-    }
-#pragma warning restore S1133
 }
 
 /// <summary>

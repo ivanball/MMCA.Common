@@ -19,15 +19,21 @@ public sealed class OutboxMessage
     };
 
     /// <summary>
-    /// Caches resolved event types per assembly-qualified name; <see cref="Type.GetType(string)"/>
-    /// is a per-call reflection lookup otherwise. Unresolvable names cache as null.
+    /// Caches resolved event types per STORED name (an assembly-qualified name, or an
+    /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity);
+    /// <see cref="Type.GetType(string)"/> and the attribute scan behind it are per-call reflection
+    /// lookups otherwise. Unresolvable names cache as null.
     /// </summary>
     private static readonly ConcurrentDictionary<string, Type?> EventTypeCache = new(StringComparer.Ordinal);
 
     /// <summary>Gets the unique identifier for this outbox entry.</summary>
     public Guid Id { get; init; } = Guid.NewGuid();
 
-    /// <summary>Gets the assembly-qualified type name of the domain event for deserialization.</summary>
+    /// <summary>
+    /// Gets the stored identity of the domain event, used to resolve its type on deserialization:
+    /// the <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> name when the event
+    /// declares one, otherwise its assembly-qualified type name.
+    /// </summary>
     public required string EventType { get; init; }
 
     /// <summary>Gets the JSON-serialized domain event payload.</summary>
@@ -81,6 +87,12 @@ public sealed class OutboxMessage
     /// <summary>
     /// Creates an <see cref="OutboxMessage"/> from a domain event, serializing it as JSON.
     /// </summary>
+    /// <remarks>
+    /// The stored <see cref="EventType"/> is the event's
+    /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> name when it declares one, and
+    /// its assembly-qualified name otherwise. Both lookups are cached per type by
+    /// <see cref="EventNameResolver"/>, so annotating an event costs nothing per message.
+    /// </remarks>
     /// <param name="domainEvent">The domain event to persist.</param>
     /// <returns>A new outbox message ready for persistence.</returns>
     public static OutboxMessage FromDomainEvent(IDomainEvent domainEvent)
@@ -91,7 +103,7 @@ public sealed class OutboxMessage
         var activity = Activity.Current;
         return new OutboxMessage
         {
-            EventType = type.AssemblyQualifiedName ?? type.FullName ?? type.Name,
+            EventType = EventNameResolver.GetStorageName(type),
             Payload = JsonSerializer.Serialize(domainEvent, type, SerializerOptions),
             OccurredOn = domainEvent.DateOccurred,
             TraceId = activity?.TraceId.ToString(),
@@ -122,6 +134,14 @@ public sealed class OutboxMessage
     /// assembly-qualified name or a bare full name, which is then searched across the loaded
     /// assemblies. Pass <see langword="null"/> for no aliasing.
     /// </param>
+    /// <remarks>
+    /// Interplay with <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/>: the attribute
+    /// is the PROACTIVE identity (rows written after it is applied store a name no rename can
+    /// break), while the alias map is the RETROACTIVE repair for rows ALREADY written under a name
+    /// that no longer resolves. Resolution is per stored string, so both coexist without conflict:
+    /// an old row keeps going through its alias, a new row resolves by its declared name, and each
+    /// caches independently.
+    /// </remarks>
     /// <returns>The deserialized domain event, or <see langword="null"/> if the type cannot be resolved.</returns>
     public IDomainEvent? DeserializeEvent(IReadOnlyDictionary<string, string>? typeAliases)
     {
@@ -135,14 +155,20 @@ public sealed class OutboxMessage
     }
 
     /// <summary>
-    /// Resolves the stored <see cref="EventType"/> to a CLR type: the stored name first, then the
-    /// alias map. Alias lookups are only paid for by rows whose stored name failed to resolve, and
-    /// the successful lookups cache under the ALIAS TARGET rather than the stored name, so two hosts
-    /// configured with different maps cannot poison each other's cache entries.
+    /// Resolves the stored <see cref="EventType"/> to a CLR type: the stored name first (as a CLR
+    /// name, then as an <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity),
+    /// then the alias map. Alias lookups are only paid for by rows whose stored name failed to
+    /// resolve, and the successful lookups cache under the ALIAS TARGET rather than the stored name,
+    /// so two hosts configured with different maps cannot poison each other's cache entries.
     /// </summary>
     private Type? ResolveEventType(IReadOnlyDictionary<string, string>? typeAliases)
     {
-        var type = EventTypeCache.GetOrAdd(EventType, static typeName => Type.GetType(typeName));
+        // Order is load-bearing. Type.GetType stays first, so every row written before [EventName]
+        // existed resolves by exactly the path it always did and pays nothing new; the attribute
+        // scan only runs for a stored name that is not a CLR name, and caches under that name.
+        var type = EventTypeCache.GetOrAdd(
+            EventType,
+            static typeName => Type.GetType(typeName) ?? EventNameResolver.FindTypeByDeclaredName(typeName));
         if (type is not null || typeAliases is null || typeAliases.Count == 0)
             return type;
 
