@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -84,4 +85,39 @@ public sealed class DependencyInjectionBrokerMessagingTests
 
         services.Should().BeEmpty("the in-process provider short-circuits before touching the container");
     }
+
+    [Fact]
+    public void AddBrokerMessaging_EndpointPrefix_ReachesTheEndpointNameFormatter()
+    {
+        // The setting exists so several services can share one broker: if the prefix never reaches the
+        // formatter, two services with the same consumer type name derive the same queue and become
+        // competing consumers of each other's events.
+        var services = new ServiceCollection();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = "RabbitMq",
+                ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
+                ["MessageBus:EndpointPrefix"] = "store-catalog",
+            })
+            .Build();
+
+        services.AddBrokerMessaging(configuration);
+
+        var formatter = services
+            .Select(d => d.ImplementationInstance)
+            .OfType<IEndpointNameFormatter>()
+            .Should().ContainSingle().Subject;
+
+        formatter.Consumer<OrderPlacedConsumer>().Should().Be("store-catalog-order-placed");
+    }
+
+    /// <summary>A consumer that exists only to be named by the endpoint name formatter.</summary>
+    private sealed class OrderPlacedConsumer : IConsumer<OrderPlacedTestEvent>
+    {
+        public Task Consume(ConsumeContext<OrderPlacedTestEvent> context) => Task.CompletedTask;
+    }
+
+    /// <summary>The message the naming-only consumer above is closed over.</summary>
+    public sealed record OrderPlacedTestEvent(int OrderId);
 }

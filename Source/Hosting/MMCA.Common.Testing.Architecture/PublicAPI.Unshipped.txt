@@ -9,6 +9,9 @@ MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase
 MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.CommandInventory_ShouldNotBe_Empty() -> void
 MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.CommandValidatorCoverageTestsBase() -> void
 MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.Commands_ShouldHave_ValidationCoverage() -> void
+MMCA.Common.Testing.Architecture.ContractImplementationTestsBase
+MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.ContractImplementationTestsBase() -> void
+MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.ServiceContractImplementations_ShouldNotBe_Public() -> void
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlerSaveTestsBase() -> void
 MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.DomainEventHandlers_ShouldNotReach_SaveChanges() -> void
@@ -34,6 +37,7 @@ MMCA.Common.Testing.Architecture.SortableColumnConventionTestsBase.SortableColum
 abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AllowedAnonymousEndpoints.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 abstract MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.TargetAssemblies.get -> System.Collections.Generic.IReadOnlyCollection<System.Reflection.Assembly!>!
 abstract MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.DomainThrowTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -54,11 +58,13 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersHaveUniq
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersIncreaseSchemaVersion(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandledCommandCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HardDeletesOnlyInAllowedTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractImplementationsAreNotPublic(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedPublicImplementations) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractsDoNotDependOnServiceInternals(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.SortableGridColumnsUsePropertyColumn(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots) -> void
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.MinimumScannedTypes.get -> int
 virtual MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.AllowedUnvalidatedCommands.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.MinimumCommands.get -> int
+virtual MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.AllowedPublicImplementations.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.AllowedSavingTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.DomainEventHandlerSaveTestsBase.MaxCallDepth.get -> int
 virtual MMCA.Common.Testing.Architecture.DomainThrowTestsBase.AllowedThrowingTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

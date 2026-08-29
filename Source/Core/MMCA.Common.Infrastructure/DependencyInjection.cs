@@ -704,7 +704,12 @@ public static class DependencyInjection
             {
                 if (!string.IsNullOrWhiteSpace(settings.EndpointPrefix))
                 {
-                    x.SetKebabCaseEndpointNameFormatter();
+                    // The prefix is the whole point: the formatter has to carry it, or every service
+                    // on a shared broker derives the same kebab-case queue name from the same
+                    // consumer type and they collide. includeNamespace: false keeps the name to the
+                    // consumer's short type name, so the prefix is the only namespacing applied.
+                    x.SetEndpointNameFormatter(
+                        new KebabCaseEndpointNameFormatter(settings.EndpointPrefix, includeNamespace: false));
                 }
 
                 configureConsumers?.Invoke(x);

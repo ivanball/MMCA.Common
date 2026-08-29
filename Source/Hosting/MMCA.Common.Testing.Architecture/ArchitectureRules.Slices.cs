@@ -9,6 +9,16 @@ public static partial class ArchitectureRules
     /// folder away from its contract. Only same-assembly contracts are checked — a module that reuses
     /// a framework-generic command (e.g. <c>DeleteEntityCommand&lt;,&gt;</c> from MMCA.Common) is
     /// legitimately not co-located with it, so cross-assembly contracts are exempt.
+    /// <para>
+    /// <b>Scope, deliberately narrow.</b> The rule covers the command/query, its validator and its
+    /// handler, and nothing else. A module's <c>DTOs/</c>, <c>Specifications/</c> and any
+    /// <c>Validation/</c> rule set shared across slices are AGGREGATE-scoped by design: one DTO shape,
+    /// one specification and one shared rule set typically serve every use case over the same
+    /// aggregate, so forcing them into a single slice's folder would either duplicate them per slice
+    /// or make one slice the arbitrary owner that the others reach into. Cohesion is worth enforcing
+    /// exactly where a feature would otherwise be split across horizontal folders; the shared
+    /// aggregate-level types are already cohesive around the aggregate.
+    /// </para>
     /// </summary>
     public static void HandlersAreCoLocatedWithTheirContracts(IArchitectureMap map)
     {

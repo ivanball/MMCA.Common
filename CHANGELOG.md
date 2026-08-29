@@ -4,6 +4,42 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.166.0] - 2026-08-28
+
+Hardening release from the 2026-08-28 Medium-literature audit (20 articles cross-checked against the
+framework; report in the workspace `Reports/`).
+
+### Added
+
+- **`ContractImplementationTestsBase`.** New opt-in architecture fitness base asserting every class
+  implementing a `[ServiceContract]` interface is non-public, so module encapsulation is a build
+  gate rather than a convention; `AllowedPublicImplementations` is the escape hatch.
+- **`CHANGELOG.md` ships in every package**, and the pack metadata gains `Copyright` and
+  `PackageReleaseNotes`.
+
+### Changed
+
+- **BREAKING: write repositories are aggregate-root-only.** `IRepository` and `IWriteRepository`
+  (with `EFRepository` and its decorator) are constrained to `AuditableAggregateRootEntity`,
+  matching the constraint `IUnitOfWork.GetRepository` always had; the read-side surfaces
+  (`IReadRepository`, `IEntityReader`, `IEntityQuerier`) still accept any `AuditableBaseEntity`.
+  Code resolving a write repository for a child entity (including test doubles constrained to
+  `AuditableBaseEntity`) must widen to the aggregate-root constraint or move to the read side.
+- **All registered validators run.** `ValidatingCommandDecorator` and `ValidatingQueryDecorator`
+  previously ran only the first `IValidator<T>` DI happened to yield; they now run every registered
+  validator and union the failures, so a command carrying both a shared and a specific validator is
+  checked by both.
+- **Tenant index matches the composed filter.** For entities that are both `ITenantEntity` and
+  soft-deletable, the auto-created index is now composite (`TenantId`, `IsDeleted`), matching the
+  AND-composed query filters; tenant-only entities keep the single-column index. No consumer ships
+  tenant entities yet, so no migration is expected downstream.
+
+### Fixed
+
+- **`MessageBusSettings.EndpointPrefix` is actually applied.** The configured value now prefixes
+  kebab-case endpoint names (namespacing queues per service on a shared broker); previously it only
+  toggled kebab-casing and the value itself was discarded.
+
 ## [1.165.0] - 2026-08-28
 
 Wave 6 extraction release: framework surface hoisted from duplicated ADC/Store/Helpdesk code

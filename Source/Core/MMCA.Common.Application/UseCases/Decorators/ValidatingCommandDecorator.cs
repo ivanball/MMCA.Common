@@ -6,12 +6,19 @@ using MMCA.Common.Shared.Abstractions;
 namespace MMCA.Common.Application.UseCases.Decorators;
 
 /// <summary>
-/// Decorator that automatically validates the command using a registered <see cref="IValidator{T}"/>
-/// before invoking the inner handler. If validation fails, the handler is never called and a
-/// <see cref="Result"/> failure containing all validation errors is returned immediately.
+/// Decorator that automatically validates the command using EVERY registered
+/// <see cref="IValidator{T}"/> before invoking the inner handler. If any of them fails, the handler
+/// is never called and a <see cref="Result"/> failure containing the union of their validation
+/// errors is returned immediately.
 /// <para>
 /// This eliminates the need for handlers to inject and call <see cref="IValidator{T}"/> manually.
 /// Commands without a registered validator pass through to the handler unchanged.
+/// </para>
+/// <para>
+/// All registered validators run, not just the first one: a command commonly carries a
+/// module-authored validator beside a framework or cross-cutting one, and honoring only the first
+/// registration turns the others into dead code whose rules are silently unenforced. Running them
+/// all also means the caller sees every broken rule in one response instead of one per round trip.
 /// </para>
 /// <para>
 /// Placed between <see cref="CachingCommandDecorator{TCommand, TResult}"/> and
@@ -26,7 +33,7 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     IEnumerable<IValidator<TCommand>> validators,
     ILogger<ValidatingCommandDecorator<TCommand, TResult>> logger) : ICommandHandler<TCommand, TResult>
 {
-    private readonly IValidator<TCommand>? _validator = validators.FirstOrDefault();
+    private readonly IValidator<TCommand>[] _validators = [.. validators];
 
     /// <summary>
     /// Cached delegate that creates a <typeparamref name="TResult"/> failure from a collection of
@@ -54,18 +61,32 @@ public sealed partial class ValidatingCommandDecorator<TCommand, TResult>(
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
-        if (_validator is null)
+        if (_validators.Length == 0)
         {
             return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
         }
 
-        var validationResult = await _validator.ValidateAsync(command, cancellationToken).ConfigureAwait(false);
-        if (validationResult.IsValid)
+        // Sequential on purpose: a validator is free to reach the database through a scoped
+        // repository, and a DbContext is not thread-safe, so running the set concurrently would
+        // trade a correctness guarantee for a saving measured in microseconds.
+        List<Error>? errors = null;
+        foreach (var validator in _validators)
+        {
+            var validationResult = await validator.ValidateAsync(command, cancellationToken).ConfigureAwait(false);
+            if (validationResult.IsValid)
+            {
+                continue;
+            }
+
+            errors ??= [];
+            errors.AddRange(validationResult.ToErrors(typeof(TCommand).Name));
+        }
+
+        if (errors is null)
         {
             return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
         }
 
-        var errors = validationResult.ToErrors(typeof(TCommand).Name).ToList();
         LogValidationFailure(errors);
 
         var createFailure = CreateFailure();

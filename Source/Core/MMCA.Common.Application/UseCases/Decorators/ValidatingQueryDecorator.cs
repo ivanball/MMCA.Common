@@ -6,15 +6,16 @@ using MMCA.Common.Shared.Abstractions;
 namespace MMCA.Common.Application.UseCases.Decorators;
 
 /// <summary>
-/// Decorator that automatically validates the query using a registered <see cref="IValidator{T}"/>
-/// before invoking the inner handler. If validation fails, the handler is never called and a
-/// <see cref="Result"/> failure containing all validation errors is returned immediately.
+/// Decorator that automatically validates the query using EVERY registered
+/// <see cref="IValidator{T}"/> before invoking the inner handler. If any of them fails, the handler
+/// is never called and a <see cref="Result"/> failure containing the union of their validation
+/// errors is returned immediately.
 /// <para>
 /// The query twin of <see cref="ValidatingCommandDecorator{TCommand, TResult}"/>: same validator
-/// resolution (first registered <c>IValidator&lt;TQuery&gt;</c> wins), same error aggregation, same
-/// pass-through when a query has no validator at all. Queries carrying paging, filter or sort input
-/// therefore reject a malformed request the same way commands do, instead of pushing the bad values
-/// into the data source.
+/// resolution (every registered <c>IValidator&lt;TQuery&gt;</c> runs, in registration order), same
+/// error aggregation, same pass-through when a query has no validator at all. Queries carrying
+/// paging, filter or sort input therefore reject a malformed request the same way commands do,
+/// instead of pushing the bad values into the data source.
 /// </para>
 /// <para>
 /// <b>Pipeline placement (ADR-014):</b> registered between
@@ -35,7 +36,7 @@ public sealed partial class ValidatingQueryDecorator<TQuery, TResult>(
     IEnumerable<IValidator<TQuery>> validators,
     ILogger<ValidatingQueryDecorator<TQuery, TResult>> logger) : IQueryHandler<TQuery, TResult>
 {
-    private readonly IValidator<TQuery>? _validator = validators.FirstOrDefault();
+    private readonly IValidator<TQuery>[] _validators = [.. validators];
 
     /// <summary>
     /// Cached delegate that creates a <typeparamref name="TResult"/> failure from a collection of
@@ -64,18 +65,31 @@ public sealed partial class ValidatingQueryDecorator<TQuery, TResult>(
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)
     {
-        if (_validator is null)
+        if (_validators.Length == 0)
         {
             return await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
         }
 
-        var validationResult = await _validator.ValidateAsync(query, cancellationToken).ConfigureAwait(false);
-        if (validationResult.IsValid)
+        // Sequential for the same reason as the command decorator: a validator may read through a
+        // scoped repository, and a DbContext is not thread-safe.
+        List<Error>? errors = null;
+        foreach (var validator in _validators)
+        {
+            var validationResult = await validator.ValidateAsync(query, cancellationToken).ConfigureAwait(false);
+            if (validationResult.IsValid)
+            {
+                continue;
+            }
+
+            errors ??= [];
+            errors.AddRange(validationResult.ToErrors(typeof(TQuery).Name));
+        }
+
+        if (errors is null)
         {
             return await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
         }
 
-        var errors = validationResult.ToErrors(typeof(TQuery).Name).ToList();
         LogValidationFailure(errors);
 
         var createFailure = CreateFailure();

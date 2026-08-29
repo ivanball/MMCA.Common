@@ -160,9 +160,39 @@ public sealed class ValidatingQueryDecoratorTests
         result.Value.Should().Be(42);
     }
 
-    // ── First registered validator wins, exactly like the command twin ──
+    // ── Every registered validator runs, exactly like the command twin ──
     [Fact]
-    public async Task HandleAsync_MultipleValidators_UsesOnlyTheFirst()
+    public async Task HandleAsync_MultipleValidators_RunsThemAllAndUnionsTheirFailures()
+    {
+        var inner = new Mock<IQueryHandler<TestValidatingQuery, Result>>();
+
+        var first = new Mock<IValidator<TestValidatingQuery>>();
+        first.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult([new ValidationFailure("PageSize", "PageSize must be greater than zero")]));
+
+        var second = new Mock<IValidator<TestValidatingQuery>>();
+        second.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult([new ValidationFailure("SortBy", "SortBy is not a known column")]));
+
+        IEnumerable<IValidator<TestValidatingQuery>> validators = [first.Object, second.Object];
+        var sut = new ValidatingQueryDecorator<TestValidatingQuery, Result>(
+            inner.Object,
+            validators,
+            NullLogger<ValidatingQueryDecorator<TestValidatingQuery, Result>>.Instance);
+
+        Result result = await sut.HandleAsync(new TestValidatingQuery(string.Empty));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Select(e => e.Message).Should().BeEquivalentTo(
+            ["PageSize must be greater than zero", "SortBy is not a known column"],
+            "a second registered validator is not dead code: its rules are enforced too");
+        first.Verify(x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        second.Verify(x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(x => x.HandleAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_MultipleValidators_AllPass_CallsInnerHandlerOnce()
     {
         var inner = new Mock<IQueryHandler<TestValidatingQuery, Result>>();
         inner.Setup(x => x.HandleAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()))
@@ -174,7 +204,7 @@ public sealed class ValidatingQueryDecoratorTests
 
         var second = new Mock<IValidator<TestValidatingQuery>>();
         second.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult([new ValidationFailure("PageSize", "never reached")]));
+            .ReturnsAsync(new ValidationResult());
 
         IEnumerable<IValidator<TestValidatingQuery>> validators = [first.Object, second.Object];
         var sut = new ValidatingQueryDecorator<TestValidatingQuery, Result>(
@@ -185,9 +215,8 @@ public sealed class ValidatingQueryDecoratorTests
         Result result = await sut.HandleAsync(new TestValidatingQuery("valid"));
 
         result.IsSuccess.Should().BeTrue();
-        second.Verify(
-            x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        second.Verify(x => x.ValidateAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(x => x.HandleAsync(It.IsAny<TestValidatingQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ── A handler whose TResult is neither Result nor Result<T>: the failure factory must stay lazy,

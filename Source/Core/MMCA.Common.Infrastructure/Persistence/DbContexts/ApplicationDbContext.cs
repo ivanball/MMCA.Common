@@ -406,7 +406,10 @@ public abstract class ApplicationDbContext(
     /// <b>Two named filters, composed by EF.</b> This one sits beside <c>SoftDelete</c>; EF combines
     /// named filters with AND, so a tenant-owned soft-deletable entity is filtered on both without
     /// either filter knowing about the other, and <c>IgnoreQueryFilters(["SoftDelete"])</c> can drop
-    /// one without dropping the other.
+    /// one without dropping the other. The supporting index follows the composition: a tenant entity
+    /// that is also an <see cref="IAuditableEntity"/> gets <c>(TenantId, IsDeleted)</c>, matching the
+    /// AND-composed predicate every read carries, while a tenant-only entity keeps
+    /// <c>(TenantId)</c>.
     /// </para>
     /// <para>
     /// <b>One model serves every tenant.</b> The filter body embeds this context instance as a
@@ -446,10 +449,21 @@ public abstract class ApplicationDbContext(
 
             // Every tenant-scoped read carries "TenantId = @tenant" as its leading predicate, so the
             // column that answers it must be indexed or shared-schema tenancy degrades into a scan
-            // per query.
+            // per query. When the entity is ALSO soft-deletable, EF composes the two named filters
+            // with AND and every read carries "TenantId = @tenant AND IsDeleted = 0": the index is
+            // widened to (TenantId, IsDeleted) so it matches that composed predicate rather than
+            // handing back the deleted rows for the server to discard afterwards. A tenant entity
+            // that is not auditable has no second conjunct, so it keeps the single-column index.
             if (physicalDataSource.Key.Engine != DataSource.CosmosDB)
             {
-                entity.HasIndex(TenantIdPropertyName);
+                if (typeof(IAuditableEntity).IsAssignableFrom(clrType))
+                {
+                    entity.HasIndex(TenantIdPropertyName, nameof(IAuditableEntity.IsDeleted));
+                }
+                else
+                {
+                    entity.HasIndex(TenantIdPropertyName);
+                }
             }
 
             var parameter = Expression.Parameter(clrType, "e");

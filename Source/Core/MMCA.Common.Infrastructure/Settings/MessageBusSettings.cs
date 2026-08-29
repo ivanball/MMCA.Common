@@ -27,8 +27,18 @@ public sealed class MessageBusSettings
 
     /// <summary>
     /// Gets the endpoint name prefix used to namespace queues per service (e.g. <c>store-catalog</c>).
-    /// MassTransit appends consumer-specific suffixes; this prefix lets multiple services coexist
-    /// on the same broker without colliding on queue names.
+    /// When set, the broker registration installs a kebab-case endpoint name formatter carrying this
+    /// prefix, so a consumer named <c>OrderPlacedConsumer</c> in a service prefixed
+    /// <c>store-catalog</c> binds the queue <c>store-catalog-order-placed</c> instead of the bare
+    /// <c>order-placed</c>. That is what lets several services with the same consumer type names
+    /// coexist on one broker without silently sharing a queue (competing consumers across service
+    /// boundaries, where each event reaches only one of them).
+    /// <para>
+    /// The consumer's namespace is deliberately left out of the generated name: the prefix is the
+    /// only namespacing applied, so a queue name stays readable and survives a type moving between
+    /// folders. Leave the setting unset and endpoint names are formatted by MassTransit's default,
+    /// which is the right choice for a single service on its own broker.
+    /// </para>
     /// </summary>
     [StringLength(64)]
     public string? EndpointPrefix { get; init; }
