@@ -7,10 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Testing.UI;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Auth;
 using MMCA.Common.UI.Services.Auth;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Pages.Auth;
 
@@ -45,14 +45,14 @@ public sealed class SessionsTests : BunitTestBase
     private static readonly DateTime ExpiresAt = new(2026, 9, 1, 9, 30, 0, DateTimeKind.Utc);
 
     private readonly Mock<IAuthUIService> _auth = new();
-    private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IToastService> _toast = new();
 
     public SessionsTests()
     {
         Services.AddSingleton(_auth.Object);
-        // Registered after the base class's AddMudServices so this wins, and the page's toasts can be
-        // counted without rendering a snackbar provider.
-        Services.AddSingleton<ISnackbar>(_snackbar.Object);
+        // Registered after the base class's default facade so this wins, and the page's toasts can
+        // be counted without rendering a snackbar provider.
+        Services.AddSingleton<IToastService>(_toast.Object);
 
         _auth.Setup(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Loaded(CurrentDevice(), OtherDevice()));
@@ -84,11 +84,6 @@ public sealed class SessionsTests : BunitTestBase
 
     private static string LocalInstant(DateTime utcInstant) =>
         DateTime.SpecifyKind(utcInstant, DateTimeKind.Utc).ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
-
-    private static void VerifySnackbar(Mock<ISnackbar> snackbar, string message, Severity severity, Times times) =>
-        snackbar.Verify(
-            s => s.Add(message, severity, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            times);
 
     // ==================== Loaded state ====================
     [Fact]
@@ -231,7 +226,7 @@ public sealed class SessionsTests : BunitTestBase
         _auth.Verify(a => a.RevokeSessionAsync(CurrentSessionId, It.IsAny<CancellationToken>()), Times.Never());
         // Reloaded from the server rather than dropping the row locally: the server is the authority.
         _auth.Verify(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
-        VerifySnackbar(_snackbar, "That device has been signed out.", Severity.Success, Times.Once());
+        _toast.Verify(t => t.Success("That device has been signed out."), Times.Once());
     }
 
     [Fact]
@@ -247,9 +242,9 @@ public sealed class SessionsTests : BunitTestBase
 
         // The user's intent is satisfied, so this is not an error to shout about.
         cut.WaitForAssertion(() =>
-            VerifySnackbar(_snackbar, "That device was already signed out.", Severity.Info, Times.Once()));
+            _toast.Verify(t => t.Info("That device was already signed out."), Times.Once()));
         _auth.Verify(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
-        VerifySnackbar(_snackbar, "That device was already signed out.", Severity.Error, Times.Never());
+        _toast.Verify(t => t.Show("That device was already signed out.", ToastSeverity.Error), Times.Never());
     }
 
     [Fact]
@@ -264,9 +259,9 @@ public sealed class SessionsTests : BunitTestBase
         cut.Find(OtherDeviceButtonSelector).Click();
 
         cut.WaitForAssertion(() =>
-            VerifySnackbar(_snackbar, "That device could not be signed out.", Severity.Error, Times.Once()));
+            _toast.Verify(t => t.Show("That device could not be signed out.", ToastSeverity.Error), Times.Once()));
         _auth.Verify(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()), Times.Once());
-        VerifySnackbar(_snackbar, "That device has been signed out.", Severity.Success, Times.Never());
+        _toast.Verify(t => t.Success("That device has been signed out."), Times.Never());
     }
 
     [Fact]

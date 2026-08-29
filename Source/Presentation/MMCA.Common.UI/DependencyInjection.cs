@@ -83,6 +83,14 @@ public static class DependencyInjection
                 .AddHttpMessageHandler<AuthDelegatingHandler>()
                 .AddHttpMessageHandler<CultureDelegatingHandler>();
 
+            // Toast and confirm-dialog facades. These two implementations are the ONLY types in the
+            // framework that name MudBlazor's ISnackbar / IDialogService: every page, component and
+            // Result helper depends on IToastService / IAppDialogService instead, so the component
+            // library stays swappable and a test can record toasts without a rendered snackbar host.
+            // Scoped to match the MudBlazor services they wrap.
+            services.TryAddScoped<IToastService, MudToastService>();
+            services.TryAddScoped<IAppDialogService, MudAppDialogService>();
+
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
             services.TryAddScoped<ListPageStateService>();

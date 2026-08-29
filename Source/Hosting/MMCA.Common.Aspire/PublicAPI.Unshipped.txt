@@ -5,8 +5,6 @@ MMCA.Common.Aspire.Gateway.DownstreamProbeVersion.Http11 = 2 -> MMCA.Common.Aspi
 MMCA.Common.Aspire.Gateway.DownstreamProbeVersion.Http2 = 1 -> MMCA.Common.Aspire.Gateway.DownstreamProbeVersion
 MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions
 MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.GatewayDownstreamHealthCheckOptions() -> void
-MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeOverHttp2.get -> bool
-MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeOverHttp2.set -> void
 MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeVersion.get -> MMCA.Common.Aspire.Gateway.DownstreamProbeVersion
 MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeVersion.set -> void
 MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayDownstreamHealthChecks(System.Action<MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions!>? configure, params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

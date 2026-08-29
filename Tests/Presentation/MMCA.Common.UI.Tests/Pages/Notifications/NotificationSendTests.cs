@@ -5,30 +5,30 @@ using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.Testing.UI;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Notifications;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
-using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Pages.Notifications;
 
 /// <summary>
 /// bUnit tests for the <see cref="NotificationSend"/> compose page: form validation gating,
-/// successful submit wiring (service call + snackbar + navigation), the failed-send surface (one
-/// snackbar, no navigation, the wording repeated inline by the shared <c>ErrorSummary</c>), and
+/// successful submit wiring (service call + toast + navigation), the failed-send surface (one
+/// toast, no navigation, the wording repeated inline by the shared <c>ErrorSummary</c>), and
 /// cancel navigation.
 /// </summary>
 public sealed class NotificationSendTests : BunitTestBase
 {
     private readonly Mock<IPushNotificationUIService> _service = new();
-    private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IToastService> _toast = new();
 
     public NotificationSendTests()
     {
         Services.AddSingleton(_service.Object);
-        // Registered after the base class's AddMudServices, so this wins and the page's snackbar
+        // Registered after the base class's default facade, so this wins and the page's toast
         // surface can be counted without rendering a snackbar provider.
-        Services.AddSingleton<ISnackbar>(_snackbar.Object);
+        Services.AddSingleton<IToastService>(_toast.Object);
     }
 
     private static Result<PushNotificationDTO> Accepted(int recipientCount)
@@ -43,7 +43,7 @@ public sealed class NotificationSendTests : BunitTestBase
         });
 
     // The messages are not resource keys, so the localizer passes them through verbatim and both the
-    // snackbar text and the inline summary can be asserted exactly.
+    // toast text and the inline summary can be asserted exactly.
     private static Result<PushNotificationDTO> SendFailure(params string[] messages)
         => Result.Failure<PushNotificationDTO>(
             [.. messages.Select(message => Error.Failure("Notif.Send.Failed", message))]);
@@ -125,17 +125,11 @@ public sealed class NotificationSendTests : BunitTestBase
 
         // The success cue names how many people it reached, which is the only feedback the user gets
         // once the page has navigated away.
-        _snackbar.Verify(
-            s => s.Add(
-                "Notification sent to 10 recipients.",
-                Severity.Success,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
-            Times.Once());
+        _toast.Verify(t => t.Success("Notification sent to 10 recipients."), Times.Once());
     }
 
     [Fact]
-    public void WhenTheSendFails_StaysOnThePageAndRaisesOneSnackbar()
+    public void WhenTheSendFails_StaysOnThePageAndRaisesOneToast()
     {
         _service
             .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
@@ -148,12 +142,8 @@ public sealed class NotificationSendTests : BunitTestBase
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
 
-        cut.WaitForAssertion(() => _snackbar.Verify(
-            s => s.Add(
-                "The notification service is unavailable.",
-                Severity.Error,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
+        cut.WaitForAssertion(() => _toast.Verify(
+            t => t.Show("The notification service is unavailable.", ToastSeverity.Error),
             Times.Once()));
         nav.Uri.Should().Be(startingUri, "a failed send must not throw away what the user typed");
     }
@@ -161,7 +151,7 @@ public sealed class NotificationSendTests : BunitTestBase
     [Fact]
     public void WhenTheSendFails_TheFailureIsRepeatedInlineByTheErrorSummary()
     {
-        // The snackbar times out; the composed form does not. The inline summary is what the user
+        // The toast times out; the composed form does not. The inline summary is what the user
         // still has to read once the toast is gone.
         _service
             .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))

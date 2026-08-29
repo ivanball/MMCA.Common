@@ -1,7 +1,9 @@
 using System.Diagnostics.Metrics;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Shared.Abstractions;
@@ -185,6 +187,52 @@ public sealed class CachingQueryDecoratorTests
             r.IsSuccess.Should().BeTrue();
             r.Value.Should().Be("expensive-data");
         });
+    }
+
+    // ── Populate-lock budget: a waiter that cannot take the stripe runs uncached ──
+    [Fact]
+    public async Task HandleAsync_WhenThePopulateLockIsHeldPastTheBudget_ExecutesTheHandlerUncached()
+    {
+        var inner = new Mock<IQueryHandler<PopulateLockTimeoutQuery, Result<string>>>();
+        var cacheService = new Mock<ICacheService>();
+        cacheService.Setup(x => x.GetAsync<Result<string>>("populate-lock-timeout-key", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Result<string>?)null);
+        inner.Setup(x => x.HandleAsync(It.IsAny<PopulateLockTimeoutQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success("uncached-data"));
+
+        var sut = new CachingQueryDecorator<PopulateLockTimeoutQuery, Result<string>>(
+            inner.Object,
+            cacheService.Object,
+            NullLogger<CachingQueryDecorator<PopulateLockTimeoutQuery, Result<string>>>.Instance,
+            tenantContext: null,
+            pipelineSettings: Options.Create(new QueryCachePipelineSettings
+            {
+                PopulateLockTimeout = TimeSpan.FromMilliseconds(50),
+            }));
+
+        Result<string> result;
+
+        // Hold the stripe this key maps to for the whole call, so the decorator can only reach the
+        // handler by giving up on the lock.
+        using (await QueryCacheKeyLocks.Locks.AcquireAsync("populate-lock-timeout-key"))
+        {
+            result = await sut.HandleAsync(new PopulateLockTimeoutQuery());
+        }
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be("uncached-data");
+        inner.Verify(
+            x => x.HandleAsync(It.IsAny<PopulateLockTimeoutQuery>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "fail-open: an expired budget degrades the query to an uncached read, it never fails it");
+        cacheService.Verify(
+            x => x.SetAsync(It.IsAny<string>(), It.IsAny<Result<string>>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the request holding the lock is the one that populates the entry");
+        cacheService.Verify(
+            x => x.GetAsync<Result<string>>("populate-lock-timeout-key", It.IsAny<CancellationToken>()),
+            Times.Once,
+            "only the fast-path read runs; the double-check inside the lock is never reached");
     }
 
     // ── A cache outage on the populate must not fail an already-successful read (M28) ──
@@ -397,6 +445,12 @@ public sealed record CacheReadFailureQuery : IQueryCacheable
 public sealed record CacheReadCanceledQuery : IQueryCacheable
 {
     public string CacheKey => "cache-read-canceled-key";
+    public TimeSpan CacheDuration => TimeSpan.FromMinutes(5);
+}
+
+public sealed record PopulateLockTimeoutQuery : IQueryCacheable
+{
+    public string CacheKey => "populate-lock-timeout-key";
     public TimeSpan CacheDuration => TimeSpan.FromMinutes(5);
 }
 

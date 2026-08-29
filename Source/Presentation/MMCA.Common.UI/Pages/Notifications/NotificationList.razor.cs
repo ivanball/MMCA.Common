@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
@@ -16,7 +17,7 @@ public partial class NotificationList : IDisposable
 {
     [Inject] private IPushNotificationUIService NotificationService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
@@ -60,7 +61,7 @@ public partial class NotificationList : IDisposable
             }
             else
             {
-                result.NotifyOnFailure(Snackbar, L);
+                result.NotifyOnFailure(Toast, L);
             }
         }
         catch (OperationCanceledException)

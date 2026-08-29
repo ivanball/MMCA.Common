@@ -97,11 +97,11 @@ public static class ErrorMessages
     /// Composes "{0} {1} successfully." from an entity noun and an English verb fragment. Obsolete
     /// because composed sentences cannot be translated correctly (Spanish gender/word agreement breaks:
     /// "creado" vs "creada" depends on the entity) — a rubric §27 red flag. Use a whole-sentence key in
-    /// the page's own resource pair instead, e.g. <c>Snackbar.Add(L["Snackbar.Created"], ...)</c> with
+    /// the page's own resource pair instead, e.g. <c>Toast.Success(L["Snackbar.Created"])</c> with
     /// <c>Snackbar.Created</c> = "Event created successfully." / "Evento creado correctamente." (ADR-027).
     /// </summary>
 #pragma warning disable S1133 // Deprecated code should be removed: the obsoletion IS the migration mechanism — it turns every remaining consumer call site into a build error (TreatWarningsAsErrors) during the lockstep sweep; the member is removed once all consumers are swept.
-    [Obsolete("Composed sentences cannot be translated (ADR-027). Use a whole-sentence key in the page's own resource pair, e.g. Snackbar.Add(L[\"Snackbar.Created\"], ...).")]
+    [Obsolete("Composed sentences cannot be translated (ADR-027). Use a whole-sentence key in the page's own resource pair, e.g. Toast.Success(L[\"Snackbar.Created\"]).")]
     public static string Success(string entityName, string action) =>
         Localize("Common.Success", "{0} {1} successfully.", entityName, action);
 #pragma warning restore S1133

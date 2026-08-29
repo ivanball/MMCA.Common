@@ -4,7 +4,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Caching;
+using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Tests.Caching;
 
@@ -169,6 +171,40 @@ public sealed class HybridCacheServiceTests
 
         recording.LastSetOptions!.Expiration.Should().Be(TimeSpan.FromSeconds(5));
         recording.LastSetOptions.LocalCacheExpiration.Should().Be(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task SetAsync_WithAConfiguredDefaultDuration_UsesItInsteadOfTheHardCodedDefault()
+    {
+        var recording = new RecordingHybridCache();
+        var sut = new HybridCacheService(
+            recording,
+            NullLogger<HybridCacheService>.Instance,
+            cacheSettings: Options.Create(new CacheSettings { DefaultDuration = TimeSpan.FromMinutes(15) }));
+
+        await sut.SetAsync("k", "v", cancellationToken: TestContext.Current.CancellationToken);
+
+        recording.LastSetOptions!.Expiration.Should().Be(
+            TimeSpan.FromMinutes(15),
+            "the Cache section is what a host configures; CacheOptions only supplies the default it starts from");
+        recording.LastSetOptions.LocalCacheExpiration.Should().Be(
+            HybridCacheService.LocalCacheDefault,
+            "the local copy is still capped at the built-in ceiling when none is configured");
+    }
+
+    [Fact]
+    public async Task SetAsync_WithAConfiguredLocalCacheDuration_CapsTheLocalCopyAtIt()
+    {
+        var recording = new RecordingHybridCache();
+        var sut = new HybridCacheService(
+            recording,
+            NullLogger<HybridCacheService>.Instance,
+            cacheSettings: Options.Create(new CacheSettings { LocalCacheDuration = TimeSpan.FromSeconds(2) }));
+
+        await sut.SetAsync("k", "v", TimeSpan.FromHours(24), TestContext.Current.CancellationToken);
+
+        recording.LastSetOptions!.Expiration.Should().Be(TimeSpan.FromHours(24));
+        recording.LastSetOptions.LocalCacheExpiration.Should().Be(TimeSpan.FromSeconds(2));
     }
 
     [Fact]

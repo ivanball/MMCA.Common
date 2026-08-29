@@ -47,3 +47,12 @@ MMCA.Common.Infrastructure.Settings.OutboxSettings.TypeAliases.get -> System.Col
 MMCA.Common.Infrastructure.Settings.OutboxSettings.TypeAliases.init -> void
 MMCA.Common.Infrastructure.Services.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.OutboxSettings!>! outboxOptions, System.TimeProvider? timeProvider = null) -> void
 *REMOVED*MMCA.Common.Infrastructure.Services.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.OutboxSettings!>! outboxOptions) -> void
+MMCA.Common.Infrastructure.Settings.CacheSettings
+MMCA.Common.Infrastructure.Settings.CacheSettings.CacheSettings() -> void
+MMCA.Common.Infrastructure.Settings.CacheSettings.DefaultDuration.get -> System.TimeSpan
+MMCA.Common.Infrastructure.Settings.CacheSettings.DefaultDuration.init -> void
+MMCA.Common.Infrastructure.Settings.CacheSettings.LocalCacheDuration.get -> System.TimeSpan?
+MMCA.Common.Infrastructure.Settings.CacheSettings.LocalCacheDuration.init -> void
+MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.get -> System.TimeSpan
+MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.init -> void
+static readonly MMCA.Common.Infrastructure.Settings.CacheSettings.SectionName -> string!

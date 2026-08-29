@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using AwesomeAssertions;
+using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -18,6 +20,90 @@ public sealed class OutboxMessageTests
     private sealed record OrderedDomainEvent(string? Key) : BaseDomainEvent, IHasOrderingKey
     {
         public string? OrderingKey => Key;
+    }
+
+    [EventName(NamedEventIdentity)]
+    private sealed record NamedDomainEvent(string Name) : BaseDomainEvent;
+
+    private const string NamedEventIdentity = "MMCA.Tests.NamedDomainEvent.v1";
+
+    // ── [EventName]: a stable stored identity instead of the CLR name ──
+    [Fact]
+    public void FromDomainEvent_StoresTheDeclaredName_WhenTheEventCarriesTheAttribute()
+    {
+        var message = OutboxMessage.FromDomainEvent(new NamedDomainEvent("Test"));
+
+        message.EventType.Should().Be(NamedEventIdentity);
+    }
+
+    [Fact]
+    public void FromDomainEvent_StoresTheAssemblyQualifiedName_WhenTheEventDoesNotOptIn()
+    {
+        var message = OutboxMessage.FromDomainEvent(new TestDomainEventWithData("Test", 42));
+
+        message.EventType.Should().Be(typeof(TestDomainEventWithData).AssemblyQualifiedName);
+    }
+
+    [Fact]
+    public void DeserializeEvent_RoundTripsAnEventStoredUnderItsDeclaredName()
+    {
+        var message = OutboxMessage.FromDomainEvent(new NamedDomainEvent("Hello"));
+
+        message.DeserializeEvent().Should().BeOfType<NamedDomainEvent>()
+            .Which.Name.Should().Be("Hello");
+    }
+
+    [Fact]
+    public void DeserializeEvent_StillResolvesARowStoredUnderAnAssemblyQualifiedName()
+    {
+        // The pre-attribute path is untouched: Type.GetType runs first, so every row already in an
+        // outbox table resolves exactly as it did before [EventName] existed.
+        var message = new OutboxMessage
+        {
+            EventType = typeof(TestDomainEventWithData).AssemblyQualifiedName!,
+            Payload = """{"Name":"Test","Value":42}""",
+        };
+
+        message.DeserializeEvent().Should().BeOfType<TestDomainEventWithData>()
+            .Which.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void DeserializeEvent_UnknownDeclaredName_ReturnsNull()
+    {
+        var message = new OutboxMessage
+        {
+            EventType = "MMCA.Tests.NoSuchDeclaredEvent.v1",
+            Payload = """{"Name":"Test"}""",
+        };
+
+        message.DeserializeEvent().Should().BeNull();
+    }
+
+    [Fact]
+    public void DeserializeEvent_CachesTheDeclaredNameLookup()
+    {
+        // Resolving a declared name scans the loaded assemblies once and caches the result under the
+        // STORED name, shared by every message carrying it. The bound below is deliberately loose:
+        // it passes with orders of magnitude to spare on the cached path, and a lost cache turns
+        // each iteration back into a full assembly scan, which cannot fit inside it.
+        var warmup = OutboxMessage.FromDomainEvent(new NamedDomainEvent("warm"));
+        warmup.DeserializeEvent().Should().BeOfType<NamedDomainEvent>();
+
+        var message = new OutboxMessage
+        {
+            EventType = NamedEventIdentity,
+            Payload = """{"Name":"cached"}""",
+        };
+
+        var stopwatch = Stopwatch.StartNew();
+        for (var i = 0; i < 1000; i++)
+        {
+            message.DeserializeEvent().Should().BeOfType<NamedDomainEvent>();
+        }
+
+        stopwatch.Stop();
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(5));
     }
 
     // ── Ordering key ──

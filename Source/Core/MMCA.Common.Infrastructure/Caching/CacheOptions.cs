@@ -6,6 +6,12 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// Factory for <see cref="DistributedCacheEntryOptions"/> with a sensible default expiration.
 /// Centralises cache TTL policy so callers don't need to construct options manually.
 /// </summary>
+/// <remarks>
+/// These are the hard-coded framework defaults and the source of truth for their values. To change
+/// the policy per host, configure the <c>Cache</c> section instead
+/// (<c>MMCA.Common.Infrastructure.Settings.CacheSettings</c>), which defaults every value to what
+/// this class exposes.
+/// </remarks>
 public static class CacheOptions
 {
     /// <summary>

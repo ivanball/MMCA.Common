@@ -207,9 +207,31 @@ public static class DependencyInjection
 
             // Optional key namespace so services sharing one cache instance cannot collide
             // (Cache:KeyPrefix). Absent configuration leaves keys exactly as callers write them.
+            //
+            // The same Cache section also carries the TTL policy (CacheSettings) and the one knob the
+            // Application-layer query pipeline needs (QueryCachePipelineSettings, defined there
+            // because that layer cannot reference this assembly; Infrastructure binds it here so both
+            // views read the same keys). Both are registered even without configuration, so
+            // IOptions<T> always resolves to the framework defaults rather than failing a host that
+            // calls the parameterless overload.
             if (configuration is not null)
             {
                 services.Configure<CacheKeyPrefixOptions>(configuration.GetSection(CacheKeyPrefixOptions.SectionName));
+
+                services.AddOptions<CacheSettings>()
+                    .Bind(configuration.GetSection(CacheSettings.SectionName))
+                    .ValidateDataAnnotations()
+                    .ValidateOnStart();
+
+                services.AddOptions<Application.Settings.QueryCachePipelineSettings>()
+                    .Bind(configuration.GetSection(Application.Settings.QueryCachePipelineSettings.SectionName))
+                    .ValidateDataAnnotations()
+                    .ValidateOnStart();
+            }
+            else
+            {
+                services.AddOptions<CacheSettings>();
+                services.AddOptions<Application.Settings.QueryCachePipelineSettings>();
             }
 
             services.TryAddSingleton<ICacheService>(sp =>
@@ -221,7 +243,12 @@ public static class DependencyInjection
                     var logger = sp.GetService<ILogger<DistributedCacheService>>()
                         ?? NullLogger<DistributedCacheService>.Instance;
                     var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
-                    return new DistributedCacheService(distributedCache, logger, multiplexer, keyNamespace);
+                    return new DistributedCacheService(
+                        distributedCache,
+                        logger,
+                        multiplexer,
+                        keyNamespace,
+                        sp.GetService<IOptions<CacheSettings>>());
                 }
 
                 // In-process: the keyspace is private to this process, so no prefix is needed.
@@ -287,19 +314,27 @@ public static class DependencyInjection
         /// </remarks>
         public IServiceCollection AddCommonHybridCache(Action<HybridCacheOptions>? configure = null)
         {
-            services.AddHybridCache(options =>
-            {
-                // Same TTL policy the rest of the framework applies, expressed in HybridCache's own
-                // option type; the local copy is capped so a replica that misses an invalidation
-                // re-reads L2 within the window.
-                options.DefaultEntryOptions = new HybridCacheEntryOptions
-                {
-                    Expiration = CacheOptions.DefaultDuration,
-                    LocalCacheExpiration = HybridCacheService.LocalCacheDefault,
-                };
+            services.AddHybridCache();
 
-                configure?.Invoke(options);
-            });
+            // Configured through the options pipeline rather than the AddHybridCache callback,
+            // because the TTL policy now comes from the bound Cache section and the callback has no
+            // service provider to read it from. The host's own hook still runs last, so it can
+            // override anything the framework set.
+            services.AddOptions<HybridCacheOptions>()
+                .Configure<IOptions<CacheSettings>>((options, cacheSettings) =>
+                {
+                    // Same TTL policy the rest of the framework applies, expressed in HybridCache's
+                    // own option type; the local copy is capped so a replica that misses an
+                    // invalidation re-reads L2 within the window.
+                    var settings = cacheSettings.Value;
+                    options.DefaultEntryOptions = new HybridCacheEntryOptions
+                    {
+                        Expiration = settings.DefaultDuration,
+                        LocalCacheExpiration = settings.LocalCacheDuration ?? HybridCacheService.LocalCacheDefault,
+                    };
+
+                    configure?.Invoke(options);
+                });
 
             // Deliberately RemoveAll + Add rather than TryAdd: this call is the host stating which
             // cache wins, and it has to win whether it runs before or after AddInfrastructure.
@@ -315,7 +350,8 @@ public static class DependencyInjection
                     sp.GetRequiredService<HybridCache>(),
                     logger,
                     multiplexer,
-                    keyNamespace);
+                    keyNamespace,
+                    sp.GetService<IOptions<CacheSettings>>());
             });
 
             return services;

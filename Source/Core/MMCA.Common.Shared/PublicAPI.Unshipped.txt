@@ -95,3 +95,13 @@ const MMCA.Common.Shared.Notifications.NotificationScopeKey.SessionPrefix = "ses
 static MMCA.Common.Shared.Notifications.NotificationScopeKey.ForEvent(long eventId) -> string!
 static MMCA.Common.Shared.Notifications.NotificationScopeKey.ForSession(long sessionId) -> string!
 static MMCA.Common.Shared.Notifications.NotificationScopeKey.IsValid(string? scopeKey) -> bool
+MMCA.Common.Shared.Conventions.ModuleNameConventions
+static MMCA.Common.Shared.Conventions.ModuleNameConventions.GetModuleName(System.Type! type) -> string?
+MMCA.Common.Shared.Resilience.GrpcResilienceDefaults
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.AttemptTimeout.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.BreakDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.FailureRatio.get -> double
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.MaxRetryAttempts.get -> int
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.MinimumThroughput.get -> int
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.SamplingDuration.get -> System.TimeSpan
+static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.TotalRequestTimeout.get -> System.TimeSpan

@@ -4,6 +4,67 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.168.0] - 2026-08-29
+
+Adherence release: the patterns the framework asks consumers to follow are applied to the framework
+itself. Entities get real identity equality, integration events get a stable wire name, the two
+config-driven knobs that were still hard-coded (cache durations, gRPC circuit breaking) move into
+settings, MudBlazor stops leaking through the UI helper surface, and two obsolete/dead surfaces are
+deleted rather than carried another cycle.
+
+### Added
+
+- **`BaseEntity<TId>` identity equality.** `Equals`, `GetHashCode` and the `==`/`!=` operators compare
+  by concrete type plus assigned `Id`, so the same row loaded through two contexts compares equal
+  instead of answering a reference comparison. Transient instances (id still at the type default) are
+  equal only to themselves, and the XML docs record the hash-changes-on-save caveat for
+  database-generated keys.
+- **`[EventName]` attribute.** Declares a stable outbox/inbox identity for an integration event, so
+  renaming or moving the CLR type no longer orphans the messages already sitting in a queue or an
+  outbox table.
+- **`CacheSettings`** (config section `Cache`). Cache durations and the populate-lock timeout come
+  from configuration instead of compiled-in constants, so an environment can tune them without a
+  release.
+- **`GrpcResilienceDefaults`.** Explicit circuit-breaker values for east-west gRPC, named in one
+  place rather than inherited from the generic HTTP defaults.
+- **`IToastService` / `IAppDialogService`** (`MMCA.Common.UI`). Thin MudBlazor facades, so component
+  and helper code depends on the framework's own contracts and a head can substitute its own
+  notification and dialog surface.
+- **`UseMmcaMauiErrorHandling`** (`MMCA.Common.UI.Maui`). One global exception hook for a MAUI head,
+  covering the unhandled-exception paths a hybrid app otherwise loses silently.
+- **`EntityPropertySettersAreNonPublic` architecture rule** (`MMCA.Common.Testing.Architecture`),
+  wired into `EntityConventionTestsBase`: every public property on a module domain entity must have
+  no setter, an `init`-only setter, or a non-public one, so aggregate mutation goes through named
+  domain methods (navigations included). Inherited by every consumer repo's entity-convention suite.
+- **MassTransit in-memory harness test tier** for the integration-event consumers: a published event
+  reaching its handler through a real bus, a handler failure surfacing as the `Fault<TEvent>` the
+  fault consumer subscribes to, and a duplicate `MessageId` suppressed by the inbox. In-memory
+  transport only, so the suite stays Docker-free.
+
+### Changed
+
+- **BREAKING: `IWriteRepository.Save` / `SaveChangesAsync` removed.** A repository no longer commits;
+  the unit of work does. Call sites move to `IUnitOfWork.SaveChangesAsync`, which is what makes one
+  command one transaction rather than one save per repository touched.
+- **BREAKING: `GatewayDownstreamHealthCheckOptions.ProbeOverHttp2` removed.** The compatibility facade
+  obsoleted in 1.167.0 is gone; use `ProbeVersion`, whose `Auto` default negotiates per downstream.
+- **BREAKING: the `MMCA.Common.UI` helper surface takes the new facades.**
+  `ResultUiExtensions.NotifyOnFailure` and `ListPageActions.DeleteWithConfirmationAsync` accept
+  `IToastService` / `IAppDialogService` instead of MudBlazor's `ISnackbar` / `IDialogService`. Callers
+  inject the facade (registered alongside the existing MudBlazor services) and pass that.
+- **Logging decorator scopes carry `{ModuleName}`.** The command/query logging scope now names the
+  owning module, so a log query can separate two modules' handlers without matching type names.
+
+### Fixed
+
+- **No-op `VersionOverride`s removed** from `MMCA.Common.Aspire.Hosting`: the three OpenTelemetry
+  references restated the central pin they already resolved to, so the overrides only created a second
+  place to forget.
+- **CPM and analyzer conventions documented in place.** `Directory.Packages.props` records why
+  transitive pinning is deliberately off (a security pin on a transitive package needs BOTH a
+  `PackageVersion` entry AND a direct `PackageReference`), and `Directory.Build.props` records why the
+  five analyzers ride in as per-project `PackageReference`s rather than CPM `GlobalPackageReference`s.
+
 ## [1.167.0] - 2026-08-29
 
 Health-gating and E2E-reliability release closing the wave6 ledger items: Http2-only services become

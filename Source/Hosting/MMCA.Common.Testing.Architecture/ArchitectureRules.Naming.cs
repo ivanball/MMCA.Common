@@ -3,6 +3,21 @@ namespace MMCA.Common.Testing.Architecture;
 public static partial class ArchitectureRules
 {
     /// <summary>CQRS handlers end in "Handler" and are sealed.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why sealed, not internal.</b> Handlers stay public on purpose. A module that is later
+    /// lifted into its own service host, and every integration test that boots one, references the
+    /// handler type across an assembly boundary; making handlers internal would buy nothing but an
+    /// <c>InternalsVisibleTo</c> entry in every host and test project, which is a wider hole than the
+    /// public type it was meant to close. The encapsulation comes from the two properties this rule
+    /// does enforce instead: <see langword="sealed"/>, so no one can subclass a handler and change what a
+    /// command means, and DI, since handlers are resolved through
+    /// <c>ICommandHandler&lt;,&gt;</c>/<c>IQueryHandler&lt;,&gt;</c> and never constructed directly
+    /// (the decorator pipeline is applied to the interface, so a hand-built handler would silently
+    /// skip authorization, validation and the transaction).
+    /// </para>
+    /// </remarks>
+    /// <param name="map">The repo's architecture map.</param>
     public static void HandlersAreSealedWithHandlerSuffix(IArchitectureMap map)
     {
         var offenders = map.ModuleApplication()

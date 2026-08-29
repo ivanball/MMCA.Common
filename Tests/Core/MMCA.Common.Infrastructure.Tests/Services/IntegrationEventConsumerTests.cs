@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Services;
@@ -12,6 +13,11 @@ namespace MMCA.Common.Infrastructure.Tests.Services;
 public sealed class IntegrationEventConsumerTests
 {
     public sealed record class TestIntegrationEvent : BaseIntegrationEvent;
+
+    [EventName(NamedEventIdentity)]
+    public sealed record class NamedIntegrationEvent : BaseIntegrationEvent;
+
+    private const string NamedEventIdentity = "MMCA.Tests.NamedIntegrationEvent.v1";
 
     private static Mock<ConsumeContext<TestIntegrationEvent>> ContextFor(TestIntegrationEvent evt)
     {
@@ -94,5 +100,51 @@ public sealed class IntegrationEventConsumerTests
             x => x.CompleteAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "a failed consume must not record the message as processed");
+    }
+
+    [Fact]
+    public async Task Consume_KeysTheInboxOnTheShortTypeName_WhenTheEventDoesNotDeclareOne()
+    {
+        // The default identity is unchanged, so rows written before [EventName] existed keep
+        // matching and a redelivery is still recognised as a duplicate.
+        var evt = new TestIntegrationEvent();
+        var inbox = InboxFor(evt);
+
+        var sut = new IntegrationEventConsumer<TestIntegrationEvent>(
+            [], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<TestIntegrationEvent>>>());
+
+        await sut.Consume(ContextFor(evt).Object);
+
+        inbox.Verify(
+            x => x.TryBeginAsync(evt.MessageId, nameof(TestIntegrationEvent), It.IsAny<CancellationToken>()),
+            Times.Once);
+        inbox.Verify(
+            x => x.CompleteAsync(evt.MessageId, nameof(TestIntegrationEvent), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Consume_KeysTheInboxOnTheDeclaredName_WhenTheEventCarriesTheAttribute()
+    {
+        var evt = new NamedIntegrationEvent();
+        var inbox = new Mock<IInboxStore>();
+        inbox.Setup(x => x.TryBeginAsync(evt.MessageId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var context = new Mock<ConsumeContext<NamedIntegrationEvent>>();
+        context.SetupGet(c => c.Message).Returns(evt);
+
+        var sut = new IntegrationEventConsumer<NamedIntegrationEvent>(
+            [], inbox.Object, Mock.Of<ILogger<IntegrationEventConsumer<NamedIntegrationEvent>>>());
+
+        await sut.Consume(context.Object);
+
+        inbox.Verify(
+            x => x.TryBeginAsync(evt.MessageId, NamedEventIdentity, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the declared identity is what survives a rename, so it is what the inbox row must hold");
+        inbox.Verify(
+            x => x.CompleteAsync(evt.MessageId, NamedEventIdentity, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

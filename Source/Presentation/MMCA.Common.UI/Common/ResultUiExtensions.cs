@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
-using MudBlazor;
+using MMCA.Common.UI.Common.Interfaces;
 
 namespace MMCA.Common.UI.Common;
 
@@ -11,7 +11,7 @@ namespace MMCA.Common.UI.Common;
 /// <list type="bullet">
 ///   <item><see cref="TryGetValue{T}(Result{T}, out T)"/>: unwrap the value, or fall through to the error branch.</item>
 ///   <item><see cref="OnFailureSetError{T}(Result{T}, Action{string}, IStringLocalizer)"/>: push the message into a page field rendered by an inline alert.</item>
-///   <item><see cref="NotifyOnFailure{T}(Result{T}, ISnackbar, IStringLocalizer, Severity)"/>: raise the message as a snackbar.</item>
+///   <item><see cref="NotifyOnFailure{T}(Result{T}, IToastService, IStringLocalizer, ToastSeverity)"/>: raise the message as a toast.</item>
 ///   <item><see cref="HasErrorType"/> and friends: branch on WHY it failed (a 401 redirect, a 404 empty state).</item>
 /// </list>
 /// <para>
@@ -44,7 +44,7 @@ namespace MMCA.Common.UI.Common;
 /// }
 /// catch (Exception ex)
 /// {
-///     Snackbar.Add(ErrorMessages.LoadError(Title, ex), Severity.Error);
+///     Toast.Error(ErrorMessages.LoadError(Title, ex));
 /// }
 /// </code>
 /// After (Result-based):
@@ -56,7 +56,7 @@ namespace MMCA.Common.UI.Common;
 /// }
 /// else
 /// {
-///     result.NotifyOnFailure(Snackbar, L);
+///     result.NotifyOnFailure(Toast, L);
 /// }
 /// </code>
 /// </example>
@@ -241,54 +241,54 @@ public static class ResultUiExtensions
     }
 
     /// <summary>
-    /// Raises the composed failure message as one snackbar (never one per error), and does nothing
+    /// Raises the composed failure message as one toast (never one per error), and does nothing
     /// on success. Returns the same result so the call can sit inline.
     /// </summary>
     /// <param name="result">The result to inspect.</param>
-    /// <param name="snackbar">The MudBlazor snackbar service.</param>
+    /// <param name="toast">The toast service (see <see cref="IToastService"/>).</param>
     /// <param name="localizer">Resolves each message as a resource key, passing unknown keys through.</param>
-    /// <param name="severity">Snackbar severity; defaults to <see cref="Severity.Error"/>.</param>
+    /// <param name="severity">Toast severity; defaults to <see cref="ToastSeverity.Error"/>.</param>
     /// <returns>The same <paramref name="result"/> instance.</returns>
     /// <example>
     /// Before:
     /// <code>
     /// catch (Exception ex)
     /// {
-    ///     Snackbar.Add(ErrorMessages.SaveError(L["Entity.Notification"], ex), Severity.Error);
+    ///     Toast.Error(ErrorMessages.SaveError(L["Entity.Notification"], ex));
     /// }
     /// </code>
     /// After:
     /// <code>
-    /// (await Service.AddAsync(dto, _cts.Token)).NotifyOnFailure(Snackbar, L);
+    /// (await Service.AddAsync(dto, _cts.Token)).NotifyOnFailure(Toast, L);
     /// </code>
     /// </example>
     public static Result NotifyOnFailure(
         this Result result,
-        ISnackbar snackbar,
+        IToastService toast,
         IStringLocalizer? localizer = null,
-        Severity severity = Severity.Error)
+        ToastSeverity severity = ToastSeverity.Error)
     {
         ArgumentNullException.ThrowIfNull(result);
-        ArgumentNullException.ThrowIfNull(snackbar);
+        ArgumentNullException.ThrowIfNull(toast);
 
         var message = result.LocalizedErrorMessage(localizer);
         if (message is not null)
         {
-            snackbar.Add(message, severity);
+            toast.Show(message, severity);
         }
 
         return result;
     }
 
-    /// <inheritdoc cref="NotifyOnFailure(Result, ISnackbar, IStringLocalizer, Severity)"/>
+    /// <inheritdoc cref="NotifyOnFailure(Result, IToastService, IStringLocalizer, ToastSeverity)"/>
     /// <typeparam name="T">The success value type.</typeparam>
     public static Result<T> NotifyOnFailure<T>(
         this Result<T> result,
-        ISnackbar snackbar,
+        IToastService toast,
         IStringLocalizer? localizer = null,
-        Severity severity = Severity.Error)
+        ToastSeverity severity = ToastSeverity.Error)
     {
-        NotifyOnFailure((Result)result, snackbar, localizer, severity);
+        NotifyOnFailure((Result)result, toast, localizer, severity);
         return result;
     }
 

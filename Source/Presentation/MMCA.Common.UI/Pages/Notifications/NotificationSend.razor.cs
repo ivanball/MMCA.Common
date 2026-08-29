@@ -3,6 +3,7 @@ using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
@@ -19,7 +20,7 @@ public partial class NotificationSend : IDisposable
 {
     [Inject] private IPushNotificationUIService NotificationService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
@@ -71,7 +72,7 @@ public partial class NotificationSend : IDisposable
         {
             // The per-field messages are already on screen; the ErrorSummary above the form collects
             // them in one place (deduplicated) and the snackbar stays the summary cue it always was.
-            Snackbar.Add(ErrorMessages.ValidationError, Severity.Warning);
+            Toast.Warning(ErrorMessages.ValidationError);
             return;
         }
 
@@ -84,14 +85,14 @@ public partial class NotificationSend : IDisposable
 
             if (result.TryGetValue(out PushNotificationDTO? sent))
             {
-                Snackbar.Add(L["Notif.Send.SentTo", sent.RecipientCount], Severity.Success);
+                Toast.Success(L["Notif.Send.SentTo", sent.RecipientCount]);
                 NavigationManager.NavigateTo(NotificationRoutePaths.Notifications);
             }
             else
             {
                 // Rendered inline by the ErrorSummary as well, so the wording survives the snackbar
                 // timing out on a long form.
-                result.NotifyOnFailure(Snackbar, L);
+                result.NotifyOnFailure(Toast, L);
             }
         }
         catch (OperationCanceledException)

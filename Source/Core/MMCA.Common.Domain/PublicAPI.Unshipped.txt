@@ -3,6 +3,9 @@
 *REMOVED*MMCA.Common.Domain.Auth.IAuthUser.RefreshTokenExpiry.get -> System.DateTime?
 *REMOVED*MMCA.Common.Domain.Auth.IAuthUser.RevokeRefreshToken() -> void
 *REMOVED*MMCA.Common.Domain.Auth.IAuthUser.UpdateRefreshToken(string! refreshToken, System.DateTime expiry) -> void
+MMCA.Common.Domain.Attributes.EventNameAttribute
+MMCA.Common.Domain.Attributes.EventNameAttribute.EventNameAttribute(string! name) -> void
+MMCA.Common.Domain.Attributes.EventNameAttribute.Name.get -> string!
 MMCA.Common.Domain.Auth.RefreshSession
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.init -> void
@@ -31,6 +34,10 @@ MMCA.Common.Domain.Interfaces.IHasOrderingKey
 MMCA.Common.Domain.Interfaces.IHasOrderingKey.OrderingKey.get -> string?
 MMCA.Common.Domain.Interfaces.IReactivatable
 MMCA.Common.Domain.Interfaces.IReactivatable.Reactivate() -> MMCA.Common.Shared.Abstractions.Result!
+override MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.Equals(object? obj) -> bool
+override MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.GetHashCode() -> int
+static MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.operator !=(MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? left, MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? right) -> bool
+static MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>.operator ==(MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? left, MMCA.Common.Domain.Entities.BaseEntity<TIdentifierType>? right) -> bool
 const MMCA.Common.Domain.Auth.RefreshSession.IpAddressMaxLength = 45 -> int
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonReuseDetected = "ReuseDetected" -> string!
 const MMCA.Common.Domain.Auth.RefreshSession.ReasonRevokedMaxLength = 64 -> int

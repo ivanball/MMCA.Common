@@ -5,7 +5,7 @@
 @inject IShareService Share
 @inject IHttpClientFactory HttpClientFactory
 @inject IOptions<ApiSettings> ApiOptions
-@inject ISnackbar Snackbar
+@inject IToastService Toast
 @inject IStringLocalizer<ApiFileDownloadButton> L
 
 @* Downloads a file produced by an API endpoint (ADR-042). Browsers get a plain download link to

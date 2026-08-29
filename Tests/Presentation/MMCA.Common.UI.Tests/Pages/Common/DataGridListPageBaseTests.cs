@@ -3,6 +3,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Services;
 using Moq;
@@ -13,20 +14,20 @@ namespace MMCA.Common.UI.Tests.Pages.Common;
 /// <summary>
 /// bUnit host tests for <see cref="DataGridListPageBase{TDto}"/> through a minimal concrete page:
 /// initial server-data load, page/sort state persistence mirrored to the URL, the failed-fetch and
-/// cancel surfaces (snackbar severities plus the <c>LoadFailed</c> flag pages branch on),
+/// cancel surfaces (toast severities plus the <c>LoadFailed</c> flag pages branch on),
 /// URL-driven state restoration, scroll/density persistence, the mobile card-view load path, and a
 /// regression guard for the disposed-CTS race (a late grid reload after component disposal must not
 /// throw ObjectDisposedException).
 /// </summary>
 public sealed class DataGridListPageBaseTests : BunitTestBase
 {
-    private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IToastService> _toast = new();
 
     public DataGridListPageBaseTests()
     {
-        // Last registration wins over the SnackbarService that AddMudServices registered, so the
-        // page's error/cancel surface can be asserted without rendering a snackbar provider.
-        Services.AddSingleton<ISnackbar>(_snackbar.Object);
+        // Last registration wins over the Mud-backed facade the base registered, so the page's
+        // error/cancel surface can be asserted without rendering a snackbar provider.
+        Services.AddSingleton<IToastService>(_toast.Object);
 
         // The shared list-page host block: state services, an inert viewport, persistent component
         // state, and (LAST, because it freezes the provider) the interactive renderer info that
@@ -43,7 +44,7 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         => Task.FromResult(Result.Success<(IReadOnlyList<WidgetRow> Items, int TotalItems)>((items, totalItems)));
 
     // A fetch that failed. The message is not a resource key, so the page localizer passes it
-    // through verbatim and the snackbar text can be asserted exactly.
+    // through verbatim and the toast text can be asserted exactly.
     private static Task<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>> LoadFailure(string message)
         => Task.FromResult(Result.Failure<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(
             Error.Failure("Widgets.LoadFailed", message)));
@@ -124,9 +125,7 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         seenPageSize.Should().Be(10);
         cut.Instance.LoadingNow.Should().BeFalse();
         cut.Instance.LoadFailedNow.Should().BeFalse("a successful fetch never raises the failure flag");
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Never);
+        _toast.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -226,9 +225,7 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         data.Items.Should().BeEmpty();
         cut.Instance.LoadingNow.Should().BeFalse();
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Error(It.IsAny<string>()), Times.Once);
     }
 
     // == State persistence: in-memory service + URL mirror ==
@@ -252,9 +249,9 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
     // == Error and cancel surfaces ==
     [Fact]
-    public async Task LoadServerDataAsync_WhenFetchFails_ReturnsEmptyGridSetsLoadFailedAndRaisesOneErrorSnackbar()
+    public async Task LoadServerDataAsync_WhenFetchFails_ReturnsEmptyGridSetsLoadFailedAndRaisesOneErrorToast()
     {
-        // A failed Result is the surface a thrown exception used to be: one snackbar carrying the
+        // A failed Result is the surface a thrown exception used to be: one toast carrying the
         // localized message, LoadFailed raised so the page can offer a retry instead of the "no
         // records" empty state, and zero rows in the grid.
         var cut = Render<TestGridPage>();
@@ -266,20 +263,12 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         data.TotalItems.Should().Be(0);
         cut.Instance.LoadFailedNow.Should().BeTrue();
         cut.Instance.LoadingNow.Should().BeFalse("the loading flag must always be reset");
-        _snackbar.Verify(
-            s => s.Add(
-                "The widget service is unavailable.",
-                Severity.Error,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
-            Times.Once);
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
+        _toast.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task LoadServerDataAsync_WhenAFailureCarriesSeveralErrors_StillRaisesExactlyOneSnackbar()
+    public async Task LoadServerDataAsync_WhenAFailureCarriesSeveralErrors_StillRaisesExactlyOneToast()
     {
         // Result.Combine aggregates; the page must read as one sentence, not one toast per error.
         var cut = Render<TestGridPage>();
@@ -293,12 +282,8 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10));
 
         // Most severe first: the backend failure leads and the validation note follows.
-        _snackbar.Verify(
-            s => s.Add(
-                "The widget service is unavailable. Page is out of range.",
-                Severity.Error,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
+        _toast.Verify(
+            t => t.Show("The widget service is unavailable. Page is out of range.", ToastSeverity.Error),
             Times.Once);
     }
 
@@ -318,7 +303,7 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
     }
 
     [Fact]
-    public async Task LoadServerDataAsync_WhenFetchThrows_ReturnsEmptyGridAndRaisesErrorSnackbar()
+    public async Task LoadServerDataAsync_WhenFetchThrows_ReturnsEmptyGridAndRaisesErrorToast()
     {
         // The catch stayed for page-supplied callbacks, so a throw still lands on the same surface.
         var cut = Render<TestGridPage>();
@@ -330,13 +315,11 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         data.TotalItems.Should().Be(0);
         cut.Instance.LoadingNow.Should().BeFalse();
         cut.Instance.LoadFailedNow.Should().BeTrue();
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Error(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
-    public async Task LoadServerDataAsync_WhenFetchCanceled_ReturnsEmptyGridAndRaisesInfoSnackbar()
+    public async Task LoadServerDataAsync_WhenFetchCanceled_ReturnsEmptyGridAndRaisesInfoToast()
     {
         var cut = Render<TestGridPage>();
         cut.Instance.Fetch = (_, _, _, _, _, _) => throw new OperationCanceledException();
@@ -344,22 +327,18 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         var data = await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10));
 
         data.Items.Should().BeEmpty();
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), Severity.Info, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Info(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
-    public async Task LoadServerDataAsync_WhenCanceledWithSnackbarSuppressed_StaysQuiet()
+    public async Task LoadServerDataAsync_WhenCanceledWithToastSuppressed_StaysQuiet()
     {
         var cut = Render<TestGridPage>();
         cut.Instance.Fetch = (_, _, _, _, _, _) => throw new OperationCanceledException();
 
         await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10), showCancelSnackbar: false);
 
-        _snackbar.Verify(
-            s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
-            Times.Never);
+        _toast.VerifyNoOtherCalls();
     }
 
     // == Disposed-CTS regression ==
@@ -438,7 +417,7 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
     }
 
     [Fact]
-    public async Task LoadMobileDataAsync_WhenFetchFails_EmptiesTheCardsAndRaisesOneErrorSnackbar()
+    public async Task LoadMobileDataAsync_WhenFetchFails_EmptiesTheCardsAndRaisesOneErrorToast()
     {
         // The card view has no NoRecordsContent to branch in, so LoadFailed is the only way the page
         // can tell "nothing matched" apart from "the fetch failed".
@@ -453,12 +432,6 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.MobileTotalNow.Should().Be(0);
         cut.Instance.LoadFailedNow.Should().BeTrue();
         cut.Instance.LoadingNow.Should().BeFalse();
-        _snackbar.Verify(
-            s => s.Add(
-                "The widget service is unavailable.",
-                Severity.Error,
-                It.IsAny<Action<SnackbarOptions>>(),
-                It.IsAny<string>()),
-            Times.Once);
+        _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
     }
 }

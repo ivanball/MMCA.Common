@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NotificationHubService HubService
 @inject NotificationState NotificationState
-@inject ISnackbar Snackbar
+@inject IToastService Toast
 @implements IAsyncDisposable
 
 <CascadingAuthenticationState>
@@ -46,19 +46,7 @@
                     NotificationState.IncrementUnreadCount();
                     // Ask NotificationBell to also fetch the authoritative count from the API
                     NotificationState.RequestRefresh();
-                    Snackbar.Add(builder =>
-                    {
-                        builder.OpenElement(0, "strong");
-                        builder.AddContent(1, title);
-                        builder.CloseElement();
-                        builder.OpenElement(2, "br");
-                        builder.CloseElement();
-                        builder.AddContent(3, body);
-                    }, Severity.Info, options =>
-                    {
-                        options.RequireInteraction = true;
-                        options.SnackbarVariant = Variant.Filled;
-                    });
+                    Toast.ShowPersistent(title, body);
                 });
             }
             catch (ObjectDisposedException)

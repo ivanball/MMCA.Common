@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Infrastructure.Settings;
 using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure.Caching;
@@ -19,13 +21,21 @@ internal sealed partial class DistributedCacheService(
     IDistributedCache cache,
     ILogger<DistributedCacheService> logger,
     IConnectionMultiplexer? connectionMultiplexer = null,
-    CacheKeyNamespace? keyNamespace = null) : ICacheService
+    CacheKeyNamespace? keyNamespace = null,
+    IOptions<CacheSettings>? cacheSettings = null) : ICacheService
 {
     /// <summary>
     /// Namespace applied to every key so services sharing one cache instance cannot collide.
     /// Defaults to no prefix, which is correct for a host that owns its cache outright.
     /// </summary>
     private readonly CacheKeyNamespace _keys = keyNamespace ?? CacheKeyNamespace.None;
+
+    /// <summary>
+    /// Bound <c>Cache</c> section, or the framework defaults when a host builds this service without
+    /// one (direct construction in tests). The default reproduces
+    /// <see cref="CacheOptions.DefaultDuration"/> exactly.
+    /// </summary>
+    private readonly CacheSettings _settings = cacheSettings?.Value ?? new CacheSettings();
 
     /// <inheritdoc />
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
@@ -36,6 +46,11 @@ internal sealed partial class DistributedCacheService(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A caller that supplies no expiration gets <see cref="CacheSettings.DefaultDuration"/>, which
+    /// defaults to <see cref="CacheOptions.DefaultDuration"/>, so an unconfigured host writes the
+    /// same TTL it always did.
+    /// </remarks>
     public Task SetAsync<T>(
         string key,
         T value,
@@ -44,7 +59,11 @@ internal sealed partial class DistributedCacheService(
     {
         byte[] bytes = Serialize(value);
 
-        return cache.SetAsync(_keys.Qualify(key), bytes, CacheOptions.Create(expiration), cancellationToken);
+        return cache.SetAsync(
+            _keys.Qualify(key),
+            bytes,
+            CacheOptions.Create(expiration ?? _settings.DefaultDuration),
+            cancellationToken);
     }
 
     /// <inheritdoc />

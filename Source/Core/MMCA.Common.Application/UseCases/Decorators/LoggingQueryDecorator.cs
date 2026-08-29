@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Conventions;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
 
@@ -21,7 +22,7 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
         var queryName = typeof(TQuery).Name;
         var correlationId = correlationContext.CorrelationId;
 
-        using (BeginQueryScope(logger, queryName, correlationId))
+        using (BeginQueryScope(logger, queryName, ModuleName, correlationId))
         {
             // Timestamp rather than a Stopwatch instance: same resolution, one fewer allocation per
             // query. Elapsed is captured before logging, so the recorded duration stays the handler's
@@ -61,8 +62,16 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
     /// <c>BeginScope(new Dictionary&lt;string, object&gt;)</c> allocated a dictionary and boxed the
     /// scope state on every query, at every log level, including when logging was disabled entirely.
     /// </summary>
-    private static readonly Func<ILogger, string, string, IDisposable?> BeginQueryScope =
-        LoggerMessage.DefineScope<string, string>("Query {QueryName} [CorrelationId: {CorrelationId}]");
+    private static readonly Func<ILogger, string, string, string, IDisposable?> BeginQueryScope =
+        LoggerMessage.DefineScope<string, string, string>(
+            "Query {QueryName} [Module: {ModuleName}] [CorrelationId: {CorrelationId}]");
+
+    /// <summary>
+    /// Owning module of the query, derived once per closed generic type (the static field is per
+    /// <c>TQuery</c>), so every log line a handler emits can be filtered by module without paying
+    /// for the namespace parse per execution.
+    /// </summary>
+    private static readonly string ModuleName = ModuleNameConventions.GetModuleName(typeof(TQuery)) ?? "unknown";
 
     private static void RecordDuration(string queryName, TimeSpan elapsed, string outcome) =>
         CqrsMetrics.QueryDuration.Record(

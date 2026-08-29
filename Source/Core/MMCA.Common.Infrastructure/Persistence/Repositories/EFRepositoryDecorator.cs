@@ -7,7 +7,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 /// <summary>
 /// MiniProfiler decorator for <see cref="IRepository{TEntity,TIdentifierType}"/>.
 /// Extends <see cref="EFReadRepositoryDecorator{TEntity,TIdentifierType}"/> with profiled
-/// write operations (add, update, save). Uses <see cref="ProfilingHelper"/> for timing.
+/// write operations (add, update). Uses <see cref="ProfilingHelper"/> for timing.
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
@@ -57,11 +57,4 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
         CancellationToken cancellationToken = default) =>
         ProfilingHelper.ProfileAsync(ClassName, nameof(ExecuteUpdateAsync),
             () => _inner.ExecuteUpdateAsync(where, setProperties, cancellationToken));
-
-    public int Save() =>
-        ProfilingHelper.Profile(ClassName, nameof(Save), _inner.Save);
-
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        ProfilingHelper.ProfileAsync(ClassName, nameof(SaveChangesAsync),
-            () => _inner.SaveChangesAsync(cancellationToken));
 }

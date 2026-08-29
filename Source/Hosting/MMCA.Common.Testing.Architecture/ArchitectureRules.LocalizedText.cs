@@ -9,6 +9,11 @@ public static partial class ArchitectureRules
     [GeneratedRegex(@"Snackbar\.Add\(\s*\$?""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex LiteralSnackbar { get; }
 
+    // Same guard for the vendor-neutral IToastService facade that replaced direct ISnackbar use:
+    // a literal first argument to any toast method is a hard-coded user-visible string.
+    [GeneratedRegex(@"Toast\.(?:Success|Info|Warning|Error|Show|ShowPersistent)\(\s*\$?""", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex LiteralToast { get; }
+
     // Matches a literal-titled page property, for example a Title property that returns the
     // string "Create Event" directly instead of routing it through localization.
     [GeneratedRegex(@"string\s+Title\s*=>\s*\$?""", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
@@ -117,6 +122,11 @@ public static partial class ArchitectureRules
             if (LiteralSnackbar.IsMatch(line))
             {
                 yield return $"  - {relative}:{i + 1} hard-codes a Snackbar message literal";
+            }
+
+            if (LiteralToast.IsMatch(line))
+            {
+                yield return $"  - {relative}:{i + 1} hard-codes a toast message literal";
             }
 
             if (LiteralTitleProperty.IsMatch(line))

@@ -136,6 +136,12 @@ public sealed class OutboxSettings
     /// </code>
     /// Aliases are for MOVED contracts, not reshaped ones: a payload whose fields changed needs a
     /// new event type and an upcaster (ADR-090), not an alias.
+    /// <para>
+    /// Precedence against <c>MMCA.Common.Domain.Attributes.EventNameAttribute</c>: the attribute is
+    /// the proactive stable identity (new rows store a name that survives a rename), this map is the
+    /// retroactive mapping for rows ALREADY persisted under an old name. Resolution is per stored
+    /// string, so aliases still win for those old rows even after the event type gains an attribute.
+    /// </para>
     /// </remarks>
     public IReadOnlyDictionary<string, string> TypeAliases { get; init; } =
         new Dictionary<string, string>(StringComparer.Ordinal);

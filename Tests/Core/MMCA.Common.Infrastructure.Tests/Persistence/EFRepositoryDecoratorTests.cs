@@ -35,26 +35,6 @@ public sealed class EFRepositoryDecoratorTests
     }
 
     [Fact]
-    public async Task SaveChangesAsync_DelegatesToInner()
-    {
-        _inner.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(3);
-
-        var result = await CreateSut().SaveChangesAsync();
-
-        result.Should().Be(3);
-    }
-
-    [Fact]
-    public void Save_DelegatesToInner()
-    {
-        _inner.Setup(x => x.Save()).Returns(5);
-
-        var result = CreateSut().Save();
-
-        result.Should().Be(5);
-    }
-
-    [Fact]
     public void Constructor_WithNullInner_ThrowsArgumentNullException()
     {
         var act = () => new EFRepositoryDecorator<FakeAggregateEntity, int>(null!);

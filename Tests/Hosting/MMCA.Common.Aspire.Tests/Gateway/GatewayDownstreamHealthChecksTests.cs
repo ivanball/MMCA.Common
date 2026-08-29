@@ -134,28 +134,6 @@ public sealed class GatewayDownstreamHealthChecksTests
     public void Options_DefaultToAutoNegotiation() =>
         new GatewayDownstreamHealthCheckOptions().ProbeVersion.Should().Be(DownstreamProbeVersion.Auto);
 
-    // The bool opt-out predates ProbeVersion and survives only as a facade, so a gateway written
-    // against it keeps compiling. It maps onto the two FIXED modes, which is exactly what giving up
-    // the negotiation means.
-    [Fact]
-    public void ObsoleteProbeOverHttp2_RoundTripsOntoTheFixedModes()
-    {
-#pragma warning disable CS0618 // Obsolete on purpose: this test is what keeps the compat facade honest.
-        var options = new GatewayDownstreamHealthCheckOptions();
-
-        options.ProbeOverHttp2.Should().BeFalse(
-            because: "the Auto default has not pinned HTTP/2, it decides per downstream");
-
-        options.ProbeOverHttp2 = true;
-        options.ProbeVersion.Should().Be(DownstreamProbeVersion.Http2);
-        options.ProbeOverHttp2.Should().BeTrue();
-
-        options.ProbeOverHttp2 = false;
-        options.ProbeVersion.Should().Be(DownstreamProbeVersion.Http11);
-        options.ProbeOverHttp2.Should().BeFalse();
-#pragma warning restore CS0618
-    }
-
     private static HttpClient ProbeClientFor(
         string serviceName,
         Action<GatewayDownstreamHealthCheckOptions>? configure = null)

@@ -98,15 +98,20 @@ public static class DependencyInjection
 
             // AddStandardResilienceHandler returns IHttpStandardResiliencePipelineBuilder; the
             // pipeline is wired onto the same IHttpClientBuilder, so return the original builder
-            // for chaining further customization (e.g., additional message handlers). The
-            // options mirror MMCA.Common.Aspire's ConfigureHttpClientDefaults exactly (they
-            // previously drifted to the 10s/30s library defaults).
+            // for chaining further customization (e.g., additional message handlers). Every value
+            // comes from GrpcResilienceDefaults: its timeouts and retry budget are the same ones
+            // MMCA.Common.Aspire's ConfigureHttpClientDefaults applies (they previously drifted to
+            // the 10s/30s library defaults), and its circuit-breaker values are explicit because an
+            // east-west gRPC call bypasses the Gateway's active health checks.
             builder.AddStandardResilienceHandler(options =>
             {
-                options.AttemptTimeout.Timeout = HttpResilienceDefaults.AttemptTimeout;
-                options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
-                options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
-                options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
+                options.AttemptTimeout.Timeout = GrpcResilienceDefaults.AttemptTimeout;
+                options.TotalRequestTimeout.Timeout = GrpcResilienceDefaults.TotalRequestTimeout;
+                options.Retry.MaxRetryAttempts = GrpcResilienceDefaults.MaxRetryAttempts;
+                options.CircuitBreaker.SamplingDuration = GrpcResilienceDefaults.SamplingDuration;
+                options.CircuitBreaker.FailureRatio = GrpcResilienceDefaults.FailureRatio;
+                options.CircuitBreaker.MinimumThroughput = GrpcResilienceDefaults.MinimumThroughput;
+                options.CircuitBreaker.BreakDuration = GrpcResilienceDefaults.BreakDuration;
             });
             return builder;
         }

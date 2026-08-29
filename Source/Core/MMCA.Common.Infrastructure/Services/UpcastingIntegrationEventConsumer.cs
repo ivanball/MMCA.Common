@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox;
 
 namespace MMCA.Common.Infrastructure.Services;
 
@@ -56,11 +57,15 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         // this is the same id a plain IntegrationEventConsumer<TEvent> would have recorded.
         var messageId = integrationEvent.MessageId;
 
+        // The inbox key is the retired contract's [EventName] identity when it declares one, and its
+        // short type name otherwise, which is what every row written so far holds.
+        var eventTypeName = EventNameResolver.GetInboxName(typeof(TEvent));
+
         // TryBegin also stages the inbox row in the scope's unit of work, so a handler's own
         // SaveChangesAsync commits it atomically with its mutations (see IInboxStore).
-        if (!await inbox.TryBeginAsync(messageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false))
+        if (!await inbox.TryBeginAsync(messageId, eventTypeName, context.CancellationToken).ConfigureAwait(false))
         {
-            LogDuplicateSkipped(logger, typeof(TEvent).Name, messageId);
+            LogDuplicateSkipped(logger, eventTypeName, messageId);
             return;
         }
 
@@ -68,7 +73,7 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         {
             // Degrade path: the host registered this consumer but no upcaster for the type, so the
             // registry returns the instance untouched and the handlers for TEvent run as usual.
-            LogNoUpcaster(logger, typeof(TEvent).Name);
+            LogNoUpcaster(logger, eventTypeName);
         }
 
         var terminalEvent = upcasters.UpcastToTerminal(integrationEvent);
@@ -76,7 +81,7 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
 
         if (terminalType != typeof(TEvent))
         {
-            LogUpcasted(logger, typeof(TEvent).Name, terminalType.Name, messageId);
+            LogUpcasted(logger, eventTypeName, terminalType.Name, messageId);
         }
 
         var (closedHandlerType, invoker) = DispatchCache.GetOrAdd(
@@ -118,12 +123,12 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         {
             // No handler registered for the terminal contract in this process. Returning normally lets
             // MassTransit ack the message; the broker will not retry.
-            LogNoHandlers(logger, terminalType.Name, typeof(TEvent).Name);
+            LogNoHandlers(logger, terminalType.Name, eventTypeName);
         }
 
         // Persist the staged row unless a handler's own save already committed it. Either way the
         // message is recorded only on a successful consume: the failure path above rethrows.
-        await inbox.CompleteAsync(messageId, typeof(TEvent).Name, context.CancellationToken).ConfigureAwait(false);
+        await inbox.CompleteAsync(messageId, eventTypeName, context.CancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

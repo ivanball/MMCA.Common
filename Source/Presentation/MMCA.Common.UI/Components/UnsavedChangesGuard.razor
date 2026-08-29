@@ -5,12 +5,13 @@
       - browser back / forward / tab close → ConfirmExternalNavigation triggers
         the native beforeunload dialog (uncustomisable, but uniformly supported)
       - in-app NavigateTo / nav links → OnBeforeInternalNavigation shows a
-        MudDialog with a custom message that the user can confirm or cancel
+        modal confirm (IAppDialogService) with a custom message that the user
+        can confirm or cancel
 
     Set IsDirty to true when the form is modified, false on save/discard.
 *@
 @using Microsoft.AspNetCore.Components.Routing
-@inject IDialogService DialogService
+@inject IAppDialogService Dialog
 @inject IStringLocalizer<SharedResource> L
 
 <NavigationLock ConfirmExternalNavigation="@CurrentIsDirty"
@@ -53,13 +54,13 @@
             return;
         }
 
-        var confirmed = await DialogService.ShowMessageBoxAsync(
+        var confirmed = await Dialog.ConfirmAsync(
             Title ?? L["UnsavedChanges.Title"],
             Message ?? L["UnsavedChanges.Message"],
-            yesText: LeaveButtonText ?? L["UnsavedChanges.Leave"],
-            cancelText: StayButtonText ?? L["UnsavedChanges.Stay"]);
+            LeaveButtonText ?? L["UnsavedChanges.Leave"],
+            StayButtonText ?? L["UnsavedChanges.Stay"]);
 
-        if (confirmed is not true)
+        if (!confirmed)
         {
             context.PreventNavigation();
         }

@@ -3,22 +3,21 @@ using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
-using MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// EF Core read-write repository supporting add, update, and save operations.
+/// EF Core read-write repository supporting add and update operations.
 /// Extends <see cref="EFReadRepository{TEntity,TIdentifierType}"/> with mutation support.
+/// Flushing is the unit of work's job, so this type stages changes and never saves.
 /// </summary>
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
 /// <remarks>
 /// The optional <paramref name="timeProvider"/> and <paramref name="currentUserService"/> serve
-/// audit stamping: the clock for <see cref="ExecuteUpdateAsync"/>, which bypasses the save
-/// pipeline, and the user for both that path and the <see cref="Save"/> /
-/// <see cref="SaveChangesAsync"/> overloads. When absent (direct construction in tests) the system
-/// clock is used and the user stamp is skipped.
+/// audit stamping on <see cref="ExecuteUpdateAsync"/>, which bypasses the save pipeline and so
+/// stamps the clock and the acting user itself. When absent (direct construction in tests) the
+/// system clock is used and the user stamp is skipped.
 /// </remarks>
 internal sealed class EFRepository<TEntity, TIdentifierType>(
     DbContext context,
@@ -133,22 +132,4 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
 
         return await Entities.Where(where).ExecuteUpdateAsync(builder.Apply, cancellationToken).ConfigureAwait(false);
     }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// Routes through the user-id overload when the context is an <see cref="ApplicationDbContext"/>,
-    /// so the audit interceptor stamps the acting user instead of the system sentinel it falls back
-    /// to when no id is supplied. A context constructed outside the factory keeps the plain overload.
-    /// </remarks>
-    public int Save() =>
-        _context is ApplicationDbContext applicationContext
-            ? applicationContext.SaveChanges(currentUserService?.UserId)
-            : _context.SaveChanges();
-
-    /// <inheritdoc />
-    /// <remarks>See <see cref="Save"/> for why the user id is threaded through.</remarks>
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        _context is ApplicationDbContext applicationContext
-            ? await applicationContext.SaveChangesAsync(currentUserService?.UserId, cancellationToken).ConfigureAwait(false)
-            : await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 }

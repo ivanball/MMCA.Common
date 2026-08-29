@@ -3,6 +3,7 @@ using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Auth;
 using MudBlazor;
@@ -26,7 +27,7 @@ public partial class Sessions : IDisposable
 {
     [Inject] private IAuthUIService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private const string LoginRoute = "/login";
@@ -119,17 +120,17 @@ public partial class Sessions : IDisposable
 
             if (result.IsSuccess)
             {
-                Snackbar.Add(L["Auth.Sessions.Revoked"], Severity.Success);
+                Toast.Success(L["Auth.Sessions.Revoked"]);
             }
             else if (result.IsNotFound())
             {
                 // Already gone (a duplicate click, or the device signed itself out): the user's
                 // intent is satisfied, so this is not an error to shout about.
-                Snackbar.Add(L["Auth.Sessions.AlreadyRevoked"], Severity.Info);
+                Toast.Info(L["Auth.Sessions.AlreadyRevoked"]);
             }
             else
             {
-                result.NotifyOnFailure(Snackbar, L);
+                result.NotifyOnFailure(Toast, L);
                 return;
             }
 
