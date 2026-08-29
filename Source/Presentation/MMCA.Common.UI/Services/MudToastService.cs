@@ -47,6 +47,36 @@ internal sealed class MudToastService(ISnackbar snackbar) : IToastService
                 options.SnackbarVariant = Variant.Filled;
             });
 
+    /// <inheritdoc />
+    public void ShowAction(
+        string message,
+        string actionText,
+        Func<Task> onAction,
+        ToastSeverity severity = ToastSeverity.Info,
+        bool requireInteraction = false) =>
+        snackbar.Add(
+            message,
+            Map(severity),
+            options =>
+            {
+                options.Action = actionText;
+                options.ActionColor = Color.Primary;
+
+                // MudBlazor hands the click a Snackbar instance the callback has no use for: the
+                // action is described entirely by the delegate the caller passed.
+                options.OnClick = _ => onAction();
+
+                if (requireInteraction)
+                {
+                    // Stated outright rather than left to MudBlazor's null default (which already
+                    // pins an action snackbar open): the contract promises the toast waits, so it
+                    // must not depend on a host configuration the caller cannot see. The filled
+                    // variant is the same emphasis convention ShowPersistent uses.
+                    options.RequireInteraction = true;
+                    options.SnackbarVariant = Variant.Filled;
+                }
+            });
+
     /// <summary>
     /// Projects the vendor-neutral level onto MudBlazor's own. Written out rather than cast: the
     /// two enums happen to agree numerically today, and an implicit dependency on that would break

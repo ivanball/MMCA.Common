@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Testing.UI;
-using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Fallbacks;
@@ -29,8 +28,9 @@ public abstract class BunitTestBase : BunitComponentTestBase
         Services.AddScoped<ICultureApplier, EndpointCultureApplier>();
 
         // Capability defaults the shared pages/layout inject (ADR-042): Login consults the
-        // external-auth broker, MainLayout renders the OfflineBanner. The Testing.UI harness
-        // cannot register these (it deliberately does not reference MMCA.Common.UI).
+        // external-auth broker, MainLayout renders the OfflineBanner. Registered here rather than in
+        // the Testing.UI harness because the head owns which capability implementations win, and a
+        // consumer's MAUI or browser head substitutes its own.
         Services.AddSingleton<IExternalAuthBroker, UnavailableExternalAuthBroker>();
         Services.AddSingleton<IConnectivityStatusService, AlwaysOnlineConnectivityStatusService>();
 
@@ -39,12 +39,9 @@ public abstract class BunitTestBase : BunitComponentTestBase
         // public-site behaviour substitutes its own builder.
         Services.AddScoped<IPublicLinkBuilder, NavigationPublicLinkBuilder>();
 
-        // Toast and confirm-dialog facades. Pages and components inject the vendor-neutral
-        // IToastService / IAppDialogService, and AddUIShared registers exactly these two Mud-backed
-        // implementations over the MudBlazor services the shared harness already added, so a
-        // component test exercises the real path. A test that asserts on toasts (or answers a
-        // confirm) registers its own double afterwards: last registration wins.
-        Services.AddScoped<IToastService, MudToastService>();
-        Services.AddScoped<IAppDialogService, MudAppDialogService>();
+        // The toast and confirm-dialog facades come from the shared harness (AddCommonUiFacades,
+        // called by BunitComponentTestBase over the MudBlazor services it registers), so a component
+        // test exercises the real Mud-backed path with no registration here. A test that asserts on
+        // toasts (or answers a confirm) registers its own double: last registration wins.
     }
 }

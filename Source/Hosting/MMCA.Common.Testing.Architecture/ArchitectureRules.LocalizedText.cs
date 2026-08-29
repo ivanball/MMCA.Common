@@ -11,7 +11,7 @@ public static partial class ArchitectureRules
 
     // Same guard for the vendor-neutral IToastService facade that replaced direct ISnackbar use:
     // a literal first argument to any toast method is a hard-coded user-visible string.
-    [GeneratedRegex(@"Toast\.(?:Success|Info|Warning|Error|Show|ShowPersistent)\(\s*\$?""", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"Toast\.(?:Success|Info|Warning|Error|Show|ShowPersistent|ShowAction)\(\s*\$?""", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex LiteralToast { get; }
 
     // Matches a literal-titled page property, for example a Title property that returns the

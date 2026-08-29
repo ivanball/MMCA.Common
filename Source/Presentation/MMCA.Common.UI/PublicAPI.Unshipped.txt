@@ -290,6 +290,7 @@ MMCA.Common.UI.Common.Interfaces.IToastService
 MMCA.Common.UI.Common.Interfaces.IToastService.Error(string! message) -> void
 MMCA.Common.UI.Common.Interfaces.IToastService.Info(string! message) -> void
 MMCA.Common.UI.Common.Interfaces.IToastService.Show(string! message, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.ShowAction(string! message, string! actionText, System.Func<System.Threading.Tasks.Task!>! onAction, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info, bool requireInteraction = false) -> void
 MMCA.Common.UI.Common.Interfaces.IToastService.ShowPersistent(string! title, string! body, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info) -> void
 MMCA.Common.UI.Common.Interfaces.IToastService.Success(string! message) -> void
 MMCA.Common.UI.Common.Interfaces.IToastService.Warning(string! message) -> void
@@ -299,3 +300,5 @@ MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info = 1 -> MMCA.Common.UI.Common
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Normal = 0 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Success = 2 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Warning = 3 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonUiFacades() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.DependencyInjection.AddCommonUiFacades(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

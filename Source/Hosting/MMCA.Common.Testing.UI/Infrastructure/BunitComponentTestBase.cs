@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MMCA.Common.UI;
 using MMCA.Common.UI.Services;
 using Moq;
 using MudBlazor;
@@ -43,6 +44,14 @@ public abstract class BunitComponentTestBase : BunitContext
     protected BunitComponentTestBase()
     {
         Services.AddMudServices();
+
+        // The vendor-neutral toast/confirm facades every migrated page and the shared Result helpers
+        // inject. They wrap the MudBlazor services registered on the line above, so they belong right
+        // here: without them a consumer's component test fails to resolve IToastService and each repo
+        // ends up re-registering the same pair in its own base. TryAdd inside, so a test that wants a
+        // recording double registers one afterwards (last registration wins).
+        Services.AddCommonUiFacades();
+
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddAuthorizationCore();
         Services.AddSingleton<IAuthorizationService, IsAuthenticatedAuthorizationService>();
