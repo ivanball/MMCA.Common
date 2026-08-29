@@ -234,6 +234,87 @@ public sealed class DataSourceResolverTests
         sut.GetPhysical(key).ConnectionString.Should().Be(OtherSql);
     }
 
+    // ── SQLite migrations assembly ──
+    [Fact]
+    public void GetPhysical_SqliteSourceWithOwnMigrationsAssembly_UsesIt()
+    {
+        var sut = CreateSut(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+        {
+            ["Tickets"] = new()
+            {
+                SqliteConnectionString = "Data Source=tickets.db",
+                SqliteMigrationsAssembly = "Tickets.Migrations.Sqlite",
+            },
+        });
+
+        var key = sut.ResolveLogical(DataSource.Sqlite, "Tickets");
+
+        sut.GetPhysical(key).SqliteMigrationsAssembly.Should().Be("Tickets.Migrations.Sqlite");
+    }
+
+    // The two slots are per-engine on purpose: a mixed host declares both, and handing the SQL Server
+    // assembly to UseSqlite would point EF at a snapshot describing a different database.
+    [Fact]
+    public void GetPhysical_SqliteSource_DoesNotInheritTheSqlServerMigrationsAssembly()
+    {
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Tickets"] = new() { SqliteConnectionString = "Data Source=tickets.db" },
+            },
+            new ConnectionStringSettings
+            {
+                SQLServerConnectionString = DefaultSql,
+                SQLServerMigrationsAssembly = "Main.Migrations",
+                SqliteConnectionString = "Data Source=main.db",
+            });
+
+        var sqlite = sut.GetPhysical(sut.ResolveLogical(DataSource.Sqlite, "Tickets"));
+
+        sqlite.SqliteMigrationsAssembly.Should().BeNull(
+            "the entry declared none, and the top-level value belongs to SQL Server");
+        sqlite.SqlServerMigrationsAssembly.Should().BeNull("this physical source is not a SQL Server one");
+    }
+
+    [Fact]
+    public void GetPhysical_SqliteDefaultSource_TakesTheAssemblyFromACollapsedEntry()
+    {
+        // ConnectionStrings carries no SQLite migrations assembly, so a SQLite Default source
+        // declares one through an entry whose connection matches the top-level value and therefore
+        // collapses onto Default.
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Tickets"] = new()
+                {
+                    SqliteConnectionString = "Data Source=main.db",
+                    SqliteMigrationsAssembly = "App.Migrations.Sqlite",
+                },
+            },
+            new ConnectionStringSettings
+            {
+                SQLServerConnectionString = DefaultSql,
+                SqliteConnectionString = "Data Source=main.db",
+            });
+
+        var key = sut.ResolveLogical(DataSource.Sqlite, "Tickets");
+
+        key.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        sut.GetPhysical(key).SqliteMigrationsAssembly.Should().Be("App.Migrations.Sqlite");
+    }
+
+    [Fact]
+    public void Constructor_SqliteSourcesSharingADatabase_WithConflictingMigrationsAssembly_Throws()
+    {
+        var act = () => CreateSut(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+        {
+            ["Alpha"] = new() { SqliteConnectionString = "Data Source=shared.db", SqliteMigrationsAssembly = "Alpha.Sqlite" },
+            ["Zebra"] = new() { SqliteConnectionString = "Data Source=shared.db", SqliteMigrationsAssembly = "Zebra.Sqlite" },
+        });
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*SqliteMigrationsAssembly*");
+    }
+
     private static DataSourceResolver CreateSut(
         Dictionary<string, DataSourceEntrySettings>? sources = null,
         ConnectionStringSettings? connectionStrings = null) =>

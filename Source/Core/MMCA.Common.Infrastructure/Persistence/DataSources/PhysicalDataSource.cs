@@ -18,4 +18,18 @@ public sealed record PhysicalDataSource(
     DataSourceKey Key,
     string ConnectionString,
     string? SqlServerMigrationsAssembly,
-    string CosmosDatabaseName);
+    string CosmosDatabaseName)
+{
+    /// <summary>
+    /// Gets the EF Core migrations assembly for SQLite sources; <see langword="null"/> when EF should
+    /// default to the context assembly. Ignored for non-SQLite engines.
+    /// <para>
+    /// Declared in the record body rather than as a positional parameter so the constructor and
+    /// deconstruction shape of this shipped record stay exactly as they were: a consumer that
+    /// constructs or deconstructs it positionally is unaffected, and the resolver sets this through
+    /// an object initializer. Only one of the two migrations-assembly properties is ever populated,
+    /// since a physical source belongs to exactly one engine.
+    /// </para>
+    /// </summary>
+    public string? SqliteMigrationsAssembly { get; init; }
+}

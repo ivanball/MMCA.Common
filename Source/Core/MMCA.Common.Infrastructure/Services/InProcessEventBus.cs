@@ -26,14 +26,20 @@ namespace MMCA.Common.Infrastructure.Services;
 /// <param name="outboxOptions">Configurable outbox settings supplying that target.</param>
 /// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on the dispatched rows; defaults to
 /// <see cref="TimeProvider.System"/> so an existing host keeps the previous constructor shape.</param>
+/// <param name="messageBusOptions">Transport posture supplying <c>IsOutboxEnabled</c>. A host that
+/// resolves no options (and any test constructing this type directly) keeps the outbox path, so the
+/// opt-out is only ever taken because configuration asked for it.</param>
 public sealed class InProcessEventBus(
     IDbContextFactory dbContextFactory,
     IDomainEventDispatcher domainEventDispatcher,
     IDataSourceResolver dataSourceResolver,
     IOptions<OutboxSettings> outboxOptions,
-    TimeProvider? timeProvider = null) : IEventBus
+    TimeProvider? timeProvider = null,
+    IOptions<MessageBusSettings>? messageBusOptions = null) : IEventBus
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    private readonly bool _outboxEnabled = messageBusOptions?.Value.IsOutboxEnabled ?? true;
 
     /// <inheritdoc />
     public async Task PublishAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken = default)
@@ -60,13 +66,18 @@ public sealed class InProcessEventBus(
     /// processed with one set-based update. A dispatch failure leaves every entry in the batch
     /// unprocessed for the <see cref="OutboxProcessor"/> to retry (at-least-once delivery;
     /// handlers are idempotent via the inbox store).
+    /// <para>
+    /// With the outbox turned off (<c>MessageBus:EnableOutbox=false</c>, the in-process default) the
+    /// direct-dispatch branch below is taken instead: no rows, no save, no processor to retry. That
+    /// is the same path a context without outbox support already takes.
+    /// </para>
     /// </summary>
     private async Task PublishBatchAsync(IIntegrationEvent[] events, CancellationToken cancellationToken)
     {
         var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
         var context = dbContextFactory.GetDbContext(target);
 
-        if (!context.SupportsOutbox)
+        if (!context.SupportsOutbox || !_outboxEnabled)
         {
             await domainEventDispatcher.DispatchAsync(events, cancellationToken).ConfigureAwait(false);
             return;

@@ -127,11 +127,17 @@ public sealed class DependencyInjectionInfrastructureTests
         descriptor.Should().NotBeNull();
     }
 
+    // The processor is registered for a host that runs the outbox. Whether a given host does is the
+    // transport's decision (MessageBus:EnableOutbox / the provider), covered by
+    // DependencyInjectionOutboxGateTests; this case pins that turning it on still wires the drain loop.
     [Fact]
-    public void AddInfrastructure_RegistersOutboxProcessorHostedService()
+    public void AddInfrastructure_WithTheOutboxEnabled_RegistersOutboxProcessorHostedService()
     {
         var services = new ServiceCollection();
-        IConfiguration config = CreateMinimalConfiguration();
+        IConfiguration config = new ConfigurationBuilder()
+            .AddConfiguration(CreateMinimalConfiguration())
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["MessageBus:EnableOutbox"] = "true" })
+            .Build();
 
         services.AddInfrastructure(config);
 

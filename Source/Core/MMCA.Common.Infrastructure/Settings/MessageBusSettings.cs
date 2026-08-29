@@ -102,6 +102,40 @@ public sealed class MessageBusSettings
     public bool IsInboxEnabled => EnableInbox ?? Provider != MessageBusProvider.InProcess;
 
     /// <summary>
+    /// Gets the explicit override for the transactional outbox, or <see langword="null"/> (the
+    /// default) to let the selected transport decide. When enabled, domain and integration events
+    /// are written to the <c>OutboxMessages</c> table in the same transaction as the aggregate
+    /// changes and delivered by <c>OutboxProcessor</c>; when disabled, the in-process buses dispatch
+    /// events synchronously and no outbox rows are written.
+    /// <para>
+    /// Leave it unset and <see cref="IsOutboxEnabled"/> resolves it from <see cref="Provider"/>: ON
+    /// for a broker (<see cref="MessageBusProvider.RabbitMq"/>,
+    /// <see cref="MessageBusProvider.AzureServiceBus"/>), OFF for
+    /// <see cref="MessageBusProvider.InProcess"/>. A single-process application dispatches every
+    /// event inside the same process that raised it, so the store-and-forward hop buys it nothing
+    /// but two background services, a table and a poll loop; a broker deployment cannot deliver at
+    /// all without it, because the only correct publish path crosses a process boundary.
+    /// </para>
+    /// <para>
+    /// An explicit value always wins for the in-process transport, in both directions: a monolith
+    /// that wants at-least-once delivery across a crash sets <c>MessageBus:EnableOutbox=true</c> and
+    /// gets the full outbox back. Turning it OFF under a broker is refused at registration rather
+    /// than honored: a broker with no outbox has no delivery channel at all, so the misconfiguration
+    /// is a startup failure instead of silently dropped events. The <c>OutboxMessages</c> table stays
+    /// part of the EF model either way, so switching the flag never needs a migration.
+    /// </para>
+    /// </summary>
+    public bool? EnableOutbox { get; init; }
+
+    /// <summary>
+    /// Gets the RESOLVED outbox posture: the explicit <see cref="EnableOutbox"/> value when the host
+    /// set one, otherwise <see langword="true"/> for a broker transport and <see langword="false"/>
+    /// for <see cref="MessageBusProvider.InProcess"/>. Every framework component reads this rather
+    /// than the raw setting.
+    /// </summary>
+    public bool IsOutboxEnabled => EnableOutbox ?? Provider != MessageBusProvider.InProcess;
+
+    /// <summary>
     /// Gets a value indicating whether second-level (broker-scheduled) redelivery is applied on
     /// top of the in-process <c>UseMessageRetry</c> policy. When <see langword="true"/>, a message
     /// that exhausts its immediate retries is scheduled back onto the queue after each interval in

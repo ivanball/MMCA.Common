@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common</PackageId>
+    <Description>MMCA framework metapackage: bundles the core framework packages a standard application needs (Shared, Domain, Application, Infrastructure, API, Aspire) so a new app takes one PackageReference instead of six. Add the specialised packages (Grpc, UI, Gateway, Testing.*) separately as needed.</Description>
+    <!-- A metapackage ships dependencies, not code: this project has no compile items of its own
+         (the two linked GlobalUsings alias files come from Directory.Build.props and declare nothing
+         a consumer can call), so packing its empty assembly would only add a DLL every consumer
+         loads for nothing. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- NU5128 fires because the nuspec declares a net10.0 dependency group with no matching lib/
+         folder, which is exactly what IncludeBuildOutput=false is meant to produce. Suppressed here
+         only, since TreatWarningsAsErrors would otherwise turn the intended shape into a pack
+         failure. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The six packages a standard MMCA application takes. Ordered by layer so the bundle reads as
+         the architecture it installs. The layer-enforcement targets key on the exact layer project
+         names, so this aggregate project matches no rule and is free to reference all of them. -->
+    <ProjectReference Include="..\Core\MMCA.Common.Shared\MMCA.Common.Shared.csproj" />
+    <ProjectReference Include="..\Core\MMCA.Common.Domain\MMCA.Common.Domain.csproj" />
+    <ProjectReference Include="..\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />
+    <ProjectReference Include="..\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
+    <ProjectReference Include="..\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

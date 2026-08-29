@@ -252,6 +252,7 @@
     <!-- Health Checks -->
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.Sqlite" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <!-- Gateway (MMCA.Common.Gateway and MMCA.Common.Testing) — the YARP reverse proxy the shared
          gateway building blocks are written against; MMCA.Common.Testing takes it for the gateway

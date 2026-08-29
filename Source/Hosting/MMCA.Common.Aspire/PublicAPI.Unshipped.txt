@@ -14,3 +14,7 @@ MMCA.Common.Aspire.Logging.SerilogHostExtensions.extension(Microsoft.AspNetCore.
 static MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.AddGatewayDownstreamHealthChecks(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions!>? configure, params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Aspire.Logging.SerilogHostExtensions.AddCommonSerilog(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, string! logFilePath, System.Action<Serilog.LoggerConfiguration!>? configure = null) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
 static MMCA.Common.Aspire.Logging.SerilogHostExtensions.CreateBootstrapLoggerFactory() -> Microsoft.Extensions.Logging.ILoggerFactory!
+*REMOVED*MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireSqlServer = false) -> TBuilder
+*REMOVED*static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireSqlServer = false) -> TBuilder
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireSqlServer = false, bool requireDatabase = false) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireSqlServer = false, bool requireDatabase = false) -> TBuilder

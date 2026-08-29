@@ -27,7 +27,7 @@ MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.TryBeginAsync(System.G
 MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore.Abandon(System.Guid messageId) -> bool
 MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore.CompleteAsync(System.Guid messageId, string! eventType, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore.TryBeginAsync(System.Guid messageId, string! eventType, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
-MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor.DomainEventSaveChangesInterceptor(MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor!>! logger, MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal! outboxSignal, System.TimeProvider? timeProvider = null) -> void
+MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor.DomainEventSaveChangesInterceptor(MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor!>! logger, MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal! outboxSignal, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.MessageBusSettings!>? messageBusOptions = null) -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxAdministration
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxAdministration.CountPendingAsync(string? dataSource, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<long>!>!
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxAdministration.ListDeadLettersAsync(string? dataSource, int skip, int take, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Interfaces.Infrastructure.OutboxDeadLetter!>!>!>!
@@ -40,12 +40,15 @@ MMCA.Common.Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetecto
 MMCA.Common.Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetector.IsUniqueConstraintViolation(System.Exception! exception) -> bool
 MMCA.Common.Infrastructure.Persistence.SqlServerUniqueConstraintViolationDetector.SqlServerUniqueConstraintViolationDetector() -> void
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableInbox.get -> bool?
+MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableOutbox.get -> bool?
+MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableOutbox.init -> void
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.IsInboxEnabled.get -> bool
+MMCA.Common.Infrastructure.Settings.MessageBusSettings.IsOutboxEnabled.get -> bool
 MMCA.Common.Infrastructure.Settings.OutboxSettings.PurgeDeadLetters.get -> bool
 MMCA.Common.Infrastructure.Settings.OutboxSettings.PurgeDeadLetters.init -> void
 MMCA.Common.Infrastructure.Settings.OutboxSettings.TypeAliases.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 MMCA.Common.Infrastructure.Settings.OutboxSettings.TypeAliases.init -> void
-MMCA.Common.Infrastructure.Services.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.OutboxSettings!>! outboxOptions, System.TimeProvider? timeProvider = null) -> void
+MMCA.Common.Infrastructure.Services.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.OutboxSettings!>! outboxOptions, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.MessageBusSettings!>? messageBusOptions = null) -> void
 *REMOVED*MMCA.Common.Infrastructure.Services.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Settings.OutboxSettings!>! outboxOptions) -> void
 MMCA.Common.Infrastructure.Settings.CacheSettings
 MMCA.Common.Infrastructure.Settings.CacheSettings.CacheSettings() -> void
@@ -56,3 +59,8 @@ MMCA.Common.Infrastructure.Settings.CacheSettings.LocalCacheDuration.init -> voi
 MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.get -> System.TimeSpan
 MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.init -> void
 static readonly MMCA.Common.Infrastructure.Settings.CacheSettings.SectionName -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqliteMigrationsAssembly.get -> string?
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqliteMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Settings.DataSourceEntrySettings.SqliteMigrationsAssembly.get -> string!
+MMCA.Common.Infrastructure.Settings.DataSourceEntrySettings.SqliteMigrationsAssembly.init -> void
+static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreateSqlite(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext!

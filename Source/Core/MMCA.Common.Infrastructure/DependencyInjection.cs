@@ -183,8 +183,26 @@ public static class DependencyInjection
                 ServiceDescriptor.Singleton<IHostedService, EventUpcasterStartupValidator>());
 
             services.TryAddSingleton<Persistence.Outbox.IOutboxSignal, Persistence.Outbox.OutboxSignal>();
-            services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
-            services.AddHostedService<Persistence.Outbox.OutboxCleanupService>();
+
+            // The outbox is a transport decision, not a persistence one: a broker deployment cannot
+            // deliver without it, while a single-process host dispatches every event inside the
+            // process that raised it and pays two hosted services, a table and a poll loop for a hop
+            // it never takes. MessageBusSettings.IsOutboxEnabled resolves that per transport (see
+            // the settings for the full rationale); the OutboxMessages table stays mapped either
+            // way, so flipping the flag is never a migration.
+            var messageBusSettings = configuration.GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()
+                ?? new MessageBusSettings();
+            EnsureOutboxAvailableForProvider(messageBusSettings);
+
+            if (messageBusSettings.IsOutboxEnabled)
+            {
+                services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
+                services.AddHostedService<Persistence.Outbox.OutboxCleanupService>();
+            }
+            else
+            {
+                services.AddHostedService<Persistence.Outbox.OutboxDisabledNoticeService>();
+            }
 
             // Operator surface over the same outbox tables: list, replay and count. Scoped, because
             // it creates one child scope per data source it visits and holds no state of its own.
@@ -734,6 +752,11 @@ public static class DependencyInjection
                 return services;
             }
 
+            // Checked here as well as in AddInfrastructure: a service host that wires the broker
+            // without the full infrastructure registration must still fail loudly rather than run a
+            // broker bus whose only delivery channel was turned off.
+            EnsureOutboxAvailableForProvider(settings);
+
             var connectionString = ResolveBrokerConnectionString(configuration, settings);
 
             services.AddMassTransit(x =>
@@ -819,6 +842,33 @@ public static class DependencyInjection
 
             builder.AddStandardResilienceHandler();
             return builder;
+        }
+    }
+
+    /// <summary>
+    /// Fails the registration when a broker transport is paired with an explicitly disabled outbox.
+    /// The outbox is the ONLY publish path a broker deployment has: <c>BrokerEventBus</c> writes rows
+    /// and signals, and <c>OutboxProcessor</c> is what turns them into broker messages. Without the
+    /// processor every published integration event would accumulate unsent (or, with the rows also
+    /// skipped, vanish), which looks exactly like a healthy service until a downstream consumer is
+    /// found to have received nothing for hours. Throwing here makes it a startup failure the first
+    /// time the host runs instead of a silent loss of every cross-service event.
+    /// </summary>
+    /// <param name="settings">The resolved message bus settings.</param>
+    /// <exception cref="InvalidOperationException">
+    /// A broker transport is configured and <c>MessageBus:EnableOutbox</c> is explicitly
+    /// <see langword="false"/>.
+    /// </exception>
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AddInfrastructure and AddBrokerMessaging inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. The local SDK 10.0.104 analyzer correctly resolves the call. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static void EnsureOutboxAvailableForProvider(MessageBusSettings settings)
+    {
+        if (settings.Provider != MessageBusProvider.InProcess && settings.EnableOutbox == false)
+        {
+            throw new InvalidOperationException(
+                $"MessageBus:EnableOutbox=false is not supported with the '{settings.Provider}' transport. A broker deployment publishes integration events exclusively through the outbox (BrokerEventBus writes the rows, OutboxProcessor publishes them), so disabling it drops every cross-service event silently. Remove MessageBus:EnableOutbox (or set it to true) for a broker transport; the setting exists to let a single-process host opt out of store-and-forward.");
         }
     }
 

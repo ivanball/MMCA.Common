@@ -91,6 +91,46 @@ public sealed class InProcessEventBusOutboxTests : IDisposable
         messages.Should().AllSatisfy(m => m.ProcessedOn.Should().NotBeNull());
     }
 
+    // ── Outbox disabled: the direct-dispatch branch, no rows, no save ──
+    // This is the small-application floor: an in-process host pays for no outbox table, no
+    // processor and no cleanup service, and the event still reaches its handlers synchronously.
+    [Fact]
+    public async Task PublishAsync_WithOutboxDisabled_DispatchesDirectlyAndWritesNoRows()
+    {
+        var sut = new InProcessEventBus(
+            _mockDbContextFactory.Object,
+            _mockDispatcher.Object,
+            _mockResolver.Object,
+            Options.Create(_outboxSettings),
+            timeProvider: null,
+            Options.Create(new MessageBusSettings { EnableOutbox = false }));
+        var integrationEvent = new TestIntegrationEvent { DateOccurred = DateTime.UtcNow };
+
+        await sut.PublishAsync(integrationEvent, CancellationToken.None);
+
+        _mockDispatcher.Verify(
+            x => x.DispatchAsync(
+                It.Is<IEnumerable<IDomainEvent>>(events => events.Contains(integrationEvent)),
+                CancellationToken.None),
+            Times.Once);
+        List<OutboxMessage> messages = await _testContext.Set<OutboxMessage>().ToListAsync();
+        messages.Should().BeEmpty("with the outbox off there is no processor to drain a row, so writing one only costs a round trip");
+    }
+
+    // ── Unset options keep the outbox path ──
+    // The constructor parameter is optional so an existing host (and every direct construction in a
+    // test) keeps the previous behaviour: the opt-out is only ever taken because configuration said so.
+    [Fact]
+    public async Task PublishAsync_WithNoMessageBusOptions_KeepsWritingOutboxRows()
+    {
+        var integrationEvent = new TestIntegrationEvent { DateOccurred = DateTime.UtcNow };
+
+        await _sut.PublishAsync(integrationEvent, CancellationToken.None);
+
+        List<OutboxMessage> messages = await _testContext.Set<OutboxMessage>().ToListAsync();
+        messages.Should().ContainSingle();
+    }
+
     public sealed class TestIntegrationEvent : IIntegrationEvent
     {
         public DateTime DateOccurred { get; init; }

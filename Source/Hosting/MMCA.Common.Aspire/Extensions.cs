@@ -212,8 +212,8 @@ public static class Extensions
         }
 
         /// <summary>
-        /// Conditionally registers health checks for infrastructure dependencies (SQL Server, Redis,
-        /// RabbitMQ) when their connection strings are configured. These are tagged as readiness
+        /// Conditionally registers health checks for infrastructure dependencies (SQL Server, SQLite,
+        /// Redis, RabbitMQ) when their connection strings are configured. These are tagged as readiness
         /// checks only — they appear in <c>/health</c> but not <c>/alive</c>, so a transient
         /// infrastructure outage does not kill the process.
         /// </summary>
@@ -229,25 +229,26 @@ public static class Extensions
         /// that reason, so pass <see langword="true"/> when replacing one.
         /// </para>
         /// </param>
+        /// <param name="requireDatabase">
+        /// When <see langword="true"/>, the host must have SOME relational database configured
+        /// (<c>SQLServerConnectionString</c> or <c>SqliteConnectionString</c>) or startup throws.
+        /// This is the engine-agnostic form of <paramref name="requireSqlServer"/>: it carries the
+        /// same "a host that cannot resolve its own database must not report healthy" rule for an
+        /// application that picks its engine from configuration, without pinning the requirement to
+        /// SQL Server. Passing both is redundant but harmless; <paramref name="requireSqlServer"/>
+        /// keeps its exact previous meaning so existing callers are unaffected.
+        /// </param>
         /// <returns>The same builder instance for chaining.</returns>
         /// <exception cref="InvalidOperationException">
         /// <paramref name="requireSqlServer"/> is <see langword="true"/> and no
-        /// <c>SQLServerConnectionString</c> is configured.
+        /// <c>SQLServerConnectionString</c> is configured, or <paramref name="requireDatabase"/> is
+        /// <see langword="true"/> and neither relational connection string is configured.
         /// </exception>
-        public TBuilder AddInfrastructureHealthChecks(bool requireSqlServer = false)
+        public TBuilder AddInfrastructureHealthChecks(bool requireSqlServer = false, bool requireDatabase = false)
         {
             var healthChecks = builder.Services.AddHealthChecks();
 
-            var sqlConnectionString = builder.Configuration.GetConnectionString("SQLServerConnectionString");
-            if (requireSqlServer && string.IsNullOrWhiteSpace(sqlConnectionString))
-            {
-                throw new InvalidOperationException("SQLServerConnectionString is not configured.");
-            }
-
-            if (!string.IsNullOrWhiteSpace(sqlConnectionString))
-            {
-                healthChecks.AddSqlServer(sqlConnectionString, name: "sqlserver");
-            }
+            AddDatabaseHealthChecks(healthChecks, builder.Configuration, requireSqlServer, requireDatabase);
 
             var redisConnectionString = builder.Configuration.GetConnectionString("redis");
             if (!string.IsNullOrWhiteSpace(redisConnectionString))
@@ -395,4 +396,49 @@ public static class Extensions
     /// </summary>
     internal static bool IsInstrumentationDisabled(IConfiguration configuration, string configKey)
         => bool.TryParse(configuration[configKey], out var disabled) && disabled;
+
+    /// <summary>
+    /// Registers the relational database checks and enforces whichever "the database must be there"
+    /// rule the caller asked for. Both engines are checked because a host picks one from
+    /// configuration: SQL Server for a deployed service, SQLite for a small single-node application.
+    /// Neither check is tagged optional, so both gate readiness (see the tagging note on the Redis
+    /// branch for why that distinction matters).
+    /// </summary>
+    /// <param name="healthChecks">The builder the checks are added to.</param>
+    /// <param name="configuration">Configuration carrying the connection strings.</param>
+    /// <param name="requireSqlServer">Fail when SQL Server specifically is not configured.</param>
+    /// <param name="requireDatabase">Fail when no relational engine at all is configured.</param>
+    /// <exception cref="InvalidOperationException">A required connection string is missing.</exception>
+    private static void AddDatabaseHealthChecks(
+        IHealthChecksBuilder healthChecks,
+        IConfiguration configuration,
+        bool requireSqlServer,
+        bool requireDatabase)
+    {
+        var sqlConnectionString = configuration.GetConnectionString("SQLServerConnectionString");
+        var sqliteConnectionString = configuration.GetConnectionString("SqliteConnectionString");
+
+        if (requireSqlServer && string.IsNullOrWhiteSpace(sqlConnectionString))
+        {
+            throw new InvalidOperationException("SQLServerConnectionString is not configured.");
+        }
+
+        if (requireDatabase
+            && string.IsNullOrWhiteSpace(sqlConnectionString)
+            && string.IsNullOrWhiteSpace(sqliteConnectionString))
+        {
+            throw new InvalidOperationException(
+                "No database connection string is configured: set ConnectionStrings:SQLServerConnectionString or ConnectionStrings:SqliteConnectionString.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(sqlConnectionString))
+        {
+            healthChecks.AddSqlServer(sqlConnectionString, name: "sqlserver");
+        }
+
+        if (!string.IsNullOrWhiteSpace(sqliteConnectionString))
+        {
+            healthChecks.AddSqlite(sqliteConnectionString, name: "sqlite");
+        }
+    }
 }
