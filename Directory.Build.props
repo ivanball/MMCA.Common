@@ -42,6 +42,7 @@
   <PropertyGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
     <Authors>Ivan Ball</Authors>
     <Company>MMCA</Company>
+    <Copyright>Copyright (c) Ivan Ball-llovera</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/ivanball/MMCA.Common</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -51,6 +52,9 @@
     <PackageProjectUrl>https://ivanball.github.io/platform.html</PackageProjectUrl>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>modular-monolith;clean-architecture;ddd;cqrs;microservices;dotnet;aspnetcore;aspire;efcore;blazor;outbox;result-pattern</PackageTags>
+    <!-- The release notes live in one place (the GitHub releases feed, generated from the tag) rather
+         than being restated per package: sixteen packages ship in lockstep off a single tag. -->
+    <PackageReleaseNotes>https://github.com/ivanball/MMCA.Common/releases</PackageReleaseNotes>
     <!-- GitHub Packages has no symbol server, so a standalone .snupkg cannot be consumed.
          Embed the PDB into the shipped DLL instead (with repo + untracked-source info), so the
          debug symbols actually reach consumers via the .nupkg. -->
@@ -60,9 +64,12 @@
   </PropertyGroup>
 
   <!-- The icon referenced by PackageIcon above must itself be packed. Done once here rather than
-       in fifteen csproj files (each of which still packs README.md individually). -->
+       in fifteen csproj files (each of which still packs README.md individually). The changelog rides
+       along in every package for the same reason: a consumer inspecting a .nupkg gets the version
+       history without leaving the package. -->
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
     <None Include="$(MSBuildThisFileDirectory)assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)CHANGELOG.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
   <!--

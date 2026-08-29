@@ -14,7 +14,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepository<TEntity, TIdentifierType> inner)
     : EFReadRepositoryDecorator<TEntity, TIdentifierType>(inner),
     IRepository<TEntity, TIdentifierType>
-    where TEntity : AuditableBaseEntity<TIdentifierType>
+    where TEntity : AuditableAggregateRootEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
     private const string ClassName = "EFRepository";

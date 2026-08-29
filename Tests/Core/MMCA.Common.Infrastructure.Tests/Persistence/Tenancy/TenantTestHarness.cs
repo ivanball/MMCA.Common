@@ -44,6 +44,18 @@ public sealed class PlainThing : AuditableBaseEntity<int>
     public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// A tenant-owned entity that is NOT soft-deletable: its reads carry the tenant predicate alone, so
+/// it must keep the single-column tenant index rather than the composite one.
+/// </summary>
+public sealed class TenantOnlyThing : BaseEntity<int>, ITenantEntity
+{
+    /// <summary>Gets or sets the owning tenant. Public setter for test seeding only.</summary>
+    public string TenantId { get; set; } = string.Empty;
+
+    public string Name { get; set; } = string.Empty;
+}
+
 /// <summary>An opted-in entity that is also change-trailed, for the trail's TenantId column.</summary>
 public sealed class TrailedTenantThing : AuditableBaseEntity<int>, ITenantEntity, IAuditedEntity
 {
@@ -152,6 +164,12 @@ public sealed class TenantTestContext : ApplicationDbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.RowVersion).IsConcurrencyToken();
+        });
+
+        modelBuilder.Entity<TenantOnlyThing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<TrailedTenantThing>(entity =>

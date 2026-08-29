@@ -25,7 +25,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     TimeProvider? timeProvider = null,
     ICurrentUserService? currentUserService = null
 ) : EFReadRepository<TEntity, TIdentifierType>(context), IRepository<TEntity, TIdentifierType>
-    where TEntity : AuditableBaseEntity<TIdentifierType>
+    where TEntity : AuditableAggregateRootEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
     /// <inheritdoc />

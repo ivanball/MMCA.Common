@@ -346,12 +346,21 @@ public interface IReadRepository<TEntity, TIdentifierType>
 }
 
 /// <summary>
-/// Write repository for persisting entity changes.
+/// Write repository for persisting AGGREGATE ROOT changes.
 /// </summary>
-/// <typeparam name="TEntity">The entity type.</typeparam>
+/// <remarks>
+/// The constraint is <see cref="AuditableAggregateRootEntity{TIdentifierType}"/>, not the wider
+/// <see cref="AuditableBaseEntity{TIdentifierType}"/> the read side accepts: a write enters the
+/// aggregate through its root, so that the root's invariants are enforced and its domain events are
+/// collected. A repository over a child entity would let a caller persist a change the root never
+/// saw. Reading a child directly is harmless and stays supported through
+/// <see cref="IReadRepository{TEntity, TIdentifierType}"/>. This mirrors the constraint on
+/// <c>IUnitOfWork.GetRepository</c>, which is how a handler is meant to obtain one.
+/// </remarks>
+/// <typeparam name="TEntity">The aggregate root entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
 public interface IWriteRepository<TEntity, TIdentifierType>
-    where TEntity : AuditableBaseEntity<TIdentifierType>
+    where TEntity : AuditableAggregateRootEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
     /// <summary>Adds a new entity to the persistence store.</summary>
@@ -451,10 +460,16 @@ public interface IWriteRepository<TEntity, TIdentifierType>
 }
 
 /// <summary>
-/// Combined read-write repository interface.
+/// Combined read-write repository interface, over an aggregate root.
 /// </summary>
-/// <typeparam name="TEntity">The entity type.</typeparam>
+/// <remarks>
+/// Inherits the write side's aggregate-root constraint (see
+/// <see cref="IWriteRepository{TEntity, TIdentifierType}"/>). A handler that only reads, and reads a
+/// child entity, depends on <see cref="IReadRepository{TEntity, TIdentifierType}"/> instead, which
+/// still accepts any auditable entity.
+/// </remarks>
+/// <typeparam name="TEntity">The aggregate root entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
 public interface IRepository<TEntity, TIdentifierType> : IReadRepository<TEntity, TIdentifierType>, IWriteRepository<TEntity, TIdentifierType>
-    where TEntity : AuditableBaseEntity<TIdentifierType>
+    where TEntity : AuditableAggregateRootEntity<TIdentifierType>
     where TIdentifierType : notnull;

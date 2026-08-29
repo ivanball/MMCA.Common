@@ -82,6 +82,65 @@ public sealed class ValidatingCommandDecoratorTests
         inner.Verify(x => x.HandleAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Every registered validator runs ──
+    [Fact]
+    public async Task HandleAsync_TwoValidators_RunsBothAndUnionsTheirFailures()
+    {
+        // A command commonly carries a module-authored validator beside a cross-cutting one. Honoring
+        // only the first registration would leave the second one's rules silently unenforced.
+        var inner = new Mock<ICommandHandler<TestValidatingCommand, Result>>();
+
+        var first = new Mock<IValidator<TestValidatingCommand>>();
+        first.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult([new ValidationFailure("Name", "Name is required")]));
+
+        var second = new Mock<IValidator<TestValidatingCommand>>();
+        second.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult([new ValidationFailure("Name", "Name must be unique")]));
+
+        IEnumerable<IValidator<TestValidatingCommand>> validators = [first.Object, second.Object];
+        var sut = new ValidatingCommandDecorator<TestValidatingCommand, Result>(
+            inner.Object,
+            validators,
+            NullLogger<ValidatingCommandDecorator<TestValidatingCommand, Result>>.Instance);
+
+        Result result = await sut.HandleAsync(new TestValidatingCommand(string.Empty));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Select(e => e.Message).Should().BeEquivalentTo(
+            ["Name is required", "Name must be unique"],
+            "the caller sees every broken rule in one response, not one per round trip");
+        first.Verify(x => x.ValidateAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        second.Verify(x => x.ValidateAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+        inner.Verify(x => x.HandleAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_TwoValidators_FirstPasses_StillHonorsTheSecond()
+    {
+        var inner = new Mock<ICommandHandler<TestValidatingCommand, Result>>();
+
+        var passing = new Mock<IValidator<TestValidatingCommand>>();
+        passing.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+
+        var failing = new Mock<IValidator<TestValidatingCommand>>();
+        failing.Setup(x => x.ValidateAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult([new ValidationFailure("Name", "Name must be unique")]));
+
+        IEnumerable<IValidator<TestValidatingCommand>> validators = [passing.Object, failing.Object];
+        var sut = new ValidatingCommandDecorator<TestValidatingCommand, Result>(
+            inner.Object,
+            validators,
+            NullLogger<ValidatingCommandDecorator<TestValidatingCommand, Result>>.Instance);
+
+        Result result = await sut.HandleAsync(new TestValidatingCommand("valid"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Message == "Name must be unique");
+        inner.Verify(x => x.HandleAsync(It.IsAny<TestValidatingCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ── Result<T> generic variant ──
     [Fact]
     public async Task HandleAsync_GenericResult_ValidationFails_ReturnsTypedFailure()

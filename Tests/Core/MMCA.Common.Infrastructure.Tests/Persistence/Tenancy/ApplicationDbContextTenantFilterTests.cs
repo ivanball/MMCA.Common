@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 
@@ -152,16 +153,31 @@ public sealed class ApplicationDbContextTenantFilterTests : IDisposable
     }
 
     [Fact]
-    public void TenantIdColumn_IsIndexed()
+    public void TenantIdColumn_IsIndexed_CompositeWithIsDeleted_WhenTheEntityIsAlsoSoftDeletable()
     {
         using var context = TenantTestContext.Create(_connection);
 
         context.Model.FindEntityType(typeof(TenantThing))!
             .GetIndexes()
             .Should().Contain(index =>
+                index.Properties.Count == 2
+                && index.Properties[0].Name == ApplicationDbContext.TenantIdPropertyName
+                && index.Properties[1].Name == nameof(IAuditableEntity.IsDeleted),
+                "the two named filters compose with AND, so every read carries "
+                + "'TenantId = @tenant AND IsDeleted = 0' and the index must cover both conjuncts");
+    }
+
+    [Fact]
+    public void TenantIdColumn_IsIndexedAlone_WhenTheEntityIsNotSoftDeletable()
+    {
+        using var context = TenantTestContext.Create(_connection);
+
+        context.Model.FindEntityType(typeof(TenantOnlyThing))!
+            .GetIndexes()
+            .Should().ContainSingle(index =>
                 index.Properties.Count == 1
                 && index.Properties[0].Name == ApplicationDbContext.TenantIdPropertyName,
-                "every tenant-scoped read leads with TenantId, so an unindexed column is a scan per query");
+                "an entity with no soft-delete filter has no second conjunct to cover");
     }
 
     [Fact]
