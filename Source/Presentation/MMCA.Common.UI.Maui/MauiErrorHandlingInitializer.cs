@@ -51,6 +51,14 @@ public sealed partial class MauiErrorHandlingInitializer : IMauiInitializeServic
         // handlers (and the callback), it just has nowhere to write the report.
         _logger = services.GetService<ILoggerFactory>()?.CreateLogger(LoggerCategory);
 
+        HookOnce(this);
+    }
+
+    // The events and the once-guard are process-wide statics, so the write happens in a static
+    // method (S2696): the first initializer instance to run installs the handlers and owns them
+    // for the life of the process; later instances are no-ops.
+    private static void HookOnce(MauiErrorHandlingInitializer instance)
+    {
         lock (HookSync)
         {
             if (_hooked)
@@ -59,8 +67,8 @@ public sealed partial class MauiErrorHandlingInitializer : IMauiInitializeServic
             }
 
             _hooked = true;
-            AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
-            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+            AppDomain.CurrentDomain.UnhandledException += instance.OnAppDomainUnhandledException;
+            TaskScheduler.UnobservedTaskException += instance.OnUnobservedTaskException;
         }
     }
 
