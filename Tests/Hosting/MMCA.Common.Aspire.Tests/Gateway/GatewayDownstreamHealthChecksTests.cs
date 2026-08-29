@@ -10,11 +10,20 @@ namespace MMCA.Common.Aspire.Tests.Gateway;
 /// <summary>
 /// Unit tests for the gateway's downstream health checks: what gets registered (names, tags,
 /// failure status), that a repeated registration does not produce the duplicate check name the
-/// health-check service rejects at startup, and how the probe itself maps an HTTP outcome onto a
-/// health status.
+/// health-check service rejects at startup, how the probe itself maps an HTTP outcome onto a health
+/// status, and how it works out which HTTP version a downstream speaks (negotiate once, latch the
+/// answer, never latch on an outage).
 /// </summary>
 public sealed class GatewayDownstreamHealthChecksTests
 {
+    /// <summary>What one h2c prior-knowledge attempt looks like on the wire.</summary>
+    private static readonly ProbeAttempt Http2Attempt =
+        new(HttpVersion.Version20, HttpVersionPolicy.RequestVersionExact);
+
+    /// <summary>What one stock HTTP/1.1 attempt looks like on the wire.</summary>
+    private static readonly ProbeAttempt Http11Attempt =
+        new(HttpVersion.Version11, HttpVersionPolicy.RequestVersionOrLower);
+
     [Fact]
     public void AddGatewayDownstreamHealthChecks_RegistersOneCheckPerService()
     {
@@ -67,61 +76,85 @@ public sealed class GatewayDownstreamHealthChecksTests
         client.Timeout.Should().Be(TimeSpan.FromSeconds(2));
     }
 
-    // An HttpClient left on its own defaults sends HTTP/1.1, which an Http2-only cleartext (h2c)
-    // endpoint refuses outright, so the probe fails and the gateway reports a downstream outage that
-    // does not exist. The services a modular-monolith gateway fronts serve h2c precisely so that
-    // cross-service gRPC works without TLS/ALPN, which makes HTTP/2 the right default here.
+    // The probe client carries NO version pin: the version belongs to the REQUEST, because an Auto
+    // probe can put HTTP/2 and HTTP/1.1 through this one client on a single poll while it works out
+    // which one the downstream speaks.
     [Fact]
-    public void ProbeClient_SpeaksHttp2ByDefault()
+    public void ProbeClient_DoesNotPinAnHttpVersion()
     {
         var client = ProbeClientFor("catalog");
+        using var stock = new HttpClient();
 
-        client.DefaultRequestVersion.Should().Be(HttpVersion.Version20);
-        client.DefaultVersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionExact,
-            because: "h2c prior knowledge means the request must go out as HTTP/2, not negotiate down");
+        client.DefaultRequestVersion.Should().Be(stock.DefaultRequestVersion);
+        client.DefaultVersionPolicy.Should().Be(stock.DefaultVersionPolicy);
     }
 
+    // The version profile is per CALL, so a gateway pinning one head's profile must not retro-change
+    // the group an earlier call registered. Driven through the REGISTRATION rather than a hand-built
+    // check, so the option is proven to travel from AddGatewayDownstreamHealthChecks onto the wire.
     [Fact]
-    public void ProbeClient_CanOptOutBackToHttp11PerDownstream()
-    {
-        var client = ProbeClientFor("legacy", configure: o => o.ProbeOverHttp2 = false);
-
-        client.DefaultRequestVersion.Should().Be(HttpVersion.Version11);
-        client.DefaultVersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionOrLower);
-    }
-
-    // The opt-out is per CALL, so a gateway fronting a mix of profiles registers each group once and
-    // the second call must not retro-change the first group's client.
-    [Fact]
-    public void ProbeClient_VersionProfileIsScopedToItsOwnRegistrationCall()
+    public async Task ProbeVersion_IsScopedToItsOwnRegistrationCall()
     {
         var services = new ServiceCollection();
         services.AddGatewayDownstreamHealthChecks("catalog");
-        services.AddGatewayDownstreamHealthChecks(o => o.ProbeOverHttp2 = false, "legacy");
+        services.AddGatewayDownstreamHealthChecks(o => o.ProbeVersion = DownstreamProbeVersion.Http11, "legacy");
 
-        using var provider = services.BuildServiceProvider();
-        var factory = provider.GetRequiredService<IHttpClientFactory>();
+        using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
 
-        using var http2Client = factory.CreateClient(GatewayHealthCheckExtensions.ClientName("catalog"));
-        using var http11Client = factory.CreateClient(GatewayHealthCheckExtensions.ClientName("legacy"));
+        // Registered last, so it wins over the real factory AddHttpClient put in earlier.
+        services.AddSingleton<IHttpClientFactory>(new StubHttpClientFactory(client));
 
-        http2Client.DefaultRequestVersion.Should().Be(HttpVersion.Version20);
-        http11Client.DefaultRequestVersion.Should().Be(HttpVersion.Version11);
+        await using var provider = services.BuildServiceProvider();
+        var registrations = provider.GetRequiredService<IOptions<HealthCheckServiceOptions>>().Value.Registrations;
+
+        foreach (var registration in registrations)
+        {
+            var check = registration.Factory(provider);
+            await check.CheckHealthAsync(
+                new HealthCheckContext { Registration = registration },
+                CancellationToken.None);
+        }
+
+        handler.Attempts.Should().Equal(Http2Attempt, Http11Attempt);
     }
 
     [Fact]
     public void AddGatewayDownstreamHealthChecks_WithOptions_RegistersTheSameChecks()
     {
         var services = new ServiceCollection();
-        services.AddGatewayDownstreamHealthChecks(o => o.ProbeOverHttp2 = false, "catalog", "sales");
+        services.AddGatewayDownstreamHealthChecks(
+            o => o.ProbeVersion = DownstreamProbeVersion.Http11, "catalog", "sales");
 
         Registrations(services).Select(r => r.Name)
             .Should().BeEquivalentTo("downstream-catalog", "downstream-sales");
     }
 
     [Fact]
-    public void Options_DefaultToHttp2() =>
-        new GatewayDownstreamHealthCheckOptions().ProbeOverHttp2.Should().BeTrue();
+    public void Options_DefaultToAutoNegotiation() =>
+        new GatewayDownstreamHealthCheckOptions().ProbeVersion.Should().Be(DownstreamProbeVersion.Auto);
+
+    // The bool opt-out predates ProbeVersion and survives only as a facade, so a gateway written
+    // against it keeps compiling. It maps onto the two FIXED modes, which is exactly what giving up
+    // the negotiation means.
+    [Fact]
+    public void ObsoleteProbeOverHttp2_RoundTripsOntoTheFixedModes()
+    {
+#pragma warning disable CS0618 // Obsolete on purpose: this test is what keeps the compat facade honest.
+        var options = new GatewayDownstreamHealthCheckOptions();
+
+        options.ProbeOverHttp2.Should().BeFalse(
+            because: "the Auto default has not pinned HTTP/2, it decides per downstream");
+
+        options.ProbeOverHttp2 = true;
+        options.ProbeVersion.Should().Be(DownstreamProbeVersion.Http2);
+        options.ProbeOverHttp2.Should().BeTrue();
+
+        options.ProbeOverHttp2 = false;
+        options.ProbeVersion.Should().Be(DownstreamProbeVersion.Http11);
+        options.ProbeOverHttp2.Should().BeFalse();
+#pragma warning restore CS0618
+    }
 
     private static HttpClient ProbeClientFor(
         string serviceName,
@@ -207,17 +240,161 @@ public sealed class GatewayDownstreamHealthChecksTests
             because: "probing readiness would make every downstream rolling deployment look like a gateway failure");
     }
 
+    // Auto is the default, so the first attempt of every probe goes out as h2c prior knowledge and
+    // an endpoint that answers it settles the question: later polls send one request, not two.
+    [Fact]
+    public async Task Probe_WhenAutoAndHttp2Answers_LatchesHttp2AndStopsNegotiating()
+    {
+        using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
+
+        var first = await check.CheckHealthAsync(context, CancellationToken.None);
+        var second = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        first.Status.Should().Be(HealthStatus.Healthy);
+        second.Status.Should().Be(HealthStatus.Healthy);
+        handler.Attempts.Should().Equal(Http2Attempt, Http2Attempt);
+    }
+
+    // A cleartext Http1AndHttp2 endpoint without ALPN answers HTTP_1_1_REQUIRED forever. The check
+    // resolves that itself, inside ONE poll, which is what removes the consumer's manual opt-out.
+    [Theory]
+    [InlineData(HttpRequestError.VersionNegotiationError)]
+    [InlineData(HttpRequestError.HttpProtocolError)]
+    public async Task Probe_WhenAutoAndHttp2IsRefused_FallsBackToHttp11WithinTheSameCheck(
+        HttpRequestError error)
+    {
+        using var handler = new StubHandler(RefusesHttp2(error));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
+
+        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        result.Status.Should().Be(HealthStatus.Healthy,
+            because: "the fallback answered inside the same check, so the poll has a verdict");
+        handler.Attempts.Should().Equal(Http2Attempt, Http11Attempt);
+    }
+
+    [Fact]
+    public async Task Probe_WhenAutoHasFallenBack_GoesStraightToHttp11()
+    {
+        using var handler = new StubHandler(RefusesHttp2(HttpRequestError.VersionNegotiationError));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
+
+        await check.CheckHealthAsync(context, CancellationToken.None);
+        var later = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        later.Status.Should().Be(HealthStatus.Healthy);
+        handler.Attempts.Should().Equal(Http2Attempt, Http11Attempt, Http11Attempt);
+    }
+
+    // Latching the version that answered must not launder the answer: a 503 over the fallback is
+    // still a downstream failure.
+    [Fact]
+    public async Task Probe_WhenAutoFallbackAnswersNonSuccess_ReportsUnhealthyAndStillLatches()
+    {
+        using var handler = new StubHandler(request => request.Version == HttpVersion.Version20
+            ? throw new HttpRequestException(HttpRequestError.VersionNegotiationError, "HTTP_1_1_REQUIRED")
+            : new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
+
+        var first = await check.CheckHealthAsync(context, CancellationToken.None);
+        var later = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        first.Status.Should().Be(HealthStatus.Unhealthy);
+        first.Description.Should().Contain("503");
+        later.Status.Should().Be(HealthStatus.Unhealthy);
+        handler.Attempts.Should().Equal(Http2Attempt, Http11Attempt, Http11Attempt);
+    }
+
+    // A downstream that is simply DOWN must never pin a protocol: the outage says nothing about
+    // which version the endpoint speaks, and the wrong latch would outlive the outage.
+    [Fact]
+    public async Task Probe_WhenAutoAndTheDownstreamIsUnreachable_ReportsUnhealthyWithoutLatching()
+    {
+        var attempts = 0;
+        using var handler = new StubHandler(_ => ++attempts == 1
+            ? throw new HttpRequestException("connection refused")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
+
+        var duringOutage = await check.CheckHealthAsync(context, CancellationToken.None);
+        var afterRecovery = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        duringOutage.Status.Should().Be(HealthStatus.Unhealthy);
+        afterRecovery.Status.Should().Be(HealthStatus.Healthy);
+        // Two attempts, both HTTP/2: a connectivity failure is not a protocol refusal, so the first
+        // check neither fell back nor latched, and the second still had the question open.
+        handler.Attempts.Should().Equal(Http2Attempt, Http2Attempt);
+    }
+
+    [Fact]
+    public async Task Probe_WhenAutoFallbackAlsoFails_ReportsUnhealthyWithoutLatching()
+    {
+        using var handler = new StubHandler(
+            _ => throw new HttpRequestException(HttpRequestError.VersionNegotiationError, "refused"));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
+
+        var first = await check.CheckHealthAsync(context, CancellationToken.None);
+        var second = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        first.Status.Should().Be(HealthStatus.Unhealthy);
+        second.Status.Should().Be(HealthStatus.Unhealthy);
+        handler.Attempts.Should().Equal(Http2Attempt, Http11Attempt, Http2Attempt, Http11Attempt);
+    }
+
+    [Fact]
+    public async Task Probe_WhenPinnedToHttp2_NeverFallsBack()
+    {
+        using var handler = new StubHandler(RefusesHttp2(HttpRequestError.VersionNegotiationError));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Http2);
+
+        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        result.Status.Should().Be(HealthStatus.Unhealthy);
+        handler.Attempts.Should().Equal(Http2Attempt);
+    }
+
+    [Fact]
+    public async Task Probe_WhenPinnedToHttp11_SendsHttp11()
+    {
+        using var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Http11);
+
+        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        result.Status.Should().Be(HealthStatus.Healthy);
+        handler.Attempts.Should().Equal(Http11Attempt);
+    }
+
+    // Stands in for a downstream that accepts the connection and refuses the VERSION: HTTP/2 throws
+    // the protocol error, HTTP/1.1 answers normally.
+    private static Func<HttpRequestMessage, HttpResponseMessage> RefusesHttp2(HttpRequestError error) =>
+        request => request.Version == HttpVersion.Version20
+            ? throw new HttpRequestException(error, "HTTP_1_1_REQUIRED")
+            : new HttpResponseMessage(HttpStatusCode.OK);
+
+    private static (DownstreamServiceHealthCheck Check, HealthCheckContext Context) CheckFor(
+        HttpClient client,
+        DownstreamProbeVersion probeVersion) =>
+        (new DownstreamServiceHealthCheck(new StubHttpClientFactory(client), "catalog", "client", probeVersion),
+            new HealthCheckContext { Registration = RegistrationFor("catalog") });
+
     private static async Task<HealthCheckResult> ProbeAsync(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
         using var handler = new StubHandler(respond);
         using var client = new HttpClient(handler) { BaseAddress = new Uri("http://catalog") };
 
-        var check = new DownstreamServiceHealthCheck(new StubHttpClientFactory(client), "catalog", "client");
-        var registration = RegistrationFor("catalog");
+        var (check, context) = CheckFor(client, DownstreamProbeVersion.Auto);
 
-        return await check.CheckHealthAsync(
-            new HealthCheckContext { Registration = registration },
-            CancellationToken.None);
+        return await check.CheckHealthAsync(context, CancellationToken.None);
     }
 
     private static HealthCheckRegistration RegistrationFor(string serviceName)
@@ -240,10 +417,25 @@ public sealed class GatewayDownstreamHealthChecksTests
         public HttpClient CreateClient(string name) => client;
     }
 
+    /// <summary>One request the check actually put on the wire, with the version profile it asked for.</summary>
+    /// <param name="Version">The HTTP version on the request.</param>
+    /// <param name="Policy">The version policy on the request.</param>
+    private sealed record ProbeAttempt(Version Version, HttpVersionPolicy Policy);
+
     private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
+        private readonly List<ProbeAttempt> _attempts = [];
+
+        // Recorded in order and BEFORE respond runs, so an attempt that throws still counts. This is
+        // how a negotiation (HTTP/2 then HTTP/1.1) is told apart from a latched, single-request poll.
+        public IReadOnlyList<ProbeAttempt> Attempts => _attempts;
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
-            CancellationToken cancellationToken) => Task.FromResult(respond(request));
+            CancellationToken cancellationToken)
+        {
+            _attempts.Add(new ProbeAttempt(request.Version, request.VersionPolicy));
+            return Task.FromResult(respond(request));
+        }
     }
 }

@@ -4,6 +4,40 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.167.0] - 2026-08-29
+
+Health-gating and E2E-reliability release closing the wave6 ledger items: Http2-only services become
+health-gateable under Aspire, the gateway probe negotiates its protocol on its own, and the E2E
+Blazor gate waits for real interactivity instead of a fixed settle.
+
+### Added
+
+- **`WithH2cHealthCheck` AppHost extension** (`MMCA.Common.Aspire.Hosting`). Health-gates a project
+  resource whose cleartext endpoint is Kestrel Http2-only (h2c prior knowledge), which Aspire's
+  stock `WithHttpHealthCheck` cannot probe (its HTTP/1.1 request answers `HTTP_1_1_REQUIRED`
+  forever, wedging every `WaitFor` on the resource). The check GETs the health path over HTTP/2
+  exact version against the existing endpoint: no service, Kestrel, or infra change needed. The
+  XML docs record why surfacing the `HealthProbe:Port` HTTP/1.1 listener as an Aspire endpoint was
+  rejected (explicit listeners override the `ASPNETCORE_URLS` binding locally and collide on the
+  fixed cleartext port).
+- **`GatewayDownstreamHealthCheckOptions.ProbeVersion`** (`DownstreamProbeVersion.Auto` default).
+  The downstream probe tries HTTP/2 exact first, falls back to HTTP/1.1 within the same check on a
+  protocol refusal, and latches the winner per downstream for process lifetime, so mixed
+  `Http1AndHttp2` cleartext services no longer need a manual opt-out registration.
+- **E2E interactivity marker.** `MmcaThemeProviders` stamps `data-mmca-interactive` on the document
+  root at its first interactive render (re-stamped across enhanced navigations), giving tests a
+  true hydration signal.
+
+### Changed
+
+- **`ProbeOverHttp2` is obsolete** (warning): it remains as a facade over `ProbeVersion`; delete
+  per-downstream opt-out registrations and let `Auto` negotiate.
+- **`WaitForBlazorAsync` waits for real interactivity.** After the Blazor runtime check it now
+  waits up to 3s for the interactivity marker (then settles one animation frame); pages that never
+  hydrate, or consumers on an older `MMCA.Common.UI`, fall back to the previous
+  two-frames-plus-500ms settle, so nothing hangs and the prerendered-dead-control failure class is
+  closed for every consumer suite at once.
+
 ## [1.166.0] - 2026-08-28
 
 Hardening release from the 2026-08-28 Medium-literature audit (20 articles cross-checked against the

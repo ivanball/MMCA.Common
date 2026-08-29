@@ -16,6 +16,10 @@ namespace MMCA.Common.Testing.E2E.Infrastructure;
     "Naming",
     "CA1708:Identifiers should differ by more than case",
     Justification = "False positive: with multiple extension(T) blocks in one static class, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
+[SuppressMessage(
+    "Style",
+    "IDE0051:Remove unused private members",
+    Justification = "The private consts below are consumed only from inside the extension(T) blocks of this class. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports them as unused. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
 public static class PageExtensions
 {
     /// <summary>
@@ -24,26 +28,85 @@ public static class PageExtensions
     /// </summary>
     public const string MudDataGridRowSelector = ".mud-table-body .mud-table-row";
 
+    /// <summary>
+    /// The RUNTIME-LOADED predicate: blazor.web.js sets <c>window.Blazor</c> on load, then populates
+    /// <c>_internal</c> once the WASM CLR (or the SignalR circuit) is ready. The exact properties inside
+    /// <c>_internal</c> vary across .NET versions, so this checks for any truthy <c>_internal</c> object.
+    /// Necessary but NOT sufficient for interactivity, which is why it is only step one of
+    /// <c>WaitForBlazorAsync</c>. Shared by the wait and by <c>GotoProtectedAsync</c>'s readiness probe so
+    /// the two cannot drift.
+    /// </summary>
+    private const string BlazorRuntimeLoadedPredicate = "() => !!window.Blazor?._internal";
+
+    /// <summary>
+    /// The INTERACTIVE predicate: <c>MmcaThemeProviders</c> (MMCA.Common.UI) stamps
+    /// <c>data-mmca-interactive</c> on the document element from its first interactive render, so the
+    /// attribute appears only after components have actually attached their event handlers. Keep the
+    /// attribute name in step with that component and with <c>theme.js</c>'s <c>markInteractive</c>.
+    /// </summary>
+    private const string InteractiveMarkerPredicate =
+        "() => document.documentElement.hasAttribute('data-mmca-interactive')";
+
+    /// <summary>
+    /// The legacy settle: two animation frames plus a fixed delay, used as the fallback whenever the
+    /// interactivity marker never appears.
+    /// </summary>
+    private const string LegacySettleScript =
+        "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))";
+
+    /// <summary>A single animation frame: enough to flush the render pipeline once the marker has confirmed interactivity.</summary>
+    private const string SingleFrameSettleScript = "() => new Promise(r => requestAnimationFrame(r))";
+
+    /// <summary>Budget for the interactivity marker before falling back to the legacy settle.</summary>
+    private const float InteractiveMarkerTimeout = 3_000;
+
     extension(IPage page)
     {
         /// <summary>
         /// Waits for the Blazor runtime to finish initialising after a full page load.
         /// Without this, event handlers are not wired up and clicks/fills are silently ignored.
         /// </summary>
+        /// <remarks>
+        /// Two phases, because the runtime flag alone is a false green.
+        /// <list type="number">
+        /// <item><description><b>Runtime loaded.</b> Wait (on the caller's full budget) for
+        /// <c>window.Blazor._internal</c>. blazor.web.js sets this once the WASM CLR or the SignalR
+        /// circuit reports ready, which is necessary but happens BEFORE components have attached their
+        /// handlers, so a click issued here lands on a prerendered-but-dead control and is
+        /// swallowed.</description></item>
+        /// <item><description><b>Interactive.</b> Wait a short extra budget for the
+        /// <c>data-mmca-interactive</c> marker that <c>MmcaThemeProviders</c> (MMCA.Common.UI) stamps
+        /// from its first interactive render. That attribute exists only once a real component has
+        /// rendered interactively, so it is the honest gate; one animation frame then flushes the render
+        /// pipeline.</description></item>
+        /// </list>
+        /// The marker is best-effort by design. A page that legitimately never hydrates (the pre-auth
+        /// login page, a static error page) and a consumer still on an older MMCA.Common.UI package
+        /// never stamp it, so a marker timeout falls back to EXACTLY the legacy settle (two animation
+        /// frames plus 500 ms). The gate therefore gets stricter where the marker ships and cannot hang
+        /// or regress where it does not.
+        /// </remarks>
         public async Task WaitForBlazorAsync(float timeout = 30_000)
         {
-            // blazor.web.js sets window.Blazor on load, then populates _internal after the
-            // WASM CLR (or SignalR circuit) is ready. The exact properties inside _internal
-            // may vary across .NET versions, so we check for any truthy _internal object.
             await page.WaitForFunctionAsync(
-                "() => !!window.Blazor?._internal",
+                BlazorRuntimeLoadedPredicate,
                 new PageWaitForFunctionOptions { Timeout = timeout }).ConfigureAwait(false);
 
-            // Blazor's component rendering is asynchronous — it happens AFTER the runtime
-            // reports as ready. Wait for two animation frames + a short delay to let the
-            // render pipeline flush, event handlers get attached, and DOM settle.
-            await page.EvaluateAsync(
-                "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))").ConfigureAwait(false);
+            try
+            {
+                await page.WaitForFunctionAsync(
+                    InteractiveMarkerPredicate,
+                    new PageWaitForFunctionOptions { Timeout = InteractiveMarkerTimeout }).ConfigureAwait(false);
+
+                // Interactivity is confirmed, so only the current render batch still needs to flush.
+                await page.EvaluateAsync(SingleFrameSettleScript).ConfigureAwait(false);
+            }
+            catch (PlaywrightException)
+            {
+                // No marker on this page (never hydrates, or an older MMCA.Common.UI): settle the way
+                // this helper always did rather than failing a test the old behaviour would have passed.
+                await page.EvaluateAsync(LegacySettleScript).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
@@ -114,7 +177,7 @@ public static class PageExtensions
             bool blazorReady;
             try
             {
-                blazorReady = await page.EvaluateAsync<bool>("() => !!window.Blazor?._internal").ConfigureAwait(false);
+                blazorReady = await page.EvaluateAsync<bool>(BlazorRuntimeLoadedPredicate).ConfigureAwait(false);
             }
             catch (PlaywrightException)
             {
@@ -149,9 +212,10 @@ public static class PageExtensions
             // For full page navigations, wait for the load event. For Blazor enhanced
             // navigation (SPA-style), this resolves immediately — harmless.
             await page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
-            // Wait for Blazor render cycle — covers both full-page and enhanced navigation.
-            await page.EvaluateAsync(
-                "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))").ConfigureAwait(false);
+            // Wait for Blazor render cycle (covers both full-page and enhanced navigation). This one
+            // stays on the legacy settle unconditionally: it runs after clicks that may land on a page
+            // with no marker at all, and it never asserts runtime readiness in the first place.
+            await page.EvaluateAsync(LegacySettleScript).ConfigureAwait(false);
         }
 
         /// <summary>
