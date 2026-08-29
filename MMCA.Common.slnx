@@ -4,7 +4,9 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Folder Name="/Source/" />
+  <Folder Name="/Source/">
+    <Project Path="Source/MMCA.Common/MMCA.Common.csproj" />
+  </Folder>
   <Folder Name="/Source/Core/">
     <Project Path="Source/Core/MMCA.Common.Shared/MMCA.Common.Shared.csproj" />
     <Project Path="Source/Core/MMCA.Common.Domain/MMCA.Common.Domain.csproj" />

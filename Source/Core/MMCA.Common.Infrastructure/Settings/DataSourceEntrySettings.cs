@@ -27,6 +27,21 @@ public sealed class DataSourceEntrySettings
     /// <summary>Gets the SQLite connection string for this source.</summary>
     public string SqliteConnectionString { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Gets the assembly containing EF Core migrations for this source's SQLite database. Empty
+    /// leaves EF defaulting to the context assembly, which is <c>MMCA.Common.Infrastructure</c> and
+    /// holds no migrations, so a host that migrates its SQLite database declares this the same way
+    /// a SQL Server host declares <see cref="SQLServerMigrationsAssembly"/>.
+    /// <para>
+    /// There is deliberately no top-level fallback: <c>ConnectionStrings</c> carries only the SQL
+    /// Server migrations assembly, so a SQLite <c>Default</c> source declares its own here through a
+    /// <c>DataSources</c> entry that collapses onto Default (an entry whose connection string equals
+    /// the top-level one). That keeps a mixed-engine host from silently applying its SQL Server
+    /// migrations assembly to a SQLite database.
+    /// </para>
+    /// </summary>
+    public string SqliteMigrationsAssembly { get; init; } = string.Empty;
+
     /// <summary>Gets the SQL Server connection string for this source.</summary>
     public string SQLServerConnectionString { get; init; } = string.Empty;
 

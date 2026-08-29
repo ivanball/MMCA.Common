@@ -21,7 +21,18 @@ public sealed class SqliteDbContext(
         ArgumentNullException.ThrowIfNull(optionsBuilder);
 
         optionsBuilder
-            .UseSqlite(PhysicalSource.ConnectionString);
+            .UseSqlite(
+                PhysicalSource.ConnectionString,
+                sqlite =>
+                {
+                    // Same contract as SQLServerDbContext: without an explicit assembly EF looks for
+                    // migrations next to the context, which lives in MMCA.Common.Infrastructure and
+                    // has none, so a per-source migrations project would never be found.
+                    if (!string.IsNullOrEmpty(PhysicalSource.SqliteMigrationsAssembly))
+                    {
+                        sqlite.MigrationsAssembly(PhysicalSource.SqliteMigrationsAssembly);
+                    }
+                });
 
         base.OnConfiguring(optionsBuilder);
     }

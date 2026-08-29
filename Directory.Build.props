@@ -53,7 +53,8 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>modular-monolith;clean-architecture;ddd;cqrs;microservices;dotnet;aspnetcore;aspire;efcore;blazor;outbox;result-pattern</PackageTags>
     <!-- The release notes live in one place (the GitHub releases feed, generated from the tag) rather
-         than being restated per package: sixteen packages ship in lockstep off a single tag. -->
+         than being restated per package: every package ships in lockstep off a single tag (count in
+         FACTS.md). -->
     <PackageReleaseNotes>https://github.com/ivanball/MMCA.Common/releases</PackageReleaseNotes>
     <!-- GitHub Packages has no symbol server, so a standalone .snupkg cannot be consumed.
          Embed the PDB into the shipped DLL instead (with repo + untracked-source info), so the

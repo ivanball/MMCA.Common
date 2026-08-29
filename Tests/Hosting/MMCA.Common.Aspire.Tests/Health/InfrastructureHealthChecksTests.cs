@@ -94,6 +94,78 @@ public sealed class InfrastructureHealthChecksTests
                 because: "a host that cannot reach its own database cannot serve correct responses, so SQL must gate readiness");
     }
 
+    // ── SQLite: the small-application engine gets a real check, not a silent skip ──
+    [Fact]
+    public void AddInfrastructureHealthChecks_WhenSqliteConfigured_RegistersTheCheck()
+    {
+        var builder = BuilderWith(new()
+        {
+            ["ConnectionStrings:SqliteConnectionString"] = "Data Source=app.db",
+        });
+
+        builder.AddInfrastructureHealthChecks();
+
+        RegisteredCheckNames(builder).Should().Contain(
+            "sqlite",
+            because: "a host whose only database is a SQLite file is no less dependent on it than a SQL Server host");
+    }
+
+    [Fact]
+    public void SqliteCheck_IsNotTaggedOptional_SoItGatesReadiness()
+    {
+        var builder = BuilderWith(new()
+        {
+            ["ConnectionStrings:SqliteConnectionString"] = "Data Source=app.db",
+        });
+
+        builder.AddInfrastructureHealthChecks();
+
+        Registrations(builder).Single(r => r.Name == "sqlite").Tags
+            .Should().NotContain(HealthCheckTags.Optional,
+                because: "an unreadable database file means the host cannot answer a single query");
+    }
+
+    [Fact]
+    public void AddInfrastructureHealthChecks_WhenDatabaseRequiredAndSqliteConfigured_DoesNotThrow()
+    {
+        // requireDatabase is the engine-agnostic form of requireSqlServer: an application that picks
+        // its engine from configuration must be able to demand A database without naming SQL Server.
+        var builder = BuilderWith(new()
+        {
+            ["ConnectionStrings:SqliteConnectionString"] = "Data Source=app.db",
+        });
+
+        var act = () => builder.AddInfrastructureHealthChecks(requireDatabase: true);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddInfrastructureHealthChecks_WhenDatabaseRequiredAndNoneConfigured_Throws()
+    {
+        var builder = BuilderWith([]);
+
+        var act = () => builder.AddInfrastructureHealthChecks(requireDatabase: true);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*SqliteConnectionString*");
+    }
+
+    [Fact]
+    public void AddInfrastructureHealthChecks_WhenSqliteAbsent_SkipsSilently()
+    {
+        var builder = BuilderWith(new()
+        {
+            ["ConnectionStrings:SQLServerConnectionString"] = "Server=(local);Database=Test;Integrated Security=true;TrustServerCertificate=true",
+        });
+
+        builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+
+        RegisteredCheckNames(builder).Should().NotContain(
+            "sqlite",
+            because: "a SQL Server host must not acquire a second, always-failing database check");
+    }
+
     private static IReadOnlyList<HealthCheckRegistration> Registrations(HostApplicationBuilder builder) =>
         [.. builder.Services.BuildServiceProvider()
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<HealthCheckServiceOptions>>()

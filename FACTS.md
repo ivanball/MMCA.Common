@@ -16,7 +16,7 @@ _As of: 2026-08-29 (framework v1.169.0) — **generated from source by `build/fa
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **16**
+## Published packages — **17**
 Released in lockstep to GitHub Packages (the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.Application`
@@ -35,6 +35,7 @@ Released in lockstep to GitHub Packages (the packable projects under `Source/` c
 14. `MMCA.Common.Testing.Architecture`
 15. `MMCA.Common.Testing.E2E`
 16. `MMCA.Common.Testing.UI`
+17. `MMCA.Common`
 
 ## Architecture Decision Records
 The ADRs live in the Website repo (`docs-src/adr/`), published at
@@ -45,7 +46,7 @@ it owns the range/count and the one-line summaries. Do not restate the `(001-NNN
 - **121 test methods across 45 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **170** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **177** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

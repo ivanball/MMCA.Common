@@ -15,6 +15,7 @@
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+    <PackageReference Include="AspNetCore.HealthChecks.Sqlite" />
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
     <!-- Shared DataProtection key ring: blob persistence (required for multi-replica cookie and
          antiforgery decryption) plus the optional Key Vault at-rest encryption, both config-gated
@@ -51,6 +52,11 @@
          this package rather than MMCA.Common.API because the bootstrap runs on the
          WebApplicationBuilder immediately before AddServiceDefaults, alongside the other host-wiring
          extensions here, and it needs no Application/Infrastructure type. -->
+    <!-- Security pin: AspNetCore.HealthChecks.Sqlite pulls Microsoft.Data.Sqlite, whose SQLitePCLRaw
+         floor is the vulnerable 2.1.6. Forces it to the patched build, same pattern (and same
+         reason) as the reference in MMCA.Common.Infrastructure. See the
+         SQLitePCLRaw.bundle_e_sqlite3 note in Directory.Packages.props. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />

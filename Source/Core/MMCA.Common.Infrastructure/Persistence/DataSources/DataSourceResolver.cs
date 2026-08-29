@@ -146,14 +146,19 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         var defaultKey = DataSourceKey.Default(engine);
 
         var explicitValues = new List<(string LogicalName, string Assembly)>();
-        if (!string.IsNullOrEmpty(connectionStrings.SQLServerMigrationsAssembly))
+
+        // The top-level value is SQL Server's alone (ConnectionStrings carries no SQLite equivalent),
+        // so it is seeded only for that engine. Seeding it unconditionally would hand a SQLite
+        // Default source the SQL Server migrations assembly in a mixed-engine host.
+        if (engine == DataSource.SQLServer && !string.IsNullOrEmpty(connectionStrings.SQLServerMigrationsAssembly))
         {
             explicitValues.Add((DataSourceKey.DefaultName, connectionStrings.SQLServerMigrationsAssembly));
         }
 
-        AddExplicitMigrationsAssemblies(explicitValues, defaultCollapsed);
+        AddExplicitMigrationsAssemblies(engine, explicitValues, defaultCollapsed);
 
-        _physicalSources[defaultKey] = new PhysicalDataSource(
+        _physicalSources[defaultKey] = BuildPhysicalSource(
+            engine,
             defaultKey,
             GetConnectionString(engine, connectionStrings),
             ResolveMigrationsAssembly(engine, defaultKey, explicitValues),
@@ -179,7 +184,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         var key = new DataSourceKey(engine, canonicalName);
 
         var explicitValues = new List<(string LogicalName, string Assembly)>();
-        AddExplicitMigrationsAssemblies(explicitValues, members);
+        AddExplicitMigrationsAssemblies(engine, explicitValues, members);
 
         var migrationsAssembly = ResolveMigrationsAssembly(engine, key, explicitValues);
         if (engine == DataSource.SQLServer && migrationsAssembly is null)
@@ -197,7 +202,8 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
             ? connectionStrings.CosmosDatabaseName
             : canonicalEntry.CosmosDatabaseName;
 
-        _physicalSources[key] = new PhysicalDataSource(
+        _physicalSources[key] = BuildPhysicalSource(
+            engine,
             key,
             GetConnectionString(engine, canonicalEntry),
             migrationsAssembly,
@@ -210,28 +216,62 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     }
 
     private static void AddExplicitMigrationsAssemblies(
+        DataSource engine,
         List<(string LogicalName, string Assembly)> explicitValues,
         List<(string LogicalName, DataSourceEntrySettings Entry)> members)
     {
         foreach (var (logicalName, entry) in members)
         {
-            if (!string.IsNullOrEmpty(entry.SQLServerMigrationsAssembly))
+            var assembly = GetMigrationsAssembly(engine, entry);
+            if (!string.IsNullOrEmpty(assembly))
             {
-                explicitValues.Add((logicalName, entry.SQLServerMigrationsAssembly));
+                explicitValues.Add((logicalName, assembly));
             }
         }
     }
 
     /// <summary>
+    /// Places the resolved migrations assembly in the slot of the engine it belongs to. A physical
+    /// source is per-engine, so at most one of the two properties is ever populated; keeping them
+    /// apart is what stops a SQL Server assembly from being handed to <c>UseSqlite</c>.
+    /// </summary>
+    private static PhysicalDataSource BuildPhysicalSource(
+        DataSource engine,
+        DataSourceKey key,
+        string connectionString,
+        string? migrationsAssembly,
+        string cosmosDatabaseName) =>
+        new(
+            key,
+            connectionString,
+            engine == DataSource.SQLServer ? migrationsAssembly : null,
+            cosmosDatabaseName)
+        {
+            SqliteMigrationsAssembly = engine == DataSource.Sqlite ? migrationsAssembly : null,
+        };
+
+    /// <summary>
+    /// The per-engine migrations assembly declared on one <c>DataSources</c> entry. Only the
+    /// relational engines have one; Cosmos migrates nothing.
+    /// </summary>
+    private static string GetMigrationsAssembly(DataSource engine, DataSourceEntrySettings entry) => engine switch
+    {
+        DataSource.CosmosDB => string.Empty,
+        DataSource.Sqlite => entry.SqliteMigrationsAssembly,
+        DataSource.SQLServer => entry.SQLServerMigrationsAssembly,
+        _ => string.Empty,
+    };
+
+    /// <summary>
     /// Picks the single explicit migrations assembly for a physical source, throwing when logical
-    /// names sharing the database declare conflicting values. Non-SQL-Server engines have none.
+    /// names sharing the database declare conflicting values. Cosmos sources have none.
     /// </summary>
     private static string? ResolveMigrationsAssembly(
         DataSource engine,
         DataSourceKey key,
         List<(string LogicalName, string Assembly)> explicitValues)
     {
-        if (engine != DataSource.SQLServer || explicitValues.Count == 0)
+        if (engine == DataSource.CosmosDB || explicitValues.Count == 0)
         {
             return null;
         }
@@ -239,10 +279,11 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         var distinct = explicitValues.Select(v => v.Assembly).Distinct(StringComparer.Ordinal).ToList();
         if (distinct.Count > 1)
         {
+            var settingName = engine == DataSource.Sqlite ? "SqliteMigrationsAssembly" : "SQLServerMigrationsAssembly";
             var declarations = string.Join("; ", explicitValues.Select(v => $"\"{v.LogicalName}\" → \"{v.Assembly}\""));
             throw new InvalidOperationException(
                 $"Data sources collapsing to the same physical database \"{key}\" declare conflicting " +
-                $"SQLServerMigrationsAssembly values: {declarations}. Align them on a single assembly.");
+                $"{settingName} values: {declarations}. Align them on a single assembly.");
         }
 
         return distinct[0];

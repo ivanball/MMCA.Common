@@ -38,13 +38,20 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on locally dispatched outbox rows;
 /// defaults to <see cref="TimeProvider.System"/> so an existing host keeps the previous
 /// constructor shape while tests can drive the stamp deterministically.</param>
+/// <param name="messageBusOptions">Transport posture supplying <c>IsOutboxEnabled</c>. When the
+/// outbox is off (<c>MessageBus:EnableOutbox=false</c>, the in-process default) no rows are written
+/// and every captured event is dispatched in-process, exactly as a context without outbox support
+/// already behaves. A host that resolves no options keeps the outbox path.</param>
 public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<DomainEventSaveChangesInterceptor> logger,
     Outbox.IOutboxSignal outboxSignal,
-    TimeProvider? timeProvider = null) : SaveChangesInterceptor
+    TimeProvider? timeProvider = null,
+    Microsoft.Extensions.Options.IOptions<Settings.MessageBusSettings>? messageBusOptions = null) : SaveChangesInterceptor
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    private readonly bool _outboxEnabled = messageBusOptions?.Value.IsOutboxEnabled ?? true;
 
     /// <summary>
     /// Per-context state captured before save and consumed after save.
@@ -75,7 +82,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         CancellationToken cancellationToken = default)
     {
         if (eventData.Context is ApplicationDbContext context)
-            CaptureEventsAndPersistToOutbox(context);
+            CaptureEventsAndPersistToOutbox(context, _outboxEnabled);
 
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
@@ -86,7 +93,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         InterceptionResult<int> result)
     {
         if (eventData.Context is ApplicationDbContext context)
-            CaptureEventsAndPersistToOutbox(context);
+            CaptureEventsAndPersistToOutbox(context, _outboxEnabled);
 
         return base.SavingChanges(eventData, result);
     }
@@ -108,12 +115,15 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// The synchronous path cannot await the in-process dispatcher, so it relies entirely on
     /// the outbox: captured events are cleared from their aggregates (preventing the duplicate
     /// re-capture a later async save used to produce) and their rows stay unprocessed for the
-    /// <see cref="OutboxProcessor"/> to deliver. Contexts without outbox support keep the
-    /// legacy no-op so a later async save can still deliver their events.
+    /// <see cref="OutboxProcessor"/> to deliver. Contexts without outbox support, and hosts running
+    /// with the outbox disabled, keep the legacy no-op so a later async save can still deliver
+    /// their events: with no rows written there is nothing for a processor to pick up, so clearing
+    /// the events here would lose them outright.
     /// </remarks>
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
     {
-        if (eventData.Context is ApplicationDbContext { SupportsOutbox: true } context
+        if (_outboxEnabled
+            && eventData.Context is ApplicationDbContext { SupportsOutbox: true } context
             && StateTable.TryGetValue(context, out var state))
         {
             StateTable.Remove(context);
@@ -187,7 +197,13 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     /// Captures domain events from aggregate roots and serializes them to the outbox table
     /// so they are persisted in the same transaction as the aggregate changes.
     /// </summary>
-    private static void CaptureEventsAndPersistToOutbox(ApplicationDbContext context)
+    /// <param name="context">The context whose tracked aggregates are being saved.</param>
+    /// <param name="outboxEnabled">
+    /// Whether this host writes outbox rows at all. <see langword="false"/> takes the same branch as
+    /// a context with no outbox table: every captured event is dispatched in-process and nothing is
+    /// persisted.
+    /// </param>
+    private static void CaptureEventsAndPersistToOutbox(ApplicationDbContext context, bool outboxEnabled)
     {
         // A previous SavingChanges that never reached SavedChanges (a failed save, then an
         // execution-strategy retry of the same operation) left its outbox rows tracked as Added
@@ -216,7 +232,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         var hasIntegrationEvents = false;
         var localOutboxEntries = new List<OutboxMessage>(domainEvents.Length);
 
-        if (context.SupportsOutbox)
+        if (context.SupportsOutbox && outboxEnabled)
         {
             // Integration events get outbox rows but no in-process dispatch: the rows stay
             // unprocessed and the OutboxProcessor publishes them via IMessageBus. Local events
@@ -244,8 +260,9 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         }
         else
         {
-            // No outbox table (e.g. Cosmos): nothing can carry integration events to the bus,
-            // so keep the legacy behavior of dispatching everything in-process.
+            // No outbox table (e.g. Cosmos), or an outbox this host turned off: nothing can carry
+            // integration events to a processor, so dispatch everything in-process. For the
+            // in-process transport that is not a degradation, it is the whole delivery path.
             localEvents = domainEvents;
         }
 

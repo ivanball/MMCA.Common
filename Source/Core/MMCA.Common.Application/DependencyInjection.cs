@@ -11,8 +11,10 @@ using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Application.Validation;
+using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.Application;
 
@@ -209,6 +211,16 @@ public static class DependencyInjection
                 .AsSelfWithInterfaces()
                 .WithScopedLifetime());
 
+            // Update appliers are the write-side twin of the request mappers: one per aggregate,
+            // wrapping that aggregate's guarded mutation methods so the generic UpdateEntityHandler
+            // never has to know a field name. Scanned beside the mappers, so a module only writes
+            // the applier class.
+            services.Scan(scan => scan
+                .FromAssemblies(moduleAssembly)
+                .AddClasses(classes => classes.AssignableTo(typeof(IEntityUpdateApplier<,,>)))
+                .AsSelfWithInterfaces()
+                .WithScopedLifetime());
+
             services.Scan(scan => scan
                 .FromAssemblies(moduleAssembly)
                 .AddClasses(classes => classes.AssignableTo(typeof(ICommandHandler<,>)))
@@ -240,6 +252,74 @@ public static class DependencyInjection
 
                 services.TryAddTransient(serviceType, validatorType);
             }
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the framework's generic write side for one aggregate: the create, update and
+        /// delete handlers, each closed over that aggregate's own types. One call replaces the three
+        /// hand-written handler classes a straightforward CRUD aggregate would otherwise need.
+        /// </summary>
+        /// <typeparam name="TEntity">The aggregate root.</typeparam>
+        /// <typeparam name="TEntityDTO">The DTO the create and update handlers return.</typeparam>
+        /// <typeparam name="TIdentifierType">The aggregate's primary key type.</typeparam>
+        /// <typeparam name="TCreateRequest">The create request, which is also the create command.</typeparam>
+        /// <typeparam name="TUpdateRequest">The update request carried by <c>UpdateEntityCommand</c>.</typeparam>
+        /// <returns>The service collection for chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// <c>AddApplicationDecorators()</c> has already run on this collection, so handlers registered
+        /// now would never be wrapped.
+        /// </exception>
+        /// <remarks>
+        /// <para>
+        /// <b>What the aggregate still owns.</b> Three collaborators, all picked up by
+        /// <see cref="ScanModuleApplicationServices{TAssemblyMarker}"/>: an
+        /// <see cref="IEntityRequestMapper{TEntity, TCreateRequest, TIdentifierType}"/> that runs the
+        /// entity factory, an <see cref="IEntityUpdateApplier{TEntity, TUpdateRequest, TIdentifierType}"/>
+        /// that calls the aggregate's guarded mutation methods, and an
+        /// <see cref="IEntityDTOMapper{TEntity, TEntityDTO, TIdentifierType}"/>. The invariants and the
+        /// domain events stay in the aggregate; nothing here writes a property.
+        /// </para>
+        /// <para>
+        /// <b>Registrations are closed, not open-generic</b>, and use <c>TryAdd</c>. Closed, because
+        /// Scrutor's <c>TryDecorate</c> wraps concrete service types: an open
+        /// <c>ICommandHandler&lt;,&gt;</c> registration would resolve completely undecorated and
+        /// <c>VerifyDecoratorPipeline()</c> could not see it. <c>TryAdd</c>, so an aggregate that
+        /// outgrows one of the three (a create that needs a retry loop, a delete that has to load its
+        /// children first) registers its own handler for that verb before this call and keeps the
+        /// generic pair for the other two.
+        /// </para>
+        /// <para>
+        /// Call it where a module registers its handlers, which means before
+        /// <c>AddApplicationDecorators()</c>: inside the module's own <c>Register</c>, or inside the
+        /// <c>AddMmcaApplicationPipeline(...)</c> callback.
+        /// </para>
+        /// <example>
+        /// <code>
+        /// services.AddEntityCrud&lt;Ticket, TicketDTO, TicketIdentifierType, TicketCreateRequest, TicketUpdateRequest&gt;();
+        /// </code>
+        /// </example>
+        /// </remarks>
+        public IServiceCollection AddEntityCrud<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>()
+            where TEntity : AuditableAggregateRootEntity<TIdentifierType>
+            where TEntityDTO : class, IBaseDTO<TIdentifierType>
+            where TIdentifierType : notnull
+            where TCreateRequest : class, ICreateRequest
+        {
+            ThrowIfPipelineSealed(services, nameof(AddEntityCrud));
+
+            services.TryAddScoped<
+                ICommandHandler<TCreateRequest, Result<TEntityDTO>>,
+                CreateEntityHandler<TCreateRequest, TEntity, TIdentifierType, TEntityDTO>>();
+
+            services.TryAddScoped<
+                ICommandHandler<UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>, Result<TEntityDTO>>,
+                UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest>>();
+
+            services.TryAddScoped<
+                ICommandHandler<DeleteEntityCommand<TEntity, TIdentifierType>, Result>,
+                DeleteEntityHandler<TEntity, TIdentifierType>>();
 
             return services;
         }

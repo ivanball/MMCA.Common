@@ -287,6 +287,30 @@ public class MessageBusSettingsTests
         new MessageBusSettings { Provider = provider, EnableInbox = configured }
             .IsInboxEnabled.Should().Be(configured);
 
+    [Fact]
+    public void Default_EnableOutbox_IsUnset_SoTheTransportDecides() =>
+        new MessageBusSettings().EnableOutbox.Should().BeNull();
+
+    // Unset resolves from the transport, same shape as the inbox: a broker deployment publishes
+    // exclusively through the outbox, while an in-process host dispatches inside the process that
+    // raised the event and pays nothing for store-and-forward it never uses.
+    [Theory]
+    [InlineData(MessageBusProvider.InProcess, false)]
+    [InlineData(MessageBusProvider.RabbitMq, true)]
+    [InlineData(MessageBusProvider.AzureServiceBus, true)]
+    public void IsOutboxEnabled_Unset_ResolvesFromTheTransport(MessageBusProvider provider, bool expected) =>
+        new MessageBusSettings { Provider = provider }.IsOutboxEnabled.Should().Be(expected);
+
+    // A monolith that wants at-least-once delivery across a crash turns it back on. Turning it OFF
+    // under a broker parses here and is refused at registration instead, where the failure can name
+    // the consequence.
+    [Theory]
+    [InlineData(MessageBusProvider.InProcess, true)]
+    [InlineData(MessageBusProvider.InProcess, false)]
+    public void IsOutboxEnabled_Explicit_OverridesTheTransportDefault(MessageBusProvider provider, bool configured) =>
+        new MessageBusSettings { Provider = provider, EnableOutbox = configured }
+            .IsOutboxEnabled.Should().Be(configured);
+
     // Default-off is load-bearing, not incidental: RabbitMQ needs the delayed-message-exchange
     // plugin, which the Aspire development container does not ship, so a default-on flag would
     // fail bus start on every local run.

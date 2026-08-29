@@ -1,4 +1,5 @@
 ﻿using AwesomeAssertions;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
@@ -130,6 +131,55 @@ public sealed class DesignTimeDbContextHelperTests
             "the gate must be opened for the source the context actually targets, not the one asked for");
     }
 
+    // ── SQLite design time ──
+    // The symmetric entry point a SQLite-backed application scaffolds through. Without it such an app
+    // has no way to run `dotnet ef` against the framework's context at all.
+    [Fact]
+    public void CreateSqlite_NamedSource_BuildsTheSqliteContextForThatSource()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlite(
+            ["--datasource", "DesignSqlite"],
+            ConfigureSqliteOptions);
+
+        context.DataSourceKey.Should().Be(new DataSourceKey(DataSource.Sqlite, "DesignSqlite"));
+        context.Model.FindEntityType(typeof(DesignSqliteEntity)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CreateSqlite_MigrationsAssembly_ReachesTheEfOptions()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlite(
+            ["--datasource", "DesignSqlite"],
+            ConfigureSqliteOptions);
+
+        RelationalOptionsExtension.Extract(context.GetService<IDbContextOptions>())
+            .MigrationsAssembly.Should().Be(
+                "Design.Sqlite.Migrations",
+                "a setting that never reaches UseSqlite leaves EF looking for migrations next to the framework context");
+    }
+
+    [Fact]
+    public void CreateSqlite_NoArgument_TargetsDefaultSource()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlite([], ConfigureSqliteOptions);
+
+        context.DataSourceKey.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+    }
+
+    private static void ConfigureSqliteOptions(DesignTimeDbContextOptions options)
+    {
+        options.ConnectionStrings = new ConnectionStringSettings
+        {
+            SqliteConnectionString = "Data Source=design-main.db",
+        };
+        options.DataSources["DesignSqlite"] = new DataSourceEntrySettings
+        {
+            SqliteConnectionString = "Data Source=design-sqlite.db",
+            SqliteMigrationsAssembly = "Design.Sqlite.Migrations",
+        };
+        options.AddConfigurationAssembly(typeof(DesignTimeDbContextHelperTests).Assembly);
+    }
+
     private static void ConfigureOptions(DesignTimeDbContextOptions options)
     {
         options.ConnectionStrings = new ConnectionStringSettings
@@ -190,9 +240,18 @@ public sealed class DesignTimeDbContextHelperTests
         public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>The SQLite-engine counterpart, mapped only into the SQLite design-time context.</summary>
+    public sealed class DesignSqliteEntity : AuditableAggregateRootEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
     [UseDatabase("DesignAlpha")]
     private sealed class DesignAlphaEntityConfiguration : EntityTypeConfigurationSQLServer<DesignAlphaEntity, int>;
 
     [UseDatabase("DesignBeta")]
     private sealed class DesignBetaEntityConfiguration : EntityTypeConfigurationSQLServer<DesignBetaEntity, int>;
+
+    [UseDatabase("DesignSqlite")]
+    private sealed class DesignSqliteEntityConfiguration : EntityTypeConfigurationSqlite<DesignSqliteEntity, int>;
 }

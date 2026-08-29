@@ -32,6 +32,11 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 /// </code>
 /// Invoked as <c>dotnet ef migrations add X --project ... -- --datasource Conference</c>
 /// (EF forwards the arguments after <c>--</c> to the factory).
+/// <para>
+/// <see cref="CreateSqlite"/> is the symmetric entry point for a SQLite-backed application, which is
+/// the same code path with <c>SqliteConnectionString</c> / <c>SqliteMigrationsAssembly</c> in place
+/// of their SQL Server equivalents.
+/// </para>
 /// </summary>
 public static class DesignTimeDbContextHelper
 {
@@ -43,6 +48,49 @@ public static class DesignTimeDbContextHelper
     /// <param name="configure">Callback configuring connection settings and configuration assemblies.</param>
     /// <returns>A context whose model contains only the selected data source's entities.</returns>
     public static SQLServerDbContext CreateSqlServer(string[] args, Action<DesignTimeDbContextOptions> configure)
+    {
+        var (services, assemblyProvider, physical) = BuildDesignTimeServices(DataSource.SQLServer, args, configure);
+
+        return new SQLServerDbContext(
+            new DbContextOptionsBuilder<SQLServerDbContext>().Options,
+            services.BuildServiceProvider(),
+            assemblyProvider,
+            physical);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SqliteDbContext"/> for the data source selected by
+    /// <see cref="DesignTimeDbContextOptions.DataSourceName"/> or the <c>--datasource</c> argument,
+    /// the SQLite counterpart of <see cref="CreateSqlServer"/>. A migrations project declares its
+    /// connection through <c>SqliteConnectionString</c> and its own assembly through
+    /// <c>SqliteMigrationsAssembly</c> on the matching <c>DataSources</c> entry.
+    /// </summary>
+    /// <param name="args">The design-time arguments forwarded by <c>dotnet ef</c> (after <c>--</c>).</param>
+    /// <param name="configure">Callback configuring connection settings and configuration assemblies.</param>
+    /// <returns>A context whose model contains only the selected data source's entities.</returns>
+    public static SqliteDbContext CreateSqlite(string[] args, Action<DesignTimeDbContextOptions> configure)
+    {
+        var (services, assemblyProvider, physical) = BuildDesignTimeServices(DataSource.Sqlite, args, configure);
+
+        return new SqliteDbContext(
+            new DbContextOptionsBuilder<SqliteDbContext>().Options,
+            services.BuildServiceProvider(),
+            assemblyProvider,
+            physical);
+    }
+
+    /// <summary>
+    /// Builds the container, assembly provider and resolved physical source every design-time
+    /// context needs. Shared by the per-engine factories so both scaffold against exactly the same
+    /// interceptor and options pipeline: a difference between them would show up as a migration that
+    /// differs by engine for reasons that have nothing to do with the engine.
+    /// </summary>
+    /// <param name="engine">The engine whose physical source is resolved.</param>
+    /// <param name="args">The design-time arguments forwarded by <c>dotnet ef</c>.</param>
+    /// <param name="configure">Callback configuring connection settings and configuration assemblies.</param>
+    /// <returns>The populated service collection, the assembly provider, and the resolved source.</returns>
+    private static (ServiceCollection Services, ExplicitAssemblyProvider AssemblyProvider, PhysicalDataSource Physical)
+        BuildDesignTimeServices(DataSource engine, string[] args, Action<DesignTimeDbContextOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(args);
         ArgumentNullException.ThrowIfNull(configure);
@@ -65,7 +113,7 @@ public static class DesignTimeDbContextHelper
         // PHYSICAL source name, which is not always the logical one asked for: a logical name whose
         // connection matches the top-level one collapses onto Default, and names sharing a
         // connection collapse onto the alphabetically-first of them.
-        var physical = resolver.GetPhysical(resolver.ResolveLogical(DataSource.SQLServer, logicalName));
+        var physical = resolver.GetPhysical(resolver.ResolveLogical(engine, logicalName));
 
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
@@ -108,11 +156,7 @@ public static class DesignTimeDbContextHelper
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);
 
-        return new SQLServerDbContext(
-            new DbContextOptionsBuilder<SQLServerDbContext>().Options,
-            services.BuildServiceProvider(),
-            assemblyProvider,
-            physical);
+        return (services, assemblyProvider, physical);
     }
 
     /// <summary>
