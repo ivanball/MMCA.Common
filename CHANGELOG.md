@@ -4,6 +4,65 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.170.0] - 2026-08-29
+
+The small-app floor release: the write-side generic CRUD twin, an outbox that resolves from the
+messaging mode, SQLite as a runnable engine, and a one-reference metapackage. Existing SQL Server +
+broker hosts see no behavior change; hosts on in-process messaging should read the outbox note below.
+
+### Added
+
+- **Generic write-side entity commands** (`MMCA.Common.Application`, `MMCA.Common.API`), completing
+  the generic read side that `EntityControllerBase` has carried since ADR-034 (see ADR-099).
+  `IEntityUpdateApplier<TEntity, TUpdateRequest, TIdentifierType>` is the per-aggregate contract that
+  wraps guarded mutation methods; `UpdateEntityCommand` (an `ICommandWithRequest` +
+  `ICacheInvalidating` record) and the generic `UpdateEntityHandler` ride the existing mutate
+  workflow (repository via `IUnitOfWork`, `SetOriginalRowVersion` concurrency, events raised only by
+  the aggregate). A concrete `CreateEntityHandler` closes `CreateEntityHandlerBase` for aggregates
+  that need no hooks, and `AddEntityCrud<...>()` registers the create/update/delete handler set in one
+  call. `CrudEntityControllerBase` derives from `AggregateRootEntityControllerBase` and adds an
+  idempotent `PUT` with weak-ETag concurrency; it is a new base rather than a change to the shipped
+  one, so existing controllers keep their generic arity.
+- **`MMCA.Common` metapackage.** One `PackageReference` bundling the Core 6 (`Shared`, `Domain`,
+  `Application`, `Infrastructure`, `API`, `Aspire`); UI, Testing, and MAUI packages stay explicit
+  references where used (ADR-101). Package count is now 17.
+- **SQLite as a runnable engine** (`MMCA.Common.Infrastructure`, `MMCA.Common.Aspire`).
+  `DesignTimeDbContextHelper.CreateSqlite` for migrations tooling,
+  `DataSourceEntrySettings.SqliteMigrationsAssembly`, and a SQLite health check registered by
+  `AddInfrastructureHealthChecks` when a SQLite connection string is configured (new optional
+  `requireDatabase` parameter; `requireSqlServer` semantics unchanged).
+- **`MessageBus:EnableOutbox`** (`MMCA.Common.Infrastructure`). Nullable, resolved like
+  `EnableInbox`: the outbox is on unless the provider is `InProcess`, and either default can be
+  overridden explicitly. A broker provider with the outbox explicitly disabled fails at startup. A
+  one-shot `OutboxDisabledNoticeService` log line states the resolved posture (ADR-100).
+
+### Changed
+
+- **Hosts on in-process messaging no longer run the durable outbox by default** (ADR-100). Events
+  dispatch synchronously in process; the outbox tables remain mapped, so no migration churn. Set
+  `MessageBus:EnableOutbox: true` to keep the previous durable behavior on an `InProcess` host.
+- **A host starts with any configured database engine.** The `[Required]` annotation on
+  `SQLServerConnectionString` is replaced by a validator that accepts a SQL Server, SQLite, or Cosmos
+  connection string at the top level or on any `DataSources` entry; a host with no database
+  connection anywhere still fails at startup with a message naming both configuration shapes.
+- **Framework-owned persistence follows the configured engine** (ADR-018 revision). When a requested
+  engine has no connection string anywhere, `DataSourceResolver` routes framework components
+  (scheduler, outbox, audit trail, refresh sessions, transactional factory) to the sole configured
+  engine, relational preferred. SQL-Server-only and mixed-engine hosts resolve exactly as before.
+- **`IntegrationEventContractTestsBase` compares event members as an unordered set**
+  (`MMCA.Common.Testing.Architecture`). Member order is not part of a JSON contract; existing
+  alphabetical literals keep passing, and scaffolded literals no longer depend on name ordering.
+
+### Fixed
+
+- **Hosts without an Identity module failed every request** with an unresolvable
+  `IPermissionRegistry` in the authorization decorator. `AddApplicationDecorators` now `TryAdd`s an
+  internal fail-closed registry (permission-gated requests get `Forbidden`, with a one-time warning
+  naming `AddAuthorizationPolicies()`); hosts that register a real registry keep it.
+- **SQLite-only hosts opened SQL Server connections with empty connection strings** from the
+  scheduled-job runner and the transactional factory; both symptoms of the engine routing fixed
+  above.
+
 ## [1.169.0] - 2026-08-29
 
 Follow-up to the 1.168.0 facade work: the two gaps the downstream migration surfaced. Interactive
