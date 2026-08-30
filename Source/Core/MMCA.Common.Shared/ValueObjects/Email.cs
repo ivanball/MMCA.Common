@@ -40,10 +40,6 @@ public sealed record Email : ValueObject
 #pragma warning restore CA1308
     }
 
-    /// <summary>Implicit conversion to <see cref="string"/> for backward compatibility.</summary>
-    /// <param name="email">The email value object.</param>
-    public static implicit operator string(Email email) => email.Value;
-
     /// <inheritdoc />
     public override string ToString() => Value;
 }

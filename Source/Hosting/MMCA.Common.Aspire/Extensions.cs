@@ -217,38 +217,29 @@ public static class Extensions
         /// checks only — they appear in <c>/health</c> but not <c>/alive</c>, so a transient
         /// infrastructure outage does not kill the process.
         /// </summary>
-        /// <param name="requireSqlServer">
-        /// When <see langword="true"/>, a missing <c>SQLServerConnectionString</c> throws at startup
-        /// instead of silently skipping the check.
+        /// <param name="requireDatabase">
+        /// When <see langword="true"/>, the host must have SOME relational database configured
+        /// (a <c>SQLServerConnectionString</c> or <c>SqliteConnectionString</c>, at the top level or
+        /// on a named <c>DataSources</c> entry) or startup throws.
         /// <para>
         /// This asymmetry with the Redis/RabbitMQ branches is DELIBERATE, not an oversight. Redis and
         /// RabbitMQ are optional per host, so their absence is a valid configuration. The service
         /// database is not: a host that cannot resolve its own connection string is misconfigured,
         /// and silently registering no check would let it report healthy and take traffic it cannot
-        /// serve. Every consumer host that hand-rolled this check used <c>?? throw</c> for exactly
-        /// that reason, so pass <see langword="true"/> when replacing one.
+        /// serve. The requirement is engine-agnostic on purpose, because an application picks its
+        /// engine from configuration.
         /// </para>
-        /// </param>
-        /// <param name="requireDatabase">
-        /// When <see langword="true"/>, the host must have SOME relational database configured
-        /// (<c>SQLServerConnectionString</c> or <c>SqliteConnectionString</c>) or startup throws.
-        /// This is the engine-agnostic form of <paramref name="requireSqlServer"/>: it carries the
-        /// same "a host that cannot resolve its own database must not report healthy" rule for an
-        /// application that picks its engine from configuration, without pinning the requirement to
-        /// SQL Server. Passing both is redundant but harmless; <paramref name="requireSqlServer"/>
-        /// keeps its exact previous meaning so existing callers are unaffected.
         /// </param>
         /// <returns>The same builder instance for chaining.</returns>
         /// <exception cref="InvalidOperationException">
-        /// <paramref name="requireSqlServer"/> is <see langword="true"/> and no
-        /// <c>SQLServerConnectionString</c> is configured, or <paramref name="requireDatabase"/> is
-        /// <see langword="true"/> and neither relational connection string is configured.
+        /// <paramref name="requireDatabase"/> is <see langword="true"/> and no relational database is
+        /// configured.
         /// </exception>
-        public TBuilder AddInfrastructureHealthChecks(bool requireSqlServer = false, bool requireDatabase = false)
+        public TBuilder AddInfrastructureHealthChecks(bool requireDatabase = false)
         {
             var healthChecks = builder.Services.AddHealthChecks();
 
-            AddDatabaseHealthChecks(healthChecks, builder.Configuration, requireSqlServer, requireDatabase);
+            AddDatabaseHealthChecks(healthChecks, builder.Configuration, requireDatabase);
 
             var redisConnectionString = builder.Configuration.GetConnectionString("redis");
             if (!string.IsNullOrWhiteSpace(redisConnectionString))
@@ -398,47 +389,91 @@ public static class Extensions
         => bool.TryParse(configuration[configKey], out var disabled) && disabled;
 
     /// <summary>
-    /// Registers the relational database checks and enforces whichever "the database must be there"
-    /// rule the caller asked for. Both engines are checked because a host picks one from
+    /// Registers the relational database checks and enforces the "the database must be there" rule
+    /// when the caller asks for it. Both engines are checked because a host picks one from
     /// configuration: SQL Server for a deployed service, SQLite for a small single-node application.
     /// Neither check is tagged optional, so both gate readiness (see the tagging note on the Redis
-    /// branch for why that distinction matters).
+    /// branch for why that distinction matters). A host that owns several databases gets one check
+    /// per database: readiness means every database it serves from is reachable.
     /// </summary>
     /// <param name="healthChecks">The builder the checks are added to.</param>
     /// <param name="configuration">Configuration carrying the connection strings.</param>
-    /// <param name="requireSqlServer">Fail when SQL Server specifically is not configured.</param>
     /// <param name="requireDatabase">Fail when no relational engine at all is configured.</param>
     /// <exception cref="InvalidOperationException">A required connection string is missing.</exception>
     private static void AddDatabaseHealthChecks(
         IHealthChecksBuilder healthChecks,
         IConfiguration configuration,
-        bool requireSqlServer,
         bool requireDatabase)
     {
-        var sqlConnectionString = configuration.GetConnectionString("SQLServerConnectionString");
-        var sqliteConnectionString = configuration.GetConnectionString("SqliteConnectionString");
+        var sqlSources = RelationalSources(configuration, "SQLServerConnectionString");
+        var sqliteSources = RelationalSources(configuration, "SqliteConnectionString");
 
-        if (requireSqlServer && string.IsNullOrWhiteSpace(sqlConnectionString))
-        {
-            throw new InvalidOperationException("SQLServerConnectionString is not configured.");
-        }
-
-        if (requireDatabase
-            && string.IsNullOrWhiteSpace(sqlConnectionString)
-            && string.IsNullOrWhiteSpace(sqliteConnectionString))
+        if (requireDatabase && sqlSources.Count == 0 && sqliteSources.Count == 0)
         {
             throw new InvalidOperationException(
-                "No database connection string is configured: set ConnectionStrings:SQLServerConnectionString or ConnectionStrings:SqliteConnectionString.");
+                "No database connection string is configured: set a SQLServerConnectionString or SqliteConnectionString, "
+                + "either at the top level under ConnectionStrings or on a named DataSources entry.");
         }
 
-        if (!string.IsNullOrWhiteSpace(sqlConnectionString))
+        foreach (var (name, connectionString) in sqlSources)
         {
-            healthChecks.AddSqlServer(sqlConnectionString, name: "sqlserver");
+            healthChecks.AddSqlServer(connectionString, name: name);
         }
 
-        if (!string.IsNullOrWhiteSpace(sqliteConnectionString))
+        foreach (var (name, connectionString) in sqliteSources)
         {
-            healthChecks.AddSqlite(sqliteConnectionString, name: "sqlite");
+            healthChecks.AddSqlite(connectionString, name: name);
         }
+    }
+
+    /// <summary>
+    /// Every distinct database the host declares on one relational engine, as (check name,
+    /// connection string) pairs. Both configuration shapes are read: the top-level
+    /// <c>ConnectionStrings</c> section and every named <c>DataSources</c> entry, so a
+    /// database-per-service host that declares its database only under <c>DataSources</c> is checked
+    /// exactly like a single-database one.
+    /// </summary>
+    /// <param name="configuration">Configuration carrying the connection strings.</param>
+    /// <param name="key">The engine's connection-string key, identical in both sections.</param>
+    /// <returns>The databases to check, deduplicated by connection string.</returns>
+    /// <remarks>
+    /// The FIRST database keeps the historical check name for its engine (<c>sqlserver</c> /
+    /// <c>sqlite</c>), and only a host that genuinely has a second, different database gets the
+    /// <c>{engine}:{source}</c> form. Deduplication is by connection string, so the entries that
+    /// collapse onto one physical database (the resolver's single-database collapse) contribute one
+    /// check, not one per logical name.
+    /// </remarks>
+    private static List<(string Name, string ConnectionString)> RelationalSources(IConfiguration configuration, string key)
+    {
+        var engineName = string.Equals(key, "SqliteConnectionString", StringComparison.Ordinal) ? "sqlite" : "sqlserver";
+
+        var declared = new List<(string Source, string ConnectionString)>();
+
+        var topLevel = configuration.GetConnectionString(key);
+        if (!string.IsNullOrWhiteSpace(topLevel))
+        {
+            declared.Add((engineName, topLevel));
+        }
+
+        foreach (var entry in configuration.GetSection("DataSources").GetChildren())
+        {
+            var connectionString = entry[key];
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                declared.Add(($"{engineName}:{entry.Key}", connectionString));
+            }
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var sources = new List<(string Name, string ConnectionString)>();
+        foreach (var (source, connectionString) in declared)
+        {
+            if (seen.Add(connectionString))
+            {
+                sources.Add((sources.Count == 0 ? engineName : source, connectionString));
+            }
+        }
+
+        return sources;
     }
 }

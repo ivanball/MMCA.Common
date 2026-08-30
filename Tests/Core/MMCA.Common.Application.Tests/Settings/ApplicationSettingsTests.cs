@@ -74,8 +74,4 @@ public sealed class ApplicationSettingsTests
         settings.DatabaseInitStrategy.Should().Be("None");
     }
 
-    // ── Implements interface ──
-    [Fact]
-    public void ImplementsIApplicationSettings() =>
-        new ApplicationSettings().Should().BeAssignableTo<IApplicationSettings>();
 }

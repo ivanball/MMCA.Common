@@ -6,30 +6,23 @@ using MMCA.Common.Shared.Auth;
 namespace MMCA.Common.API.Authorization;
 
 /// <summary>
-/// Registers the application's authorization model: the named role/authentication policies plus
-/// the permission-based authorization mechanism (handler, on-demand policy provider, and registry).
+/// Registers the application's authorization model: the permission-based authorization mechanism
+/// (handler, on-demand policy provider, and registry).
 /// </summary>
 public static class AuthorizationExtensions
 {
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Registers named authorization policies used by controllers via <c>[Authorize(Policy = ...)]</c>
-        /// (defined in <see cref="AuthorizationPolicies"/>) and wires the permission-based
-        /// authorization mechanism used by <see cref="HasPermissionAttribute"/>.
+        /// Registers the ASP.NET Core authorization services and wires the permission-based
+        /// authorization mechanism used by <see cref="HasPermissionAttribute"/>. Permissions are the
+        /// one authorization model: an endpoint states the capability it needs and the registry maps
+        /// roles to capabilities, so no policy name has to be pre-registered per role.
         /// </summary>
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddAuthorizationPolicies()
         {
-            services.AddAuthorizationBuilder()
-                .AddPolicy(AuthorizationPolicies.RequireOrganizer, policy =>
-                    policy.RequireRole(RoleNames.Organizer))
-                .AddPolicy(AuthorizationPolicies.RequireAttendee, policy =>
-                    policy.RequireRole(RoleNames.Attendee))
-                .AddPolicy(AuthorizationPolicies.RequireAdmin, policy =>
-                    policy.RequireRole(RoleNames.Admin))
-                .AddPolicy(AuthorizationPolicies.RequireAuthenticated, policy =>
-                    policy.RequireAuthenticatedUser());
+            services.AddAuthorization();
 
             // Permission-based authorization. The on-demand policy provider materializes "perm:*"
             // policies and the handler evaluates them against the permission registry. Registered

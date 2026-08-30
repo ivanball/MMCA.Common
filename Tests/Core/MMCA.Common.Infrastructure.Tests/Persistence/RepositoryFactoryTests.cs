@@ -2,12 +2,12 @@ using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
-using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
 
@@ -43,10 +43,9 @@ public sealed class RepositoryFactoryTests : IDisposable
     [Fact]
     public void Create_WithMiniProfilerDisabled_ReturnsEFRepository()
     {
-        var settings = new Mock<IApplicationSettings>();
-        settings.Setup(s => s.UseMiniProfiler).Returns(false);
+        var settings = Options.Create(new ApplicationSettings { UseMiniProfiler = false });
 
-        var sut = new RepositoryFactory(_serviceProvider, settings.Object);
+        var sut = new RepositoryFactory(_serviceProvider, settings);
 
         var repo = sut.Create<FakeAggregate, int>(_context);
 
@@ -57,10 +56,9 @@ public sealed class RepositoryFactoryTests : IDisposable
     [Fact]
     public void Create_WithMiniProfilerEnabled_ReturnsDecoratedRepository()
     {
-        var settings = new Mock<IApplicationSettings>();
-        settings.Setup(s => s.UseMiniProfiler).Returns(true);
+        var settings = Options.Create(new ApplicationSettings { UseMiniProfiler = true });
 
-        var sut = new RepositoryFactory(_serviceProvider, settings.Object);
+        var sut = new RepositoryFactory(_serviceProvider, settings);
 
         var repo = sut.Create<FakeAggregate, int>(_context);
 
@@ -71,10 +69,9 @@ public sealed class RepositoryFactoryTests : IDisposable
     [Fact]
     public void CreateReadOnly_WithMiniProfilerDisabled_ReturnsEFReadRepository()
     {
-        var settings = new Mock<IApplicationSettings>();
-        settings.Setup(s => s.UseMiniProfiler).Returns(false);
+        var settings = Options.Create(new ApplicationSettings { UseMiniProfiler = false });
 
-        var sut = new RepositoryFactory(_serviceProvider, settings.Object);
+        var sut = new RepositoryFactory(_serviceProvider, settings);
 
         var repo = sut.CreateReadOnly<FakeEntity, int>(_context);
 
@@ -85,10 +82,9 @@ public sealed class RepositoryFactoryTests : IDisposable
     [Fact]
     public void CreateReadOnly_WithMiniProfilerEnabled_ReturnsDecoratedReadRepository()
     {
-        var settings = new Mock<IApplicationSettings>();
-        settings.Setup(s => s.UseMiniProfiler).Returns(true);
+        var settings = Options.Create(new ApplicationSettings { UseMiniProfiler = true });
 
-        var sut = new RepositoryFactory(_serviceProvider, settings.Object);
+        var sut = new RepositoryFactory(_serviceProvider, settings);
 
         var repo = sut.CreateReadOnly<FakeEntity, int>(_context);
 
@@ -99,10 +95,9 @@ public sealed class RepositoryFactoryTests : IDisposable
     [Fact]
     public void Create_ReturnsFunctionalRepository()
     {
-        var settings = new Mock<IApplicationSettings>();
-        settings.Setup(s => s.UseMiniProfiler).Returns(false);
+        var settings = Options.Create(new ApplicationSettings { UseMiniProfiler = false });
 
-        var sut = new RepositoryFactory(_serviceProvider, settings.Object);
+        var sut = new RepositoryFactory(_serviceProvider, settings);
         var repo = sut.Create<FakeAggregate, int>(_context);
 
         repo.Should().BeAssignableTo<IRepository<FakeAggregate, int>>();
@@ -111,10 +106,9 @@ public sealed class RepositoryFactoryTests : IDisposable
     [Fact]
     public void CreateReadOnly_ReturnsFunctionalReadRepository()
     {
-        var settings = new Mock<IApplicationSettings>();
-        settings.Setup(s => s.UseMiniProfiler).Returns(false);
+        var settings = Options.Create(new ApplicationSettings { UseMiniProfiler = false });
 
-        var sut = new RepositoryFactory(_serviceProvider, settings.Object);
+        var sut = new RepositoryFactory(_serviceProvider, settings);
         var repo = sut.CreateReadOnly<FakeEntity, int>(_context);
 
         repo.Should().BeAssignableTo<IReadRepository<FakeEntity, int>>();

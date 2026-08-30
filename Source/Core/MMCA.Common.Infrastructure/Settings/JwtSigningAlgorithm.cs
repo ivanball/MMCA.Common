@@ -2,24 +2,27 @@ namespace MMCA.Common.Infrastructure.Settings;
 
 /// <summary>
 /// Selects which algorithm <c>TokenService</c> uses to sign access tokens (and which key
-/// type the JWT bearer middleware uses to validate them).
+/// type the JWT bearer middleware uses to validate them). The choice encodes the deployment
+/// shape, not a compatibility level, which is why both values stay:
 /// <para>
-/// <see cref="HS256"/> is the default for backwards compatibility — single-process
-/// monolith deployments where issuer and validators all live in the same host can keep
-/// using the symmetric key in <c>JwtSettings.SecretForKey</c>.
+/// <see cref="RS256"/> (the default, <c>JwtSettings.SigningAlgorithm</c>) is what an extracted
+/// service topology needs. The Identity service signs with its RSA private key
+/// (<c>RsaPrivateKeyPem</c>) and every other service validates against the JWKS endpoint exposing
+/// <c>RsaPublicKeyPem</c>, so no peer ever holds the signing key. It is also the correct choice for a
+/// monolith that intends to extract later, because the token format does not change when it does.
 /// </para>
 /// <para>
-/// <see cref="RS256"/> is the target for the microservice extraction (Phase 1+). The
-/// Identity service signs with its RSA private key (<c>RsaPrivateKeyPem</c>), other
-/// services validate via the JWKS endpoint exposing <c>RsaPublicKeyPem</c>. Switching
-/// from HS256 to RS256 invalidates all existing tokens (hard cutover).
+/// <see cref="HS256"/> is for a single-process monolith whose issuer and validators all live in the
+/// one host: they can share the symmetric key in <c>JwtSettings.SecretForKey</c> and skip RSA key
+/// management entirely. Switching a running deployment between the two invalidates every existing
+/// token (a hard cutover).
 /// </para>
 /// </summary>
 public enum JwtSigningAlgorithm
 {
-    /// <summary>HMAC-SHA256 using a shared symmetric key (<c>SecretForKey</c>). Default.</summary>
+    /// <summary>HMAC-SHA256 using a shared symmetric key (<c>SecretForKey</c>); the single-host monolith choice.</summary>
     HS256 = 0,
 
-    /// <summary>RSA-SHA256 using an asymmetric key pair (<c>RsaPrivateKeyPem</c> + <c>RsaPublicKeyPem</c>).</summary>
+    /// <summary>RSA-SHA256 using an asymmetric key pair (<c>RsaPrivateKeyPem</c> + <c>RsaPublicKeyPem</c>); the default.</summary>
     RS256 = 1,
 }

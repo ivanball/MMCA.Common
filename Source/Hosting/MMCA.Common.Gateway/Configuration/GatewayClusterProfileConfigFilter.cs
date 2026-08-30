@@ -5,8 +5,7 @@ using Yarp.ReverseProxy.Forwarder;
 namespace MMCA.Common.Gateway.Configuration;
 
 /// <summary>
-/// Resolves each cluster's forwarder request profile from three sources and honors the
-/// <c>ForwardHttp2</c> rollback switch.
+/// Resolves each cluster's forwarder request profile from three sources.
 /// <para>
 /// Precedence, per property rather than per block, so a cluster that states one value keeps
 /// inheriting the rest: the cluster's own <c>HttpRequest</c> in the <c>ReverseProxy</c> section,
@@ -17,10 +16,9 @@ namespace MMCA.Common.Gateway.Configuration;
 /// WebSocket hub, an HTTP/1.1-only head) still says so locally.
 /// </para>
 /// <para>
-/// The rollback switch strips <c>Version</c> and <c>VersionPolicy</c> from any cluster whose
-/// resolved version is HTTP/2 or above, dropping it to YARP's negotiated default. Clusters pinned
-/// to 1.1 are left alone: they are already the fallback, and clearing them would hand them back to
-/// YARP's HTTP/2-preferring default, which is the opposite of a rollback.
+/// A resolved HTTP/2 version pair is forwarded as stated. Dropping a cluster to HTTP/1.1 is a
+/// per-cluster decision expressed in its own profile, so the resolved values reach the forwarder
+/// exactly as configuration declares them.
 /// </para>
 /// </summary>
 /// <param name="options">The bound gateway settings.</param>
@@ -53,7 +51,7 @@ public sealed class GatewayClusterProfileConfigFilter(IOptions<GatewaySettings> 
         ValueTask.FromResult(route);
 
     /// <summary>
-    /// Merges the three sources for one cluster and applies the rollback switch.
+    /// Merges the three sources for one cluster.
     /// </summary>
     /// <param name="cluster">The cluster as loaded from configuration.</param>
     /// <returns>The forwarder request config the cluster should carry.</returns>
@@ -66,21 +64,10 @@ public sealed class GatewayClusterProfileConfigFilter(IOptions<GatewaySettings> 
         _settings.ClusterRequestOverrides.TryGetValue(clusterId, out var over);
         var fallback = _settings.ClusterRequestDefaults;
 
-        var version = ResolveVersion(clusterId, own, over, fallback);
-        var versionPolicy = ResolveVersionPolicy(clusterId, own, over, fallback);
-
-        // HTTP/2 and above is the only thing the rollback switch is about: a cluster deliberately
-        // pinned to 1.1 is already where a rollback would send it.
-        if (!_settings.ForwardHttp2 && version?.Major >= 2)
-        {
-            version = null;
-            versionPolicy = null;
-        }
-
         return new ForwarderRequestConfig
         {
-            Version = version,
-            VersionPolicy = versionPolicy,
+            Version = ResolveVersion(clusterId, own, over, fallback),
+            VersionPolicy = ResolveVersionPolicy(clusterId, own, over, fallback),
             ActivityTimeout = ResolveActivityTimeout(own, over, fallback),
             AllowResponseBuffering = ResolveAllowResponseBuffering(own, over, fallback),
         };

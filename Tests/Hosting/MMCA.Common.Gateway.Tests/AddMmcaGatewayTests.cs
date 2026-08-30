@@ -40,14 +40,18 @@ public sealed class AddMmcaGatewayTests
     [Fact]
     public void AddMmcaGateway_FromSettings_MakesThemResolvable()
     {
-        var settings = new GatewaySettings { ForwardHttp2 = false };
+        var settings = new GatewaySettings
+        {
+            ClusterRequestDefaults = new GatewayClusterRequestProfile { Version = "2.0" },
+        };
 
         var services = new ServiceCollection();
         services.AddReverseProxy().AddMmcaGateway(settings);
 
         using var provider = services.BuildServiceProvider();
 
-        provider.GetRequiredService<IOptions<GatewaySettings>>().Value.ForwardHttp2.Should().BeFalse();
+        provider.GetRequiredService<IOptions<GatewaySettings>>().Value
+            .ClusterRequestDefaults!.Version.Should().Be("2.0");
     }
 
     [Fact]
@@ -56,7 +60,6 @@ public sealed class AddMmcaGatewayTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["MmcaGateway:ForwardHttp2"] = "false",
                 ["MmcaGateway:ClusterRequestDefaults:Version"] = "2.0",
                 ["MmcaGateway:ClusterRequestDefaults:VersionPolicy"] = "RequestVersionExact",
                 ["MmcaGateway:ClusterRequestDefaults:ActivityTimeout"] = "00:01:40",
@@ -73,7 +76,6 @@ public sealed class AddMmcaGatewayTests
         using var provider = services.BuildServiceProvider();
         var settings = provider.GetRequiredService<IOptions<GatewaySettings>>().Value;
 
-        settings.ForwardHttp2.Should().BeFalse();
         settings.ClusterRequestDefaults!.Version.Should().Be("2.0");
         settings.ClusterRequestDefaults.ActivityTimeout.Should().Be(TimeSpan.FromSeconds(100));
         settings.ClusterRequestOverrides["notification-hub"].ActivityTimeout.Should().Be(TimeSpan.FromHours(1));
@@ -91,7 +93,6 @@ public sealed class AddMmcaGatewayTests
         using var provider = services.BuildServiceProvider();
         var settings = provider.GetRequiredService<IOptions<GatewaySettings>>().Value;
 
-        settings.ForwardHttp2.Should().BeTrue();
         settings.ClusterRequestDefaults.Should().BeNull();
         settings.HealthCheckDefaults.Passive.Enabled.Should().BeTrue();
         settings.TraceHeaders.Enabled.Should().BeTrue();

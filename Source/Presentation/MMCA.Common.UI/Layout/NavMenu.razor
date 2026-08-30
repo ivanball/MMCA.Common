@@ -157,29 +157,23 @@
     private List<NavItem> _userItems = [];
     private List<NavItem> _adminItems = [];
 
-    // ADR-027: items carrying a TitleResource treat Title/Group as resource keys resolved at render
-    // time against that type's resx pair, so the menu follows the active culture; items without one
-    // (or with a missing key) render the raw string, keeping literal-titled modules working unchanged.
+    // ADR-027: Title and Group are resource keys resolved at render time against the item's
+    // TitleResource resx pair, so the menu follows the active culture; a key the resource type does
+    // not declare renders as the raw string.
     private string Display(NavItem item)
     {
-        if (item.TitleResource is null)
-        {
-            return item.Title;
-        }
-
         var localized = LocalizerFactory.Create(item.TitleResource)[item.Title];
         return localized.ResourceNotFound ? item.Title : localized.Value;
     }
 
     private string DisplayGroup(IGrouping<string?, NavItem> group)
     {
-        var first = group.FirstOrDefault(i => i.TitleResource is not null);
-        if (group.Key is null || first is null)
+        if (group.Key is null)
         {
-            return group.Key ?? string.Empty;
+            return string.Empty;
         }
 
-        var localized = LocalizerFactory.Create(first.TitleResource!)[group.Key];
+        var localized = LocalizerFactory.Create(group.First().TitleResource)[group.Key];
         return localized.ResourceNotFound ? group.Key : localized.Value;
     }
 

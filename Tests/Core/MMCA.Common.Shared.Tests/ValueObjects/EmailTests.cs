@@ -54,12 +54,11 @@ public class EmailTests
     }
 
     [Fact]
-    public void ImplicitConversion_ReturnsValue()
+    public void Value_ReturnsTheNormalizedAddress()
     {
         Email email = Email.Create("test@example.com").Value!;
-        string value = email;
 
-        value.Should().Be("test@example.com");
+        email.Value.Should().Be("test@example.com");
     }
 
     [Fact]

@@ -1,41 +1,38 @@
-using System.Collections.Concurrent;
-using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
-using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 
 namespace MMCA.Common.API.Concurrency;
 
 /// <summary>
-/// Lets a write action take its optimistic-concurrency token from the HTTP <c>If-Match</c> header
-/// instead of the request body, and answers a failed precondition with 412 rather than 409.
+/// Makes a write action conditional: the optimistic-concurrency token comes from the HTTP
+/// <c>If-Match</c> header, the header is mandatory, and a failed precondition is answered with 412
+/// rather than 409.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>What it does.</b> Before the action runs, an <c>If-Match</c> header is decoded (see
-/// <see cref="ConcurrencyETag"/>) and written into every bound argument that implements
-/// <see cref="IConcurrencyAware"/> and does not already carry a token. After the action runs, a
-/// conflict outcome is rewritten to <c>412 Precondition Failed</c>, keeping the response body exactly
-/// as it was built.
+/// <b>What it does.</b> Before the action runs, the <c>If-Match</c> header is decoded (see
+/// <see cref="ConcurrencyETag"/>) and placed in <see cref="HttpContext.Items"/> under
+/// <see cref="TokenItemKey"/>, where the action reads it. After the action runs, a conflict outcome
+/// is rewritten to <c>412 Precondition Failed</c>, keeping the response body exactly as it was built.
 /// </para>
 /// <para>
-/// <b>Body precedence.</b> An argument that already carries a <c>RowVersion</c> is left alone, and
-/// the header is then NOT the source of the version, so that request keeps its existing
-/// <c>409 Conflict</c> semantics untouched. The two mechanisms therefore coexist: an older client
-/// posting the token in the body sees no change at all, and only a caller who actually used the
-/// HTTP precondition gets the HTTP precondition status back.
+/// <b>The header is required.</b> A guarded mutation without a usable token would be a
+/// last-write-wins write, so a request that states no precondition is refused with
+/// <c>428 Precondition Required</c> and the action never runs. A malformed tag is a
+/// <c>400 Bad Request</c>: the server cannot tell what the caller meant. <c>*</c> counts as no
+/// precondition, because it names no particular version.
 /// </para>
 /// <para>
 /// <b>Why 412 and not 409.</b> RFC 9110 reserves 412 for a precondition the client stated in a
 /// conditional request header, which is precisely what <c>If-Match</c> is; 409 stays the answer for a
-/// conflict the client did not condition on. Rewriting on the header-sourced path only is what keeps
-/// both meanings intact. Note that the rewrite keys on the conflict OUTCOME (a 409 result, or the EF
-/// Core concurrency exception), because this framework surfaces a stale row version through the
-/// generic <c>Conflict</c> channel rather than a dedicated error code; a caller who sends
-/// <c>If-Match</c> on an endpoint whose 409 means something else (a duplicate key, say) will see that
-/// conflict reported as 412, with the original problem details, including the error codes, intact.
+/// conflict the client did not condition on. Note that the rewrite keys on the conflict OUTCOME (a
+/// 409 result, or the EF Core concurrency exception), because this framework surfaces a stale row
+/// version through the generic <c>Conflict</c> channel rather than a dedicated error code; an
+/// endpoint whose 409 means something else (a duplicate key, say) reports that conflict as 412, with
+/// the original problem details, including the error codes, intact.
 /// </para>
 /// <para>
 /// <b>Attribute IS the filter.</b> Unlike <see cref="Idempotency.IdempotentAttribute"/> this needs no
@@ -47,18 +44,31 @@ namespace MMCA.Common.API.Concurrency;
 public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
 {
     /// <summary>
-    /// <see cref="HttpContext.Items"/> key set to <see langword="true"/> when the concurrency token
-    /// in play came from the <c>If-Match</c> header rather than the request body. Exposed so an
-    /// action (or a downstream filter) can tell the two sources apart.
+    /// <see cref="HttpContext.Items"/> key holding the decoded <c>If-Match</c> token (a
+    /// <see cref="byte"/> array) for the action about to run. The token travels here rather than in
+    /// the request model, so a request body never carries a concurrency token and no model has to
+    /// loosen its immutability to receive one.
     /// </summary>
-    public const string HeaderSourcedItemKey = "MMCA.Common.API.Concurrency.IfMatchApplied";
+    public const string TokenItemKey = "MMCA.Common.API.Concurrency.IfMatchToken";
 
     /// <summary>
-    /// The <c>RowVersion</c> setter per concrete argument type. Records declare the property
-    /// <c>init</c>-only, which the immutability fitness rules require and which reflection can still
-    /// invoke, so no request model has to loosen its contract to support conditional writes.
+    /// Reads the token the filter decoded for the current request.
     /// </summary>
-    private static readonly ConcurrentDictionary<Type, PropertyInfo?> RowVersionSetters = new();
+    /// <param name="httpContext">The request whose <c>If-Match</c> token is wanted.</param>
+    /// <returns>The decoded token.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The action was reached without this filter, so no token was decoded. That is a wiring
+    /// mistake, not a client error: every conditional action carries <c>[SupportsIfMatch]</c>.
+    /// </exception>
+    public static byte[] RequiredToken(HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        return httpContext.Items.TryGetValue(TokenItemKey, out var value) && value is byte[] rowVersion
+            ? rowVersion
+            : throw new InvalidOperationException(
+                $"No If-Match token was decoded for this request. Apply [{nameof(SupportsIfMatchAttribute)}] to the action that reads it.");
+    }
 
     /// <inheritdoc />
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -66,113 +76,50 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
 
-        var headerSourced = TryApplyIfMatch(context);
-        if (headerSourced is null)
+        if (!TryApplyIfMatch(context))
         {
-            // Malformed header: the 400 is already on the context and the action must not run.
+            // The 428 or the 400 is already on the context and the action must not run.
             return;
         }
 
         var executed = await next().ConfigureAwait(false);
 
-        if (headerSourced == true)
-        {
-            RewriteConflictToPreconditionFailed(executed);
-        }
+        RewriteConflictToPreconditionFailed(executed);
     }
 
     /// <summary>
-    /// Decodes the <c>If-Match</c> header and populates the bound arguments that want a concurrency
-    /// token.
+    /// Decodes the <c>If-Match</c> header into <see cref="HttpContext.Items"/>.
     /// </summary>
     /// <param name="context">The executing action context.</param>
     /// <returns>
-    /// <see langword="true"/> when at least one argument took its token from the header,
-    /// <see langword="false"/> when the header was absent, a wildcard, or superseded by a token the
-    /// body already carried, and <see langword="null"/> when the header was malformed and the request
-    /// has been short-circuited with 400.
+    /// <see langword="true"/> when a token was decoded and the action may run; <see langword="false"/>
+    /// when the request has been short-circuited with 428 (no precondition stated) or 400 (a
+    /// precondition the server cannot read).
     /// </returns>
-    private static bool? TryApplyIfMatch(ActionExecutingContext context)
+    private static bool TryApplyIfMatch(ActionExecutingContext context)
     {
-        if (!context.HttpContext.Request.Headers.TryGetValue(ConcurrencyETag.IfMatchHeaderName, out var headerValues))
-        {
-            return false;
-        }
-
+        context.HttpContext.Request.Headers.TryGetValue(ConcurrencyETag.IfMatchHeaderName, out var headerValues);
         var headerValue = headerValues.ToString();
-        if (string.IsNullOrWhiteSpace(headerValue))
-        {
-            return false;
-        }
 
-        // "*" means "any current version", which is the same precondition as sending no token at all.
-        if (string.Equals(headerValue.Trim(), ConcurrencyETag.Wildcard, StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(headerValue)
+            || string.Equals(headerValue.Trim(), ConcurrencyETag.Wildcard, StringComparison.Ordinal))
         {
+            context.Result = PreconditionRequiredResult();
             return false;
         }
 
         if (!ConcurrencyETag.TryParse(headerValue, out var rowVersion))
         {
             context.Result = MalformedIfMatchResult();
-            return null;
+            return false;
         }
 
-        var targets = context.ActionArguments.Values
-            .OfType<IConcurrencyAware>()
-            .Where(CanTakeRowVersion)
-            .ToList();
-
-        foreach (var target in targets)
-        {
-            RowVersionSetter(target)?.SetValue(target, rowVersion);
-        }
-
-        if (targets.Count > 0)
-        {
-            context.HttpContext.Items[HeaderSourcedItemKey] = true;
-        }
-
-        return targets.Count > 0;
+        context.HttpContext.Items[TokenItemKey] = rowVersion;
+        return true;
     }
 
     /// <summary>
-    /// Whether one bound argument should take its token from the header: it is concurrency-aware,
-    /// carries no token of its own, and has a settable <c>RowVersion</c>.
-    /// </summary>
-    /// <param name="argument">The bound action argument.</param>
-    /// <returns><see langword="true"/> when the argument will be populated.</returns>
-    /// <remarks>
-    /// Value types are skipped: the argument reaching this filter is a boxed copy, so writing to it
-    /// would update a box the action never sees. Every request model in this framework is a record
-    /// class, so the exclusion costs nothing and avoids a silently ineffective write. A null OR empty
-    /// <c>RowVersion</c> counts as "no token supplied", matching what the repository treats as
-    /// "skip the conflict check".
-    /// </remarks>
-    private static bool CanTakeRowVersion(IConcurrencyAware argument) =>
-        !argument.GetType().IsValueType
-        && argument.RowVersion is not { Length: > 0 }
-        && RowVersionSetter(argument) is not null;
-
-    /// <summary>The cached <c>RowVersion</c> setter for one argument's concrete type.</summary>
-    /// <param name="argument">The bound action argument.</param>
-    /// <returns>The property, or null when the type has no settable <c>RowVersion</c>.</returns>
-    private static PropertyInfo? RowVersionSetter(IConcurrencyAware argument) =>
-        RowVersionSetters.GetOrAdd(argument.GetType(), ResolveRowVersionSetter);
-
-    /// <summary>Finds the writable <c>RowVersion</c> property on a concrete request type.</summary>
-    /// <param name="type">The runtime type of the bound argument.</param>
-    /// <returns>The property, or null when it is not settable even by reflection.</returns>
-    private static PropertyInfo? ResolveRowVersionSetter(Type type)
-    {
-        var property = type.GetProperty(
-            nameof(IConcurrencyAware.RowVersion),
-            BindingFlags.Public | BindingFlags.Instance);
-
-        return property?.SetMethod is not null ? property : null;
-    }
-
-    /// <summary>
-    /// Rewrites a conflict outcome to 412 for a request whose token came from <c>If-Match</c>.
+    /// Rewrites a conflict outcome to 412: every request reaching the action stated a precondition.
     /// </summary>
     /// <param name="executed">The executed action context.</param>
     private static void RewriteConflictToPreconditionFailed(ActionExecutedContext executed)
@@ -205,6 +152,18 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
                 break;
         }
     }
+
+    /// <summary>The response for a conditional write that stated no precondition at all.</summary>
+    private static ObjectResult PreconditionRequiredResult() =>
+        new(new ProblemDetails
+        {
+            Status = StatusCodes.Status428PreconditionRequired,
+            Title = "If-Match header required",
+            Detail = "This write is conditional. Send the entity tag from your last read in the If-Match header, for example W/\"AAAAAAAAB9E=\".",
+        })
+        {
+            StatusCode = StatusCodes.Status428PreconditionRequired,
+        };
 
     /// <summary>The response for an <c>If-Match</c> value that is not a decodable entity tag.</summary>
     private static ObjectResult MalformedIfMatchResult() =>

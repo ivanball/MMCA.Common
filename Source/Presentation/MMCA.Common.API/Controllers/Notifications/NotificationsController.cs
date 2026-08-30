@@ -1,7 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using Asp.Versioning;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.FeatureManagement.Mvc;
@@ -19,14 +18,15 @@ using MMCA.Common.Shared.Notifications.PushNotifications;
 namespace MMCA.Common.API.Controllers.Notifications;
 
 /// <summary>
-/// REST controller for push notification operations.
-/// Only organizers can send notifications and view notification history.
+/// REST controller for push notification operations. Sending notifications and reading the send
+/// history both require the <see cref="NotificationPermissions.Manage"/> capability, which a host
+/// grants to whichever roles it wants to hold it.
 /// </summary>
 [ApiController]
 [Route("[controller]")]
 [ApiVersion("1.0")]
 [FeatureGate(NotificationFeatures.PushNotifications)]
-[Authorize(Policy = AuthorizationPolicies.RequireOrganizer)]
+[HasPermission(NotificationPermissions.Manage)]
 public sealed class NotificationsController(
     ICommandHandler<SendPushNotificationCommand, Result<PushNotificationDTO>> sendHandler,
     IQueryHandler<GetNotificationHistoryQuery, Result<PagedCollectionResult<PushNotificationDTO>>> historyHandler,

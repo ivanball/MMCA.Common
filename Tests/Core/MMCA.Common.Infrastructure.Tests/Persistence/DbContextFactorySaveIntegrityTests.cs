@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.DomainEvents;
@@ -13,6 +14,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -58,7 +60,9 @@ public sealed class DbContextFactorySaveIntegrityTests : IDisposable
             physicalFactory.Object,
             registry.Object,
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
     }
 
     public void Dispose()

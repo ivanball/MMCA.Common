@@ -14,12 +14,19 @@ public sealed class ModelValidationTests
 {
     private const string TooLong = "0123456789";
 
+    /// <summary>
+    /// A validator over a localizer that knows no keys, so every attribute message falls through
+    /// unchanged. This is what a page with plain-English <c>ErrorMessage</c> values renders.
+    /// </summary>
+    private static readonly DataAnnotationsModelValidator PassThroughValidator =
+        new(new StubLocalizer(new Dictionary<string, string>(StringComparer.Ordinal)));
+
     [Fact]
     public void For_ReturnsNoErrors_WhenThePropertyIsValid()
     {
         var model = new SampleModel { Name = "Ada" };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(model, nameof(SampleModel.Name)).Should().BeEmpty();
     }
@@ -29,7 +36,7 @@ public sealed class ModelValidationTests
     {
         var model = new SampleModel { Name = string.Empty };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(model, nameof(SampleModel.Name)).Should().ContainSingle()
             .Which.Should().Be("Name is required");
@@ -40,7 +47,7 @@ public sealed class ModelValidationTests
     {
         var model = new SampleModel { Name = TooLong };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(model, nameof(SampleModel.Name)).Should().ContainSingle()
             .Which.Should().Be("Name is too long");
@@ -52,7 +59,7 @@ public sealed class ModelValidationTests
         // Every field on a form shares one delegate; the path MudBlazor passes selects the rules.
         var model = new SampleModel { Name = string.Empty, Email = "not-an-email" };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(model, nameof(SampleModel.Email)).Should().ContainSingle()
             .Which.Should().Be("Email is invalid");
@@ -63,7 +70,7 @@ public sealed class ModelValidationTests
     {
         var model = new SampleModel { Name = "Ada", Age = 36, Child = new ChildModel { City = string.Empty } };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(model, "Child.City").Should().ContainSingle()
             .Which.Should().Be("City is required");
@@ -76,7 +83,7 @@ public sealed class ModelValidationTests
         // partially-built model must not throw mid-keystroke.
         var model = new SampleModel { Name = "Ada" };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(model, "Child.City").Should().BeEmpty();
         validate(model, "NoSuchProperty").Should().BeEmpty();
@@ -87,7 +94,7 @@ public sealed class ModelValidationTests
     {
         var model = new SampleModel { Name = string.Empty };
 
-        var validate = ModelValidation.For(model);
+        var validate = ModelValidation.For(model, PassThroughValidator);
 
         validate(null!, nameof(SampleModel.Name)).Should().ContainSingle();
     }
@@ -139,7 +146,7 @@ public sealed class ModelValidationTests
         // hands it, without depending on whether @bind-Value has written it back yet.
         var model = new SampleModel { Name = "Ada" };
 
-        var validate = ModelValidation.ForProperty(model, m => m.Name);
+        var validate = ModelValidation.ForProperty(model, m => m.Name, PassThroughValidator);
 
         validate(TooLong).Should().ContainSingle().Which.Should().Be("Name is too long");
         validate("Grace").Should().BeEmpty();

@@ -7,11 +7,8 @@ namespace MMCA.Common.API.Idempotency;
 /// <param name="StatusCode">The HTTP status code of the original response.</param>
 /// <param name="ResponseBody">The JSON-serialized response body.</param>
 /// <param name="RequestBodyHash">
-/// Lowercase hex SHA-256 of the request body that produced the stored response, used to reject a
-/// key that is replayed with a different payload. <see langword="null"/> means the record is a
-/// legacy entry written before this field existed, in which case the comparison is skipped and the
-/// response replays as it always did. The default keeps the field optional so two-property JSON
-/// already in the cache still deserializes, which is what makes the rollout safe: entries written
-/// by the previous version simply age out of the live 24-hour retention window.
+/// Lowercase hex SHA-256 of the request body that produced the stored response. Every record
+/// carries one, so a key replayed with a different payload is always rejected rather than served
+/// someone else's response. A body-less request hashes the empty payload.
 /// </param>
-public sealed record IdempotencyRecord(int StatusCode, string ResponseBody, string? RequestBodyHash = null);
+public sealed record IdempotencyRecord(int StatusCode, string ResponseBody, string RequestBodyHash);

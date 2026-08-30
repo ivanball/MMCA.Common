@@ -1,16 +1,16 @@
-using System.Dynamic;
+﻿using System.Dynamic;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Controllers;
@@ -158,7 +158,7 @@ public sealed record VersionedDTO : IBaseDTO<int>, IConcurrencyAware
     public required int Id { get; init; }
 
     /// <inheritdoc />
-    public byte[]? RowVersion { get; init; }
+    public byte[] RowVersion { get; init; } = [];
 }
 
 /// <summary>An entity whose DTO carries no token at all.</summary>

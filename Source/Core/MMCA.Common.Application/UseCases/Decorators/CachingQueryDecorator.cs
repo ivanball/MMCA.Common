@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Settings;
@@ -46,22 +45,6 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     ITenantContext? tenantContext = null,
     IOptions<QueryCachePipelineSettings>? pipelineSettings = null) : IQueryHandler<TQuery, TResult>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CachingQueryDecorator{TQuery, TResult}"/> class
-    /// without a logger, discarding the cache-populate warnings.
-    /// <para>
-    /// Exists for source compatibility with consumers that construct the decorator directly (tests
-    /// pinned to a released package version). DI never selects it: container resolution prefers the
-    /// logger-bearing constructor, so production keeps logging.
-    /// </para>
-    /// </summary>
-    /// <param name="inner">The wrapped query handler.</param>
-    /// <param name="cacheService">The cache backing the query results.</param>
-    public CachingQueryDecorator(IQueryHandler<TQuery, TResult> inner, ICacheService cacheService)
-        : this(inner, cacheService, NullLogger<CachingQueryDecorator<TQuery, TResult>>.Instance)
-    {
-    }
-
     /// <summary>
     /// The cache key for this query in the current tenant: the query's own key, prefixed with the
     /// tenant when one is resolved. Two tenants therefore never share an entry, and a host that

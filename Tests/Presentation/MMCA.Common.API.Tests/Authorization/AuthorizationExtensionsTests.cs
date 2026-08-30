@@ -1,8 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.Shared.Auth;
 
@@ -32,77 +30,33 @@ public sealed class AuthorizationExtensionsTests
         result.Should().BeSameAs(services);
     }
 
-    // ── RequireOrganizer policy ──
+    // ── Permissions are the one authorization model ──
     [Fact]
-    public void AddAuthorizationPolicies_RegistersRequireOrganizerPolicy()
+    public void AddAuthorizationPolicies_RegistersThePermissionMechanism()
     {
-        AuthorizationPolicy policy = ResolvePolicy(AuthorizationPolicies.RequireOrganizer);
+        var services = new ServiceCollection();
 
-        policy.Should().NotBeNull();
-        policy.Requirements.Should().ContainSingle()
-            .Which.Should().BeOfType<RolesAuthorizationRequirement>()
-            .Which.AllowedRoles.Should().ContainSingle()
-            .Which.Should().Be(RoleNames.Organizer);
+        services.AddAuthorizationPolicies();
+
+        services.Any(s => s.ImplementationType == typeof(PermissionAuthorizationHandler))
+            .Should().BeTrue("the handler evaluates a permission policy against the registry");
+        services.Any(s => s.ServiceType == typeof(IAuthorizationPolicyProvider)
+                && s.ImplementationType == typeof(PermissionPolicyProvider))
+            .Should().BeTrue("permission policies are materialized on demand rather than pre-registered");
+        services.Any(s => s.ServiceType == typeof(IPermissionRegistry))
+            .Should().BeTrue("a host that declares no grant still resolves a registry");
     }
 
-    // ── RequireAttendee policy ──
     [Fact]
-    public void AddAuthorizationPolicies_RegistersRequireAttendeePolicy()
-    {
-        AuthorizationPolicy policy = ResolvePolicy(AuthorizationPolicies.RequireAttendee);
-
-        policy.Should().NotBeNull();
-        policy.Requirements.Should().ContainSingle()
-            .Which.Should().BeOfType<RolesAuthorizationRequirement>()
-            .Which.AllowedRoles.Should().ContainSingle()
-            .Which.Should().Be(RoleNames.Attendee);
-    }
-
-    // ── RequireAdmin policy ──
-    [Fact]
-    public void AddAuthorizationPolicies_RegistersRequireAdminPolicy()
-    {
-        AuthorizationPolicy policy = ResolvePolicy(AuthorizationPolicies.RequireAdmin);
-
-        policy.Should().NotBeNull();
-        policy.Requirements.Should().ContainSingle()
-            .Which.Should().BeOfType<RolesAuthorizationRequirement>()
-            .Which.AllowedRoles.Should().ContainSingle()
-            .Which.Should().Be(RoleNames.Admin);
-    }
-
-    // ── RequireAuthenticated policy ──
-    [Fact]
-    public void AddAuthorizationPolicies_RegistersRequireAuthenticatedPolicy()
-    {
-        AuthorizationPolicy policy = ResolvePolicy(AuthorizationPolicies.RequireAuthenticated);
-
-        policy.Should().NotBeNull();
-        policy.Requirements.Should().ContainSingle()
-            .Which.Should().BeOfType<DenyAnonymousAuthorizationRequirement>();
-    }
-
-    // ── All four policies present ──
-    [Fact]
-    public void AddAuthorizationPolicies_RegistersExactlyFourPolicies()
+    public void AddAuthorizationPolicies_RegistersNoNamedPolicies()
     {
         var services = new ServiceCollection();
         services.AddAuthorizationPolicies();
         ServiceProvider provider = services.BuildServiceProvider();
-        var options = provider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
+        var policyProvider = provider.GetRequiredService<IAuthorizationPolicyProvider>();
 
-        string[] expectedPolicies =
-        [
-            AuthorizationPolicies.RequireOrganizer,
-            AuthorizationPolicies.RequireAttendee,
-            AuthorizationPolicies.RequireAdmin,
-            AuthorizationPolicies.RequireAuthenticated,
-        ];
-
-        foreach (string policyName in expectedPolicies)
-        {
-            options.GetPolicy(policyName).Should().NotBeNull($"policy '{policyName}' should be registered");
-        }
+        policyProvider.Should().BeOfType<PermissionPolicyProvider>(
+            "an endpoint states the capability it needs; no role policy is pre-registered for it");
     }
 
     // ── Idempotent: calling twice does not throw ──
@@ -118,14 +72,5 @@ public sealed class AuthorizationExtensionsTests
         };
 
         act.Should().NotThrow();
-    }
-
-    private static AuthorizationPolicy ResolvePolicy(string policyName)
-    {
-        var services = new ServiceCollection();
-        services.AddAuthorizationPolicies();
-        ServiceProvider provider = services.BuildServiceProvider();
-        var options = provider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
-        return options.GetPolicy(policyName)!;
     }
 }

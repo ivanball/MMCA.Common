@@ -240,8 +240,7 @@ public sealed class OutboxProcessorTests : IDisposable
     public async Task UnresolvableType_FirstAttempt_RetriesInsteadOfDeadLettering()
     {
         // A name that does not resolve right now is not proof it never will: the assembly declaring
-        // it may load a moment later, and an operator may still be adding an Outbox:TypeAliases
-        // entry. The first attempt therefore goes through the normal retry path.
+        // it may load a moment later. The first attempt therefore goes through the normal retry path.
         OutboxMessage message = CreateEligibleMessage(eventType: "NonExistent.Type, FakeAssembly");
         _dbContext.Set<OutboxMessage>().Add(message);
         await _dbContext.SaveChangesAsync();
@@ -272,64 +271,6 @@ public sealed class OutboxProcessorTests : IDisposable
         OutboxMessage deadLettered = await _dbContext.Set<OutboxMessage>().SingleAsync();
         deadLettered.ProcessedOn.Should().NotBeNull("dead-lettered messages are marked as processed");
         deadLettered.LastError.Should().Contain("Cannot resolve type");
-    }
-
-    [Fact]
-    public async Task TypeAliases_ResolveARenamedEventType_AndDispatchIt()
-    {
-        // The event class moved after the row was written: its stored name no longer resolves, and
-        // without the alias map the row would spend its retries and dead-letter, losing an event
-        // whose only problem is a rename.
-        const string retiredName = "MMCA.Common.Tests.Retired.MovedEvent, RetiredAssembly";
-        OutboxMessage message = CreateEligibleMessage(eventType: retiredName);
-        _dbContext.Set<OutboxMessage>().Add(message);
-        await _dbContext.SaveChangesAsync();
-
-        OutboxProcessor sut = CreateProcessor(new OutboxSettings
-        {
-            TypeAliases = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [retiredName] = typeof(TestDomainEvent).AssemblyQualifiedName!,
-            },
-        });
-
-        await sut.ProcessPendingMessagesAsync(CancellationToken.None);
-
-        OutboxMessage dispatched = await _dbContext.Set<OutboxMessage>().SingleAsync();
-        dispatched.ProcessedOn.Should().NotBeNull("the alias resolved the type, so the event was delivered normally");
-        dispatched.LastError.Should().BeNull();
-        _dispatcherMock.Verify(
-            d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task TypeAliases_KeyedByTypeFullNameWithoutAssembly_AlsoResolve()
-    {
-        // Operators write configuration keys as type names, not assembly-qualified names. Accepting
-        // the short form is what makes the setting usable without copying a version and token out of
-        // a database row.
-        var storedName = typeof(TestDomainEvent).AssemblyQualifiedName!.Replace(
-            nameof(TestDomainEvent),
-            "GoneEvent",
-            StringComparison.Ordinal);
-        var shortName = storedName[..storedName.IndexOf(',', StringComparison.Ordinal)];
-
-        OutboxMessage message = CreateEligibleMessage(eventType: storedName);
-        _dbContext.Set<OutboxMessage>().Add(message);
-        await _dbContext.SaveChangesAsync();
-
-        OutboxProcessor sut = CreateProcessor(new OutboxSettings
-        {
-            TypeAliases = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [shortName] = typeof(TestDomainEvent).AssemblyQualifiedName!,
-            },
-        });
-
-        await sut.ProcessPendingMessagesAsync(CancellationToken.None);
-
-        (await _dbContext.Set<OutboxMessage>().SingleAsync()).ProcessedOn.Should().NotBeNull();
     }
 
     [Fact]

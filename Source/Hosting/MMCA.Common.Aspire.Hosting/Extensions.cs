@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
@@ -236,17 +236,16 @@ public static class Extensions
     {
         /// <summary>
         /// Wires a service project to its own SQL Server database ("database per microservice", ADR-006).
-        /// References the given database and injects its connection string twice:
-        /// <list type="bullet">
-        ///   <item><c>DataSources__{logicalName}__SQLServerConnectionString</c> — feeds the
-        ///   MMCA.Common multi-database routing (entities whose logical source matches
-        ///   <paramref name="logicalName"/> resolve to this database).</item>
-        ///   <item><c>ConnectionStrings__SQLServerConnectionString</c> — keeps the framework's
-        ///   <c>[Required]</c> validation and the <c>AddSqlServer</c> health checks working, and makes
-        ///   the service's <c>Default</c> source point at its own database. Because both values are
-        ///   identical, the resolver collapses the logical name onto Default — one context, one
-        ///   change tracker, one migration set per service.</item>
-        /// </list>
+        /// References the given database and injects its connection string as
+        /// <c>DataSources__{logicalName}__SQLServerConnectionString</c>, which feeds the MMCA.Common
+        /// multi-database routing (entities whose logical source matches <paramref name="logicalName"/>
+        /// resolve to this database).
+        /// <para>
+        /// That one entry is the whole configuration: with no top-level connection string, the single
+        /// database a host declares this way also becomes its <c>Default</c> source, so the framework's
+        /// own tables and the readiness health check both land on it, and the logical name collapses
+        /// onto Default: one context, one change tracker, one migration set per service.
+        /// </para>
         /// </summary>
         /// <param name="database">The service's own database resource.</param>
         /// <param name="logicalName">The module's logical data source name (e.g. <c>"Catalog"</c>).</param>
@@ -261,8 +260,7 @@ public static class Extensions
             return service
                 .WithReference(database)
                 .WaitFor(database)
-                .WithEnvironment($"DataSources__{logicalName}__SQLServerConnectionString", database.Resource.ConnectionStringExpression)
-                .WithEnvironment("ConnectionStrings__SQLServerConnectionString", database.Resource.ConnectionStringExpression);
+                .WithEnvironment($"DataSources__{logicalName}__SQLServerConnectionString", database.Resource.ConnectionStringExpression);
         }
 
         /// <summary>
@@ -274,8 +272,6 @@ public static class Extensions
         ///   string the multi-database resolver hands to <c>CosmosDbContext.UseCosmos(...)</c>.</item>
         ///   <item><c>DataSources__{logicalName}__CosmosDatabaseName</c> — the Cosmos database name
         ///   (<c>UseCosmos</c> takes the database separately from the connection string).</item>
-        ///   <item><c>ConnectionStrings__CosmosConnectionString</c> — the framework's <c>[Required]</c>
-        ///   validation / <c>Default</c> Cosmos source fallback.</item>
         /// </list>
         /// Unlike SQL Server, a service typically uses Cosmos for ONE module alongside its SQL Server
         /// source, so this is layered on top of (not instead of) <see cref="WithSQLServerDataSource"/>.
@@ -294,21 +290,16 @@ public static class Extensions
                 .WithReference(database)
                 .WaitFor(database)
                 .WithEnvironment($"DataSources__{logicalName}__CosmosConnectionString", database.Resource.ConnectionStringExpression)
-                .WithEnvironment($"DataSources__{logicalName}__CosmosDatabaseName", database.Resource.DatabaseName)
-                .WithEnvironment("ConnectionStrings__CosmosConnectionString", database.Resource.ConnectionStringExpression);
+                .WithEnvironment($"DataSources__{logicalName}__CosmosDatabaseName", database.Resource.DatabaseName);
         }
 
         /// <summary>
         /// Wires a service project to a SQLite database file for a given logical data source (polyglot
         /// persistence — entities whose configuration inherits <c>EntityTypeConfigurationSqlite</c> and
         /// resolve to <paramref name="logicalName"/> are stored here). SQLite has no Aspire container
-        /// resource (it is an in-process file), so this only injects connection-string env vars:
-        /// <list type="bullet">
-        ///   <item><c>DataSources__{logicalName}__SqliteConnectionString</c> — <c>Data Source=&lt;path&gt;</c>
-        ///   handed to <c>SqliteDbContext.UseSqlite(...)</c>.</item>
-        ///   <item><c>ConnectionStrings__SqliteConnectionString</c> — the framework's <c>Default</c>
-        ///   SQLite source fallback.</item>
-        /// </list>
+        /// resource (it is an in-process file), so this only injects the connection-string env var
+        /// <c>DataSources__{logicalName}__SqliteConnectionString</c> (<c>Data Source=&lt;path&gt;</c>),
+        /// which is handed to <c>SqliteDbContext.UseSqlite(...)</c>.
         /// </summary>
         /// <param name="logicalName">The module's logical data source name (e.g. <c>"Conference"</c>).</param>
         /// <param name="filePath">The absolute path to the SQLite database file.</param>
@@ -323,8 +314,7 @@ public static class Extensions
             var connectionString = $"Data Source={filePath}";
 
             return service
-                .WithEnvironment($"DataSources__{logicalName}__SqliteConnectionString", connectionString)
-                .WithEnvironment("ConnectionStrings__SqliteConnectionString", connectionString);
+                .WithEnvironment($"DataSources__{logicalName}__SqliteConnectionString", connectionString);
         }
     }
 }

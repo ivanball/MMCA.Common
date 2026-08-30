@@ -527,9 +527,10 @@ public static class WebApplicationBuilderExtensions
         /// symmetric (HMAC-SHA256) and asymmetric (RSA-SHA256) signing modes selected via
         /// <see cref="JwtSettings.SigningAlgorithm"/>.
         /// <para>
-        /// In monolith mode (the default <see cref="JwtSigningAlgorithm.HS256"/>), the
-        /// validator uses the same Base64 HMAC secret as the issuer. In RS256 mode, the
-        /// validator loads the RSA public key from <see cref="JwtSettings.RsaPublicKeyPem"/>.
+        /// In the default <see cref="JwtSigningAlgorithm.RS256"/> mode, the validator loads the
+        /// RSA public key from <see cref="JwtSettings.RsaPublicKeyPem"/>. In
+        /// <see cref="JwtSigningAlgorithm.HS256"/> mode, a single-process monolith's validator uses
+        /// the same Base64 HMAC secret as the issuer.
         /// For extracted services that should fetch the public key from the Identity
         /// service's JWKS endpoint at runtime, use <c>AddForwardedJwtBearer</c> instead.
         /// </para>
@@ -619,8 +620,8 @@ public static class WebApplicationBuilderExtensions
 
     /// <summary>
     /// Builds the <see cref="TokenValidationParameters"/> for the configured signing
-    /// algorithm. RS256 deployments load the public key from <see cref="JwtSettings.RsaPublicKeyPem"/>;
-    /// HS256 (default) uses the Base64 HMAC secret. The validator pins
+    /// algorithm. RS256 deployments (the default) load the public key from
+    /// <see cref="JwtSettings.RsaPublicKeyPem"/>; HS256 uses the Base64 HMAC secret. The validator pins
     /// <see cref="TokenValidationParameters.ValidAlgorithms"/> so an attacker cannot swap
     /// algorithms (e.g., signing an HS256 token with the RSA public key as the HMAC secret).
     /// </summary>

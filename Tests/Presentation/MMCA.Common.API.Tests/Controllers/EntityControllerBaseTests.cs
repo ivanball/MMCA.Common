@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Settings;
@@ -25,9 +26,7 @@ public sealed class EntityControllerBaseTests
         var services = new ServiceCollection();
         if (maxPageSize.HasValue)
         {
-            var settingsMock = new Mock<IApplicationSettings>();
-            settingsMock.Setup(s => s.MaxPageSize).Returns(maxPageSize.Value);
-            services.AddSingleton(settingsMock.Object);
+            services.AddSingleton(Options.Create(new ApplicationSettings { MaxPageSize = maxPageSize.Value }));
         }
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();

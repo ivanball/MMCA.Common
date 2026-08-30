@@ -149,21 +149,6 @@ public sealed class DependencyInjectionInfrastructureTests
     }
 
     [Fact]
-    public void AddInfrastructure_RegistersJwtSettings()
-    {
-        var services = new ServiceCollection();
-        IConfiguration config = CreateMinimalConfiguration();
-
-        services.AddInfrastructure(config);
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IJwtSettings));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-    }
-
-    [Fact]
     public void AddInfrastructure_RegistersGenericRepositoryInterface()
     {
         var services = new ServiceCollection();
@@ -231,36 +216,6 @@ public sealed class DependencyInjectionInfrastructureTests
         var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<Infrastructure.Persistence.EntityConfigurationOptions>>().Value;
 
         options.AdditionalAssemblies.Count(a => a == assembly).Should().Be(1);
-    }
-
-    [Fact]
-    public void AddInfrastructure_RegistersISmtpSettings()
-    {
-        var services = new ServiceCollection();
-        IConfiguration config = CreateMinimalConfiguration();
-
-        services.AddInfrastructure(config);
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(ISmtpSettings));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-    }
-
-    [Fact]
-    public void AddInfrastructure_RegistersIConnectionStringSettings()
-    {
-        var services = new ServiceCollection();
-        IConfiguration config = CreateMinimalConfiguration();
-
-        services.AddInfrastructure(config);
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IConnectionStringSettings));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.DomainEvents;
@@ -15,6 +16,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
@@ -51,7 +53,9 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
             physicalFactory.Object,
             registry.Object,
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
     }
 
     public void Dispose()
@@ -73,7 +77,7 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
             async ct =>
             {
                 attempts++;
-                var context = _sut.GetDbContext(DataSource.SQLServer);
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
                 context.Set<TestAggregate>().Add(CreateAggregateWithEvent());
                 await _sut.SaveChangesAsync(ct);
                 return Result.Success();
@@ -105,7 +109,7 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         var act = async () => await _sut.ExecuteInTransactionAsync<Result>(
             async ct =>
             {
-                var context = _sut.GetDbContext(DataSource.SQLServer);
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
                 context.Set<TestAggregate>().Add(CreateAggregateWithEvent());
                 await _sut.SaveChangesAsync(ct);
                 return Result.Success();
@@ -127,7 +131,7 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         var result = await _sut.ExecuteInTransactionAsync<Result>(
             async ct =>
             {
-                var context = _sut.GetDbContext(DataSource.SQLServer);
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
                 context.Set<TestAggregate>().Add(CreateAggregateWithEvent());
                 await _sut.SaveChangesAsync(ct);
                 return Result.Success();
@@ -192,7 +196,9 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
             physicalFactory.Object,
             registry.Object,
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
 
         var act = async () => await sut.ExecuteInTransactionAsync<Result>(
             async ct =>

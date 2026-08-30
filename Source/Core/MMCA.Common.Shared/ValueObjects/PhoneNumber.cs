@@ -36,10 +36,6 @@ public sealed record PhoneNumber : ValueObject
         return Result.Success(new PhoneNumber(value.Trim()));
     }
 
-    /// <summary>Implicit conversion to <see cref="string"/> for backward compatibility.</summary>
-    /// <param name="phoneNumber">The phone number value object.</param>
-    public static implicit operator string(PhoneNumber phoneNumber) => phoneNumber.Value;
-
     /// <inheritdoc />
     public override string ToString() => Value;
 }

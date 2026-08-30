@@ -157,6 +157,12 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The update is conditional (ADR-035): the DTO's concurrency token is sent as the
+    /// <c>If-Match</c> header, which is the only route the token travels. A DTO that carries no token
+    /// sends no header, and the server refuses the write with <c>428 Precondition Required</c> rather
+    /// than overwriting another editor's change.
+    /// </remarks>
     public virtual async Task<Result> UpdateAsync(
         TEntityDTO entity,
         CancellationToken cancellationToken = default)
@@ -164,9 +170,21 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
         var url = $"{Endpoint}/{GetEntityId(entity)}";
         return await SendRequestAsync(
             httpClient => httpClient.PutAsJsonAsync(new Uri(url, UriKind.Relative), entity, cancellationToken),
-            cancellationToken
+            cancellationToken,
+            ifMatch: ConcurrencyTagOf(entity)
         );
     }
+
+    /// <summary>
+    /// The <c>If-Match</c> value for a DTO: its concurrency token rendered as a weak entity tag, or
+    /// null when this DTO type carries no token.
+    /// </summary>
+    /// <param name="entity">The DTO about to be written back.</param>
+    /// <returns>The entity tag, or <see langword="null"/>.</returns>
+    protected static string? ConcurrencyTagOf(TEntityDTO entity) =>
+        entity is IConcurrencyAware { RowVersion: { Length: > 0 } rowVersion }
+            ? ConcurrencyETag.Format(rowVersion)
+            : null;
 
     /// <inheritdoc />
     public virtual async Task<Result> DeleteAsync(
@@ -208,6 +226,11 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// <see cref="AuthenticatedServiceBase.NewIdempotencyKey"/>). Supply one for non-idempotent
     /// writes (creates); leave <see langword="null"/> for reads and naturally idempotent writes.
     /// </param>
+    /// <param name="ifMatch">
+    /// Optional entity tag sent as the <c>If-Match</c> header, stating the version the write is
+    /// conditional on (see <see cref="ConcurrencyETag"/>). Required by every endpoint the framework
+    /// guards with <c>[SupportsIfMatch]</c>.
+    /// </param>
     /// <returns>
     /// The deserialized value, or a failure. A 2xx with no body fails with
     /// <see cref="ProblemDetailsResultReader.EmptyResponseCode"/>: use the non-generic overload for
@@ -216,7 +239,8 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     protected async Task<Result<T>> SendRequestAsync<T>(
         Func<HttpClient, Task<HttpResponseMessage>> httpAction,
         CancellationToken cancellationToken,
-        string? idempotencyKey = null)
+        string? idempotencyKey = null,
+        string? ifMatch = null)
     {
         ArgumentNullException.ThrowIfNull(httpAction);
 
@@ -225,7 +249,7 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             {
                 // The client stays alive across the read: HttpClient buffers the body before the send
                 // task completes, but keeping it in scope means that is a property, not a dependency.
-                using var httpClient = await CreateRequestClientAsync(idempotencyKey);
+                using var httpClient = await CreateRequestClientAsync(idempotencyKey, ifMatch);
                 using var response = await RetryPolicy.ExecuteAsync(_ => httpAction(httpClient), cancellationToken);
                 return await ProblemDetailsResultReader.ReadAsync<T>(response, cancellationToken: cancellationToken);
             },
@@ -240,18 +264,20 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     /// <param name="httpAction">Lambda that performs the actual HTTP call.</param>
     /// <param name="cancellationToken">Cancellation token; caller cancellation still propagates as an exception.</param>
     /// <param name="idempotencyKey">Optional <c>Idempotency-Key</c> header value.</param>
+    /// <param name="ifMatch">Optional <c>If-Match</c> entity tag stating the version the write is conditional on.</param>
     /// <returns>Success for any 2xx, otherwise the errors the response described.</returns>
     protected async Task<Result> SendRequestAsync(
         Func<HttpClient, Task<HttpResponseMessage>> httpAction,
         CancellationToken cancellationToken,
-        string? idempotencyKey = null)
+        string? idempotencyKey = null,
+        string? ifMatch = null)
     {
         ArgumentNullException.ThrowIfNull(httpAction);
 
         return await HttpResultExecutor.ExecuteAsync(
             async () =>
             {
-                using var httpClient = await CreateRequestClientAsync(idempotencyKey);
+                using var httpClient = await CreateRequestClientAsync(idempotencyKey, ifMatch);
                 using var response = await RetryPolicy.ExecuteAsync(_ => httpAction(httpClient), cancellationToken);
                 return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
             },
@@ -259,10 +285,10 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
     }
 
     /// <summary>
-    /// Builds the authenticated client for one logical operation, carrying the idempotency key when
-    /// the operation needs one.
+    /// Builds the authenticated client for one logical operation, carrying the idempotency key and
+    /// the conditional-write precondition when the operation needs them.
     /// </summary>
-    private async Task<HttpClient> CreateRequestClientAsync(string? idempotencyKey)
+    private async Task<HttpClient> CreateRequestClientAsync(string? idempotencyKey, string? ifMatch)
     {
         var httpClient = await CreateAuthenticatedClientAsync();
 
@@ -273,6 +299,14 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             // same value. That is exactly the property the server needs: the same key across
             // attempts means duplicate arrivals dedup instead of creating extra records.
             httpClient.DefaultRequestHeaders.Add(IdempotencyHeaders.IdempotencyKey, idempotencyKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(ifMatch))
+        {
+            // Same reasoning as the idempotency key: every retry states the same precondition, so a
+            // write that lost the race fails the precondition on each attempt instead of succeeding
+            // on a later one against a version the caller never saw.
+            httpClient.DefaultRequestHeaders.Add(ConcurrencyETag.IfMatchHeaderName, ifMatch);
         }
 
         return httpClient;

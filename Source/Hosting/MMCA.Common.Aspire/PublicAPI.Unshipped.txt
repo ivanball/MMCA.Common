@@ -16,5 +16,5 @@ static MMCA.Common.Aspire.Logging.SerilogHostExtensions.AddCommonSerilog(this Mi
 static MMCA.Common.Aspire.Logging.SerilogHostExtensions.CreateBootstrapLoggerFactory() -> Microsoft.Extensions.Logging.ILoggerFactory!
 *REMOVED*MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireSqlServer = false) -> TBuilder
 *REMOVED*static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireSqlServer = false) -> TBuilder
-MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireSqlServer = false, bool requireDatabase = false) -> TBuilder
-static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireSqlServer = false, bool requireDatabase = false) -> TBuilder
+MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireDatabase = false) -> TBuilder
+static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireDatabase = false) -> TBuilder

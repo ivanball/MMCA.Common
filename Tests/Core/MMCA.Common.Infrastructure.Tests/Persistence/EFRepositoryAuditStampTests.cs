@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
@@ -14,6 +15,7 @@ using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
+using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -117,7 +119,9 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
             physicalFactory.Object,
             registry.Object,
             new DefaultDataSourceResolver(),
-            currentUserService);
+            currentUserService,
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
 
         var dataSourceService = new Mock<IDataSourceService>();
         dataSourceService.Setup(s => s.GetDataSourceKey(typeof(StampedEntity))).Returns(SqliteKey);

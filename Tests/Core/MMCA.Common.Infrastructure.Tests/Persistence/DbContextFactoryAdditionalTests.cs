@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -10,6 +11,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -24,7 +26,7 @@ public sealed class DbContextFactoryAdditionalTests
         var sut = CreateSut();
         await sut.DisposeAsync();
 
-        var act = () => sut.GetDbContext(DataSource.SQLServer);
+        var act = () => sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
 
         act.Should().Throw<ObjectDisposedException>();
     }
@@ -143,7 +145,7 @@ public sealed class DbContextFactoryAdditionalTests
 
         await using var factory = CreateSut(physicalFactory);
         sut = factory;
-        factory.GetDbContext(DataSource.Sqlite);
+        factory.GetDbContext(DataSourceKey.Default(DataSource.Sqlite));
 
         var act = async () => await factory.SaveChangesAsync();
 
@@ -172,7 +174,7 @@ public sealed class DbContextFactoryAdditionalTests
 
         await using var factory = CreateSut(physicalFactory);
         sut = factory;
-        factory.GetDbContext(DataSource.Sqlite);
+        factory.GetDbContext(DataSourceKey.Default(DataSource.Sqlite));
 
         await factory.SaveChangesAsync();
 
@@ -189,7 +191,9 @@ public sealed class DbContextFactoryAdditionalTests
             (physicalFactory ?? new Mock<IPhysicalDbContextFactory>()).Object,
             registry.Object,
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
     }
 
     /// <summary>

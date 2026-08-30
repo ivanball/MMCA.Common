@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
 using AwesomeAssertions;
@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
-using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Settings;
@@ -16,6 +16,7 @@ using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Controllers;
@@ -36,12 +37,10 @@ public sealed class EntityControllerBaseReadSpecificationTests : IDisposable
 
     private ControllerContext CreateControllerContext(int maxPageSize)
     {
-        var settingsMock = new Mock<IApplicationSettings>();
-        settingsMock.Setup(s => s.MaxPageSize).Returns(maxPageSize);
-        settingsMock.Setup(s => s.MaxExportRows).Returns(100);
+        var settings = Options.Create(new ApplicationSettings { MaxPageSize = maxPageSize, MaxExportRows = 100 });
 
         var services = new ServiceCollection();
-        services.AddSingleton(settingsMock.Object);
+        services.AddSingleton(settings);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider(ExportInstant));
 
         var httpContext = new DefaultHttpContext

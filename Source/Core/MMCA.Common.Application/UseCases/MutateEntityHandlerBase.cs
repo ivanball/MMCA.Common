@@ -81,11 +81,12 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
 
     /// <summary>
     /// Extracts the caller's last-observed <c>RowVersion</c> from the command. Returns
-    /// <see langword="null"/> by default, which skips the conflict check; override on any command
-    /// whose request round-trips a concurrency token.
+    /// <see langword="null"/> by default, for a mutation whose endpoint states no precondition at
+    /// all; override on any command reached through a conditional (<c>If-Match</c>) endpoint, where
+    /// the token is always present.
     /// </summary>
     /// <param name="command">The command being handled.</param>
-    /// <returns>The client's last-observed row version, or <see langword="null"/> to skip the check.</returns>
+    /// <returns>The client's last-observed row version, or <see langword="null"/> when the endpoint is unconditional.</returns>
     protected virtual byte[]? RowVersion(TCommand command) => null;
 
     /// <summary>
@@ -282,9 +283,12 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
 
         // ADR-035 optimistic concurrency: stamp the client's last-seen rowversion back as the
         // original, so an edit decided against a stale view fails the save with a
-        // DbUpdateConcurrencyException (mapped to 409 Conflict) instead of silent last-write-wins.
-        // Null skips the check.
-        repository.SetOriginalRowVersion(entity, RowVersion(command));
+        // DbUpdateConcurrencyException (mapped to 412 Precondition Failed) instead of silent
+        // last-write-wins. A handler serving an unconditional endpoint reports no token and the
+        // stamp is skipped; a conditional endpoint always has one, because a request without an
+        // If-Match header never reaches the action.
+        if (RowVersion(command) is { Length: > 0 } rowVersion)
+            repository.SetOriginalRowVersion(entity, rowVersion);
 
         var result = await MutateAsync(entity, command, context, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)

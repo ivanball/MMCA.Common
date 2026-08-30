@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
@@ -41,12 +42,10 @@ public sealed class EntityControllerBaseExportTests : IDisposable
     /// </summary>
     private ControllerContext CreateControllerContext(int maxPageSize, int maxExportRows)
     {
-        var settingsMock = new Mock<IApplicationSettings>();
-        settingsMock.Setup(s => s.MaxPageSize).Returns(maxPageSize);
-        settingsMock.Setup(s => s.MaxExportRows).Returns(maxExportRows);
+        var settings = Options.Create(new ApplicationSettings { MaxPageSize = maxPageSize, MaxExportRows = maxExportRows });
 
         var services = new ServiceCollection();
-        services.AddSingleton(settingsMock.Object);
+        services.AddSingleton(settings);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider(ExportInstant));
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -660,12 +659,10 @@ public sealed class EntityControllerBaseExportColumnTests : IDisposable
 
     private ExportShapeTestController CreateController()
     {
-        var settingsMock = new Mock<IApplicationSettings>();
-        settingsMock.Setup(s => s.MaxPageSize).Returns(10);
-        settingsMock.Setup(s => s.MaxExportRows).Returns(100);
+        var settings = Options.Create(new ApplicationSettings { MaxPageSize = 10, MaxExportRows = 100 });
 
         var services = new ServiceCollection();
-        services.AddSingleton(settingsMock.Object);
+        services.AddSingleton(settings);
         services.AddSingleton<TimeProvider>(new FakeTimeProvider(new DateTimeOffset(2026, 8, 14, 9, 0, 0, TimeSpan.Zero)));
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 

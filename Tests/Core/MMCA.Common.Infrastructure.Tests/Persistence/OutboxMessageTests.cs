@@ -125,10 +125,11 @@ public sealed class OutboxMessageTests
         OutboxMessage.FromDomainEvent(new OrderedDomainEvent(null)).OrderingKey.Should().BeNull();
     }
 
-    // ── Type aliases: a renamed or relocated contract still deserializes ──
     [Fact]
-    public void DeserializeEvent_WithoutAnAlias_ReturnsNullForARetiredTypeName()
+    public void DeserializeEvent_ReturnsNullForARetiredTypeName()
     {
+        // A stored CLR name is only resolvable while that name exists: an event that may be renamed,
+        // moved, or relocated later declares [EventName] before the row is written.
         var message = new OutboxMessage
         {
             EventType = "Gone.Namespace.GoneEvent, GoneAssembly",
@@ -136,59 +137,6 @@ public sealed class OutboxMessageTests
         };
 
         message.DeserializeEvent().Should().BeNull();
-    }
-
-    [Fact]
-    public void DeserializeEvent_WithAnAlias_ResolvesTheReplacementTypeAndReadsThePayload()
-    {
-        var message = new OutboxMessage
-        {
-            EventType = "Gone.Namespace.GoneEvent, GoneAssembly",
-            Payload = """{"Name":"Test","Value":42}""",
-        };
-
-        var aliases = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["Gone.Namespace.GoneEvent, GoneAssembly"] = typeof(TestDomainEventWithData).AssemblyQualifiedName!,
-        };
-
-        message.DeserializeEvent(aliases).Should().BeOfType<TestDomainEventWithData>()
-            .Which.Should().BeEquivalentTo(new { Name = "Test", Value = 42 });
-    }
-
-    [Fact]
-    public void DeserializeEvent_AliasKeyedByTypeFullName_AlsoResolves()
-    {
-        // Operators write type names in configuration, not assembly-qualified names.
-        var message = new OutboxMessage
-        {
-            EventType = "Gone.Namespace.OtherGoneEvent, GoneAssembly",
-            Payload = """{"Name":"Test","Value":1}""",
-        };
-
-        var aliases = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["Gone.Namespace.OtherGoneEvent"] = typeof(TestDomainEventWithData).AssemblyQualifiedName!,
-        };
-
-        message.DeserializeEvent(aliases).Should().BeOfType<TestDomainEventWithData>();
-    }
-
-    [Fact]
-    public void DeserializeEvent_AliasTargetWithoutAnAssembly_IsFoundAmongTheLoadedAssemblies()
-    {
-        var message = new OutboxMessage
-        {
-            EventType = "Gone.Namespace.BareTargetEvent, GoneAssembly",
-            Payload = """{"Name":"Test","Value":7}""",
-        };
-
-        var aliases = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["Gone.Namespace.BareTargetEvent"] = typeof(TestDomainEventWithData).FullName!,
-        };
-
-        message.DeserializeEvent(aliases).Should().BeOfType<TestDomainEventWithData>();
     }
 
     // ── FromDomainEvent ──

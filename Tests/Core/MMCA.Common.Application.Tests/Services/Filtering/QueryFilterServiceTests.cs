@@ -193,6 +193,19 @@ public class QueryFilterServiceTests
     public void ApplyFilters_UnknownProperty_SkipsFilter() =>
         Filter("NonExistent", "EQUALS", "value").Should().HaveCount(4);
 
+    // ── A nested path whose leaf cannot be reached is skipped, not guessed at ──
+    // ValidateFilters rejects the same path with Filter.Property.NotFound, so application only has
+    // to refuse to invent a strategy for a filter the query cannot express.
+    [Fact]
+    public void ApplyFilters_NestedPathWithMissingLeaf_SkipsFilter()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Title"] = "Name.Missing" };
+        var filters = new Dictionary<string, (string, string)> { ["Title"] = ("CONTAINS", "Widget") };
+
+        QueryFilterService.ApplyFilters(Products(), filters, map).Should().HaveCount(4);
+        QueryFilterService.ValidateFilters<Product>(filters, map).IsFailure.Should().BeTrue();
+    }
+
     // ── Empty filters ──
     [Fact]
     public void ApplyFilters_EmptyFilters_ReturnsAll()

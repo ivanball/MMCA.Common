@@ -12,11 +12,11 @@ using Moq;
 namespace MMCA.Common.Application.Tests.Decorators;
 
 /// <summary>
-/// Both caching decorators carry a second, logger-less constructor kept only for source
-/// compatibility with consumers that build the decorator by hand. These tests pin the thing that
-/// makes that overload safe: when the container builds the decorator it must still choose the
-/// logger-bearing constructor. If selection ever flipped, the decorators would keep working and
-/// every test would stay green while production silently stopped reporting cache failures.
+/// Both caching decorators take their logger as a constructor argument, and each declares exactly
+/// one constructor. These tests pin that: the container activates the decorator with a real logger,
+/// and no logger-less overload exists for container activation to prefer. A logger-less overload
+/// would leave the decorators working and every test green while production silently stopped
+/// reporting cache failures.
 /// </summary>
 public sealed class CachingDecoratorConstructorSelectionTests
 {
@@ -34,7 +34,7 @@ public sealed class CachingDecoratorConstructorSelectionTests
         var resolved = scope.ServiceProvider.GetRequiredService<ICommandHandler<CtorProbeCommand, Result>>();
 
         CapturedLogger(resolved).Should().NotBeOfType<NullLogger<CachingCommandDecorator<CtorProbeCommand, Result>>>(
-            "the container must pick the 3-argument constructor, or cache-invalidation warnings are silently discarded");
+            "the container must supply a real logger, or cache-invalidation warnings are silently discarded");
     }
 
     [Fact]
@@ -51,21 +51,20 @@ public sealed class CachingDecoratorConstructorSelectionTests
         var resolved = scope.ServiceProvider.GetRequiredService<IQueryHandler<CtorProbeQuery, Result<string>>>();
 
         CapturedLogger(resolved).Should().NotBeOfType<NullLogger<CachingQueryDecorator<CtorProbeQuery, Result<string>>>>(
-            "the container must pick the 3-argument constructor, or cache-populate warnings are silently discarded");
+            "the container must supply a real logger, or cache-populate warnings are silently discarded");
     }
 
-    [Fact]
-    public void LoggerLessConstructors_RemainAvailableForDirectConstruction()
+    [Theory]
+    [InlineData(typeof(CachingCommandDecorator<CtorProbeCommand, Result>))]
+    [InlineData(typeof(CachingQueryDecorator<CtorProbeQuery, Result<string>>))]
+    public void CachingDecorator_DeclaresOneConstructor_AndItTakesALogger(Type decoratorType)
     {
-        // The source-compatibility contract itself: a consumer pinned to the released package
-        // constructs these with two arguments, and that must keep compiling and working.
-        var command = new CachingCommandDecorator<CtorProbeCommand, Result>(
-            new CtorProbeCommandHandler(), new Mock<ICacheService>().Object);
-        var query = new CachingQueryDecorator<CtorProbeQuery, Result<string>>(
-            new CtorProbeQueryHandler(), new Mock<ICacheService>().Object);
+        var constructors = decoratorType.GetConstructors();
 
-        command.Should().NotBeNull();
-        query.Should().NotBeNull();
+        constructors.Should().ContainSingle(
+            "a second, logger-less overload is what container activation would prefer, silently discarding cache warnings");
+        constructors[0].GetParameters()
+            .Should().Contain(p => typeof(ILogger).IsAssignableFrom(p.ParameterType));
     }
 
     /// <summary>

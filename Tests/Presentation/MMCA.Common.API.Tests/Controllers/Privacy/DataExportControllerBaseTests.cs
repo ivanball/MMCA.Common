@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FeatureManagement;
 using Microsoft.FeatureManagement.Mvc;
-using MMCA.Common.API.Authorization;
 using MMCA.Common.API.Controllers.Privacy;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
@@ -134,8 +133,8 @@ public sealed class DataExportControllerBaseTests
     [Fact]
     public void Controller_RequiresAnAuthenticatedCaller() =>
         typeof(DataExportControllerBase<TestExportQuery>)
-            .GetCustomAttribute<AuthorizeAttribute>()!.Policy
-            .Should().Be(AuthorizationPolicies.RequireAuthenticated,
+            .GetCustomAttribute<AuthorizeAttribute>()
+            .Should().NotBeNull(
                 because: "the handler's ownership check is the second line of defence, not the first");
 
     [Fact]

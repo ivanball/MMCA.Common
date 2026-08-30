@@ -12,8 +12,10 @@ namespace MMCA.Common.Application.Services.Filtering;
 /// <see cref="RegisterStrategy"/> at startup for custom types.
 /// <para>
 /// Supports DTO-to-entity property name mapping and nested property filtering
-/// (e.g. <c>"Category.Name"</c>), which always routes through the string strategy
-/// since the nested value is accessed via the string expression path.
+/// (e.g. <c>"Category.Name"</c>). A nested path is walked segment by segment to its leaf, and the
+/// leaf's type picks the strategy, so <c>"Category.Id"</c> filters as a Guid rather than as a
+/// string. A path whose leaf cannot be reached is rejected by <see cref="ValidateFilters"/> as an
+/// unknown property.
 /// </para>
 /// </summary>
 public static class QueryFilterService
@@ -45,9 +47,8 @@ public static class QueryFilterService
         });
 
     /// <summary>
-    /// Dedicated string strategy instance used for both string properties and nested
-    /// property paths (dot-separated), since nested access is always string-based in
-    /// LINQ Dynamic expressions.
+    /// Dedicated string strategy instance, used whenever the resolved value type is
+    /// <see cref="string"/>: a flat string property, or a nested path whose leaf is one.
     /// </summary>
     private static readonly StringFilterStrategy StringStrategy = new();
 
@@ -90,9 +91,16 @@ public static class QueryFilterService
             if (propertyInfo is null)
                 continue;
 
+            // A dotted path whose leaf cannot be reached is skipped for the same reason an unknown
+            // property is: ValidateFilters rejects both, so reaching here means the caller never
+            // validated, and applying a filter the query cannot express is worse than dropping it.
+            var valueType = ResolveFilterValueType<TEntity>(entityProperty, propertyInfo);
+            if (valueType is null)
+                continue;
+
             var opUpper = op.ToUpperInvariant();
 
-            var strategy = ResolveStrategy(ResolveFilterValueType<TEntity>(entityProperty, propertyInfo));
+            var strategy = ResolveStrategy(valueType);
             if (strategy is not null)
                 query = strategy.Apply(query, entityProperty, opUpper, value);
         }
@@ -151,24 +159,38 @@ public static class QueryFilterService
         var opUpper = op.ToUpperInvariant();
 
         // Resolve the type the filter VALUE is compared against, walking a nested path to its leaf.
-        // Validation and application must agree on this: routing every dotted path to the string
-        // strategy let a nested non-string leaf pass validation for a string-only operator (say
-        // IS EMPTY on "Category.Id") and then fail inside Dynamic LINQ at query-build time, which is
-        // a 500 for what is really a bad request.
+        // Validation and application must agree on this: a nested non-string leaf routed to the
+        // string strategy passes validation for a string-only operator (say IS EMPTY on
+        // "Category.Id") and then fails inside Dynamic LINQ at query-build time, which is a 500 for
+        // what is really a bad request.
         var valueType = ResolveFilterValueType<TEntity>(entityProperty, propertyInfo);
+
+        // A path whose leaf cannot be reached names a property the entity does not have, so it is
+        // the same failure an unknown flat property gets: a 400 naming the path, never a silent
+        // fall back to the string strategy on a filter the query cannot express.
+        if (valueType is null)
+        {
+            errors.Add(Error.Validation(
+                "Filter.Property.NotFound",
+                $"Filter property path '{entityProperty}' does not resolve on type '{typeof(TEntity).Name}' (property '{property}').",
+                source: nameof(ValidateFilters),
+                target: typeof(TEntity).Name));
+            return;
+        }
+
         var strategy = ResolveStrategy(valueType);
 
         if (strategy is null)
         {
             errors.Add(Error.Validation(
                 "Filter.Type.NotSupported",
-                $"No filter strategy registered for type '{(valueType ?? propertyInfo.PropertyType).Name}' (property '{property}').",
+                $"No filter strategy registered for type '{valueType.Name}' (property '{property}').",
                 source: nameof(ValidateFilters),
                 target: property));
             return;
         }
 
-        var typeName = (valueType ?? propertyInfo.PropertyType).Name;
+        var typeName = valueType.Name;
         ValidateOperatorSupported(strategy, opUpper, op, property, typeName, errors);
         ValidateValueParseable(strategy, opUpper, value, property, typeName, errors);
     }
@@ -251,10 +273,11 @@ public static class QueryFilterService
     /// reached by walking each segment.
     /// </summary>
     /// <remarks>
-    /// Returns <see langword="null"/> when the path cannot be walked (an intermediate segment is not
-    /// a public instance property). Callers fall back to the string strategy in that case, which is
-    /// the behavior every dotted path used to get unconditionally, so an unresolvable path keeps
-    /// working exactly as before rather than newly failing validation.
+    /// Returns <see langword="null"/> when the path cannot be walked (a segment is not a public
+    /// instance property of the preceding segment's type). That is a filter the query can never
+    /// answer, so the caller fails it closed: validation rejects it as an unknown property and
+    /// application skips it, rather than guessing at the string strategy and letting Dynamic LINQ
+    /// turn a bad request into a 500 at query-build time.
     /// </remarks>
     private static Type? ResolveFilterValueType<TEntity>(string entityProperty, PropertyInfo resolvedRoot)
     {
@@ -277,8 +300,8 @@ public static class QueryFilterService
         return current;
     }
 
-    private static IFilterStrategy? ResolveStrategy(Type? propertyType) =>
-        propertyType is null || propertyType == typeof(string)
+    private static IFilterStrategy? ResolveStrategy(Type propertyType) =>
+        propertyType == typeof(string)
             ? StringStrategy
             : Strategies.GetValueOrDefault(propertyType);
 

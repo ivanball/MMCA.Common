@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
@@ -9,16 +10,16 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
 
 /// <summary>
 /// Creates repository instances, conditionally wrapping them in MiniProfiler decorators
-/// when profiling is enabled in <see cref="IApplicationSettings"/>.
+/// when profiling is enabled in <see cref="ApplicationSettings"/>.
 /// </summary>
-public sealed class RepositoryFactory(IServiceProvider serviceProvider, IApplicationSettings applicationSettings) : IRepositoryFactory
+public sealed class RepositoryFactory(IServiceProvider serviceProvider, IOptions<ApplicationSettings> applicationSettings) : IRepositoryFactory
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
-    private readonly IApplicationSettings _applicationSettings = applicationSettings;
+    private readonly ApplicationSettings _applicationSettings = applicationSettings.Value;
 
     /// <inheritdoc />
     /// <remarks>
-    /// When <see cref="IApplicationSettings.UseMiniProfiler"/> is <see langword="true"/>, the base
+    /// When <see cref="ApplicationSettings.UseMiniProfiler"/> is <see langword="true"/>, the base
     /// <see cref="EFRepository{TEntity,TIdentifierType}"/> is wrapped in an
     /// <see cref="EFRepositoryDecorator{TEntity,TIdentifierType}"/> that records timing data.
     /// </remarks>
@@ -42,7 +43,7 @@ public sealed class RepositoryFactory(IServiceProvider serviceProvider, IApplica
 
     /// <inheritdoc />
     /// <remarks>
-    /// When <see cref="IApplicationSettings.UseMiniProfiler"/> is <see langword="true"/>, the base
+    /// When <see cref="ApplicationSettings.UseMiniProfiler"/> is <see langword="true"/>, the base
     /// <see cref="EFReadRepository{TEntity,TIdentifierType}"/> is wrapped in an
     /// <see cref="EFReadRepositoryDecorator{TEntity,TIdentifierType}"/> that records timing data.
     /// </remarks>

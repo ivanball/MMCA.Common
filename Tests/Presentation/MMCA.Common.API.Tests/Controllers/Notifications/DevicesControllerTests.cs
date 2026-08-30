@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.API.Controllers.Notifications;
@@ -94,10 +94,6 @@ public sealed class DevicesControllerTests
             x => x.DeleteAsync(42, "abc123", It.IsAny<CancellationToken>()),
             Times.Once,
             "the installation id comes from the client, so the owner must be stamped server-side");
-        _registrar.Verify(
-            x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "the unscoped overload performs no ownership check and must not be reached from the endpoint");
     }
 
     [Fact]
@@ -126,9 +122,6 @@ public sealed class DevicesControllerTests
             .Which.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
         _registrar.Verify(
             x => x.DeleteAsync(It.IsAny<UserIdentifierType>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        _registrar.Verify(
-            x => x.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

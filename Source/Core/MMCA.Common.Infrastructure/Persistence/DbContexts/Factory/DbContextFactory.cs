@@ -29,20 +29,19 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 /// <param name="dataSourceResolver">Resolves connection information per physical source.</param>
 /// <param name="currentUserService">Supplies the user id used for audit stamps on save.</param>
 /// <param name="tenantContext">
-/// The scope's tenant, or <see langword="null"/> in a container that never registered tenancy.
-/// Read live by every context this factory creates.
+/// The scope's tenant. Read live by every context this factory creates; a container that never
+/// adopts tenancy still resolves it, and its <c>TenantId</c> is simply never set.
 /// </param>
 /// <param name="tenancySettings">
-/// Bound tenancy configuration, consulted only for per-tenant connection overrides. Defaulted so
-/// the pre-tenancy constructor shape keeps resolving.
+/// Bound tenancy configuration, consulted only for per-tenant connection overrides.
 /// </param>
 public sealed class DbContextFactory(
     IPhysicalDbContextFactory physicalDbContextFactory,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
     ICurrentUserService currentUserService,
-    ITenantContext? tenantContext = null,
-    IOptions<TenancySettings>? tenancySettings = null
+    ITenantContext tenantContext,
+    IOptions<TenancySettings> tenancySettings
 ) : IDbContextFactory
 {
     /// <summary>
@@ -99,7 +98,7 @@ public sealed class DbContextFactory(
             _dbContexts[dataSourceKey] = context;
 
             if (tenantOverride is not null)
-                _routedContextTenants[dataSourceKey] = tenantContext?.TenantId;
+                _routedContextTenants[dataSourceKey] = tenantContext.TenantId;
 
             AttachTenantAccessor(context);
 
@@ -117,10 +116,6 @@ public sealed class DbContextFactory(
         return context;
     }
 
-    /// <inheritdoc />
-    public ApplicationDbContext GetDbContext(DataSource dataSource) =>
-        GetDbContext(DataSourceKey.Default(dataSource));
-
     /// <summary>
     /// Gives a freshly created context a live view of the scope's tenant. An accessor, not a copied
     /// value: the context can be created before the request's tenant is resolved, and the query
@@ -136,7 +131,7 @@ public sealed class DbContextFactory(
         if (context is null)
             return;
 
-        context.TenantIdAccessor = () => tenantContext?.TenantId;
+        context.TenantIdAccessor = () => tenantContext.TenantId;
     }
 
     /// <summary>
@@ -147,8 +142,8 @@ public sealed class DbContextFactory(
     /// </summary>
     private PhysicalDataSource? ResolveTenantOverride(DataSourceKey dataSourceKey)
     {
-        if (tenantContext?.TenantId is not { } tenantId
-            || tenancySettings?.Value is not { } settings
+        if (tenantContext.TenantId is not { } tenantId
+            || tenancySettings.Value is not { } settings
             || !settings.Tenants.TryGetValue(tenantId, out var tenant)
             || !tenant.DataSources.TryGetValue(dataSourceKey.Name, out var over))
         {
@@ -183,7 +178,7 @@ public sealed class DbContextFactory(
         if (!_routedContextTenants.TryGetValue(dataSourceKey, out var creationTenant))
             return;
 
-        var current = tenantContext?.TenantId;
+        var current = tenantContext.TenantId;
         if (string.Equals(creationTenant, current, StringComparison.Ordinal))
             return;
 

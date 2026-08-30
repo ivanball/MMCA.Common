@@ -9,8 +9,7 @@ namespace MMCA.Common.Gateway.Tests.Configuration;
 
 /// <summary>
 /// Unit tests for the cluster request-profile filter: the three-source precedence that lets a
-/// gateway declare the h2c profile once, and the rollback switch that takes every HTTP/2 cluster
-/// back to negotiated forwarding in one configuration change.
+/// gateway declare the h2c profile once, while the one cluster that genuinely differs states its own.
 /// </summary>
 public sealed class GatewayClusterProfileConfigFilterTests
 {
@@ -115,21 +114,10 @@ public sealed class GatewayClusterProfileConfigFilterTests
         config.Version.Should().Be(HttpVersion.Version11, because: "the override still wins over the defaults");
     }
 
+    // A cluster that states the h2c pair itself reaches the forwarder with it: nothing in the
+    // pipeline downgrades a configured HTTP/2 cluster.
     [Fact]
-    public async Task RollbackSwitch_StripsTheHttp2ProfileFromEveryCluster()
-    {
-        var config = await ConfigureAsync(
-            new GatewaySettings { ForwardHttp2 = false, ClusterRequestDefaults = Http2Profile },
-            Cluster("identity"));
-
-        config.Version.Should().BeNull();
-        config.VersionPolicy.Should().BeNull();
-        config.ActivityTimeout.Should().Be(TimeSpan.FromSeconds(100),
-            because: "the rollback is about the wire protocol, not about the request budget");
-    }
-
-    [Fact]
-    public async Task RollbackSwitch_StripsAClusterThatDeclaredHttp2Itself()
+    public async Task ClusterThatDeclaresHttp2Itself_ForwardsOverHttp2()
     {
         var cluster = Cluster("identity") with
         {
@@ -140,40 +128,10 @@ public sealed class GatewayClusterProfileConfigFilterTests
             },
         };
 
-        var config = await ConfigureAsync(new GatewaySettings { ForwardHttp2 = false }, cluster);
-
-        config.Version.Should().BeNull();
-        config.VersionPolicy.Should().BeNull();
-    }
-
-    // Clearing a 1.1 cluster would hand it back to YARP's HTTP/2-preferring default, which is the
-    // opposite of what a rollback is for.
-    [Fact]
-    public async Task RollbackSwitch_LeavesAnHttp11ClusterAlone()
-    {
-        var settings = new GatewaySettings
-        {
-            ForwardHttp2 = false,
-            ClusterRequestOverrides = new Dictionary<string, GatewayClusterRequestProfile>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["notification-rest"] = new() { Version = "1.1", VersionPolicy = "RequestVersionOrLower" },
-            },
-        };
-
-        var config = await ConfigureAsync(settings, Cluster("notification-rest"));
-
-        config.Version.Should().Be(HttpVersion.Version11);
-        config.VersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionOrLower);
-    }
-
-    [Fact]
-    public async Task RollbackSwitch_DefaultsToOn()
-    {
-        var config = await ConfigureAsync(
-            new GatewaySettings { ClusterRequestDefaults = Http2Profile },
-            Cluster("identity"));
+        var config = await ConfigureAsync(new GatewaySettings(), cluster);
 
         config.Version.Should().Be(HttpVersion.Version20);
+        config.VersionPolicy.Should().Be(HttpVersionPolicy.RequestVersionExact);
     }
 
     [Fact]

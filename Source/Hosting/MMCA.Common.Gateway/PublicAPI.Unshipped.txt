@@ -68,8 +68,6 @@ MMCA.Common.Gateway.GatewaySettings.ClusterRequestDefaults.get -> MMCA.Common.Ga
 MMCA.Common.Gateway.GatewaySettings.ClusterRequestDefaults.init -> void
 MMCA.Common.Gateway.GatewaySettings.ClusterRequestOverrides.get -> System.Collections.Generic.IReadOnlyDictionary<string!, MMCA.Common.Gateway.GatewayClusterRequestProfile!>!
 MMCA.Common.Gateway.GatewaySettings.ClusterRequestOverrides.init -> void
-MMCA.Common.Gateway.GatewaySettings.ForwardHttp2.get -> bool
-MMCA.Common.Gateway.GatewaySettings.ForwardHttp2.init -> void
 MMCA.Common.Gateway.GatewaySettings.GatewaySettings() -> void
 MMCA.Common.Gateway.GatewaySettings.HealthCheckDefaults.get -> MMCA.Common.Gateway.GatewayHealthCheckDefaults!
 MMCA.Common.Gateway.GatewaySettings.HealthCheckDefaults.init -> void

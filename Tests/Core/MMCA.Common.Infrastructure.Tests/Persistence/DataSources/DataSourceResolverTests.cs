@@ -1,5 +1,6 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Settings;
@@ -46,9 +47,13 @@ public sealed class DataSourceResolverTests
             ["Conference"] = new() { SqliteConnectionString = "Data Source=conference.db" },
         });
 
-        // The entry only configures Sqlite — SQL Server resolution falls back to Default.
+        // The entry only configures Sqlite, so SQL Server resolution falls back to Default. The SQLite
+        // side collapses too: the entry is the only SQLite database the host declares, and the
+        // top-level section names none, so it IS this host's Default SQLite source.
         sut.ResolveLogical(DataSource.SQLServer, "Conference").Should().Be(DataSourceKey.Default(DataSource.SQLServer));
-        sut.ResolveLogical(DataSource.Sqlite, "Conference").Should().Be(new DataSourceKey(DataSource.Sqlite, "Conference"));
+        sut.ResolveLogical(DataSource.Sqlite, "Conference").Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        sut.GetPhysical(DataSourceKey.Default(DataSource.Sqlite)).ConnectionString
+            .Should().Be("Data Source=conference.db");
     }
 
     [Fact]
@@ -356,7 +361,51 @@ public sealed class DataSourceResolverTests
         sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
             .Should().Be(DataSourceKey.Default(DataSource.Sqlite));
         sut.ResolveLogical(DataSource.SQLServer, "Notes")
-            .Should().Be(new DataSourceKey(DataSource.Sqlite, "Notes"));
+            .Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+
+        // The point of the collapse: the framework's own tables resolve to Default, so Default has
+        // to be the host's one database even though only the named entry declares it.
+        sut.GetPhysical(DataSourceKey.Default(DataSource.Sqlite)).ConnectionString
+            .Should().Be("Data Source=notes.db");
+    }
+
+    [Fact]
+    public void Default_TakesTheMigrationsAssemblyOfTheSingleNamedEntryItCollapsesOnto()
+    {
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Tickets"] = new()
+                {
+                    SQLServerConnectionString = DefaultSql,
+                    SQLServerMigrationsAssembly = "Helpdesk.Migrations",
+                },
+            },
+            new ConnectionStringSettings());
+
+        var physical = sut.GetPhysical(sut.ResolveLogical(DataSource.SQLServer, "Tickets"));
+
+        physical.Key.Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+        physical.ConnectionString.Should().Be(DefaultSql);
+        physical.SqlServerMigrationsAssembly.Should().Be("Helpdesk.Migrations");
+    }
+
+    [Fact]
+    public void Default_StaysEmpty_WhenSeveralNamedEntriesDeclareDifferentDatabasesAndNoTopLevelOneDoes()
+    {
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Conference"] = new() { SQLServerConnectionString = DefaultSql },
+                ["Engagement"] = new() { SQLServerConnectionString = OtherSql },
+            },
+            new ConnectionStringSettings());
+
+        // Two databases and nothing naming which is shared: there is no single answer, so each keeps
+        // its own physical source and Default names none of them.
+        sut.ResolveLogical(DataSource.SQLServer, "Conference").Should().Be(new DataSourceKey(DataSource.SQLServer, "Conference"));
+        sut.ResolveLogical(DataSource.SQLServer, "Engagement").Should().Be(new DataSourceKey(DataSource.SQLServer, "Engagement"));
+        sut.GetPhysical(DataSourceKey.Default(DataSource.SQLServer)).ConnectionString.Should().BeEmpty();
     }
 
     [Fact]
@@ -440,7 +489,7 @@ public sealed class DataSourceResolverTests
         Dictionary<string, DataSourceEntrySettings>? sources = null,
         ConnectionStringSettings? connectionStrings = null) =>
         new(
-            connectionStrings ?? new ConnectionStringSettings { SQLServerConnectionString = DefaultSql },
+            Options.Create(connectionStrings ?? new ConnectionStringSettings { SQLServerConnectionString = DefaultSql }),
             new DataSourcesSettings(sources),
             NullLogger<DataSourceResolver>.Instance);
 }

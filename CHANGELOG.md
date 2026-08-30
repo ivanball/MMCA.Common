@@ -4,6 +4,76 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+One way to do everything. This release removes the dual code paths that existed only for
+compatibility with earlier package versions; supporting older consumers is a non-goal, so each pair
+collapses to its single surviving mechanism. The pairs that serve the monolith-versus-extracted-services
+choice are untouched by design: both message-bus transports, the per-engine context classes, the
+HS256/RS256 signing choice, the outbox toggle and the two-event-paths model all remain.
+
+### Removed (breaking)
+
+- **The concurrency body transport** (`MMCA.Common.Shared` / `Application` / `API` / `UI`). The
+  optimistic-concurrency token travels only in the `If-Match` header: a guarded endpoint answers 428
+  to a request with no header, 400 to a malformed one and 412 to a stale one. `ConcurrencyTokenRequest`
+  is deleted, `IConcurrencyAware.RowVersion` and `UpdateEntityCommand.RowVersion` are non-nullable (no
+  token no longer means skip-the-check), both `SetOriginalRowVersion` overloads reject null, and
+  `EntityServiceBase.UpdateAsync` sends the header itself (`ConcurrencyTagOf` exposes the current tag).
+  `ConcurrencyETag` moved to `MMCA.Common.Shared.Http` so the UI package can format headers.
+  `ConcurrencyConventionTestsBase` now asserts the inverse rule: no update request implements
+  `IConcurrencyAware`.
+- **The pre-registered role policies** (`MMCA.Common.API`). `AuthorizationPolicies` and the four
+  fallback policies are gone; `IPermissionRegistry` permission policies are the one authorization
+  model. The framework notification endpoints now require the `notifications:manage` permission
+  (`NotificationPermissions.Manage`), which a host grants via `AddPermissions(...)`.
+- **The settings-interface aliases** (`MMCA.Common.Application` / `Infrastructure`).
+  `IApplicationSettings`, `IJwtSettings`, `ISmtpSettings`, `IConnectionStringSettings` and
+  `IPushNotificationSettings` are deleted; `IOptions<T>` of the concrete settings class is the one
+  resolution surface.
+- **The EF-standard factory adapters** (`MMCA.Common.Infrastructure`). The
+  `IDbContextFactory<TEngineContext>` registrations, `ApplicationDbContextEFFactory` and the
+  per-engine default factories are gone; the framework `IDbContextFactory` (keyed by `DataSourceKey`)
+  is the one factory surface, and its `GetDbContext(DataSource)` convenience overload is removed.
+- **Members kept only for older callers.** The `[Obsolete]` tuple `FetchPage` on
+  `MobileInfiniteScrollList` (use `FetchPageResult`), `ErrorMessages.Success(entityName, action)` and
+  `ErrorMessages.ActionError(Exception, string)`, the two-argument caching-decorator constructors, the
+  defaulted tenancy parameters on `DbContextFactory`, the string-frozen MAUI barcode-scanner overloads
+  (the `Func<string>` forms remain), the five-argument `ModuleLoader.DiscoverAndRegister` and its
+  silent AppDomain scan (`moduleAssemblies` is required, and `AddModuleHost` takes the module
+  assemblies as its first parameter), the unscoped `IPushDeviceRegistrar.DeleteAsync` (the user-scoped
+  overload with its ownership check is the one member), `DataAnnotationsModelValidator.Instance` (the
+  localizer is required), the `NavItem` literal-title mode (`TitleResource` is required, positional
+  slot 4) and the implicit string conversions on `Email` and `PhoneNumber` (use `.Value`).
+- **Config switches whose only purpose was restoring prior behavior.**
+  `DatabaseInitStrategy=EnsureCreated` (valid values: `Migrate`, `None`; anything else fails startup),
+  `Outbox:TypeAliases` (`[EventName]` is the one stable-identity mechanism),
+  `Outbox:PurgeDeadLetters` (dead-letter rows past their retention are always deleted) and
+  `MmcaGateway:ForwardHttp2` (the gateway always forwards HTTP/2).
+- **Migration-window mechanisms.** `HybridCacheService.RemoveByPrefixAsync` scans only its own `hc:`
+  keyspace; `IdempotencyRecord.RequestBodyHash` is required (pre-field cache entries age out); the E2E
+  `WaitForBlazorAsync` marker fallback for pages rendered by older UI packages is gone, and the
+  `DomainInvariantViolationException` branches in `ErrorMessages` are gone (domain wording routes
+  through `Result`).
+
+### Changed
+
+- **`Jwt:SigningAlgorithm` defaults to `RS256`.** Both algorithms remain supported (HS256 is the
+  single-process monolith option); a host that wants HS256 sets it explicitly alongside
+  `Jwt:SecretForKey`.
+- **A `DataSources`-only configuration is self-sufficient.** When the top-level
+  `ConnectionStrings:SQLServerConnectionString` is absent and the named `DataSources` entries declare
+  exactly one distinct connection per engine, that database seeds `Default`, so framework-owned tables
+  route without the legacy key; the plain `ConnectionStrings`-only monolith shape still works
+  unchanged. Database health checks enumerate both shapes, deduplicated by connection string, and the
+  Aspire `With*DataSource` host extensions no longer inject the `ConnectionStrings__*` twin.
+  `AddInfrastructureHealthChecks` takes the single engine-agnostic `requireDatabase` flag.
+- **`AuthenticationServiceBase<TUser>` requires `IOptions<RefreshSessionSettings>`** (the null
+  fallback to pre-session behavior is gone; `RefreshSessions:Enabled` remains the per-host model
+  toggle).
+- **`QueryFilterService` fails closed.** A `DTOToEntityPropertyMap` entry whose dotted path cannot be
+  walked is a `Filter.Property.NotFound` validation failure instead of a silent string comparison.
+
 ## [1.172.0] - 2026-08-30
 
 Completes the generic write-side surface ADR-099 opened. The five shapes that still forced a

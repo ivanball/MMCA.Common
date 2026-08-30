@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
-using MMCA.Common.Application.Settings;
 
 namespace MMCA.Common.Application.Tests;
 
@@ -56,38 +55,6 @@ public sealed class DependencyInjectionTests
         descriptor.ImplementationType.Should().Be<EntityQueryPipeline>();
     }
 
-    [Fact]
-    public void AddApplication_RegistersApplicationSettings_AsSingletonFactory()
-    {
-        ServiceCollection services = CreateServiceCollection();
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IApplicationSettings));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-
-        // IApplicationSettings is registered via a factory delegate that reads IOptions<ApplicationSettings>,
-        // so ImplementationType is null — the registration uses ImplementationFactory instead.
-        descriptor.ImplementationFactory.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void AddApplication_ApplicationSettingsFactory_ResolvesFromOptions()
-    {
-        var services = new ServiceCollection();
-
-        // Register IOptions<ApplicationSettings> so the factory delegate can resolve it.
-        services.AddOptions<ApplicationSettings>();
-        services.AddApplication();
-
-        using ServiceProvider provider = services.BuildServiceProvider();
-        IApplicationSettings settings = provider.GetRequiredService<IApplicationSettings>();
-
-        settings.Should().NotBeNull();
-        settings.MaxPageSize.Should().Be(500, "default MaxPageSize is 500");
-    }
-
     // ── AddApplication: idempotency (TryAdd) ──
     [Fact]
     public void AddApplication_CalledTwice_DoesNotDuplicateRegistrations()
@@ -99,12 +66,10 @@ public sealed class DependencyInjectionTests
         int dispatcherCount = services.Count(d => d.ServiceType == typeof(IDomainEventDispatcher));
         int navigationCount = services.Count(d => d.ServiceType == typeof(INavigationMetadataProvider));
         int pipelineCount = services.Count(d => d.ServiceType == typeof(IEntityQueryPipeline));
-        int settingsCount = services.Count(d => d.ServiceType == typeof(IApplicationSettings));
 
         dispatcherCount.Should().Be(1);
         navigationCount.Should().Be(1);
         pipelineCount.Should().Be(1);
-        settingsCount.Should().Be(1);
     }
 
     // ── AddApplication: returns service collection for chaining ──

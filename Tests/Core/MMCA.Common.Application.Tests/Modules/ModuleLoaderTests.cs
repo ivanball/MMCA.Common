@@ -10,8 +10,8 @@ using Moq;
 namespace MMCA.Common.Application.Tests.Modules;
 
 /// <summary>
-/// Tests for <see cref="ModuleLoader"/> using fake modules declared in THIS assembly and the
-/// <c>DiscoverAndRegister</c> overload that takes explicit assemblies to scan. The fakes use
+/// Tests for <see cref="ModuleLoader"/> using fake modules declared in THIS assembly, handed to
+/// <c>DiscoverAndRegister</c> as the assemblies to scan. The fakes use
 /// static, benign-by-default configuration (see <see cref="FakeCycleModuleOne"/>) so that the
 /// whole-assembly scan every test performs stays deterministic; tests within this class run
 /// sequentially (xUnit default), so the static state is safe.

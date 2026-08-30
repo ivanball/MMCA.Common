@@ -12,16 +12,11 @@ namespace MMCA.Common.Domain.Attributes;
 /// </para>
 /// </summary>
 /// <remarks>
-/// Precedence, and why both mechanisms exist:
-/// <list type="bullet">
-///   <item>This attribute is the PROACTIVE identity. Applied before the rename, rows are written
-///   under a name that survives it, so nothing has to be repaired afterwards.</item>
-///   <item><c>Outbox:TypeAliases</c> is the RETROACTIVE fix, for rows ALREADY persisted under a name
-///   that no longer resolves. Resolution is per stored string, so an alias still wins for those old
-///   rows even after the type gains an attribute: the attribute only changes what NEW rows store.</item>
-/// </list>
-/// Adopting the attribute on an event that already has pending rows therefore means both are in play
-/// for a while, which is the intended overlap and not a conflict.
+/// The attribute is the one type-resolution mechanism, and it works by being applied BEFORE the
+/// refactoring: rows written from that point on carry a name the refactoring does not touch. It
+/// changes only what NEW rows store, so rows already persisted under a CLR name keep resolving by
+/// that name and stop resolving if it goes away. Applying it while an outbox holds pending rows is
+/// therefore a two-step move: drain the pending rows first, then rename.
 /// <para>
 /// The name must be unique across the events a host can resolve, since reverse lookup matches on it.
 /// A versioned contract name (<c>"Sales.OrderPlaced.v1"</c>) reads well and leaves room for the

@@ -1,8 +1,11 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -18,7 +21,9 @@ public sealed class DbContextFactoryTests
             null!,
             Mock.Of<IEntityDataSourceRegistry>(),
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("physicalDbContextFactory");
     }
@@ -30,7 +35,9 @@ public sealed class DbContextFactoryTests
             Mock.Of<IPhysicalDbContextFactory>(),
             null!,
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("entityDataSourceRegistry");
     }
@@ -42,7 +49,9 @@ public sealed class DbContextFactoryTests
             Mock.Of<IPhysicalDbContextFactory>(),
             Mock.Of<IEntityDataSourceRegistry>(),
             null!,
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("dataSourceResolver");
     }
@@ -54,7 +63,9 @@ public sealed class DbContextFactoryTests
             Mock.Of<IPhysicalDbContextFactory>(),
             Mock.Of<IEntityDataSourceRegistry>(),
             new DefaultDataSourceResolver(),
-            null!);
+            null!,
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("currentUserService");
     }
@@ -67,7 +78,7 @@ public sealed class DbContextFactoryTests
         physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
         var sut = CreateSut(physicalFactory);
 
-        sut.GetDbContext(DataSource.SQLServer);
+        sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
 
         physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.SQLServer)), Times.Once);
     }
@@ -79,7 +90,7 @@ public sealed class DbContextFactoryTests
         physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
         var sut = CreateSut(physicalFactory);
 
-        sut.GetDbContext(DataSource.Sqlite);
+        sut.GetDbContext(DataSourceKey.Default(DataSource.Sqlite));
 
         physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.Sqlite)), Times.Once);
     }
@@ -91,7 +102,7 @@ public sealed class DbContextFactoryTests
         physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
         var sut = CreateSut(physicalFactory);
 
-        sut.GetDbContext(DataSource.CosmosDB);
+        sut.GetDbContext(DataSourceKey.Default(DataSource.CosmosDB));
 
         physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.CosmosDB)), Times.Once);
     }
@@ -103,8 +114,8 @@ public sealed class DbContextFactoryTests
         physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns((ApplicationDbContext)null!);
         var sut = CreateSut(physicalFactory);
 
-        _ = sut.GetDbContext(DataSource.SQLServer);
-        _ = sut.GetDbContext(DataSource.SQLServer);
+        _ = sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+        _ = sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
 
         // Source code re-creates when cached value is null
         physicalFactory.Verify(f => f.Create(DataSourceKey.Default(DataSource.SQLServer)), Times.Exactly(2));
@@ -116,7 +127,7 @@ public sealed class DbContextFactoryTests
         var sut = CreateSut();
         sut.Dispose();
 
-        var act = () => sut.GetDbContext(DataSource.SQLServer);
+        var act = () => sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
 
         act.Should().Throw<ObjectDisposedException>();
     }
@@ -164,6 +175,8 @@ public sealed class DbContextFactoryTests
             (physicalFactory ?? new Mock<IPhysicalDbContextFactory>()).Object,
             registry.Object,
             new DefaultDataSourceResolver(),
-            Mock.Of<ICurrentUserService>());
+            Mock.Of<ICurrentUserService>(),
+            Mock.Of<ITenantContext>(),
+            Options.Create(new TenancySettings()));
     }
 }

@@ -170,22 +170,6 @@ public sealed class DependencyInjectionPushNotificationsTests
         settings.HubPath.Should().Be("/hubs/test");
     }
 
-    // ── AddPushNotifications registers IPushNotificationSettings singleton ──
-    [Fact]
-    public void AddPushNotifications_RegistersIPushNotificationSettingsSingleton()
-    {
-        var services = new ServiceCollection();
-        IConfiguration config = CreateConfigurationWithRedis();
-
-        services.AddPushNotifications(config);
-
-        ServiceDescriptor? descriptor = services.FirstOrDefault(
-            d => d.ServiceType == typeof(IPushNotificationSettings));
-
-        descriptor.Should().NotBeNull();
-        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
-    }
-
     // ── AddPushNotifications with Redis connection string configures backplane ──
     [Fact]
     public void AddPushNotifications_WithRedisConnectionString_DoesNotThrow()

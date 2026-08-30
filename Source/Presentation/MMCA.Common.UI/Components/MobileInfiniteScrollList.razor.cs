@@ -30,23 +30,12 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     /// <summary>
     /// The page fetcher, in the shape every Result-returning UI service already has
     /// (<c>IEntityService.GetPagedAsync</c> without the filter/sort arguments): page number
-    /// (1-based), page size, cancellation token. A failure <see cref="Result"/> renders the inline
-    /// load-failure message plus its Retry button, exactly where a thrown exception used to.
-    /// Supply either this or the obsolete <see cref="FetchPage"/>, never both.
+    /// (1-based), page size, cancellation token. Required. A failure <see cref="Result"/> renders
+    /// the inline load-failure message plus its Retry button.
     /// </summary>
     [Parameter]
+    [EditorRequired]
     public Func<int, int, CancellationToken, Task<Result<(IReadOnlyList<TItem> Items, int TotalItems)>>>? FetchPageResult { get; set; }
-
-    /// <summary>
-    /// The pre-Result page fetcher, whose only failure signal is a thrown exception.
-    /// Kept working for call sites that have not switched yet: its tuple is lifted into a success
-    /// <see cref="Result"/> internally, so both parameters run the same single load path.
-    /// </summary>
-    [Parameter]
-#pragma warning disable S1133 // Deprecated code should be removed: the obsoletion IS the migration mechanism; it turns every remaining tuple call site into a build warning during the lockstep sweep, and the parameter is removed once all consumers are swept.
-    [Obsolete("Services no longer throw for server answers, so a failure has to reach the component as a Result to keep the inline retry affordance. Use FetchPageResult, whose delegate returns Task<Result<(IReadOnlyList<TItem> Items, int TotalItems)>>.")]
-#pragma warning restore S1133
-    public Func<int, int, CancellationToken, Task<(IReadOnlyList<TItem> Items, int TotalItems)>>? FetchPage { get; set; }
 
     [Parameter] public int PageSize { get; set; } = 10;
     [Parameter] public EventCallback<TItem> OnCardClick { get; set; }
@@ -95,47 +84,24 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
-        ValidateFetchParameters();
+        ValidateFetchParameter();
 
         await LoadNextPageAsync(isInitial: true);
         _isInitialLoad = false;
     }
 
     /// <summary>
-    /// Exactly one fetcher must be supplied. Checked here rather than inside the load, so a
-    /// misconfigured call site fails loudly instead of rendering as a load failure with a Retry
+    /// <see cref="FetchPageResult"/> must be supplied. Checked here rather than inside the load, so
+    /// a misconfigured call site fails loudly instead of rendering as a load failure with a Retry
     /// button that can never succeed.
     /// </summary>
-    private void ValidateFetchParameters()
+    private void ValidateFetchParameter()
     {
-#pragma warning disable CS0618 // The obsolete parameter stays supported; reading it is the support.
-        bool hasTupleFetch = FetchPage is not null;
-#pragma warning restore CS0618
-        bool hasResultFetch = FetchPageResult is not null;
-
-        if (hasTupleFetch == hasResultFetch)
+        if (FetchPageResult is null)
         {
             throw new InvalidOperationException(
-                "MobileInfiniteScrollList requires exactly one of FetchPageResult (preferred) or the obsolete FetchPage.");
+                "MobileInfiniteScrollList requires a FetchPageResult delegate.");
         }
-    }
-
-    /// <summary>
-    /// The single fetch path. The obsolete tuple delegate is lifted into a success
-    /// <see cref="Result"/>, so the caller below has one shape to handle regardless of which
-    /// parameter the call site supplied (an exception from it still travels as an exception).
-    /// </summary>
-    private async Task<Result<(IReadOnlyList<TItem> Items, int TotalItems)>> FetchAsync(
-        int page, CancellationToken cancellationToken)
-    {
-        if (FetchPageResult is not null)
-        {
-            return await FetchPageResult(page, PageSize, cancellationToken);
-        }
-
-#pragma warning disable CS0618 // Back-compat path for call sites still on the tuple delegate.
-        return Result.Success(await FetchPage!(page, PageSize, cancellationToken));
-#pragma warning restore CS0618
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -218,7 +184,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
         try
         {
-            var fetched = await FetchAsync(targetPage, cts.Token);
+            var fetched = await FetchPageResult!(targetPage, PageSize, cts.Token);
 
             // The generation, not the token, is authoritative: the fetcher is consumer-supplied and
             // may ignore the CancellationToken entirely, so a superseded fetch can still complete
@@ -230,8 +196,8 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
             if (!fetched.TryGetValue(out var page))
             {
-                // A failure Result is the answer an exception used to be: same error state, same
-                // inline Retry button, and the page counter still never advanced.
+                // A failure Result raises the error state and its inline Retry button; the page
+                // counter never advanced, so there is nothing to compensate back.
                 SetLoadFailed(isInitial, fetched);
                 return;
             }
@@ -312,7 +278,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     /// </summary>
     public async Task ResetAsync()
     {
-        // Supersede first: any fetch already awaiting FetchPage now belongs to an older generation
+        // Supersede first: any fetch already awaiting FetchPageResult now belongs to an older generation
         // and must drop its results instead of appending them to the list cleared below.
         _generation++;
 

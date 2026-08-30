@@ -7,8 +7,8 @@ namespace MMCA.Common.API.Authorization;
 /// Lazily materializes an <see cref="AuthorizationPolicy"/> for any policy name prefixed with
 /// <see cref="PermissionPolicy.Prefix"/>, attaching a <see cref="PermissionRequirement"/> for the
 /// permission encoded in the name. This removes the need to pre-register a named policy per
-/// permission. Every other policy name falls through to the default provider, so the named role
-/// policies in <see cref="AuthorizationPolicies"/> keep working unchanged.
+/// permission. Every other policy name falls through to the default provider, so a policy an
+/// application registers itself is still resolved the usual way.
 /// </summary>
 public sealed class PermissionPolicyProvider : IAuthorizationPolicyProvider
 {

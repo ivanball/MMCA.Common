@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
@@ -43,7 +44,7 @@ public sealed class CosmosConfigurationPortabilityTests
             ["Portable"] = new() { CosmosConnectionString = EmulatorConnectionString, CosmosDatabaseName = "TestDb" },
         });
 
-        var resolver = new DataSourceResolver(connectionStrings, dataSources, NullLogger<DataSourceResolver>.Instance);
+        var resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
         var assemblyProvider = new FixedAssemblyProvider();
         var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
 

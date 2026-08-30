@@ -15,18 +15,6 @@ public sealed class GatewaySettings
     public const string SectionName = "MmcaGateway";
 
     /// <summary>
-    /// Rollback switch for HTTP/2 forwarding. When <see langword="false"/> every cluster that would
-    /// otherwise forward over HTTP/2 (from its own config, from an override, or from the defaults)
-    /// has its version settings stripped, dropping it back to YARP's negotiated behavior.
-    /// <para>
-    /// It exists because the h2c decision is an infrastructure one, not a code one: an ingress
-    /// deployed without HTTP/2 transport breaks every cluster at once, and one switch is a faster
-    /// rollback than editing each cluster's HttpRequest block.
-    /// </para>
-    /// </summary>
-    public bool ForwardHttp2 { get; init; } = true;
-
-    /// <summary>
     /// The request profile applied to every cluster that does not state a value of its own. This is
     /// the copy-paste eliminator: the shared activity timeout and the h2c version pair are declared
     /// once here instead of in each cluster's <c>HttpRequest</c> block.

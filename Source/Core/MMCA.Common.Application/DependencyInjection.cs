@@ -2,12 +2,10 @@ using System.Reflection;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
-using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.Users.UseCases.ExportUserData;
@@ -34,8 +32,6 @@ public static class DependencyInjection
         /// <returns>The service collection for chaining.</returns>
         public IServiceCollection AddApplication()
         {
-            services.TryAddSingleton<IApplicationSettings>(sp => sp.GetRequiredService<IOptions<ApplicationSettings>>().Value);
-
             services.TryAddSingleton<IDomainEventDispatcher, DomainEventDispatcher>();
 
             // Composed view of every AddEventUpcaster registration. Always registered: with no
@@ -593,7 +589,8 @@ public static class DependencyInjection
         /// <code>
         /// services.AddMmcaApplicationPipeline(pipeline => pipeline
         ///     .ScanModule&lt;TicketsClassReference&gt;()
-        ///     .Register(s => moduleLoader.DiscoverAndRegister(s, configuration, appSettings, moduleSettings)));
+        ///     .Register(s => moduleLoader.DiscoverAndRegister(
+        ///         s, configuration, appSettings, moduleSettings, environmentName, moduleAssemblies)));
         /// </code>
         /// </example>
         /// </remarks>

@@ -400,11 +400,10 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// Applies a client-supplied optimistic-concurrency token as the tracked entity's original
     /// <c>RowVersion</c>, so the next save raises <c>DbUpdateConcurrencyException</c> (mapped to
     /// <c>409 Conflict</c>) when the row was modified by someone else since the client read it.
-    /// No-op when <paramref name="rowVersion"/> is null or empty (legacy clients / first write).
     /// </summary>
     /// <param name="entity">The tracked entity whose original concurrency token should be set.</param>
-    /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>, or null to skip the check.</param>
-    void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion);
+    /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>.</param>
+    void SetOriginalRowVersion(TEntity entity, byte[] rowVersion);
 
     /// <summary>
     /// Applies a client-supplied optimistic-concurrency token to a tracked CHILD entity of this
@@ -412,11 +411,10 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// the same stale-token 409 protection as the aggregate root (ADR-035). The aggregate-typed
     /// overload above cannot reach children because the repository's <c>TEntity</c> is the root;
     /// this overload accepts any <see cref="Domain.Interfaces.IRowVersioned"/> entity instead.
-    /// No-op when <paramref name="rowVersion"/> is null or empty (legacy clients / first write).
     /// </summary>
     /// <param name="childEntity">The tracked child entity whose original concurrency token should be set.</param>
-    /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>, or null to skip the check.</param>
-    void SetOriginalRowVersion(Domain.Interfaces.IRowVersioned childEntity, byte[]? rowVersion);
+    /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>.</param>
+    void SetOriginalRowVersion(Domain.Interfaces.IRowVersioned childEntity, byte[] rowVersion);
 
     /// <summary>
     /// Executes a bulk delete directly in the database, bypassing change tracking.

@@ -22,7 +22,6 @@ using MMCA.Common.Infrastructure.Http;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
-using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
@@ -62,8 +61,6 @@ public static class DependencyInjection
             // that does can never accidentally leave the write-side guard off.
             services.TryAddSingleton<TenantSaveChangesInterceptor>();
 
-            services.TryAddSingleton<IJwtSettings>(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
-
             services.AddOptions<ConnectionStringSettings>()
                 .Bind(configuration.GetSection(ConnectionStringSettings.SectionName))
                 .ValidateDataAnnotations()
@@ -76,7 +73,6 @@ public static class DependencyInjection
             // AddInfrastructure must not run the same validation twice.
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IValidateOptions<ConnectionStringSettings>, ConnectionStringSettingsValidator>());
-            services.TryAddSingleton<IConnectionStringSettings>(sp => sp.GetRequiredService<IOptions<ConnectionStringSettings>>().Value);
 
             // Named data sources for database-per-microservice routing. A root-level dictionary
             // section does not bind through the options pipeline — build the settings directly.
@@ -90,7 +86,6 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(SmtpSettings.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
-            services.TryAddSingleton<ISmtpSettings>(sp => sp.GetRequiredService<IOptions<SmtpSettings>>().Value);
 
             // Register our custom IDbContextFactory (scoped — one per request) and the singleton
             // physical factory that creates raw contexts per physical data source.
@@ -99,16 +94,6 @@ public static class DependencyInjection
             // pooling would silently reuse across databases.
             services.TryAddScoped<IDbContextFactory, DbContextFactory>();
             services.TryAddSingleton<IPhysicalDbContextFactory, PhysicalDbContextFactory>();
-
-            // EF-style IDbContextFactory<T> adapters bound to each engine's Default physical
-            // source — preserves the DI surface for ApplicationDbContextEFFactory and tests.
-            services.TryAddSingleton<Microsoft.EntityFrameworkCore.IDbContextFactory<CosmosDbContext>, DefaultCosmosDbContextFactory>();
-            services.TryAddSingleton<Microsoft.EntityFrameworkCore.IDbContextFactory<SqliteDbContext>, DefaultSqliteDbContextFactory>();
-            services.TryAddSingleton<Microsoft.EntityFrameworkCore.IDbContextFactory<SQLServerDbContext>, DefaultSqlServerDbContextFactory>();
-
-            // Dual factory: our IDbContextFactory manages multi-DB routing, while this adapter satisfies
-            // consumers that require EF Core's standard IDbContextFactory<ApplicationDbContext>.
-            services.TryAddScoped<Microsoft.EntityFrameworkCore.IDbContextFactory<ApplicationDbContext>, ApplicationDbContextEFFactory>();
 
             services.TryAddSingleton<IQueryableExecutor, EFQueryableExecutor>();
 
@@ -558,7 +543,7 @@ public static class DependencyInjection
             // Scoped lifetime caused the underlying RSA to be disposed at end-of-request while
             // Microsoft.IdentityModel.Tokens' static CryptoProviderCache still held the cached
             // AsymmetricSignatureProvider that wrapped it, throwing ObjectDisposedException on
-            // the next RS256 sign. Constructor only depends on IJwtSettings (singleton) and the
+            // the next RS256 sign. Constructor only depends on IOptions of JwtSettings (singleton) and the
             // service is stateless after construction, so singleton is correct.
             services.TryAddSingleton<ITokenService, TokenService>();
             services.TryAddSingleton<IPasswordHasher, PasswordHasher>();
@@ -633,8 +618,6 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(PushNotificationSettings.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
-            services.TryAddSingleton<IPushNotificationSettings>(sp =>
-                sp.GetRequiredService<IOptions<PushNotificationSettings>>().Value);
 
             var signalRBuilder = services.AddSignalR();
 

@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using AwesomeAssertions;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Azure.NotificationHubs.Messaging;
@@ -128,21 +128,6 @@ public sealed class AzureNotificationHubDeviceRegistrarTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "PushDevice.DeleteFailed");
-    }
-
-    [Fact]
-    public async Task DeleteAsync_UnscopedOverload_StillDeletesWithoutAnOwnershipLookup()
-    {
-        var result = await _sut.DeleteAsync(InstallationId, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.Should().BeTrue();
-        _hubClient.Verify(
-            x => x.DeleteInstallationAsync(InstallationId, It.IsAny<CancellationToken>()),
-            Times.Once);
-        _hubClient.Verify(
-            x => x.GetInstallationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "the unscoped overload is for server-initiated cleanup where the owner is already established");
     }
 
     [Fact]

@@ -6,26 +6,19 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.API.Concurrency;
-using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 
 namespace MMCA.Common.API.Tests.Concurrency;
 
 /// <summary>
-/// The conditional-write filter: where the concurrency token comes from, and which status a conflict
-/// gets as a result.
+/// The conditional-write filter: the <c>If-Match</c> header is the one source of the concurrency
+/// token, it is mandatory, and a conflict is answered as a failed precondition.
 /// </summary>
 public sealed class SupportsIfMatchAttributeTests
 {
     private static readonly byte[] HeaderRowVersion = [0, 0, 0, 0, 0, 0, 7, 209];
-    private static readonly byte[] BodyRowVersion = [9, 9, 9, 9];
 
-    /// <summary>A request record shaped exactly like a real one: init-only, as the immutability rules require.</summary>
-    private sealed record UpdateThingRequest : IConcurrencyAware
-    {
-        public byte[]? RowVersion { get; init; }
-    }
-
-    private static ActionExecutingContext CreateContext(string? ifMatch, object? argument)
+    private static ActionExecutingContext CreateContext(string? ifMatch)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Method = "PUT";
@@ -35,14 +28,8 @@ public sealed class SupportsIfMatchAttributeTests
             httpContext.Request.Headers[ConcurrencyETag.IfMatchHeaderName] = ifMatch;
         }
 
-        var arguments = new Dictionary<string, object?>(StringComparer.Ordinal);
-        if (argument is not null)
-        {
-            arguments["request"] = argument;
-        }
-
         var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
-        return new ActionExecutingContext(actionContext, [], arguments, null!);
+        return new ActionExecutingContext(actionContext, [], new Dictionary<string, object?>(StringComparer.Ordinal), null!);
     }
 
     /// <summary>Runs the filter with an action that produces <paramref name="actionResult"/>.</summary>
@@ -75,40 +62,56 @@ public sealed class SupportsIfMatchAttributeTests
         };
 
     [Fact]
-    public async Task WithoutIfMatch_LeavesTheRequestAloneAndKeeps409()
+    public async Task WithoutIfMatch_Returns428AndNeverRunsTheAction()
     {
-        var request = new UpdateThingRequest();
-        var (context, result, executed) = await RunAsync(CreateContext(ifMatch: null, request), Conflict());
+        var (context, result, executed) = await RunAsync(CreateContext(ifMatch: null), Conflict());
 
-        executed.Should().BeTrue();
-        request.RowVersion.Should().BeNull("there was no header to take a token from");
-        context.HttpContext.Items.Should().NotContainKey(SupportsIfMatchAttribute.HeaderSourcedItemKey);
-        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        executed.Should().BeFalse("a conditional write with no precondition would be last-write-wins");
+        context.HttpContext.Items.Should().NotContainKey(SupportsIfMatchAttribute.TokenItemKey);
+
+        var objectResult = result.Should().BeOfType<ObjectResult>().Which;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status428PreconditionRequired);
+        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Title.Should().Be("If-Match header required");
     }
 
     [Fact]
-    public async Task WithIfMatch_PopulatesTheTokenAndFlagsTheSource()
+    public async Task WithBlankIfMatch_Returns428()
     {
-        var request = new UpdateThingRequest();
-        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion), request);
+        var (_, result, executed) = await RunAsync(CreateContext("   "));
+
+        executed.Should().BeFalse();
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status428PreconditionRequired);
+    }
+
+    [Fact]
+    public async Task WithWildcardIfMatch_Returns428()
+    {
+        var (_, result, executed) = await RunAsync(CreateContext(ConcurrencyETag.Wildcard));
+
+        executed.Should().BeFalse("\"*\" states no particular version, so it is no precondition at all");
+        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status428PreconditionRequired);
+    }
+
+    [Fact]
+    public async Task WithIfMatch_PublishesTheDecodedTokenForTheAction()
+    {
+        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion));
 
         var (_, _, executed) = await RunAsync(context);
 
         executed.Should().BeTrue();
-        request.RowVersion.Should().Equal(HeaderRowVersion);
-        context.HttpContext.Items[SupportsIfMatchAttribute.HeaderSourcedItemKey].Should().Be(true);
+        SupportsIfMatchAttribute.RequiredToken(context.HttpContext).Should().Equal(HeaderRowVersion);
     }
 
     [Fact]
     public async Task WithMalformedIfMatch_Returns400AndNeverRunsTheAction()
     {
-        var request = new UpdateThingRequest();
-        var context = CreateContext("W/\"not base64!\"", request);
+        var context = CreateContext("W/\"not base64!\"");
 
         var (_, result, executed) = await RunAsync(context);
 
         executed.Should().BeFalse("a precondition the server cannot read must not be silently ignored");
-        request.RowVersion.Should().BeNull();
+        context.HttpContext.Items.Should().NotContainKey(SupportsIfMatchAttribute.TokenItemKey);
 
         var objectResult = result.Should().BeOfType<ObjectResult>().Which;
         objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -116,38 +119,18 @@ public sealed class SupportsIfMatchAttributeTests
     }
 
     [Fact]
-    public async Task WithWildcardIfMatch_RunsTheActionWithNoToken()
+    public void RequiredToken_WithoutTheFilter_ThrowsRatherThanGuessing()
     {
-        var request = new UpdateThingRequest();
-        var context = CreateContext(ConcurrencyETag.Wildcard, request);
+        var act = () => SupportsIfMatchAttribute.RequiredToken(new DefaultHttpContext());
 
-        var (_, result, executed) = await RunAsync(context, Conflict());
-
-        executed.Should().BeTrue();
-        request.RowVersion.Should().BeNull("\"*\" states no particular version");
-        context.HttpContext.Items.Should().NotContainKey(SupportsIfMatchAttribute.HeaderSourcedItemKey);
-        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*SupportsIfMatchAttribute*", because: "reaching the action without the filter is a wiring mistake");
     }
 
     [Fact]
-    public async Task WhenTheBodyAlreadyCarriesAToken_TheHeaderDoesNotOverwriteItAnd409Stands()
+    public async Task AConflictBecomes412WithTheSameBody()
     {
-        var request = new UpdateThingRequest { RowVersion = BodyRowVersion };
-        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion), request);
-
-        var (_, result, _) = await RunAsync(context, Conflict());
-
-        request.RowVersion.Should().Equal(BodyRowVersion, "the body wins; the header only fills a gap");
-        context.HttpContext.Items.Should().NotContainKey(SupportsIfMatchAttribute.HeaderSourcedItemKey);
-        result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(
-            StatusCodes.Status409Conflict,
-            "a body-sourced token keeps the pre-existing conflict semantics untouched");
-    }
-
-    [Fact]
-    public async Task WhenHeaderSourced_AConflictBecomes412WithTheSameBody()
-    {
-        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion), new UpdateThingRequest());
+        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion));
 
         var (_, result, _) = await RunAsync(context, Conflict());
 
@@ -160,9 +143,9 @@ public sealed class SupportsIfMatchAttributeTests
     }
 
     [Fact]
-    public async Task WhenHeaderSourced_ASuccessIsLeftAlone()
+    public async Task ASuccessIsLeftAlone()
     {
-        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion), new UpdateThingRequest());
+        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion));
 
         var (_, result, _) = await RunAsync(context, new NoContentResult());
 
@@ -170,9 +153,9 @@ public sealed class SupportsIfMatchAttributeTests
     }
 
     [Fact]
-    public async Task WhenHeaderSourced_ABodylessConflictStatusBecomes412()
+    public async Task ABodylessConflictStatusBecomes412()
     {
-        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion), new UpdateThingRequest());
+        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion));
 
         var (_, result, _) = await RunAsync(context, new StatusCodeResult(StatusCodes.Status409Conflict));
 
@@ -180,27 +163,15 @@ public sealed class SupportsIfMatchAttributeTests
     }
 
     [Fact]
-    public async Task WhenHeaderSourced_TheEfConcurrencyExceptionIsAnsweredAs412()
+    public async Task TheEfConcurrencyExceptionIsAnsweredAs412()
     {
-        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion), new UpdateThingRequest());
+        var context = CreateContext(ConcurrencyETag.Format(HeaderRowVersion));
 
         var executedContext = await RunFilterAsync(context, new DbUpdateConcurrencyException("stale"));
 
         executedContext.ExceptionHandled.Should().BeTrue("the global 409 handler must not also answer this");
         var objectResult = executedContext.Result.Should().BeOfType<ObjectResult>().Which;
         objectResult.StatusCode.Should().Be(StatusCodes.Status412PreconditionFailed);
-    }
-
-    [Fact]
-    public async Task WhenBodySourced_TheEfConcurrencyExceptionIsLeftToTheGlobalHandler()
-    {
-        var request = new UpdateThingRequest { RowVersion = BodyRowVersion };
-        var context = CreateContext(ifMatch: null, request);
-
-        var executedContext = await RunFilterAsync(context, new DbUpdateConcurrencyException("stale"));
-
-        executedContext.ExceptionHandled.Should().BeFalse();
-        executedContext.Exception.Should().BeOfType<DbUpdateConcurrencyException>();
     }
 
     /// <summary>Runs the filter over an action that threw, returning the executed context itself.</summary>

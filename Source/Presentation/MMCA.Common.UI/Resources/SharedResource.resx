@@ -97,9 +97,6 @@
   <data name="Common.Error.Validation" xml:space="preserve">
     <value>There were validation errors. Please check the form.</value>
   </data>
-  <data name="Common.Success" xml:space="preserve">
-    <value>{0} {1} successfully.</value>
-  </data>
   <data name="Grid.Snackbar.LoadCancelled" xml:space="preserve">
     <value>Loading cancelled.</value>
   </data>
@@ -297,6 +294,12 @@
   </data>
   <data name="Nav.Home" xml:space="preserve">
     <value>Home</value>
+  </data>
+  <data name="Nav.NotificationInbox" xml:space="preserve">
+    <value>Notification Inbox</value>
+  </data>
+  <data name="Nav.PushNotifications" xml:space="preserve">
+    <value>Push Notifications</value>
   </data>
   <data name="Auth.Register.Subtitle" xml:space="preserve">
     <value>Create your account to get started</value>

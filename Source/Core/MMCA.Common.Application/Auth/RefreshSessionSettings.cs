@@ -12,11 +12,15 @@ public sealed class RefreshSessionSettings
     public const string SectionName = "RefreshSessions";
 
     /// <summary>
-    /// Gets a value indicating whether the <c>RefreshSessions</c> table belongs in the model.
-    /// Defaults to <see langword="false"/>, so a host that has not opted in keeps the model it had
-    /// before sessions shipped and its migrations never see the table (the <c>Scheduler:Enabled</c>
-    /// precedent). The Identity service sets this to <see langword="true"/>; every other service
-    /// leaves it alone, which is what keeps the table in exactly one database.
+    /// Gets a value indicating whether the <c>RefreshSessions</c> table belongs in this host's model
+    /// and its retention sweep runs here. Defaults to <see langword="false"/> (the
+    /// <c>Scheduler:Enabled</c> precedent): the service that owns identity sets it to
+    /// <see langword="true"/> and every other service in a modular host leaves it alone, which is
+    /// what keeps the table, its migrations and its sweep in exactly one database.
+    /// <para>
+    /// It gates the model, not the workflow. <see cref="AuthenticationServiceBase{TUser}"/> always
+    /// issues, rotates and revokes sessions; this flag decides which database carries the rows.
+    /// </para>
     /// </summary>
     public bool Enabled { get; init; }
 
@@ -61,8 +65,7 @@ public sealed class RefreshSessionSettings
     /// could still come back.
     /// </para>
     /// <para>
-    /// Set to <c>0</c> to keep every row forever, which is the pre-sweep behavior and makes the table
-    /// an operator's problem.
+    /// Set to <c>0</c> to keep every row forever, which makes the table an operator's problem.
     /// </para>
     /// </summary>
     [Range(0, 3650)]
