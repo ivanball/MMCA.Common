@@ -3,6 +3,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
+using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence;
@@ -16,7 +17,7 @@ public sealed class DbContextFactoryTests
         var act = () => new DbContextFactory(
             null!,
             Mock.Of<IEntityDataSourceRegistry>(),
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("physicalDbContextFactory");
@@ -28,7 +29,7 @@ public sealed class DbContextFactoryTests
         var act = () => new DbContextFactory(
             Mock.Of<IPhysicalDbContextFactory>(),
             null!,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("entityDataSourceRegistry");
@@ -52,7 +53,7 @@ public sealed class DbContextFactoryTests
         var act = () => new DbContextFactory(
             Mock.Of<IPhysicalDbContextFactory>(),
             Mock.Of<IEntityDataSourceRegistry>(),
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("currentUserService");
@@ -162,7 +163,7 @@ public sealed class DbContextFactoryTests
         return new DbContextFactory(
             (physicalFactory ?? new Mock<IPhysicalDbContextFactory>()).Object,
             registry.Object,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
     }
 }

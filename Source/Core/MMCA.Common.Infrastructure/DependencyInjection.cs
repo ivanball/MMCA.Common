@@ -68,6 +68,14 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(ConnectionStringSettings.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
+            // The "a host must reach some database" rule cannot be a data annotation: it spans the
+            // ConnectionStrings section AND the DataSources one, so a SQLite-only host that declares
+            // its databases as named sources is legitimate while a host declaring none anywhere is
+            // not. TryAddEnumerable, like the tenancy validator: two modules calling
+            // AddInfrastructure must not run the same validation twice.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<ConnectionStringSettings>, ConnectionStringSettingsValidator>());
             services.TryAddSingleton<IConnectionStringSettings>(sp => sp.GetRequiredService<IOptions<ConnectionStringSettings>>().Value);
 
             // Named data sources for database-per-microservice routing. A root-level dictionary

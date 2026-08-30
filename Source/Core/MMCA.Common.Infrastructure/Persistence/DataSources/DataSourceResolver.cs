@@ -14,11 +14,29 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
 {
     private static readonly DataSource[] AllEngines = [DataSource.CosmosDB, DataSource.Sqlite, DataSource.SQLServer];
 
+    /// <summary>
+    /// Engine preference used to pick the substitute engine for a request naming an engine the host
+    /// does not configure. Relational first, because every table the framework owns (outbox, inbox,
+    /// scheduled jobs, audit trail, refresh sessions) is relational, and SQL Server ahead of SQLite
+    /// so a host that configures SQL Server at all keeps exactly the routing it had before.
+    /// </summary>
+    private static readonly DataSource[] EnginePreference = [DataSource.SQLServer, DataSource.Sqlite, DataSource.CosmosDB];
+
     /// <summary>Per-engine map of logical name → physical key (collapse already applied).</summary>
     private readonly Dictionary<(DataSource Engine, string LogicalName), DataSourceKey> _logicalToPhysical = [];
 
     /// <summary>Resolved connection information per physical key (Default keys always present).</summary>
     private readonly Dictionary<DataSourceKey, PhysicalDataSource> _physicalSources = [];
+
+    /// <summary>Engines carrying at least one connection string (top-level or on a named entry).</summary>
+    private readonly HashSet<DataSource> _configuredEngines = [];
+
+    /// <summary>
+    /// The engine a request for an unconfigured engine is served from, or <see langword="null"/>
+    /// when the host configures no database at all (nothing to substitute, so requests pass through
+    /// exactly as they did before).
+    /// </summary>
+    private readonly DataSource? _substituteEngine;
 
     /// <summary>
     /// Initializes the resolver, eagerly building and validating the logical→physical map.
@@ -41,6 +59,24 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         foreach (var engine in AllEngines)
         {
             BuildEngineMap(engine, connectionStrings, dataSources, logger);
+
+            if (HasAnyConnectionString(engine, connectionStrings, dataSources))
+            {
+                _configuredEngines.Add(engine);
+            }
+        }
+
+        _substituteEngine = EnginePreference
+            .Where(_configuredEngines.Contains)
+            .Select(engine => (DataSource?)engine)
+            .FirstOrDefault();
+
+        if (_substituteEngine is { } substitute && substitute != DataSource.SQLServer)
+        {
+            // Worth one startup line: the framework's own tables (outbox, inbox, scheduled jobs,
+            // audit trail) default to SQL Server in settings, and this is where a host that
+            // configures no SQL Server connection learns they were served from another engine.
+            LogSubstituteEngine(logger, substitute);
         }
     }
 
@@ -49,15 +85,50 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logicalName);
 
+        var effectiveEngine = SubstituteUnconfiguredEngine(engine);
+
         if (string.Equals(logicalName, DataSourceKey.DefaultName, StringComparison.OrdinalIgnoreCase))
         {
-            return DataSourceKey.Default(engine);
+            return DataSourceKey.Default(effectiveEngine);
         }
 
-        return _logicalToPhysical.TryGetValue((engine, logicalName), out var key)
+        return _logicalToPhysical.TryGetValue((effectiveEngine, logicalName), out var key)
             ? key
-            : DataSourceKey.Default(engine);
+            : DataSourceKey.Default(effectiveEngine);
     }
+
+    /// <summary>
+    /// Substitutes the host's own engine for a request naming an engine it does not configure.
+    /// <para>
+    /// Every engine choice the framework makes for its own tables comes from a setting that defaults
+    /// to <see cref="DataSource.SQLServer"/> (<c>Outbox:DataSource</c>, <c>Scheduler:DataSource</c>,
+    /// <c>AuditTrail:DataSource</c>). Honoring that default literally in a host that configures only
+    /// SQLite handed those components a physical source with an empty connection string, and the
+    /// first query they ran failed with "The ConnectionString property has not been initialized".
+    /// Serving them from the engine the host actually configures is what makes a single-engine host
+    /// work without every framework component growing its own engine setting.
+    /// </para>
+    /// <para>
+    /// Nothing moves for a host that configures the requested engine, so a SQL-Server-only host and a
+    /// polyglot host that configures both engines (ADR-018) resolve exactly as before; only a request
+    /// that could not have been served at all is redirected.
+    /// </para>
+    /// </summary>
+    /// <param name="engine">The requested engine.</param>
+    /// <returns>The requested engine, or the substitute when it is unconfigured.</returns>
+    private DataSource SubstituteUnconfiguredEngine(DataSource engine) =>
+        _configuredEngines.Contains(engine) ? engine : _substituteEngine ?? engine;
+
+    /// <summary>
+    /// Reports whether the engine carries a connection string anywhere in configuration: the
+    /// top-level <c>ConnectionStrings</c> section or any named <c>DataSources</c> entry.
+    /// </summary>
+    private static bool HasAnyConnectionString(
+        DataSource engine,
+        IConnectionStringSettings connectionStrings,
+        DataSourcesSettings dataSources) =>
+        !string.IsNullOrEmpty(GetConnectionString(engine, connectionStrings))
+        || dataSources.Sources.Values.Any(entry => !string.IsNullOrEmpty(GetConnectionString(engine, entry)));
 
     /// <inheritdoc />
     public PhysicalDataSource GetPhysical(DataSourceKey key) =>
@@ -315,6 +386,9 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         DataSource.SQLServer => entry.SQLServerConnectionString,
         _ => throw new InvalidOperationException($"DataSource \"{engine}\" not implemented."),
     };
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "No SQL Server connection string is configured; data sources requesting an unconfigured engine (including the framework's own outbox, inbox, scheduled-job, and audit-trail tables) resolve to {SubstituteEngine}.")]
+    private static partial void LogSubstituteEngine(ILogger logger, DataSource substituteEngine);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "SQL Server data source \"{DataSourceName}\" has no dedicated SQLServerMigrationsAssembly; falling back to {Fallback}. Applying another database's migrations to a separate database is almost always a mistake — declare a per-source migrations assembly.")]
     private static partial void LogMigrationsAssemblyFallback(ILogger logger, string dataSourceName, string fallback);

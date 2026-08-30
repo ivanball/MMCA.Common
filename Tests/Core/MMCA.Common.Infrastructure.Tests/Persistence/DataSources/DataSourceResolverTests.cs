@@ -10,6 +10,7 @@ public sealed class DataSourceResolverTests
 {
     private const string DefaultSql = "Server=localhost;Database=Main;";
     private const string OtherSql = "Server=localhost;Database=Other;";
+    private const string DefaultSqlite = "Data Source=main.db";
 
     // ── Collapse rules ──
     [Fact]
@@ -28,7 +29,11 @@ public sealed class DataSourceResolverTests
     [InlineData("DEFAULT")]
     public void ResolveLogical_DefaultName_AnyCase_ReturnsDefault(string name)
     {
-        var sut = CreateSut();
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            SQLServerConnectionString = DefaultSql,
+            SqliteConnectionString = DefaultSqlite,
+        });
 
         sut.ResolveLogical(DataSource.Sqlite, name).Should().Be(DataSourceKey.Default(DataSource.Sqlite));
     }
@@ -313,6 +318,122 @@ public sealed class DataSourceResolverTests
         });
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*SqliteMigrationsAssembly*");
+    }
+
+    // ── Unconfigured-engine substitution ──
+    // Every engine the framework picks for its OWN tables comes from a setting defaulting to SQL
+    // Server (Outbox:DataSource, Scheduler:DataSource, AuditTrail:DataSource). A host that
+    // configures only SQLite must serve them from SQLite rather than from a physical source whose
+    // connection string is empty.
+    [Fact]
+    public void ResolveLogical_SqliteOnlyHost_ServesTheFrameworkSqlServerDefaultFromSqlite()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings { SqliteConnectionString = DefaultSqlite });
+
+        // The engine the outbox, scheduler and audit trail ask for out of the box.
+        var scheduler = sut.ResolveLogical(new SchedulerSettings().DataSource, DataSourceKey.DefaultName);
+        var outbox = sut.ResolveLogical(new OutboxSettings().DataSource, new OutboxSettings().DatabaseName);
+        var auditTrail = sut.ResolveLogical(new AuditTrailSettings().DataSource, DataSourceKey.DefaultName);
+
+        scheduler.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        outbox.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        auditTrail.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        sut.GetPhysical(scheduler).ConnectionString.Should().Be(DefaultSqlite);
+    }
+
+    [Fact]
+    public void ResolveLogical_SqliteConfiguredOnANamedEntryOnly_StillSubstitutesSqlite()
+    {
+        // No top-level SQLite connection string: the only database in the host is a named entry,
+        // which is the shape the small-app template generates.
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Notes"] = new() { SqliteConnectionString = "Data Source=notes.db" },
+            },
+            new ConnectionStringSettings());
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        sut.ResolveLogical(DataSource.SQLServer, "Notes")
+            .Should().Be(new DataSourceKey(DataSource.Sqlite, "Notes"));
+    }
+
+    [Fact]
+    public void ResolveLogical_SqlServerOnlyHost_IsUnchanged()
+    {
+        var sut = CreateSut();
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+        sut.ResolveLogical(DataSource.SQLServer, "Conference")
+            .Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+    }
+
+    [Fact]
+    public void ResolveLogical_PolyglotHost_RoutesEachEngineToItself()
+    {
+        // ADR-018: both engines are configured, so nothing is substituted and each engine keeps its
+        // own physical sources.
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Catalog"] = new() { SqliteConnectionString = "Data Source=catalog.db" },
+                ["Sales"] = new() { SQLServerConnectionString = OtherSql },
+            },
+            new ConnectionStringSettings
+            {
+                SQLServerConnectionString = DefaultSql,
+                SqliteConnectionString = DefaultSqlite,
+            });
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+        sut.ResolveLogical(DataSource.SQLServer, "Sales").Should().Be(new DataSourceKey(DataSource.SQLServer, "Sales"));
+        sut.ResolveLogical(DataSource.Sqlite, "Catalog").Should().Be(new DataSourceKey(DataSource.Sqlite, "Catalog"));
+
+        // A SQL Server logical name with no SQL Server connection collapses onto SQL Server's
+        // Default, exactly as before: it is NOT redirected to the SQLite source of the same name.
+        sut.ResolveLogical(DataSource.SQLServer, "Catalog").Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+    }
+
+    [Fact]
+    public void ResolveLogical_SqliteAndCosmosHost_PrefersTheRelationalEngine()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            SqliteConnectionString = DefaultSqlite,
+            CosmosConnectionString = "AccountEndpoint=https://test;AccountKey=dGVzdA==",
+        });
+
+        // The framework's own tables are relational, so SQLite wins over Cosmos DB.
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.Sqlite));
+        sut.ResolveLogical(DataSource.CosmosDB, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.CosmosDB));
+    }
+
+    [Fact]
+    public void ResolveLogical_CosmosOnlyHost_SubstitutesCosmos()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            CosmosConnectionString = "AccountEndpoint=https://test;AccountKey=dGVzdA==",
+        });
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.CosmosDB));
+    }
+
+    [Fact]
+    public void ResolveLogical_HostWithNoDatabaseAtAll_PassesTheEngineThrough()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings());
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+        sut.ResolveLogical(DataSource.Sqlite, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.Sqlite));
     }
 
     private static DataSourceResolver CreateSut(

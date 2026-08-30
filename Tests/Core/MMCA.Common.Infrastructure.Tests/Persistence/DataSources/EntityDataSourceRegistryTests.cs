@@ -15,6 +15,7 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.DataSources;
 public sealed class EntityDataSourceRegistryTests
 {
     private const string DefaultSql = "Server=localhost;Database=Main;";
+    private const string DefaultSqlite = "Data Source=main.db";
 
     // ── [UseDatabase] override ──
     [Fact]
@@ -162,8 +163,15 @@ public sealed class EntityDataSourceRegistryTests
         Dictionary<string, DataSourceEntrySettings>? sources = null,
         IReadOnlyList<Assembly>? assemblies = null)
     {
+        // Both engines carry a top-level connection string: these fixtures model a polyglot host
+        // (the entity configurations under test declare SQL Server AND SQLite), and the resolver
+        // only substitutes an engine the host configures nowhere.
         var resolver = new DataSourceResolver(
-            new ConnectionStringSettings { SQLServerConnectionString = DefaultSql },
+            new ConnectionStringSettings
+            {
+                SQLServerConnectionString = DefaultSql,
+                SqliteConnectionString = DefaultSqlite,
+            },
             new DataSourcesSettings(sources),
             NullLogger<DataSourceResolver>.Instance);
 

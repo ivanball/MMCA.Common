@@ -1,10 +1,13 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace MMCA.Common.Infrastructure.Settings;
 
 /// <summary>
 /// Concrete settings bound from the <c>ConnectionStrings</c> configuration section.
-/// Only <see cref="SQLServerConnectionString"/> is required because SQL Server is the default data source.
+/// <para>
+/// No single property is required. SQL Server is the default engine, but a host may run entirely on
+/// SQLite or Cosmos, and may declare its databases through the <c>DataSources</c> section instead of
+/// this one. What IS required is that the host can reach some database:
+/// <see cref="ConnectionStringSettingsValidator"/> enforces that across both sections at startup.
+/// </para>
 /// </summary>
 public sealed class ConnectionStringSettings : IConnectionStringSettings
 {
@@ -21,7 +24,6 @@ public sealed class ConnectionStringSettings : IConnectionStringSettings
     public string SqliteConnectionString { get; init; } = string.Empty;
 
     /// <inheritdoc />
-    [Required]
     public string SQLServerConnectionString { get; init; } = string.Empty;
 
     /// <inheritdoc />

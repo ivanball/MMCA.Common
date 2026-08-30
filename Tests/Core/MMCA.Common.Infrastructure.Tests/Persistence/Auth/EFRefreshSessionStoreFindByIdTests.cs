@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
@@ -118,6 +119,7 @@ public sealed class EFRefreshSessionStoreFindByIdTests
             var store = new StoreUnderTest(
                 dbContextFactory.Object,
                 new EmptyEntityDataSourceRegistry(),
+                Mock.Of<IDataSourceResolver>(),
                 Options.Create(new RefreshSessionSettings { Enabled = true }));
 
             return new StoreHarness(connection, context, store);

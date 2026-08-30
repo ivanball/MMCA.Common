@@ -31,11 +31,21 @@ public sealed class ApplicationDbContextEFFactory : IDbContextFactory<Applicatio
     }
 
     /// <inheritdoc />
-    public ApplicationDbContext CreateDbContext() => _defaultDataSource switch
+    public ApplicationDbContext CreateDbContext() => ResolveEngine() switch
     {
         DataSource.CosmosDB => _serviceProvider.GetRequiredService<IDbContextFactory<CosmosDbContext>>().CreateDbContext(),
         DataSource.Sqlite => _serviceProvider.GetRequiredService<IDbContextFactory<SqliteDbContext>>().CreateDbContext(),
         DataSource.SQLServer => _serviceProvider.GetRequiredService<IDbContextFactory<SQLServerDbContext>>().CreateDbContext(),
-        _ => throw new InvalidOperationException($"Unsupported default DataSource '{_defaultDataSource}'")
+        var engine => throw new InvalidOperationException($"Unsupported default DataSource '{engine}'")
     };
+
+    /// <summary>
+    /// Substitutes the host's own engine when the configured default names one it has no connection
+    /// string for. Without it, a SQLite-only host resolving this factory built a SQL Server context
+    /// over an empty connection string.
+    /// </summary>
+    private DataSource ResolveEngine() =>
+        _serviceProvider.GetService<DataSources.IDataSourceResolver>() is { } resolver
+            ? resolver.ResolveLogical(_defaultDataSource, DataSourceKey.DefaultName).Engine
+            : _defaultDataSource;
 }

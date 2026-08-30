@@ -47,7 +47,7 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
         _sut = new DbContextFactory(
             physicalFactory.Object,
             registry.Object,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
     }
 

@@ -105,8 +105,9 @@ public sealed partial class RefreshSessionCleanupService(
 
         using var scope = scopeFactory.CreateScope();
         var registry = scope.ServiceProvider.GetRequiredService<IEntityDataSourceRegistry>();
+        var resolver = scope.ServiceProvider.GetRequiredService<IDataSourceResolver>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
-        var context = dbContextFactory.GetDbContext(ResolveDataSourceKey(registry));
+        var context = dbContextFactory.GetDbContext(ResolveDataSourceKey(registry, resolver));
 
         // The source can be reachable and still not map the table (a host that pointed
         // RefreshSessions:DataSourceName at the wrong database). Say so once per sweep rather than
@@ -133,10 +134,12 @@ public sealed partial class RefreshSessionCleanupService(
     /// <see cref="EFRefreshSessionStore"/> exactly so the sweep can never visit a different database
     /// than the store reads.
     /// </summary>
-    private DataSourceKey ResolveDataSourceKey(IEntityDataSourceRegistry registry) =>
+    private DataSourceKey ResolveDataSourceKey(IEntityDataSourceRegistry registry, IDataSourceResolver resolver) =>
         registry.TryGetDataSourceKey(typeof(RefreshSession).FullName!, out var key)
             ? key
-            : new DataSourceKey(DataSource.SQLServer, _settings.DataSourceName);
+            : new DataSourceKey(
+                resolver.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName).Engine,
+                _settings.DataSourceName);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Refresh-session cleanup not started: RefreshSessions:Enabled is false")]
     private static partial void LogSessionsDisabled(ILogger logger);
