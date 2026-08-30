@@ -32,4 +32,24 @@ public sealed record PhysicalDataSource(
     /// </para>
     /// </summary>
     public string? SqliteMigrationsAssembly { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether this source participates in EF Core migrations, which is what
+    /// decides between <c>Migrate</c> and <c>EnsureCreated</c> at startup for this one database.
+    /// <para>
+    /// SQL Server always does: a SQL Server host has been migration-driven since the first release,
+    /// including the single-database monolith whose <c>Default</c> source names no migrations
+    /// assembly at all and lets EF look next to the context. SQLite does only once a
+    /// <c>SqliteMigrationsAssembly</c> is configured for it, because a SQLite source wired by hand
+    /// before that setting existed has no migrations to apply and must keep being created outright.
+    /// Cosmos never does: the provider has no migrations pipeline.
+    /// </para>
+    /// </summary>
+    public bool UsesMigrations => Key.Engine switch
+    {
+        DataSource.SQLServer => true,
+        DataSource.Sqlite => !string.IsNullOrEmpty(SqliteMigrationsAssembly),
+        DataSource.CosmosDB => false,
+        _ => false,
+    };
 }

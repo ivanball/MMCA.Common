@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.Middleware;
+using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Shared.Exceptions;
 using Moq;
 
@@ -51,6 +52,103 @@ public sealed class ExceptionHandlerTests
         capturedContext.Should().NotBeNull();
         capturedContext!.ProblemDetails.Title.Should().Be("Internal Server Error");
         capturedContext.ProblemDetails.Detail.Should().Be("An error occurred while processing your request. Please try again");
+    }
+
+    // ── GlobalExceptionHandler: the one exception it maps by type ──
+    [Fact]
+    public async Task GlobalExceptionHandler_WithCrossTenantWriteException_Returns400()
+    {
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .ReturnsAsync(true);
+        var sut = new GlobalExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<GlobalExceptionHandler>.Instance);
+
+        var httpContext = new DefaultHttpContext();
+
+        bool handled = await sut.TryHandleAsync(
+            httpContext,
+            new CrossTenantWriteException(),
+            CancellationToken.None);
+
+        handled.Should().BeTrue();
+        httpContext.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest,
+            "a write the caller may not perform is a caller fault, not a server fault");
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_WithCrossTenantWriteException_WritesTenantProblemDetails()
+    {
+        ProblemDetailsContext? capturedContext = null;
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
+            .ReturnsAsync(true);
+        var sut = new GlobalExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<GlobalExceptionHandler>.Instance);
+
+        await sut.TryHandleAsync(
+            new DefaultHttpContext(),
+            new CrossTenantWriteException(),
+            CancellationToken.None);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext!.ProblemDetails.Status.Should().Be(StatusCodes.Status400BadRequest);
+        capturedContext.ProblemDetails.Title.Should().Be(GlobalExceptionHandler.CrossTenantWriteTitle);
+        capturedContext.ProblemDetails.Detail.Should().Be(GlobalExceptionHandler.CrossTenantWriteDetail);
+        capturedContext.ProblemDetails.Detail.Should().Contain("tenant",
+            "the caller has to be told what to fix about the request");
+    }
+
+    // The exception message names the entity type and both tenant ids so an operator can read the
+    // log. None of that may reach the caller: a tenant id echoed back tells an unauthorized caller
+    // which tenant owns the row it just tried to write.
+    [Fact]
+    public async Task GlobalExceptionHandler_WithCrossTenantWriteException_DoesNotLeakTheExceptionMessage()
+    {
+        ProblemDetailsContext? capturedContext = null;
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .Callback<ProblemDetailsContext>(ctx => capturedContext = ctx)
+            .ReturnsAsync(true);
+        var sut = new GlobalExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<GlobalExceptionHandler>.Instance);
+
+        var exception = new CrossTenantWriteException(
+            "The update of \"SecretWidget\" was rejected: the entity belongs to tenant "
+            + "\"acme-corp\" but this scope resolved tenant \"contoso\".");
+
+        await sut.TryHandleAsync(new DefaultHttpContext(), exception, CancellationToken.None);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext!.ProblemDetails.Detail.Should().NotContain("SecretWidget");
+        capturedContext.ProblemDetails.Detail.Should().NotContain("acme-corp");
+        capturedContext.ProblemDetails.Detail.Should().NotContain("contoso");
+        capturedContext.ProblemDetails.Title.Should().NotContain("SecretWidget");
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_WithOtherInvalidOperationException_StillReturns500()
+    {
+        var problemDetailsService = new Mock<IProblemDetailsService>();
+        problemDetailsService.Setup(x => x.TryWriteAsync(It.IsAny<ProblemDetailsContext>()))
+            .ReturnsAsync(true);
+        var sut = new GlobalExceptionHandler(
+            problemDetailsService.Object,
+            NullLogger<GlobalExceptionHandler>.Instance);
+
+        var httpContext = new DefaultHttpContext();
+
+        await sut.TryHandleAsync(
+            httpContext,
+            new InvalidOperationException("some other save-time invariant"),
+            CancellationToken.None);
+
+        httpContext.Response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError,
+            "only the cross-tenant write is mapped; its base type is not");
     }
 
     // ── DomainExceptionHandler ──
