@@ -4,6 +4,27 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.171.0] - 2026-08-30
+
+Two follow-ups to the 1.170.0 small-app floor: SQLite databases now migrate at startup like SQL
+Server ones, and a tenant-less write answers with a client error instead of a 500.
+
+### Changed
+
+- **SQLite sources with a configured migrations assembly migrate at startup.** Migration targets
+  are selected by the new `PhysicalDataSource.UsesMigrations` rule: SQL Server always, SQLite only
+  when `SqliteMigrationsAssembly` is configured, Cosmos never. `MigrateAsync` and
+  `HasPendingMigrationsAsync` share the rule, and database initialization no longer runs
+  EnsureCreated ahead of a migrating SQLite source (EnsureCreated-then-Migrate would leave tables
+  with no `__EFMigrationsHistory`). A SQLite source without a configured migrations assembly keeps
+  the EnsureCreated behavior, and SQL Server single-database monoliths (no `DataSources` entry, so
+  no configured assembly) are unchanged. A scaffolded `--database sqlite` application now requires
+  `dotnet ef migrations add InitialCreate` before its first run.
+- **`CrossTenantWriteException` maps to 400.** A write carrying no tenant, or a foreign tenant, on
+  a tenancy-enabled host previously surfaced as an unmapped 500. `GlobalExceptionHandler` now
+  answers a `ProblemDetails` 400 titled "Tenant write rejected" with a fixed generic detail; the
+  exception's entity and tenant identifiers are logged at Warning and never echoed to the caller.
+
 ## [1.170.0] - 2026-08-29
 
 The small-app floor release: the write-side generic CRUD twin, an outbox that resolves from the
