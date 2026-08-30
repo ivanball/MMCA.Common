@@ -690,14 +690,47 @@ public sealed class DbContextFactory(
     /// <inheritdoc />
     public async Task MigrateAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var key in GetSourcesInUse().Where(k => k.Engine == DataSource.SQLServer))
+        foreach (var key in GetMigrationTargets())
             await GetDbContext(key).Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The sources this host migrates: every source in use whose resolved
+    /// <see cref="PhysicalDataSource.UsesMigrations"/> says a migrations pipeline owns its schema
+    /// (every SQL Server source, plus a SQLite source with a configured migrations assembly).
+    /// <para>
+    /// A migration target that resolves no connection string is skipped unless it is SQL Server,
+    /// which keeps two behaviours intact: an optional SQLite source a test host leaves unconfigured
+    /// stays silently absent (exactly as <see cref="EnsureCreatedAsync"/> treats it), while a SQL
+    /// Server source with no connection string still fails loudly at startup rather than being
+    /// quietly skipped, because for SQL Server that is a misconfiguration, not an option.
+    /// </para>
+    /// </summary>
+    /// <returns>The keys to migrate, in source-in-use order.</returns>
+    private List<DataSourceKey> GetMigrationTargets()
+    {
+        var targets = new List<DataSourceKey>();
+
+        foreach (var key in GetSourcesInUse())
+        {
+            var physical = _dataSourceResolver.GetPhysical(key);
+
+            if (!physical.UsesMigrations)
+                continue;
+
+            if (key.Engine != DataSource.SQLServer && string.IsNullOrEmpty(physical.ConnectionString))
+                continue;
+
+            targets.Add(key);
+        }
+
+        return targets;
     }
 
     /// <inheritdoc />
     public async Task<bool> HasPendingMigrationsAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var key in GetSourcesInUse().Where(k => k.Engine == DataSource.SQLServer))
+        foreach (var key in GetMigrationTargets())
         {
             var pending = await GetDbContext(key).Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
             if (pending.Any())

@@ -49,16 +49,34 @@ public static class DatabaseInitializationExtensions
 
             var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
 
-            // Cosmos and SQLite sources are optional — integration tests may omit their connection
-            // strings. Neither engine has EF Core schema migrations, so both are always created via
-            // EnsureCreated up front, independent of the SQL-Server-oriented DatabaseInitStrategy
-            // below. This is the ONLY path that creates SQLite sources under the "Migrate" and "None"
-            // strategies (which act on SQL Server alone) — without it a SQLite source in use is never
-            // created and the first repository call fails.
+            // Cosmos and SQLite sources are optional: integration tests may omit their connection
+            // strings. A Cosmos source has no EF Core migrations pipeline at all, and neither does a
+            // SQLite source with no migrations assembly configured, so both are created via
+            // EnsureCreated up front, independent of the migration-oriented DatabaseInitStrategy
+            // below. This is the ONLY path that creates them under the "Migrate" and "None"
+            // strategies; without it such a source in use is never created and the first repository
+            // call fails.
+            //
+            // A SQLite source WITH a migrations assembly is deliberately excluded here whenever the
+            // strategy migrates: EnsureCreated writes the tables without an __EFMigrationsHistory
+            // row, after which every migration is both pending and un-appliable (its CREATE TABLE
+            // hits an existing table). Under the "EnsureCreated" strategy nothing migrates, so the
+            // exclusion does not apply and every source is created outright.
+            var strategyMigrates =
+                string.Equals(applicationSettings.DatabaseInitStrategy, "Migrate", StringComparison.Ordinal)
+                || string.Equals(applicationSettings.DatabaseInitStrategy, "None", StringComparison.Ordinal);
+
             foreach (var migrationlessKey in sourcesInUse
                 .Where(k => k.Engine is DataSource.CosmosDB or DataSource.Sqlite))
             {
-                if (string.IsNullOrEmpty(resolver.GetPhysical(migrationlessKey).ConnectionString))
+                var physical = resolver.GetPhysical(migrationlessKey);
+
+                if (string.IsNullOrEmpty(physical.ConnectionString))
+                {
+                    continue;
+                }
+
+                if (strategyMigrates && physical.UsesMigrations)
                 {
                     continue;
                 }
@@ -68,7 +86,7 @@ public static class DatabaseInitializationExtensions
             }
 
             // Apply schema initialisation based on the configured strategy:
-            //   "Migrate"       — auto-apply pending EF Core migrations per SQL Server source (development/testing).
+            //   "Migrate"       — auto-apply pending EF Core migrations per migrated source (development/testing).
             //   "EnsureCreated" — legacy EnsureCreated behavior for every source in use.
             //   "None"          — production: validate no pending migrations on any source, throw if behind.
             switch (applicationSettings.DatabaseInitStrategy)
@@ -80,7 +98,7 @@ public static class DatabaseInitializationExtensions
                     await dbContextFactory.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
                     break;
                 case "None":
-                    await ThrowIfPendingMigrationsAsync(dbContextFactory, sourcesInUse, cancellationToken).ConfigureAwait(false);
+                    await ThrowIfPendingMigrationsAsync(dbContextFactory, resolver, sourcesInUse, cancellationToken).ConfigureAwait(false);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -88,7 +106,7 @@ public static class DatabaseInitializationExtensions
                         "Valid values are: Migrate, EnsureCreated, None.");
             }
 
-            await InitializeTenantDatabasesAsync(services, applicationSettings, sourcesInUse, cancellationToken)
+            await InitializeTenantDatabasesAsync(services, applicationSettings, resolver, sourcesInUse, cancellationToken)
                 .ConfigureAwait(false);
 
             // Module seeding runs on the default scope only. A seeder writes reference data an
@@ -112,6 +130,7 @@ public static class DatabaseInitializationExtensions
     private static async Task InitializeTenantDatabasesAsync(
         IServiceProvider services,
         ApplicationSettings applicationSettings,
+        IDataSourceResolver resolver,
         IReadOnlyCollection<DataSourceKey> sourcesInUse,
         CancellationToken cancellationToken)
     {
@@ -130,10 +149,15 @@ public static class DatabaseInitializationExtensions
             var factory = tenantScope.ServiceProvider.GetRequiredService<IDbContextFactory>();
             var database = factory.GetDbContext(target.Source).Database;
 
+            // The tenant's copy of a source is the same schema on a different connection, so it is
+            // migrated exactly when the shared source is. The migrations assembly is declared once,
+            // on the source, and a per-tenant override only replaces the connection string.
+            var usesMigrations = resolver.GetPhysical(target.Source).UsesMigrations;
+
             switch (applicationSettings.DatabaseInitStrategy)
             {
                 case "Migrate":
-                    if (target.Source.Engine == DataSource.SQLServer)
+                    if (usesMigrations)
                     {
                         await database.MigrateAsync(cancellationToken).ConfigureAwait(false);
                     }
@@ -147,7 +171,7 @@ public static class DatabaseInitializationExtensions
                     await database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
                     break;
                 case "None":
-                    await ThrowIfTenantPendingMigrationsAsync(database, target, cancellationToken)
+                    await ThrowIfTenantPendingMigrationsAsync(database, target, usesMigrations, cancellationToken)
                         .ConfigureAwait(false);
                     break;
                 default:
@@ -165,9 +189,10 @@ public static class DatabaseInitializationExtensions
     private static async Task ThrowIfTenantPendingMigrationsAsync(
         DatabaseFacade database,
         TenantDataSourceTarget target,
+        bool usesMigrations,
         CancellationToken cancellationToken)
     {
-        if (target.Source.Engine != DataSource.SQLServer)
+        if (!usesMigrations)
         {
             return;
         }
@@ -185,11 +210,25 @@ public static class DatabaseInitializationExtensions
     }
 
     /// <summary>
+    /// Mirrors the context factory's own migration-target rule so the breakdown this file prints
+    /// names exactly the sources the factory checked: a source a migrations pipeline owns, minus an
+    /// optional non-SQL-Server source left without a connection string.
+    /// </summary>
+    /// <param name="physical">The resolved source.</param>
+    /// <returns><see langword="true"/> when migrations are applied to this source.</returns>
+    private static bool IsMigrationTarget(PhysicalDataSource physical) =>
+        physical.UsesMigrations
+        && (physical.Key.Engine == DataSource.SQLServer || !string.IsNullOrEmpty(physical.ConnectionString));
+
+    /// <summary>
     /// Production guard for the <c>"None"</c> strategy: throws with a per-source breakdown when
-    /// any SQL Server data source in use has migrations that have not been applied.
+    /// any migrated data source in use has migrations that have not been applied. The breakdown
+    /// covers exactly the sources the factory migrates, so a SQLite source with a migrations
+    /// assembly is named here rather than reported as an empty list.
     /// </summary>
     private static async Task ThrowIfPendingMigrationsAsync(
         IDbContextFactory dbContextFactory,
+        IDataSourceResolver resolver,
         IReadOnlyCollection<DataSourceKey> sourcesInUse,
         CancellationToken cancellationToken)
     {
@@ -199,13 +238,13 @@ public static class DatabaseInitializationExtensions
         }
 
         var pendingPerSource = new List<string>();
-        foreach (var sqlKey in sourcesInUse.Where(k => k.Engine == DataSource.SQLServer))
+        foreach (var migratedKey in sourcesInUse.Where(k => IsMigrationTarget(resolver.GetPhysical(k))))
         {
-            var pending = await dbContextFactory.GetDbContext(sqlKey).Database
+            var pending = await dbContextFactory.GetDbContext(migratedKey).Database
                 .GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
             if (pending.Any())
             {
-                pendingPerSource.Add($"{sqlKey}: {string.Join(", ", pending)}");
+                pendingPerSource.Add($"{migratedKey}: {string.Join(", ", pending)}");
             }
         }
 

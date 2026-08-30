@@ -59,6 +59,7 @@ MMCA.Common.Infrastructure.Settings.CacheSettings.LocalCacheDuration.init -> voi
 MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.get -> System.TimeSpan
 MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.init -> void
 static readonly MMCA.Common.Infrastructure.Settings.CacheSettings.SectionName -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.UsesMigrations.get -> bool
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqliteMigrationsAssembly.get -> string?
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqliteMigrationsAssembly.init -> void
 MMCA.Common.Infrastructure.Settings.DataSourceEntrySettings.SqliteMigrationsAssembly.get -> string!

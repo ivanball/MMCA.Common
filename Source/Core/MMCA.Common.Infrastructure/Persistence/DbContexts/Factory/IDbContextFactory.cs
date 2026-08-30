@@ -79,14 +79,17 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Applies pending EF Core migrations for every SQL Server physical data source in use by this
-    /// host (each with its own migrations assembly). Cosmos and SQLite sources are skipped.
+    /// Applies pending EF Core migrations for every physical data source in use whose schema a
+    /// migrations pipeline owns (each with its own migrations assembly): every SQL Server source,
+    /// plus any SQLite source with a configured <c>SqliteMigrationsAssembly</c>. Cosmos sources and
+    /// SQLite sources without a migrations assembly are skipped, and are created by
+    /// <see cref="EnsureCreatedAsync"/> instead.
     /// </summary>
     Task MigrateAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns <see langword="true"/> if any SQL Server physical data source in use has pending
-    /// migrations that have not been applied.
+    /// Returns <see langword="true"/> if any physical data source in use that
+    /// <see cref="MigrateAsync"/> would migrate has pending migrations that have not been applied.
     /// </summary>
     Task<bool> HasPendingMigrationsAsync(CancellationToken cancellationToken = default);
 }

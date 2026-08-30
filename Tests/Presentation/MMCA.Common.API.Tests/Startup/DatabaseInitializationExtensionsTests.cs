@@ -31,6 +31,9 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
     private readonly string _sqliteDbPath =
         Path.Combine(Path.GetTempPath(), $"mmca-init-sqlite-{Guid.NewGuid():N}.db");
 
+    private readonly string _sqliteMigratedDbPath =
+        Path.Combine(Path.GetTempPath(), $"mmca-init-sqlite-migrated-{Guid.NewGuid():N}.db");
+
     [Fact]
     public async Task InitializeDatabaseAsync_MigrateStrategy_CreatesSqliteSource()
     {
@@ -78,12 +81,107 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
         (await context.Set<InitTestWidget>().CountAsync()).Should().Be(0);
     }
 
+    // A SQLite source that DOES name a migrations assembly is the small-app shape: its schema is
+    // owned by a migrations project, so startup must migrate it and must NOT EnsureCreated it first
+    // (EnsureCreated writes the tables with no __EFMigrationsHistory row, after which every
+    // migration is both pending and un-appliable). Both sources are in use in this one host, so the
+    // choice is made per source rather than per host.
+    [Fact]
+    public async Task InitializeDatabaseAsync_MigrateStrategy_MigratesTheSqliteSourceThatHasAMigrationsAssembly()
+    {
+        var connectionStrings = new ConnectionStringSettings { SQLServerConnectionString = "Server=unused;" };
+        var dataSources = new DataSourcesSettings(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+        {
+            ["TestSqlite"] = new() { SqliteConnectionString = $"Data Source={_sqliteDbPath}" },
+            ["TestSqliteMigrated"] = new()
+            {
+                SqliteConnectionString = $"Data Source={_sqliteMigratedDbPath}",
+
+                // The test assembly declares no migrations, so Migrate creates the database and the
+                // history table and nothing else: the absence of the entity's table is what proves
+                // EnsureCreated did not run against this source.
+                SqliteMigrationsAssembly = typeof(DatabaseInitializationExtensionsTests).Assembly.GetName().Name!,
+            },
+        });
+
+        var resolver = new DataSourceResolver(connectionStrings, dataSources, NullLogger<DataSourceResolver>.Instance);
+        var assemblyProvider = new FixedAssemblyProvider();
+        var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
+
+        await using var provider = BuildProvider(resolver, registry, assemblyProvider);
+
+        await provider.InitializeDatabaseAsync(
+            new ApplicationSettings { DatabaseInitStrategy = "Migrate" },
+            new ModuleLoader());
+
+        using var scope = provider.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
+
+        var migrated = factory.GetDbContext(resolver.ResolveLogical(DataSource.Sqlite, "TestSqliteMigrated"));
+        (await CountTablesAsync(migrated, "__EFMigrationsHistory")).Should().Be(1,
+            "a SQLite source with a migrations assembly goes through Migrate");
+        (await CountTablesAsync(migrated, nameof(InitTestMigratedWidget))).Should().Be(0,
+            "EnsureCreated must not run first: it would leave the schema outside migration control");
+
+        var created = factory.GetDbContext(resolver.ResolveLogical(DataSource.Sqlite, "TestSqlite"));
+        (await CountTablesAsync(created, nameof(InitTestWidget))).Should().Be(1,
+            "the source with no migrations assembly keeps its EnsureCreated behaviour");
+        (await CountTablesAsync(created, "__EFMigrationsHistory")).Should().Be(0);
+    }
+
+    /// <summary>Counts the tables of the given name in a SQLite context's database.</summary>
+    private static async Task<int> CountTablesAsync(DbContext context, string tableName)
+    {
+        var connection = context.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = $name";
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "$name";
+        parameter.Value = tableName;
+        command.Parameters.Add(parameter);
+
+        return Convert.ToInt32(
+            await command.ExecuteScalarAsync(),
+            System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static ServiceProvider BuildProvider(
+        DataSourceResolver resolver,
+        EntityDataSourceRegistry registry,
+        IEntityConfigurationAssemblyProvider assemblyProvider) =>
+        new ServiceCollection()
+            .AddSingleton(TimeProvider.System)
+            .AddSingleton<ILoggerFactory, NullLoggerFactory>()
+            .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
+            .AddSingleton(Mock.Of<IDomainEventDispatcher>())
+            .AddSingleton<IOutboxSignal, OutboxSignal>()
+            .AddSingleton<AuditSaveChangesInterceptor>()
+            .AddSingleton<DomainEventSaveChangesInterceptor>()
+            .AddSingleton(Mock.Of<ICurrentUserService>())
+            .AddSingleton(assemblyProvider)
+            .AddSingleton<IDataSourceResolver>(resolver)
+            .AddSingleton<IEntityDataSourceRegistry>(registry)
+            .AddSingleton<IPhysicalDbContextFactory, PhysicalDbContextFactory>()
+            .AddScoped<IDbContextFactory, DbContextFactory>()
+            .BuildServiceProvider();
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        TryDelete(_sqliteDbPath);
+        TryDelete(_sqliteMigratedDbPath);
+    }
+
+    private static void TryDelete(string path)
+    {
         try
         {
-            File.Delete(_sqliteDbPath);
+            File.Delete(path);
         }
         catch (IOException)
         {
@@ -104,4 +202,13 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
 
     [UseDatabase("TestSqlite")]
     private sealed class InitTestWidgetConfiguration : EntityTypeConfigurationSqlite<InitTestWidget, int>;
+
+    public sealed class InitTestMigratedWidget : AuditableAggregateRootEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    [UseDatabase("TestSqliteMigrated")]
+    private sealed class InitTestMigratedWidgetConfiguration
+        : EntityTypeConfigurationSqlite<InitTestMigratedWidget, int>;
 }
