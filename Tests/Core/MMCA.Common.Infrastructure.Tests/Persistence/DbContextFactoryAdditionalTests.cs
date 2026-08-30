@@ -188,7 +188,7 @@ public sealed class DbContextFactoryAdditionalTests
         return new DbContextFactory(
             (physicalFactory ?? new Mock<IPhysicalDbContextFactory>()).Object,
             registry.Object,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
     }
 

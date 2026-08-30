@@ -282,12 +282,13 @@ public sealed class RefreshSessionCleanupServiceTests
     /// </summary>
     private static DataSourceKey InvokeResolveDataSourceKey(
         RefreshSessionCleanupService sut,
-        IEntityDataSourceRegistry registry)
+        IEntityDataSourceRegistry registry,
+        IDataSourceResolver? resolver = null)
     {
         var method = typeof(RefreshSessionCleanupService)
             .GetMethod("ResolveDataSourceKey", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        return (DataSourceKey)method!.Invoke(sut, [registry])!;
+        return (DataSourceKey)method!.Invoke(sut, [registry, resolver ?? new DefaultDataSourceResolver()])!;
     }
 
     /// <summary>
@@ -332,6 +333,7 @@ public sealed class RefreshSessionCleanupServiceTests
             var services = new ServiceCollection();
             services.AddScoped(_ => dbContextFactory.Object);
             services.AddScoped<IEntityDataSourceRegistry>(_ => new EmptyEntityDataSourceRegistry());
+            services.AddScoped<IDataSourceResolver>(_ => new DefaultDataSourceResolver());
 
             return new SweepHarness(connection, context, services.BuildServiceProvider());
         }

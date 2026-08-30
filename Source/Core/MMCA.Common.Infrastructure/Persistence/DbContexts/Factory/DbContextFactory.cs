@@ -517,9 +517,12 @@ public sealed class DbContextFactory(
 
         // Use the execution strategy from the first active transactional context
         // (typically SQL Server). If none exists yet, create the default context so
-        // the strategy is available before the handler's first repository call.
+        // the strategy is available before the handler's first repository call. The engine goes
+        // through the resolver rather than being taken literally: in a host that configures no SQL
+        // Server connection this is the first thing an ITransactional command touches, and a
+        // literal SQL Server context would open a connection string that does not exist.
         var context = _dbContexts.Values.FirstOrDefault(SupportsTransactions)
-            ?? GetDbContext(DataSource.SQLServer);
+            ?? GetDbContext(_dataSourceResolver.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName));
 
         var attempt = 0;
         TransactionCommitAmbiguousException? commitFailure = null;

@@ -26,6 +26,21 @@ internal sealed class EmptyEntityDataSourceRegistry : IEntityDataSourceRegistry
 }
 
 /// <summary>
+/// An <see cref="IDataSourceResolver"/> that collapses every logical name onto its engine's Default
+/// key, exactly like the real resolver in a host with no <c>DataSources</c> section. Preferred over
+/// <c>Mock.Of&lt;IDataSourceResolver&gt;()</c> wherever the code under test USES the returned key:
+/// an unconfigured mock hands back <c>default(DataSourceKey)</c>, whose name is null.
+/// </summary>
+internal sealed class DefaultDataSourceResolver : IDataSourceResolver
+{
+    public DataSourceKey ResolveLogical(DataSource engine, string logicalName) =>
+        DataSourceKey.Default(engine);
+
+    public PhysicalDataSource GetPhysical(DataSourceKey key) =>
+        new(key, string.Empty, null, string.Empty);
+}
+
+/// <summary>
 /// Ready-made <see cref="PhysicalDataSource"/> values for constructing
 /// <c>ApplicationDbContext</c>-derived test contexts.
 /// </summary>

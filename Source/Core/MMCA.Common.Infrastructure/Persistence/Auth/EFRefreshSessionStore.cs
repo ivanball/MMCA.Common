@@ -30,6 +30,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 internal sealed class EFRefreshSessionStore(
     IDbContextFactory dbContextFactory,
     IEntityDataSourceRegistry registry,
+    IDataSourceResolver dataSourceResolver,
     IOptions<RefreshSessionSettings> settings) : IRefreshSessionStore
 {
     private ApplicationDbContext Context => dbContextFactory.GetDbContext(ResolveDataSourceKey());
@@ -86,8 +87,13 @@ internal sealed class EFRefreshSessionStore(
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         dbContextFactory.SaveChangesAsync(cancellationToken);
 
+    // The configured NAME is used verbatim, as it always was; only the engine goes through the
+    // resolver, so a host that configures no SQL Server connection string gets the engine it does
+    // configure rather than a context over an empty connection string.
     private DataSourceKey ResolveDataSourceKey() =>
         registry.TryGetDataSourceKey(typeof(RefreshSession).FullName!, out var key)
             ? key
-            : new DataSourceKey(DataSource.SQLServer, settings.Value.DataSourceName);
+            : new DataSourceKey(
+                dataSourceResolver.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName).Engine,
+                settings.Value.DataSourceName);
 }

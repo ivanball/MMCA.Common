@@ -50,7 +50,7 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         _sut = new DbContextFactory(
             physicalFactory.Object,
             registry.Object,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
     }
 
@@ -191,7 +191,7 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
         await using var sut = new DbContextFactory(
             physicalFactory.Object,
             registry.Object,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             Mock.Of<ICurrentUserService>());
 
         var act = async () => await sut.ExecuteInTransactionAsync<Result>(

@@ -116,7 +116,7 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
         var dbContextFactory = new DbContextFactory(
             physicalFactory.Object,
             registry.Object,
-            Mock.Of<IDataSourceResolver>(),
+            new DefaultDataSourceResolver(),
             currentUserService);
 
         var dataSourceService = new Mock<IDataSourceService>();

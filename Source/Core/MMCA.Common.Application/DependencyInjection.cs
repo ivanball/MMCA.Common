@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
@@ -14,6 +15,7 @@ using MMCA.Common.Application.Validation;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.Application;
@@ -117,6 +119,13 @@ public static class DependencyInjection
         public IServiceCollection AddApplicationDecorators()
         {
             ThrowIfPipelineSealed(services, nameof(AddApplicationDecorators));
+
+            // The two authorization decorators below are registered unconditionally and take an
+            // IPermissionRegistry, so the pipeline cannot activate at all without one. TryAdd, and
+            // registered here rather than in AddApplication(), so a host that declared its grants
+            // (AddAuthorizationPolicies / AddPermissions, both of which run before this call) keeps
+            // its own registry, and a host with no permission model still resolves every handler.
+            services.TryAddSingleton<IPermissionRegistry, UnconfiguredPermissionRegistry>();
 
             // ── Command decorators ──────────────────────────────────────
             // Registered first = innermost (wraps the concrete handler directly).
