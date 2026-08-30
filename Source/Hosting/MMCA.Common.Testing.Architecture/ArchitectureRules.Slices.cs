@@ -7,9 +7,12 @@ public static partial class ArchitectureRules
     /// that serves it in the <em>same</em> namespace (the <c>…/UseCases/{Action}/</c> folder), so a
     /// feature is one cohesive unit rather than a handler stranded in a horizontal <c>Handlers/</c>
     /// folder away from its contract. Only same-assembly contracts are checked — a module that reuses
-    /// a framework-generic command (<c>DeleteEntityCommand&lt;,&gt;</c> or
-    /// <c>UpdateEntityCommand&lt;,,&gt;</c> from MMCA.Common) is legitimately not co-located with it,
-    /// so cross-assembly contracts are exempt.
+    /// a framework-generic command (<c>DeleteEntityCommand&lt;,&gt;</c>,
+    /// <c>UpdateEntityCommand&lt;,,&gt;</c> or its verb-discriminated
+    /// <c>UpdateEntityCommand&lt;,,,&gt;</c> from MMCA.Common) is legitimately not co-located with it,
+    /// so cross-assembly contracts are exempt. A command a module <em>derives</em> from
+    /// <c>UpdateEntityCommand&lt;,,&gt;</c> is declared in the module's own assembly and is checked
+    /// like any other: it belongs in its slice folder beside the handler registered for it.
     /// <para>
     /// <b>Scope, deliberately narrow.</b> The rule covers the command/query, its validator and its
     /// handler, and nothing else. A module's <c>DTOs/</c>, <c>Specifications/</c> and any
