@@ -119,33 +119,16 @@ public sealed class OutboxMessage
     /// <summary>
     /// Deserializes the stored payload back into a domain event instance.
     /// </summary>
-    /// <returns>The deserialized domain event, or <see langword="null"/> if the type cannot be resolved.</returns>
-    public IDomainEvent? DeserializeEvent() => DeserializeEvent(typeAliases: null);
-
-    /// <summary>
-    /// Deserializes the stored payload back into a domain event instance, consulting
-    /// <paramref name="typeAliases"/> when the stored type name no longer resolves (the event class
-    /// was renamed, moved to another namespace, or moved to another assembly after the row was
-    /// written).
-    /// </summary>
-    /// <param name="typeAliases">
-    /// Map of stored name to replacement type, keyed either by the full stored assembly-qualified
-    /// name or by its type-full-name portion (the text before the first comma). The value may be an
-    /// assembly-qualified name or a bare full name, which is then searched across the loaded
-    /// assemblies. Pass <see langword="null"/> for no aliasing.
-    /// </param>
     /// <remarks>
-    /// Interplay with <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/>: the attribute
-    /// is the PROACTIVE identity (rows written after it is applied store a name no rename can
-    /// break), while the alias map is the RETROACTIVE repair for rows ALREADY written under a name
-    /// that no longer resolves. Resolution is per stored string, so both coexist without conflict:
-    /// an old row keeps going through its alias, a new row resolves by its declared name, and each
-    /// caches independently.
+    /// The type is resolved from the stored <see cref="EventType"/> alone. An event that declares
+    /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> stores that name, so a rename,
+    /// namespace move, or assembly move leaves every row still resolvable; an event without one
+    /// stores its assembly-qualified name and is resolvable for as long as that name holds.
     /// </remarks>
     /// <returns>The deserialized domain event, or <see langword="null"/> if the type cannot be resolved.</returns>
-    public IDomainEvent? DeserializeEvent(IReadOnlyDictionary<string, string>? typeAliases)
+    public IDomainEvent? DeserializeEvent()
     {
-        var type = ResolveEventType(typeAliases);
+        var type = ResolveEventType();
         if (type is null)
             return null;
 
@@ -155,54 +138,16 @@ public sealed class OutboxMessage
     }
 
     /// <summary>
-    /// Resolves the stored <see cref="EventType"/> to a CLR type: the stored name first (as a CLR
-    /// name, then as an <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity),
-    /// then the alias map. Alias lookups are only paid for by rows whose stored name failed to
-    /// resolve, and the successful lookups cache under the ALIAS TARGET rather than the stored name,
-    /// so two hosts configured with different maps cannot poison each other's cache entries.
+    /// Resolves the stored <see cref="EventType"/> to a CLR type: as a CLR name first, then as an
+    /// <see cref="MMCA.Common.Domain.Attributes.EventNameAttribute"/> identity. The result, including
+    /// a failure, caches under the stored name.
     /// </summary>
-    private Type? ResolveEventType(IReadOnlyDictionary<string, string>? typeAliases)
-    {
-        // Order is load-bearing. Type.GetType stays first, so every row written before [EventName]
-        // existed resolves by exactly the path it always did and pays nothing new; the attribute
-        // scan only runs for a stored name that is not a CLR name, and caches under that name.
-        var type = EventTypeCache.GetOrAdd(
+    /// <returns>The resolved type, or <see langword="null"/> when the stored name matches nothing.</returns>
+    private Type? ResolveEventType() =>
+        // Order is load-bearing. Type.GetType stays first, so a row storing an assembly-qualified
+        // name resolves by a direct lookup; the attribute scan only runs for a stored name that is
+        // not a CLR name.
+        EventTypeCache.GetOrAdd(
             EventType,
             static typeName => Type.GetType(typeName) ?? EventNameResolver.FindTypeByDeclaredName(typeName));
-        if (type is not null || typeAliases is null || typeAliases.Count == 0)
-            return type;
-
-        if (!typeAliases.TryGetValue(EventType, out var target))
-        {
-            // The stored value is an assembly-qualified name, while an operator writing a
-            // configuration key naturally reaches for the type name alone. Accept both.
-            var commaIndex = EventType.IndexOf(',', StringComparison.Ordinal);
-            var fullName = commaIndex < 0 ? EventType : EventType[..commaIndex].Trim();
-            if (!typeAliases.TryGetValue(fullName, out target))
-                return null;
-        }
-
-        return string.IsNullOrWhiteSpace(target)
-            ? null
-            : EventTypeCache.GetOrAdd(target, static name => Type.GetType(name) ?? FindLoadedType(name));
-    }
-
-    /// <summary>
-    /// Last resort for an alias target written as a bare full name (no assembly): scans the loaded
-    /// assemblies for it. Only ever reached once per alias target, because the result caches.
-    /// </summary>
-    private static Type? FindLoadedType(string fullName)
-    {
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (assembly.IsDynamic)
-                continue;
-
-            var candidate = assembly.GetType(fullName, throwOnError: false);
-            if (candidate is not null)
-                return candidate;
-        }
-
-        return null;
-    }
 }

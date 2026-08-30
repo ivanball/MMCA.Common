@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Shared.Abstractions.ErrorType.Unexpected = 8 -> MMCA.Common.Shared.Abstractions.ErrorType
 MMCA.Common.Shared.Abstractions.ErrorTypeSeverity
 MMCA.Common.Shared.Abstractions.Result.Bind(System.Func<MMCA.Common.Shared.Abstractions.Result!>! binder) -> MMCA.Common.Shared.Abstractions.Result!
@@ -105,3 +105,12 @@ static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.MaxRetryAttempts.get
 static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.MinimumThroughput.get -> int
 static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.SamplingDuration.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.GrpcResilienceDefaults.TotalRequestTimeout.get -> System.TimeSpan
+MMCA.Common.Shared.DTOs.IConcurrencyAware.RowVersion.get -> byte[]!
+MMCA.Common.Shared.Http.ConcurrencyETag
+const MMCA.Common.Shared.Http.ConcurrencyETag.ETagHeaderName = "ETag" -> string!
+const MMCA.Common.Shared.Http.ConcurrencyETag.IfMatchHeaderName = "If-Match" -> string!
+const MMCA.Common.Shared.Http.ConcurrencyETag.Wildcard = "*" -> string!
+static MMCA.Common.Shared.Http.ConcurrencyETag.Format(byte[]! rowVersion) -> string!
+static MMCA.Common.Shared.Http.ConcurrencyETag.TryParse(string? value, out byte[]? rowVersion) -> bool
+MMCA.Common.Shared.Notifications.NotificationPermissions
+const MMCA.Common.Shared.Notifications.NotificationPermissions.Manage = "notifications:manage" -> string!

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Application.AssemblyReference
 MMCA.Common.Application.Auditing.AuditTrailEntryDTO
 MMCA.Common.Application.Auditing.AuditTrailEntryDTO.<Clone>$() -> MMCA.Common.Application.Auditing.AuditTrailEntryDTO!
@@ -194,7 +194,6 @@ MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher.HashPassword(s
 MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher.VerifyPassword(string! password, byte[]! hash, byte[]! salt) -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar
 MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar.DeleteAsync(int userId, string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar.DeleteAsync(string! installationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Interfaces.Infrastructure.IPushDeviceRegistrar.UpsertAsync(int userId, MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender
 MMCA.Common.Application.Interfaces.Infrastructure.IPushNotificationSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -239,8 +238,6 @@ MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIde
 MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.ExecuteUpdateAsync(System.Linq.Expressions.Expression<System.Func<TEntity!, bool>!>! where, System.Action<MMCA.Common.Application.Interfaces.Infrastructure.IUpdatePropertySetter<TEntity!>!>! setProperties, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.Save() -> int
 MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
-MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.SetOriginalRowVersion(MMCA.Common.Domain.Interfaces.IRowVersioned! childEntity, byte[]? rowVersion) -> void
-MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.SetOriginalRowVersion(TEntity! entity, byte[]? rowVersion) -> void
 MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.UpdateAsync(TEntity! entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Application.Interfaces.Infrastructure.IWriteRepository<TEntity, TIdentifierType>.UpdateRange(System.Collections.Generic.IEnumerable<TEntity!>! entities) -> void
 MMCA.Common.Application.Interfaces.Infrastructure.ImageContentSniffer
@@ -281,8 +278,6 @@ MMCA.Common.Application.Modules.IModuleSeeder.ModuleName.get -> string!
 MMCA.Common.Application.Modules.IModuleSeeder.SeedAsync(System.IServiceProvider! serviceProvider, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Application.Modules.ModuleLoader
 MMCA.Common.Application.Modules.ModuleLoader.DisabledModuleNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
-MMCA.Common.Application.Modules.ModuleLoader.DiscoverAndRegister(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfigurationBuilder! configurationBuilder, MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings, MMCA.Common.Application.Settings.ModulesSettings! modulesSettings, string? environmentName = null) -> void
-MMCA.Common.Application.Modules.ModuleLoader.DiscoverAndRegister(Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfigurationBuilder! configurationBuilder, MMCA.Common.Application.Settings.ApplicationSettings! applicationSettings, MMCA.Common.Application.Settings.ModulesSettings! modulesSettings, string? environmentName, System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>? moduleAssemblies) -> void
 MMCA.Common.Application.Modules.ModuleLoader.EnabledModules.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.Modules.IModule!>!
 MMCA.Common.Application.Modules.ModuleLoader.Logger.get -> Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Modules.ModuleLoader!>!
 MMCA.Common.Application.Modules.ModuleLoader.Logger.init -> void
@@ -480,15 +475,6 @@ MMCA.Common.Application.Settings.ApplicationSettings.MaxPageSize.get -> int
 MMCA.Common.Application.Settings.ApplicationSettings.MaxPageSize.init -> void
 MMCA.Common.Application.Settings.ApplicationSettings.UseMiniProfiler.get -> bool
 MMCA.Common.Application.Settings.ApplicationSettings.UseMiniProfiler.init -> void
-MMCA.Common.Application.Settings.IApplicationSettings
-MMCA.Common.Application.Settings.IApplicationSettings.DatabaseInitStrategy.get -> string!
-MMCA.Common.Application.Settings.IApplicationSettings.DatabaseInitStrategy.init -> void
-MMCA.Common.Application.Settings.IApplicationSettings.MaxExportRows.get -> int
-MMCA.Common.Application.Settings.IApplicationSettings.MaxExportRows.init -> void
-MMCA.Common.Application.Settings.IApplicationSettings.MaxPageSize.get -> int
-MMCA.Common.Application.Settings.IApplicationSettings.MaxPageSize.init -> void
-MMCA.Common.Application.Settings.IApplicationSettings.UseMiniProfiler.get -> bool
-MMCA.Common.Application.Settings.IApplicationSettings.UseMiniProfiler.init -> void
 MMCA.Common.Application.Settings.ModuleSettings
 MMCA.Common.Application.Settings.ModuleSettings.Enabled.get -> bool
 MMCA.Common.Application.Settings.ModuleSettings.Enabled.init -> void
@@ -507,11 +493,9 @@ MMCA.Common.Application.UseCases.Decorators.AuthorizationQueryDecorator<TQuery, 
 MMCA.Common.Application.UseCases.Decorators.AuthorizationQueryDecorator<TQuery, TResult>.AuthorizationQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.Infrastructure.ICurrentUserService! currentUser, MMCA.Common.Shared.Auth.IPermissionRegistry! permissionRegistry) -> void
 MMCA.Common.Application.UseCases.Decorators.AuthorizationQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>
-MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>.CachingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService) -> void
 MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>.CachingCommandDecorator(MMCA.Common.Application.UseCases.ICommandHandler<TCommand, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>!>! logger, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null) -> void
 MMCA.Common.Application.UseCases.Decorators.CachingCommandDecorator<TCommand, TResult>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>
-MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>.CachingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService) -> void
 MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>.CachingQueryDecorator(MMCA.Common.Application.UseCases.IQueryHandler<TQuery, TResult>! inner, MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>!>! logger, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null) -> void
 MMCA.Common.Application.UseCases.Decorators.CachingQueryDecorator<TQuery, TResult>.HandleAsync(TQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Application.UseCases.Decorators.FeatureGateCommandDecorator<TCommand, TResult>

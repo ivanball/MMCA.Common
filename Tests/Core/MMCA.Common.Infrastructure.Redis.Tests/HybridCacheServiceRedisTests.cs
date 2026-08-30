@@ -23,9 +23,9 @@ namespace MMCA.Common.Infrastructure.Redis.Tests;
 /// meet: an entry from the other format is a clean MISS, never an exception.
 /// </para>
 /// <para>
-/// It also covers prefix eviction end to end. <c>RemoveByPrefixAsync</c> runs a real SCAN over two
-/// patterns, and only a real server distinguishes "evicted both keyspaces" from "evicted the one the
-/// test happened to write".
+/// It also covers prefix eviction end to end. <c>RemoveByPrefixAsync</c> runs a real SCAN over its
+/// own keyspace, and only a real server distinguishes "evicted every matching key" from "evicted the
+/// one the test happened to write".
 /// </para>
 /// <para>
 /// These tests need a Docker daemon, so this project is outside <c>MMCA.Common.slnx</c> and runs in
@@ -92,68 +92,61 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
         await sut.SetAsync(key, "value", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         (await db.KeyExistsAsync($"hc:{key}")).Should().BeTrue("the server must hold the entry under the segmented key");
-        (await db.KeyExistsAsync(key)).Should().BeFalse("nothing may be written under the legacy shape");
+        (await db.KeyExistsAsync(key)).Should().BeFalse("nothing may be written under the unsegmented shape DistributedCacheService owns");
     }
 
     // ── The coexistence property the whole design rests on ──
     [Fact]
-    public async Task AnEntryWrittenByTheOldCache_IsASoftMissHereNeverAFault()
+    public async Task AnEntryWrittenByTheDistributedCache_IsASoftMissHereNeverAFault()
     {
         var key = $"coexist:{Guid.NewGuid():N}";
-        var legacy = CreateLegacy();
+        var distributed = CreateDistributed();
         var sut = CreateSut();
 
-        await legacy.SetAsync(key, "old-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await distributed.SetAsync(key, "old-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         // This is the read that WOULD have thrown if both formats shared one key.
         var read = await sut.GetAsync<string>(key, TestContext.Current.CancellationToken);
 
         read.Should().BeNull("the old entry lives in a keyspace this service does not address");
-        (await legacy.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().Be(
+        (await distributed.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().Be(
             "old-format",
             "and the old cache keeps reading its own entry, which is what makes a rolling deploy safe");
     }
 
     [Fact]
-    public async Task AnEntryWrittenHere_IsASoftMissForTheOldCache()
+    public async Task AnEntryWrittenHere_IsASoftMissForTheDistributedCache()
     {
         var key = $"coexist:{Guid.NewGuid():N}";
-        var legacy = CreateLegacy();
+        var distributed = CreateDistributed();
         var sut = CreateSut();
 
         await sut.SetAsync(key, "new-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
-        (await legacy.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().BeNull();
+        (await distributed.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().BeNull();
     }
 
-    // ── Dual-pattern prefix eviction ──
+    // ── Prefix eviction ──
     [Fact]
-    public async Task RemoveByPrefixAsync_EvictsBothKeyspacesAndLeavesEverythingElse()
+    public async Task RemoveByPrefixAsync_EvictsItsOwnKeyspaceAndLeavesEverythingElse()
     {
         var prefix = $"catalog:{Guid.NewGuid():N}:";
         var sut = CreateSut();
-        var legacy = CreateLegacy();
+        var distributed = CreateDistributed();
 
         await sut.SetAsync($"{prefix}a", "one", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
         await sut.SetAsync($"{prefix}b", "two", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
-        // Written by the PREVIOUS implementation under the same logical prefix: a 24h idempotency
-        // record outlives the deploy that switched the host over, and must still be evictable.
-        await legacy.SetAsync($"{prefix}legacy", "old", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
-
         var survivor = $"other:{Guid.NewGuid():N}";
         await sut.SetAsync(survivor, "keep", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
-        await legacy.SetAsync(survivor, "keep-old", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await distributed.SetAsync(survivor, "keep-old", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         await sut.RemoveByPrefixAsync(prefix, TestContext.Current.CancellationToken);
 
         (await sut.GetAsync<string>($"{prefix}a", TestContext.Current.CancellationToken)).Should().BeNull();
         (await sut.GetAsync<string>($"{prefix}b", TestContext.Current.CancellationToken)).Should().BeNull();
-        (await legacy.GetAsync<string>($"{prefix}legacy", TestContext.Current.CancellationToken)).Should().BeNull(
-            "the legacy pattern is the second half of the eviction, not an afterthought");
-
         (await sut.GetAsync<string>(survivor, TestContext.Current.CancellationToken)).Should().Be("keep");
-        (await legacy.GetAsync<string>(survivor, TestContext.Current.CancellationToken)).Should().Be("keep-old");
+        (await distributed.GetAsync<string>(survivor, TestContext.Current.CancellationToken)).Should().Be("keep-old");
     }
 
     [Fact]
@@ -258,8 +251,8 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
             _multiplexer);
     }
 
-    /// <summary>The previous implementation, still writing its own format into the same server.</summary>
-    /// <returns>A cache in the legacy keyspace.</returns>
-    private DistributedCacheService CreateLegacy() =>
+    /// <summary>The sibling cache service, writing its own format into the same server.</summary>
+    /// <returns>A cache in the unsegmented keyspace.</returns>
+    private DistributedCacheService CreateDistributed() =>
         new(_distributedCache, NullLogger<DistributedCacheService>.Instance, _multiplexer);
 }

@@ -1,5 +1,5 @@
+using System.ComponentModel.DataAnnotations;
 using AwesomeAssertions;
-using Microsoft.Extensions.Configuration;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Settings;
 
@@ -32,6 +32,38 @@ public class JwtSettingsTests
     public void Default_RefreshTokenExpirationDays_Is7() =>
         new JwtSettings().RefreshTokenExpirationDays.Should().Be(7);
 
+    // Asymmetric signing by default: a validator verifies without holding the key that mints tokens,
+    // so a host that never sets Jwt:SigningAlgorithm gets the algorithm an extracted service needs.
+    [Fact]
+    public void Default_SigningAlgorithm_IsRS256() =>
+        new JwtSettings().SigningAlgorithm.Should().Be(JwtSigningAlgorithm.RS256);
+
+    [Fact]
+    public void Validate_OnTheDefaults_DemandsAnRsaPrivateKey()
+    {
+        var sut = new JwtSettings { Issuer = "https://issuer.example.com", Audience = "api" };
+
+        sut.Validate(new ValidationContext(sut))
+            .Should().ContainSingle()
+            .Which.MemberNames.Should().Contain(nameof(JwtSettings.RsaPrivateKeyPem));
+    }
+
+    [Fact]
+    public void Validate_WithHS256AndAShortSecret_DemandsALongerSecret()
+    {
+        var sut = new JwtSettings
+        {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
+            SecretForKey = "too-short",
+            Issuer = "https://issuer.example.com",
+            Audience = "api",
+        };
+
+        sut.Validate(new ValidationContext(sut))
+            .Should().ContainSingle()
+            .Which.MemberNames.Should().Contain(nameof(JwtSettings.SecretForKey));
+    }
+
     [Fact]
     public void Properties_RoundTrip()
     {
@@ -51,12 +83,6 @@ public class JwtSettingsTests
         sut.RefreshTokenExpirationDays.Should().Be(14);
     }
 
-    [Fact]
-    public void Implements_IJwtSettings()
-    {
-        IJwtSettings sut = new JwtSettings();
-        sut.Should().BeAssignableTo<IJwtSettings>();
-    }
 }
 
 // ── SmtpSettings ──
@@ -121,12 +147,6 @@ public class SmtpSettingsTests
         sut.To.Should().Be("admin@example.com");
     }
 
-    [Fact]
-    public void Implements_ISmtpSettings()
-    {
-        ISmtpSettings sut = new SmtpSettings();
-        sut.Should().BeAssignableTo<ISmtpSettings>();
-    }
 }
 
 // ── ConnectionStringSettings ──
@@ -169,12 +189,6 @@ public class ConnectionStringSettingsTests
         sut.SQLServerMigrationsAssembly.Should().Be("MyApp.Migrations");
     }
 
-    [Fact]
-    public void Implements_IConnectionStringSettings()
-    {
-        IConnectionStringSettings sut = new ConnectionStringSettings();
-        sut.Should().BeAssignableTo<IConnectionStringSettings>();
-    }
 }
 
 // ── OutboxSettings ──
@@ -221,35 +235,6 @@ public class OutboxSettingsTests
         sut.PollingIntervalSeconds.Should().Be(30);
         sut.ProcessingDelaySeconds.Should().Be(60);
         sut.DataSource.Should().Be(DataSource.Sqlite);
-    }
-
-    // Keeping an undelivered event is the safe default; deleting it is the irreversible one.
-    [Fact]
-    public void Default_PurgeDeadLetters_IsFalse() =>
-        new OutboxSettings().PurgeDeadLetters.Should().BeFalse();
-
-    [Fact]
-    public void Default_TypeAliases_IsEmpty() =>
-        new OutboxSettings().TypeAliases.Should().BeEmpty();
-
-    // The alias map is only useful if an operator can actually set it from appsettings, so bind it
-    // the way a host does rather than only constructing it in code.
-    [Fact]
-    public void TypeAliases_BindFromConfiguration()
-    {
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
-            {
-                ["Outbox:PurgeDeadLetters"] = "true",
-                ["Outbox:TypeAliases:Old.Ns.ThingHappened"] = "New.Ns.ThingHappened, New.Assembly",
-            })
-            .Build();
-
-        var sut = configuration.GetSection(OutboxSettings.SectionName).Get<OutboxSettings>()!;
-
-        sut.PurgeDeadLetters.Should().BeTrue();
-        sut.TypeAliases.Should().ContainKey("Old.Ns.ThingHappened")
-            .WhoseValue.Should().Be("New.Ns.ThingHappened, New.Assembly");
     }
 }
 
@@ -372,10 +357,4 @@ public class PushNotificationSettingsTests
         sut.ChannelKeyPattern.Should().Be("^room:[a-z]+$");
     }
 
-    [Fact]
-    public void Implements_IPushNotificationSettings()
-    {
-        IPushNotificationSettings sut = new PushNotificationSettings();
-        sut.Should().BeAssignableTo<IPushNotificationSettings>();
-    }
 }

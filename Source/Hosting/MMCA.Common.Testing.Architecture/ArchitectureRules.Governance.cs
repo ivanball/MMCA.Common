@@ -20,18 +20,18 @@ public static partial class ArchitectureRules
             "entities with [Pii]-marked properties must implement IAnonymizable to satisfy the GDPR/CCPA erasure path (ADR-005)");
     }
 
-    /// <summary>Mutable update requests carry an optimistic-concurrency token (<c>IConcurrencyAware</c>).</summary>
-    public static void UpdateRequestsAreConcurrencyAware(IArchitectureMap map)
+    /// <summary>Update requests carry no optimistic-concurrency token: the token travels in the <c>If-Match</c> header.</summary>
+    public static void UpdateRequestsAreNotConcurrencyAware(IArchitectureMap map)
     {
         var violations = map.ModuleApplication()
             .SelectMany(a => a.LoadableTypes)
             .Where(t => t is { IsClass: true } or { IsValueType: true }
                 && t.SimpleName.EndsWith("UpdateRequest", StringComparison.Ordinal))
-            .Where(t => !t.GetInterfaces().Any(i => string.Equals(i.FullName, ConcurrencyAwareFullName, StringComparison.Ordinal)))
-            .Select(t => $"  - {t.FullName} must implement {ConcurrencyAwareFullName} (RowVersion) so concurrent edits surface as 409 Conflict");
+            .Where(t => t.GetInterfaces().Any(i => string.Equals(i.FullName, ConcurrencyAwareFullName, StringComparison.Ordinal)))
+            .Select(t => $"  - {t.FullName} must not implement {ConcurrencyAwareFullName}: the concurrency token is read from the If-Match request header");
 
         ArchitectureAssert.NoViolations(violations,
-            "*UpdateRequest types must implement IConcurrencyAware so optimistic-concurrency conflicts surface as 409 rather than last-write-wins");
+            "*UpdateRequest types must not implement IConcurrencyAware: the concurrency token is read from the If-Match request header, and a token in the body would give the same check a second, competing source");
     }
 
     /// <summary>The pinned major version of a package in Directory.Packages.props is below a ceiling.</summary>

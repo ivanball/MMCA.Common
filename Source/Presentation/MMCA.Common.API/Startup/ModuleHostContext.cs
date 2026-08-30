@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Modules;
@@ -21,16 +22,19 @@ public sealed class ModuleHostContext
 {
     private readonly IConfigurationManager _configuration;
     private readonly string? _environmentName;
+    private readonly IEnumerable<Assembly> _moduleAssemblies;
 
     internal ModuleHostContext(
         IConfigurationManager configuration,
         string? environmentName,
         ApplicationSettings applicationSettings,
         ModulesSettings modulesSettings,
-        ModuleLoader moduleLoader)
+        ModuleLoader moduleLoader,
+        IEnumerable<Assembly> moduleAssemblies)
     {
         _configuration = configuration;
         _environmentName = environmentName;
+        _moduleAssemblies = moduleAssemblies;
         ApplicationSettings = applicationSettings;
         ModulesSettings = modulesSettings;
         ModuleLoader = moduleLoader;
@@ -50,8 +54,9 @@ public sealed class ModuleHostContext
     public ModuleLoader ModuleLoader { get; }
 
     /// <summary>
-    /// Runs <see cref="ModuleLoader.DiscoverAndRegister(IServiceCollection, IConfigurationBuilder, ApplicationSettings, ModulesSettings, string?)"/>
-    /// with the configuration, settings and environment name captured at <c>AddModuleHost</c> time.
+    /// Runs <see cref="ModuleLoader.DiscoverAndRegister(IServiceCollection, IConfigurationBuilder, ApplicationSettings, ModulesSettings, string?, IEnumerable{Assembly})"/>
+    /// with the configuration, settings, environment name and module assemblies captured at
+    /// <c>AddModuleHost</c> time.
     /// Register it as a step of the host's application pipeline
     /// (<c>pipeline.Register(moduleHost.RegisterModules)</c>) so every module handler lands in the
     /// container before <c>AddApplicationDecorators()</c> closes the pipeline.
@@ -67,6 +72,7 @@ public sealed class ModuleHostContext
             _configuration,
             ApplicationSettings,
             ModulesSettings,
-            _environmentName);
+            _environmentName,
+            _moduleAssemblies);
     }
 }

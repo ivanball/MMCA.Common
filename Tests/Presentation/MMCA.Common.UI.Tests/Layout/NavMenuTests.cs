@@ -9,6 +9,7 @@ using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Layout;
+using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Auth;
 using Moq;
 
@@ -109,8 +110,8 @@ public sealed class NavMenuTests : BunitTestBase
     public void WhenAnonymous_HidesRoleGatedNavItems()
     {
         RegisterModule(
-            new NavItem("Browse Catalog", "/catalog", "icon"),
-            new NavItem("Manage Events", "/events", "icon", RequiredRole: "Organizer", Section: NavSection.Admin));
+            new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
+            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), RequiredRole: "Organizer", Section: NavSection.Admin));
 
         RenderMudProviders();
         var cut = RenderUnderTest<NavMenu>(_ => { });
@@ -123,8 +124,8 @@ public sealed class NavMenuTests : BunitTestBase
     public void WhenOrganizer_ShowsRoleGatedNavItems()
     {
         RegisterModule(
-            new NavItem("Browse Catalog", "/catalog", "icon"),
-            new NavItem("Manage Events", "/events", "icon", RequiredRole: "Organizer", Section: NavSection.Admin));
+            new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
+            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), RequiredRole: "Organizer", Section: NavSection.Admin));
 
         RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.Organizer(), _ => { });

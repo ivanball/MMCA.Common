@@ -160,19 +160,25 @@ public sealed class DbContextFactoryTenantTests : IDisposable
     }
 
     [Fact]
-    public void DefaultedConstructorParameters_StillResolveFromAContainerWithoutTenancy()
+    public void ResolvesFromAContainerThatNeverConfiguresTenancy()
     {
         var services = new ServiceCollection();
+        services.AddOptions();
         services.AddSingleton(PhysicalFactory().Object);
         services.AddSingleton(Mock.Of<IEntityDataSourceRegistry>());
         services.AddSingleton(Resolver());
         services.AddSingleton(Mock.Of<ICurrentUserService>());
 
+        // AddInfrastructure registers ITenantContext unconditionally, and IOptions<TenancySettings>
+        // falls back to a default-constructed instance, so a host that never calls AddMultiTenancy
+        // still satisfies the constructor and simply resolves no tenant.
+        services.AddScoped<ITenantContext, TenantContext>();
+
         using var provider = services.BuildServiceProvider();
 
-        var act = () => ActivatorUtilities.CreateInstance<DbContextFactory>(provider);
+        var sut = ActivatorUtilities.CreateInstance<DbContextFactory>(provider);
 
-        act.Should().NotThrow("the pre-tenancy constructor shape must keep resolving");
+        sut.GetDbContext(SqliteKey).CurrentTenantId.Should().BeNull();
     }
 
     // ── Scaffolding ──
@@ -231,7 +237,7 @@ public sealed class DbContextFactoryTenantTests : IDisposable
             Resolver(),
             Mock.Of<ICurrentUserService>(),
             tenantContext,
-            tenancy is null ? null : Options.Create(tenancy));
+            Options.Create(tenancy ?? new TenancySettings()));
 
     /// <summary>
     /// A tenant context a test can move, which the production <see cref="TenantContext"/> refuses to

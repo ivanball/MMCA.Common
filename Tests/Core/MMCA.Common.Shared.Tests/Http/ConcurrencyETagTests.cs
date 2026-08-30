@@ -1,7 +1,7 @@
-using AwesomeAssertions;
-using MMCA.Common.API.Concurrency;
+﻿using AwesomeAssertions;
+using MMCA.Common.Shared.Http;
 
-namespace MMCA.Common.API.Tests.Concurrency;
+namespace MMCA.Common.Shared.Tests.Http;
 
 /// <summary>
 /// Round-trip and tolerance rules for the weak entity tag that carries the framework's

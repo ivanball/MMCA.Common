@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces;
+﻿using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
@@ -73,7 +73,7 @@ public class UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRe
     }
 
     /// <inheritdoc />
-    protected override byte[]? RowVersion(UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType> command)
+    protected override byte[] RowVersion(UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType> command)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -142,7 +142,7 @@ public class UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRe
     }
 
     /// <inheritdoc />
-    protected override byte[]? RowVersion(
+    protected override byte[] RowVersion(
         UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier> command)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -207,7 +207,7 @@ public class UpdateEntityCommandHandler<TCommand, TEntity, TEntityDTO, TIdentifi
     }
 
     /// <inheritdoc />
-    protected override byte[]? RowVersion(TCommand command)
+    protected override byte[] RowVersion(TCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
 

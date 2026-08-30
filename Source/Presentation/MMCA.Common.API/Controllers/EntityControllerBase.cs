@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Reflection;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.API.Concurrency;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Export;
 using MMCA.Common.API.ModelBinders;
 using MMCA.Common.Application.Interfaces;
@@ -18,6 +18,7 @@ using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 
 namespace MMCA.Common.API.Controllers;
 
@@ -58,7 +59,7 @@ public abstract class EntityControllerBase<
     {
         get
         {
-            var settings = HttpContext.RequestServices.GetService<IApplicationSettings>();
+            var settings = HttpContext.RequestServices.GetService<IOptions<ApplicationSettings>>()?.Value;
             return settings?.MaxPageSize ?? 500;
         }
     }
@@ -78,7 +79,7 @@ public abstract class EntityControllerBase<
     {
         get
         {
-            var settings = HttpContext.RequestServices.GetService<IApplicationSettings>();
+            var settings = HttpContext.RequestServices.GetService<IOptions<ApplicationSettings>>()?.Value;
             var configured = settings?.MaxExportRows ?? DefaultMaxExportRows;
             return configured > 0 ? configured : DefaultMaxExportRows;
         }
@@ -450,8 +451,7 @@ public abstract class EntityControllerBase<
     /// <summary>
     /// Emits the read's concurrency token as a weak <c>ETag</c>, so a client can hand it straight back
     /// as an <c>If-Match</c> precondition on the next write (see
-    /// <see cref="Concurrency.SupportsIfMatchAttribute"/>) instead of round-tripping it through the
-    /// request body.
+    /// <see cref="Concurrency.SupportsIfMatchAttribute"/>), which is the only route a token travels.
     /// </summary>
     /// <param name="dto">The DTO just served, or null: a typed DTO on an ordinary read, or a shaped
     /// dictionary keyed by JSON names when the caller asked for a field projection.</param>

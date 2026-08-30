@@ -80,44 +80,18 @@ public static class HostingDependencyInjection
         }
 
         /// <summary>
-        /// Opt-in camera barcode/QR scanning (ADR-042): registers the ZXing.Net.MAUI handlers
-        /// (<c>UseBarcodeReader()</c>) and overrides the null <c>IBarcodeScannerService</c> with
-        /// <see cref="MauiBarcodeScannerService"/>. Deliberately NOT folded into
-        /// <see cref="UseMauiDeviceCapabilities"/>: a head that never scans should ship neither the
-        /// camera handler nor a camera permission declaration.
-        /// <para>
-        /// The head still declares the platform permission itself (Android CAMERA, iOS
-        /// NSCameraUsageDescription). Call AFTER <c>AddUIShared</c> so the plain Add overrides the
-        /// TryAdd default (last registration wins).
-        /// </para>
-        /// <para>
-        /// This overload fixes both strings at startup. Everything here runs while the app is being
-        /// built, which is BEFORE <see cref="Globalization.MauiCultureInitializer"/> restores the
-        /// user's persisted language (ADR-027), so the values are resolved under the DEVICE language
-        /// and never change afterwards, not even when the user switches language in the app. On any
-        /// head with a language switcher, call the
-        /// <c>UseCommonBarcodeScanner(Func&lt;string&gt;, Func&lt;string&gt;)</c> overload below instead
-        /// (a cref cannot name a sibling extension member here).
-        /// </para>
-        /// </summary>
-        /// <param name="cancelText">Label for the scan page's cancel button; fixed at startup.</param>
-        /// <param name="cameraDescription">Accessible description and title for the scan surface; fixed at startup.</param>
-        public MauiAppBuilder UseCommonBarcodeScanner(
-            string cancelText = "Cancel",
-            string cameraDescription = "Scan a code") =>
-            builder.UseCommonBarcodeScanner(() => cancelText, () => cameraDescription);
-
-        /// <summary>
         /// Opt-in camera barcode/QR scanning (ADR-042) with the scan page's text resolved lazily:
         /// registers the ZXing.Net.MAUI handlers (<c>UseBarcodeReader()</c>) and overrides the null
         /// <c>IBarcodeScannerService</c> with <see cref="MauiBarcodeScannerService"/>. Deliberately
         /// NOT folded into <see cref="UseMauiDeviceCapabilities"/>: a head that never scans should
         /// ship neither the camera handler nor a camera permission declaration.
         /// <para>
-        /// This is the localization-correct overload. Both delegates are invoked once per scan, when
-        /// the page is built, so the modal follows the user's in-app language choice instead of the
-        /// device language that was active at startup. Pass the resource lookups themselves, for
-        /// example <c>() =&gt; localizer["Cancel"]</c>, and keep them cheap and side-effect free.
+        /// Both delegates are invoked once per scan, when the page is built, so the modal follows the
+        /// user's in-app language choice rather than the device language that was active at startup
+        /// (everything here runs while the app is being built, which is BEFORE
+        /// <see cref="Globalization.MauiCultureInitializer"/> restores the persisted language,
+        /// ADR-027). Pass the resource lookups themselves, for example
+        /// <c>() =&gt; localizer["Cancel"]</c>, and keep them cheap and side-effect free.
         /// </para>
         /// <para>
         /// The head still declares the platform permission itself (Android CAMERA, iOS

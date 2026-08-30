@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;
 
@@ -7,7 +8,7 @@ namespace MMCA.Common.Infrastructure.Tests.Services;
 public sealed class SmtpEmailSenderTests
 {
     private static SmtpEmailSender CreateSut() =>
-        new(new SmtpSettings
+        new(Options.Create(new SmtpSettings
         {
             Host = "smtp.test.com",
             Port = 587,
@@ -16,7 +17,7 @@ public sealed class SmtpEmailSenderTests
             EnableSsl = true,
             From = "from@test.com",
             To = "default@test.com"
-        });
+        }));
 
     [Fact]
     public async Task SendAsync_WithNullTo_ThrowsArgumentException()

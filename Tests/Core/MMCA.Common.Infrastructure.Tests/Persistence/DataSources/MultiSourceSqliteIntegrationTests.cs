@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Services;
@@ -48,7 +49,7 @@ public sealed class MultiSourceSqliteIntegrationTests : IDisposable
             ["SourceB"] = new() { SqliteConnectionString = $"Data Source={_databaseBPath}" },
         });
 
-        _resolver = new DataSourceResolver(connectionStrings, dataSources, NullLogger<DataSourceResolver>.Instance);
+        _resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
 
         var assemblyProvider = new FixedAssemblyProvider();
         _registry = new EntityDataSourceRegistry(assemblyProvider, _resolver);
@@ -66,9 +67,9 @@ public sealed class MultiSourceSqliteIntegrationTests : IDisposable
             .BuildServiceProvider();
 
         var physicalFactory = new PhysicalDbContextFactory(_serviceProvider, _resolver, assemblyProvider);
-        _dbContextFactory = new DbContextFactory(physicalFactory, _registry, _resolver, Mock.Of<ICurrentUserService>());
+        _dbContextFactory = new DbContextFactory(physicalFactory, _registry, _resolver, Mock.Of<ICurrentUserService>(), Mock.Of<ITenantContext>(), Options.Create(new TenancySettings()));
 
-        var applicationSettings = Mock.Of<IApplicationSettings>();
+        var applicationSettings = Options.Create(new ApplicationSettings());
         _unitOfWork = new UnitOfWork(
             _dbContextFactory,
             new DataSourceService(_registry),
@@ -167,7 +168,7 @@ public sealed class MultiSourceSqliteIntegrationTests : IDisposable
         var connectionStrings = new ConnectionStringSettings { SQLServerConnectionString = "Server=unused;" };
         var shared = $"Data Source={Path.Combine(Path.GetTempPath(), $"mmca-collapse-{Guid.NewGuid():N}.db")}";
         var resolver = new DataSourceResolver(
-            connectionStrings,
+            Options.Create(connectionStrings),
             new DataSourcesSettings(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
             {
                 ["First"] = new() { SqliteConnectionString = shared },
@@ -180,7 +181,7 @@ public sealed class MultiSourceSqliteIntegrationTests : IDisposable
         keyFirst.Should().Be(keySecond, "equal connection strings must collapse to one physical source");
 
         var physicalFactory = new PhysicalDbContextFactory(_serviceProvider, resolver, new FixedAssemblyProvider());
-        using var factory = new DbContextFactory(physicalFactory, _registry, resolver, Mock.Of<ICurrentUserService>());
+        using var factory = new DbContextFactory(physicalFactory, _registry, resolver, Mock.Of<ICurrentUserService>(), Mock.Of<ITenantContext>(), Options.Create(new TenancySettings()));
 
         ReferenceEquals(factory.GetDbContext(keyFirst), factory.GetDbContext(keySecond)).Should().BeTrue(
             "one physical source must yield one context (one change tracker, one transaction)");

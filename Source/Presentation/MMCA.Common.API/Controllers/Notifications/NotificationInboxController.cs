@@ -1,10 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.FeatureManagement.Mvc;
-using MMCA.Common.API.Authorization;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount;
@@ -26,7 +25,7 @@ namespace MMCA.Common.API.Controllers.Notifications;
 [Route("Notifications/[controller]")]
 [ApiVersion("1.0")]
 [FeatureGate(NotificationFeatures.PushNotifications)]
-[Authorize(Policy = AuthorizationPolicies.RequireAuthenticated)]
+[Authorize]
 public sealed class InboxController(
     IQueryHandler<GetMyNotificationsQuery, Result<PagedCollectionResult<UserNotificationDTO>>> inboxHandler,
     IQueryHandler<GetUnreadNotificationCountQuery, Result<int>> unreadCountHandler,

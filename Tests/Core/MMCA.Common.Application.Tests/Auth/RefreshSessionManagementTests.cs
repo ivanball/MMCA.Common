@@ -431,7 +431,7 @@ public sealed class SessionAwareAuthenticationService(
     TimeProvider timeProvider,
     AuthenticationValidators validators,
     IRefreshSessionStore refreshSessions,
-    IOptions<RefreshSessionSettings>? refreshSessionSettings = null)
+    IOptions<RefreshSessionSettings> refreshSessionSettings)
     : AuthenticationServiceBase<TestAuthUser>(
         unitOfWork, tokenService, passwordHasher, loginProtection, timeProvider, validators, refreshSessions, refreshSessionSettings)
 {

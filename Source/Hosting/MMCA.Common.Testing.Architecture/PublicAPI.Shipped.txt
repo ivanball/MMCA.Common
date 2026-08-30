@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Testing.Architecture.AggregateConventionTestsBase
 MMCA.Common.Testing.Architecture.AggregateConventionTestsBase.AggregateConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.AggregateConventionTestsBase.AggregateRoots_ShouldHave_NoPublicConstructors() -> void
@@ -28,9 +28,6 @@ MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.LandingPageCss_Sources
 MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase
 MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.AsyncMethods_ShouldDeclare_TrailingCancellationToken() -> void
 MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.CancellationTokenConventionTestsBase() -> void
-MMCA.Common.Testing.Architecture.ConcurrencyConventionTestsBase
-MMCA.Common.Testing.Architecture.ConcurrencyConventionTestsBase.ConcurrencyConventionTestsBase() -> void
-MMCA.Common.Testing.Architecture.ConcurrencyConventionTestsBase.UpdateRequests_ShouldImplement_IConcurrencyAware() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ApplicationServices_DoNotExceedConstructorDependencyCeiling() -> void
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ConstructorDependencyCountTestsBase() -> void
@@ -234,7 +231,6 @@ abstract MMCA.Common.Testing.Architecture.ArchitectureMapBase.DefineLayers() -> 
 abstract MMCA.Common.Testing.Architecture.ArchitectureMapBase.RepoToken.get -> string!
 abstract MMCA.Common.Testing.Architecture.BrandColorTokenTestsBase.EmbeddedCssLogicalNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.Architecture.CancellationTokenConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
-abstract MMCA.Common.Testing.Architecture.ConcurrencyConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 abstract MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.MaxConstructorDependencies.get -> int
 abstract MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
@@ -356,7 +352,6 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.TransportDoesNotLeakIn
 static MMCA.Common.Testing.Architecture.ArchitectureRules.UiDoesNotDependOnApplication(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.UiDoesNotDependOnDomain(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.UiDoesNotDependOnInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
-static MMCA.Common.Testing.Architecture.ArchitectureRules.UpdateRequestsAreConcurrencyAware(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.UserVisibleTextIsLocalized(string! sourceRoot, System.Collections.Generic.IReadOnlyCollection<string!>! allowedFileSuffixes, int minimumScannedFiles = 0) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsAreCoLocatedWithTheirContracts(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ValidatorsHaveValidatorOrRulesSuffix(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

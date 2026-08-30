@@ -34,7 +34,6 @@ public sealed class OutboxCleanupServiceTests
     // The sweep tests use them both to assert specific log entries and as completion signals.
     private const string PurgedEvent = "LogPurged";
     private const string DeadLetterPurgedEvent = "LogDeadLetterPurged";
-    private const string DeadLettersRetainedEvent = "LogDeadLettersRetained";
     private const string InboxPurgedEvent = "LogInboxPurged";
     private const string SourceErrorEvent = "LogSourcePurgeError";
 
@@ -264,59 +263,8 @@ public sealed class OutboxCleanupServiceTests
             "only PROCESSED rows older than the retention cutoff are purged; newer processed rows and pending rows survive");
     }
 
-    // ── Purge sweep: dead letters are KEPT by default and only counted, loudly ──
-    [Fact]
-    public async Task PurgeSweep_DeadLetterPurgeNotOptedIn_KeepsTheRowsAndWarnsWithTheCount()
-    {
-        var timeProvider = new FakeTimeProvider(SweepStart);
-        await using var connection = new SqliteConnection("DataSource=:memory:");
-        await connection.OpenAsync(CancellationToken.None);
-        await using var context = CleanupTestContext.Create(connection);
-
-        var oldDeadLettered = DeadLetteredOutboxMessage(SweepStart.UtcDateTime.AddDays(-8), retryCount: 3);
-        var oldProcessed = ProcessedOutboxMessage(SweepStart.UtcDateTime.AddDays(-8));
-        context.AddRange(oldDeadLettered, oldProcessed);
-        await context.SaveChangesAsync(CancellationToken.None);
-
-        var (sut, sweepObserved, logger, scopeServices) = CreateSweepSut(
-            timeProvider,
-            _ => context,
-            [DataSourceKey.Default(DataSource.Sqlite)],
-            new OutboxSettings { RetentionDays = 7, CleanupIntervalHours = 1, MaxRetries = 3, DataSource = DataSource.Sqlite },
-            observedLogEvent: DeadLettersRetainedEvent);
-        await using var scope = scopeServices;
-        using var service = sut;
-
-        await service.StartAsync(CancellationToken.None);
-        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
-        await service.StopAsync(CancellationToken.None);
-
-        List<Guid> remaining = await context.Set<OutboxMessage>().AsNoTracking()
-            .Select(m => m.Id)
-            .ToListAsync(CancellationToken.None);
-        remaining.Should().BeEquivalentTo(
-            [oldDeadLettered.Id],
-            "processed rows are still purged, but an undelivered event is kept until an operator opts into deleting it");
-        logger.Verify(
-            l => l.Log(
-                LogLevel.Warning,
-                It.Is<EventId>(e => e.Name == DeadLettersRetainedEvent),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce,
-            "a silently growing pile of dead letters is exactly what the old purge hid");
-        logger.Verify(
-            l => l.Log(
-                LogLevel.Warning,
-                It.Is<EventId>(e => e.Name == DeadLetterPurgedEvent),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
-    }
-
-    // ── Purge sweep: with the opt-in set, dead-lettered rows older than retention are purged ──
+    // ── Purge sweep: a dead-lettered row is deleted past its retention window, and the deletion is
+    // logged at Warning because it destroys the only record that the event was raised ──
     [Fact]
     public async Task PurgeSweep_DeletesDeadLetteredRowsOlderThanRetention_KeepsRecentAndStillRetrying()
     {
@@ -332,7 +280,7 @@ public sealed class OutboxCleanupServiceTests
         context.AddRange(oldDeadLettered, recentDeadLettered, oldStillRetrying);
         await context.SaveChangesAsync(CancellationToken.None);
 
-        var (sut, sweepObserved, _, scopeServices) = CreateSweepSut(
+        var (sut, sweepObserved, logger, scopeServices) = CreateSweepSut(
             timeProvider,
             _ => context,
             [DataSourceKey.Default(DataSource.Sqlite)],
@@ -342,7 +290,6 @@ public sealed class OutboxCleanupServiceTests
                 CleanupIntervalHours = 1,
                 MaxRetries = 3,
                 DataSource = DataSource.Sqlite,
-                PurgeDeadLetters = true,
             },
             observedLogEvent: DeadLetterPurgedEvent);
         await using var scope = scopeServices;
@@ -358,6 +305,15 @@ public sealed class OutboxCleanupServiceTests
         remaining.Should().BeEquivalentTo(
             [recentDeadLettered.Id, oldStillRetrying.Id],
             "only dead-lettered rows older than retention are purged; recent dead rows and still-retrying rows survive");
+        logger.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.Is<EventId>(e => e.Name == DeadLetterPurgedEvent),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce,
+            "deleting an undelivered event is the one cleanup action nothing can undo, so it is never silent");
     }
 
     // ── Purge sweep: one unreachable source must not stop the others from being purged ──

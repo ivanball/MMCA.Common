@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
@@ -162,7 +162,7 @@ public sealed class MutationContextHandlerTests
         result.IsSuccess.Should().BeTrue();
         _calls.Should().Equal("mutate", "save", "log", "mutated");
         _repository.Verify(
-            r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), It.Is<byte[]?>(v => v != null && v[0] == 1)),
+            r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), It.Is<byte[]>(v => v[0] == 1)),
             Times.Once);
     }
 
@@ -357,11 +357,11 @@ public sealed class VerbDiscriminatedUpdateTests
 
         var increaseResult = await new UpdateEntityHandler<OrderAggregate, OrderDTO, int, OrderUpdateRequest, IncreaseOrderApplier>(
                 _unitOfWork.Object, increase, _dtoMapper.Object)
-            .HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, IncreaseOrderApplier>(3, request));
+            .HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, IncreaseOrderApplier>(3, request, [1]));
 
         var decreaseResult = await new UpdateEntityHandler<OrderAggregate, OrderDTO, int, OrderUpdateRequest, DecreaseOrderApplier>(
                 _unitOfWork.Object, decrease, _dtoMapper.Object)
-            .HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, DecreaseOrderApplier>(3, request));
+            .HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, DecreaseOrderApplier>(3, request, [1]));
 
         increaseResult.Value!.Name.Should().Be("increased");
         decreaseResult.Value!.Name.Should().Be("decreased");
@@ -380,7 +380,7 @@ public sealed class VerbDiscriminatedUpdateTests
         _repository.Verify(
             r => r.SetOriginalRowVersion(
                 It.IsAny<OrderAggregate>(),
-                It.Is<byte[]?>(v => v != null && v.SequenceEqual(new byte[] { 4, 5 }))),
+                It.Is<byte[]>(v => v.SequenceEqual(new byte[] { 4, 5 }))),
             Times.Once);
     }
 
@@ -388,8 +388,8 @@ public sealed class VerbDiscriminatedUpdateTests
     public void TheTwoVerbsAreDistinctCommandTypesOverOneRequestType()
     {
         var request = new OrderUpdateRequest("x");
-        var increase = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, IncreaseOrderApplier>(3, request);
-        var decrease = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, DecreaseOrderApplier>(3, request);
+        var increase = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, IncreaseOrderApplier>(3, request, [1]);
+        var decrease = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, DecreaseOrderApplier>(3, request, [1]);
 
         increase.GetType().Should().NotBe(decrease.GetType());
         increase.ApplierType.Should().Be<IncreaseOrderApplier>();
@@ -401,7 +401,7 @@ public sealed class VerbDiscriminatedUpdateTests
     public void TheVerbCommandKeepsTheAggregateCachePrefixAndItsOptOut()
     {
         var command = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int, IncreaseOrderApplier>(
-            1, new OrderUpdateRequest("x"));
+            1, new OrderUpdateRequest("x"), [1]);
 
         command.CachePrefix.Should().Be(typeof(OrderAggregate).FullName + ":");
         (command with { CachePrefix = string.Empty }).CachePrefix.Should().BeEmpty();
@@ -437,7 +437,7 @@ public sealed class DerivedUpdateCommandTests
     public async Task TheApplierSeesTheServerDerivedFlagTheRequestDoesNotCarry()
     {
         var result = await CreateSut().HandleAsync(
-            new RenameOrderByOwnerCommand(3, new OrderUpdateRequest("renamed"), CallerIsOwner: true));
+            new RenameOrderByOwnerCommand(3, new OrderUpdateRequest("renamed"), CallerIsOwner: true, RowVersion: [1]));
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Name.Should().Be("renamed");
@@ -448,7 +448,7 @@ public sealed class DerivedUpdateCommandTests
     public async Task TheApplierCanRefuseOnThatFlagAndNothingIsSaved()
     {
         var result = await CreateSut().HandleAsync(
-            new RenameOrderByOwnerCommand(3, new OrderUpdateRequest("renamed"), CallerIsOwner: false));
+            new RenameOrderByOwnerCommand(3, new OrderUpdateRequest("renamed"), CallerIsOwner: false, RowVersion: [1]));
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Order.NotTheOwner");
@@ -459,7 +459,7 @@ public sealed class DerivedUpdateCommandTests
     public async Task TheApplierCanWriteSideDataAndShortCircuitThroughTheSharedContext()
     {
         var result = await CreateSut().HandleAsync(
-            new RenameOrderByOwnerCommand(3, new OrderUpdateRequest(OwnerOrderApplier.NoOpName), CallerIsOwner: true));
+            new RenameOrderByOwnerCommand(3, new OrderUpdateRequest(OwnerOrderApplier.NoOpName), CallerIsOwner: true, RowVersion: [1]));
 
         result.IsSuccess.Should().BeTrue();
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -474,14 +474,14 @@ public sealed class DerivedUpdateCommandTests
         _repository.Verify(
             r => r.SetOriginalRowVersion(
                 It.IsAny<OrderAggregate>(),
-                It.Is<byte[]?>(v => v != null && v[0] == 7)),
+                It.Is<byte[]>(v => v[0] == 7)),
             Times.Once);
     }
 
     [Fact]
     public void TheDerivedCommandInheritsTheValidatorBridgeAndTheCachePrefix()
     {
-        var command = new RenameOrderByOwnerCommand(3, new OrderUpdateRequest("x"), CallerIsOwner: true);
+        var command = new RenameOrderByOwnerCommand(3, new OrderUpdateRequest("x"), CallerIsOwner: true, RowVersion: [1]);
 
         command.Should().BeAssignableTo<ICommandWithRequest<OrderUpdateRequest>>();
         command.Should().BeAssignableTo<UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>>();
@@ -612,7 +612,7 @@ public sealed record RenameOrderByOwnerCommand(
     int Id,
     OrderUpdateRequest Request,
     bool CallerIsOwner,
-    byte[]? RowVersion = null)
+    byte[] RowVersion)
     : UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(Id, Request, RowVersion);
 
 public sealed class TestRenameOrderPayloadHandler(IUnitOfWork unitOfWork, List<string> calls)

@@ -40,13 +40,13 @@ namespace MMCA.Common.Application.UseCases;
 /// <param name="Id">The primary key of the entity to update.</param>
 /// <param name="Request">The update request payload.</param>
 /// <param name="RowVersion">
-/// The caller's last-observed concurrency token (ADR-035), or <see langword="null"/> to skip the
-/// stale-view check. A body-less or legacy caller simply passes nothing.
+/// The caller's last-observed concurrency token (ADR-035), taken from the request's <c>If-Match</c>
+/// header. It is required: a conditional write with no precondition never reaches a handler.
 /// </param>
 public record UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>(
     TIdentifierType Id,
     TUpdateRequest Request,
-    byte[]? RowVersion = null)
+    byte[] RowVersion)
     : ICommandWithRequest<TUpdateRequest>, ICacheInvalidating
     where TIdentifierType : notnull
 {
@@ -96,13 +96,13 @@ public record UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>(
 /// <param name="Id">The primary key of the entity to update.</param>
 /// <param name="Request">The update request payload.</param>
 /// <param name="RowVersion">
-/// The caller's last-observed concurrency token (ADR-035), or <see langword="null"/> to skip the
-/// stale-view check.
+/// The caller's last-observed concurrency token (ADR-035), taken from the request's <c>If-Match</c>
+/// header.
 /// </param>
 public record UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>(
     TIdentifierType Id,
     TUpdateRequest Request,
-    byte[]? RowVersion = null)
+    byte[] RowVersion)
     : UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>(Id, Request, RowVersion)
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull

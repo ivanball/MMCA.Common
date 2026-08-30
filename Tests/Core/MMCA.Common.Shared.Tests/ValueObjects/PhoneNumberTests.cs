@@ -60,12 +60,11 @@ public class PhoneNumberTests
     }
 
     [Fact]
-    public void ImplicitConversion_ReturnsValue()
+    public void Value_ReturnsTheTrimmedNumber()
     {
         PhoneNumber phone = PhoneNumber.Create("+1 555-1234567").Value!;
-        string value = phone;
 
-        value.Should().Be("+1 555-1234567");
+        phone.Value.Should().Be("+1 555-1234567");
     }
 
     [Fact]

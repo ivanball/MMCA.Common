@@ -33,9 +33,9 @@ namespace MMCA.Common.Application.Auth;
 /// <c>ExternalLoginAsync</c> stays app-level (the interface's default member rejects it), since OAuth
 /// account linking is coupled to the app's <c>User</c> factory surface.
 /// <para>
-/// <b>Refresh tokens are multi-device rows, hashed at rest.</b> Every issue opens a
-/// <see cref="RefreshSession"/> instead of overwriting one column on the user, so signing in on a
-/// second device no longer signs the first one out, and the store holds only
+/// <b>Refresh tokens are multi-device rows, hashed at rest.</b> Every issue opens its own
+/// <see cref="RefreshSession"/>, so signing in on a second device leaves the first device signed in,
+/// and the store holds only
 /// <see cref="RefreshSession.HashToken"/> digests. Rotation revokes the presented session and links it
 /// to its successor; presenting an already-rotated token lands on that revoked row, which is the reuse
 /// signal that revokes the user's whole live family (BR-206). An expired session is not a reuse signal
@@ -52,12 +52,9 @@ public abstract class AuthenticationServiceBase<TUser>(
     TimeProvider timeProvider,
     AuthenticationValidators validators,
     IRefreshSessionStore refreshSessions,
-    IOptions<RefreshSessionSettings>? refreshSessionSettings = null) : IAuthenticationService
+    IOptions<RefreshSessionSettings> refreshSessionSettings) : IAuthenticationService
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser
 {
-    /// <summary>The cap applied when <c>RefreshSessions:MaxActiveSessionsPerUser</c> is not configured.</summary>
-    private const int DefaultMaxActiveSessionsPerUser = 10;
-
     /// <summary>
     /// The token service handed to subclasses, wrapped so that a token minted while a session is
     /// being opened or rotated carries that session's <c>sid</c> claim without the subclass knowing
@@ -109,19 +106,10 @@ public abstract class AuthenticationServiceBase<TUser>(
 
     /// <summary>
     /// Maximum live sessions one user may hold (<c>RefreshSessions:MaxActiveSessionsPerUser</c>,
-    /// default 10). Opening session number cap + 1 revokes the user's oldest live session rather than
-    /// refusing the sign-in.
+    /// default 10, validated to the range 1-1000 at startup). Opening session number cap + 1 revokes
+    /// the user's oldest live session rather than refusing the sign-in.
     /// </summary>
-    protected virtual int MaxActiveSessionsPerUser
-    {
-        get
-        {
-            // A non-positive value (an unbound options instance in a test double, or a host that
-            // configured zero) falls back to the default rather than evicting every session.
-            var configured = refreshSessionSettings?.Value.MaxActiveSessionsPerUser ?? 0;
-            return configured > 0 ? configured : DefaultMaxActiveSessionsPerUser;
-        }
-    }
+    protected virtual int MaxActiveSessionsPerUser => refreshSessionSettings.Value.MaxActiveSessionsPerUser;
 
     /// <inheritdoc />
     public async Task<Result<AuthenticationResponse>> LoginAsync(
@@ -172,10 +160,10 @@ public abstract class AuthenticationServiceBase<TUser>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
         }
 
-        // Step 2: Tracked re-fetch. The refresh token no longer lives on the user, so this is no
-        // longer about persisting one: it is the instance the app's CreateAccessToken hook mints
-        // from (apps reach linked aggregates and navigations through it), and the second lookup is
-        // what turns a race that deleted the account between the two steps into a clean 404.
+        // Step 2: Tracked re-fetch. Refresh tokens live in their own session rows, so this fetch is
+        // purely about the instance the app's CreateAccessToken hook mints from (apps reach linked
+        // aggregates and navigations through it), and the second lookup is what turns a race that
+        // deleted the account between the two steps into a clean 404.
         var user = await Repository.GetByIdAsync(untracked.Id, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Settings;
@@ -24,9 +25,7 @@ public sealed class AggregateRootEntityControllerBaseTests
     private TestAggregateRootController CreateController()
     {
         var services = new ServiceCollection();
-        var settingsMock = new Mock<IApplicationSettings>();
-        settingsMock.Setup(s => s.MaxPageSize).Returns(100);
-        services.AddSingleton(settingsMock.Object);
+        services.AddSingleton(Options.Create(new ApplicationSettings { MaxPageSize = 100 }));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
         var httpContext = new DefaultHttpContext

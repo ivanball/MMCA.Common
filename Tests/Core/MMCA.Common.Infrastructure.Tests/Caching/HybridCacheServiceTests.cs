@@ -85,18 +85,18 @@ public sealed class HybridCacheServiceTests
         (await reader.GetAsync<string>("shared", TestContext.Current.CancellationToken)).Should().Be("written-elsewhere");
     }
 
-    // ── Coexistence with the legacy keyspace ──
+    // ── Disjoint from the DistributedCacheService keyspace ──
     [Fact]
-    public async Task GetAsync_WithALegacyEntryAtTheSameLogicalKey_IsACleanMiss()
+    public async Task GetAsync_WithADistributedCacheEntryAtTheSameLogicalKey_IsACleanMiss()
     {
         var l2 = new RecordingDistributedCache();
-        var legacy = new DistributedCacheService(l2, NullLogger<DistributedCacheService>.Instance, keyNamespace: new CacheKeyNamespace(Prefix));
-        await legacy.SetAsync("shared", "old-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var other = new DistributedCacheService(l2, NullLogger<DistributedCacheService>.Instance, keyNamespace: new CacheKeyNamespace(Prefix));
+        await other.SetAsync("shared", "other-format", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         var sut = new HybridCacheService(BuildHybridCache(l2), NullLogger<HybridCacheService>.Instance, keyNamespace: new CacheKeyNamespace(Prefix));
 
         (await sut.GetAsync<string>("shared", TestContext.Current.CancellationToken)).Should().BeNull(
-            "the two keyspaces are disjoint, so the old entry is invisible rather than unreadable");
+            "the two keyspaces are disjoint, so the other service's entry is invisible rather than unreadable");
         l2.Keys.Should().ContainSingle().Which.Should().Be($"{Prefix}shared");
     }
 

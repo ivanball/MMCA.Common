@@ -3,6 +3,7 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components.Notifications;
+using MMCA.Common.UI.Resources;
 using MudBlazor;
 
 namespace MMCA.Common.UI.Notifications;
@@ -15,8 +16,8 @@ public sealed class NotificationUIModule : IUIModule
 {
     public IReadOnlyList<NavItem> NavItems { get; } =
     [
-        new("Notification Inbox", NotificationRoutePaths.NotificationInbox, Icons.Material.Filled.Inbox, Section: NavSection.User),
-        new("Push Notifications", NotificationRoutePaths.Notifications, Icons.Material.Filled.NotificationsActive, RoleNames.Organizer, Section: NavSection.Admin, Group: "Notifications"),
+        new("Nav.NotificationInbox", NotificationRoutePaths.NotificationInbox, Icons.Material.Filled.Inbox, typeof(SharedResource), Section: NavSection.User),
+        new("Nav.PushNotifications", NotificationRoutePaths.Notifications, Icons.Material.Filled.NotificationsActive, typeof(SharedResource), RoleNames.Organizer, Section: NavSection.Admin, Group: "Notifications"),
     ];
 
     public IReadOnlyList<Type> AppBarComponentTypes { get; } = [typeof(NotificationBell)];

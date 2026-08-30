@@ -10,7 +10,7 @@ namespace MMCA.Common.UI.Maui.Capabilities;
 /// that simply never decodes and is cancelled out of, which the contract surfaces as
 /// <see langword="null"/> rather than an exception.
 /// <para>
-/// Registered by <c>UseCommonBarcodeScanner()</c> only, so a head that never scans neither ships
+/// Registered by <c>UseCommonBarcodeScanner</c> only, so a head that never scans neither ships
 /// the camera handler nor needs the permission.
 /// </para>
 /// <para>
@@ -27,10 +27,9 @@ public sealed class MauiBarcodeScannerService : IBarcodeScannerService
     private readonly Func<string> _cameraDescription;
 
     /// <summary>
-    /// Initializes the service with text resolved lazily, per scan. This is the localization-correct
-    /// overload: pass the resource lookups themselves (for example
-    /// <c>() =&gt; Localizer["Cancel"]</c>) so each scan page is built under the
-    /// <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> in effect at that moment.
+    /// Initializes the service with text resolved lazily, per scan: pass the resource lookups
+    /// themselves (for example <c>() =&gt; Localizer["Cancel"]</c>) so each scan page is built under
+    /// the <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> in effect at that moment.
     /// </summary>
     /// <param name="cancelText">Resolves the label for the scan page's cancel button.</param>
     /// <param name="cameraDescription">Resolves the accessible description and title for the scan surface.</param>
@@ -41,20 +40,6 @@ public sealed class MauiBarcodeScannerService : IBarcodeScannerService
 
         _cancelText = cancelText;
         _cameraDescription = cameraDescription;
-    }
-
-    /// <summary>
-    /// Initializes the service with fixed text. The values are captured as given and never
-    /// re-resolved, so they stay in whatever language was active when the service was constructed
-    /// (the device language, on a head that persists a different in-app choice). Prefer the
-    /// <see cref="MauiBarcodeScannerService(Func{string}, Func{string})"/> overload on any head that
-    /// offers a language switcher.
-    /// </summary>
-    /// <param name="cancelText">Label for the scan page's cancel button.</param>
-    /// <param name="cameraDescription">Accessible description and title for the scan surface.</param>
-    public MauiBarcodeScannerService(string cancelText, string cameraDescription)
-        : this(() => cancelText, () => cameraDescription)
-    {
     }
 
     /// <inheritdoc />

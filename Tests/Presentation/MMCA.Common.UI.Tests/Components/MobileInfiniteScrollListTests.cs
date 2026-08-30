@@ -73,12 +73,12 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
     }
 
     [Fact]
-    public void SupplyingNeitherFetcher_Throws()
+    public void SupplyingNoFetcher_Throws()
     {
         var render = () => RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
             .Add(c => c.CardTemplate, item => item));
 
-        render.Should().Throw<InvalidOperationException>().WithMessage("*exactly one*");
+        render.Should().Throw<InvalidOperationException>().WithMessage("*FetchPageResult*");
     }
 
     [Fact]
@@ -145,45 +145,29 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
     }
 
     [Fact]
-    public void ObsoleteTupleFetch_RendersCards()
-    {
-        var items = new List<string> { "Alpha", "Bravo" };
-
-        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
-            .Add(c => c.CardTemplate, item => item)
-#pragma warning disable CS0618 // The obsolete tuple path must keep working until every call site is swept.
-            .Add(c => c.FetchPage, (_, _, _) => Task.FromResult<(IReadOnlyList<string>, int)>((items, items.Count))));
-#pragma warning restore CS0618
-
-        cut.Markup.Should().Contain("Alpha").And.Contain("Bravo");
-        cut.FindComponents<MudCard>().Count.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task ObsoleteTupleFetch_WhenLoadMoreThrows_ShowsRetry_ThenRecoversOnRetry()
+    public async Task WhenLoadMoreThrows_ShowsTheGenericError_ThenRecoversOnRetry()
     {
         var page2Attempts = 0;
 
-        Task<(IReadOnlyList<string> Items, int TotalItems)> Fetch(int page, int pageSize, CancellationToken ct)
+        Task<Result<(IReadOnlyList<string> Items, int TotalItems)>> Fetch(int page, int pageSize, CancellationToken ct)
         {
             if (page == 1)
             {
-                return Task.FromResult<(IReadOnlyList<string>, int)>((["Alpha"], 5));
+                return Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((["Alpha"], 5)));
             }
 
-            // First attempt at the second page fails transiently; the retry succeeds.
+            // First attempt at the second page throws (a fault on the client side of the call, not a
+            // server answer); the retry succeeds.
             page2Attempts++;
             return page2Attempts == 1
                 ? throw new InvalidOperationException("transient")
-                : Task.FromResult<(IReadOnlyList<string>, int)>((["Bravo"], 5));
+                : Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((["Bravo"], 5)));
         }
 
         var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
             .Add(c => c.CardTemplate, item => item)
             .Add(c => c.PageSize, 1)
-#pragma warning disable CS0618 // The obsolete tuple path must keep working until every call site is swept.
-            .Add(c => c.FetchPage, Fetch));
-#pragma warning restore CS0618
+            .Add(c => c.FetchPageResult, Fetch));
 
         cut.Markup.Should().Contain("Alpha");
 

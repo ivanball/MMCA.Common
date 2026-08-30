@@ -577,10 +577,7 @@ public sealed partial class OutboxProcessor(
             using var activity = StartOutboxActivity(message, source);
             try
             {
-                // The alias map is consulted only for a name that no longer resolves, so a renamed or
-                // relocated event type costs nothing on the happy path and does not dead-letter the
-                // rows that were already in flight when it moved.
-                var domainEvent = message.DeserializeEvent(_settings.TypeAliases);
+                var domainEvent = message.DeserializeEvent();
                 if (domainEvent is null)
                 {
                     processedAny |= HandleUnresolvableType(message);
@@ -690,12 +687,11 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
-    /// Handles a row whose stored <c>EventType</c> resolved to nothing, even after
-    /// <c>Outbox:TypeAliases</c>. The FIRST such attempt is treated as transient and retried through
-    /// the normal backoff path: the assembly declaring the type may simply not be loaded yet (a
-    /// module assembly resolved lazily, a host still coming up), and a name that resolves one cycle
-    /// later was never a dead letter. Only the second attempt is terminal, which is also the point
-    /// at which an operator has had a Warning naming the alias setting.
+    /// Handles a row whose stored <c>EventType</c> resolved to nothing. The FIRST such attempt is
+    /// treated as transient and retried through the normal backoff path: the assembly declaring the
+    /// type may simply not be loaded yet (a module assembly resolved lazily, a host still coming up),
+    /// and a name that resolves one cycle later was never a dead letter. Only the second attempt is
+    /// terminal, which is also the point at which an operator has had a Warning naming the row.
     /// </summary>
     /// <param name="message">The row that could not be deserialized.</param>
     /// <returns>
@@ -823,10 +819,9 @@ public sealed partial class OutboxProcessor(
     private static partial void LogDeadLetter(ILogger logger, Guid messageId, string eventType);
 
     // Warning, not Error: one unresolved attempt is a maybe (the declaring assembly may load on a
-    // later cycle), and the terminal attempt logs at Error above. Names both fixes, because the one
-    // that repairs THIS row is configuration while the one that prevents the next occurrence is a
-    // one-line code change on the event.
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} could not resolve event type {EventType}; retrying once before dead-lettering. If the type was renamed or moved, map the stored name with Outbox:TypeAliases to recover the rows already written, and give the event an [EventName] so future rows carry an identity a rename cannot break")]
+    // later cycle), and the terminal attempt logs at Error above. Names the fix that prevents the
+    // next occurrence, which is a one-line change on the event itself.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} could not resolve event type {EventType}; retrying once before dead-lettering. Give the event an [EventName] so its rows carry an identity a rename, namespace move, or assembly move cannot break")]
     private static partial void LogTypeUnresolvableRetry(ILogger logger, Guid messageId, string eventType);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} failed (attempt {RetryCount})")]

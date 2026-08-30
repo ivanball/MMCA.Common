@@ -199,7 +199,7 @@ public sealed class AddMultiTenancyTests
     private static ValidateOptionsResult Validate(TenancySettings settings)
     {
         var resolver = new DataSourceResolver(
-            new ConnectionStringSettings { SQLServerConnectionString = "Server=test;Database=test" },
+            Options.Create(new ConnectionStringSettings { SQLServerConnectionString = "Server=test;Database=test" }),
             new DataSourcesSettings(),
             NullLogger<DataSourceResolver>.Instance);
 

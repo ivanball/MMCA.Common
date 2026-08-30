@@ -23,10 +23,11 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 /// purging entirely.
 /// </para>
 /// <para>
-/// <b>Dead-lettered</b> rows (retries exhausted, never delivered) are KEPT by default and only
-/// counted, loudly, once per source per sweep. Deleting an undelivered event is unrecoverable, so
-/// it takes an explicit <see cref="OutboxSettings.PurgeDeadLetters"/>; the alternative to deletion
-/// is replaying them through <c>IOutboxAdministration</c>.
+/// <b>Dead-lettered</b> rows (retries exhausted, never delivered) are deleted once
+/// <see cref="OutboxSettings.DeadLetterRetentionDays"/> has elapsed, and every deletion is logged at
+/// Warning with its count. Set that window wider than <see cref="OutboxSettings.RetentionDays"/> to
+/// keep undelivered payloads around long enough to diagnose them and replay them through
+/// <c>IOutboxAdministration</c>.
 /// </para>
 /// </summary>
 /// <param name="scopeFactory">Factory for creating a DI scope per sweep.</param>
@@ -142,13 +143,11 @@ public sealed partial class OutboxCleanupService(
     /// (<c>RetryCount &lt; MaxRetries</c>) but the processed sweep never reaches them either: they
     /// accumulate AND stay in the <c>ProcessedOn IS NULL</c> pending index that every poll re-scans.
     /// <para>
-    /// What happens to them past their window (<c>Outbox:DeadLetterRetentionDays</c>, falling back
-    /// to <c>RetentionDays</c>, keyed on <c>OccurredOn</c> since they have no <c>ProcessedOn</c>) is
-    /// a decision, not a default: deleting an undelivered event destroys the only record that it was
-    /// ever raised, and it is the one cleanup action nothing can undo. So the purge is OPT-IN
-    /// (<c>Outbox:PurgeDeadLetters</c>). Left off, the sweep counts them instead and logs one
-    /// Warning per source per cycle, which keeps the pile visible until an operator either replays
-    /// it (<c>IOutboxAdministration.ReplayDeadLettersAsync</c>) or turns the purge on.
+    /// Their window is <c>Outbox:DeadLetterRetentionDays</c>, falling back to <c>RetentionDays</c>,
+    /// and it is keyed on <c>OccurredOn</c> since they have no <c>ProcessedOn</c>. Past it they are
+    /// deleted, and the deletion is logged at Warning with its count, because it destroys the only
+    /// record that the event was ever raised. Widen the window to keep them available for diagnosis
+    /// and for replay through <c>IOutboxAdministration.ReplayDeadLettersAsync</c>.
     /// </para>
     /// </summary>
     private async Task SweepDeadLettersAsync(
@@ -166,17 +165,6 @@ public sealed partial class OutboxCleanupService(
             .Where(m => m.ProcessedOn == null
                 && m.RetryCount >= _settings.MaxRetries
                 && m.OccurredOn < deadLetterCutoff);
-
-        if (!_settings.PurgeDeadLetters)
-        {
-            var retained = await expired.LongCountAsync(cancellationToken).ConfigureAwait(false);
-            if (retained > 0)
-            {
-                LogDeadLettersRetained(logger, retained, sourceName);
-            }
-
-            return;
-        }
 
         var deadLettered = await expired.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 
@@ -237,9 +225,6 @@ public sealed partial class OutboxCleanupService(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Purged {Count} dead-lettered (retries exhausted) outbox messages older than retention from {DataSourceName}")]
     private static partial void LogDeadLetterPurged(ILogger logger, int count, string dataSourceName);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "{Count} dead-lettered outbox messages in {DataSourceName} are past their retention window and are being KEPT (Outbox:PurgeDeadLetters is false). Replay them with IOutboxAdministration.ReplayDeadLettersAsync once the cause is fixed, or set Outbox:PurgeDeadLetters=true to delete them")]
-    private static partial void LogDeadLettersRetained(ILogger logger, long count, string dataSourceName);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Purged {Count} processed inbox messages older than retention from {DataSourceName}")]
     private static partial void LogInboxPurged(ILogger logger, int count, string dataSourceName);

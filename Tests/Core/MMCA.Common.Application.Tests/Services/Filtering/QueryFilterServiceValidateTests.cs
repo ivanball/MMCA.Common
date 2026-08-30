@@ -14,6 +14,14 @@ public sealed class QueryFilterServiceValidateTests
         public decimal Amount { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+        public Category Category { get; set; } = new();
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("S1144", "S1144:Unused private types or members should be removed", Justification = "Properties are used via reflection by QueryFilterService")]
+    private sealed class Category
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     private static readonly Dictionary<string, string> EmptyMap = [];
@@ -166,14 +174,14 @@ public sealed class QueryFilterServiceValidateTests
         result.IsSuccess.Should().BeTrue();
     }
 
-    // ── Nested property (dot notation) uses string filtering ──
+    // ── Nested property (dot notation) validates against the LEAF's type ──
     [Fact]
-    public void ValidateFilters_NestedProperty_ValidatesWithStringStrategy()
+    public void ValidateFilters_NestedStringLeaf_ValidatesWithStringStrategy()
     {
-        var map = new Dictionary<string, string> { ["CreatedOn"] = "Category.Name" };
+        var map = new Dictionary<string, string> { ["CategoryName"] = "Category.Name" };
         var filters = new Dictionary<string, (string, string)>
         {
-            ["CreatedOn"] = ("CONTAINS", "Electronics")
+            ["CategoryName"] = ("CONTAINS", "Electronics")
         };
 
         var result = QueryFilterService.ValidateFilters<Product>(filters, map);
@@ -182,18 +190,84 @@ public sealed class QueryFilterServiceValidateTests
     }
 
     [Fact]
-    public void ValidateFilters_NestedProperty_UnsupportedOperator_ReturnsFailure()
+    public void ValidateFilters_NestedStringLeaf_UnsupportedOperator_ReturnsFailure()
     {
-        var map = new Dictionary<string, string> { ["CreatedOn"] = "Category.Name" };
+        var map = new Dictionary<string, string> { ["CategoryName"] = "Category.Name" };
         var filters = new Dictionary<string, (string, string)>
         {
-            ["CreatedOn"] = ("GREATER THAN", "Electronics")
+            ["CategoryName"] = ("GREATER THAN", "Electronics")
         };
 
         var result = QueryFilterService.ValidateFilters<Product>(filters, map);
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Filter.Operator.NotSupported");
+    }
+
+    [Fact]
+    public void ValidateFilters_NestedNonStringLeaf_ValidatesWithTheLeafsStrategy()
+    {
+        // "Category.Id" is a Guid, so a string-only operator is rejected here rather than blowing up
+        // inside Dynamic LINQ at query-build time.
+        var map = new Dictionary<string, string> { ["CategoryId"] = "Category.Id" };
+        var filters = new Dictionary<string, (string, string)>
+        {
+            ["CategoryId"] = ("CONTAINS", "Electronics")
+        };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, map);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Filter.Operator.NotSupported");
+    }
+
+    // ── Fail closed: a nested path whose leaf cannot be reached is an unknown property ──
+    [Fact]
+    public void ValidateFilters_NestedPathWithMissingLeaf_ReturnsPropertyNotFound()
+    {
+        var map = new Dictionary<string, string> { ["CategoryTitle"] = "Category.Title" };
+        var filters = new Dictionary<string, (string, string)>
+        {
+            ["CategoryTitle"] = ("CONTAINS", "Electronics")
+        };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, map);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Filter.Property.NotFound");
+    }
+
+    [Fact]
+    public void ValidateFilters_NestedPathWithMissingRoot_ReturnsPropertyNotFound()
+    {
+        // The DTO-facing name resolves, so the filter reaches type resolution; the path's own root
+        // does not exist, and that must fail rather than fall back to the string strategy.
+        var map = new Dictionary<string, string> { ["CreatedOn"] = "Supplier.Name" };
+        var filters = new Dictionary<string, (string, string)>
+        {
+            ["CreatedOn"] = ("CONTAINS", "Acme")
+        };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, map);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Filter.Property.NotFound");
+    }
+
+    [Fact]
+    public void ValidateFilters_NestedPathThroughAScalarSegment_ReturnsPropertyNotFound()
+    {
+        // "Price" is an int, so "Price.Amount" has nowhere to walk to.
+        var map = new Dictionary<string, string> { ["PriceAmount"] = "Price.Amount" };
+        var filters = new Dictionary<string, (string, string)>
+        {
+            ["PriceAmount"] = ("EQUALS", "10")
+        };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, map);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Filter.Property.NotFound");
     }
 
     // ── Unparseable values are rejected rather than silently widening the result set ──

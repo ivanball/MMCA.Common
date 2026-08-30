@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
@@ -109,7 +109,7 @@ public sealed class MutateEntityHandlerBaseTests
         _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback(() => _calls.Add("save"))
             .ReturnsAsync(1);
-        _repository.Setup(r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), It.IsAny<byte[]?>()))
+        _repository.Setup(r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), It.IsAny<byte[]>()))
             .Callback(() => _calls.Add("rowversion"));
         _dtoMapper.Setup(m => m.MapToDTO(It.IsAny<OrderAggregate>()))
             .Returns((OrderAggregate e) => new OrderDTO { Id = e.Id, Name = e.Name });
@@ -145,7 +145,7 @@ public sealed class MutateEntityHandlerBaseTests
 
         _calls.Should().Equal("rowversion", "mutate", "save", "log", "mutated");
         _repository.Verify(
-            r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), It.Is<byte[]?>(v => v != null && v[0] == 9)),
+            r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), It.Is<byte[]>(v => v[0] == 9)),
             Times.Once);
     }
 
@@ -176,7 +176,8 @@ public sealed class MutateEntityHandlerBaseTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Order.NameRequired");
-        _calls.Should().Equal("rowversion", "mutate");
+        // No "rowversion": a command carrying no token states no precondition, so nothing is stamped.
+        _calls.Should().Equal("mutate");
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

@@ -234,17 +234,10 @@ MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Id.get -> TIdentifierType
 MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Id.init -> void
 MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Name.get -> string!
 MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Name.init -> void
-MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest
-MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.<Clone>$() -> MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest!
-MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.ConcurrencyTokenRequest() -> void
-MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.Equals(MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? other) -> bool
-MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.RowVersion.get -> byte[]?
-MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.RowVersion.init -> void
 MMCA.Common.Shared.DTOs.IBaseDTO<TIdentifierType>
 MMCA.Common.Shared.DTOs.IBaseDTO<TIdentifierType>.Id.get -> TIdentifierType
 MMCA.Common.Shared.DTOs.IBaseDTO<TIdentifierType>.Id.init -> void
 MMCA.Common.Shared.DTOs.IConcurrencyAware
-MMCA.Common.Shared.DTOs.IConcurrencyAware.RowVersion.get -> byte[]?
 MMCA.Common.Shared.DTOs.IConcurrencyAware.RowVersion.init -> void
 MMCA.Common.Shared.Exceptions.DomainException
 MMCA.Common.Shared.Exceptions.DomainException.DomainException() -> void
@@ -466,9 +459,6 @@ override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.GetHashCod
 override MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.Equals(object? obj) -> bool
 override MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.GetHashCode() -> int
 override MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.ToString() -> string!
-override MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.Equals(object? obj) -> bool
-override MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.GetHashCode() -> int
-override MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.ToString() -> string!
 override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Notifications.PushNotifications.DeviceInstallationRequest.ToString() -> string!
@@ -592,8 +582,6 @@ static MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.operator !=(
 static MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.operator ==(MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser left, MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser right) -> bool
 static MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.operator !=(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? left, MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? right) -> bool
 static MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>.operator ==(MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? left, MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>? right) -> bool
-static MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.operator !=(MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? left, MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? right) -> bool
-static MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest.operator ==(MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? left, MMCA.Common.Shared.DTOs.ConcurrencyTokenRequest? right) -> bool
 static MMCA.Common.Shared.Extensions.DomainHelper.Parse<TIdentifier>(this string? id) -> TIdentifier
 static MMCA.Common.Shared.Extensions.DomainHelper.TryParse<TIdentifier>(this string? id, out TIdentifier result) -> bool
 static MMCA.Common.Shared.Globalization.SupportedCultures.All.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -639,7 +627,6 @@ static MMCA.Common.Shared.ValueObjects.DateTimeRange.Create(System.DateTime star
 static MMCA.Common.Shared.ValueObjects.DateTimeRange.operator !=(MMCA.Common.Shared.ValueObjects.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.DateTimeRange? right) -> bool
 static MMCA.Common.Shared.ValueObjects.DateTimeRange.operator ==(MMCA.Common.Shared.ValueObjects.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.DateTimeRange? right) -> bool
 static MMCA.Common.Shared.ValueObjects.Email.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Email!>!
-static MMCA.Common.Shared.ValueObjects.Email.implicit operator string!(MMCA.Common.Shared.ValueObjects.Email! email) -> string!
 static MMCA.Common.Shared.ValueObjects.Email.operator !=(MMCA.Common.Shared.ValueObjects.Email? left, MMCA.Common.Shared.ValueObjects.Email? right) -> bool
 static MMCA.Common.Shared.ValueObjects.Email.operator ==(MMCA.Common.Shared.ValueObjects.Email? left, MMCA.Common.Shared.ValueObjects.Email? right) -> bool
 static MMCA.Common.Shared.ValueObjects.EmailInvariants.EnsureEmailIsValid(string! email, string! source) -> MMCA.Common.Shared.Abstractions.Result!
@@ -656,7 +643,6 @@ static MMCA.Common.Shared.ValueObjects.Money.operator *(MMCA.Common.Shared.Value
 static MMCA.Common.Shared.ValueObjects.Money.operator +(MMCA.Common.Shared.ValueObjects.Money! first, MMCA.Common.Shared.ValueObjects.Money! second) -> MMCA.Common.Shared.ValueObjects.Money!
 static MMCA.Common.Shared.ValueObjects.Money.operator ==(MMCA.Common.Shared.ValueObjects.Money? left, MMCA.Common.Shared.ValueObjects.Money? right) -> bool
 static MMCA.Common.Shared.ValueObjects.PhoneNumber.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.PhoneNumber!>!
-static MMCA.Common.Shared.ValueObjects.PhoneNumber.implicit operator string!(MMCA.Common.Shared.ValueObjects.PhoneNumber! phoneNumber) -> string!
 static MMCA.Common.Shared.ValueObjects.PhoneNumber.operator !=(MMCA.Common.Shared.ValueObjects.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.PhoneNumber? right) -> bool
 static MMCA.Common.Shared.ValueObjects.PhoneNumber.operator ==(MMCA.Common.Shared.ValueObjects.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.PhoneNumber? right) -> bool
 static MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.EnsurePhoneNumberIsValid(string! phoneNumber, string! source) -> MMCA.Common.Shared.Abstractions.Result!

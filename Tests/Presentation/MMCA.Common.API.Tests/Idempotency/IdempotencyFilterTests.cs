@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
@@ -19,6 +20,12 @@ namespace MMCA.Common.API.Tests.Idempotency;
 
 public sealed class IdempotencyFilterTests
 {
+    /// <summary>
+    /// The hash the filter computes for a request that carries no body. Records built by hand in
+    /// these tests use it so a replay of a body-less request compares equal.
+    /// </summary>
+    private static readonly string EmptyBodyHash = Convert.ToHexStringLower(SHA256.HashData([]));
+
     /// <summary>The filter takes an <c>ILogger</c> so a swallowed cache fault is still reported.</summary>
     private static IdempotencyFilter CreateSut() => new(NullLogger<IdempotencyFilter>.Instance);
 
@@ -103,7 +110,7 @@ public sealed class IdempotencyFilterTests
         var sut = CreateSut();
         var (context, cache) = CreateContext("unique-key-1");
 
-        var cachedRecord = new IdempotencyRecord(200, "{\"id\":1}");
+        var cachedRecord = new IdempotencyRecord(200, "{\"id\":1}", EmptyBodyHash);
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedRecord);
 
@@ -156,7 +163,7 @@ public sealed class IdempotencyFilterTests
     public async Task ConcurrentRequests_SameKey_OnlyOneExecutes()
     {
         var idempotencyKey = $"concurrent-test-{Guid.NewGuid()}";
-        var cachedRecord = new IdempotencyRecord(200, "{\"id\":1}");
+        var cachedRecord = new IdempotencyRecord(200, "{\"id\":1}", EmptyBodyHash);
         var nextCallCount = 0;
 
         // Semaphore to hold the first next() call in progress while the second request starts
@@ -292,7 +299,7 @@ public sealed class IdempotencyFilterTests
         var idempotencyKey = $"double-check-replay-{Guid.NewGuid()}";
         var (context, cache) = CreateContext(idempotencyKey);
 
-        var cachedRecord = new IdempotencyRecord(200, "{\"replayed\":true}");
+        var cachedRecord = new IdempotencyRecord(200, "{\"replayed\":true}", EmptyBodyHash);
         var getCallCount = 0;
 
         // First GetAsync returns null (fast path misses), second returns cached record
@@ -528,7 +535,7 @@ public sealed class IdempotencyFilterTests
         var (context, cache) = CreateContext($"replay-no-content-{Guid.NewGuid()}");
 
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IdempotencyRecord(204, string.Empty));
+            .ReturnsAsync(new IdempotencyRecord(204, string.Empty, EmptyBodyHash));
 
         var nextCalled = false;
 
@@ -607,7 +614,7 @@ public sealed class IdempotencyFilterTests
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => Interlocked.Increment(ref getCalls) == 1
                 ? null
-                : new IdempotencyRecord(200, "{\"id\":1}"));
+                : new IdempotencyRecord(200, "{\"id\":1}", EmptyBodyHash));
 
         var nextCalled = false;
 
@@ -691,9 +698,9 @@ public sealed class IdempotencyFilterTests
     }
 
     // ── Request-body binding ──
-    // The key alone used to decide a replay, so a client that reused a key with a DIFFERENT payload
-    // was handed the first response and its second write silently never ran. The stored record now
-    // carries a hash of the body that produced it.
+    // A replay is decided by the key AND the payload: every stored record carries a hash of the body
+    // that produced it, so reusing a key with a different payload is refused instead of being handed
+    // the first response while the second write silently never runs.
     [Fact]
     public async Task SameRequestBody_ReplaysTheCachedResponse()
     {
@@ -706,7 +713,7 @@ public sealed class IdempotencyFilterTests
         stored.Should().NotBeNull();
 
         var record = stored!;
-        record.RequestBodyHash.Should().NotBeNull("the stored record binds the payload to the key");
+        record.RequestBodyHash.Should().NotBeEmpty("the stored record binds the payload to the key");
 
         var (context, cache) = CreateContext(idempotencyKey, userId: "1", routeTemplate: "Orders", body: body);
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -762,32 +769,6 @@ public sealed class IdempotencyFilterTests
     }
 
     [Fact]
-    public async Task LegacyCachedRecord_WithNoStoredHash_ReplaysWithoutComparison()
-    {
-        var (context, cache) = CreateContext(
-            $"legacy-record-{Guid.NewGuid()}", userId: "1", routeTemplate: "Orders", body: "{\"amount\":99}");
-
-        // Written by the version before the hash existed: two properties, no RequestBodyHash.
-        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new IdempotencyRecord(200, "{\"id\":1}"));
-
-        var nextCalled = false;
-
-        await CreateSut().OnActionExecutionAsync(context, () =>
-        {
-            nextCalled = true;
-            return Task.FromResult(new ActionExecutedContext(
-                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
-                [], null!));
-        });
-
-        nextCalled.Should().BeFalse();
-        context.Result.Should().BeOfType<ContentResult>(
-            "entries cached before the hash existed must keep replaying until they age out");
-        ((ContentResult)context.Result!).Content.Should().Be("{\"id\":1}");
-    }
-
-    [Fact]
     public async Task BodylessRequest_StoresAndReplays()
     {
         var idempotencyKey = $"bodyless-{Guid.NewGuid()}";
@@ -795,7 +776,7 @@ public sealed class IdempotencyFilterTests
         var stored = await CaptureStoredRecordAsync(idempotencyKey, body: null, new NoContentResult());
 
         stored.Should().NotBeNull();
-        stored!.RequestBodyHash.Should().NotBeNull("a body-less request hashes the empty payload");
+        stored!.RequestBodyHash.Should().Be(EmptyBodyHash, "a body-less request hashes the empty payload");
 
         var (context, cache) = CreateContext(idempotencyKey, userId: "1", routeTemplate: "Orders");
         cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))

@@ -3,24 +3,22 @@ using MMCA.Common.Shared.Notifications;
 namespace MMCA.Common.Infrastructure.Settings;
 
 /// <summary>
-/// Concrete push notification settings bound from the <c>PushNotifications</c> configuration section.
+/// Push notification settings bound from the <c>PushNotifications</c> configuration section.
 /// </summary>
-public sealed class PushNotificationSettings : IPushNotificationSettings
+public sealed class PushNotificationSettings
 {
     /// <summary>Configuration section name used for options binding.</summary>
     public static readonly string SectionName = "PushNotifications";
 
-    /// <inheritdoc />
+    /// <summary>Gets a value indicating whether push notifications are enabled.</summary>
     public bool Enabled { get; init; }
 
-    /// <inheritdoc />
+    /// <summary>Gets the SignalR hub endpoint path.</summary>
     public string HubPath { get; init; } = "/hubs/notifications";
 
     /// <summary>
     /// Gets the regular expression a channel key must match before a client may join or leave a
     /// channel via the notification hub. Guards SignalR group names against arbitrary client input.
-    /// Deliberately declared on the concrete settings class only so that
-    /// <see cref="IPushNotificationSettings"/> stays unchanged (no breaking change for implementers).
     /// <para>
     /// The default is <see cref="NotificationScopeKey.Pattern"/>, the same constant
     /// <see cref="NotificationScopeKey.ForEvent"/> and <see cref="NotificationScopeKey.ForSession"/>

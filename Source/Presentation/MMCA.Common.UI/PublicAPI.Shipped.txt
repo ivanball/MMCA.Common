@@ -17,7 +17,6 @@ MMCA.Common.UI.Common.Interfaces.IUIModule.Assembly.get -> System.Reflection.Ass
 MMCA.Common.UI.Common.Interfaces.IUIModule.LayoutComponentTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
 MMCA.Common.UI.Common.Interfaces.IUIModule.NavItems.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.UI.Common.NavItem!>!
 MMCA.Common.UI.Common.NavItem
-MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out string? RequiredRole, out string? RequiredClaim, out MMCA.Common.UI.Common.NavSection Section, out string? Group, out System.Type? TitleResource) -> void
 MMCA.Common.UI.Common.NavItem.Group.get -> string?
 MMCA.Common.UI.Common.NavItem.Group.init -> void
 MMCA.Common.UI.Common.NavItem.Href.get -> string!
@@ -25,7 +24,6 @@ MMCA.Common.UI.Common.NavItem.Href.init -> void
 MMCA.Common.UI.Common.NavItem.Icon.get -> string!
 MMCA.Common.UI.Common.NavItem.Icon.init -> void
 MMCA.Common.UI.Common.NavItem.NavItem(MMCA.Common.UI.Common.NavItem! original) -> void
-MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, string? RequiredRole = null, string? RequiredClaim = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null, System.Type? TitleResource = null) -> void
 MMCA.Common.UI.Common.NavItem.RequiredClaim.get -> string?
 MMCA.Common.UI.Common.NavItem.RequiredClaim.init -> void
 MMCA.Common.UI.Common.NavItem.RequiredRole.get -> string?
@@ -34,7 +32,6 @@ MMCA.Common.UI.Common.NavItem.Section.get -> MMCA.Common.UI.Common.NavSection
 MMCA.Common.UI.Common.NavItem.Section.init -> void
 MMCA.Common.UI.Common.NavItem.Title.get -> string!
 MMCA.Common.UI.Common.NavItem.Title.init -> void
-MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type?
 MMCA.Common.UI.Common.NavItem.TitleResource.init -> void
 MMCA.Common.UI.Common.NavSection
 MMCA.Common.UI.Common.NavSection.Admin = 2 -> MMCA.Common.UI.Common.NavSection
@@ -127,8 +124,6 @@ MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.EmptyIcon.get -> strin
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.EmptyIcon.set -> void
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.EmptyMessage.get -> string?
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.EmptyMessage.set -> void
-MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPage.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!
-MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPage.set -> void
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.MaxRenderedItems.get -> int
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.MaxRenderedItems.set -> void
 MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.MobileInfiniteScrollList() -> void
@@ -886,14 +881,12 @@ static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Commo
 static MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.UI.Globalization.PseudoLocalizer.Transform(string! value) -> string!
 static MMCA.Common.UI.Notifications.DependencyInjection.AddNotificationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.UI.Pages.Common.ErrorMessages.ActionError(System.Exception! ex, string! localizedFallback) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.Configure(Microsoft.Extensions.Localization.IStringLocalizer! localizer) -> void
 static MMCA.Common.UI.Pages.Common.ErrorMessages.DeleteError(string! entityName, System.Exception! ex) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.DeleteFailed(string! entityName) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.LoadError(string! entityName, System.Exception! ex) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.NotFound(string! entityName, object! id) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.SaveError(string! entityName, System.Exception! ex) -> string!
-static MMCA.Common.UI.Pages.Common.ErrorMessages.Success(string! entityName, string! action) -> string!
 static MMCA.Common.UI.Pages.Common.ErrorMessages.ValidationError.get -> string!
 static MMCA.Common.UI.Services.Auth.JwtTokenInfo.IsFresh(string? token, System.TimeSpan skew) -> bool
 static MMCA.Common.UI.Services.AuthenticatedServiceBase.NewIdempotencyKey() -> string!

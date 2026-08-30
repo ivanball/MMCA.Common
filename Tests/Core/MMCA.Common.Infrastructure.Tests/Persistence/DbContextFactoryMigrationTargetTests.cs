@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -55,7 +56,7 @@ public sealed class DbContextFactoryMigrationTargetTests : IDisposable
             [CreatedSourceName] = new() { SqliteConnectionString = $"Data Source={_createdPath}" },
         });
 
-        _resolver = new DataSourceResolver(connectionStrings, dataSources, NullLogger<DataSourceResolver>.Instance);
+        _resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
         _migratedKey = _resolver.ResolveLogical(DataSource.Sqlite, MigratedSourceName);
         _createdKey = _resolver.ResolveLogical(DataSource.Sqlite, CreatedSourceName);
 
@@ -75,7 +76,7 @@ public sealed class DbContextFactoryMigrationTargetTests : IDisposable
             .BuildServiceProvider();
 
         var physicalFactory = new PhysicalDbContextFactory(_serviceProvider, _resolver, assemblyProvider);
-        _sut = new DbContextFactory(physicalFactory, registry, _resolver, Mock.Of<ICurrentUserService>());
+        _sut = new DbContextFactory(physicalFactory, registry, _resolver, Mock.Of<ICurrentUserService>(), Mock.Of<ITenantContext>(), Options.Create(new TenancySettings()));
     }
 
     public void Dispose()

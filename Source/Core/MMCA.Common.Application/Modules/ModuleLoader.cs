@@ -33,9 +33,9 @@ public sealed partial class ModuleLoader
     public ILogger<ModuleLoader> Logger { get; init; } = NullLogger<ModuleLoader>.Instance;
 
     /// <summary>
-    /// Scans all loaded assemblies for <see cref="IModule"/> implementations, sorts them
-    /// in dependency order via topological sort, and registers each enabled module into
-    /// the DI container. Disabled modules receive stub registrations instead.
+    /// Scans the given assemblies for <see cref="IModule"/> implementations, sorts them in
+    /// dependency order via topological sort, and registers each enabled module into the DI
+    /// container. Disabled modules receive stub registrations instead.
     /// </summary>
     /// <param name="services">The service collection to register module services into.</param>
     /// <param name="configurationBuilder">Allows modules to add their own configuration sources.</param>
@@ -44,6 +44,12 @@ public sealed partial class ModuleLoader
     /// <param name="environmentName">
     /// Optional hosting environment name (e.g. "Development"). When provided, the loader
     /// also loads <c>modules.{name}.{environmentName}.json</c> for each module.
+    /// </param>
+    /// <param name="moduleAssemblies">
+    /// The assemblies to scan for <see cref="IModule"/> and <see cref="IModuleSeeder"/>
+    /// implementations. The host names them explicitly: an AppDomain scan only sees assemblies
+    /// already loaded, so a module assembly that is referenced but not yet touched by any code path
+    /// would be silently absent from discovery.
     /// </param>
     /// <exception cref="InvalidOperationException">
     /// Thrown when a module with <see cref="IModule.RequiresDependencies"/> set to <see langword="true"/>
@@ -54,36 +60,15 @@ public sealed partial class ModuleLoader
         IConfigurationBuilder configurationBuilder,
         ApplicationSettings applicationSettings,
         ModulesSettings modulesSettings,
-        string? environmentName = null)
-        => DiscoverAndRegister(
-            services, configurationBuilder, applicationSettings, modulesSettings, environmentName, moduleAssemblies: null);
-
-    /// <summary>
-    /// Overload taking the assemblies to scan explicitly. Prefer this in hosts: the parameterless
-    /// AppDomain scan only sees assemblies already loaded into the AppDomain, so a module assembly
-    /// that is referenced but not yet touched by any code path is silently absent from discovery.
-    /// </summary>
-    /// <param name="services">The service collection to register module services into.</param>
-    /// <param name="configurationBuilder">Allows modules to add their own configuration sources.</param>
-    /// <param name="applicationSettings">Global application settings shared across modules.</param>
-    /// <param name="modulesSettings">Per-module enabled/disabled configuration.</param>
-    /// <param name="environmentName">Optional hosting environment name (e.g. "Development").</param>
-    /// <param name="moduleAssemblies">The assemblies to scan for <see cref="IModule"/> and
-    /// <see cref="IModuleSeeder"/> implementations; <see langword="null"/> scans the AppDomain.</param>
-    public void DiscoverAndRegister(
-        IServiceCollection services,
-        IConfigurationBuilder configurationBuilder,
-        ApplicationSettings applicationSettings,
-        ModulesSettings modulesSettings,
         string? environmentName,
-        IEnumerable<System.Reflection.Assembly>? moduleAssemblies)
+        IEnumerable<System.Reflection.Assembly> moduleAssemblies)
     {
         _modulesSettings = modulesSettings;
 
-        // Scan the given (or all loaded) assemblies for concrete IModule implementations.
-        // The try-catch guards against assemblies that throw on GetTypes()
+        // Scan the host-named assemblies for concrete IModule implementations. The try-catch guards
+        // against assemblies that throw on GetTypes()
         // (e.g. ReflectionTypeLoadException from missing transitive references).
-        var allTypes = (moduleAssemblies ?? AppDomain.CurrentDomain.GetAssemblies())
+        var allTypes = moduleAssemblies
             .SelectMany(a =>
             {
                 try

@@ -29,6 +29,9 @@ public static class DatabaseInitializationExtensions
         /// <param name="applicationSettings">Application settings containing the database init strategy.</param>
         /// <param name="moduleLoader">The module loader to seed enabled modules.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
+        /// <exception cref="InvalidOperationException">
+        /// <see cref="ApplicationSettings.DatabaseInitStrategy"/> is not <c>Migrate</c> or <c>None</c>.
+        /// </exception>
         public async Task InitializeDatabaseAsync(
             ApplicationSettings applicationSettings,
             ModuleLoader moduleLoader,
@@ -37,6 +40,11 @@ public static class DatabaseInitializationExtensions
             ArgumentNullException.ThrowIfNull(services);
             ArgumentNullException.ThrowIfNull(applicationSettings);
             ArgumentNullException.ThrowIfNull(moduleLoader);
+
+            // Validated before anything is created: a misspelled strategy is a configuration mistake,
+            // and the host must stop rather than reach the switch below having already created the
+            // migrationless sources.
+            EnsureKnownStrategy(applicationSettings.DatabaseInitStrategy);
 
             using var scope = services.CreateScope();
 
@@ -53,19 +61,12 @@ public static class DatabaseInitializationExtensions
             // strings. A Cosmos source has no EF Core migrations pipeline at all, and neither does a
             // SQLite source with no migrations assembly configured, so both are created via
             // EnsureCreated up front, independent of the migration-oriented DatabaseInitStrategy
-            // below. This is the ONLY path that creates them under the "Migrate" and "None"
-            // strategies; without it such a source in use is never created and the first repository
-            // call fails.
+            // below. This is the ONLY path that creates them; without it such a source in use is
+            // never created and the first repository call fails.
             //
-            // A SQLite source WITH a migrations assembly is deliberately excluded here whenever the
-            // strategy migrates: EnsureCreated writes the tables without an __EFMigrationsHistory
-            // row, after which every migration is both pending and un-appliable (its CREATE TABLE
-            // hits an existing table). Under the "EnsureCreated" strategy nothing migrates, so the
-            // exclusion does not apply and every source is created outright.
-            var strategyMigrates =
-                string.Equals(applicationSettings.DatabaseInitStrategy, "Migrate", StringComparison.Ordinal)
-                || string.Equals(applicationSettings.DatabaseInitStrategy, "None", StringComparison.Ordinal);
-
+            // A SQLite source WITH a migrations assembly is deliberately excluded here: EnsureCreated
+            // writes the tables without an __EFMigrationsHistory row, after which every migration is
+            // both pending and un-appliable (its CREATE TABLE hits an existing table).
             foreach (var migrationlessKey in sourcesInUse
                 .Where(k => k.Engine is DataSource.CosmosDB or DataSource.Sqlite))
             {
@@ -76,7 +77,7 @@ public static class DatabaseInitializationExtensions
                     continue;
                 }
 
-                if (strategyMigrates && physical.UsesMigrations)
+                if (physical.UsesMigrations)
                 {
                     continue;
                 }
@@ -86,24 +87,18 @@ public static class DatabaseInitializationExtensions
             }
 
             // Apply schema initialisation based on the configured strategy:
-            //   "Migrate"       — auto-apply pending EF Core migrations per migrated source (development/testing).
-            //   "EnsureCreated" — legacy EnsureCreated behavior for every source in use.
-            //   "None"          — production: validate no pending migrations on any source, throw if behind.
+            //   "Migrate": auto-apply pending EF Core migrations per migrated source (development/testing).
+            //   "None":    production, validate no pending migrations on any source, throw if behind.
             switch (applicationSettings.DatabaseInitStrategy)
             {
                 case "Migrate":
                     await dbContextFactory.MigrateAsync(cancellationToken).ConfigureAwait(false);
                     break;
-                case "EnsureCreated":
-                    await dbContextFactory.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
-                    break;
                 case "None":
                     await ThrowIfPendingMigrationsAsync(dbContextFactory, resolver, sourcesInUse, cancellationToken).ConfigureAwait(false);
                     break;
                 default:
-                    throw new InvalidOperationException(
-                        $"Unknown DatabaseInitStrategy: '{applicationSettings.DatabaseInitStrategy}'. " +
-                        "Valid values are: Migrate, EnsureCreated, None.");
+                    throw UnknownStrategy(applicationSettings.DatabaseInitStrategy);
             }
 
             await InitializeTenantDatabasesAsync(services, applicationSettings, resolver, sourcesInUse, cancellationToken)
@@ -167,20 +162,37 @@ public static class DatabaseInitializationExtensions
                     }
 
                     break;
-                case "EnsureCreated":
-                    await database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
-                    break;
                 case "None":
                     await ThrowIfTenantPendingMigrationsAsync(database, target, usesMigrations, cancellationToken)
                         .ConfigureAwait(false);
                     break;
                 default:
-                    throw new InvalidOperationException(
-                        $"Unknown DatabaseInitStrategy: '{applicationSettings.DatabaseInitStrategy}'. " +
-                        "Valid values are: Migrate, EnsureCreated, None.");
+                    throw UnknownStrategy(applicationSettings.DatabaseInitStrategy);
             }
         }
     }
+
+    /// <summary>
+    /// Stops startup when <c>DatabaseInitStrategy</c> is anything other than <c>Migrate</c> or
+    /// <c>None</c>. A value that is not recognised would otherwise leave the schema untouched and
+    /// surface as a failing query long after startup reported success.
+    /// </summary>
+    /// <param name="strategy">The configured strategy.</param>
+    /// <exception cref="InvalidOperationException">The strategy is not a valid value.</exception>
+    private static void EnsureKnownStrategy(string? strategy)
+    {
+        if (!string.Equals(strategy, "Migrate", StringComparison.Ordinal)
+            && !string.Equals(strategy, "None", StringComparison.Ordinal))
+        {
+            throw UnknownStrategy(strategy);
+        }
+    }
+
+    /// <summary>The startup error for an unrecognised <c>DatabaseInitStrategy</c>, naming the valid values.</summary>
+    /// <param name="strategy">The configured strategy.</param>
+    /// <returns>The exception to throw.</returns>
+    private static InvalidOperationException UnknownStrategy(string? strategy) =>
+        new($"Unknown DatabaseInitStrategy: '{strategy}'. Valid values are: Migrate, None.");
 
     /// <summary>
     /// Production guard for a tenant database under the <c>"None"</c> strategy: a tenant left

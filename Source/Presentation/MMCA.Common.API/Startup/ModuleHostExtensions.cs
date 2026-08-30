@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,11 @@ public static class ModuleHostExtensions
         /// configuration (both validated on start), constructs the host's
         /// <see cref="ModuleLoader"/> and registers it as a singleton.
         /// </summary>
+        /// <param name="moduleAssemblies">
+        /// The assemblies discovery scans for <see cref="Application.Modules.IModule"/>
+        /// implementations. The host names them explicitly, typically one marker type per module
+        /// (for example <c>[typeof(CatalogModule).Assembly, typeof(SalesModule).Assembly]</c>).
+        /// </param>
         /// <param name="moduleLoaderLogger">
         /// Optional logger for module-discovery diagnostics. A host that has already bootstrapped a
         /// logger passes one here (for example
@@ -42,9 +48,12 @@ public static class ModuleHostExtensions
         /// <exception cref="InvalidOperationException">
         /// The <c>ApplicationSettings</c> configuration section is absent.
         /// </exception>
-        public ModuleHostContext AddModuleHost(ILogger<ModuleLoader>? moduleLoaderLogger = null)
+        public ModuleHostContext AddModuleHost(
+            IEnumerable<Assembly> moduleAssemblies,
+            ILogger<ModuleLoader>? moduleLoaderLogger = null)
         {
             ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(moduleAssemblies);
 
             var services = builder.Services;
             var configuration = builder.Configuration;
@@ -77,7 +86,8 @@ public static class ModuleHostExtensions
                 builder.Environment.EnvironmentName,
                 applicationSettings,
                 modulesSettings,
-                moduleLoader);
+                moduleLoader,
+                moduleAssemblies);
         }
     }
 }

@@ -16,13 +16,6 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
     ApplicationDbContext GetDbContext(DataSourceKey dataSourceKey);
 
     /// <summary>
-    /// Returns the <see cref="ApplicationDbContext"/> for the engine's <b>Default</b> physical
-    /// source (the top-level connection strings). Convenience overload preserving the
-    /// single-database call sites.
-    /// </summary>
-    ApplicationDbContext GetDbContext(DataSource dataSource);
-
-    /// <summary>
     /// Ensures the databases of every physical data source in use by this host have been created
     /// (sources without a configured connection string are skipped).
     /// </summary>

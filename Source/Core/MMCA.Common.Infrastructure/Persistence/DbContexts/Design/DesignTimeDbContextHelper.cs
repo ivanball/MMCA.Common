@@ -104,7 +104,7 @@ public static class DesignTimeDbContextHelper
 
         var assemblyProvider = new ExplicitAssemblyProvider([.. designOptions.ConfigurationAssemblies]);
         var resolver = new DataSourceResolver(
-            designOptions.ConnectionStrings,
+            Options.Create(designOptions.ConnectionStrings),
             new DataSourcesSettings(designOptions.DataSources),
             NullLogger<DataSourceResolver>.Instance);
         var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);

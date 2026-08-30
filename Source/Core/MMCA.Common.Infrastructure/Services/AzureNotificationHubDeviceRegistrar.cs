@@ -57,26 +57,6 @@ public sealed class AzureNotificationHubDeviceRegistrar(
     }
 
     /// <inheritdoc />
-    public async Task<Result> DeleteAsync(string installationId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await hubClient.DeleteInstallationAsync(installationId, cancellationToken).ConfigureAwait(false);
-            return Result.Success();
-        }
-        catch (MessagingEntityNotFoundException)
-        {
-            // Idempotent delete: an unknown installation is already the desired state.
-            return Result.Success();
-        }
-        catch (MessagingException ex)
-        {
-            logger.LogError(ex, "Device installation delete failed");
-            return DeleteFailed();
-        }
-    }
-
-    /// <inheritdoc />
     public async Task<Result> DeleteAsync(UserIdentifierType userId, string installationId, CancellationToken cancellationToken = default)
     {
         try

@@ -1,8 +1,9 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Concurrency;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Interfaces;
@@ -10,12 +11,16 @@ using MMCA.Common.Application.Settings;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Shared.Http;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Controllers;
 
 public sealed class CrudEntityControllerBaseTests
 {
+    /// <summary>The token the conditional-write filter decoded for the request under test.</summary>
+    private static readonly byte[] IfMatchToken = [4, 2];
+
     private readonly Mock<IEntityQueryService<TestAggregateEntity, TestCrudDTO, int>> _queryServiceMock = new();
     private readonly Mock<ICommandHandler<TestCreateRequest, Result<TestCrudDTO>>> _createHandlerMock = new();
     private readonly Mock<ICommandHandler<UpdateEntityCommand<TestAggregateEntity, TestUpdateRequest, int>, Result<TestCrudDTO>>> _updateHandlerMock = new();
@@ -25,15 +30,17 @@ public sealed class CrudEntityControllerBaseTests
     private TestCrudController CreateController()
     {
         var services = new ServiceCollection();
-        var settingsMock = new Mock<IApplicationSettings>();
-        settingsMock.Setup(s => s.MaxPageSize).Returns(100);
-        services.AddSingleton(settingsMock.Object);
+        services.AddSingleton(Options.Create(new ApplicationSettings { MaxPageSize = 100 }));
 
         ServiceProvider serviceProvider = services.BuildServiceProvider();
         var httpContext = new DefaultHttpContext
         {
             RequestServices = serviceProvider
         };
+
+        // [SupportsIfMatch] decodes the If-Match header into this slot before the action runs, so a
+        // direct call to the action supplies it the same way.
+        httpContext.Items[SupportsIfMatchAttribute.TokenItemKey] = IfMatchToken;
 
         return new TestCrudController(
             _queryServiceMock.Object,
@@ -72,7 +79,7 @@ public sealed class CrudEntityControllerBaseTests
     }
 
     [Fact]
-    public async Task UpdateAsync_BuildsTheCommandFromTheRouteIdAndTheBody()
+    public async Task UpdateAsync_BuildsTheCommandFromTheRouteIdTheBodyAndTheIfMatchToken()
     {
         UpdateEntityCommand<TestAggregateEntity, TestUpdateRequest, int>? captured = null;
         _updateHandlerMock
@@ -81,7 +88,7 @@ public sealed class CrudEntityControllerBaseTests
                 It.IsAny<CancellationToken>()))
             .Callback((UpdateEntityCommand<TestAggregateEntity, TestUpdateRequest, int> c, CancellationToken _) => captured = c)
             .ReturnsAsync(Result.Success(new TestCrudDTO { Id = 5 }));
-        var request = new TestUpdateRequest { RowVersion = [4, 2] };
+        var request = new TestUpdateRequest();
         TestCrudController sut = CreateController();
 
         await sut.UpdateAsync(5, request, CancellationToken.None);
@@ -89,24 +96,7 @@ public sealed class CrudEntityControllerBaseTests
         captured.Should().NotBeNull();
         captured!.Id.Should().Be(5);
         captured.Request.Should().Be(request);
-        captured.RowVersion.Should().Equal(4, 2);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_WithARequestThatCarriesNoToken_SendsNoRowVersion()
-    {
-        UpdateEntityCommand<TestAggregateEntity, TestUpdateRequest, int>? captured = null;
-        _updateHandlerMock
-            .Setup(h => h.HandleAsync(
-                It.IsAny<UpdateEntityCommand<TestAggregateEntity, TestUpdateRequest, int>>(),
-                It.IsAny<CancellationToken>()))
-            .Callback((UpdateEntityCommand<TestAggregateEntity, TestUpdateRequest, int> c, CancellationToken _) => captured = c)
-            .ReturnsAsync(Result.Success(new TestCrudDTO { Id = 5 }));
-        TestCrudController sut = CreateController();
-
-        await sut.UpdateAsync(5, new TestUpdateRequest(), CancellationToken.None);
-
-        captured!.RowVersion.Should().BeNull();
+        captured.RowVersion.Should().Equal(IfMatchToken, "the token comes from the header, never from the body");
     }
 
     [Fact]
@@ -161,14 +151,11 @@ public sealed class TestCrudController(
     : CrudEntityControllerBase<TestAggregateEntity, TestCrudDTO, int, TestCreateRequest, TestUpdateRequest>(
         queryService, createHandler, updateHandler, deleteHandler, logger);
 
-public sealed record TestUpdateRequest : IConcurrencyAware
-{
-    public byte[]? RowVersion { get; init; }
-}
+public sealed record TestUpdateRequest;
 
 public sealed record TestCrudDTO : IBaseDTO<int>, IConcurrencyAware
 {
     public required int Id { get; init; }
 
-    public byte[]? RowVersion { get; init; }
+    public byte[] RowVersion { get; init; } = [];
 }

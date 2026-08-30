@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -454,18 +454,16 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task SetOriginalRowVersion_OnChildEntity_NullOrEmptyToken_IsANoOp()
+    public async Task SetOriginalRowVersion_OnChildEntity_RejectsANullToken()
     {
         var child = new TestChildEntity { Id = 11, Label = "variant" };
         _context.Add(child);
         await _context.SaveChangesAsync();
-        var original = _context.Entry(child).Property(nameof(TestChildEntity.RowVersion)).OriginalValue;
 
-        _sut.SetOriginalRowVersion(child, null);
-        _sut.SetOriginalRowVersion(child, []);
+        var act = () => _sut.SetOriginalRowVersion(child, null!);
 
-        _context.Entry(child).Property(nameof(TestChildEntity.RowVersion)).OriginalValue
-            .Should().BeSameAs(original, because: "legacy clients that send no token skip the concurrency check, matching the aggregate-typed overload's contract");
+        act.Should().Throw<ArgumentNullException>(
+            because: "the token is required end to end: a conditional write without one never reaches the repository");
     }
 
     // ── ExecuteUpdateAsync (set-based conditional update) ──

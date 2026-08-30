@@ -28,13 +28,12 @@ namespace MMCA.Common.API.Controllers;
 /// this and gains the action.
 /// </para>
 /// <para>
-/// <b>Concurrency.</b> The action honours both routes an ADR-035 token can travel. A request body
-/// implementing <see cref="IConcurrencyAware"/> carries the caller's last-observed
-/// <c>RowVersion</c> straight into the command, and <see cref="SupportsIfMatchAttribute"/> fills that
-/// same property from an <c>If-Match</c> header when the body left it empty, answering a failed
-/// precondition with 412 rather than 409. On success the refreshed token is emitted as a weak
-/// <c>ETag</c> through the inherited <c>SetConcurrencyETag</c>, so the client can condition its next
-/// write without re-reading the resource.
+/// <b>Concurrency.</b> The update is conditional (ADR-035): <see cref="SupportsIfMatchAttribute"/>
+/// decodes the caller's <c>If-Match</c> header into the command's <c>RowVersion</c>, refuses a
+/// request that states no precondition with 428, and answers a failed one with 412. The request body
+/// carries no token. On success the refreshed token is emitted as a weak <c>ETag</c> through the
+/// inherited <c>SetConcurrencyETag</c>, so the client can condition its next write without re-reading
+/// the resource.
 /// </para>
 /// <para>
 /// <b>Cache eviction.</b> The command's default <c>CachePrefix</c> evicts the aggregate's cached
@@ -93,13 +92,14 @@ public abstract class CrudEntityControllerBase<
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status409Conflict, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status412PreconditionFailed, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ProblemDetails))]
     public virtual async Task<ActionResult<TEntityDTO>> UpdateAsync(
         TIdentifierType id,
         [FromBody, Required] TUpdateRequest request,
         CancellationToken cancellationToken = default)
     {
-        var rowVersion = request is IConcurrencyAware concurrencyAware ? concurrencyAware.RowVersion : null;
+        var rowVersion = SupportsIfMatchAttribute.RequiredToken(HttpContext);
 
         var result = await UpdateHandler.HandleAsync(
             new UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>(id, request, rowVersion),

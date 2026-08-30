@@ -1,11 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace MMCA.Common.API.Concurrency;
+namespace MMCA.Common.Shared.Http;
 
 /// <summary>
 /// Translates between the framework's optimistic-concurrency token (the EF Core <c>rowversion</c>
-/// byte array carried by <see cref="Shared.DTOs.IConcurrencyAware"/>) and the HTTP entity tag that
-/// represents it on the wire.
+/// byte array carried by <see cref="DTOs.IConcurrencyAware"/>) and the HTTP entity tag that
+/// represents it on the wire. It lives in Shared because both ends of the exchange need it: the API
+/// reads an <c>If-Match</c> value with it and the UI services write one with it.
 /// </summary>
 /// <remarks>
 /// <para>

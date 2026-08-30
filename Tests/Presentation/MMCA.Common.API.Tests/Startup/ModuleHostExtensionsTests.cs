@@ -1,3 +1,4 @@
+using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,9 @@ namespace MMCA.Common.API.Tests.Startup;
 /// </summary>
 public sealed class ModuleHostExtensionsTests
 {
+    /// <summary>The assemblies discovery scans in these tests: this test assembly alone.</summary>
+    private static readonly Assembly[] TestModuleAssemblies = [typeof(ModuleHostExtensionsTests).Assembly];
+
     private static WebApplicationBuilder CreateBuilder(params (string Key, string? Value)[] settings)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -42,7 +46,7 @@ public sealed class ModuleHostExtensionsTests
     {
         var builder = CreateBuilder(("ApplicationSettings:MaxPageSize", "250"));
 
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         moduleHost.ApplicationSettings.MaxPageSize.Should().Be(250);
 
@@ -55,7 +59,7 @@ public sealed class ModuleHostExtensionsTests
     {
         var builder = CreateBuilder();
 
-        var act = () => builder.AddModuleHost();
+        var act = () => builder.AddModuleHost(TestModuleAssemblies);
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("ApplicationSettings section is not configured.");
@@ -67,7 +71,7 @@ public sealed class ModuleHostExtensionsTests
         var builder = CreateBuilder(
             [.. MinimalApplicationSettings(), ("Modules:Tickets:Enabled", "true")]);
 
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         moduleHost.ModulesSettings.Should().ContainKey("Tickets");
         moduleHost.ModulesSettings["Tickets"].Enabled.Should().BeTrue();
@@ -78,7 +82,7 @@ public sealed class ModuleHostExtensionsTests
     {
         var builder = CreateBuilder(MinimalApplicationSettings());
 
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         moduleHost.ModulesSettings.Should().BeEmpty(
             "a host with no Modules section runs every discovered module, exactly as before the hoist");
@@ -89,7 +93,7 @@ public sealed class ModuleHostExtensionsTests
     {
         var builder = CreateBuilder(MinimalApplicationSettings());
 
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         using var provider = builder.Services.BuildServiceProvider();
         provider.GetRequiredService<ModuleLoader>().Should().BeSameAs(moduleHost.ModuleLoader);
@@ -101,7 +105,7 @@ public sealed class ModuleHostExtensionsTests
         var builder = CreateBuilder(MinimalApplicationSettings());
         ILogger<ModuleLoader> logger = NullLoggerFactory.Instance.CreateLogger<ModuleLoader>();
 
-        var moduleHost = builder.AddModuleHost(logger);
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies, logger);
 
         moduleHost.ModuleLoader.Logger.Should().BeSameAs(logger);
     }
@@ -111,7 +115,7 @@ public sealed class ModuleHostExtensionsTests
     {
         var builder = CreateBuilder(MinimalApplicationSettings());
 
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         moduleHost.ModuleLoader.Logger.Should().BeOfType<NullLogger<ModuleLoader>>();
     }
@@ -121,21 +125,20 @@ public sealed class ModuleHostExtensionsTests
     {
         var builder = CreateBuilder(MinimalApplicationSettings());
 
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         ReadCapturedModulesSettings(moduleHost.ModuleLoader).Should().BeNull(
             "discovery belongs inside the host's application pipeline, between AddApplication and AddApplicationDecorators");
     }
 
-    // There is deliberately no test driving RegisterModules through to a real discovery pass: it
-    // calls ModuleLoader's AppDomain-scanning overload, exactly as the hosts do, and in a test
-    // process that scan sweeps in whatever IModule types other test classes happen to have created
-    // (Moq's dynamic proxies among them), which would make the outcome depend on run order.
+    // There is deliberately no test driving RegisterModules through to a real discovery pass: the
+    // scan would sweep in whatever IModule types other test classes in this assembly happen to have
+    // created (Moq's dynamic proxies among them), which would make the outcome depend on run order.
     [Fact]
     public void RegisterModules_RejectsANullServiceCollection()
     {
         var builder = CreateBuilder(MinimalApplicationSettings());
-        var moduleHost = builder.AddModuleHost();
+        var moduleHost = builder.AddModuleHost(TestModuleAssemblies);
 
         var act = () => moduleHost.RegisterModules(null!);
 

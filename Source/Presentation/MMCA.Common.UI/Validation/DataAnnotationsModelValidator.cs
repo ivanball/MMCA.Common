@@ -11,10 +11,11 @@ namespace MMCA.Common.UI.Validation;
 /// model already carries are the only place those rules are written: markup stops repeating
 /// <c>Required</c> / <c>MaxLength</c> per field.
 /// <para>
-/// When an <see cref="IStringLocalizer"/> is supplied, each produced message is looked up as a resource
-/// key (ADR-027). A model therefore declares <c>ErrorMessage = "Some.Resource.Key"</c> and the key is
-/// resolved against the host's resources; a message that is not a known key is passed through
-/// unchanged, so plain-English <c>ErrorMessage</c> models keep working.
+/// Every produced message is looked up as a resource key against the required
+/// <see cref="IStringLocalizer"/> (ADR-027). A model therefore declares
+/// <c>ErrorMessage = "Some.Resource.Key"</c> and the key is resolved against the host's resources; a
+/// message that is not a known key is passed through unchanged, so plain-English
+/// <c>ErrorMessage</c> models render exactly as written.
 /// </para>
 /// </summary>
 public sealed class DataAnnotationsModelValidator : IModelValidator
@@ -22,19 +23,22 @@ public sealed class DataAnnotationsModelValidator : IModelValidator
     private const BindingFlags PropertyLookup =
         BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy;
 
-    private readonly IStringLocalizer? _localizer;
+    private readonly IStringLocalizer _localizer;
 
     /// <summary>
-    /// Creates a validator, optionally resolving each error message through <paramref name="localizer"/>.
+    /// Creates a validator that resolves each error message through <paramref name="localizer"/>.
     /// </summary>
     /// <param name="localizer">
-    /// Localizer used to treat every <c>ErrorMessage</c> as a resource key; <see langword="null"/> to use the
-    /// messages exactly as the attributes produce them.
+    /// Localizer used to treat every <c>ErrorMessage</c> as a resource key. Pass the page's own
+    /// <c>IStringLocalizer&lt;TResource&gt;</c>, so a message that is not one of its keys falls
+    /// through unchanged.
     /// </param>
-    public DataAnnotationsModelValidator(IStringLocalizer? localizer = null) => _localizer = localizer;
+    public DataAnnotationsModelValidator(IStringLocalizer localizer)
+    {
+        ArgumentNullException.ThrowIfNull(localizer);
 
-    /// <summary>Shared, non-localizing instance. Stateless, so one instance serves every form.</summary>
-    public static DataAnnotationsModelValidator Instance { get; } = new();
+        _localizer = localizer;
+    }
 
     /// <inheritdoc />
     public IEnumerable<string> Validate(object model, string propertyPath)
@@ -140,11 +144,6 @@ public sealed class DataAnnotationsModelValidator : IModelValidator
         if (string.IsNullOrEmpty(message))
         {
             return string.Empty;
-        }
-
-        if (_localizer is null)
-        {
-            return message;
         }
 
         LocalizedString localized = _localizer[message];

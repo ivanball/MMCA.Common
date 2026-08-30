@@ -7,9 +7,10 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// and the reads that follow agreeing on one scope.
 /// </summary>
 /// <remarks>
-/// Implementations must never throw: a scope is a view filter, not a security boundary, and the safe
-/// direction on any failure is null (unscoped), which restores the pre-scope behaviour rather than
-/// breaking the bell or the inbox.
+/// Implementations must never throw. In an application whose notifications are all scoped, fail
+/// closed: return the last known scope key (or fail the operation) rather than null, because
+/// degrading to null silently widens the view to every notification. Return null only when the
+/// application genuinely runs unscoped.
 /// </remarks>
 public interface INotificationScopeProvider
 {

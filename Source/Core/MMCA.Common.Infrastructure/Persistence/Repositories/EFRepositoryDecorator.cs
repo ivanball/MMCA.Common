@@ -38,11 +38,11 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
         _inner.UpdateRange(entities);
     }
 
-    public void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion) =>
+    public void SetOriginalRowVersion(TEntity entity, byte[] rowVersion) =>
         _inner.SetOriginalRowVersion(entity, rowVersion);
 
     /// <inheritdoc />
-    public void SetOriginalRowVersion(IRowVersioned childEntity, byte[]? rowVersion) =>
+    public void SetOriginalRowVersion(IRowVersioned childEntity, byte[] rowVersion) =>
         _inner.SetOriginalRowVersion(childEntity, rowVersion);
 
     public Task<int> ExecuteDeleteAsync(

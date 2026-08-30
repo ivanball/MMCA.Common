@@ -7,27 +7,16 @@ using Microsoft.Extensions.Hosting;
 namespace MMCA.Common.Aspire.Tests.Health;
 
 /// <summary>
-/// Guards the one asymmetry in <c>AddInfrastructureHealthChecks</c>: SQL Server can fail fast on a
-/// missing connection string while Redis and RabbitMQ silently skip. That difference is deliberate
-/// (an optional cache is a valid configuration, a host that cannot resolve its own database is not)
-/// and it is exactly the kind of inconsistency a later refactor "tidies away", so it is asserted
-/// directly rather than left to review.
+/// Guards the one asymmetry in <c>AddInfrastructureHealthChecks</c>: the relational database can
+/// fail fast on a missing connection string while Redis and RabbitMQ silently skip. That difference
+/// is deliberate (an optional cache is a valid configuration, a host that cannot resolve its own
+/// database is not) and it is exactly the kind of inconsistency a later refactor "tidies away", so
+/// it is asserted directly rather than left to review.
 /// </summary>
 public sealed class InfrastructureHealthChecksTests
 {
     [Fact]
-    public void AddInfrastructureHealthChecks_WhenSqlRequiredAndMissing_ThrowsAtStartup()
-    {
-        var builder = BuilderWith([]);
-
-        var act = () => builder.AddInfrastructureHealthChecks(requireSqlServer: true);
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*SQLServerConnectionString*");
-    }
-
-    [Fact]
-    public void AddInfrastructureHealthChecks_WhenSqlNotRequiredAndMissing_SkipsSilently()
+    public void AddInfrastructureHealthChecks_WhenDatabaseNotRequiredAndMissing_SkipsSilently()
     {
         var builder = BuilderWith([]);
 
@@ -45,12 +34,29 @@ public sealed class InfrastructureHealthChecksTests
             ["ConnectionStrings:SQLServerConnectionString"] = "Server=(local);Database=Test;Integrated Security=true;TrustServerCertificate=true",
         });
 
-        builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+        builder.AddInfrastructureHealthChecks(requireDatabase: true);
 
         RegisteredCheckNames(builder).Should().Contain("sqlserver");
     }
 
-    // Absent Redis/RabbitMQ must never throw, whatever the SQL flag is: they are optional per host.
+    [Fact]
+    public void AddInfrastructureHealthChecks_WhenSqlDeclaredOnlyUnderDataSources_SatisfiesTheRequirement()
+    {
+        // A database-per-service host declares its database under DataSources, not at the top level.
+        var builder = BuilderWith(new()
+        {
+            ["DataSources:Tickets:SQLServerConnectionString"] = "Server=(local);Database=Tickets;Integrated Security=true;TrustServerCertificate=true",
+        });
+
+        var act = () => builder.AddInfrastructureHealthChecks(requireDatabase: true);
+
+        act.Should().NotThrow();
+        RegisteredCheckNames(builder).Should().Contain(
+            "sqlserver",
+            because: "the first declared database keeps the plain engine check name whichever section declares it");
+    }
+
+    // Absent Redis/RabbitMQ must never throw, whatever the database flag is: they are optional per host.
     [Fact]
     public void AddInfrastructureHealthChecks_WithOnlySqlConfigured_DoesNotRegisterOptionalDependencies()
     {
@@ -59,7 +65,7 @@ public sealed class InfrastructureHealthChecksTests
             ["ConnectionStrings:SQLServerConnectionString"] = "Server=(local);Database=Test;Integrated Security=true;TrustServerCertificate=true",
         });
 
-        builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+        builder.AddInfrastructureHealthChecks(requireDatabase: true);
 
         var names = RegisteredCheckNames(builder);
         names.Should().NotContain("redis");
@@ -81,7 +87,7 @@ public sealed class InfrastructureHealthChecksTests
             ["ConnectionStrings:redis"] = "localhost:6379",
         });
 
-        builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+        builder.AddInfrastructureHealthChecks(requireDatabase: true);
 
         var registrations = Registrations(builder);
 
@@ -128,8 +134,8 @@ public sealed class InfrastructureHealthChecksTests
     [Fact]
     public void AddInfrastructureHealthChecks_WhenDatabaseRequiredAndSqliteConfigured_DoesNotThrow()
     {
-        // requireDatabase is the engine-agnostic form of requireSqlServer: an application that picks
-        // its engine from configuration must be able to demand A database without naming SQL Server.
+        // requireDatabase is engine-agnostic: an application that picks its engine from configuration
+        // demands A database without naming SQL Server.
         var builder = BuilderWith(new()
         {
             ["ConnectionStrings:SqliteConnectionString"] = "Data Source=app.db",
@@ -148,6 +154,7 @@ public sealed class InfrastructureHealthChecksTests
         var act = () => builder.AddInfrastructureHealthChecks(requireDatabase: true);
 
         act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*SQLServerConnectionString*")
             .WithMessage("*SqliteConnectionString*");
     }
 
@@ -159,7 +166,7 @@ public sealed class InfrastructureHealthChecksTests
             ["ConnectionStrings:SQLServerConnectionString"] = "Server=(local);Database=Test;Integrated Security=true;TrustServerCertificate=true",
         });
 
-        builder.AddInfrastructureHealthChecks(requireSqlServer: true);
+        builder.AddInfrastructureHealthChecks(requireDatabase: true);
 
         RegisteredCheckNames(builder).Should().NotContain(
             "sqlite",

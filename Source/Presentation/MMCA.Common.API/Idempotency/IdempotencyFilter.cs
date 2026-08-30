@@ -176,8 +176,8 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
     /// <remarks>
     /// The stream is rewound before reading AND after hashing, because model binding (or any later
     /// reader) still has to see the whole body. A stream that cannot seek was never buffered, so
-    /// there is nothing to hash and nothing to compare against: it takes the empty-body hash rather
-    /// than throwing, which leaves such a request exactly as idempotent as it was before.
+    /// there is nothing to hash: it takes the empty-body hash rather than throwing, which leaves
+    /// such a request deduplicated on its key alone.
     /// </remarks>
     private static async Task<string> ComputeRequestBodyHashAsync(HttpContext httpContext)
     {
@@ -340,9 +340,8 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
     /// <c>application/json</c> would put a content type on a response with no content, which the
     /// original did not have.
     /// <para>
-    /// A record whose <see cref="IdempotencyRecord.RequestBodyHash"/> is <see langword="null"/> was
-    /// written before the body was bound to the key, so there is nothing to compare and it replays
-    /// unconditionally. Those entries expire with the retention window.
+    /// Every stored record carries the hash of the body that produced it, so a replay under the same
+    /// key with a different payload is answered 422 rather than served the earlier response.
     /// </para>
     /// <para>
     /// A cache read that faults is reported as "nothing stored" so the request executes: an
@@ -370,8 +369,7 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
         if (cached is null)
             return false;
 
-        if (cached.RequestBodyHash is not null
-            && !string.Equals(cached.RequestBodyHash, requestBodyHash, StringComparison.Ordinal))
+        if (!string.Equals(cached.RequestBodyHash, requestBodyHash, StringComparison.Ordinal))
         {
             IdempotencyMetrics.RecordConflict(IdempotencyMetrics.ConflictKindBodyMismatch);
             LogRequestBodyMismatch(cacheKey);

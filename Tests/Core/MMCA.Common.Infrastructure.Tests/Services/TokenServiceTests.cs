@@ -15,8 +15,11 @@ public sealed class TokenServiceTests : IDisposable
 {
     private static readonly string Base64Secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
+    // HS256 is stated rather than inherited: RS256 is the default, so a settings object meant to
+    // exercise the symmetric path selects it explicitly.
     private static readonly JwtSettings Settings = new()
     {
+        SigningAlgorithm = JwtSigningAlgorithm.HS256,
         SecretForKey = Base64Secret,
         Issuer = "https://test-issuer",
         Audience = "test-audience",
@@ -24,7 +27,7 @@ public sealed class TokenServiceTests : IDisposable
         RefreshTokenExpirationDays = 7
     };
 
-    private readonly TokenService _sut = new(Settings);
+    private readonly TokenService _sut = new(Options.Create(Settings));
 
     public void Dispose() => _sut.Dispose();
 
@@ -105,13 +108,14 @@ public sealed class TokenServiceTests : IDisposable
     {
         var settings = new JwtSettings
         {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
             SecretForKey = Base64Secret,
             Issuer = "https://test-issuer",
             Audience = "test-audience",
             AccessTokenExpirationMinutes = 45,
             RefreshTokenExpirationDays = 10
         };
-        using var service = new TokenService(settings);
+        using var service = new TokenService(Options.Create(settings));
 
         service.AccessTokenLifetime.Should().Be(TimeSpan.FromMinutes(45));
         service.RefreshTokenLifetime.Should().Be(TimeSpan.FromDays(10));
@@ -144,12 +148,13 @@ public sealed class TokenServiceTests : IDisposable
     {
         var wrongSettings = new JwtSettings
         {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
             SecretForKey = Base64Secret,
             Issuer = "https://wrong-issuer",
             Audience = Settings.Audience,
             AccessTokenExpirationMinutes = 30
         };
-        using var wrongService = new TokenService(wrongSettings);
+        using var wrongService = new TokenService(Options.Create(wrongSettings));
         var token = wrongService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
@@ -163,12 +168,13 @@ public sealed class TokenServiceTests : IDisposable
         var differentSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var wrongSettings = new JwtSettings
         {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
             SecretForKey = differentSecret,
             Issuer = Settings.Issuer,
             Audience = Settings.Audience,
             AccessTokenExpirationMinutes = 30
         };
-        using var wrongService = new TokenService(wrongSettings);
+        using var wrongService = new TokenService(Options.Create(wrongSettings));
         var token = wrongService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
@@ -183,16 +189,17 @@ public sealed class TokenServiceTests : IDisposable
         return (rsa.ExportRSAPrivateKeyPem(), rsa.ExportSubjectPublicKeyInfoPem());
     }
 
-    private static JwtSettings CreateRsaSettings(string privatePem, string? publicPem = null) => new()
-    {
-        SigningAlgorithm = JwtSigningAlgorithm.RS256,
-        RsaPrivateKeyPem = privatePem,
-        RsaPublicKeyPem = publicPem,
-        Issuer = "https://test-issuer",
-        Audience = "test-audience",
-        AccessTokenExpirationMinutes = 30,
-        RefreshTokenExpirationDays = 7,
-    };
+    private static IOptions<JwtSettings> CreateRsaSettings(string privatePem, string? publicPem = null) =>
+        Options.Create(new JwtSettings
+        {
+            SigningAlgorithm = JwtSigningAlgorithm.RS256,
+            RsaPrivateKeyPem = privatePem,
+            RsaPublicKeyPem = publicPem,
+            Issuer = "https://test-issuer",
+            Audience = "test-audience",
+            AccessTokenExpirationMinutes = 30,
+            RefreshTokenExpirationDays = 7,
+        });
 
     [Fact]
     public void Constructor_Rs256_WithoutPrivateKey_Throws()
@@ -205,7 +212,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30,
         };
 
-        var act = () => new TokenService(settings);
+        var act = () => new TokenService(Options.Create(settings));
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*RsaPrivateKeyPem is required*");
     }
@@ -222,7 +229,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30,
         };
 
-        var act = () => new TokenService(settings);
+        var act = () => new TokenService(Options.Create(settings));
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*SecretForKey is required*");
     }
@@ -267,12 +274,13 @@ public sealed class TokenServiceTests : IDisposable
 
         var hmacSettings = new JwtSettings
         {
+            SigningAlgorithm = JwtSigningAlgorithm.HS256,
             SecretForKey = Base64Secret,
             Issuer = "https://test-issuer",
             Audience = "test-audience",
             AccessTokenExpirationMinutes = 30,
         };
-        using var hmacService = new TokenService(hmacSettings);
+        using var hmacService = new TokenService(Options.Create(hmacSettings));
         var hmacToken = hmacService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
 
         var principal = rsaService.GetPrincipalFromExpiredToken(hmacToken);

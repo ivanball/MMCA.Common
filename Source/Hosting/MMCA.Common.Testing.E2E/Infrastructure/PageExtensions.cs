@@ -48,17 +48,16 @@ public static class PageExtensions
         "() => document.documentElement.hasAttribute('data-mmca-interactive')";
 
     /// <summary>
-    /// The legacy settle: two animation frames plus a fixed delay, used as the fallback whenever the
-    /// interactivity marker never appears.
+    /// A marker-free settle: two animation frames plus a fixed delay. Used by
+    /// <c>WaitForPageAndBlazorAsync</c>, which runs after a click that may land on a page with no
+    /// interactivity marker at all (a static error page, an external page), so it cannot wait on the
+    /// marker and settles on timing alone.
     /// </summary>
-    private const string LegacySettleScript =
+    private const string TimedSettleScript =
         "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 500))))";
 
     /// <summary>A single animation frame: enough to flush the render pipeline once the marker has confirmed interactivity.</summary>
     private const string SingleFrameSettleScript = "() => new Promise(r => requestAnimationFrame(r))";
-
-    /// <summary>Budget for the interactivity marker before falling back to the legacy settle.</summary>
-    private const float InteractiveMarkerTimeout = 3_000;
 
     extension(IPage page)
     {
@@ -74,17 +73,14 @@ public static class PageExtensions
         /// circuit reports ready, which is necessary but happens BEFORE components have attached their
         /// handlers, so a click issued here lands on a prerendered-but-dead control and is
         /// swallowed.</description></item>
-        /// <item><description><b>Interactive.</b> Wait a short extra budget for the
+        /// <item><description><b>Interactive.</b> Wait for the
         /// <c>data-mmca-interactive</c> marker that <c>MmcaThemeProviders</c> (MMCA.Common.UI) stamps
         /// from its first interactive render. That attribute exists only once a real component has
         /// rendered interactively, so it is the honest gate; one animation frame then flushes the render
         /// pipeline.</description></item>
         /// </list>
-        /// The marker is best-effort by design. A page that legitimately never hydrates (the pre-auth
-        /// login page, a static error page) and a consumer still on an older MMCA.Common.UI package
-        /// never stamp it, so a marker timeout falls back to EXACTLY the legacy settle (two animation
-        /// frames plus 500 ms). The gate therefore gets stricter where the marker ships and cannot hang
-        /// or regress where it does not.
+        /// The marker is the gate, so a page that never stamps it fails this wait rather than
+        /// proceeding to click controls that have no handlers attached.
         /// </remarks>
         public async Task WaitForBlazorAsync(float timeout = 30_000)
         {
@@ -92,21 +88,12 @@ public static class PageExtensions
                 BlazorRuntimeLoadedPredicate,
                 new PageWaitForFunctionOptions { Timeout = timeout }).ConfigureAwait(false);
 
-            try
-            {
-                await page.WaitForFunctionAsync(
-                    InteractiveMarkerPredicate,
-                    new PageWaitForFunctionOptions { Timeout = InteractiveMarkerTimeout }).ConfigureAwait(false);
+            await page.WaitForFunctionAsync(
+                InteractiveMarkerPredicate,
+                new PageWaitForFunctionOptions { Timeout = timeout }).ConfigureAwait(false);
 
-                // Interactivity is confirmed, so only the current render batch still needs to flush.
-                await page.EvaluateAsync(SingleFrameSettleScript).ConfigureAwait(false);
-            }
-            catch (PlaywrightException)
-            {
-                // No marker on this page (never hydrates, or an older MMCA.Common.UI): settle the way
-                // this helper always did rather than failing a test the old behaviour would have passed.
-                await page.EvaluateAsync(LegacySettleScript).ConfigureAwait(false);
-            }
+            // Interactivity is confirmed, so only the current render batch still needs to flush.
+            await page.EvaluateAsync(SingleFrameSettleScript).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -213,9 +200,9 @@ public static class PageExtensions
             // navigation (SPA-style), this resolves immediately — harmless.
             await page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
             // Wait for Blazor render cycle (covers both full-page and enhanced navigation). This one
-            // stays on the legacy settle unconditionally: it runs after clicks that may land on a page
-            // with no marker at all, and it never asserts runtime readiness in the first place.
-            await page.EvaluateAsync(LegacySettleScript).ConfigureAwait(false);
+            // settles on timing alone: it runs after clicks that may land on a page with no
+            // interactivity marker at all, and it never asserts runtime readiness in the first place.
+            await page.EvaluateAsync(TimedSettleScript).ConfigureAwait(false);
         }
 
         /// <summary>

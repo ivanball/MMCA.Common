@@ -20,7 +20,7 @@ namespace MMCA.Common.UI.Validation;
 ///
 /// private readonly MyModel _model = new();
 /// private Func&lt;object, string, IEnumerable&lt;string&gt;&gt; _validate = default!;
-/// protected override void OnInitialized() =&gt; _validate = ModelValidation.For(_model);
+/// protected override void OnInitialized() =&gt; _validate = ModelValidation.For(_model, new DataAnnotationsModelValidator(L));
 /// </code>
 /// </summary>
 public static class ModelValidation
@@ -35,16 +35,17 @@ public static class ModelValidation
     /// this instance is the fallback used when it does not, so a field still validates outside a form.
     /// </param>
     /// <param name="validator">
-    /// The rule engine to run. Defaults to <see cref="DataAnnotationsModelValidator"/>; pass a
-    /// consumer implementation (a FluentValidation adapter, for example) to source the rules elsewhere.
+    /// The rule engine to run: a <see cref="DataAnnotationsModelValidator"/> built over the page's
+    /// localizer, or a consumer implementation (a FluentValidation adapter, for example) that sources
+    /// the rules elsewhere.
     /// </param>
     /// <returns>A delegate assignable to a MudBlazor field's <c>Validation</c> parameter.</returns>
-    public static Func<object, string, IEnumerable<string>> For(object model, IModelValidator? validator = null)
+    public static Func<object, string, IEnumerable<string>> For(object model, IModelValidator validator)
     {
         ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(validator);
 
-        IModelValidator effective = validator ?? DataAnnotationsModelValidator.Instance;
-        return (instance, propertyPath) => effective.Validate(instance ?? model, propertyPath);
+        return (instance, propertyPath) => validator.Validate(instance ?? model, propertyPath);
     }
 
     /// <summary>
@@ -62,22 +63,21 @@ public static class ModelValidation
     /// <param name="model">The form model instance that declares the property.</param>
     /// <param name="property">A property-access expression, for example <c>m =&gt; m.Title</c>.</param>
     /// <param name="validator">
-    /// Optional validator, supplied when error messages must be localized. Defaults to the shared
-    /// non-localizing <see cref="DataAnnotationsModelValidator.Instance"/>.
+    /// The validator whose localizer resolves each <c>ErrorMessage</c> as a resource key.
     /// </param>
     /// <returns>A delegate assignable to a MudBlazor field's <c>Validation</c> parameter.</returns>
     public static Func<TValue, IEnumerable<string>> ForProperty<TModel, TValue>(
         TModel model,
         Expression<Func<TModel, TValue>> property,
-        DataAnnotationsModelValidator? validator = null)
+        DataAnnotationsModelValidator validator)
         where TModel : class
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(property);
+        ArgumentNullException.ThrowIfNull(validator);
 
         string path = GetPropertyPath(property);
-        DataAnnotationsModelValidator effective = validator ?? DataAnnotationsModelValidator.Instance;
-        return value => effective.ValidateValue(model, path, value);
+        return value => validator.ValidateValue(model, path, value);
     }
 
     /// <summary>

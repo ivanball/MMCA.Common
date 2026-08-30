@@ -2,6 +2,7 @@ using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Notifications.PushNotifications;
@@ -167,11 +168,11 @@ public sealed class EntityDataSourceRegistryTests
         // (the entity configurations under test declare SQL Server AND SQLite), and the resolver
         // only substitutes an engine the host configures nowhere.
         var resolver = new DataSourceResolver(
-            new ConnectionStringSettings
+            Options.Create(new ConnectionStringSettings
             {
                 SQLServerConnectionString = DefaultSql,
                 SqliteConnectionString = DefaultSqlite,
-            },
+            }),
             new DataSourcesSettings(sources),
             NullLogger<DataSourceResolver>.Instance);
 

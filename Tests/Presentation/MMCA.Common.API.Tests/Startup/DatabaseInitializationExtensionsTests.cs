@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -15,6 +16,7 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;
 using Moq;
 
@@ -22,9 +24,9 @@ namespace MMCA.Common.API.Tests.Startup;
 
 /// <summary>
 /// Tests for <see cref="DatabaseInitializationExtensions.InitializeDatabaseAsync"/>, focused on the
-/// migration-less engines (SQLite, Cosmos). The SQL-Server-oriented <c>"Migrate"</c> strategy must
-/// still create SQLite sources via <c>EnsureCreated</c> up front — without that, a SQLite source in
-/// use is never created and the first repository call fails.
+/// migration-less engines (SQLite, Cosmos) and on the strategy contract. The SQL-Server-oriented
+/// <c>"Migrate"</c> strategy must still create SQLite sources via <c>EnsureCreated</c> up front:
+/// without that, a SQLite source in use is never created and the first repository call fails.
 /// </summary>
 public sealed class DatabaseInitializationExtensionsTests : IDisposable
 {
@@ -46,11 +48,12 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
             ["TestSqlite"] = new() { SqliteConnectionString = $"Data Source={_sqliteDbPath}" },
         });
 
-        var resolver = new DataSourceResolver(connectionStrings, dataSources, NullLogger<DataSourceResolver>.Instance);
+        var resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
         var assemblyProvider = new FixedAssemblyProvider();
         var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
 
         await using var provider = new ServiceCollection()
+            .AddOptions()
             .AddSingleton(TimeProvider.System)
             .AddSingleton<ILoggerFactory, NullLoggerFactory>()
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
@@ -63,6 +66,7 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
             .AddSingleton<IDataSourceResolver>(resolver)
             .AddSingleton<IEntityDataSourceRegistry>(registry)
             .AddSingleton<IPhysicalDbContextFactory, PhysicalDbContextFactory>()
+            .AddScoped<ITenantContext, TenantContext>()
             .AddScoped<IDbContextFactory, DbContextFactory>()
             .BuildServiceProvider();
 
@@ -104,7 +108,7 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
             },
         });
 
-        var resolver = new DataSourceResolver(connectionStrings, dataSources, NullLogger<DataSourceResolver>.Instance);
+        var resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
         var assemblyProvider = new FixedAssemblyProvider();
         var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
 
@@ -127,6 +131,25 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
         (await CountTablesAsync(created, nameof(InitTestWidget))).Should().Be(1,
             "the source with no migrations assembly keeps its EnsureCreated behaviour");
         (await CountTablesAsync(created, "__EFMigrationsHistory")).Should().Be(0);
+    }
+
+    // The strategy names exactly two behaviours. A value outside that set is a configuration mistake
+    // whose only other outcome is a schema nobody touched, discovered as a failing query in
+    // production, so startup refuses it before a single database is opened.
+    [Theory]
+    [InlineData("EnsureCreated")]
+    [InlineData("migrate")]
+    [InlineData("")]
+    public async Task InitializeDatabaseAsync_UnknownStrategy_FailsStartupNamingTheValidValues(string strategy)
+    {
+        await using var provider = new ServiceCollection().BuildServiceProvider();
+
+        var act = () => provider.InitializeDatabaseAsync(
+            new ApplicationSettings { DatabaseInitStrategy = strategy },
+            new ModuleLoader());
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Valid values are: Migrate, None*");
     }
 
     /// <summary>Counts the tables of the given name in a SQLite context's database.</summary>
@@ -155,6 +178,7 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
         EntityDataSourceRegistry registry,
         IEntityConfigurationAssemblyProvider assemblyProvider) =>
         new ServiceCollection()
+            .AddOptions()
             .AddSingleton(TimeProvider.System)
             .AddSingleton<ILoggerFactory, NullLoggerFactory>()
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
@@ -167,6 +191,7 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
             .AddSingleton<IDataSourceResolver>(resolver)
             .AddSingleton<IEntityDataSourceRegistry>(registry)
             .AddSingleton<IPhysicalDbContextFactory, PhysicalDbContextFactory>()
+            .AddScoped<ITenantContext, TenantContext>()
             .AddScoped<IDbContextFactory, DbContextFactory>()
             .BuildServiceProvider();
 

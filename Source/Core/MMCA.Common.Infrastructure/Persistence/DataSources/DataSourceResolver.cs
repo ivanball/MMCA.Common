@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Settings;
 
@@ -6,9 +7,11 @@ namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 
 /// <summary>
 /// Singleton implementation of <see cref="IDataSourceResolver"/>. Builds the logical→physical map
-/// once from <see cref="IConnectionStringSettings"/> (the <c>Default</c> source) and
-/// <see cref="DataSourcesSettings"/> (named sources), validating that no two logical names that
-/// collapse to the same database declare conflicting migrations assemblies.
+/// once from <see cref="ConnectionStringSettings"/> and <see cref="DataSourcesSettings"/>,
+/// validating that no two logical names that collapse to the same database declare conflicting
+/// migrations assemblies. Either section can supply the <c>Default</c> source on its own: the
+/// top-level one when it names a connection, otherwise the single database the named entries declare
+/// (see <c>ResolveDefaultSeed</c>).
 /// </summary>
 public sealed partial class DataSourceResolver : IDataSourceResolver
 {
@@ -41,7 +44,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// <summary>
     /// Initializes the resolver, eagerly building and validating the logical→physical map.
     /// </summary>
-    /// <param name="connectionStrings">The top-level connection strings (the Default source).</param>
+    /// <param name="connectionStringOptions">The top-level connection strings (the Default source).</param>
     /// <param name="dataSources">The named data source entries.</param>
     /// <param name="logger">Logger for configuration warnings.</param>
     /// <exception cref="InvalidOperationException">
@@ -49,12 +52,14 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// <c>SQLServerMigrationsAssembly</c> values.
     /// </exception>
     public DataSourceResolver(
-        IConnectionStringSettings connectionStrings,
+        IOptions<ConnectionStringSettings> connectionStringOptions,
         DataSourcesSettings dataSources,
         ILogger<DataSourceResolver> logger)
     {
-        ArgumentNullException.ThrowIfNull(connectionStrings);
+        ArgumentNullException.ThrowIfNull(connectionStringOptions);
         ArgumentNullException.ThrowIfNull(dataSources);
+
+        var connectionStrings = connectionStringOptions.Value;
 
         foreach (var engine in AllEngines)
         {
@@ -125,7 +130,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// </summary>
     private static bool HasAnyConnectionString(
         DataSource engine,
-        IConnectionStringSettings connectionStrings,
+        ConnectionStringSettings connectionStrings,
         DataSourcesSettings dataSources) =>
         !string.IsNullOrEmpty(GetConnectionString(engine, connectionStrings))
         || dataSources.Sources.Values.Any(entry => !string.IsNullOrEmpty(GetConnectionString(engine, entry)));
@@ -145,30 +150,103 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// </summary>
     private void BuildEngineMap(
         DataSource engine,
-        IConnectionStringSettings connectionStrings,
+        ConnectionStringSettings connectionStrings,
         DataSourcesSettings dataSources,
         ILogger<DataSourceResolver> logger)
     {
-        var (defaultCollapsed, groups) = ClassifyEntries(engine, connectionStrings, dataSources);
-        RegisterDefaultSource(engine, connectionStrings, defaultCollapsed);
+        var seed = ResolveDefaultSeed(engine, connectionStrings, dataSources);
+        var (defaultCollapsed, groups) = ClassifyEntries(engine, seed, dataSources);
+        RegisterDefaultSource(engine, seed, defaultCollapsed);
 
         foreach (var members in groups.Values)
         {
-            RegisterNamedSource(engine, connectionStrings, members, logger);
+            RegisterNamedSource(engine, seed, members, logger);
         }
     }
 
     /// <summary>
+    /// What the <c>Default</c> physical source for one engine is built from.
+    /// </summary>
+    /// <param name="ConnectionString">The connection the Default source uses, empty when the engine is unconfigured.</param>
+    /// <param name="MigrationsAssembly">The migrations assembly declared for it, empty when none is.</param>
+    /// <param name="CosmosDatabaseName">The Cosmos database name entries fall back to.</param>
+    private sealed record DefaultSeed(string ConnectionString, string MigrationsAssembly, string CosmosDatabaseName);
+
+    /// <summary>
+    /// Resolves what the engine's <c>Default</c> source is built from. The top-level
+    /// <c>ConnectionStrings</c> section is the first answer; when it names nothing for this engine
+    /// and the <c>DataSources</c> section names exactly ONE database on it, that database IS the
+    /// host's single database and becomes Default.
+    /// <para>
+    /// That second branch is what lets a host declare its database only under <c>DataSources</c>:
+    /// the framework's own tables (outbox, inbox, scheduled jobs, audit trail) resolve to the
+    /// <c>Default</c> logical name, so without it they would resolve to a source with an empty
+    /// connection string and fail on their first query. It cannot change an existing host's routing,
+    /// because it only applies where the top-level value is absent.
+    /// </para>
+    /// <para>
+    /// With SEVERAL distinct databases and no top-level value there is no single answer, so Default
+    /// stays empty: a genuinely multi-database host names the one it wants shared by adding a
+    /// <c>DataSources:Default</c> entry, which is just another entry as far as the collapse is
+    /// concerned.
+    /// </para>
+    /// </summary>
+    /// <param name="engine">The engine whose Default source is being built.</param>
+    /// <param name="connectionStrings">The top-level connection strings.</param>
+    /// <param name="dataSources">The named data source entries.</param>
+    /// <returns>The connection, migrations assembly and Cosmos database the Default source uses.</returns>
+    private static DefaultSeed ResolveDefaultSeed(
+        DataSource engine,
+        ConnectionStringSettings connectionStrings,
+        DataSourcesSettings dataSources)
+    {
+        var topLevel = GetConnectionString(engine, connectionStrings);
+        if (!string.IsNullOrEmpty(topLevel))
+        {
+            return new DefaultSeed(
+                topLevel,
+                // The top-level migrations assembly is SQL Server's alone: ConnectionStrings carries
+                // no SQLite equivalent, and handing a SQLite Default source the SQL Server value in a
+                // mixed-engine host would scaffold the wrong schema.
+                engine == DataSource.SQLServer ? connectionStrings.SQLServerMigrationsAssembly : string.Empty,
+                connectionStrings.CosmosDatabaseName);
+        }
+
+        var candidates = dataSources.Sources.Values
+            .Where(entry => !string.IsNullOrEmpty(GetConnectionString(engine, entry)))
+            .ToList();
+
+        var distinctIdentities = candidates
+            .Select(entry => GetIdentity(engine, GetConnectionString(engine, entry), CosmosDatabaseNameOf(entry, connectionStrings)))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        // The migrations assembly is deliberately not seeded here: every one of these entries has
+        // the seed's own connection identity, so they all collapse onto Default and contribute their
+        // declared assemblies through AddExplicitMigrationsAssemblies, conflicts included.
+        return distinctIdentities == 1
+            ? new DefaultSeed(
+                GetConnectionString(engine, candidates[0]),
+                string.Empty,
+                CosmosDatabaseNameOf(candidates[0], connectionStrings))
+            : new DefaultSeed(string.Empty, string.Empty, connectionStrings.CosmosDatabaseName);
+    }
+
+    /// <summary>The Cosmos database an entry uses: its own name, or the top-level one.</summary>
+    private static string CosmosDatabaseNameOf(DataSourceEntrySettings entry, ConnectionStringSettings connectionStrings) =>
+        string.IsNullOrEmpty(entry.CosmosDatabaseName) ? connectionStrings.CosmosDatabaseName : entry.CosmosDatabaseName;
+
+    /// <summary>
     /// Classifies each named entry for the engine: collapsed onto Default (no connection string,
-    /// or connection identity equal to the top-level one) versus grouped by connection identity.
+    /// or connection identity equal to the Default source's) versus grouped by connection identity.
     /// </summary>
     private static (List<(string LogicalName, DataSourceEntrySettings Entry)> DefaultCollapsed,
         Dictionary<string, List<(string LogicalName, DataSourceEntrySettings Entry)>> Groups) ClassifyEntries(
         DataSource engine,
-        IConnectionStringSettings connectionStrings,
+        DefaultSeed seed,
         DataSourcesSettings dataSources)
     {
-        var defaultIdentity = GetIdentity(engine, GetConnectionString(engine, connectionStrings), connectionStrings.CosmosDatabaseName);
+        var defaultIdentity = GetIdentity(engine, seed.ConnectionString, seed.CosmosDatabaseName);
         var defaultCollapsed = new List<(string LogicalName, DataSourceEntrySettings Entry)>();
         var groups = new Dictionary<string, List<(string LogicalName, DataSourceEntrySettings Entry)>>(StringComparer.Ordinal);
 
@@ -183,7 +261,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
             }
 
             var entryCosmosDb = string.IsNullOrEmpty(entry.CosmosDatabaseName)
-                ? connectionStrings.CosmosDatabaseName
+                ? seed.CosmosDatabaseName
                 : entry.CosmosDatabaseName;
             var identity = GetIdentity(engine, entryConnection, entryCosmosDb);
 
@@ -211,19 +289,19 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// </summary>
     private void RegisterDefaultSource(
         DataSource engine,
-        IConnectionStringSettings connectionStrings,
+        DefaultSeed seed,
         List<(string LogicalName, DataSourceEntrySettings Entry)> defaultCollapsed)
     {
         var defaultKey = DataSourceKey.Default(engine);
 
         var explicitValues = new List<(string LogicalName, string Assembly)>();
 
-        // The top-level value is SQL Server's alone (ConnectionStrings carries no SQLite equivalent),
-        // so it is seeded only for that engine. Seeding it unconditionally would hand a SQLite
-        // Default source the SQL Server migrations assembly in a mixed-engine host.
-        if (engine == DataSource.SQLServer && !string.IsNullOrEmpty(connectionStrings.SQLServerMigrationsAssembly))
+        // The seed's value is already scoped to this engine (see ResolveDefaultSeed), so it can be
+        // added as-is; an entry collapsing onto Default that repeats the same value is deduplicated
+        // by ResolveMigrationsAssembly.
+        if (!string.IsNullOrEmpty(seed.MigrationsAssembly))
         {
-            explicitValues.Add((DataSourceKey.DefaultName, connectionStrings.SQLServerMigrationsAssembly));
+            explicitValues.Add((DataSourceKey.DefaultName, seed.MigrationsAssembly));
         }
 
         AddExplicitMigrationsAssemblies(engine, explicitValues, defaultCollapsed);
@@ -231,9 +309,9 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         _physicalSources[defaultKey] = BuildPhysicalSource(
             engine,
             defaultKey,
-            GetConnectionString(engine, connectionStrings),
+            seed.ConnectionString,
             ResolveMigrationsAssembly(engine, defaultKey, explicitValues),
-            connectionStrings.CosmosDatabaseName);
+            seed.CosmosDatabaseName);
 
         foreach (var (logicalName, _) in defaultCollapsed)
         {
@@ -247,7 +325,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// </summary>
     private void RegisterNamedSource(
         DataSource engine,
-        IConnectionStringSettings connectionStrings,
+        DefaultSeed seed,
         List<(string LogicalName, DataSourceEntrySettings Entry)> members,
         ILogger<DataSourceResolver> logger)
     {
@@ -262,15 +340,15 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         {
             // Falling back to the Default migrations assembly is almost always a mistake for a
             // separate database (its snapshot describes a different schema) — surface it.
-            migrationsAssembly = string.IsNullOrEmpty(connectionStrings.SQLServerMigrationsAssembly)
+            migrationsAssembly = string.IsNullOrEmpty(seed.MigrationsAssembly)
                 ? null
-                : connectionStrings.SQLServerMigrationsAssembly;
+                : seed.MigrationsAssembly;
             LogMigrationsAssemblyFallback(logger, key.Name, migrationsAssembly ?? "<context assembly>");
         }
 
         var canonicalEntry = members.First(m => string.Equals(m.LogicalName, canonicalName, StringComparison.Ordinal)).Entry;
         var cosmosDatabaseName = string.IsNullOrEmpty(canonicalEntry.CosmosDatabaseName)
-            ? connectionStrings.CosmosDatabaseName
+            ? seed.CosmosDatabaseName
             : canonicalEntry.CosmosDatabaseName;
 
         _physicalSources[key] = BuildPhysicalSource(
@@ -371,7 +449,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
             ? string.Concat(connectionString, "\n", cosmosDatabaseName)
             : connectionString;
 
-    private static string GetConnectionString(DataSource engine, IConnectionStringSettings settings) => engine switch
+    private static string GetConnectionString(DataSource engine, ConnectionStringSettings settings) => engine switch
     {
         DataSource.CosmosDB => settings.CosmosConnectionString,
         DataSource.Sqlite => settings.SqliteConnectionString,

@@ -12,18 +12,19 @@ namespace MMCA.Common.Infrastructure.Services;
 /// <summary>
 /// JWT token service that creates access tokens, refresh tokens, and validates expired tokens
 /// for the refresh flow. Supports both symmetric (HMAC-SHA256) and asymmetric (RSA-SHA256)
-/// signing, selected via <see cref="IJwtSettings.SigningAlgorithm"/>.
+/// signing, selected via <see cref="JwtSettings.SigningAlgorithm"/>.
 /// <para>
-/// In monolith mode, the default <see cref="JwtSigningAlgorithm.HS256"/> reuses
-/// <see cref="IJwtSettings.SecretForKey"/> (Base64-encoded HMAC key). In microservice mode,
-/// <see cref="JwtSigningAlgorithm.RS256"/> signs with <see cref="IJwtSettings.RsaPrivateKeyPem"/>
-/// and validates with <see cref="IJwtSettings.RsaPublicKeyPem"/>; other services validate
-/// via the JWKS endpoint exposing the same public key.
+/// The default <see cref="JwtSigningAlgorithm.RS256"/> signs with
+/// <see cref="JwtSettings.RsaPrivateKeyPem"/> and validates with
+/// <see cref="JwtSettings.RsaPublicKeyPem"/>; other services validate via the JWKS endpoint
+/// exposing the same public key, which is what an extracted service needs. A single-process
+/// monolith can select <see cref="JwtSigningAlgorithm.HS256"/> instead, which reuses
+/// <see cref="JwtSettings.SecretForKey"/> (Base64-encoded HMAC key).
 /// </para>
 /// </summary>
 public sealed class TokenService : ITokenService, IDisposable
 {
-    private readonly IJwtSettings _jwtSettings;
+    private readonly JwtSettings _jwtSettings;
     private readonly TimeProvider _timeProvider;
     private readonly SigningCredentials _signingCredentials;
     private readonly SecurityKey _validationKey;
@@ -39,7 +40,7 @@ public sealed class TokenService : ITokenService, IDisposable
     /// at construction time so subsequent token operations don't repeatedly parse the
     /// configured key material.
     /// </summary>
-    /// <param name="jwtSettings">The bound JWT settings.</param>
+    /// <param name="jwtOptions">The bound JWT settings.</param>
     /// <param name="timeProvider">
     /// Clock used for token timestamps (<c>iat</c>, <c>nbf</c>, <c>exp</c>). Optional so the service
     /// can be constructed directly in tests; resolved from DI in production and defaults to
@@ -52,11 +53,12 @@ public sealed class TokenService : ITokenService, IDisposable
     /// service can be constructed directly in tests; when absent the JWKS default key id is used.
     /// </param>
     public TokenService(
-        IJwtSettings jwtSettings,
+        IOptions<JwtSettings> jwtOptions,
         TimeProvider? timeProvider = null,
         IOptions<JwksSettings>? jwksSettings = null)
     {
-        ArgumentNullException.ThrowIfNull(jwtSettings);
+        ArgumentNullException.ThrowIfNull(jwtOptions);
+        var jwtSettings = jwtOptions.Value;
         _jwtSettings = jwtSettings;
         _timeProvider = timeProvider ?? TimeProvider.System;
 
@@ -176,7 +178,7 @@ public sealed class TokenService : ITokenService, IDisposable
         _ownedValidationRsa?.Dispose();
     }
 
-    private static (SigningCredentials Signing, SecurityKey Validation) BuildHmacCredentials(IJwtSettings jwtSettings)
+    private static (SigningCredentials Signing, SecurityKey Validation) BuildHmacCredentials(JwtSettings jwtSettings)
     {
         if (string.IsNullOrWhiteSpace(jwtSettings.SecretForKey))
         {
@@ -191,7 +193,7 @@ public sealed class TokenService : ITokenService, IDisposable
     }
 
     private static (SigningCredentials Signing, SecurityKey Validation, RSA SigningRsa, RSA ValidationRsa) BuildRsaCredentials(
-        IJwtSettings jwtSettings,
+        JwtSettings jwtSettings,
         string keyId)
     {
         if (string.IsNullOrWhiteSpace(jwtSettings.RsaPrivateKeyPem))

@@ -1,10 +1,9 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.FeatureManagement.Mvc;
-using MMCA.Common.API.Authorization;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
 using MMCA.Common.Application.Users;
@@ -55,7 +54,7 @@ namespace MMCA.Common.API.Controllers.Privacy;
 /// </para>
 /// </remarks>
 /// <typeparam name="TQuery">The app's export-user-data query record.</typeparam>
-[Authorize(Policy = AuthorizationPolicies.RequireAuthenticated)]
+[Authorize]
 [FeatureGate(PrivacyFeatures.DataExport)]
 public abstract class DataExportControllerBase<TQuery>(
     IQueryHandler<TQuery, Result<UserDataExportDTO>> exportHandler,

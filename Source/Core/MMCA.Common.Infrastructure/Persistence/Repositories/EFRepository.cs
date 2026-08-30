@@ -71,11 +71,10 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public void SetOriginalRowVersion(TEntity entity, byte[]? rowVersion)
+    public void SetOriginalRowVersion(TEntity entity, byte[] rowVersion)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        if (rowVersion is not { Length: > 0 })
-            return;
+        ArgumentNullException.ThrowIfNull(rowVersion);
 
         _context.Entry(entity)
             .Property(nameof(AuditableBaseEntity<>.RowVersion))
@@ -83,11 +82,10 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
-    public void SetOriginalRowVersion(IRowVersioned childEntity, byte[]? rowVersion)
+    public void SetOriginalRowVersion(IRowVersioned childEntity, byte[] rowVersion)
     {
         ArgumentNullException.ThrowIfNull(childEntity);
-        if (rowVersion is not { Length: > 0 })
-            return;
+        ArgumentNullException.ThrowIfNull(rowVersion);
 
         _context.Entry((object)childEntity)
             .Property(nameof(AuditableBaseEntity<>.RowVersion))

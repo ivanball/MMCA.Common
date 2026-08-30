@@ -23,11 +23,9 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// two serialization formats must never share one key. <see cref="HybridCache"/> writes its own
 /// payload layout, which is not the UTF-8 JSON <see cref="DistributedCacheService"/> writes, so
 /// letting the two meet at one key would reproduce that failure at every key rather than at one
-/// counter. With the keyspaces separated, an old-format entry is simply invisible to this service
-/// (a clean miss) and a new-format entry is invisible to the old one, including while a rolling
-/// deploy runs both. Old entries age out on their TTL; <see cref="RemoveByPrefixAsync"/> evicts both
-/// keyspaces so long-lived records (24h idempotency responses) stay evictable through the migration
-/// window.
+/// counter. With the keyspaces separated, an entry written by the other service is simply invisible
+/// to this one (a clean miss) and vice versa, so two hosts can share one Redis without either being
+/// able to read a payload it cannot parse.
 /// </para>
 /// <para>
 /// Replica L1 staleness after an invalidation is bounded by the local expiration (30 seconds by
@@ -147,18 +145,14 @@ internal sealed partial class HybridCacheService(
     /// <inheritdoc />
     /// <remarks>
     /// <para>
-    /// Runs the shared <see cref="RedisPrefixScanner"/> TWICE, over two disjoint patterns: this
-    /// service's <c>{prefix}hc:{key}</c> keyspace and the legacy <c>{prefix}{key}</c> keyspace that
-    /// <see cref="DistributedCacheService"/> wrote. A host switching to
-    /// <c>AddCommonHybridCache</c> inherits live entries under the old shape (a 24h idempotency
-    /// record outlives any deploy), and a prefix eviction that skipped them would leave a stale
-    /// answer addressable for the rest of its TTL. The two patterns cannot overlap, so nothing is
-    /// visited twice.
+    /// Runs the shared <see cref="RedisPrefixScanner"/> over this service's own
+    /// <c>{prefix}hc:{key}</c> keyspace, which is the one keyspace this service writes and therefore
+    /// the one it evicts.
     /// </para>
     /// <para>
-    /// Hybrid keys are deleted through <see cref="HybridCache.RemoveAsync(string, CancellationToken)"/>
+    /// Matched keys are deleted through <see cref="HybridCache.RemoveAsync(string, CancellationToken)"/>
     /// rather than by raw key: a raw delete would clear L2 and leave this process's own L1 copy
-    /// serving the value it just invalidated. Legacy keys have no L1 to clear and are deleted raw.
+    /// serving the value it just invalidated.
     /// </para>
     /// <para>
     /// Without an <see cref="IConnectionMultiplexer"/> prefix eviction cannot run at all and is
@@ -177,41 +171,12 @@ internal sealed partial class HybridCacheService(
             return;
         }
 
-        // Resolved on the first legacy delete rather than up front: a host whose multiplexer reports
-        // no scannable server, or that holds no legacy entries at all, never asks for a database.
-        IDatabase? db = null;
-
-        // Both passes share one multiplexer, so an empty server list is one condition, not two.
-        var noServersLogged = false;
-        void OnNoServers()
-        {
-            if (!noServersLogged)
-            {
-                noServersLogged = true;
-                LogPrefixEvictionNoServer(logger, prefix);
-            }
-        }
-
-        void OnServerFailed(string server, Exception ex) =>
-            LogPrefixEvictionServerFailed(logger, server, prefix, ex);
-
-        // This service's own keyspace: routed back through HybridCache so L1 goes with L2.
         await RedisPrefixScanner.RemoveMatchingAsync(
             connectionMultiplexer,
             $"{HybridKey(prefix)}*",
             key => hybrid.RemoveAsync(key.ToString(), cancellationToken).AsTask(),
-            OnNoServers,
-            OnServerFailed,
-            cancellationToken).ConfigureAwait(false);
-
-        // The legacy keyspace left behind by DistributedCacheService; raw deletes, nothing holds
-        // these in an L1.
-        await RedisPrefixScanner.RemoveMatchingAsync(
-            connectionMultiplexer,
-            $"{_keys.Qualify(prefix)}*",
-            key => (db ??= connectionMultiplexer.GetDatabase()).KeyDeleteAsync(key),
-            OnNoServers,
-            OnServerFailed,
+            () => LogPrefixEvictionNoServer(logger, prefix),
+            (server, ex) => LogPrefixEvictionServerFailed(logger, server, prefix, ex),
             cancellationToken).ConfigureAwait(false);
     }
 

@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
@@ -15,6 +15,9 @@ public sealed class UpdateEntityHandlerTests
     private readonly Mock<IRepository<OrderAggregate, int>> _repository = new();
     private readonly Mock<IEntityUpdateApplier<OrderAggregate, OrderUpdateRequest, int>> _applier = new();
     private readonly Mock<IEntityDTOMapper<OrderAggregate, OrderDTO, int>> _dtoMapper = new();
+
+    /// <summary>The If-Match token every conditional update carries (ADR-035).</summary>
+    private static readonly byte[] Token = [1, 2, 3];
 
     public UpdateEntityHandlerTests()
     {
@@ -54,7 +57,7 @@ public sealed class UpdateEntityHandlerTests
         var sut = CreateSut();
 
         var result = await sut.HandleAsync(
-            new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(3, request));
+            new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(3, request, Token));
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Id.Should().Be(3);
@@ -78,23 +81,7 @@ public sealed class UpdateEntityHandlerTests
         _repository.Verify(
             r => r.SetOriginalRowVersion(
                 It.IsAny<OrderAggregate>(),
-                It.Is<byte[]?>(v => v != null && v.SequenceEqual(new byte[] { 9, 8, 7 }))),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task HandleAsync_WithNoRowVersion_SkipsTheConflictCheck()
-    {
-        SetupLoad(new OrderAggregate { Id = 3 });
-        SetupApplier(Result.Success());
-        var sut = CreateSut();
-
-        await sut.HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(
-            3,
-            new OrderUpdateRequest("renamed")));
-
-        _repository.Verify(
-            r => r.SetOriginalRowVersion(It.IsAny<OrderAggregate>(), null),
+                It.Is<byte[]>(v => v.SequenceEqual(new byte[] { 9, 8, 7 }))),
             Times.Once);
     }
 
@@ -107,7 +94,8 @@ public sealed class UpdateEntityHandlerTests
 
         var result = await sut.HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(
             3,
-            new OrderUpdateRequest("  ")));
+            new OrderUpdateRequest("  "),
+            Token));
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Order.NameRequired");
@@ -123,7 +111,8 @@ public sealed class UpdateEntityHandlerTests
 
         var result = await sut.HandleAsync(new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(
             3,
-            new OrderUpdateRequest("renamed")));
+            new OrderUpdateRequest("renamed"),
+            Token));
 
         result.IsFailure.Should().BeTrue();
         var error = result.Errors.Should().ContainSingle().Subject;
@@ -145,7 +134,7 @@ public sealed class UpdateEntityHandlerTests
         var sut = CreateSut();
 
         await sut.HandleAsync(
-            new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(3, new OrderUpdateRequest("renamed")),
+            new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(3, new OrderUpdateRequest("renamed"), Token),
             token);
 
         _applier.Verify(
@@ -158,13 +147,13 @@ public sealed class UpdateEntityHandlerTests
     // that makes an update evict the aggregate's cached reads.
     [Fact]
     public void CachePrefix_DefaultsToEntityFullNameConvention() =>
-        new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(1, new OrderUpdateRequest("x"))
+        new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(1, new OrderUpdateRequest("x"), Token)
             .CachePrefix.Should().Be(typeof(OrderAggregate).FullName + ":");
 
     [Fact]
     public void CachePrefix_CanBeOverriddenToOptOut()
     {
-        var command = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(1, new OrderUpdateRequest("x"));
+        var command = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(1, new OrderUpdateRequest("x"), Token);
 
         (command with { CachePrefix = string.Empty }).CachePrefix.Should().BeEmpty();
     }
@@ -175,7 +164,7 @@ public sealed class UpdateEntityHandlerTests
     public void Command_ExposesItsRequestThroughICommandWithRequest()
     {
         var request = new OrderUpdateRequest("x");
-        var command = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(1, request);
+        var command = new UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>(1, request, Token);
 
         command.Should().BeAssignableTo<ICommandWithRequest<OrderUpdateRequest>>()
             .Which.Request.Should().Be(request);
