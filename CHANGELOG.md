@@ -4,6 +4,69 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.172.0] - 2026-08-30
+
+Completes the generic write-side surface ADR-099 opened. The five shapes that still forced a
+hand-written handler (a value derived before the mutation, an idempotent no-op, a fresh-scope retry,
+a delete that has to load its children or refuse, a command that carries more than its request) now
+sit on the framework bases. Every addition is additive: existing subclasses, commands and appliers
+compile and behave exactly as before.
+
+### Added
+
+- **A mutation context on every write handler** (`MMCA.Common.Application`). `MutationContext` is a
+  per-command side channel: a typed bag (`Set` / `TryGet` / `GetOrDefault` / `Contains`) for values a
+  mutation derives while the aggregate is loaded, plus `SkipSave()`, the idempotent-no-op signal that
+  finishes the command successfully with no save, no `LogMutated` and no `OnMutatedAsync`.
+  `MutateEntityHandlerCore` threads one instance through `LoadAsync`, `MutateAsync`, `LogMutated` and
+  `OnMutatedAsync` as a new overload of each, every one of which forwards to the context-free overload
+  by default, so a handler that needs neither never sees it. `MutateAsync(entity, command, token)` is
+  now `virtual` rather than `abstract` (a handler overrides exactly one of the two overloads;
+  overriding neither throws at the call site), which is the one behavioral note for anyone writing a
+  new handler.
+- **`MutateEntityPayloadHandlerBase<TCommand, TEntity, TIdentifierType, TResultPayload>`**
+  (`MMCA.Common.Application`). The third mutate flavor beside the bare-`Result` and refreshed-DTO
+  ones, for a command whose response is a purpose-built envelope rather than the aggregate's DTO. The
+  payload is unconstrained and the subclass builds it in
+  `BuildResult(entity, command, context)`, reading both the mutated aggregate and whatever the
+  mutation wrote into the context, so a pre-mutation value reaches the response without handler
+  instance state. It is a sibling type rather than a fourth parameter on the DTO flavor, because
+  generic types overload by arity alone.
+- **Attempt-scope parity for mutations** (`MMCA.Common.Application`).
+  `MutateCoreAsync(attemptUnitOfWork, command, token)` and its context-taking overload mirror the
+  create workflow's `CreateCoreAsync`: a handler whose write can lose a unique-key race overrides
+  `HandleAsync`, wraps the workflow in a retry loop and runs each attempt against a fresh DI scope's
+  unit of work, instead of reimplementing load-stamp-mutate-save around the base.
+- **`DeleteEntityHandler` is extensible** (`MMCA.Common.Application`). `HandleAsync` is `virtual`, and
+  the workflow is split into `Includes`, `AsTracking`, `LoadAsync`, the Result-returning pre-delete
+  hook `OnDeletingAsync` (a refusal stops the delete and the save), `LogDeleted`, `HandlerName` and a
+  protected `UnitOfWork`. A subclass declares the child collections the aggregate's `Delete()` cascade
+  has to see, or an invariant that spans more than the aggregate. With no `Includes` the handler
+  issues the same bare by-id query it always has, so an existing consumer sees no change.
+- **Verb-discriminated updates** (`MMCA.Common.Application`).
+  `UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType, TApplier>` derives from the
+  three-parameter command and adds the applier type as a discriminator, so two verbs over one request
+  DTO stay two commands with two appliers.
+  `UpdateEntityHandler<TEntity, TEntityDTO, TIdentifierType, TUpdateRequest, TApplier>` resolves that
+  exact applier, and `AddEntityUpdateVerb<...>()` registers one verb (handler plus validator bridge).
+  The wire shape is unchanged: same route, same request DTO.
+- **Commands that carry state beside the request** (`MMCA.Common.Application`).
+  `UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>` is no longer sealed, so a module can
+  derive a positional record adding a route-derived id, a server-decided flag or a second concurrency
+  token while inheriting `Id`, `Request`, `RowVersion`, the `ICommandWithRequest` validator bridge and
+  the cache prefix. `IEntityUpdateCommandApplier<TEntity, TUpdateRequest, TIdentifierType, TCommand>`
+  is the applier that sees the whole command (and the mutation context),
+  `UpdateEntityCommandHandler<TCommand, ...>` runs it on the shared workflow, and
+  `AddEntityUpdate<TCommand, ...>()` registers the pair. Post-load, pre-mutate work such as
+  `SetOriginalRowVersion` on a tracked child row needs no new hook: a subclass overrides `MutateAsync`,
+  does its work against `UnitOfWork.GetRepository<...>()` and awaits `base.MutateAsync(...)`, which is
+  now documented on `UpdateEntityHandler`.
+- **`AddCommandRequestValidator<TCommand, TRequest>()`** (`MMCA.Common.Application`). The explicit
+  form of the `ICommandWithRequest` bridge the module scan applies by reflection, for a command the
+  scan cannot see because it is a closed generic constructed at registration time. `TryAdd`
+  semantics, so an explicit `IValidator<TCommand>` still wins. The two new registration helpers call
+  it for the commands they register.
+
 ## [1.171.0] - 2026-08-30
 
 Two follow-ups to the 1.170.0 small-app floor: SQLite databases now migrate at startup like SQL
