@@ -4,6 +4,18 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.173.1] - 2026-08-30
+
+### Fixed
+
+- **Filter-built concurrency responses satisfy the problem-details contract.** The 428 (no
+  precondition), 400 (malformed If-Match) and exception-path 412 responses from
+  `SupportsIfMatchAttribute` are now built through the registered `ProblemDetailsFactory` (stamping
+  `traceId`/`requestId` like every other problem response) and carry the standard `errors`
+  extension (`Concurrency.PreconditionRequired`, `Concurrency.MalformedIfMatch`,
+  `Concurrency.PreconditionFailed`). v1.173.0 answered them with a bare body, which failed the
+  consumers' RFC 9457 contract tests.
+
 ## [1.173.0] - 2026-08-30
 
 One way to do everything. This release removes the dual code paths that existed only for
