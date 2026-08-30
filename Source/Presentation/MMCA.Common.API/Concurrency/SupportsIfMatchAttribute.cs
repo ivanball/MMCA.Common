@@ -1,7 +1,12 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using MMCA.Common.API.Localization;
+using MMCA.Common.API.Middleware;
+using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Http;
 
 namespace MMCA.Common.API.Concurrency;
@@ -104,13 +109,13 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
         if (string.IsNullOrWhiteSpace(headerValue)
             || string.Equals(headerValue.Trim(), ConcurrencyETag.Wildcard, StringComparison.Ordinal))
         {
-            context.Result = PreconditionRequiredResult();
+            context.Result = PreconditionRequiredResult(context.HttpContext);
             return false;
         }
 
         if (!ConcurrencyETag.TryParse(headerValue, out var rowVersion))
         {
-            context.Result = MalformedIfMatchResult();
+            context.Result = MalformedIfMatchResult(context.HttpContext);
             return false;
         }
 
@@ -128,7 +133,7 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
         {
             // The global handler would map this to 409 like any other DbUpdateException. Under an
             // explicit precondition it is a failed precondition, so it is answered here instead.
-            executed.Result = PreconditionFailedResult();
+            executed.Result = PreconditionFailedResult(executed.HttpContext);
             executed.ExceptionHandled = true;
             return;
         }
@@ -154,38 +159,63 @@ public sealed class SupportsIfMatchAttribute : Attribute, IAsyncActionFilter
     }
 
     /// <summary>The response for a conditional write that stated no precondition at all.</summary>
-    private static ObjectResult PreconditionRequiredResult() =>
-        new(new ProblemDetails
-        {
-            Status = StatusCodes.Status428PreconditionRequired,
-            Title = "If-Match header required",
-            Detail = "This write is conditional. Send the entity tag from your last read in the If-Match header, for example W/\"AAAAAAAAB9E=\".",
-        })
-        {
-            StatusCode = StatusCodes.Status428PreconditionRequired,
-        };
+    private static ObjectResult PreconditionRequiredResult(HttpContext httpContext) =>
+        Problem(
+            httpContext,
+            StatusCodes.Status428PreconditionRequired,
+            "If-Match header required",
+            "This write is conditional. Send the entity tag from your last read in the If-Match header, for example W/\"AAAAAAAAB9E=\".",
+            Error.Validation(
+                "Concurrency.PreconditionRequired",
+                "This write is conditional; the If-Match header is required.",
+                nameof(SupportsIfMatchAttribute)));
 
     /// <summary>The response for an <c>If-Match</c> value that is not a decodable entity tag.</summary>
-    private static ObjectResult MalformedIfMatchResult() =>
-        new(new ProblemDetails
-        {
-            Status = StatusCodes.Status400BadRequest,
-            Title = "Invalid If-Match header",
-            Detail = "The If-Match header must be an entity tag returned by a previous read, for example W/\"AAAAAAAAB9E=\".",
-        })
-        {
-            StatusCode = StatusCodes.Status400BadRequest,
-        };
+    private static ObjectResult MalformedIfMatchResult(HttpContext httpContext) =>
+        Problem(
+            httpContext,
+            StatusCodes.Status400BadRequest,
+            "Invalid If-Match header",
+            "The If-Match header must be an entity tag returned by a previous read, for example W/\"AAAAAAAAB9E=\".",
+            Error.Validation(
+                "Concurrency.MalformedIfMatch",
+                "The If-Match header is not a decodable entity tag.",
+                nameof(SupportsIfMatchAttribute)));
 
     /// <summary>The response for a concurrency conflict on a request that stated a precondition.</summary>
-    private static ObjectResult PreconditionFailedResult() =>
-        new(new ProblemDetails
-        {
-            Status = StatusCodes.Status412PreconditionFailed,
-            Title = "Precondition failed",
-            Detail = "The resource changed since the version named in the If-Match header. Re-read it and retry.",
-        })
-        {
-            StatusCode = StatusCodes.Status412PreconditionFailed,
-        };
+    private static ObjectResult PreconditionFailedResult(HttpContext httpContext) =>
+        Problem(
+            httpContext,
+            StatusCodes.Status412PreconditionFailed,
+            "Precondition failed",
+            "The resource changed since the version named in the If-Match header. Re-read it and retry.",
+            Error.Conflict(
+                "Concurrency.PreconditionFailed",
+                "The resource changed since the version named in the If-Match header.",
+                nameof(SupportsIfMatchAttribute)));
+
+    /// <summary>
+    /// Builds the problem response the same way the rest of the API surface does: through the
+    /// registered <see cref="ProblemDetailsFactory"/> (which stamps the diagnostic extensions such
+    /// as <c>traceId</c>), with the error carried in the standard <c>errors</c> extension. The
+    /// factory can be absent only in a host that never called the framework's API registration; the
+    /// response then still carries the <c>errors</c> extension.
+    /// </summary>
+    private static ObjectResult Problem(HttpContext httpContext, int statusCode, string title, string detail, Error error)
+    {
+        var services = httpContext.RequestServices;
+        var problemDetails = services?.GetService<ProblemDetailsFactory>()
+                ?.CreateProblemDetails(httpContext, statusCode, title: title, detail: detail)
+            ?? new ProblemDetails
+            {
+                Status = statusCode,
+                Title = title,
+                Detail = detail,
+            };
+
+        problemDetails.Extensions["errors"] =
+            ErrorHttpMapping.BuildErrorsExtension([error], services?.GetService<IErrorLocalizer>());
+
+        return new ObjectResult(problemDetails) { StatusCode = statusCode };
+    }
 }

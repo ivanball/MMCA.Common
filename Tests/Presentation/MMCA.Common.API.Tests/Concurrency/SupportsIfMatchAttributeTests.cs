@@ -71,7 +71,11 @@ public sealed class SupportsIfMatchAttributeTests
 
         var objectResult = result.Should().BeOfType<ObjectResult>().Which;
         objectResult.StatusCode.Should().Be(StatusCodes.Status428PreconditionRequired);
-        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Title.Should().Be("If-Match header required");
+        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Which;
+        problemDetails.Title.Should().Be("If-Match header required");
+        problemDetails.Extensions.Should().ContainKey(
+            "errors",
+            because: "the problem-details contract carries every failure in the errors extension");
     }
 
     [Fact]
@@ -172,6 +176,11 @@ public sealed class SupportsIfMatchAttributeTests
         executedContext.ExceptionHandled.Should().BeTrue("the global 409 handler must not also answer this");
         var objectResult = executedContext.Result.Should().BeOfType<ObjectResult>().Which;
         objectResult.StatusCode.Should().Be(StatusCodes.Status412PreconditionFailed);
+
+        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Which;
+        problemDetails.Extensions.Should().ContainKey(
+            "errors",
+            because: "a filter-built 412 must satisfy the same problem-details contract as a handler-built conflict");
     }
 
     /// <summary>Runs the filter over an action that threw, returning the executed context itself.</summary>
