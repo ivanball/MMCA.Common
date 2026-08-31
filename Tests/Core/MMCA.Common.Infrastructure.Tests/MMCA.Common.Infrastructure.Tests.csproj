@@ -19,5 +19,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+    <!-- Holds the one committed EF migration MigrationApplyProofTests applies. Kept in its own
+         assembly so it is invisible to the tests that name THIS assembly as their migrations
+         assembly precisely because it declares none. -->
+    <ProjectReference Include="..\MMCA.Common.Infrastructure.Tests.MigrationsFixture\MMCA.Common.Infrastructure.Tests.MigrationsFixture.csproj" />
   </ItemGroup>
 </Project>

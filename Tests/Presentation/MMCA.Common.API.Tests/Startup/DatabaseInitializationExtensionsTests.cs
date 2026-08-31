@@ -18,6 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Services;
 using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Tests.MigrationsFixture;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Startup;
@@ -131,6 +132,46 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
         (await CountTablesAsync(created, nameof(InitTestWidget))).Should().Be(1,
             "the source with no migrations assembly keeps its EnsureCreated behaviour");
         (await CountTablesAsync(created, "__EFMigrationsHistory")).Should().Be(0);
+    }
+
+    // The production guard, against a REAL committed migration rather than an empty migrations
+    // assembly: "None" is what a deployed host runs, and its whole job is to refuse to start when
+    // the schema is behind the code. The failure has to NAME the migration, because the operator
+    // reading it needs to know what to apply. Nothing may be applied on the way out either: "None"
+    // means none.
+    [Fact]
+    public async Task InitializeDatabaseAsync_NoneStrategy_FailsStartupNamingThePendingMigration()
+    {
+        var connectionStrings = new ConnectionStringSettings { SQLServerConnectionString = "Server=unused;" };
+        var dataSources = new DataSourcesSettings(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+        {
+            ["TestSqlite"] = new() { SqliteConnectionString = $"Data Source={_sqliteDbPath}" },
+            ["TestSqliteMigrated"] = new()
+            {
+                SqliteConnectionString = $"Data Source={_sqliteMigratedDbPath}",
+                SqliteMigrationsAssembly =
+                    typeof(CreateMigrationProofTable).Assembly.GetName().Name!,
+            },
+        });
+
+        var resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
+        var assemblyProvider = new FixedAssemblyProvider();
+        var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
+
+        await using var provider = BuildProvider(resolver, registry, assemblyProvider);
+
+        var act = () => provider.InitializeDatabaseAsync(
+            new ApplicationSettings { DatabaseInitStrategy = "None" },
+            new ModuleLoader());
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage($"*{CreateMigrationProofTable.MigrationId}*");
+
+        using var scope = provider.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
+        var context = factory.GetDbContext(resolver.ResolveLogical(DataSource.Sqlite, "TestSqliteMigrated"));
+        (await CountTablesAsync(context, CreateMigrationProofTable.TableName)).Should().Be(0,
+            "the 'None' strategy reports what is pending and applies nothing");
     }
 
     // The strategy names exactly two behaviours. A value outside that set is a configuration mistake

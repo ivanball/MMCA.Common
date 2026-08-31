@@ -34,6 +34,7 @@
     <Project Path="Tests/Core/MMCA.Common.Domain.Tests/MMCA.Common.Domain.Tests.csproj" />
     <Project Path="Tests/Core/MMCA.Common.Application.Tests/MMCA.Common.Application.Tests.csproj" />
     <Project Path="Tests/Core/MMCA.Common.Infrastructure.Tests/MMCA.Common.Infrastructure.Tests.csproj" />
+    <Project Path="Tests/Core/MMCA.Common.Infrastructure.Tests.MigrationsFixture/MMCA.Common.Infrastructure.Tests.MigrationsFixture.csproj" />
   </Folder>
   <Folder Name="/Tests/Presentation/">
     <Project Path="Tests/Presentation/MMCA.Common.API.Tests/MMCA.Common.API.Tests.csproj" />

@@ -1031,6 +1031,12 @@
           "StackExchange.Redis": "[3.1.31, )"
         }
       },
+      "mmca.common.infrastructure.tests.migrationsfixture": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.Infrastructure": "[1.0.0, )"
+        }
+      },
       "mmca.common.shared": {
         "type": "Project"
       },
