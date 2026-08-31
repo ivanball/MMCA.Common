@@ -1,3 +1,4 @@
+using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.DomainEvents;
 
 namespace MMCA.Common.Domain.IntegrationEvents;
@@ -24,6 +25,7 @@ namespace MMCA.Common.Domain.IntegrationEvents;
 /// queues drain (ADR-090).
 /// </para>
 /// </summary>
+[EventName("Common.OutputCacheEvictionRequested.v1")]
 public sealed record class OutputCacheEvictionRequested : BaseIntegrationEvent
 {
     /// <summary>
