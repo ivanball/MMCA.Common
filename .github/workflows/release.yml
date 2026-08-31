@@ -87,9 +87,10 @@ jobs:
         if: github.repository_owner == 'ivanball'
         run: dotnet nuget push ./nupkgs/*.nupkg --source "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
 
-  # MMCA.Common.UI.Maui (the 15th package) cannot build on ubuntu — its four TFMs need the MAUI
-  # workloads — so it packs on windows, versioned from the same tag so the lockstep release stays
-  # whole. Same SBOM hard gate as the main job, scoped to this project.
+  # MMCA.Common.UI.Maui (the one MAUI-TFM package; the full id list lives in FACTS.md) cannot
+  # build on ubuntu (its four TFMs need the MAUI workloads), so it packs on windows, versioned
+  # from the same tag so the lockstep release stays whole. Same SBOM hard gate as the main job,
+  # scoped to this project.
   publish-maui:
     runs-on: windows-latest
     timeout-minutes: 40

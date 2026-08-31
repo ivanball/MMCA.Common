@@ -65,7 +65,7 @@
   </PropertyGroup>
 
   <!-- The icon referenced by PackageIcon above must itself be packed. Done once here rather than
-       in fifteen csproj files (each of which still packs README.md individually). The changelog rides
+       in every packable csproj (each of which still packs README.md individually). The changelog rides
        along in every package for the same reason: a consumer inspecting a .nupkg gets the version
        history without leaving the package. -->
   <ItemGroup Condition="$(MSBuildProjectDirectory.Contains('Source'))">
