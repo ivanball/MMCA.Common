@@ -4,6 +4,37 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.176.0] - 2026-08-31
+
+Local-vs-prod broker parity for consumers: the Aspire AppHost can now provision the Azure Service Bus
+emulator as an opt-in local broker, and the MassTransit registration drives it through the same
+AzureServiceBus provider path used in production. Plus a client-side absolute-URL validation attribute
+and per-module layer-requirement overrides for the architecture-test bases. No breaking changes.
+
+### Added
+
+- **`AddServiceBusEmulatorBroker` + `ServiceBusEmulatorResource`** (`MMCA.Common.Aspire.Hosting`).
+  Provisions the official Service Bus emulator container (2.0.1, admin plane on 5300) wired to an
+  existing SQL Server resource, exposing an emulator-form connection string
+  (`UseDevelopmentEmulator=true`) and the admin-plane endpoint. A new `WithBroker` overload accepts
+  the emulator resource and sets `MessageBus__Provider=AzureServiceBus`,
+  `MessageBus__ConnectionString`, and `MessageBus__EmulatorAdminEndpoint` on the service; the
+  RabbitMQ overload is unchanged.
+- **Service Bus emulator support in `AddBrokerMessaging`** (`MMCA.Common.Infrastructure`). When the
+  AzureServiceBus connection string carries `UseDevelopmentEmulator=true`, the bus is configured via
+  the MassTransit v8 custom-clients `Host` overload (the only v8 path onto the emulator) with an
+  admin client built from the new `MessageBusSettings.EmulatorAdminEndpoint`, and the process-global
+  transport TTL quotas are lowered once to emulator-accepted values. The real Azure Service Bus path
+  is byte-for-byte unchanged.
+- **`AbsoluteUrlAttribute`** (`MMCA.Common.UI`). DataAnnotations mirror of the server-side
+  `AbsoluteUrlRules` semantics (absolute http/https only, null/empty passes; pair with `[Required]`),
+  with resource-key `ErrorMessage` localization like the other model attributes.
+- **`ModuleRequiredLayerOverrides`** (`MMCA.Common.Testing.Architecture`).
+  `LayerDependencyTestsBase` can now require a different layer set for a named module (a deliberately
+  thin module without Domain/Infrastructure/UI assemblies) without weakening the required set for
+  every other module; backed by a new three-argument `ArchitectureRules.ModulesDeclareLayers`
+  overload. The existing overloads are unchanged.
+
 ## [1.175.0] - 2026-08-31
 
 A six-front implementation-lift wave (scorecard categories 8, 19, 23, 25, 26, 34): migrations proven
