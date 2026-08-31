@@ -3,119 +3,78 @@ using MMCA.Common.UI.Services.Auth;
 namespace MMCA.Common.UI.Maui.Services;
 
 /// <summary>
-/// MAUI token storage using <see cref="SecureStorage"/>, which leverages platform-specific
-/// secure enclaves (Android Keystore, iOS Keychain, Windows DPAPI) to protect tokens at rest.
-/// Every call is guarded: the OS invalidates keystore entries on its own schedule (an Android
-/// backup/restore onto a new device, a security patch that rotates the master key, a biometric
-/// enrolment change), and the raw APIs then throw a platform exception instead of returning
-/// nothing. An unhandled throw here bricks the app on launch until it is reinstalled, so a read
-/// failure degrades to "no token stored" (which <see cref="ITokenStorageService"/> already
-/// documents) and drops the unreadable entry, forcing one clean re-login. A write failure clears
-/// BOTH entries before it propagates, so the app can never be left holding a stale pair it believes
-/// is current: the outcome of any failed write is the clean signed-out state.
+/// MAUI token storage: the freshness-checking layer over <see cref="ISecureTokenStore"/>. Raw
+/// persistence lives in <see cref="MauiSecureTokenStore"/> (OS SecureStorage); this type adds what a
+/// long-lived mobile session needs, exactly as <c>WasmTokenStorageService</c> does for the browser.
+/// A token read back from the enclave can be hours or days old, so returning it verbatim hands every
+/// caller (the delegating handler, the auth-state provider, SignalR) an expired bearer and produces a
+/// 401 the user experiences as a random sign-out. Reading through the expiry check instead refreshes
+/// proactively, <see cref="ExpirySkew"/> ahead of the actual expiry.
 /// <para>
-/// Register with <c>AddCommonMauiTokenStorage()</c>; the browser-host siblings are
-/// <c>WasmTokenStorageService</c> (MMCA.Common.UI) and <c>ServerTokenStorageService</c>
-/// (MMCA.Common.UI.Web).
+/// Register with <c>AddCommonMauiTokenStorage()</c>, which wires the raw store alongside it; the
+/// browser-host siblings are <c>WasmTokenStorageService</c> (MMCA.Common.UI) and
+/// <c>ServerTokenStorageService</c> (MMCA.Common.UI.Web).
 /// </para>
 /// </summary>
-public sealed class MauiTokenStorageService : ITokenStorageService
+public sealed class MauiTokenStorageService(
+    ISecureTokenStore store,
+    ITokenRefresher tokenRefresher) : ITokenStorageService
 {
-    private const string AccessTokenKey = "auth_access_token";
-    private const string RefreshTokenKey = "auth_refresh_token";
+    private static readonly TimeSpan ExpirySkew = TimeSpan.FromSeconds(30);
+
+    private readonly Lock _hydrateSync = new();
+
+    private Task<string?>? _hydrateInFlight;
 
     /// <inheritdoc />
-    public Task<string?> GetAccessTokenAsync() => GetAsync(AccessTokenKey);
+    public async Task<string?> GetAccessTokenAsync()
+    {
+        var stored = await store.GetAccessTokenAsync();
+        if (JwtTokenInfo.IsFresh(stored, ExpirySkew))
+        {
+            return stored;
+        }
+
+        // Single-flight: concurrent callers (delegating handler, auth-state, SignalR) share one
+        // acquisition. The lock is what makes it single: an unguarded "??=" lets two callers each
+        // start a refresh, and every extra refresh rotates the refresh token again, invalidating the
+        // pair the other caller is still holding. HydrateAsync reaches its first await immediately,
+        // so nothing slow runs under the lock.
+        Task<string?> inFlight;
+        lock (_hydrateSync)
+        {
+            _hydrateInFlight ??= HydrateAsync();
+            inFlight = _hydrateInFlight;
+        }
+
+        try
+        {
+            return await inFlight.ConfigureAwait(false);
+        }
+        finally
+        {
+            // Only clear our own task: an unguarded clear can drop a NEWER hydrate started after
+            // this one completed, splitting the next set of callers again.
+            lock (_hydrateSync)
+            {
+                if (ReferenceEquals(_hydrateInFlight, inFlight))
+                {
+                    _hydrateInFlight = null;
+                }
+            }
+        }
+    }
 
     /// <inheritdoc />
-    public Task<string?> GetRefreshTokenAsync() => GetAsync(RefreshTokenKey);
+    public Task<string?> GetRefreshTokenAsync() => store.GetRefreshTokenAsync();
 
     /// <inheritdoc />
-    public async Task SetTokensAsync(string accessToken, string refreshToken)
-    {
-        // Refresh first, both writes under the SAME guard: whichever one fails, drop both so storage
-        // is a clean signed-out state. A failing refresh write used to escape before the guard was
-        // entered, leaving the OLD pair in place: the app then held a stale access token it believed
-        // was current, and only a manual sign-out cleared it.
-        try
-        {
-            await SetAsync(RefreshTokenKey, refreshToken);
-            await SetAsync(AccessTokenKey, accessToken);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync; rethrown after the cleanup
-        catch
-#pragma warning restore CA1031
-        {
-            TryRemove(AccessTokenKey);
-            TryRemove(RefreshTokenKey);
-            throw;
-        }
-    }
+    public Task SetTokensAsync(string accessToken, string refreshToken) =>
+        store.SetTokensAsync(accessToken, refreshToken);
 
     /// <inheritdoc />
-    public Task ClearTokensAsync()
-    {
-        // Logout must always succeed: an entry we cannot delete is one the OS already
-        // invalidated, which is the outcome the caller asked for.
-        TryRemove(AccessTokenKey);
-        TryRemove(RefreshTokenKey);
-        return Task.CompletedTask;
-    }
+    public Task ClearTokensAsync() => store.ClearTokensAsync();
 
-    /// <summary>
-    /// Reads one entry, degrading a corrupt or undecryptable entry to <see langword="null"/> and
-    /// dropping it so the next write starts from a clean key.
-    /// </summary>
-    private static async Task<string?> GetAsync(string key)
-    {
-        try
-        {
-            return await SecureStorage.Default.GetAsync(key);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types - the platform exception type differs per OS and none of them are recoverable here
-        catch
-#pragma warning restore CA1031
-        {
-            // No logging facility exists in this host (nothing in the MAUI head takes an ILogger),
-            // so the swallow is documented here rather than reported: the user sees the normal
-            // signed-out state and logs in again.
-            TryRemove(key);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Writes one entry, retrying once against a freshly removed key. A second failure propagates:
-    /// the caller must never believe a token was persisted when it was not.
-    /// </summary>
-    private static async Task SetAsync(string key, string value)
-    {
-        try
-        {
-            await SecureStorage.Default.SetAsync(key, value);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync; the retry below is the recovery
-        catch
-#pragma warning restore CA1031
-        {
-            TryRemove(key);
-            await SecureStorage.Default.SetAsync(key, value);
-        }
-    }
-
-    /// <summary>Best-effort delete of one entry; a delete that itself throws is already the goal.</summary>
-    private static void TryRemove(string key)
-    {
-        try
-        {
-            SecureStorage.Default.Remove(key);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types - see GetAsync
-        catch
-#pragma warning restore CA1031
-        {
-            // Nothing left to do: the entry is unreadable and undeletable, and the next
-            // SetAsync overwrites it anyway.
-        }
-    }
+    private async Task<string?> HydrateAsync() =>
+        await tokenRefresher.AcquireAccessTokenAsync().ConfigureAwait(false);
 }

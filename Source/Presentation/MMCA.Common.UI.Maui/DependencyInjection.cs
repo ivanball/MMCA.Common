@@ -62,16 +62,27 @@ public static class DependencyInjection
         }
 
         /// <summary>
-        /// Registers the OS-SecureStorage token storage (<see cref="MauiTokenStorageService"/> as
-        /// the scoped <c>ITokenStorageService</c>): the platform secure enclave holds both tokens,
-        /// and every read/write is guarded so an OS-invalidated keystore entry degrades to one
-        /// clean re-login instead of an unhandled throw on launch. The browser-host equivalents are
-        /// <c>AddCommonServerTokenStorage()</c> (MMCA.Common.UI.Web) and the WASM
-        /// <c>WasmTokenStorageService</c> (MMCA.Common.UI). Scoped rather than singleton to match
-        /// those siblings, so component code can depend on one lifetime across every head.
+        /// Registers the MAUI token pipeline: <see cref="MauiSecureTokenStore"/> as the scoped
+        /// <c>ISecureTokenStore</c> (the platform secure enclave holds both tokens, and every
+        /// read/write is guarded so an OS-invalidated keystore entry degrades to one clean re-login
+        /// instead of an unhandled throw on launch) and <see cref="MauiTokenStorageService"/> as the
+        /// scoped <c>ITokenStorageService</c> on top of it, which checks expiry and refreshes
+        /// proactively rather than handing callers a stale bearer.
+        /// <para>
+        /// Both halves are required. The split is what keeps the graph acyclic: storage depends on
+        /// the refresher, and the refresher depends on the raw store rather than back on storage.
+        /// </para>
+        /// <para>
+        /// The browser-host equivalents are <c>AddCommonServerTokenStorage()</c> (MMCA.Common.UI.Web)
+        /// and the WASM <c>WasmTokenStorageService</c> (MMCA.Common.UI). Scoped rather than singleton
+        /// to match those siblings, so component code can depend on one lifetime across every head.
+        /// </para>
         /// </summary>
-        public IServiceCollection AddCommonMauiTokenStorage() =>
-            services.AddScoped<ITokenStorageService, MauiTokenStorageService>();
+        public IServiceCollection AddCommonMauiTokenStorage()
+        {
+            services.AddScoped<ISecureTokenStore, MauiSecureTokenStore>();
+            return services.AddScoped<ITokenStorageService, MauiTokenStorageService>();
+        }
 
         /// <summary>
         /// Registers this platform's credentialed <see cref="IPushDeviceTokenProvider"/> (ADR-044):

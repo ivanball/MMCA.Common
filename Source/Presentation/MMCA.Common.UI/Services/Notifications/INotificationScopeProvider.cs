@@ -20,4 +20,21 @@ public interface INotificationScopeProvider
     /// <param name="ct">A cancellation token.</param>
     /// <returns>The scope key (for example <c>"event:2"</c>), or null for no scoping.</returns>
     Task<string?> GetCurrentScopeKeyAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Gets a human-readable name for the scope currently in force (the conference event's title, the
+    /// tenant's name), or null when there is nothing to show. The send page uses it to caption who a
+    /// notification will actually reach, so an operator can see the auto-applied target rather than
+    /// infer it.
+    /// <para>
+    /// It is a default interface method returning null: an application that has no display name, and
+    /// every existing implementation, keeps compiling untouched. The same never-throw, fail-closed
+    /// contract as <see cref="GetCurrentScopeKeyAsync"/> applies, except that failing closed here
+    /// means returning null: a missing caption hides information, while a wrong one would state the
+    /// wrong audience.
+    /// </para>
+    /// </summary>
+    /// <param name="ct">A cancellation token.</param>
+    /// <returns>The scope display name, or null when none is available.</returns>
+    Task<string?> GetCurrentScopeDisplayNameAsync(CancellationToken ct = default) => Task.FromResult<string?>(null);
 }

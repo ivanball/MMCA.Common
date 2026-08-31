@@ -22,6 +22,7 @@ public partial class NotificationSend : IDisposable
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
+    [Inject] private INotificationScopeProvider ScopeProvider { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
 
@@ -44,6 +45,13 @@ public partial class NotificationSend : IDisposable
     // model's own DataAnnotations decide the outcome, so no rule is written twice.
     private Func<object, string, IEnumerable<string>> _validate = default!;
 
+    /// <summary>
+    /// The caption naming the scope this send will be auto-targeted at, already localized. Null when
+    /// the application runs unscoped or the provider has no display name, in which case the page
+    /// renders no caption at all rather than an empty line.
+    /// </summary>
+    private string? _scopeCaption;
+
     protected override void OnInitialized()
     {
         // Built here (not in a field initializer) so the injected localizer is available (ADR-027).
@@ -56,6 +64,26 @@ public partial class NotificationSend : IDisposable
 
         // The model's ErrorMessage values are resource keys; the localizer resolves them (ADR-027).
         _validate = ModelValidation.For(_model, new DataAnnotationsModelValidator(L));
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // A scoped application applies its scope to the send automatically, so without a caption the
+        // operator is composing a broadcast with no visible statement of who receives it. The
+        // localized string is built here rather than in a field initializer because it needs the
+        // injected localizer (ADR-027).
+        try
+        {
+            var scopeName = await ScopeProvider.GetCurrentScopeDisplayNameAsync(_cts.Token);
+            if (!string.IsNullOrWhiteSpace(scopeName))
+            {
+                _scopeCaption = L["Notif.Send.Targeting", scopeName].Value;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during component disposal or InteractiveAuto render mode transition
+        }
     }
 
     private async Task SendNotificationAsync()

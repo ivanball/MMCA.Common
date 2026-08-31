@@ -194,6 +194,43 @@ public sealed class CapturingHttpMessageHandlerTests
     }
 
     [Fact]
+    public async Task CapturedHeaders_CarryRequestHeaders_SoIfMatchIsAssertable()
+    {
+        using var handler = new CapturingHttpMessageHandler();
+        handler.SetResponse(HttpMethod.Put, "/orders/42", HttpStatusCode.NoContent);
+        using var client = CreateClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, new Uri("/orders/42", UriKind.Relative));
+        request.Headers.TryAddWithoutValidation("If-Match", "\"v7\"");
+        using var response = await client.SendAsync(request);
+
+        var captured = handler.RequestsFor(HttpMethod.Put, "/orders/42").Should().ContainSingle().Subject;
+        captured.Headers.Should().ContainKey("if-match",
+            "the lookup is case-insensitive, matching how HTTP treats header names");
+        captured.Headers["If-Match"].Should().Be("\"v7\"",
+            "an optimistic-concurrency test asserts the exact entity tag the service sent");
+    }
+
+    [Fact]
+    public async Task CapturedHeaders_AlsoCarryContentHeaders_AndAreEmptyWhenNoneWereSet()
+    {
+        using var handler = new CapturingHttpMessageHandler();
+        handler.SetResponse(HttpMethod.Post, "/orders", HttpStatusCode.Created);
+        handler.SetResponse(HttpMethod.Get, "/orders", HttpStatusCode.OK);
+        using var client = CreateClient(handler);
+
+        using var content = new StringContent(/*lang=json,strict*/ """{"productId":7}""");
+        using var post = await client.PostAsync(new Uri("/orders", UriKind.Relative), content);
+        using var get = await client.GetAsync(new Uri("/orders", UriKind.Relative));
+
+        handler.Requests[0].Headers.Should().ContainKey("Content-Type",
+            "a content header belongs in the same lookup: the caller should not have to know which "
+            + "collection HTTP files a given header under");
+        handler.Requests[1].Headers.Should().NotContainKey("Content-Type",
+            "the GET carried no content, and the default is an empty lookup rather than null");
+    }
+
+    [Fact]
     public async Task RequestsFor_FiltersByMethodAndPath_CaseInsensitively()
     {
         using var handler = new CapturingHttpMessageHandler();

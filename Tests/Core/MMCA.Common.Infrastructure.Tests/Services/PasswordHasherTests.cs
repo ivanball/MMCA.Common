@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Services;
 
@@ -60,30 +58,6 @@ public sealed class PasswordHasherTests
     {
         var (hash, salt) = _sut.HashPassword("MyPassword");
         _sut.VerifyPassword("WrongPassword", hash, salt).Should().BeFalse();
-    }
-
-    // ── Legacy HMAC-SHA512 backward compatibility ──
-    [Fact]
-    public void VerifyPassword_LegacyHmacSha512Hash_ReturnsTrue()
-    {
-        // Simulate a password hashed with the old HMAC-SHA512 algorithm (128-byte salt).
-        const string password = "LegacyPassword";
-        using var hmac = new HMACSHA512();
-        var legacySalt = hmac.Key; // 128 bytes
-        var legacyHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-
-        _sut.VerifyPassword(password, legacyHash, legacySalt).Should().BeTrue();
-    }
-
-    [Fact]
-    public void VerifyPassword_LegacyHmacSha512Hash_WrongPassword_ReturnsFalse()
-    {
-        const string password = "LegacyPassword";
-        using var hmac = new HMACSHA512();
-        var legacySalt = hmac.Key;
-        var legacyHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-
-        _sut.VerifyPassword("WrongPassword", legacyHash, legacySalt).Should().BeFalse();
     }
 
     // ── Argument validation ──

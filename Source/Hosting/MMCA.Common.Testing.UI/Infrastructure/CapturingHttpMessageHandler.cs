@@ -13,7 +13,8 @@ namespace MMCA.Common.Testing.UI;
 /// responder when one was supplied, otherwise 404 with an empty body, which mirrors the WebAPI's
 /// not-found behavior and keeps incidental refresh calls out of each test's setup. Responses are
 /// built fresh per request so a Polly retry pipeline never reuses a consumed
-/// <see cref="HttpContent"/>. Every request is recorded (method, URI, Authorization header, body).
+/// <see cref="HttpContent"/>. Every request is recorded (method, URI, Authorization header, every
+/// request and content header, body).
 /// </summary>
 public sealed class CapturingHttpMessageHandler : HttpMessageHandler
 {
@@ -84,7 +85,35 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
             uri?.AbsolutePath ?? string.Empty,
             uri?.PathAndQuery ?? string.Empty,
             request.Headers.Authorization?.ToString(),
-            body);
+            body)
+        {
+            Headers = CaptureHeaders(request),
+        };
+    }
+
+    /// <summary>
+    /// Flattens the request headers and, when present, the content headers into one case-insensitive
+    /// lookup. Both halves are needed: <c>If-Match</c> lives on the request while <c>Content-Type</c>
+    /// lives on the content, and a caller asserting either should not have to know which.
+    /// </summary>
+    private static Dictionary<string, string> CaptureHeaders(HttpRequestMessage request)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var header in request.Headers)
+        {
+            headers[header.Key] = string.Join(", ", header.Value);
+        }
+
+        if (request.Content is not null)
+        {
+            foreach (var header in request.Content.Headers)
+            {
+                headers[header.Key] = string.Join(", ", header.Value);
+            }
+        }
+
+        return headers;
     }
 
     private HttpResponseMessage Respond(HttpRequestMessage request)
@@ -132,4 +161,21 @@ public sealed record CapturedRequest(
     string Path,
     string PathAndQuery,
     string? Authorization,
-    string? Body);
+    string? Body)
+{
+    /// <summary>
+    /// Every request header, plus the content headers when the request carried a body, keyed by
+    /// header name (case-insensitive) with multiple values comma-joined. This is what makes headers
+    /// the service layer sets itself assertable: <c>If-Match</c> is a request header and
+    /// <c>Content-Type</c> is a content header, and a test that pins optimistic concurrency needs the
+    /// first while a test that pins the payload shape needs the second.
+    /// <para>
+    /// It is a non-positional init member on purpose: adding a seventh positional parameter would
+    /// rewrite the record's primary constructor and <c>Deconstruct</c>, breaking every consumer that
+    /// constructs or deconstructs a captured request. <see cref="Authorization"/> stays as it is, so
+    /// existing assertions keep working; it is also present here.
+    /// </para>
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Headers { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+}

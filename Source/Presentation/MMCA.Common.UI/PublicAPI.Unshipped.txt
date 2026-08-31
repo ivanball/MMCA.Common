@@ -303,3 +303,12 @@ static MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.Co
 MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
 MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
 MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type!
+*REMOVED*MMCA.Common.UI.Services.Auth.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Auth.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ISecureTokenStore! tokenStore) -> void
+MMCA.Common.UI.Services.Auth.ISecureTokenStore
+MMCA.Common.UI.Services.Auth.ISecureTokenStore.ClearTokensAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Auth.ISecureTokenStore.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.ISecureTokenStore.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.ISecureTokenStore.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Notifications.INotificationScopeProvider.GetCurrentScopeDisplayNameAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitializedAsync() -> System.Threading.Tasks.Task!

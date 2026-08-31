@@ -79,6 +79,11 @@ public static class GalleryHost
         builder.Services.AddScoped<INotificationInboxUIService, StubNotificationInboxUIService>();
         builder.Services.AddScoped<IPushNotificationUIService, StubPushNotificationUIService>();
 
+        // The send page injects the scope provider to caption its auto-applied target. The gallery is
+        // unscoped, so the null provider is the right stand-in: it keeps the page rendering and the
+        // caption absent, which is exactly the framework-default look the scan should measure.
+        builder.Services.AddScoped<INotificationScopeProvider, NullNotificationScopeProvider>();
+
         // One empty UI module whose Assembly is the gallery, so the shared Router (Routes.razor)
         // discovers the gallery's own /components page alongside the real Login/Register pages, and
         // contributes a few nav links so the host is browsable when run interactively.

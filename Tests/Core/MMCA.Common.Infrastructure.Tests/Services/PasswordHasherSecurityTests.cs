@@ -20,7 +20,6 @@ public sealed class PasswordHasherSecurityTests
     private const int PinnedIterations = 600_000;
     private const int PinnedSaltSize = 32;
     private const int PinnedHashSize = 64;
-    private const int PinnedLegacyHmacSaltSize = 128;
 
     private readonly PasswordHasher _sut = new();
 
@@ -103,10 +102,17 @@ public sealed class PasswordHasherSecurityTests
             "the stored digest must keep the full 512-bit output of the KDF, not a truncation of it");
 
     [Fact]
-    public void LegacyHmacSaltSize_IsPinnedTo128Bytes() =>
-        ReadPrivateConstant("LegacyHmacSaltSize").Should().Be(PinnedLegacyHmacSaltSize,
-            "this length is the discriminator that routes a credential to the weak legacy HMAC path: "
-            + "moving it to 32 would send every current PBKDF2 credential down the unsalted-HMAC branch");
+    public void VerifyPassword_RejectsALegacyHmacDigest()
+    {
+        const string password = "LegacyPassword";
+        using var hmac = new HMACSHA512();
+        var legacySalt = hmac.Key; // 128 bytes, the length the removed legacy branch keyed on
+        var legacyDigest = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
+
+        _sut.VerifyPassword(password, legacyDigest, legacySalt).Should().BeFalse(
+            "the HMAC-SHA512 verification branch is gone: a credential still stored in the legacy shape "
+            + "must fail verification rather than authenticate through an unsalted, single-round digest");
+    }
 
     private static byte[] DeterministicSalt()
     {

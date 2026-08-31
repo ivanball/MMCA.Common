@@ -5,3 +5,5 @@ MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRende
 MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ErrorSummaryMessages() -> System.Collections.Generic.IReadOnlyList<string!>!
 const MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryTitleClass = "mmca-error-summary-title" -> string!
 static MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryMessages<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut) -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Testing.UI.CapturedRequest.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+MMCA.Common.Testing.UI.CapturedRequest.Headers.init -> void
