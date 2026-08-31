@@ -1,4 +1,5 @@
 @page "/notifications/inbox"
+@page "/notifications/inbox/{Id:int}"
 @using Microsoft.AspNetCore.Authorization
 @using MMCA.Common.Shared.Notifications.UserNotifications
 @attribute [Authorize]
@@ -33,9 +34,10 @@ else
     <MudStack Spacing="2">
         @foreach (var notification in _notifications)
         {
-            <MudCard Elevation="@(notification.IsRead ? 0 : 1)"
-                     Class="@($"notification-card {(notification.IsRead ? "read" : "unread")}")"
-                     Style="@(notification.IsRead ? "" : "border-left: 4px solid var(--mud-palette-primary);")">
+            <MudCard id="@CardElementId(notification)"
+                     Elevation="@CardElevation(notification)"
+                     Class="@CardClass(notification)"
+                     Style="@CardStyle(notification)">
                 <MudCardContent Class="py-2">
                     <div class="d-flex align-center justify-space-between">
                         <div class="flex-grow-1">

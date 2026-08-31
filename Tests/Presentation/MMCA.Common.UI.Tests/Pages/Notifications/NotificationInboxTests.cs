@@ -9,6 +9,7 @@ using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Notifications;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
+using MudBlazor;
 
 namespace MMCA.Common.UI.Tests.Pages.Notifications;
 
@@ -23,6 +24,7 @@ public sealed class NotificationInboxTests : BunitTestBase
     private readonly Mock<INotificationInboxUIService> _inbox = new();
     private readonly NotificationState _state = new();
     private readonly Mock<IToastService> _toast = new();
+    private readonly Mock<IScrollManager> _scroll = new();
 
     public NotificationInboxTests()
     {
@@ -31,6 +33,9 @@ public sealed class NotificationInboxTests : BunitTestBase
         // Registered after the base class's default facade, so this wins and the page's toast
         // surface can be counted without rendering a snackbar provider.
         Services.AddSingleton<IToastService>(_toast.Object);
+        // Same reasoning for MudBlazor's scroll manager (registered by AddMudServices in the base):
+        // the deep-link scroll is a JS call, so the assertion has to be on the call, not on markup.
+        Services.AddSingleton(_scroll.Object);
     }
 
     private static Result<PagedCollectionResult<UserNotificationDTO>> Inbox(params UserNotificationDTO[] items)
@@ -54,6 +59,11 @@ public sealed class NotificationInboxTests : BunitTestBase
 
     private void VerifyOneToast(string message) =>
         _toast.Verify(t => t.Show(message, ToastSeverity.Error), Times.Once());
+
+    private void VerifyNeverScrolled() =>
+        _scroll.Verify(
+            s => s.ScrollIntoViewAsync(It.IsAny<string>(), It.IsAny<ScrollBehavior>()),
+            Times.Never());
 
     [Fact]
     public void WhenInboxEmpty_RendersEmptyState()
@@ -293,5 +303,103 @@ public sealed class NotificationInboxTests : BunitTestBase
         cut.WaitForAssertion(() => VerifyOneToast("Nothing could be marked read."));
         _state.UnreadCount.Should().Be(2, "the optimistic zeroing belongs to the success path only");
         cut.FindAll(".notification-card.unread").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void WhenDeepLinkedNotificationIsOnThePage_HighlightsItAndScrollsToIt()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        var cut = RenderUnderTest<NotificationInbox>(p => p.Add(c => c.Id, 2));
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".notification-card.deep-linked").Should().ContainSingle(
+                "exactly the deep-linked card carries the highlight"));
+        cut.Find(".notification-card.deep-linked").Id.Should().Be("notification-2");
+        cut.WaitForAssertion(() => _scroll.Verify(
+            s => s.ScrollIntoViewAsync("#notification-2", ScrollBehavior.Smooth),
+            Times.Once()));
+        _toast.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void WhenTheDeepLinkedNotificationIsNotOnThePage_RendersThePlainInboxSilently()
+    {
+        // A later page, a deleted notification, or another user's id: the route constraint already
+        // proved the value is an integer, so there is nothing the user can do about the miss and no
+        // toast is raised. The inbox simply renders as if the id had not been supplied.
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        var cut = RenderUnderTest<NotificationInbox>(p => p.Add(c => c.Id, 999));
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 1"));
+        cut.FindAll(".notification-card").Should().HaveCount(2);
+        cut.FindAll(".notification-card.deep-linked").Should().BeEmpty();
+        VerifyNeverScrolled();
+        _toast.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void WhenNoDeepLinkIdIsSupplied_NothingIsHighlightedAndNothingScrolls()
+    {
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        var cut = RenderUnderTest<NotificationInbox>(_ => { });
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notice 2"));
+        cut.FindAll(".notification-card.deep-linked").Should().BeEmpty(
+            "the parameterless route must render byte-identically to the pre-deep-link inbox");
+        VerifyNeverScrolled();
+    }
+
+    [Fact]
+    public void WhenTheDeepLinkIdChanges_HighlightsAndScrollsToTheNewTarget()
+    {
+        // Re-navigating between two deep links reuses this component instance, so the "already
+        // scrolled" latch has to clear on the parameter change or the second link would highlight
+        // without ever moving the viewport.
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        var cut = RenderUnderTest<NotificationInbox>(p => p.Add(c => c.Id, 1));
+        cut.WaitForAssertion(() => _scroll.Verify(
+            s => s.ScrollIntoViewAsync("#notification-1", ScrollBehavior.Smooth), Times.Once()));
+
+        cut.Render(p => p.Add(c => c.Id, 2));
+
+        cut.WaitForAssertion(() => _scroll.Verify(
+            s => s.ScrollIntoViewAsync("#notification-2", ScrollBehavior.Smooth), Times.Once()));
+        cut.Find(".notification-card.deep-linked").Id.Should().Be("notification-2");
+        cut.FindAll(".notification-card.deep-linked").Should().ContainSingle();
+    }
+
+    [Fact]
+    public void WhenAPushReloadsTheSamePage_TheDeepLinkScrollDoesNotRepeat()
+    {
+        // The highlight survives a reload, but scrolling the user's viewport again mid-read would be
+        // a real annoyance, so the scroll is once per deep link, not once per load.
+        _inbox
+            .Setup(x => x.GetInboxAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Inbox(Unread(1), Unread(2)));
+
+        var cut = RenderUnderTest<NotificationInbox>(p => p.Add(c => c.Id, 2));
+        cut.WaitForAssertion(() => _scroll.Verify(
+            s => s.ScrollIntoViewAsync("#notification-2", ScrollBehavior.Smooth), Times.Once()));
+
+        _state.RequestRefresh();
+
+        cut.WaitForAssertion(() => _inbox.Verify(
+            x => x.GetInboxAsync(1, It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Exactly(2)));
+        cut.FindAll(".notification-card.deep-linked").Should().ContainSingle();
+        _scroll.Verify(
+            s => s.ScrollIntoViewAsync(It.IsAny<string>(), It.IsAny<ScrollBehavior>()),
+            Times.Once());
     }
 }

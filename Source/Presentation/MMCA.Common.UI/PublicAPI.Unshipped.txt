@@ -347,3 +347,8 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadVirtualizedServerData
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedGridHeight.get -> string!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedItemSize.get -> int
+MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.get -> int?
+MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.set -> void
+override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnParametersSet() -> void
+static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!
