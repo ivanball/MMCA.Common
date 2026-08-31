@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.174.0] - 2026-08-30
 
 Five framework riders feeding the consumer wave: one credential-verification path, one startup-gate
 default, the MAUI token pipeline, a testing affordance and a send-page caption. Three of them are
