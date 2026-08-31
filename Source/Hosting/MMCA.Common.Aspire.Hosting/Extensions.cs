@@ -35,6 +35,29 @@ public static class Extensions
     public const int E2eRegistrationsPerIpPerHour = 1000;
 
     /// <summary>
+    /// Default Aspire resource name used for the Azure Service Bus emulator container.
+    /// </summary>
+    public const string DefaultServiceBusEmulatorResourceName = "servicebus";
+
+    /// <summary>
+    /// Registry the Azure Service Bus emulator image is pulled from.
+    /// </summary>
+    public const string ServiceBusEmulatorImageRegistry = "mcr.microsoft.com";
+
+    /// <summary>
+    /// Repository of the official Azure Service Bus emulator image.
+    /// </summary>
+    public const string ServiceBusEmulatorImage = "azure-messaging/servicebus-emulator";
+
+    /// <summary>
+    /// Emulator image tag. Pinned to a 2.x build on purpose: the HTTP management plane (port 5300)
+    /// that lets a client create its own topics, subscriptions and queues shipped in 2.0.0, and
+    /// MassTransit provisions its whole topology at bus start. A silent downgrade to a 1.x image
+    /// would leave the broker unusable rather than merely older.
+    /// </summary>
+    public const string ServiceBusEmulatorImageTag = "2.0.1";
+
+    /// <summary>
     /// Default Aspire resource name used for the MailDev container.
     /// </summary>
     public const string DefaultMailDevResourceName = "maildev";
@@ -91,6 +114,79 @@ public static class Extensions
             ArgumentNullException.ThrowIfNull(builder);
             return builder.AddRabbitMQ(name).WithManagementPlugin();
         }
+
+        /// <summary>
+        /// Provisions the official Azure Service Bus emulator as a local container, so a development
+        /// stack runs the SAME transport production runs. <see cref="AddMessageBroker"/> gives a
+        /// developer RabbitMQ, which is fast and dependency-free but is a different broker with
+        /// different topology semantics: anything that only breaks on Azure Service Bus (entity
+        /// naming limits, topic/subscription provisioning, scheduled redelivery) is invisible locally
+        /// until it reaches production. This closes that divergence for hosts that want it, and it is
+        /// opt-in rather than the default because the emulator costs two containers and a warm-up.
+        /// <para>
+        /// The emulator keeps its state in SQL Server, so it is wired to an EXISTING SQL Server
+        /// resource (<paramref name="sqlServer"/>) rather than starting one of its own: a stack that
+        /// already runs SQL Server for its databases should not run a second engine for the broker.
+        /// The emulator reaches it over the container network, so only the SQL host name is passed
+        /// (the emulator connects on the default port 1433, which is the container's target port).
+        /// </para>
+        /// <para>
+        /// Both planes are published: AMQP (container port
+        /// <see cref="ServiceBusEmulatorResource.AmqpTargetPort"/>) carries every publish and
+        /// consume, and the HTTP management plane (container port
+        /// <see cref="ServiceBusEmulatorResource.AdminTargetPort"/>) is what MassTransit provisions
+        /// topology through. Host ports are left to Aspire: nothing outside the stack dials these,
+        /// so fixing them would only invite a collision with a stray container.
+        /// </para>
+        /// <para>
+        /// Wire a service to it with the <c>WithBroker</c> overload that takes this resource; that is
+        /// what sets <c>MessageBus:Provider=AzureServiceBus</c> plus the two connection settings.
+        /// </para>
+        /// </summary>
+        /// <param name="sqlServer">The SQL Server resource the emulator stores its state in.</param>
+        /// <param name="name">
+        /// The resource name (defaults to <see cref="DefaultServiceBusEmulatorResourceName"/>). It is
+        /// also the container's network alias.
+        /// </param>
+        /// <returns>The emulator resource builder, for <c>WithBroker</c> / <c>WaitFor</c> wiring.</returns>
+        public IResourceBuilder<ServiceBusEmulatorResource> AddServiceBusEmulatorBroker(
+            IResourceBuilder<SqlServerServerResource> sqlServer,
+            string name = DefaultServiceBusEmulatorResourceName)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(sqlServer);
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+            var resource = new ServiceBusEmulatorResource(name);
+
+            return builder.AddResource(resource)
+                // WithImage first: WithImageRegistry updates the image annotation that WithImage
+                // creates, and throws when there is none yet.
+                .WithImage(ServiceBusEmulatorImage, ServiceBusEmulatorImageTag)
+                .WithImageRegistry(ServiceBusEmulatorImageRegistry)
+                .WithEndpoint(
+                    targetPort: ServiceBusEmulatorResource.AmqpTargetPort,
+                    name: ServiceBusEmulatorResource.AmqpEndpointName,
+                    scheme: "tcp")
+                .WithHttpEndpoint(
+                    targetPort: ServiceBusEmulatorResource.AdminTargetPort,
+                    name: ServiceBusEmulatorResource.AdminEndpointName)
+
+                // The emulator refuses to start without an explicit EULA acknowledgement. Accepting
+                // it here is the same posture the Testcontainers module takes: the image is only ever
+                // used for local development and test.
+                .WithEnvironment("ACCEPT_EULA", "Y")
+                .WithEnvironment(
+                    "SQL_SERVER",
+                    ReferenceExpression.Create($"{sqlServer.Resource.PrimaryEndpoint.Property(EndpointProperty.Host)}"))
+                .WithEnvironment(
+                    "MSSQL_SA_PASSWORD",
+                    ReferenceExpression.Create($"{sqlServer.Resource.PasswordParameter}"))
+
+                // The emulator's first act is to create its schema, so it cannot start before SQL
+                // Server is accepting connections.
+                .WaitFor(sqlServer);
+        }
     }
 
     extension<TResource>(IResourceBuilder<TResource> service)
@@ -114,6 +210,36 @@ public static class Extensions
                 .WithReference(broker)
                 .WaitFor(broker)
                 .WithEnvironment("MessageBus__Provider", "RabbitMq");
+        }
+
+        /// <summary>
+        /// Wires a service to the local Azure Service Bus emulator instead of RabbitMQ, so the
+        /// development stack runs the production transport. Sets
+        /// <c>MessageBus:Provider=AzureServiceBus</c>, the AMQP connection string, and the
+        /// management-plane address the infrastructure layer needs to build MassTransit v8's
+        /// administration client. Adds a wait-for so the service does not start before the emulator
+        /// container is up.
+        /// <para>
+        /// The connection string carries <c>UseDevelopmentEmulator=true</c>, which is the marker
+        /// <c>AddBrokerMessaging</c> keys its emulator branch off. Everything a real Azure Service Bus
+        /// deployment does is left untouched: a production connection string never carries that
+        /// suffix, so the emulator path cannot be entered by accident.
+        /// </para>
+        /// </summary>
+        /// <param name="broker">The emulator resource builder.</param>
+        /// <returns>The service resource builder for chaining.</returns>
+        public IResourceBuilder<TResource> WithBroker(
+            IResourceBuilder<ServiceBusEmulatorResource> broker)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(broker);
+
+            return service
+                .WithReference(broker)
+                .WaitFor(broker)
+                .WithEnvironment("MessageBus__Provider", "AzureServiceBus")
+                .WithEnvironment("MessageBus__ConnectionString", broker.Resource.ConnectionStringExpression)
+                .WithEnvironment("MessageBus__EmulatorAdminEndpoint", broker.Resource.AdminEndpointExpression);
         }
 
         /// <summary>

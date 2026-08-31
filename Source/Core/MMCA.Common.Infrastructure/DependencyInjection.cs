@@ -958,7 +958,19 @@ public static class DependencyInjection
                 {
                     if (!string.IsNullOrWhiteSpace(connectionString))
                     {
-                        cfg.Host(connectionString);
+                        // The emulator branch exists so a development stack can run the SAME
+                        // transport production runs. It is entered only when the connection string
+                        // carries UseDevelopmentEmulator=true, a token no real namespace emits, so
+                        // the production path below is reached byte-for-byte as before.
+                        if (Messaging.ServiceBusEmulatorSupport.IsEmulatorConnectionString(connectionString))
+                        {
+                            Messaging.ServiceBusEmulatorSupport.ConfigureEmulatorHost(
+                                cfg, connectionString, settings.EmulatorAdminEndpoint);
+                        }
+                        else
+                        {
+                            cfg.Host(connectionString);
+                        }
                     }
 
                     // Unconditional: Azure Service Bus schedules messages natively, so there is no

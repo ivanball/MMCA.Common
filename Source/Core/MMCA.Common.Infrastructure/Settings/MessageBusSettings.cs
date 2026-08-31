@@ -26,6 +26,29 @@ public sealed class MessageBusSettings
     public string? ConnectionString { get; init; }
 
     /// <summary>
+    /// Gets the base address of the Azure Service Bus emulator's HTTP management plane, for example
+    /// <c>http://localhost:5300</c>. Set ONLY by a development stack pointing at the local emulator;
+    /// leave it unset for a real Azure Service Bus namespace, which serves both planes on one
+    /// endpoint and needs nothing here.
+    /// <para>
+    /// It exists because MassTransit is pinned to v8, which has no vendor emulator mode (that
+    /// arrived in v9, excluded by the commercial-license policy). The only v8 path onto the emulator
+    /// is the custom-clients <c>Host</c> overload, which takes a data-plane client AND a
+    /// management-plane client; the emulator serves those on two different ports, so the management
+    /// client cannot be derived from <see cref="ConnectionString"/> alone. An Aspire AppHost gets
+    /// this value for free from the emulator <c>WithBroker</c> overload.
+    /// </para>
+    /// <para>
+    /// The setting is read only when <see cref="ConnectionString"/> carries
+    /// <c>UseDevelopmentEmulator=true</c>; when it does, a missing or malformed value fails at
+    /// registration rather than at the first publish, because a bus with no management client cannot
+    /// provision the topology it needs to run at all.
+    /// </para>
+    /// </summary>
+    [StringLength(2048)]
+    public string? EmulatorAdminEndpoint { get; init; }
+
+    /// <summary>
     /// Gets the endpoint name prefix used to namespace queues per service (e.g. <c>store-catalog</c>).
     /// When set, the broker registration installs a kebab-case endpoint name formatter carrying this
     /// prefix, so a consumer named <c>OrderPlacedConsumer</c> in a service prefixed

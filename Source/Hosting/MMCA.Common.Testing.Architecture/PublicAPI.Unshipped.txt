@@ -32,6 +32,7 @@ MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCodes_ShouldBe_Uniqu
 MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.ErrorCodes_ShouldCarry_TheOwningModulePrefix() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldHave_UniqueSourceTypes() -> void
 MMCA.Common.Testing.Architecture.EventConventionTestsBase.EventUpcasters_ShouldIncrease_SchemaVersion() -> void
+virtual MMCA.Common.Testing.Architecture.LayerDependencyTestsBase.ModuleRequiredLayerOverrides.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>!
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.ServiceContractPurityTestsBase() -> void
 MMCA.Common.Testing.Architecture.ServiceContractPurityTestsBase.ServiceContracts_ShouldNotDependOn_ServiceInternals() -> void
@@ -69,6 +70,7 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersHaveUniq
 static MMCA.Common.Testing.Architecture.ArchitectureRules.EventUpcastersIncreaseSchemaVersion(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HandledCommandCount(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> int
 static MMCA.Common.Testing.Architecture.ArchitectureRules.HardDeletesOnlyInAllowedTypes(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ModulesDeclareLayers(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IEnumerable<MMCA.Common.Testing.Architecture.Layer>! required, System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Architecture.Layer>!>? overrides) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractImplementationsAreNotPublic(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedPublicImplementations) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ServiceContractsDoNotDependOnServiceInternals(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.SortableGridColumnsUsePropertyColumn(System.Collections.Generic.IReadOnlyCollection<string!>! markupRoots) -> void

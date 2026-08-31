@@ -86,17 +86,55 @@ public static partial class ArchitectureRules
     /// </summary>
     /// <param name="map">The repo's architecture map.</param>
     /// <param name="required">The layers every declared module must register.</param>
-    public static void ModulesDeclareLayers(IArchitectureMap map, IEnumerable<Layer> required)
+    public static void ModulesDeclareLayers(IArchitectureMap map, IEnumerable<Layer> required) =>
+        ModulesDeclareLayers(map, required, overrides: null);
+
+    /// <summary>
+    /// Every module the map declares registers an assembly for each layer in
+    /// <paramref name="required"/>, EXCEPT a module named in <paramref name="overrides"/>, which is
+    /// checked against its own list instead.
+    /// <para>
+    /// The override exists for a deliberately thin module: one that legitimately has no Domain or
+    /// Infrastructure assembly because it owns no aggregate and no persistence (a SignalR hub module,
+    /// say, that is Shared plus Application plus Api and nothing else). Without a per-module escape
+    /// the only way to express that is to trim the DEFAULT list, which silently stops enforcing those
+    /// layers for every OTHER module in the repo: one thin module would buy blanket permission to
+    /// forget an assembly anywhere. Naming the exception keeps the default strict and puts the
+    /// weakening exactly where it is true.
+    /// </para>
+    /// </summary>
+    /// <param name="map">The repo's architecture map.</param>
+    /// <param name="required">The layers every module not named in <paramref name="overrides"/> must register.</param>
+    /// <param name="overrides">
+    /// Per-module replacements for <paramref name="required"/>, keyed by module name. A module listed
+    /// here is checked against its own list only; <see langword="null"/> or empty means every module
+    /// uses <paramref name="required"/>.
+    /// </param>
+    public static void ModulesDeclareLayers(
+        IArchitectureMap map,
+        IEnumerable<Layer> required,
+        IReadOnlyDictionary<string, IReadOnlyList<Layer>>? overrides)
     {
+        ArgumentNullException.ThrowIfNull(map);
+        ArgumentNullException.ThrowIfNull(required);
+
         var requiredList = required.ToList();
         var missing = map.ModuleNames
-            .SelectMany(module => requiredList
+            .SelectMany(module => LayersRequiredFor(module, requiredList, overrides)
                 .Where(layer => map.For(module, layer) is null)
                 .Select(layer => $"  - module '{module}' declares no Layer.{layer} assembly"));
 
         ArchitectureAssert.NoViolations(missing,
             "every declared module must register its expected layer assemblies so the per-module layer rules run non-vacuously");
     }
+
+    private static IReadOnlyList<Layer> LayersRequiredFor(
+        string module,
+        IReadOnlyList<Layer> required,
+        IReadOnlyDictionary<string, IReadOnlyList<Layer>>? overrides)
+        => overrides is not null && overrides.TryGetValue(module, out var moduleLayers)
+            ? moduleLayers
+            : required;
 
     private static void LayerNotDependOnLayer(IArchitectureMap map, Layer from, Layer to, string reason)
     {

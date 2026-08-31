@@ -1,62 +1,4 @@
 ﻿#nullable enable
-*REMOVED*MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
-*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
-*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInboxService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider) -> void
-*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller() -> bool
-*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller() -> void
-MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.get -> string!
-MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.init -> void
-MMCA.Common.UI.Components.MmcaThemeProviders.Theme.get -> MudBlazor.MudTheme!
-MMCA.Common.UI.Components.MmcaThemeProviders.Theme.set -> void
-MMCA.Common.UI.Services.AuthenticatedServiceBase.CreateClientWithToken(string! accessToken) -> System.Net.Http.HttpClient!
-MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInboxService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider, MMCA.Common.UI.Services.Auth.ITokenRefresher? tokenRefresher = null) -> void
-MMCA.Common.UI.Services.Notifications.NotificationState.OnPollerSlotFreed -> System.EventHandler?
-MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller(object! owner) -> bool
-MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller(object! owner) -> void
-MMCA.Common.UI.Pages.Auth.ForgotPassword
-MMCA.Common.UI.Pages.Auth.ForgotPassword.ForgotPassword() -> void
-MMCA.Common.UI.Pages.Auth.ForgotPasswordModel
-MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.get -> string!
-MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.set -> void
-MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.ForgotPasswordModel() -> void
-MMCA.Common.UI.Pages.Auth.ResetPassword
-MMCA.Common.UI.Pages.Auth.ResetPassword.Email.get -> string?
-MMCA.Common.UI.Pages.Auth.ResetPassword.Email.set -> void
-MMCA.Common.UI.Pages.Auth.ResetPassword.ResetPassword() -> void
-MMCA.Common.UI.Pages.Auth.ResetPassword.Token.get -> string?
-MMCA.Common.UI.Pages.Auth.ResetPassword.Token.set -> void
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ConfirmPassword.get -> string!
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ConfirmPassword.set -> void
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Email.get -> string!
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Email.set -> void
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.NewPassword.get -> string!
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.NewPassword.set -> void
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ResetPasswordModel() -> void
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.get -> string!
-MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.set -> void
-MMCA.Common.UI.Services.Auth.ConfigurationOAuthUISettings.AppleEnabled.get -> bool
-MMCA.Common.UI.Services.Auth.IOAuthUISettings.AppleEnabled.get -> bool
-MMCA.Common.UI.Pages.Notifications.NotificationSendModel
-MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.get -> string!
-MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.set -> void
-MMCA.Common.UI.Pages.Notifications.NotificationSendModel.NotificationSendModel() -> void
-MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.get -> string!
-MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.set -> void
-MMCA.Common.UI.Validation.DataAnnotationsModelValidator
-MMCA.Common.UI.Validation.DataAnnotationsModelValidator.DataAnnotationsModelValidator(Microsoft.Extensions.Localization.IStringLocalizer! localizer) -> void
-MMCA.Common.UI.Validation.DataAnnotationsModelValidator.Validate(object! model, string! propertyPath) -> System.Collections.Generic.IEnumerable<string!>!
-MMCA.Common.UI.Validation.DataAnnotationsModelValidator.ValidateValue(object! model, string! propertyPath, object? value) -> System.Collections.Generic.IEnumerable<string!>!
-MMCA.Common.UI.Validation.IModelValidator
-MMCA.Common.UI.Validation.IModelValidator.Validate(object! model, string! propertyPath) -> System.Collections.Generic.IEnumerable<string!>!
-MMCA.Common.UI.Validation.ModelValidation
-override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
-static MMCA.Common.UI.Validation.ModelValidation.For(object! model, MMCA.Common.UI.Validation.IModelValidator! validator) -> System.Func<object!, string!, System.Collections.Generic.IEnumerable<string!>!>!
-static MMCA.Common.UI.Validation.ModelValidation.ForProperty<TModel, TValue>(TModel! model, System.Linq.Expressions.Expression<System.Func<TModel!, TValue>!>! property, MMCA.Common.UI.Validation.DataAnnotationsModelValidator! validator) -> System.Func<TValue, System.Collections.Generic.IEnumerable<string!>!>!
-static MMCA.Common.UI.Validation.ModelValidation.GetPropertyPath<TModel, TValue>(System.Linq.Expressions.Expression<System.Func<TModel, TValue>!>! property) -> string!
-static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, string! propertyPath) -> bool
-~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 *REMOVED*MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.AddAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TEntityDTO>!
 *REMOVED*MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.DeleteAsync(TIdentifierType id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 *REMOVED*MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<TEntityDTO>?>!
@@ -66,11 +8,15 @@ static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, strin
 *REMOVED*MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 *REMOVED*MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadMobileDataAsync(System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null) -> System.Threading.Tasks.Task!
 *REMOVED*MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadServerDataAsync(MudBlazor.GridState<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, bool showCancelSnackbar = true) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
+*REMOVED*MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Snackbar.get -> MudBlazor.ISnackbar!
+*REMOVED*MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Snackbar.set -> void
+*REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.IPushRegistrationService! pushRegistration) -> void
 *REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 *REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
 *REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.LastError.get -> string?
 *REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
 *REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+*REMOVED*MMCA.Common.UI.Services.Auth.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService) -> void
 *REMOVED*MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 *REMOVED*MMCA.Common.UI.Services.Auth.IAuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
 *REMOVED*MMCA.Common.UI.Services.Auth.IAuthUIService.LastError.get -> string?
@@ -78,15 +24,22 @@ static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, strin
 *REMOVED*MMCA.Common.UI.Services.Auth.IAuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
 *REMOVED*MMCA.Common.UI.Services.ChildEntityServiceBase.DeleteByIdAsync(string! id, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 *REMOVED*MMCA.Common.UI.Services.ChildEntityServiceBase.PostAsync<TRequest>(TRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+*REMOVED*MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService) -> void
 *REMOVED*MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.SendRequestAsync<T>(System.Func<System.Net.Http.HttpClient!, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! httpAction, System.Threading.CancellationToken cancellationToken, bool treatNotFoundAsDefault = false, bool throwIfNull = false, bool expectContent = true, string? idempotencyKey = null) -> System.Threading.Tasks.Task<T?>!
 *REMOVED*MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetInboxAsync(int pageNumber = 1, int pageSize = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>?>!
+*REMOVED*MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 *REMOVED*MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.MarkAllReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 *REMOVED*MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.MarkReadAsync(int id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 *REMOVED*MMCA.Common.UI.Services.Notifications.IPushNotificationUIService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>?>!
 *REMOVED*MMCA.Common.UI.Services.Notifications.IPushNotificationUIService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO?>!
 *REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetInboxAsync(int pageNumber = 1, int pageSize = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>?>!
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 *REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.MarkAllReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 *REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.MarkReadAsync(int id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInboxService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider) -> void
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.NotificationState() -> void
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller() -> bool
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller() -> void
 *REMOVED*MMCA.Common.UI.Services.Notifications.PushNotificationService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>?>!
 *REMOVED*MMCA.Common.UI.Services.Notifications.PushNotificationService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO?>!
 *REMOVED*MMCA.Common.UI.Services.ServiceExceptionHelper
@@ -98,6 +51,8 @@ static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, strin
 *REMOVED*virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TEntityDTO?>!
 *REMOVED*virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetPagedAsync(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, int pageNumber, int pageSize, string? sortColumn, string? sortDirection, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TEntityDTO>! Items, int TotalItems)>!
 *REMOVED*virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Common.Interfaces.IAppDialogService
+MMCA.Common.UI.Common.Interfaces.IAppDialogService.ConfirmAsync(string! title, string! message, string! confirmText, string! cancelText) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.AddAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.DeleteAsync(TIdentifierType id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<TEntityDTO>!>!>!
@@ -105,101 +60,39 @@ MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.Get
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.GetPagedAsync(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, int pageNumber, int pageSize, string? sortColumn, string? sortDirection, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TEntityDTO>! Items, int TotalItems)>!>!
 MMCA.Common.UI.Common.Interfaces.IEntityService<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Common.Interfaces.IToastService
+MMCA.Common.UI.Common.Interfaces.IToastService.Error(string! message) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.Info(string! message) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.Show(string! message, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.ShowAction(string! message, string! actionText, System.Func<System.Threading.Tasks.Task!>! onAction, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info, bool requireInteraction = false) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.ShowPersistent(string! title, string! body, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.Success(string! message) -> void
+MMCA.Common.UI.Common.Interfaces.IToastService.Warning(string! message) -> void
+MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error = 4 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info = 1 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.Interfaces.ToastSeverity.Normal = 0 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.Interfaces.ToastSeverity.Success = 2 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.Interfaces.ToastSeverity.Warning = 3 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
+MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
+MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type!
 MMCA.Common.UI.Common.ResultUiExtensions
-MMCA.Common.UI.Components.ErrorSummary
-MMCA.Common.UI.Components.ErrorSummary.Class.get -> string!
-MMCA.Common.UI.Components.ErrorSummary.Class.set -> void
-MMCA.Common.UI.Components.ErrorSummary.Dense.get -> bool
-MMCA.Common.UI.Components.ErrorSummary.Dense.set -> void
-MMCA.Common.UI.Components.ErrorSummary.ErrorSummary() -> void
-MMCA.Common.UI.Components.ErrorSummary.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
-MMCA.Common.UI.Components.ErrorSummary.Localizer.set -> void
-MMCA.Common.UI.Components.ErrorSummary.Messages.get -> System.Collections.Generic.IEnumerable<string!>?
-MMCA.Common.UI.Components.ErrorSummary.Messages.set -> void
-MMCA.Common.UI.Components.ErrorSummary.Result.get -> MMCA.Common.Shared.Abstractions.Result?
-MMCA.Common.UI.Components.ErrorSummary.Result.set -> void
-MMCA.Common.UI.Components.ErrorSummary.Severity.get -> MudBlazor.Severity
-MMCA.Common.UI.Components.ErrorSummary.Severity.set -> void
-MMCA.Common.UI.Components.ErrorSummary.Title.get -> string?
-MMCA.Common.UI.Components.ErrorSummary.Title.set -> void
-MMCA.Common.UI.Components.ErrorSummary.Variant.get -> MudBlazor.Variant
-MMCA.Common.UI.Components.ErrorSummary.Variant.set -> void
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadMobileDataAsync(System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadServerDataAsync(MudBlazor.GridState<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, bool showCancelSnackbar = true) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!>!>!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.AuthUIService.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!>!>!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.ChildEntityServiceBase.DeleteByIdAsync(string! id, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.ChildEntityServiceBase.PostAsync(object! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.ChildEntityServiceBase.PostAsync<TResponse>(object! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TResponse>!>!
-MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.SendRequestAsync(System.Func<System.Net.Http.HttpClient!, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! httpAction, System.Threading.CancellationToken cancellationToken, string? idempotencyKey = null, string? ifMatch = null) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.SendRequestAsync<T>(System.Func<System.Net.Http.HttpClient!, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! httpAction, System.Threading.CancellationToken cancellationToken, string? idempotencyKey = null, string? ifMatch = null) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
-MMCA.Common.UI.Services.HttpResultExecutor
-MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetInboxAsync(int pageNumber = 1, int pageSize = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>!>!>!
-MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
-MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.MarkAllReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.MarkReadAsync(int id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Notifications.IPushNotificationUIService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!>!
-MMCA.Common.UI.Services.Notifications.IPushNotificationUIService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!
-MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetInboxAsync(int pageNumber = 1, int pageSize = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>!>!>!
-MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
-MMCA.Common.UI.Services.Notifications.NotificationInboxService.MarkAllReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Notifications.NotificationInboxService.MarkReadAsync(int id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.UI.Services.Notifications.PushNotificationService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!>!
-MMCA.Common.UI.Services.Notifications.PushNotificationService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!
-const MMCA.Common.UI.Services.Auth.AuthUIService.MissingAccessTokenCode = "Auth.MissingAccessToken" -> string!
-const MMCA.Common.UI.Services.Auth.AuthUIService.TokenStorageUnavailableCode = "Auth.TokenStorageUnavailable" -> string!
-const MMCA.Common.UI.Services.HttpResultExecutor.TimeoutErrorCode = "Http.Timeout" -> string!
-const MMCA.Common.UI.Services.HttpResultExecutor.TransportErrorCode = "Http.TransportFailure" -> string!
-override MMCA.Common.UI.Components.ErrorSummary.OnParametersSet() -> void
-static MMCA.Common.UI.Common.ResultUiExtensions.HasErrorType(this MMCA.Common.Shared.Abstractions.Result! result, MMCA.Common.Shared.Abstractions.ErrorType errorType) -> bool
-static MMCA.Common.UI.Common.ResultUiExtensions.IsNotFound(this MMCA.Common.Shared.Abstractions.Result! result) -> bool
-static MMCA.Common.UI.Common.ResultUiExtensions.IsUnauthorized(this MMCA.Common.Shared.Abstractions.Result! result) -> bool
-static MMCA.Common.UI.Common.ResultUiExtensions.LocalizeDistinct(System.Collections.Generic.IEnumerable<string!>? messages, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> System.Collections.Generic.IReadOnlyList<string!>!
-static MMCA.Common.UI.Common.ResultUiExtensions.LocalizedErrorMessage(this MMCA.Common.Shared.Abstractions.Result! result, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> string?
-static MMCA.Common.UI.Common.ResultUiExtensions.LocalizedErrorMessages(this MMCA.Common.Shared.Abstractions.Result! result, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> System.Collections.Generic.IReadOnlyList<string!>!
-static MMCA.Common.UI.Common.ResultUiExtensions.NotifyOnFailure(this MMCA.Common.Shared.Abstractions.Result! result, MMCA.Common.UI.Common.Interfaces.IToastService! toast, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error) -> MMCA.Common.Shared.Abstractions.Result!
-static MMCA.Common.UI.Common.ResultUiExtensions.NotifyOnFailure<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, MMCA.Common.UI.Common.Interfaces.IToastService! toast, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error) -> MMCA.Common.Shared.Abstractions.Result<T>!
-static MMCA.Common.UI.Common.ResultUiExtensions.OnFailureSetError(this MMCA.Common.Shared.Abstractions.Result! result, System.Action<string?>! setError, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> MMCA.Common.Shared.Abstractions.Result!
-static MMCA.Common.UI.Common.ResultUiExtensions.OnFailureSetError<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, System.Action<string?>! setError, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> MMCA.Common.Shared.Abstractions.Result<T>!
-static MMCA.Common.UI.Common.ResultUiExtensions.TryGetValue<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, out T? value) -> bool
-static MMCA.Common.UI.Common.ResultUiExtensions.TryGetValue<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, out T? value, out System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> bool
-static MMCA.Common.UI.Services.HttpResultExecutor.ExecuteAsync(System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! operation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-static MMCA.Common.UI.Services.HttpResultExecutor.ExecuteAsync<T>(System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!>! operation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.AddAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.DeleteAsync(TIdentifierType id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<TEntityDTO>!>!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetPagedAsync(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, int pageNumber, int pageSize, string? sortColumn, string? sortDirection, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TEntityDTO>! Items, int TotalItems)>!>!
-virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
-~override MMCA.Common.UI.Components.ErrorSummary.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-MMCA.Common.UI.Pages.Auth.Sessions
-MMCA.Common.UI.Pages.Auth.Sessions.Dispose() -> void
-MMCA.Common.UI.Pages.Auth.Sessions.IsBusy.get -> bool
-MMCA.Common.UI.Pages.Auth.Sessions.IsLoading.get -> bool
-MMCA.Common.UI.Pages.Auth.Sessions.Sessions() -> void
-override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threading.Tasks.Task!
-static readonly MMCA.Common.UI.Common.RoutePaths.Sessions -> string!
-virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
-~override MMCA.Common.UI.Pages.Auth.Sessions.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!>?
-MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.set -> void
-MMCA.Common.UI.Services.Capabilities.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddDeviceCapabilityDefaults() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddDeviceCapabilityDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.init -> void
+MMCA.Common.UI.Common.Settings.NotificationBellOptions
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.get -> System.TimeSpan
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.init -> void
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.NotificationBellOptions() -> void
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.PollInterval.get -> System.TimeSpan
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.PollInterval.init -> void
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.get -> System.TimeSpan
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.init -> void
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.get -> bool
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.init -> void
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.RoutePrefixTtls.get -> System.Collections.Generic.Dictionary<string!, System.TimeSpan>!
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.UiReadCacheOptions() -> void
 MMCA.Common.UI.Components.ApiFileDownloadButton
 MMCA.Common.UI.Components.ApiFileDownloadButton.ApiFileDownloadButton() -> void
 MMCA.Common.UI.Components.ApiFileDownloadButton.AriaLabel.get -> string?
@@ -222,6 +115,24 @@ MMCA.Common.UI.Components.ApiFileDownloadButton.Size.get -> MudBlazor.Size
 MMCA.Common.UI.Components.ApiFileDownloadButton.Size.set -> void
 MMCA.Common.UI.Components.ApiFileDownloadButton.UnavailableMessage.get -> string?
 MMCA.Common.UI.Components.ApiFileDownloadButton.UnavailableMessage.set -> void
+MMCA.Common.UI.Components.ErrorSummary
+MMCA.Common.UI.Components.ErrorSummary.Class.get -> string!
+MMCA.Common.UI.Components.ErrorSummary.Class.set -> void
+MMCA.Common.UI.Components.ErrorSummary.Dense.get -> bool
+MMCA.Common.UI.Components.ErrorSummary.Dense.set -> void
+MMCA.Common.UI.Components.ErrorSummary.ErrorSummary() -> void
+MMCA.Common.UI.Components.ErrorSummary.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Components.ErrorSummary.Localizer.set -> void
+MMCA.Common.UI.Components.ErrorSummary.Messages.get -> System.Collections.Generic.IEnumerable<string!>?
+MMCA.Common.UI.Components.ErrorSummary.Messages.set -> void
+MMCA.Common.UI.Components.ErrorSummary.Result.get -> MMCA.Common.Shared.Abstractions.Result?
+MMCA.Common.UI.Components.ErrorSummary.Result.set -> void
+MMCA.Common.UI.Components.ErrorSummary.Severity.get -> MudBlazor.Severity
+MMCA.Common.UI.Components.ErrorSummary.Severity.set -> void
+MMCA.Common.UI.Components.ErrorSummary.Title.get -> string?
+MMCA.Common.UI.Components.ErrorSummary.Title.set -> void
+MMCA.Common.UI.Components.ErrorSummary.Variant.get -> MudBlazor.Variant
+MMCA.Common.UI.Components.ErrorSummary.Variant.set -> void
 MMCA.Common.UI.Components.InfiniteScrollSentinel
 MMCA.Common.UI.Components.InfiniteScrollSentinel.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Components.InfiniteScrollSentinel.InfiniteScrollSentinel() -> void
@@ -242,6 +153,10 @@ MMCA.Common.UI.Components.ListNoRecordsContent.LoadFailed.get -> bool
 MMCA.Common.UI.Components.ListNoRecordsContent.LoadFailed.set -> void
 MMCA.Common.UI.Components.ListNoRecordsContent.OnRetry.get -> Microsoft.AspNetCore.Components.EventCallback
 MMCA.Common.UI.Components.ListNoRecordsContent.OnRetry.set -> void
+MMCA.Common.UI.Components.MmcaThemeProviders.Theme.get -> MudBlazor.MudTheme!
+MMCA.Common.UI.Components.MmcaThemeProviders.Theme.set -> void
+MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.get -> System.Func<int, int, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)>!>!>?
+MMCA.Common.UI.Components.MobileInfiniteScrollList<TItem>.FetchPageResult.set -> void
 MMCA.Common.UI.Components.QrCodeButton
 MMCA.Common.UI.Components.QrCodeButton.ErrorCorrection.get -> MMCA.Common.UI.Components.QrErrorCorrectionLevel
 MMCA.Common.UI.Components.QrCodeButton.ErrorCorrection.set -> void
@@ -258,97 +173,184 @@ MMCA.Common.UI.Components.SharePageButton.RelativePath.set -> void
 MMCA.Common.UI.Components.SharePageButton.SharePageButton() -> void
 MMCA.Common.UI.Components.SharePageButton.ShareTitle.get -> string!
 MMCA.Common.UI.Components.SharePageButton.ShareTitle.set -> void
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonUiFacades() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Pages.Auth.ForgotPassword
+MMCA.Common.UI.Pages.Auth.ForgotPassword.ForgotPassword() -> void
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.get -> string!
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.Email.set -> void
+MMCA.Common.UI.Pages.Auth.ForgotPasswordModel.ForgotPasswordModel() -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword
+MMCA.Common.UI.Pages.Auth.ResetPassword.Email.get -> string?
+MMCA.Common.UI.Pages.Auth.ResetPassword.Email.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword.ResetPassword() -> void
+MMCA.Common.UI.Pages.Auth.ResetPassword.Token.get -> string?
+MMCA.Common.UI.Pages.Auth.ResetPassword.Token.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ConfirmPassword.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ConfirmPassword.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Email.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Email.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.NewPassword.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.NewPassword.set -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.ResetPasswordModel() -> void
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.get -> string!
+MMCA.Common.UI.Pages.Auth.ResetPasswordModel.Token.set -> void
+MMCA.Common.UI.Pages.Auth.Sessions
+MMCA.Common.UI.Pages.Auth.Sessions.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.Sessions.IsBusy.get -> bool
+MMCA.Common.UI.Pages.Auth.Sessions.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Auth.Sessions.Sessions() -> void
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadMobileDataAsync(System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadServerDataAsync(MudBlazor.GridState<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, bool showCancelSnackbar = true) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadVirtualizedServerDataAsync(MudBlazor.GridStateVirtualize<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.get -> MMCA.Common.UI.Common.Interfaces.IToastService!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.set -> void
 MMCA.Common.UI.Pages.Common.ListPageActions
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.CanServe(int page) -> bool
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.OfflineFirstPageSnapshot(MMCA.Common.UI.Services.Capabilities.ILocalCacheStore! store, MMCA.Common.UI.Services.Capabilities.IConnectivityStatusService! connectivity, string! cacheKey) -> void
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.RememberAsync((System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems) fetched, int page, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.TryReadAsync(int page, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)?>!
-MMCA.Common.UI.Services.IPublicLinkBuilder
-MMCA.Common.UI.Services.IPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
-MMCA.Common.UI.Services.NavigationPublicLinkBuilder
-MMCA.Common.UI.Services.NavigationPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
-MMCA.Common.UI.Services.NavigationPublicLinkBuilder.NavigationPublicLinkBuilder(Microsoft.AspNetCore.Components.NavigationManager! navigationManager) -> void
-override MMCA.Common.UI.Components.InfiniteScrollSentinel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
-static MMCA.Common.UI.Pages.Common.ListPageActions.DeleteWithConfirmationAsync(MMCA.Common.UI.Components.DeleteConfirmation! deleteConfirm, string? entityName, System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! deleteAsync, MMCA.Common.UI.Common.Interfaces.IToastService! toast, string! successMessage, System.Func<MMCA.Common.Shared.Abstractions.Result!, string!>! errorMessage, System.Func<System.Threading.Tasks.Task!>! reloadAsync) -> System.Threading.Tasks.Task!
-static MMCA.Common.UI.Pages.Common.ListPageActions.ReloadActiveLayoutAsync<TDto>(bool isMobile, MMCA.Common.UI.Components.MobileInfiniteScrollList<TDto>? mobileList, MudBlazor.MudDataGrid<TDto>? dataGrid) -> System.Threading.Tasks.Task!
-~override MMCA.Common.UI.Components.ApiFileDownloadButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Components.InfiniteScrollSentinel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Components.ListNoRecordsContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Components.QrCodeButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-~override MMCA.Common.UI.Components.SharePageButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
-*REMOVED*MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Snackbar.get -> MudBlazor.ISnackbar!
-*REMOVED*MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Snackbar.set -> void
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.get -> MMCA.Common.UI.Common.Interfaces.IToastService!
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.set -> void
-MMCA.Common.UI.Common.Interfaces.IAppDialogService
-MMCA.Common.UI.Common.Interfaces.IAppDialogService.ConfirmAsync(string! title, string! message, string! confirmText, string! cancelText) -> System.Threading.Tasks.Task<bool>!
-MMCA.Common.UI.Common.Interfaces.IToastService
-MMCA.Common.UI.Common.Interfaces.IToastService.Error(string! message) -> void
-MMCA.Common.UI.Common.Interfaces.IToastService.Info(string! message) -> void
-MMCA.Common.UI.Common.Interfaces.IToastService.Show(string! message, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity) -> void
-MMCA.Common.UI.Common.Interfaces.IToastService.ShowAction(string! message, string! actionText, System.Func<System.Threading.Tasks.Task!>! onAction, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info, bool requireInteraction = false) -> void
-MMCA.Common.UI.Common.Interfaces.IToastService.ShowPersistent(string! title, string! body, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info) -> void
-MMCA.Common.UI.Common.Interfaces.IToastService.Success(string! message) -> void
-MMCA.Common.UI.Common.Interfaces.IToastService.Warning(string! message) -> void
-MMCA.Common.UI.Common.Interfaces.ToastSeverity
-MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error = 4 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
-MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info = 1 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
-MMCA.Common.UI.Common.Interfaces.ToastSeverity.Normal = 0 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
-MMCA.Common.UI.Common.Interfaces.ToastSeverity.Success = 2 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
-MMCA.Common.UI.Common.Interfaces.ToastSeverity.Warning = 3 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
-MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddCommonUiFacades() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.UI.DependencyInjection.AddCommonUiFacades(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.ConcurrencyTagOf(TEntityDTO entity) -> string?
-MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
-MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
-MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type!
-*REMOVED*MMCA.Common.UI.Services.Auth.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.get -> int?
+MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.set -> void
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.get -> string!
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.set -> void
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.NotificationSendModel() -> void
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.get -> string!
+MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.set -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.ConfigurationOAuthUISettings.AppleEnabled.get -> bool
 MMCA.Common.UI.Services.Auth.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ISecureTokenStore! tokenStore) -> void
+MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!>!>!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.AuthenticationResponse>!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.RequestPasswordResetAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.ResetPasswordAsync(string! email, string! token, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IOAuthUISettings.AppleEnabled.get -> bool
 MMCA.Common.UI.Services.Auth.ISecureTokenStore
 MMCA.Common.UI.Services.Auth.ISecureTokenStore.ClearTokensAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Auth.ISecureTokenStore.GetAccessTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.ISecureTokenStore.GetRefreshTokenAsync() -> System.Threading.Tasks.Task<string?>!
 MMCA.Common.UI.Services.Auth.ISecureTokenStore.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Notifications.INotificationScopeProvider.GetCurrentScopeDisplayNameAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
-override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitializedAsync() -> System.Threading.Tasks.Task!
-*REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.IPushRegistrationService! pushRegistration) -> void
-*REMOVED*MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService) -> void
-*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.NotificationState() -> void
-MMCA.Common.UI.Common.Settings.NotificationBellOptions
-MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.get -> System.TimeSpan
-MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.init -> void
-MMCA.Common.UI.Common.Settings.NotificationBellOptions.NotificationBellOptions() -> void
-MMCA.Common.UI.Common.Settings.NotificationBellOptions.PollInterval.get -> System.TimeSpan
-MMCA.Common.UI.Common.Settings.NotificationBellOptions.PollInterval.init -> void
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.get -> System.TimeSpan
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.init -> void
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.get -> bool
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.init -> void
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions.RoutePrefixTtls.get -> System.Collections.Generic.Dictionary<string!, System.TimeSpan>!
-MMCA.Common.UI.Common.Settings.UiReadCacheOptions.UiReadCacheOptions() -> void
-MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
+MMCA.Common.UI.Services.AuthenticatedServiceBase.CreateClientWithToken(string! accessToken) -> System.Net.Http.HttpClient!
 MMCA.Common.UI.Services.Caching.IUiReadCache
 MMCA.Common.UI.Services.Caching.IUiReadCache.Clear() -> void
 MMCA.Common.UI.Services.Caching.IUiReadCache.InvalidatePrefix(string! routePrefix) -> void
 MMCA.Common.UI.Services.Caching.IUiReadCache.Set<T>(string! url, T value) -> void
 MMCA.Common.UI.Services.Caching.IUiReadCache.TryGetFresh<T>(string! url, out T? value) -> bool
+MMCA.Common.UI.Services.Capabilities.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddDeviceCapabilityDefaults() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Services.ChildEntityServiceBase.DeleteByIdAsync(string! id, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.ChildEntityServiceBase.PostAsync(object! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.ChildEntityServiceBase.PostAsync<TResponse>(object! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TResponse>!>!
 MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
 MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetCachedAsync<T>(string! url, System.Threading.CancellationToken cancellationToken, bool bypassCache = false) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
 MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.ReadCache.get -> MMCA.Common.UI.Services.Caching.IUiReadCache?
+MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.SendRequestAsync(System.Func<System.Net.Http.HttpClient!, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! httpAction, System.Threading.CancellationToken cancellationToken, string? idempotencyKey = null, string? ifMatch = null) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.SendRequestAsync<T>(System.Func<System.Net.Http.HttpClient!, System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!>! httpAction, System.Threading.CancellationToken cancellationToken, string? idempotencyKey = null, string? ifMatch = null) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+MMCA.Common.UI.Services.HttpResultExecutor
+MMCA.Common.UI.Services.IPublicLinkBuilder
+MMCA.Common.UI.Services.IPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
+MMCA.Common.UI.Services.NavigationPublicLinkBuilder
+MMCA.Common.UI.Services.NavigationPublicLinkBuilder.BuildAbsolute(string! relativePath) -> System.Uri!
+MMCA.Common.UI.Services.NavigationPublicLinkBuilder.NavigationPublicLinkBuilder(Microsoft.AspNetCore.Components.NavigationManager! navigationManager) -> void
+MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetInboxAsync(int pageNumber = 1, int pageSize = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>!>!>!
+MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.MarkAllReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Notifications.INotificationInboxUIService.MarkReadAsync(int id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Notifications.INotificationScopeProvider.GetCurrentScopeDisplayNameAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Notifications.IPushNotificationUIService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!>!
+MMCA.Common.UI.Services.Notifications.IPushNotificationUIService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetInboxAsync(int pageNumber = 1, int pageSize = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.UserNotifications.UserNotificationDTO!>!>!>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.GetUnreadCountAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.MarkAllReadAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.MarkReadAsync(int id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Notifications.NotificationInboxService.NotificationInboxService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Notifications.INotificationScopeProvider! scopeProvider, MMCA.Common.UI.Services.Auth.ITokenRefresher? tokenRefresher = null) -> void
 MMCA.Common.UI.Services.Notifications.NotificationState.IsStale(System.TimeSpan maxAge) -> bool
 MMCA.Common.UI.Services.Notifications.NotificationState.LastFetchedUtc.get -> System.DateTimeOffset?
 MMCA.Common.UI.Services.Notifications.NotificationState.MarkStale() -> void
 MMCA.Common.UI.Services.Notifications.NotificationState.NotificationState(System.TimeProvider? timeProvider = null) -> void
+MMCA.Common.UI.Services.Notifications.NotificationState.OnPollerSlotFreed -> System.EventHandler?
+MMCA.Common.UI.Services.Notifications.NotificationState.TryRegisterPoller(object! owner) -> bool
+MMCA.Common.UI.Services.Notifications.NotificationState.UnregisterPoller(object! owner) -> void
+MMCA.Common.UI.Services.Notifications.PushNotificationService.GetHistoryAsync(int pageNumber = 1, int pageSize = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!>!
+MMCA.Common.UI.Services.Notifications.PushNotificationService.SendAsync(MMCA.Common.Shared.Notifications.PushNotifications.SendPushNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO!>!>!
+MMCA.Common.UI.Validation.AbsoluteUrlAttribute
+MMCA.Common.UI.Validation.AbsoluteUrlAttribute.AbsoluteUrlAttribute() -> void
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator.DataAnnotationsModelValidator(Microsoft.Extensions.Localization.IStringLocalizer! localizer) -> void
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator.Validate(object! model, string! propertyPath) -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.UI.Validation.DataAnnotationsModelValidator.ValidateValue(object! model, string! propertyPath, object? value) -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.UI.Validation.IModelValidator
+MMCA.Common.UI.Validation.IModelValidator.Validate(object! model, string! propertyPath) -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.UI.Validation.ModelValidation
+const MMCA.Common.UI.Services.Auth.AuthUIService.MissingAccessTokenCode = "Auth.MissingAccessToken" -> string!
+const MMCA.Common.UI.Services.Auth.AuthUIService.TokenStorageUnavailableCode = "Auth.TokenStorageUnavailable" -> string!
+const MMCA.Common.UI.Services.HttpResultExecutor.TimeoutErrorCode = "Http.Timeout" -> string!
+const MMCA.Common.UI.Services.HttpResultExecutor.TransportErrorCode = "Http.TransportFailure" -> string!
+override MMCA.Common.UI.Components.ErrorSummary.OnParametersSet() -> void
+override MMCA.Common.UI.Components.InfiniteScrollSentinel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
+override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnParametersSet() -> void
+override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitializedAsync() -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!
+static MMCA.Common.UI.Common.ResultUiExtensions.HasErrorType(this MMCA.Common.Shared.Abstractions.Result! result, MMCA.Common.Shared.Abstractions.ErrorType errorType) -> bool
+static MMCA.Common.UI.Common.ResultUiExtensions.IsNotFound(this MMCA.Common.Shared.Abstractions.Result! result) -> bool
+static MMCA.Common.UI.Common.ResultUiExtensions.IsUnauthorized(this MMCA.Common.Shared.Abstractions.Result! result) -> bool
+static MMCA.Common.UI.Common.ResultUiExtensions.LocalizeDistinct(System.Collections.Generic.IEnumerable<string!>? messages, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.UI.Common.ResultUiExtensions.LocalizedErrorMessage(this MMCA.Common.Shared.Abstractions.Result! result, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> string?
+static MMCA.Common.UI.Common.ResultUiExtensions.LocalizedErrorMessages(this MMCA.Common.Shared.Abstractions.Result! result, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> System.Collections.Generic.IReadOnlyList<string!>!
+static MMCA.Common.UI.Common.ResultUiExtensions.NotifyOnFailure(this MMCA.Common.Shared.Abstractions.Result! result, MMCA.Common.UI.Common.Interfaces.IToastService! toast, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.UI.Common.ResultUiExtensions.NotifyOnFailure<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, MMCA.Common.UI.Common.Interfaces.IToastService! toast, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null, MMCA.Common.UI.Common.Interfaces.ToastSeverity severity = MMCA.Common.UI.Common.Interfaces.ToastSeverity.Error) -> MMCA.Common.Shared.Abstractions.Result<T>!
+static MMCA.Common.UI.Common.ResultUiExtensions.OnFailureSetError(this MMCA.Common.Shared.Abstractions.Result! result, System.Action<string?>! setError, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.UI.Common.ResultUiExtensions.OnFailureSetError<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, System.Action<string?>! setError, Microsoft.Extensions.Localization.IStringLocalizer? localizer = null) -> MMCA.Common.Shared.Abstractions.Result<T>!
+static MMCA.Common.UI.Common.ResultUiExtensions.TryGetValue<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, out T? value) -> bool
+static MMCA.Common.UI.Common.ResultUiExtensions.TryGetValue<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result, out T? value, out System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> bool
+static MMCA.Common.UI.DependencyInjection.AddCommonUiFacades(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Pages.Common.ListPageActions.DeleteWithConfirmationAsync(MMCA.Common.UI.Components.DeleteConfirmation! deleteConfirm, string? entityName, System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! deleteAsync, MMCA.Common.UI.Common.Interfaces.IToastService! toast, string! successMessage, System.Func<MMCA.Common.Shared.Abstractions.Result!, string!>! errorMessage, System.Func<System.Threading.Tasks.Task!>! reloadAsync) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Pages.Common.ListPageActions.ReloadActiveLayoutAsync<TDto>(bool isMobile, MMCA.Common.UI.Components.MobileInfiniteScrollList<TDto>? mobileList, MudBlazor.MudDataGrid<TDto>? dataGrid) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddDeviceCapabilityDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.ConcurrencyTagOf(TEntityDTO entity) -> string?
+static MMCA.Common.UI.Services.HttpResultExecutor.ExecuteAsync(System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>! operation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+static MMCA.Common.UI.Services.HttpResultExecutor.ExecuteAsync<T>(System.Func<System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!>! operation, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+static MMCA.Common.UI.Validation.ModelValidation.For(object! model, MMCA.Common.UI.Validation.IModelValidator! validator) -> System.Func<object!, string!, System.Collections.Generic.IEnumerable<string!>!>!
+static MMCA.Common.UI.Validation.ModelValidation.ForProperty<TModel, TValue>(TModel! model, System.Linq.Expressions.Expression<System.Func<TModel!, TValue>!>! property, MMCA.Common.UI.Validation.DataAnnotationsModelValidator! validator) -> System.Func<TValue, System.Collections.Generic.IEnumerable<string!>!>!
+static MMCA.Common.UI.Validation.ModelValidation.GetPropertyPath<TModel, TValue>(System.Linq.Expressions.Expression<System.Func<TModel, TValue>!>! property) -> string!
+static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, string! propertyPath) -> bool
+static readonly MMCA.Common.UI.Common.RoutePaths.Sessions -> string!
 static readonly MMCA.Common.UI.Common.Settings.NotificationBellOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
-MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadVirtualizedServerDataAsync(MudBlazor.GridStateVirtualize<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
+virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedGridHeight.get -> string!
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedItemSize.get -> int
-MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.get -> int?
-MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.set -> void
-override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
-override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnParametersSet() -> void
-static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.AddAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.DeleteAsync(TIdentifierType id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetAllAsync(bool includeFKs = false, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<TEntityDTO>!>!>!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetAllForLookupAsync(string! nameProperty, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.DTOs.BaseLookup<TIdentifierType>!>!>!>!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetByIdAsync(TIdentifierType id, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetPagedAsync(System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>! filters, int pageNumber, int pageSize, string? sortColumn, string? sortDirection, bool includeChildren = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TEntityDTO>! Items, int TotalItems)>!>!
+virtual MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+~override MMCA.Common.UI.Components.ApiFileDownloadButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.ErrorSummary.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.InfiniteScrollSentinel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.ListNoRecordsContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.QrCodeButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.SharePageButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Auth.Sessions.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
