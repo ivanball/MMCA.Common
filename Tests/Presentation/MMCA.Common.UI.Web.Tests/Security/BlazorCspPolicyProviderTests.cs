@@ -14,9 +14,10 @@ namespace MMCA.Common.UI.Web.Tests.Security;
 /// Pins the exact Content-Security-Policy assembled by <c>BlazorCspPolicyProvider</c> (resolved as
 /// <see cref="ICspPolicyProvider"/> through <c>AddCommonBlazorCsp()</c>; the class itself is internal):
 /// the enforced production policy with connect-src pinned to the configured API/Gateway origin
-/// (https + matching ws scheme, port preserved, WasmApiEndpoint preferred), the permissive
-/// Report-Only degradation on missing/unparseable endpoints, the Development-only localhost and
-/// inline-script allowances, and the no-unsafe-eval / no-inline-script-in-production regressions.
+/// (https + matching ws scheme, port preserved, WasmApiEndpoint preferred), the fail-closed
+/// <c>connect-src 'self'</c> degradation on missing/unparseable endpoints (still enforced), the
+/// Development-only localhost and inline-script allowances, and the no-unsafe-eval /
+/// no-inline-script-in-production regressions.
 /// </summary>
 public sealed class BlazorCspPolicyProviderTests
 {
@@ -32,14 +33,15 @@ public sealed class BlazorCspPolicyProviderTests
         "form-action 'self'; " +
         "frame-ancestors 'none'";
 
-    /// <summary>The permissive Report-Only fallback policy, pinned verbatim.</summary>
+    /// <summary>The fail-closed fallback policy, pinned verbatim: identical to the production policy
+    /// except that connect-src narrows to 'self'.</summary>
     private const string ExpectedFallbackPolicy =
         "default-src 'self'; " +
         "script-src 'self' 'wasm-unsafe-eval'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: https:; " +
         "font-src 'self'; " +
-        "connect-src 'self' https: wss:; " +
+        "connect-src 'self'; " +
         "base-uri 'self'; " +
         "form-action 'self'; " +
         "frame-ancestors 'none'";
@@ -103,7 +105,7 @@ public sealed class BlazorCspPolicyProviderTests
             "connect-src 'self' https://gateway.example.com:8443 wss://gateway.example.com:8443");
     }
 
-    // == Report-Only degradation ==
+    // == Fail-closed degradation ==
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -112,13 +114,17 @@ public sealed class BlazorCspPolicyProviderTests
     [InlineData("/relative/path")]
     [InlineData("file:///etc/hosts")]
     [InlineData("ftp://gateway.example.com")]
-    public void GetPolicy_WithMissingOrUnparseableEndpoint_DegradesToPermissiveReportOnly(string? endpoint)
+    public void GetPolicy_WithMissingOrUnparseableEndpoint_FailsClosedOnSelfOnlyConnectSrc(string? endpoint)
     {
         var policy = GetPolicy(endpoint);
 
         policy.Should().NotBeNull();
-        policy!.Enforce.Should().BeFalse("a CSP we cannot construct correctly must never be enforced");
-        policy.Value.Should().Be(ExpectedFallbackPolicy);
+        policy!.Enforce.Should().BeTrue("a security response header that stops being enforced protects nothing");
+
+        var directives = policy.Value.Split("; ", StringSplitOptions.None);
+        directives.Single(d => d.StartsWith("connect-src", StringComparison.Ordinal))
+            .Should().Be("connect-src 'self'");
+        policy.Value.Should().Be(ExpectedFallbackPolicy, "only connect-src narrows; the rest of the policy is unchanged");
     }
 
     // == Development-only allowances ==

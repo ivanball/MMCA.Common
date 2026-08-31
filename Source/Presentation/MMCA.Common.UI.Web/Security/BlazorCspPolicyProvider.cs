@@ -13,8 +13,11 @@ namespace MMCA.Common.UI.Web.Security;
 /// configured API/Gateway origin (https + wss) from <see cref="ApiSettings"/>
 /// (<c>WasmApiEndpoint</c> ?? <c>ApiEndpoint</c>): <c>'self'</c> covers the Blazor Server interactive
 /// circuit's same-origin WebSocket; the Gateway origin covers cross-origin API calls and the SignalR
-/// notification hub. If the endpoint cannot be resolved/parsed, the CSP degrades to a permissive
-/// <c>Report-Only</c> policy so a misconfiguration can never hard-break the app in production.
+/// notification hub. If the endpoint cannot be resolved/parsed, the policy <b>fails closed</b>: the rest
+/// of the policy is unchanged but <c>connect-src</c> narrows to <c>'self'</c> and the policy is still
+/// enforced. A misconfigured endpoint therefore surfaces immediately as blocked API calls in the browser
+/// console, instead of as a permissive Report-Only header that protects nothing and that nobody notices;
+/// a security response header that quietly stops being enforced is the worse failure mode.
 /// Hoisted from the app Blazor Web hosts (byte-identical there); register via
 /// <c>AddCommonBlazorCsp()</c> BEFORE <c>AddCommonSecurityHeaders</c>.
 /// </summary>
@@ -33,8 +36,8 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
     /// <inheritdoc />
     public CspPolicy? GetPolicy(HttpContext context) => _policy;
 
-    // Builds the CSP. When the API/Gateway origin can be pinned, the policy is enforced; otherwise it
-    // degrades to a permissive Report-Only policy (never enforce a CSP we can't construct correctly).
+    // Builds the CSP. When the API/Gateway origin can be pinned, connect-src carries it; otherwise the
+    // policy fails closed on the strictest connect-src we can be sure of ('self') and stays enforced.
     private static CspPolicy BuildCsp(ApiSettings api, bool isDevelopment)
     {
         var endpoint = api.WasmApiEndpoint ?? api.ApiEndpoint;
@@ -46,7 +49,9 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
             !string.Equals(apiUri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(apiUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
         {
-            return new CspPolicy(BuildPolicy("connect-src 'self' https: wss:", isDevelopment), Enforce: false);
+            // Fail closed: an endpoint we cannot parse is a misconfiguration, and the honest signal is
+            // blocked cross-origin calls in the console rather than a policy that is emitted but inert.
+            return new CspPolicy(BuildPolicy("connect-src 'self'", isDevelopment), Enforce: true);
         }
 
         // scheme://host:port for the API/Gateway, plus its WebSocket origin (SignalR notification hub).
