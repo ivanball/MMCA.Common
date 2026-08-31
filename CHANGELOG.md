@@ -4,6 +4,68 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+Five framework riders feeding the consumer wave: one credential-verification path, one startup-gate
+default, the MAUI token pipeline, a testing affordance and a send-page caption. Three of them are
+breaking; each is listed below with the exact call site a consumer has to touch.
+
+### Removed (breaking)
+
+- **The legacy HMAC-SHA512 verification branch** (`MMCA.Common.Infrastructure`).
+  `PasswordHasher.VerifyPassword` derives every candidate digest with PBKDF2-HMAC-SHA512: the
+  128-byte-salt discriminator, the `ComputeLegacyHash` path and the `LegacyHmacSaltSize` constant are
+  gone. A credential still stored in the pre-PBKDF2 shape now fails verification instead of
+  authenticating through an unsalted single-round digest, so it needs a password reset. Both
+  production databases were verified clean (every stored salt is 32 bytes) before the branch was
+  removed; a consumer on an older data set should run the same check before taking this version.
+  `PasswordHasherSecurityTests` pins the removal with a test asserting a legacy-shaped digest is
+  rejected.
+
+### Changed (breaking)
+
+- **`WithH2cHealthCheck` defaults to `/alive`** (`MMCA.Common.Aspire.Hosting`). `DefaultProbePath`
+  moves from `/health/ready` to `/alive`, because a startup `WaitFor` gate must probe liveness: a
+  readiness endpoint aggregates downstream and warmup checks, so gating startup on it can deadlock the
+  dependency graph when the warmup path runs back through the resource that is waiting. An AppHost
+  that passes `/alive` explicitly can drop the argument; one that relied on the old default changes
+  behavior silently, so check every `WithH2cHealthCheck` call site during the bump. Pass an explicit
+  path where a stricter gate is genuinely wanted and no cycle exists.
+- **`DirectApiTokenRefresher` takes `ISecureTokenStore`** (`MMCA.Common.UI`). Its second constructor
+  parameter changes from `ITokenStorageService` to the new raw-storage interface. Hosts that wire the
+  MAUI token pipeline through `AddCommonMauiTokenStorage()` need no change (it registers both halves);
+  a host that constructs the refresher by hand, or registers its own storage, supplies an
+  `ISecureTokenStore` instead.
+
+### Added
+
+- **`ISecureTokenStore`** (`MMCA.Common.UI`): raw token persistence with no freshness semantics,
+  splitting storage from the freshness-checking layer above it. `MauiSecureTokenStore`
+  (`MMCA.Common.UI.Maui`) implements it over OS SecureStorage with the same per-call guards the old
+  storage type carried, and `AddCommonMauiTokenStorage()` registers it alongside the storage service.
+- **`CapturedRequest.Headers`** (`MMCA.Common.Testing.UI`): every request header plus the content
+  headers when the request had a body, keyed case-insensitively with multi-values comma-joined, so a
+  test can assert `If-Match` or `Content-Type` directly. Additive and non-positional: the record's
+  constructor and `Deconstruct` are unchanged, and `Authorization` still works as before.
+- **`INotificationScopeProvider.GetCurrentScopeDisplayNameAsync`** (`MMCA.Common.UI`): a default
+  interface method returning null, so existing implementations compile untouched. An application that
+  scopes its notifications overrides it to name the current scope, and the send page captions the
+  auto-applied target ("Targeting: {name}") instead of leaving the operator to infer who a broadcast
+  reaches. Same never-throw contract as `GetCurrentScopeKeyAsync`; failing closed here means returning
+  null, since a missing caption only hides information while a wrong one would state the wrong
+  audience.
+
+### Fixed
+
+- **MAUI reads its access token through an expiry check.** `MauiTokenStorageService` now mirrors
+  `WasmTokenStorageService`: a 30-second skew, `JwtTokenInfo.IsFresh`, and a single-flight refresh
+  through `ITokenRefresher`, delegating raw reads and writes to `ISecureTokenStore`. It previously
+  returned whatever the secure enclave held, so a token that expired while the app was backgrounded
+  was handed to the delegating handler, the auth-state provider and SignalR alike, and the resulting
+  401 read to the user as a random sign-out. The split also breaks the DI cycle that a freshness check
+  would otherwise have introduced: storage depends on the refresher, and the refresher depends on the
+  raw store rather than back on storage.
+
 ## [1.173.1] - 2026-08-30
 
 ### Fixed

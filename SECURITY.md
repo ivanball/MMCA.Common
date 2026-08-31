@@ -29,9 +29,10 @@ fix before public disclosure.
 - **Password hashing:** PBKDF2-SHA512 with a high iteration count and constant-time comparison. Both
   are build-failing invariants, not conventions: `PasswordHasherSecurityTests` recomputes the digest
   independently (known-answer tests, plus a negative one proving the work factor participates in
-  verification) and pins the iteration count, salt size, digest size and legacy-salt discriminator by
-  reflection, while `PasswordHashingFitnessTests` asserts structurally that the hasher still depends on
-  a slow key derivation function and on the fixed-time comparison.
+  verification) and pins the iteration count, salt size and digest size by reflection, while
+  `PasswordHashingFitnessTests` asserts structurally that the hasher still depends on a slow key
+  derivation function and on the fixed-time comparison. PBKDF2 is the only verification path: there is
+  no legacy HMAC fallback.
 - **Field encryption:** AES-256-GCM via `EncryptedStringConverter` for sensitive columns.
 - **Authorization:** server-side; `Result` → HTTP status mapping never leaks internal detail.
 - **CORS:** the permissive `AllowAnyOrigin` policy is **development-only**; production uses an

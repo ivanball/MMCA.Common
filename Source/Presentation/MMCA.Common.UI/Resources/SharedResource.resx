@@ -448,6 +448,9 @@
   <data name="Nav.ToggleMenu.Aria" xml:space="preserve">
     <value>Toggle navigation menu</value>
   </data>
+  <data name="Notif.Send.Targeting" xml:space="preserve">
+    <value>Targeting: {0}</value>
+  </data>
   <data name="Notif.Send.SentTo" xml:space="preserve">
     <value>Notification sent to {0} recipients.</value>
   </data>

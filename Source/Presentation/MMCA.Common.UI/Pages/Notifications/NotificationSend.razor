@@ -17,6 +17,14 @@
             <MudText Typo="Typo.body2" Color="Color.Tertiary">
                 @L["Notif.Send.Description"]
             </MudText>
+            @* Only rendered when the app supplies a scope display name: a scoped send is targeted
+               automatically, and the operator should see that target rather than infer it. *@
+            @if (_scopeCaption is not null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Primary" Class="mmca-send-scope">
+                    @_scopeCaption
+                </MudText>
+            }
         </CardHeaderContent>
     </MudCardHeader>
     <MudCardContent>

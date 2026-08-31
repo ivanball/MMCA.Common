@@ -41,12 +41,16 @@ namespace MMCA.Common.Aspire.Hosting;
 public static class H2cHealthCheckExtensions
 {
     /// <summary>
-    /// Default path probed. <c>/health/ready</c> rather than <c>/alive</c> on purpose: the point of
-    /// gating a <c>WaitFor</c> edge is to hold the dependent resource until the service can actually
-    /// serve, which includes its database and its own dependency checks. A gateway probing its
-    /// downstreams makes the opposite choice for the opposite reason.
+    /// Default path probed. <c>/alive</c> rather than <c>/health/ready</c> on purpose: a startup
+    /// <c>WaitFor</c> gate must probe LIVENESS, never readiness. A readiness endpoint aggregates
+    /// downstream and warmup checks, so gating startup on it can deadlock the dependency graph: the
+    /// gateway waits for a service to report ready, that service's readiness includes a check that
+    /// warms up through the gateway, and neither side can complete first. Liveness answers as soon as
+    /// the process can serve a request, which is exactly what a dependent resource needs to know
+    /// before it starts. Pass an explicit path when a specific resource genuinely needs a stricter
+    /// gate and no cycle exists.
     /// </summary>
-    public const string DefaultProbePath = "/health/ready";
+    public const string DefaultProbePath = "/alive";
 
     /// <summary>
     /// Default Aspire endpoint name probed. The cleartext <c>http</c> endpoint is the h2c one; an
@@ -76,11 +80,18 @@ public static class H2cHealthCheckExtensions
         /// <summary>
         /// Registers an HTTP/2 (h2c prior knowledge) health check against one of the resource's
         /// endpoints and associates it with the resource, so <c>WaitFor</c> edges into this resource
-        /// wait for a real ready answer.
+        /// wait for a real answer over the protocol the endpoint actually speaks.
         /// <para>
         /// Use this instead of Aspire's <c>WithHttpHealthCheck</c> whenever the target endpoint is
         /// Http2-only. For an endpoint that serves <c>Http1AndHttp2</c> the stock extension is fine
         /// and this one is unnecessary.
+        /// </para>
+        /// <para>
+        /// <b>Probe liveness, not readiness.</b> The default path is <c>/alive</c> for that reason: a
+        /// readiness endpoint rolls up downstream and warmup checks, and a startup gate pointed at one
+        /// can deadlock the dependency graph when the warmup path runs back through the resource that
+        /// is doing the waiting. Only override <paramref name="path"/> when the stricter gate is
+        /// genuinely required and no such cycle exists.
         /// </para>
         /// <para>
         /// Calling it twice for the same resource and endpoint is a no-op: the second call returns

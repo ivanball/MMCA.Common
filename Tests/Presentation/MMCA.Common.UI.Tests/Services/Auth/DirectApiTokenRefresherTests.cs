@@ -19,7 +19,7 @@ public sealed class DirectApiTokenRefresherTests
     private sealed record Mocks(
         StubHttpMessageHandler Handler,
         StubHttpClientFactory Factory,
-        Mock<ITokenStorageService> TokenStorage);
+        Mock<ISecureTokenStore> TokenStore);
 
     private static (DirectApiTokenRefresher Sut, Mocks Mocks) CreateSut(
         Func<HttpRequestMessage, HttpResponseMessage> responder,
@@ -28,10 +28,10 @@ public sealed class DirectApiTokenRefresherTests
     {
         var handler = new StubHttpMessageHandler(responder);
         var factory = new StubHttpClientFactory(handler);
-        var tokenStorage = new Mock<ITokenStorageService>();
-        tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync(accessToken);
-        tokenStorage.Setup(s => s.GetRefreshTokenAsync()).ReturnsAsync(refreshToken);
-        return (new DirectApiTokenRefresher(factory, tokenStorage.Object), new Mocks(handler, factory, tokenStorage));
+        var tokenStore = new Mock<ISecureTokenStore>();
+        tokenStore.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync(accessToken);
+        tokenStore.Setup(s => s.GetRefreshTokenAsync()).ReturnsAsync(refreshToken);
+        return (new DirectApiTokenRefresher(factory, tokenStore.Object), new Mocks(handler, factory, tokenStore));
     }
 
     private static HttpResponseMessage TokenResponse(string accessToken, string refreshToken) =>
@@ -54,7 +54,7 @@ public sealed class DirectApiTokenRefresherTests
         mocks.Handler.LastRequest.Method.Should().Be(HttpMethod.Post);
         mocks.Handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/refresh");
         mocks.Handler.LastRequest.Body.Should().Contain("old-access").And.Contain("old-refresh");
-        mocks.TokenStorage.Verify(s => s.SetTokensAsync("new-access", "new-refresh"), Times.Once);
+        mocks.TokenStore.Verify(s => s.SetTokensAsync("new-access", "new-refresh"), Times.Once);
     }
 
     // == Missing credentials: no HTTP round-trip at all ==
@@ -73,7 +73,7 @@ public sealed class DirectApiTokenRefresherTests
 
         result.Should().BeNull();
         mocks.Handler.CallCount.Should().Be(0);
-        mocks.TokenStorage.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     // == Failure paths ==
@@ -85,7 +85,7 @@ public sealed class DirectApiTokenRefresherTests
         var result = await sut.AcquireAccessTokenAsync(TestContext.Current.CancellationToken);
 
         result.Should().BeNull();
-        mocks.TokenStorage.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class DirectApiTokenRefresherTests
         var result = await sut.AcquireAccessTokenAsync(TestContext.Current.CancellationToken);
 
         result.Should().BeNull();
-        mocks.TokenStorage.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        mocks.TokenStore.Verify(s => s.SetTokensAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Fact]

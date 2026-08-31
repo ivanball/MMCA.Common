@@ -6,8 +6,8 @@ namespace MMCA.Common.Infrastructure.Services;
 
 /// <summary>
 /// Hashes and verifies passwords using PBKDF2-HMAC-SHA512 with 600,000 iterations
-/// (OWASP-recommended). Backward-compatible with legacy HMAC-SHA512 hashes: detects
-/// the algorithm from the salt length (32 bytes = PBKDF2, 128 bytes = legacy HMAC-SHA512).
+/// (OWASP-recommended). PBKDF2 is the only supported algorithm: every stored hash is
+/// derived and verified through it.
 /// </summary>
 public sealed class PasswordHasher : IPasswordHasher
 {
@@ -22,9 +22,6 @@ public sealed class PasswordHasher : IPasswordHasher
     /// High iteration count makes brute-force attacks computationally expensive.
     /// </summary>
     private const int Iterations = 600_000;
-
-    /// <summary>Legacy HMAC-SHA512 salt size (the HMAC key length).</summary>
-    private const int LegacyHmacSaltSize = 128;
 
     /// <inheritdoc />
     public (byte[] Hash, byte[] Salt) HashPassword(string password)
@@ -49,9 +46,7 @@ public sealed class PasswordHasher : IPasswordHasher
         ArgumentNullException.ThrowIfNull(hash);
         ArgumentNullException.ThrowIfNull(salt);
 
-        var computedHash = salt.Length == LegacyHmacSaltSize
-            ? ComputeLegacyHash(password, salt)
-            : ComputePbkdf2Hash(password, salt, hash.Length);
+        var computedHash = ComputePbkdf2Hash(password, salt, hash.Length);
 
         // FixedTimeEquals prevents timing side-channel attacks by always comparing
         // the full length regardless of where the first difference occurs.
@@ -66,11 +61,4 @@ public sealed class PasswordHasher : IPasswordHasher
             Iterations,
             HashAlgorithmName.SHA512,
             outputLength);
-
-    /// <summary>Computes a legacy HMAC-SHA512 hash for backward compatibility with existing passwords.</summary>
-    private static byte[] ComputeLegacyHash(string password, byte[] salt)
-    {
-        using var hmac = new HMACSHA512(salt);
-        return hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-    }
 }

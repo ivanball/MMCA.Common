@@ -15,11 +15,25 @@ namespace MMCA.Common.UI.Tests.Pages.Notifications;
 /// <summary>
 /// bUnit tests for the <see cref="NotificationSend"/> compose page: form validation gating,
 /// successful submit wiring (service call + toast + navigation), the failed-send surface (one
-/// toast, no navigation, the wording repeated inline by the shared <c>ErrorSummary</c>), and
-/// cancel navigation.
+/// toast, no navigation, the wording repeated inline by the shared <c>ErrorSummary</c>), the
+/// auto-target caption, and cancel navigation.
 /// </summary>
 public sealed class NotificationSendTests : BunitTestBase
 {
+    /// <summary>
+    /// Scope provider that supplies a display name, standing in for a scoped application. It relies
+    /// on the interface's default implementation of nothing: the display-name member is overridden
+    /// here while the key member is implemented explicitly, which is the shape a real app has.
+    /// </summary>
+    private sealed class NamedScopeProvider(string? displayName) : INotificationScopeProvider
+    {
+        public Task<string?> GetCurrentScopeKeyAsync(CancellationToken ct = default) =>
+            Task.FromResult<string?>("event:2");
+
+        public Task<string?> GetCurrentScopeDisplayNameAsync(CancellationToken ct = default) =>
+            Task.FromResult(displayName);
+    }
+
     private readonly Mock<IPushNotificationUIService> _service = new();
     private readonly Mock<IToastService> _toast = new();
 
@@ -29,6 +43,9 @@ public sealed class NotificationSendTests : BunitTestBase
         // Registered after the base class's default facade, so this wins and the page's toast
         // surface can be counted without rendering a snackbar provider.
         Services.AddSingleton<IToastService>(_toast.Object);
+        // The framework default. A test that needs a captioned scope registers its own provider
+        // after this one, and the later registration is the one resolved.
+        Services.AddSingleton<INotificationScopeProvider>(new NullNotificationScopeProvider());
     }
 
     private static Result<PushNotificationDTO> Accepted(int recipientCount)
@@ -101,6 +118,42 @@ public sealed class NotificationSendTests : BunitTestBase
         _service.Verify(
             x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()),
             Times.Never());
+    }
+
+    // ── Auto-target caption ──
+    [Fact]
+    public void WithAScopedProvider_CaptionsTheAutoAppliedTarget()
+    {
+        // The send is scoped automatically by the notification service; without this caption the
+        // operator composes a broadcast with no statement of who receives it.
+        Services.AddSingleton<INotificationScopeProvider>(new NamedScopeProvider("ADC 2026"));
+
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Targeting: ADC 2026"));
+    }
+
+    [Fact]
+    public void WithAnUnscopedProvider_RendersNoCaption()
+    {
+        // The null provider is the framework default, and an unscoped app must not gain a caption
+        // with nothing in it.
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.Markup.Should().NotContain("Targeting:");
+        cut.FindAll(".mmca-send-scope").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void WithAScopedProviderThatHasNoDisplayName_RendersNoCaption()
+    {
+        // A provider that scopes but cannot name the scope fails closed to no caption rather than
+        // printing a bare label.
+        Services.AddSingleton<INotificationScopeProvider>(new NamedScopeProvider(displayName: null));
+
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.FindAll(".mmca-send-scope").Should().BeEmpty();
     }
 
     [Fact]

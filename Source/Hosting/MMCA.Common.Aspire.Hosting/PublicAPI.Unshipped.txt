@@ -2,11 +2,11 @@
 MMCA.Common.Aspire.Hosting.Extensions.extension(Aspire.Hosting.IDistributedApplicationBuilder!).AddMailDev(string! name = "maildev") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ContainerResource!>!
 MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions
 MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.extension(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!)
-MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.extension(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!).WithH2cHealthCheck(string! path = "/health/ready", string! endpointName = "http") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!
+MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.extension(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!).WithH2cHealthCheck(string! path = "/alive", string! endpointName = "http") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!
 const MMCA.Common.Aspire.Hosting.Extensions.DefaultMailDevResourceName = "maildev" -> string!
 const MMCA.Common.Aspire.Hosting.Extensions.MailDevHttpPort = 1080 -> int
 const MMCA.Common.Aspire.Hosting.Extensions.MailDevSmtpPort = 1025 -> int
 const MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.DefaultEndpointName = "http" -> string!
-const MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.DefaultProbePath = "/health/ready" -> string!
+const MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.DefaultProbePath = "/alive" -> string!
 static MMCA.Common.Aspire.Hosting.Extensions.AddMailDev(this Aspire.Hosting.IDistributedApplicationBuilder! builder, string! name = "maildev") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ContainerResource!>!
-static MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.WithH2cHealthCheck(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>! builder, string! path = "/health/ready", string! endpointName = "http") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!
+static MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.WithH2cHealthCheck(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>! builder, string! path = "/alive", string! endpointName = "http") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!

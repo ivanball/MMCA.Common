@@ -17,10 +17,12 @@ namespace MMCA.Common.Aspire.Hosting.Tests;
 public sealed class H2cHealthCheckExtensionsTests
 {
     [Fact]
-    public void Defaults_ProbeReadinessOnTheCleartextEndpoint()
+    public void Defaults_ProbeLivenessOnTheCleartextEndpoint()
     {
-        H2cHealthCheckExtensions.DefaultProbePath.Should().Be("/health/ready",
-            because: "gating a WaitFor edge is about the service being able to serve, not merely being alive");
+        H2cHealthCheckExtensions.DefaultProbePath.Should().Be("/alive",
+            because: "a startup WaitFor gate must probe liveness: a readiness endpoint aggregates downstream "
+                + "and warmup checks, so gating startup on it can deadlock the dependency graph when the "
+                + "warmup path runs back through the resource that is waiting");
         H2cHealthCheckExtensions.DefaultEndpointName.Should().Be("http",
             because: "the cleartext endpoint is the h2c one; https negotiates its version through ALPN");
     }
