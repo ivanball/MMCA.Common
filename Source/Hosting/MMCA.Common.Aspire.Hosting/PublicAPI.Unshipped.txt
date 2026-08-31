@@ -1,12 +1,30 @@
 #nullable enable
 MMCA.Common.Aspire.Hosting.Extensions.extension(Aspire.Hosting.IDistributedApplicationBuilder!).AddMailDev(string! name = "maildev") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ContainerResource!>!
+MMCA.Common.Aspire.Hosting.Extensions.extension(Aspire.Hosting.IDistributedApplicationBuilder!).AddServiceBusEmulatorBroker(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SqlServerServerResource!>! sqlServer, string! name = "servicebus") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource!>!
+MMCA.Common.Aspire.Hosting.Extensions.extension<TResource>(Aspire.Hosting.ApplicationModel.IResourceBuilder<TResource>!).WithBroker(Aspire.Hosting.ApplicationModel.IResourceBuilder<MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource!>! broker) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<TResource>!
 MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions
 MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.extension(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!)
 MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.extension(Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!).WithH2cHealthCheck(string! path = "/alive", string! endpointName = "http") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!
+MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource
+MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AdminEndpoint.get -> Aspire.Hosting.ApplicationModel.EndpointReference!
+MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AdminEndpointExpression.get -> Aspire.Hosting.ApplicationModel.ReferenceExpression!
+MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AmqpEndpoint.get -> Aspire.Hosting.ApplicationModel.EndpointReference!
+MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.ConnectionStringExpression.get -> Aspire.Hosting.ApplicationModel.ReferenceExpression!
+MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.ServiceBusEmulatorResource(string! name) -> void
 const MMCA.Common.Aspire.Hosting.Extensions.DefaultMailDevResourceName = "maildev" -> string!
+const MMCA.Common.Aspire.Hosting.Extensions.DefaultServiceBusEmulatorResourceName = "servicebus" -> string!
 const MMCA.Common.Aspire.Hosting.Extensions.MailDevHttpPort = 1080 -> int
 const MMCA.Common.Aspire.Hosting.Extensions.MailDevSmtpPort = 1025 -> int
+const MMCA.Common.Aspire.Hosting.Extensions.ServiceBusEmulatorImage = "azure-messaging/servicebus-emulator" -> string!
+const MMCA.Common.Aspire.Hosting.Extensions.ServiceBusEmulatorImageRegistry = "mcr.microsoft.com" -> string!
+const MMCA.Common.Aspire.Hosting.Extensions.ServiceBusEmulatorImageTag = "2.0.1" -> string!
 const MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.DefaultEndpointName = "http" -> string!
 const MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.DefaultProbePath = "/alive" -> string!
+const MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AdminEndpointName = "admin" -> string!
+const MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AdminTargetPort = 5300 -> int
+const MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AmqpEndpointName = "amqp" -> string!
+const MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource.AmqpTargetPort = 5672 -> int
 static MMCA.Common.Aspire.Hosting.Extensions.AddMailDev(this Aspire.Hosting.IDistributedApplicationBuilder! builder, string! name = "maildev") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ContainerResource!>!
+static MMCA.Common.Aspire.Hosting.Extensions.AddServiceBusEmulatorBroker(this Aspire.Hosting.IDistributedApplicationBuilder! builder, Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.SqlServerServerResource!>! sqlServer, string! name = "servicebus") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource!>!
+static MMCA.Common.Aspire.Hosting.Extensions.WithBroker<TResource>(this Aspire.Hosting.ApplicationModel.IResourceBuilder<TResource>! service, Aspire.Hosting.ApplicationModel.IResourceBuilder<MMCA.Common.Aspire.Hosting.ServiceBusEmulatorResource!>! broker) -> Aspire.Hosting.ApplicationModel.IResourceBuilder<TResource>!
 static MMCA.Common.Aspire.Hosting.H2cHealthCheckExtensions.WithH2cHealthCheck(this Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>! builder, string! path = "/alive", string! endpointName = "http") -> Aspire.Hosting.ApplicationModel.IResourceBuilder<Aspire.Hosting.ApplicationModel.ProjectResource!>!

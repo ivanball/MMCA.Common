@@ -52,6 +52,8 @@ MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.get -> Sys
 MMCA.Common.Infrastructure.Settings.CacheSettings.PopulateLockTimeout.init -> void
 MMCA.Common.Infrastructure.Settings.DataSourceEntrySettings.SqliteMigrationsAssembly.get -> string!
 MMCA.Common.Infrastructure.Settings.DataSourceEntrySettings.SqliteMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Settings.MessageBusSettings.EmulatorAdminEndpoint.get -> string?
+MMCA.Common.Infrastructure.Settings.MessageBusSettings.EmulatorAdminEndpoint.init -> void
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableInbox.get -> bool?
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableOutbox.get -> bool?
 MMCA.Common.Infrastructure.Settings.MessageBusSettings.EnableOutbox.init -> void
