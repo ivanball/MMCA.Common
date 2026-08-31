@@ -4,7 +4,7 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.175.0] - 2026-08-31
 
 A six-front implementation-lift wave (scorecard categories 8, 19, 23, 25, 26, 34): migrations proven
 in CI, cascade soft-delete enforced, a complete default CSP with a nonce path, an explicit client-side
