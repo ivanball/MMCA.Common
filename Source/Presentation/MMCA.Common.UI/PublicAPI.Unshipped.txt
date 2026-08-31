@@ -343,3 +343,7 @@ MMCA.Common.UI.Services.Notifications.NotificationState.MarkStale() -> void
 MMCA.Common.UI.Services.Notifications.NotificationState.NotificationState(System.TimeProvider? timeProvider = null) -> void
 static readonly MMCA.Common.UI.Common.Settings.NotificationBellOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadVirtualizedServerDataAsync(MudBlazor.GridStateVirtualize<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedGridHeight.get -> string!
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedItemSize.get -> int

@@ -18,6 +18,7 @@ internal sealed class GalleryUIModule : IUIModule
         new("Login", "/login", Icons.Material.Filled.Login, typeof(SharedResource)),
         new("Register", "/register", Icons.Material.Filled.PersonAdd, typeof(SharedResource)),
         new("Components", "/components", Icons.Material.Filled.Widgets, typeof(SharedResource)),
+        new("Grid", "/grid", Icons.Material.Filled.TableRows, typeof(SharedResource)),
     ];
 
     public Assembly Assembly => typeof(GalleryUIModule).Assembly;

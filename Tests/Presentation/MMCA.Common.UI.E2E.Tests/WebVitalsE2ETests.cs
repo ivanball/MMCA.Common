@@ -1,4 +1,3 @@
-using System.Globalization;
 using MMCA.Common.Testing.E2E.Infrastructure;
 using MMCA.Common.UI.E2E.Tests.Infrastructure;
 using Xunit;
@@ -19,29 +18,53 @@ public sealed class WebVitalsE2ETests : GalleryAxeTestBase
     private const double TtfbBudgetMs = 4000;
     private const double ClsBudget = 0.25;
 
+    /// <summary>
+    /// The measurement flow lives in the shipped <c>MeasureWebVitalsAsync</c> extension (install the
+    /// observers BEFORE the navigation, load, collect, write the artifact, assert), so this suite no
+    /// longer hand-rolls it. FCP is pinned to the LCP ceiling rather than left on the package default:
+    /// FCP always precedes LCP, so this keeps the effective gate exactly the three metrics the suite has
+    /// always gated on and its CI history comparable. INP stays on the default and is skipped anyway,
+    /// since neither case drives an interaction.
+    /// </summary>
+    private static readonly WebVitalsBudget Budget =
+        new(Lcp: LcpBudgetMs, Fcp: LcpBudgetMs, Ttfb: TtfbBudgetMs, Cls: ClsBudget);
+
     public WebVitalsE2ETests(PlaywrightFixture playwright, GalleryHostFixture gallery)
         : base(playwright, gallery)
     {
     }
 
     [Fact]
-    public async Task LoginPage_CoreWebVitals_WithinBudget() =>
-        await MeasureAsync("gallery-login", "/login");
+    public async Task LoginPage_CoreWebVitals_WithinBudget()
+    {
+        var sample = await Page.MeasureWebVitalsAsync("gallery-login", "/login", Budget);
+
+        AssertSomethingWasMeasured(sample);
+    }
 
     [Fact]
-    public async Task ComponentsPage_CoreWebVitals_WithinBudget() =>
-        await MeasureAsync("gallery-components", "/components");
-
-    private async Task MeasureAsync(string label, string path)
+    public async Task ComponentsPage_CoreWebVitals_WithinBudget()
     {
-        await WebVitalsCollector.InstallAsync(Page);
-        await Page.GotoAndWaitForBlazorAsync(path);
+        var sample = await Page.MeasureWebVitalsAsync("gallery-components", "/components", Budget);
 
-        var sample = await WebVitalsCollector.CollectAsync(Page);
-        await WebVitalsCollector.WriteArtifactAsync(label, path, sample);
-
-        Assert.True(sample.Lcp <= LcpBudgetMs, string.Create(CultureInfo.InvariantCulture, $"LCP {sample.Lcp:F0}ms exceeded budget {LcpBudgetMs}ms on {path}"));
-        Assert.True(sample.Ttfb <= TtfbBudgetMs, string.Create(CultureInfo.InvariantCulture, $"TTFB {sample.Ttfb:F0}ms exceeded budget {TtfbBudgetMs}ms on {path}"));
-        Assert.True(sample.Cls <= ClsBudget, string.Create(CultureInfo.InvariantCulture, $"CLS {sample.Cls:F3} exceeded budget {ClsBudget} on {path}"));
+        AssertSomethingWasMeasured(sample);
     }
+
+    [Fact]
+    public async Task GridPage_CoreWebVitals_WithinBudget()
+    {
+        var sample = await Page.MeasureWebVitalsAsync("gallery-grid", "/grid", Budget);
+
+        AssertSomethingWasMeasured(sample);
+    }
+
+    /// <summary>
+    /// Guards against a vacuous pass. An all-zero sample (collector never installed, navigation never
+    /// happened) is inside every ceiling, so the budget alone cannot tell "fast" from "not measured".
+    /// LCP and CLS are Chromium-only, so the cross-engine floor is TTFB or FCP.
+    /// </summary>
+    private static void AssertSomethingWasMeasured(WebVitalsSample sample) =>
+        Assert.True(
+            sample.Ttfb > 0 || sample.Fcp > 0,
+            "No TTFB or FCP was recorded, so the budget assertion measured nothing.");
 }
