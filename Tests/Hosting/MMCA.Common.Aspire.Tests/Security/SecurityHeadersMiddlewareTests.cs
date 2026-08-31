@@ -91,13 +91,97 @@ public sealed class SecurityHeadersMiddlewareTests
         headers.ContentSecurityPolicyReportOnly.ToString().Should().BeEmpty();
     }
 
-    // The framework default (used when a host registers no custom ICspPolicyProvider) must be a
-    // conservative hardened baseline — safe for API/Gateway JSON responses, and deliberately omitting
-    // script-src/style-src so an HTML host that forgot a provider isn't broken (§26, R18).
+    // The framework default (used when a host registers no custom ICspPolicyProvider) is a COMPLETE
+    // hardened baseline: script-src and style-src ship at exactly the strength Blazor ('wasm-unsafe-eval')
+    // and MudBlazor ('unsafe-inline' styles) require, so an HTML host that never registers a provider
+    // still gets a functional policy rather than one silently missing both directives (§26, R18).
     [Fact]
     public void DefaultSettings_ContentSecurityPolicy_IsHardenedBaseline() =>
         new SecurityHeadersSettings().ContentSecurityPolicy.Should().Be(
-            "default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+            "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+
+    // == Per-request {nonce} placeholder ==
+    private static async Task<(IHeaderDictionary Headers, HttpContext Context)> RunWithContextAsync(CspPolicy? policy)
+    {
+        var context = new DefaultHttpContext();
+        var middleware = new SecurityHeadersMiddleware(
+            _ => Task.CompletedTask,
+            Options.Create(new SecurityHeadersSettings()),
+            new StubCspProvider(policy),
+            new StubWebHostEnvironment(Environments.Production));
+
+        await middleware.InvokeAsync(context);
+        return (context.Response.Headers, context);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_PolicyWithNoncePlaceholder_SubstitutesQuotedNonceIntoTheHeader()
+    {
+        var (headers, context) = await RunWithContextAsync(
+            new CspPolicy("script-src 'self' {nonce}; style-src 'self' {nonce}", Enforce: true));
+
+        var nonce = CspNonce.Get(context);
+        nonce.Should().NotBeNullOrWhiteSpace();
+        Convert.TryFromBase64String(nonce!, new byte[nonce!.Length], out var written)
+            .Should().BeTrue("the nonce is valid Base64");
+        written.Should().Be(16, "the nonce carries 128 bits of entropy");
+
+        var value = headers.ContentSecurityPolicy.ToString();
+        value.Should().NotContain("{nonce}", "every occurrence of the placeholder is replaced");
+        value.Should().Be(
+            $"script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'",
+            "one nonce is generated per request, not per occurrence, and it is emitted in quoted source-list form");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_PolicyWithNoncePlaceholder_StoresTheSameValueCspNonceGetReturns()
+    {
+        var (headers, context) = await RunWithContextAsync(new CspPolicy("script-src 'self' {nonce}", Enforce: true));
+
+        var stored = CspNonce.Get(context);
+        stored.Should().NotBeNullOrWhiteSpace();
+        context.Items[CspNonce.ItemKey].Should().Be(stored);
+        headers.ContentSecurityPolicy.ToString().Should().Be($"script-src 'self' 'nonce-{stored}'");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_PolicyWithNoncePlaceholder_GeneratesADifferentNoncePerRequest()
+    {
+        var policy = new CspPolicy("script-src 'self' {nonce}", Enforce: true);
+
+        var (_, first) = await RunWithContextAsync(policy);
+        var (_, second) = await RunWithContextAsync(policy);
+
+        CspNonce.Get(second).Should().NotBe(CspNonce.Get(first));
+    }
+
+    [Fact]
+    public async Task InvokeAsync_PolicyWithNoncePlaceholder_WorksInReportOnlyMode()
+    {
+        var (headers, context) = await RunWithContextAsync(new CspPolicy("script-src 'self' {nonce}", Enforce: false));
+
+        var stored = CspNonce.Get(context);
+        stored.Should().NotBeNullOrWhiteSpace();
+        headers.ContentSecurityPolicyReportOnly.ToString().Should().Be($"script-src 'self' 'nonce-{stored}'");
+        headers.ContentSecurityPolicy.ToString().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_PolicyWithoutNoncePlaceholder_EmitsTheconfiguredStringAndStoresNoNonce()
+    {
+        const string configured = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'";
+
+        var (headers, context) = await RunWithContextAsync(new CspPolicy(configured, Enforce: true));
+
+        headers.ContentSecurityPolicy.ToString().Should().Be(configured);
+        context.Items.ContainsKey(CspNonce.ItemKey).Should().BeFalse();
+        CspNonce.Get(context).Should().BeNull();
+    }
+
+    [Fact]
+    public void CspNonce_Get_WithNoMiddlewareRun_ReturnsNull() =>
+        CspNonce.Get(new DefaultHttpContext()).Should().BeNull();
 
     private sealed class StubCspProvider(CspPolicy? policy) : ICspPolicyProvider
     {

@@ -1,16 +1,22 @@
 using AwesomeAssertions;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.UI.Services.Notifications;
 
 namespace MMCA.Common.UI.Tests.Services.Notifications;
 
 /// <summary>
 /// Verifies <see cref="NotificationState"/>: unread-count mutation and change notification,
-/// the refresh-request signal, and the poller registration protocol that keeps a single
+/// the refresh-request signal, the freshness stamp subscribers use to decide whether the count is
+/// worth re-reading (§19), and the poller registration protocol that keeps a single
 /// NotificationBell instance polling when the bell renders in multiple DOM locations.
 /// </summary>
 public sealed class NotificationStateTests
 {
-    private readonly NotificationState _sut = new();
+    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+
+    private readonly NotificationState _sut;
+
+    public NotificationStateTests() => _sut = new NotificationState(_clock);
 
     // == Unread count ==
     [Fact]
@@ -56,6 +62,80 @@ public sealed class NotificationStateTests
 
         _sut.UnreadCount.Should().Be(3);
         raised.Should().Be(1);
+    }
+
+    // == Freshness stamp (§19) ==
+    [Fact]
+    public void LastFetchedUtc_StartsNull() =>
+        _sut.LastFetchedUtc.Should().BeNull("no count has been established yet");
+
+    [Fact]
+    public void SetUnreadCount_WithANewValue_StampsLastFetched()
+    {
+        _sut.SetUnreadCount(5);
+
+        _sut.LastFetchedUtc.Should().Be(_clock.GetUtcNow());
+    }
+
+    [Fact]
+    public void SetUnreadCount_WithTheSameValue_StillStampsLastFetched()
+    {
+        // The stamp answers "how old is this number", not "when did it change". On a quiet inbox
+        // almost every read re-confirms the same count, and treating that as no read at all is what
+        // would leave a subscriber permanently stale and re-fetching on every trigger.
+        _sut.SetUnreadCount(5);
+        _clock.Advance(TimeSpan.FromMinutes(5));
+
+        _sut.SetUnreadCount(5);
+
+        _sut.LastFetchedUtc.Should().Be(_clock.GetUtcNow());
+    }
+
+    [Fact]
+    public void IsStale_BeforeAnyFetch_IsTrue() =>
+        _sut.IsStale(TimeSpan.FromSeconds(30)).Should().BeTrue();
+
+    [Fact]
+    public void IsStale_WithinTheWindow_IsFalse()
+    {
+        _sut.SetUnreadCount(3);
+
+        _clock.Advance(TimeSpan.FromSeconds(29));
+
+        _sut.IsStale(TimeSpan.FromSeconds(30)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsStale_PastTheWindow_IsTrue()
+    {
+        _sut.SetUnreadCount(3);
+
+        _clock.Advance(TimeSpan.FromSeconds(31));
+
+        _sut.IsStale(TimeSpan.FromSeconds(30)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void MarkStale_DiscardsTheStampWhateverTheClockSays()
+    {
+        // A real-time push says the data moved, so the age of the number is no longer evidence of
+        // anything: the next read must happen even though the stamp is seconds old.
+        _sut.SetUnreadCount(3);
+
+        _sut.MarkStale();
+
+        _sut.LastFetchedUtc.Should().BeNull();
+        _sut.IsStale(TimeSpan.FromHours(1)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IncrementUnreadCount_DoesNotStampLastFetched()
+    {
+        // The optimistic increment from a push is a guess, not an authoritative read; stamping it
+        // would let the guess suppress the API read that confirms it.
+        _sut.IncrementUnreadCount();
+
+        _sut.LastFetchedUtc.Should().BeNull();
     }
 
     // == Refresh request ==

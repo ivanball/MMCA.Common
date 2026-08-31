@@ -25,8 +25,31 @@ internal sealed class H2cEndpointHealthCheck : IHealthCheck
     /// <summary>
     /// Proxy detection is off: the probe target is a sibling process on the developer's own machine
     /// (or a sibling replica inside the deployment network), never something a proxy should see.
+    /// <para>
+    /// <b>The keep-alive ping trio is load-bearing, not tuning.</b> The client below is shared for
+    /// the process lifetime, and HTTP/2 pools ONE connection per origin. Aspire's endpoint proxy
+    /// listens before the target Kestrel does, so the first probe of a starting resource can open a
+    /// connection that is accepted and then never answered: the TCP connect succeeds, the HTTP/2
+    /// handshake never completes, and the proxy holds that socket open for the life of the AppHost.
+    /// Without the pings, every later probe queues onto that one zombie connection and times out at
+    /// <see cref="H2cHealthCheckExtensions.ProbeTimeout"/> forever, even after the service is up:
+    /// the resource can never turn healthy and every WaitFor edge into it wedges the stack (the
+    /// 2026-08-31 apphost-smoke wedge, nightly runs 33392642362/33399413579). The pings bound the
+    /// zombie's life instead: a connection that stops answering pings is torn down, and the next
+    /// probe opens a fresh one to the now-listening service. Verified against a held-open
+    /// accepted-but-unanswered socket: without pings the client never recovers; with them it
+    /// recovers on the first probe after the service binds. ConnectTimeout does NOT cover this case
+    /// (the connect itself succeeds) and is deliberately absent: the request timeout already bounds
+    /// the connect phase.
+    /// </para>
     /// </summary>
-    private static readonly SocketsHttpHandler ProbeHandler = new() { UseProxy = false };
+    internal static readonly SocketsHttpHandler ProbeHandler = new()
+    {
+        UseProxy = false,
+        KeepAlivePingDelay = TimeSpan.FromSeconds(1),
+        KeepAlivePingTimeout = TimeSpan.FromSeconds(1),
+        KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,
+    };
 
     /// <summary>
     /// One process-lifetime client for every probe. Static rather than per-registration so a handful
@@ -121,16 +144,19 @@ internal sealed class H2cEndpointHealthCheck : IHealthCheck
 
             return new HealthCheckResult(context.Registration.FailureStatus, description);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or TimeoutException or InvalidOperationException or UriFormatException
-                                   && !cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or TimeoutException or InvalidOperationException or UriFormatException)
         {
             // Unreachable, still starting, refusing HTTP/2, or slower than the probe budget. Narrow
             // catch list (rather than a blanket Exception) so a genuine programming error still
-            // surfaces, and the cancellation guard keeps AppHost shutdown from being reported as a
-            // service fault.
+            // surfaces. No cancellation guard: the registration's own timeout cancels the SAME token
+            // this method receives, so a probe that outlives ProbeTimeout used to slip past the
+            // filter and be logged by the health service as an unhandled exception rather than
+            // reported here. The status is Unhealthy either way; catching it just keeps the report
+            // honest. The one other canceller is AppHost shutdown, where an Unhealthy result goes
+            // nowhere and costs nothing.
             return new HealthCheckResult(
                 context.Registration.FailureStatus,
-                "Endpoint did not answer " + _path + " over HTTP/2.",
+                "Endpoint did not answer " + _path + " over HTTP/2 within the probe budget.",
                 ex);
         }
     }

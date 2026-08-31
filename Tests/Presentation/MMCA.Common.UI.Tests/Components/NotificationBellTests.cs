@@ -3,8 +3,11 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Components.Notifications;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
@@ -49,18 +52,48 @@ internal sealed class NotificationBellHost : ComponentBase
 /// </summary>
 public sealed class NotificationBellTests : BunitTestBase
 {
+    /// <summary>
+    /// A poll interval far longer than any window the staleness tests advance through, so a
+    /// <see cref="FakeTimeProvider.Advance"/> that ages the count never also fires the periodic tick
+    /// and muddles the call count.
+    /// </summary>
+    private static readonly TimeSpan NoPollWithinTheTest = TimeSpan.FromHours(1);
+
     private readonly Mock<INotificationInboxUIService> _inbox = new();
-    private readonly NotificationState _state = new();
     private readonly Mock<IToastService> _toast = new();
+    private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+    private readonly NotificationState _state;
 
     public NotificationBellTests()
     {
+        _state = new NotificationState(_clock);
         Services.AddSingleton(_state);
         Services.AddSingleton(_inbox.Object);
+
+        // Registered after the base harness's TimeProvider.System, so the bell's periodic timer and
+        // the state's freshness stamp both run off the same driveable clock (last registration wins).
+        Services.AddSingleton<TimeProvider>(_clock);
+
         // Registered after the base class's default facade, so this wins: the bell has no error
         // surface of its own, and this is how a stray toast from it would be caught.
         Services.AddSingleton<IToastService>(_toast.Object);
     }
+
+    /// <summary>
+    /// Pins the bell's staleness policy for one test; call before rendering. Registered as the closed
+    /// <c>IOptions&lt;T&gt;</c> rather than through <c>Configure</c> because the settings properties are
+    /// init-only, matching the other settings classes in the framework.
+    /// </summary>
+    private void BellOptions(TimeSpan navigationRefreshMaxAge, TimeSpan? pollInterval = null) =>
+        Services.AddSingleton<IOptions<NotificationBellOptions>>(
+            Options.Create(new NotificationBellOptions
+            {
+                NavigationRefreshMaxAge = navigationRefreshMaxAge,
+                PollInterval = pollInterval ?? NoPollWithinTheTest,
+            }));
+
+    private void VerifyFetchCount(Times times) =>
+        _inbox.Verify(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()), times);
 
     private void CountIs(int count) =>
         _inbox.Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()))
@@ -183,6 +216,93 @@ public sealed class NotificationBellTests : BunitTestBase
             _inbox.Verify(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>()), Times.AtLeastOnce()));
 
         _toast.VerifyNoOtherCalls();
+    }
+
+    // == Staleness policy (§19) ==
+    [Fact]
+    public void NavigatingWhileTheCountIsFresh_DoesNotRefetch()
+    {
+        // Navigation is an ambient trigger, not evidence the count moved. A user clicking through a
+        // menu used to issue one API read per click for a number that had not changed.
+        CountIs(2);
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromSeconds(30));
+        var nav = Services.GetRequiredService<NavigationManager>();
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _clock.Advance(TimeSpan.FromSeconds(10));
+        nav.NavigateTo("/somewhere");
+        nav.NavigateTo("/somewhere-else");
+
+        VerifyFetchCount(Times.Once());
+    }
+
+    [Fact]
+    public void NavigatingOnceTheCountIsStale_Refetches()
+    {
+        CountIs(2);
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromSeconds(30));
+        var nav = Services.GetRequiredService<NavigationManager>();
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _clock.Advance(TimeSpan.FromSeconds(31));
+        nav.NavigateTo("/somewhere");
+
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(2)));
+    }
+
+    [Fact]
+    public void NavigatingAfterAFailedRead_Refetches()
+    {
+        // A failed read never established a count, so nothing stamped it fresh: the next navigation
+        // must try again rather than sit on an unknown value for the whole window.
+        CountIsUnavailable();
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1));
+        var nav = Services.GetRequiredService<NavigationManager>();
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        nav.NavigateTo("/somewhere");
+
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(2)));
+    }
+
+    [Fact]
+    public void APushRefresh_MarksTheCountStaleAndRefetchesInsideTheWindow()
+    {
+        // The server has just said the data changed, so the age of the number carries no information:
+        // this path must never be throttled by the navigation window.
+        CountIs(2);
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+        _state.LastFetchedUtc.Should().NotBeNull();
+
+        _state.RequestRefresh();
+
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(2)));
+    }
+
+    [Fact]
+    public void ThePeriodicTick_RefetchesUnconditionally()
+    {
+        // The tick runs off the injected TimeProvider (the PeriodicTimer overload), so the poll is
+        // asserted directly rather than inferred: advancing one interval produces one read even
+        // though the count is seconds old and a navigation would have skipped it.
+        CountIs(2);
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1), pollInterval: TimeSpan.FromSeconds(30));
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _clock.Advance(TimeSpan.FromSeconds(30));
+
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(2)));
     }
 
     [Fact]

@@ -1,0 +1,89 @@
+@page "/grid"
+@using MMCA.Common.Shared.Abstractions
+@using MMCA.Common.UI.Pages.Common
+@inherits DataGridListPageBase<SampleGridRow>
+
+<PageTitle>Virtualized grid</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-4">
+    <PageHeader Title="Virtualized Grid Gallery" />
+
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2 mb-4">
+        @SampleGridData.RowCount.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) rows served through
+        <c>VirtualizeServerData</c>. Only the visible window is rendered and fetched, so the row
+        count in the DOM stays a small fraction of the data set no matter how far you scroll.
+    </MudText>
+
+    <MudDataGrid T="SampleGridRow"
+                 @ref="_grid"
+                 Virtualize="true"
+                 Height="@VirtualizedGridHeight"
+                 ItemSize="VirtualizedItemSize"
+                 FixedHeader="true"
+                 Dense="@DenseGrid"
+                 Hover="true"
+                 SortMode="SortMode.Single"
+                 VirtualizeServerData="LoadRowsAsync">
+        <Columns>
+            <PropertyColumn Property="x => x.Id" Title="Id" />
+            <PropertyColumn Property="x => x.Name" Title="Name" />
+            <PropertyColumn Property="x => x.Category" Title="Category" />
+            <PropertyColumn Property="x => x.CreatedOn" Title="Created" Format="yyyy-MM-dd" />
+            <PropertyColumn Property="x => x.Amount" Title="Amount" Format="F2" />
+        </Columns>
+    </MudDataGrid>
+</MudContainer>
+
+@code {
+    private MudDataGrid<SampleGridRow>? _grid;
+
+    protected override string Title => "Virtualized Grid Gallery";
+
+    // The opt-in switch under test: it turns off the pager-restore machinery in the base class and
+    // moves scroll tracking onto the grid's own viewport.
+    protected override bool VirtualizeGrid => true;
+
+    protected override MudDataGrid<SampleGridRow>? GridRef => _grid;
+
+    private Task<GridData<SampleGridRow>> LoadRowsAsync(
+        GridStateVirtualize<SampleGridRow> state, CancellationToken cancellationToken) =>
+        LoadVirtualizedServerDataAsync(state, FetchPageAsync, cancellationToken: cancellationToken);
+
+    // Stands in for IEntityService.GetPagedAsync: same delegate shape, same 1-based page contract, so
+    // the base class maps the virtualization window onto it exactly as it would onto a real API.
+    private static Task<Result<(IReadOnlyList<SampleGridRow> Items, int TotalItems)>> FetchPageAsync(
+        Dictionary<string, (string Operator, string Value)> filters,
+        int pageNumber,
+        int pageSize,
+        string? sortColumn,
+        string? sortDirection,
+        CancellationToken cancellationToken)
+    {
+        var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        var rows = SampleGridData.All;
+
+        IEnumerable<SampleGridRow> ordered = sortColumn switch
+        {
+            nameof(SampleGridRow.Name) => descending
+                ? rows.OrderByDescending(r => r.Name, StringComparer.Ordinal)
+                : rows.OrderBy(r => r.Name, StringComparer.Ordinal),
+            nameof(SampleGridRow.Category) => descending
+                ? rows.OrderByDescending(r => r.Category, StringComparer.Ordinal)
+                : rows.OrderBy(r => r.Category, StringComparer.Ordinal),
+            nameof(SampleGridRow.CreatedOn) => descending
+                ? rows.OrderByDescending(r => r.CreatedOn)
+                : rows.OrderBy(r => r.CreatedOn),
+            nameof(SampleGridRow.Amount) => descending
+                ? rows.OrderByDescending(r => r.Amount)
+                : rows.OrderBy(r => r.Amount),
+            _ => descending
+                ? rows.OrderByDescending(r => r.Id)
+                : rows.OrderBy(r => r.Id),
+        };
+
+        var page = ordered.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+        return Task.FromResult(
+            Result.Success<(IReadOnlyList<SampleGridRow> Items, int TotalItems)>((page, rows.Count)));
+    }
+}

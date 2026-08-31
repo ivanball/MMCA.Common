@@ -62,6 +62,12 @@ public abstract class BunitComponentTestBase : BunitContext
         // resources in the component's own assembly) without per-test setup.
         Services.AddLogging();
         Services.AddLocalization();
+
+        // The clock components measure staleness against (the notification bell's poll interval and
+        // navigation-refresh window, §19). TryAdd so a test that drives time deterministically
+        // registers a FakeTimeProvider of its own; AddLogging above already brought in the options
+        // infrastructure, so IOptions<T> of an unconfigured settings class resolves to its defaults.
+        Services.TryAddSingleton(TimeProvider.System);
     }
 
     /// <summary>

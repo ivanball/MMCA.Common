@@ -45,6 +45,36 @@ public sealed class NotificationPagesE2ETests : GalleryAxeTestBase
     }
 
     [Fact]
+    public async Task NotificationInboxDeepLink_ToAnUnknownNotification_DegradesToThePlainInbox()
+    {
+        // The typed deep link /notifications/inbox/{Id:int} (rubric §25). The gallery's stub inbox
+        // holds ids 1 and 2, so 123 is a well-formed id that is simply not on the loaded page: the
+        // page must render the ordinary inbox, with nothing highlighted and no error surface, since
+        // the user can do nothing about a stale link.
+        await SeedSignedInCookieAsync();
+        await Page.GotoAndWaitForBlazorAsync("/notifications/inbox/123");
+
+        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Mark All as Read" })).ToBeVisibleAsync();
+        await Expect(Page.GetByText("Welcome to MMCA").First).ToBeVisibleAsync();
+        await Expect(Page.Locator(".notification-card.deep-linked")).ToHaveCountAsync(0);
+
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
+    }
+
+    [Fact]
+    public async Task NotificationInboxDeepLink_ToAKnownNotification_HighlightsThatCard()
+    {
+        await SeedSignedInCookieAsync();
+        await Page.GotoAndWaitForBlazorAsync("/notifications/inbox/2");
+
+        var highlighted = Page.Locator(".notification-card.deep-linked");
+        await Expect(highlighted).ToHaveCountAsync(1);
+        await Expect(highlighted).ToHaveAttributeAsync("id", "notification-2");
+
+        await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa);
+    }
+
+    [Fact]
     public async Task NotificationCompose_Renders_AndHasNoWcag21AaViolations()
     {
         await SeedSignedInCookieAsync();

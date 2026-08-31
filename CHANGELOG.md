@@ -4,6 +4,79 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+A six-front implementation-lift wave (scorecard categories 8, 19, 23, 25, 26, 34): migrations proven
+in CI, cascade soft-delete enforced, a complete default CSP with a nonce path, an explicit client-side
+staleness policy, opt-in desktop grid virtualization, and a typed notification deep link. Three
+constructor signatures change shape (binary-breaking, source-compatible via optional parameters);
+each is listed with the call site a consumer has to touch.
+
+### Changed (breaking)
+
+- **`EntityServiceBase` constructor gains an optional `IUiReadCache? readCache = null`**
+  (`MMCA.Common.UI`). Source-compatible (existing subclasses compile unchanged) but binary-breaking:
+  recompile during the bump. Passing `null` keeps read behavior byte-identical; passing the
+  DI-registered cache opts that service's reads into the staleness policy below. `AuthUIService` and
+  `NotificationState` change the same way (`IUiReadCache?` and `TimeProvider?` respectively, both
+  optional and defaulted).
+- **The default static Content-Security-Policy now carries `script-src` and `style-src`**
+  (`MMCA.Common.Aspire`). `SecurityHeadersSettings.ContentSecurityPolicy` defaults to
+  `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`,
+  the strength Blazor and MudBlazor require, so a host on the static default gets a complete policy
+  instead of one missing both directives. A host that loads third-party scripts or stylesheets from
+  another origin must now name them in a configured policy; everything same-origin keeps working.
+- **`BlazorCspPolicyProvider` fails closed on a missing or unparseable API endpoint**
+  (`MMCA.Common.UI.Web`). The fallback was `connect-src 'self' https: wss:` in Report-Only mode
+  (permissive and unenforced); it is now `connect-src 'self'`, enforced. A misconfigured endpoint
+  surfaces as blocked API calls in the browser console instead of a silently unenforced policy; fix
+  the `ApiEndpoint`/`WasmApiEndpoint` setting rather than relaxing the policy.
+- **`NotificationBell` reads its cadence from configuration** (`MMCA.Common.UI`). The hardcoded 30s
+  poll moves to `NotificationBellOptions` (`NotificationBell` section: `PollInterval`,
+  `NavigationRefreshMaxAge`, both defaulting to 30s), and navigating no longer refetches the unread
+  count unless it is stale by that policy. Defaults preserve today's cadence; hosts tune via config.
+
+### Added
+
+- **Client-side staleness policy** (`MMCA.Common.UI`): `IUiReadCache` (scoped, per circuit) with
+  `UiReadCacheOptions` (`UiReadCache` section: `Enabled`, `DefaultTtl` 60s, longest-prefix
+  `RoutePrefixTtls`). Keys are the relative URL (path plus full query), the same shape as the server
+  output cache's `QueryKeys="*"` (ADR-040), so client and server agree on what "the same read" means.
+  Reads through `EntityServiceBase` route via `GetCachedAsync` (successes only, explicit
+  `bypassCache` available); writes invalidate their endpoint prefix; logout clears the cache. Opt-in
+  per service via the constructor parameter above.
+- **Per-request CSP nonce path** (`MMCA.Common.Aspire`): a `{nonce}` placeholder anywhere in a
+  configured policy is replaced per request with `'nonce-<base64>'`, and `CspNonce.Get(HttpContext)`
+  exposes the value for the host layout to stamp onto its script and style tags. This is the
+  supported path off `style-src 'unsafe-inline'` for hosts that can nonce their tags.
+- **Cascade soft-delete fitness rule** (`MMCA.Common.Testing.Architecture`):
+  `CascadeSoftDeleteConventionTestsBase` fails the build when an aggregate declaring a collection of
+  auditable children has no `Delete()` override that cascades (`DeleteChildren` or per-child
+  `Delete()`; a bare `base.Delete()` cannot satisfy the rule). Subclass with your map and move each
+  reported aggregate to a fix or a justified exemption. Common now also runs the shipped hard-delete
+  gate over its own assemblies, so a new framework eraser fails here rather than downstream.
+- **Migrations proven in CI**: the `consumer-source-build` job applies MMCA.Helpdesk's real SQL
+  Server migrations against an ephemeral SQL Server 2022 container with pinned `dotnet-ef`, and an
+  in-repo fixture migration proves the `Migrate`/`None` startup strategies against real migration
+  files in the unit tier.
+- **Opt-in desktop grid row virtualization** (`MMCA.Common.UI`): override `VirtualizeGrid` on
+  `DataGridListPageBase` and bind `Virtualize`/`Height`/`ItemSize`/`VirtualizeServerData` to the new
+  `LoadVirtualizedServerDataAsync` funnel (the viewport window maps onto the existing paged API; a
+  grid binds `ServerData` or `VirtualizeServerData`, never both). Scroll persistence follows the
+  grid's inner container; the pager-restore machinery is inert for virtualized grids. Defaults off;
+  existing grids are untouched.
+- **Typed notification deep link** (`MMCA.Common.UI`): `/notifications/inbox/{Id:int}` highlights
+  and scrolls to one notification (`NotificationRoutePaths.NotificationInboxItem(id)` builds the
+  link); a malformed id renders `NotFound` via the route constraint, an absent id degrades to the
+  plain inbox. A new navigation-contract fact requires every future route parameter to carry a type
+  constraint.
+
+### Fixed
+
+- **`FACTS.md` names both registries**: the generated packages line now reads "Released in lockstep
+  to nuget.org and GitHub Packages (dual-registry, ADR-053)", ending a seven-cycle drift between the
+  generator prose and the actual release pipeline.
+
 ## [1.174.0] - 2026-08-30
 
 Five framework riders feeding the consumer wave: one credential-verification path, one startup-gate

@@ -83,6 +83,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     // back to an empty grid that the first interactive ServerData call refills.
     private const int PrerenderFetchTimeoutMs = 5000;
 
+    // MudDataGrid v9 puts its height-bound scroll viewport on `.mud-table-container`. A virtualized
+    // grid scrolls THERE, not on the document, so scroll tracking and restore have to follow it.
+    private const string VirtualizedScrollContainerSelector = ".mud-table-container";
+
     private CancellationTokenSource? _cts;
     private bool _disposed;
     private IJSObjectReference? _scrollModule;
@@ -121,6 +125,35 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// (e.g., mobile-only pages).
     /// </summary>
     protected virtual MudDataGrid<TDto>? GridRef => null;
+
+    /// <summary>
+    /// Opt-in switch for MudDataGrid row virtualization. Defaults to <see langword="false"/>, so every
+    /// existing page keeps its pager and its <c>ServerData</c> binding untouched. A page that overrides
+    /// this to <see langword="true"/> binds <c>Virtualize="true"</c>, <c>Height="@VirtualizedGridHeight"</c>,
+    /// <c>ItemSize="VirtualizedItemSize"</c> and <c>VirtualizeServerData</c> (wired to
+    /// <see cref="LoadVirtualizedServerDataAsync"/>) in its markup INSTEAD of <c>ServerData</c>: MudBlazor
+    /// v9 accepts only one of the two funnels, and binding both leaves the grid fetching through the
+    /// pager it no longer renders. Turning this on also disables the pager-restore machinery
+    /// (rows-per-page / current-page restoration and the <c>p</c>/<c>ps</c> URL mirror), which has no
+    /// meaning without a pager; sort, filter and density persistence still apply.
+    /// </summary>
+    protected virtual bool VirtualizeGrid => false;
+
+    /// <summary>
+    /// The CSS height bound to <c>Height</c> on a virtualized grid. MudDataGrid v9 virtualizes only when
+    /// <c>Height</c> is set (the scroll viewport is what bounds the rendered window), so this is
+    /// mandatory rather than cosmetic. Defaults to <c>70vh</c>, which leaves room for the page header and
+    /// toolbar on a laptop viewport; override for a page whose chrome is taller or shorter.
+    /// </summary>
+    protected virtual string VirtualizedGridHeight => "70vh";
+
+    /// <summary>
+    /// The row height in pixels bound to <c>ItemSize</c> on a virtualized grid. MudBlazor sizes the
+    /// spacer elements above and below the rendered window from this number, so a value far from the
+    /// real rendered row height makes the scrollbar drift and the fetch window overshoot. Defaults to
+    /// <c>52</c>, the comfortable-density MudDataGrid row height; a dense grid is nearer <c>36</c>.
+    /// </summary>
+    protected virtual int VirtualizedItemSize => 52;
 
     /// <summary>
     /// Reads URL query string as the source of truth for paging, sort, and filter state,
@@ -245,7 +278,13 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         {
             if (GridRef is { } grid)
             {
-                ApplyCurrentPageFromUrl(grid, urlState.Page);
+                // A virtualized grid renders no pager, so there is no CurrentPage to re-apply; the
+                // reload alone re-reads the restored sort/filters.
+                if (!VirtualizeGrid)
+                {
+                    ApplyCurrentPageFromUrl(grid, urlState.Page);
+                }
+
                 await grid.ReloadServerData();
             }
             StateHasChanged();
@@ -321,7 +360,8 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 "enableScrollTracking",
                 _dotNetRef,
                 _scrollTrackerId,
-                150);
+                150,
+                ScrollContainerSelector);
 
             await RestoreGridStateAsync(needsSessionRestore);
 
@@ -335,11 +375,18 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         if (_pendingScrollRestore is { } pending && !IsLoading && _scrollModule is not null)
         {
             _pendingScrollRestore = null;
-            await _scrollModule.InvokeVoidAsync("setScrollPosition", pending);
+            await _scrollModule.InvokeVoidAsync("setScrollPosition", pending, ScrollContainerSelector);
         }
 
         await base.OnAfterRenderAsync(firstRender);
     }
+
+    /// <summary>
+    /// The element whose <c>scrollTop</c> is tracked and restored: the grid's own scroll viewport when
+    /// virtualization is on (the document itself does not scroll then, because the grid is height-bound),
+    /// otherwise <see langword="null"/> for the document scroller.
+    /// </summary>
+    private string? ScrollContainerSelector => VirtualizeGrid ? VirtualizedScrollContainerSelector : null;
 
     /// <summary>
     /// Invoked from JS by the debounced scroll listener whenever the user scrolls.
@@ -394,6 +441,20 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// </summary>
     private async Task RestoreGridStateAsync(bool needsReload)
     {
+        // Single entry point for the pager-restore machinery, so opting into virtualization skips it
+        // in ONE place instead of guarding each step: a virtualized grid renders no pager, so
+        // RowsPerPage and CurrentPage carry no meaning there. A session-driven reload is still needed
+        // (sort/filters were restored after the first fetch returned defaults).
+        if (VirtualizeGrid)
+        {
+            if (needsReload && GridRef is { } virtualizedGrid)
+            {
+                await virtualizedGrid.ReloadServerData();
+            }
+
+            return;
+        }
+
         // SAFETY NET: even though we pass RowsPerPage as a parameter (so the pager init sees
         // the saved size), MudDataGrid v9's parameter setter is one-shot and queues an
         // InvokeAsync that may not propagate the value to _rowsPerPage in time for the first
@@ -455,7 +516,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             _persistedGridData = null;
             _lastSuccessfulGridData = cached;
 
-            var (sc, sd) = ResolveSortParameters(state);
+            var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
             SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase));
             return cached;
         }
@@ -468,17 +529,18 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         // backend can't block prerendering — and therefore the page load / navigation — indefinitely (the
         // dominant cause of E2E navigation timeouts). On timeout the fetch throws OperationCanceledException
         // and we return an empty grid; the first INTERACTIVE ServerData call then loads the real data.
-        using var fetchCts = CreateFetchCts();
+        // No extra token to link: the paged funnel has no per-request token of its own.
+        using var fetchCts = CreateFetchCts(CancellationToken.None);
 
         // Filter and sort extraction run INSIDE the try: the caller's additionalFilters callback is
         // arbitrary page code, and a throw from it (or from the extraction itself) used to escape
         // past the finally, stranding IsLoading at true and leaving the grid spinning forever.
         try
         {
-            var filters = ExtractGridFilters(state);
+            var filters = ExtractGridFilters(state.FilterDefinitions);
             additionalFilters?.Invoke(filters);
 
-            var (sortColumn, sortDirection) = ResolveSortParameters(state);
+            var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
 
             var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
             if (!fetched.TryGetValue(out var page))
@@ -517,14 +579,139 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     }
 
     /// <summary>
+    /// The <c>VirtualizeServerData</c> counterpart of <see cref="LoadServerDataAsync"/>: it manages the
+    /// <see cref="CancellationTokenSource"/>, loading/failure state and error toast identically, but maps
+    /// the row window MudBlazor asks for (<c>[StartIndex, StartIndex + Count)</c>) onto the same
+    /// page-based fetch delegate, so a page can switch to virtualization without a second API contract.
+    /// </summary>
+    /// <param name="state">Virtualized grid state provided by MudDataGrid.</param>
+    /// <param name="fetchAsync">
+    /// Delegate that performs the actual data fetch. Receives: filters, pageNumber, pageSize,
+    /// sortColumn, sortDirection, cancellationToken. Called twice when the requested window straddles
+    /// two pages (see <see cref="ComputeVirtualWindow"/>).
+    /// </param>
+    /// <param name="additionalFilters">
+    /// Optional action to inject extra filters (e.g., search string, status dropdown) before the fetch.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// The token MudBlazor hands the <c>VirtualizeServerData</c> callback (it cancels a window that the
+    /// user has already scrolled past). Forward it so a superseded fetch stops at the API boundary too;
+    /// omitting it still works, because the base class supersedes its own previous fetch on every call.
+    /// </param>
+    /// <remarks>
+    /// Cancellation is ALWAYS silent here, unlike the paged path: a virtualized grid supersedes its own
+    /// in-flight fetch on every scroll burst, so a cancel toast would fire continuously during normal
+    /// scrolling and say nothing the user needs to act on.
+    /// </remarks>
+    protected async Task<GridData<TDto>> LoadVirtualizedServerDataAsync(
+        GridStateVirtualize<TDto> state,
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
+        Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(fetchAsync);
+
+        await ResetCancellationTokenAsync();
+
+        IsLoading = true;
+        LoadFailed = false;
+        StateHasChanged();
+
+        using var fetchCts = CreateFetchCts(cancellationToken);
+
+        try
+        {
+            var filters = ExtractGridFilters(state.FilterDefinitions);
+            additionalFilters?.Invoke(filters);
+
+            var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
+            var window = ComputeVirtualWindow(state.StartIndex, state.Count);
+
+            var fetched = await fetchAsync(filters, window.FirstPage, window.PageSize, sortColumn, sortDirection, fetchCts.Token);
+            if (!fetched.TryGetValue(out var page))
+            {
+                fetched.NotifyOnFailure(Toast, Localizer);
+                LoadFailed = true;
+                return new GridData<TDto> { Items = [], TotalItems = 0 };
+            }
+
+            var items = page.Items;
+            if (window.NeedsSecondPage)
+            {
+                var continued = await fetchAsync(filters, window.FirstPage + 1, window.PageSize, sortColumn, sortDirection, fetchCts.Token);
+                if (!continued.TryGetValue(out var nextPage))
+                {
+                    continued.NotifyOnFailure(Toast, Localizer);
+                    LoadFailed = true;
+                    return new GridData<TDto> { Items = [], TotalItems = 0 };
+                }
+
+                items = [.. items, .. nextPage.Items];
+            }
+
+            // Trim to exactly the requested window; the tail of the data set legitimately yields fewer.
+            var slice = items.Skip(window.Offset).Take(Math.Max(state.Count, 0)).ToList();
+            SaveCurrentState(0, 0, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
+            return new GridData<TDto> { Items = slice, TotalItems = page.TotalItems };
+        }
+        catch (OperationCanceledException)
+        {
+            // Deliberately silent — see the remarks above.
+            return new GridData<TDto> { Items = [], TotalItems = 0 };
+        }
+        catch (Exception ex)
+        {
+            Toast.Error(ErrorMessages.LoadError(Title, ex));
+            LoadFailed = true;
+            return new GridData<TDto> { Items = [], TotalItems = 0 };
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Maps a virtualization row window onto the page-based fetch contract. The window's own size
+    /// becomes the page size, so an aligned window (<paramref name="startIndex"/> a multiple of
+    /// <paramref name="count"/>) is exactly one page and needs one fetch; an unaligned window spills
+    /// into the following page, which is fetched too and concatenated before the caller slices
+    /// <c>Offset</c> rows off the front.
+    /// </summary>
+    /// <param name="startIndex">Zero-based index of the first requested row.</param>
+    /// <param name="count">Number of requested rows. Zero or less is clamped to a page size of 1.</param>
+    /// <returns>
+    /// The 1-based first page to fetch, the page size to fetch it with, how many leading rows of that
+    /// page fall before the window, and whether the following page is needed as well.
+    /// </returns>
+    internal static (int FirstPage, int PageSize, int Offset, bool NeedsSecondPage) ComputeVirtualWindow(int startIndex, int count)
+    {
+        var pageSize = Math.Max(count, 1);
+        var start = Math.Max(startIndex, 0);
+        var offset = start % pageSize;
+
+        var firstPage = start / pageSize + 1;
+
+        return (firstPage, pageSize, offset, offset > 0);
+    }
+
+    /// <summary>
     /// Builds the cancellation token source for a <c>ServerData</c> fetch. Always linked to the active
     /// request token; during SSR pre-render (non-interactive) it additionally times out after
     /// <see cref="PrerenderFetchTimeoutMs"/> so a cold or unreachable backend cannot block prerendering
     /// (and therefore the page load) indefinitely. The caller owns disposal via a <see langword="using"/> statement.
     /// </summary>
-    private CancellationTokenSource CreateFetchCts()
+    /// <param name="additionalToken">
+    /// An extra token to link in (the virtualized path forwards MudBlazor's own per-window token).
+    /// <see cref="CancellationToken.None"/> links nothing extra.
+    /// </param>
+    private CancellationTokenSource CreateFetchCts(CancellationToken additionalToken)
     {
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
+        var cts = additionalToken.CanBeCanceled
+            ? CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token, additionalToken)
+            : CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
         if (!RendererInfo.IsInteractive)
         {
             cts.CancelAfter(PrerenderFetchTimeoutMs);
@@ -613,8 +800,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// delegate takes. MudDataGrid lets the user add several filter rows on the SAME column, which
     /// a dictionary cannot carry, so the newest row wins instead of the projection throwing.
     /// </summary>
-    private static Dictionary<string, (string Operator, string Value)> ExtractGridFilters(GridState<TDto> state) =>
-        state.FilterDefinitions?
+    /// <remarks>
+    /// Takes the definition collection rather than the state object so the paged
+    /// (<see cref="GridState{T}"/>) and virtualized (<see cref="GridStateVirtualize{T}"/>) funnels
+    /// share one implementation; MudBlazor v9 exposes the same definition types on both.
+    /// </remarks>
+    private static Dictionary<string, (string Operator, string Value)> ExtractGridFilters(
+        IEnumerable<IFilterDefinition<TDto>>? filterDefinitions) =>
+        filterDefinitions?
             .Where(f => !string.IsNullOrWhiteSpace(f.Column?.PropertyName))
             .GroupBy(f => f.Column!.PropertyName!, StringComparer.Ordinal)
             .ToDictionary(
@@ -627,9 +820,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 StringComparer.Ordinal
             ) ?? [];
 
-    private static (string? SortColumn, string? SortDirection) ExtractSortParameters(GridState<TDto> state)
+    private static (string? SortColumn, string? SortDirection) ExtractSortParameters(
+        IEnumerable<SortDefinition<TDto>>? sortDefinitions)
     {
-        var sort = state.SortDefinitions?.FirstOrDefault();
+        var sort = sortDefinitions?.FirstOrDefault();
         return (sort?.SortBy, sort?.Descending == true ? "desc" : "asc");
     }
 
@@ -638,9 +832,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// SortDefinition (typical on initial load with a URL-driven sort), the sort restored from the
     /// query string is used instead, so the data lands sorted from the very first request.
     /// </summary>
-    private (string? SortColumn, string? SortDirection) ResolveSortParameters(GridState<TDto> state)
+    private (string? SortColumn, string? SortDirection) ResolveSortParameters(
+        IEnumerable<SortDefinition<TDto>>? sortDefinitions)
     {
-        var (sortColumn, sortDirection) = ExtractSortParameters(state);
+        var (sortColumn, sortDirection) = ExtractSortParameters(sortDefinitions);
 
         if (string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(_savedSortColumn))
         {

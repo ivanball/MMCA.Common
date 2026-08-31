@@ -440,11 +440,25 @@ jobs:
   # repos are checked out as siblings so Helpdesk's local.props path (..\MMCA.Common\Source)
   # resolves to this PR's checkout. Promoted to a required merge gate 2026-07-16 after 9
   # consecutive green runs since introduction (2026-07-14); its context is in branch protection.
+  # It also proves the framework's MIGRATION path end to end (rubric #8): the consumer's real EF
+  # migrations are applied to an ephemeral SQL Server, so a framework change that breaks
+  # `dotnet ef database update` fails here instead of at a consumer's deploy.
   consumer-source-build:
     name: Consumer source build (Helpdesk)
     needs: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 20 covered the build+test pair; the SQL container, its readiness poll and the migration apply
+    # add a few minutes on a cold cache.
+    timeout-minutes: 30
+    env:
+      # Throwaway SA password for a container that lives and dies with this job. Not a secret:
+      # keeping it inline (as ADC's integration job does) means no secret is needed to run the gate
+      # from a fork, and there is nothing to rotate.
+      MSSQL_SA_PASSWORD: "Helpdesk_Canary!Test1"
+      # The database the Helpdesk design-time factory targets. Its DesignTimeSQLServerDbContextFactory
+      # reads HELPDESK_TICKETS_SQL and falls back to a Trusted_Connection localhost string, which
+      # cannot work on a Linux runner, so the apply step below overrides it.
+      HELPDESK_TICKETS_DB: HelpdeskMigrationCanary
     steps:
       - name: Checkout MMCA.Common (this PR)
         uses: actions/checkout@v7
@@ -493,6 +507,20 @@ jobs:
             **/packages.lock.json
             Directory.Packages.props
 
+      # Started BEFORE the build so SQL Server warms up (~30-60s) while the solution compiles; the
+      # readiness poll below then usually returns on its first try. A guarded STEP rather than a
+      # job-level `services:` block, so a docs-only PR pays no SQL cost while this job still posts
+      # its required status green.
+      - name: Start SQL Server (ephemeral, for the migration apply)
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          docker run -d --name sqlserver \
+            -e ACCEPT_EULA=Y \
+            -e MSSQL_SA_PASSWORD="$MSSQL_SA_PASSWORD" \
+            -e MSSQL_PID=Developer \
+            -p 1433:1433 \
+            mcr.microsoft.com/mssql/server:2022-latest
+
       - name: Build Helpdesk against Common source (UseLocalMMCA)
         if: needs.changes.outputs.code == 'true'
         working-directory: MMCA.Helpdesk
@@ -506,6 +534,92 @@ jobs:
         # Helpdesk's suite is ~91 tests; floor at 40 so a discovery/filter regression fails
         # instead of passing green with near-zero tests discovered.
         run: dotnet test --solution MMCA.Helpdesk.slnx -c Release --no-build --minimum-expected-tests 40
+
+      # go-sqlcmd (the Go rewrite) rather than the mssql-tools deb: a single static binary with no
+      # apt source and no EULA prompt. Used by the readiness poll and by the post-apply assertions.
+      - name: Install sqlcmd
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          curl -sL https://github.com/microsoft/go-sqlcmd/releases/latest/download/sqlcmd-linux-amd64.tar.bz2 \
+            | sudo tar -xjC /usr/local/bin/
+
+      # The container reports "running" long before the engine accepts logins, so poll a real query
+      # rather than docker state. 30 x 5s covers a cold image pull on a slow runner.
+      - name: Wait for SQL Server
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          for i in $(seq 1 30); do
+            if sqlcmd -S localhost,1433 -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1; then
+              echo "SQL Server is ready"
+              exit 0
+            fi
+            echo "Waiting for SQL Server ($i/30)..."
+            sleep 5
+          done
+          echo "::error::SQL Server did not become ready in time"
+          docker logs sqlserver || true
+          exit 1
+
+      # Pinned to the same version ADC and Store deploy with, so the canary exercises the tool the
+      # consumers actually run their migrations through.
+      - name: Install EF Core tools
+        if: needs.changes.outputs.code == 'true'
+        run: dotnet tool install --global dotnet-ef --version 10.0.8
+
+      # The point of the whole SQL half of this job: apply a REAL consumer's committed migrations,
+      # built against THIS PR's framework source, to a real SQL Server. `migrations add` and the
+      # model-drift gate never open a connection, so neither notices a framework change that breaks
+      # the generated DDL, the history table, or the design-time context wiring. `database update`
+      # does, and it creates the database as its first act.
+      # --no-build is safe: the Release build above covers MMCA.Helpdesk.slnx, which includes the
+      # migrations project. The project IS the startup project (it ships its own
+      # DesignTimeSQLServerDbContextFactory), and SQLServerDbContext is the framework's single
+      # per-engine context class (ADR-006), not a per-module subclass.
+      - name: Apply Helpdesk Tickets migrations to SQL Server
+        if: needs.changes.outputs.code == 'true'
+        working-directory: MMCA.Helpdesk
+        env:
+          HELPDESK_TICKETS_SQL: "Server=localhost,1433;Database=${{ env.HELPDESK_TICKETS_DB }};User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=False;MultipleActiveResultSets=True"
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef database update \
+            --project Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets \
+            --startup-project Source/Hosting/MMCA.Helpdesk.Migrations.SqlServer.Tickets \
+            --context SQLServerDbContext \
+            --configuration Release \
+            --no-build
+
+      # `dotnet ef database update` exits 0 on a no-op, so a wiring mistake that applied nothing
+      # would pass the step above silently. Assert the outcome instead: migrations recorded in the
+      # history table, plus one module table and one framework table actually present. The framework
+      # table (dbo.OutboxMessages) is the half that belongs to MMCA.Common, so a change that stops
+      # the framework's own tables reaching a consumer's schema fails right here.
+      - name: Assert migrations were recorded and the schema exists
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          db='${{ env.HELPDESK_TICKETS_DB }}'
+          query() {
+            sqlcmd -S localhost,1433 -U sa -P "$MSSQL_SA_PASSWORD" -C -d "$db" -h -1 -W \
+              -Q "SET NOCOUNT ON; $1"
+          }
+
+          applied=$(query "SELECT COUNT(*) FROM __EFMigrationsHistory")
+          echo "Applied migrations: $applied"
+          if [ "${applied:-0}" -lt 1 ]; then
+            echo "::error::No rows in __EFMigrationsHistory: the migration apply was a silent no-op"
+            exit 1
+          fi
+
+          for table in "Tickets.Ticket" "dbo.OutboxMessages"; do
+            schema="${table%%.*}"
+            name="${table##*.}"
+            found=$(query "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '$schema' AND TABLE_NAME = '$name'")
+            if [ "${found:-0}" -lt 1 ]; then
+              echo "::error::Table $table is missing after the migration apply"
+              exit 1
+            fi
+            echo "Table $table exists"
+          done
 
   # Package-mode consumption canary: pack every slnx package into a local folder feed, then
   # restore + build a minimal throwaway consumer against those nupkgs. Catches pack breaks (NU5xxx)

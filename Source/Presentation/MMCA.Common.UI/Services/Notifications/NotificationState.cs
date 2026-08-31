@@ -4,10 +4,21 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// Shared state for notification unread count. Components subscribe to <see cref="OnChange"/>
 /// to react when the count changes (e.g., new notification received, notification marked as read).
 /// Registered as scoped so each Blazor circuit gets its own instance.
+/// <para>
+/// It also records WHEN the count was last established (<see cref="LastFetchedUtc"/>), which is the
+/// state half of the client's staleness policy: a subscriber can ask <see cref="IsStale"/> instead of
+/// re-fetching on every trigger it sees, and a subscriber that knows the data moved calls
+/// <see cref="MarkStale"/> to force the next read.
+/// </para>
 /// </summary>
-public sealed class NotificationState
+/// <param name="timeProvider">
+/// Clock used to stamp and age <see cref="LastFetchedUtc"/>; defaults to
+/// <see cref="TimeProvider.System"/> so an existing host keeps the previous constructor shape.
+/// </param>
+public sealed class NotificationState(TimeProvider? timeProvider = null)
 {
     private readonly Lock _pollerSync = new();
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <summary>
     /// The component that currently holds the single active-poller slot, or <see langword="null"/>
@@ -19,6 +30,15 @@ public sealed class NotificationState
 
     /// <summary>Gets the current unread notification count.</summary>
     public int UnreadCount { get; private set; }
+
+    /// <summary>
+    /// When the count was last established from the API, or <see langword="null"/> when it never has
+    /// been (or <see cref="MarkStale"/> discarded the stamp). Stamped by every
+    /// <see cref="SetUnreadCount"/> call, INCLUDING one that re-confirms the value already held: the
+    /// question the stamp answers is "how old is this number", and a confirmed number is fresh even
+    /// though nothing changed.
+    /// </summary>
+    public DateTimeOffset? LastFetchedUtc { get; private set; }
 
     /// <summary>Raised when <see cref="UnreadCount"/> changes.</summary>
     public event EventHandler? OnChange;
@@ -37,8 +57,14 @@ public sealed class NotificationState
     public event EventHandler? OnPollerSlotFreed;
 
     /// <summary>Sets the unread count to an absolute value (e.g., after fetching from API).</summary>
+    /// <param name="count">The authoritative count just read.</param>
     public void SetUnreadCount(int count)
     {
+        // Stamped BEFORE the unchanged-count early return: an API read that came back with the same
+        // number is still a read, and treating it as one is what stops a subscriber from re-fetching
+        // forever on a quiet inbox (the count almost never changes, so almost every read is this one).
+        LastFetchedUtc = _timeProvider.GetUtcNow();
+
         if (UnreadCount == count)
         {
             return;
@@ -47,6 +73,23 @@ public sealed class NotificationState
         UnreadCount = count;
         OnChange?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// Whether the count is older than <paramref name="maxAge"/>, or was never established at all.
+    /// A subscriber that fires on an ambient trigger (navigation, a re-render) asks this instead of
+    /// re-reading the API every time the trigger happens to fire.
+    /// </summary>
+    /// <param name="maxAge">How old the count may be before it counts as stale.</param>
+    /// <returns><see langword="true"/> when the count should be re-read.</returns>
+    public bool IsStale(TimeSpan maxAge) =>
+        LastFetchedUtc is not { } lastFetched || _timeProvider.GetUtcNow() - lastFetched > maxAge;
+
+    /// <summary>
+    /// Discards the freshness stamp, so the next <see cref="IsStale"/> answers <see langword="true"/>
+    /// whatever the clock says. Called by a subscriber that learned the data moved (a real-time push),
+    /// where age is no longer evidence of freshness.
+    /// </summary>
+    public void MarkStale() => LastFetchedUtc = null;
 
     /// <summary>Increments the unread count by one (e.g., real-time notification received).</summary>
     public void IncrementUnreadCount()

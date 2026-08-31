@@ -17,7 +17,12 @@ public sealed record ListPageState
     /// <summary>Mobile card list 1-indexed page number.</summary>
     public int MobilePage { get; init; } = 1;
 
-    /// <summary>Document scroll offset in pixels (from <c>document.scrollingElement.scrollTop</c>).</summary>
+    /// <summary>
+    /// Scroll offset in pixels of whichever element the page actually scrolls. For a normal paged list
+    /// page that is the document (<c>document.scrollingElement.scrollTop</c>); for a page that opts into
+    /// grid virtualization it is the grid's own height-bound viewport
+    /// (<c>.mud-table-container</c>), because the document itself does not scroll there.
+    /// </summary>
     public double ScrollPosition { get; init; }
 
     /// <summary>

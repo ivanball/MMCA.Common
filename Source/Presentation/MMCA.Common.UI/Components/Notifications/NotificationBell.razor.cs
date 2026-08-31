@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common;
+using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
 
@@ -10,6 +12,12 @@ namespace MMCA.Common.UI.Components.Notifications;
 /// Code-behind for the notification bell: renders the unread badge from the scoped
 /// <see cref="NotificationState"/>, and one instance at a time holds the single active-poller slot
 /// (periodic + on-navigation refresh) so duplicate bell placements never duplicate API calls.
+/// <para>
+/// Its staleness policy is explicit and configurable (<see cref="NotificationBellOptions"/>): the
+/// first read and the periodic tick are unconditional, a navigation reads only when the count is
+/// older than the configured window, and a real-time push marks the count stale and reads
+/// regardless. Both the timer and the age comparison run off the injected <see cref="TimeProvider"/>.
+/// </para>
 /// </summary>
 /// <remarks>
 /// Hosts commonly render the bell twice (a desktop app bar and a mobile nav) inside
@@ -21,12 +29,12 @@ namespace MMCA.Common.UI.Components.Notifications;
 /// </remarks>
 public partial class NotificationBell : IDisposable
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
-
     [Inject] private NotificationState State { get; set; } = default!;
     [Inject] private INotificationInboxUIService InboxService { get; set; } = default!;
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
+    [Inject] private IOptions<NotificationBellOptions> Options { get; set; } = default!;
+    [Inject] private TimeProvider Clock { get; set; } = default!;
 
     private readonly CancellationTokenSource _cts = new();
     private PeriodicTimer? _pollTimer;
@@ -66,9 +74,13 @@ public partial class NotificationBell : IDisposable
 
         _isActivePoller = true;
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        // The first read is unconditional: nothing has established the count yet.
         await RefreshUnreadCountAsync();
 
-        _pollTimer = new PeriodicTimer(PollInterval);
+        // The TimeProvider overload rather than the ambient system clock, so a test drives the loop
+        // deterministically instead of waiting out a real interval.
+        _pollTimer = new PeriodicTimer(Options.Value.PollInterval, Clock);
         _ = PollLoopAsync();
     }
 
@@ -114,18 +126,39 @@ public partial class NotificationBell : IDisposable
         }
     }
 
-    // Event-handler signature; the refresh task observes its own failures internally (catch-all),
-    // so the explicit discard is safe and avoids the async-void crash-the-process mode (VSTHRD100).
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
-        _ = RefreshUnreadCountAsync();
+    /// <summary>
+    /// Navigation is an ambient trigger, not evidence that the count moved: it fires on every page
+    /// change, and a user clicking through a menu used to issue one API read per click for a number
+    /// that had not changed. The read now happens only when the count is actually old enough
+    /// (<see cref="NotificationBellOptions.NavigationRefreshMaxAge"/>).
+    /// </summary>
+    /// <remarks>
+    /// Event-handler signature; the refresh task observes its own failures internally (catch-all),
+    /// so the explicit discard is safe and avoids the async-void crash-the-process mode (VSTHRD100).
+    /// </remarks>
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (State.IsStale(Options.Value.NavigationRefreshMaxAge))
+        {
+            _ = RefreshUnreadCountAsync();
+        }
+    }
 
     /// <summary>
     /// Called when NotificationListener receives a SignalR push and requests an API refresh.
     /// This provides a second chance to update the badge if the optimistic IncrementUnreadCount
     /// didn't trigger a re-render (e.g., cross-component InvokeAsync dispatch was dropped).
+    /// <para>
+    /// Unconditional, and it marks the count stale first: the server has just said the data changed,
+    /// so the age of the number carries no information any more. This is the one path that must never
+    /// be throttled by the navigation window.
+    /// </para>
     /// </summary>
-    private void HandleRefreshRequested(object? sender, EventArgs e) =>
+    private void HandleRefreshRequested(object? sender, EventArgs e)
+    {
+        State.MarkStale();
         _ = RefreshUnreadCountAsync();
+    }
 
     private async Task RefreshUnreadCountAsync()
     {

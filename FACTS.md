@@ -17,7 +17,7 @@ _As of: 2026-08-31 (framework v1.174.0) — **generated from source by `build/fa
   rollout).
 
 ## Published packages — **17**
-Released in lockstep to GitHub Packages (the packable projects under `Source/` carrying a `<PackageId>`):
+Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.Application`
 2. `MMCA.Common.Domain`
@@ -43,10 +43,10 @@ The ADRs live in the Website repo (`docs-src/adr/`), published at
 it owns the range/count and the one-line summaries. Do not restate the `(001-NNN)` range elsewhere.
 
 ## Architecture fitness functions
-- **121 test methods across 45 abstract `*TestsBase` classes**, shipped once in the
+- **122 test methods across 46 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **178** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **187** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

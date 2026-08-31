@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -37,15 +38,21 @@ public sealed class SecurityHeadersSettings
 
     /// <summary>
     /// Static Content-Security-Policy used by the default <see cref="ICspPolicyProvider"/>. Set to
-    /// <see langword="null"/>/empty to emit no CSP. The default is a conservative hardened baseline —
-    /// <c>default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'</c>
-    /// — safe for the JSON / WebSocket / static responses of API and Gateway hosts. It deliberately omits
-    /// <c>script-src</c>/<c>style-src</c> so it does not break an HTML/Blazor host that forgot to register a
-    /// provider (Blazor needs <c>script-src 'wasm-unsafe-eval'</c> and MudBlazor needs <c>style-src 'unsafe-inline'</c>);
-    /// HTML hosts register their own <see cref="ICspPolicyProvider"/> for a full resource policy.
+    /// <see langword="null"/>/empty to emit no CSP. The default is a complete hardened baseline:
+    /// <code>
+    /// default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+    /// </code>
+    /// It ships <c>script-src</c> and <c>style-src</c> at exactly the strength Blazor
+    /// (<c>'wasm-unsafe-eval'</c>) and MudBlazor (<c>'unsafe-inline'</c> styles) require, so an HTML host that never registers a
+    /// provider still gets a functional policy instead of one silently missing both directives, while
+    /// the JSON / WebSocket / static responses of API and Gateway hosts are unaffected.
+    /// A host needing a stricter or looser policy configures the <c>"SecurityHeaders"</c> section or
+    /// registers its own <see cref="ICspPolicyProvider"/>; the <c>{nonce}</c> placeholder (see
+    /// <see cref="CspNonce"/>) is the supported path off <c>'unsafe-inline'</c>.
     /// </summary>
     public string? ContentSecurityPolicy { get; set; } =
-        "default-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+        "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
     /// <summary>When <see langword="true"/> the static CSP is enforced; otherwise it is emitted Report-Only.</summary>
     public bool EnforceContentSecurityPolicy { get; set; } = true;
@@ -86,6 +93,38 @@ internal sealed class StaticCspPolicyProvider : ICspPolicyProvider
 }
 
 /// <summary>
+/// Per-request Content-Security-Policy nonce produced by <see cref="SecurityHeadersMiddleware"/>.
+/// </summary>
+/// <remarks>
+/// A policy that wants a nonce writes the literal token <c>{nonce}</c> as a source-list entry, e.g.
+/// <c>script-src 'self' {nonce}</c>. For every request whose resolved policy contains that token the
+/// middleware generates a fresh random value, replaces each occurrence with the quoted source-list form
+/// <c>'nonce-&lt;value&gt;'</c>, and stashes the raw value under <see cref="ItemKey"/> before the rest of
+/// the pipeline runs, so the page render can read it. A host layout stamps it onto its own tags:
+/// <code>
+/// @inject Microsoft.AspNetCore.Http.IHttpContextAccessor Http
+/// &lt;script nonce="@CspNonce.Get(Http.HttpContext!)" src="app.js"&gt;&lt;/script&gt;
+/// </code>
+/// A policy with no placeholder generates no nonce and stores nothing.
+/// </remarks>
+public static class CspNonce
+{
+    /// <summary>Key under which the raw (unquoted, Base64) nonce is stored in <see cref="HttpContext.Items"/>.</summary>
+    public const string ItemKey = "MMCA.CspNonce";
+
+    /// <summary>
+    /// Returns the nonce generated for the current request, or <see langword="null"/> when the resolved
+    /// policy carried no <c>{nonce}</c> placeholder (or the middleware did not run).
+    /// </summary>
+    /// <param name="context">The current request.</param>
+    public static string? Get(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return context.Items.TryGetValue(ItemKey, out var value) ? value as string : null;
+    }
+}
+
+/// <summary>
 /// Adds hardened security response headers to every response: <c>X-Content-Type-Options</c>,
 /// <c>X-Frame-Options</c>, <c>Referrer-Policy</c>, <c>Permissions-Policy</c>, HSTS (outside Development),
 /// and a Content-Security-Policy resolved from <see cref="ICspPolicyProvider"/>. Centralizes what each
@@ -93,6 +132,12 @@ internal sealed class StaticCspPolicyProvider : ICspPolicyProvider
 /// </summary>
 public sealed class SecurityHeadersMiddleware
 {
+    /// <summary>Literal token a policy uses to request a per-request nonce (see <see cref="CspNonce"/>).</summary>
+    private const string NoncePlaceholder = "{nonce}";
+
+    /// <summary>Nonce entropy in bytes; 16 bytes (128 bits) is the CSP specification's recommendation.</summary>
+    private const int NonceByteCount = 16;
+
     private readonly RequestDelegate _next;
     private readonly ICspPolicyProvider _cspPolicyProvider;
     private readonly SecurityHeadersSettings _settings;
@@ -132,13 +177,24 @@ public sealed class SecurityHeadersMiddleware
         var csp = _cspPolicyProvider.GetPolicy(context);
         if (csp is not null)
         {
+            // A policy carrying the {nonce} token gets a fresh value per request. The raw value lands in
+            // HttpContext.Items BEFORE the pipeline runs, because the page render is what stamps it onto
+            // its script/style tags; the header carries the quoted 'nonce-<value>' source-list form.
+            var value = csp.Value;
+            if (value.Contains(NoncePlaceholder, StringComparison.Ordinal))
+            {
+                var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(NonceByteCount));
+                context.Items[CspNonce.ItemKey] = nonce;
+                value = value.Replace(NoncePlaceholder, $"'nonce-{nonce}'", StringComparison.Ordinal);
+            }
+
             if (csp.Enforce)
             {
-                headers.ContentSecurityPolicy = csp.Value;
+                headers.ContentSecurityPolicy = value;
             }
             else
             {
-                headers.ContentSecurityPolicyReportOnly = csp.Value;
+                headers.ContentSecurityPolicyReportOnly = value;
             }
         }
 

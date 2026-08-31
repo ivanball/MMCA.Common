@@ -207,6 +207,50 @@ public sealed class H2cHealthCheckExtensionsTests
         result.Status.Should().Be(HealthStatus.Unhealthy);
     }
 
+    // The registration's own timeout cancels the SAME token CheckHealthAsync receives. A probe that
+    // outlives ProbeTimeout therefore arrives here with a cancelled token, and it must still come
+    // back as an Unhealthy RESULT: letting it escape gets it logged by the health service as an
+    // unhandled exception on every poll (the 2026-08-31 apphost-smoke logs were full of exactly
+    // that noise).
+    [Fact]
+    public async Task Probe_WhenTheRegistrationTimeoutHasCancelledTheToken_StillReportsUnhealthyRatherThanThrowing()
+    {
+        using var handler = new StubHandler(_ => throw new TaskCanceledException("probe budget exhausted"));
+        using var client = new HttpClient(handler, disposeHandler: false);
+        var check = new H2cEndpointHealthCheck(() => "http://identity:8080", "/alive", client.SendAsync);
+        var registration = new HealthCheckRegistration("identity-h2c-http", check, HealthStatus.Unhealthy, tags: null);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        var result = await check.CheckHealthAsync(
+            new HealthCheckContext { Registration = registration },
+            cancelled.Token);
+
+        result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Exception.Should().BeOfType<TaskCanceledException>();
+    }
+
+    // Pins the poisoned-connection guard on the shared probe handler. HTTP/2 pools one connection
+    // per origin, and the Aspire endpoint proxy listens before the target Kestrel does, so the first
+    // probe of a starting resource can open a connection that is accepted and never answered. The
+    // keep-alive ping trio is what tears that zombie down so a later probe can open a fresh
+    // connection; without it the shared client queues every probe onto the zombie forever and the
+    // resource can never turn healthy (the 2026-08-31 apphost-smoke wedge). Verified empirically
+    // against a held-open unanswered socket; this test pins the settings so a refactor cannot
+    // silently drop them.
+    [Fact]
+    public void ProbeHandler_KeepsTheKeepAlivePingGuardAgainstPoisonedConnections()
+    {
+        var handler = H2cEndpointHealthCheck.ProbeHandler;
+
+        handler.KeepAlivePingPolicy.Should().Be(
+            HttpKeepAlivePingPolicy.Always,
+            because: "a zombie connection carries no active streams, so a WithActiveRequests policy would never ping it down");
+        handler.KeepAlivePingDelay.Should().Be(TimeSpan.FromSeconds(1));
+        handler.KeepAlivePingTimeout.Should().Be(TimeSpan.FromSeconds(1));
+        handler.UseProxy.Should().BeFalse();
+    }
+
     // Aspire allocates an endpoint only once the resource starts, so the first polls after the
     // AppHost comes up resolve nothing. Failing them is correct: Aspire releases a WaitFor edge only
     // on Healthy, so a pre-allocation poll that passed would defeat the gate entirely.

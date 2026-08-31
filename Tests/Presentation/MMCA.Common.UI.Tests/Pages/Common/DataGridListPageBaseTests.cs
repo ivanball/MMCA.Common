@@ -79,6 +79,36 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         public Task LoadMobileAsync() => LoadMobileDataAsync(Fetch);
 
         public void ToggleDensityNow() => ToggleDensity();
+
+        public bool VirtualizeGridNow => VirtualizeGrid;
+
+        public string VirtualizedGridHeightNow => VirtualizedGridHeight;
+
+        public int VirtualizedItemSizeNow => VirtualizedItemSize;
+
+        public Task<GridData<WidgetRow>> LoadVirtualizedAsync(
+            GridStateVirtualize<WidgetRow> state,
+            Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null) =>
+            LoadVirtualizedServerDataAsync(state, Fetch, additionalFilters);
+    }
+
+    /// <summary>
+    /// A page that holds a REAL <see cref="MudDataGrid{T}"/> as its <c>GridRef</c> and can be flipped
+    /// between the paged and virtualized modes by parameter. The rows-per-page restore is only
+    /// observable through a live grid, so the pager-machinery tests bind one here rather than through
+    /// the grid-less <see cref="TestGridPage"/>.
+    /// </summary>
+    private sealed class GridBackedTestPage : DataGridListPageBase<WidgetRow>
+    {
+        [Parameter] public MudDataGrid<WidgetRow>? Grid { get; set; }
+
+        [Parameter] public bool Virtualize { get; set; }
+
+        protected override string Title => "Widgets";
+
+        protected override MudDataGrid<WidgetRow>? GridRef => Grid;
+
+        protected override bool VirtualizeGrid => Virtualize;
     }
 
     private static GridState<WidgetRow> State(int page, int pageSize, string? sortBy = null, bool descending = false)
@@ -433,5 +463,241 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.LoadFailedNow.Should().BeTrue();
         cut.Instance.LoadingNow.Should().BeFalse();
         _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
+    }
+
+    // == Virtualization: window arithmetic ==
+    [Theory]
+    // startIndex, count -> firstPage, pageSize, offset, needsSecondPage
+    [InlineData(0, 10, 1, 10, 0, false)] // the very first window
+    [InlineData(20, 10, 3, 10, 0, false)] // aligned: exactly one page
+    [InlineData(25, 10, 3, 10, 5, true)] // unaligned: spills into the next page
+    [InlineData(7, 5, 2, 5, 2, true)] // unaligned again, different page size
+    [InlineData(0, 0, 1, 1, 0, false)] // count 0: page size clamps to 1, nothing spills
+    [InlineData(0, -4, 1, 1, 0, false)] // a negative count is clamped the same way
+    public void ComputeVirtualWindow_MapsTheRowWindowOntoPagedFetches(
+        int startIndex, int count, int firstPage, int pageSize, int offset, bool needsSecondPage)
+    {
+        var window = DataGridListPageBase<WidgetRow>.ComputeVirtualWindow(startIndex, count);
+
+        window.FirstPage.Should().Be(firstPage, "pages are 1-based for the fetch delegate");
+        window.PageSize.Should().Be(pageSize);
+        window.Offset.Should().Be(offset);
+        window.NeedsSecondPage.Should().Be(needsSecondPage);
+    }
+
+    private static GridStateVirtualize<WidgetRow> VirtualState(
+        int startIndex, int count, string? sortBy = null, bool descending = false)
+    {
+        var state = new GridStateVirtualize<WidgetRow> { StartIndex = startIndex, Count = count };
+        if (sortBy is not null)
+        {
+            state.SortDefinitions = [new SortDefinition<WidgetRow>(sortBy, descending, 0, row => row.Name)];
+        }
+
+        return state;
+    }
+
+    private async Task<GridData<WidgetRow>> LoadVirtualizedOnDispatcherAsync(
+        IRenderedComponent<TestGridPage> cut,
+        GridStateVirtualize<WidgetRow> state,
+        Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null)
+    {
+        GridData<WidgetRow>? data = null;
+        await cut.InvokeAsync(async () => data = await cut.Instance.LoadVirtualizedAsync(state, additionalFilters));
+        return data!;
+    }
+
+    // == Virtualization: the VirtualizeServerData funnel ==
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_AlignedWindow_FetchesOnePageAndReturnsIt()
+    {
+        var cut = Render<TestGridPage>();
+        var calls = new List<(int PageNumber, int PageSize)>();
+        cut.Instance.Fetch = (_, pageNumber, pageSize, _, _, _) =>
+        {
+            calls.Add((pageNumber, pageSize));
+            return Loaded(40, new WidgetRow(1, "First"), new WidgetRow(2, "Second"), new WidgetRow(3, "Third"));
+        };
+
+        var data = await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 3, count: 3));
+
+        calls.Should().ContainSingle("an aligned window is exactly one page")
+            .Which.Should().Be((2, 3));
+        data.Items.Should().HaveCount(3);
+        data.TotalItems.Should().Be(40, "the fetch result carries the unpaginated total");
+        cut.Instance.LoadingNow.Should().BeFalse();
+        cut.Instance.LoadFailedNow.Should().BeFalse();
+        _toast.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_UnalignedWindow_FetchesBothPagesAndSlicesToCount()
+    {
+        // startIndex 4 / count 3 -> page size 3, first page 2 (rows 3-5), offset 1, so the window
+        // (rows 4-6) needs page 3 as well and the concatenation is sliced from the second row.
+        var cut = Render<TestGridPage>();
+        var calls = new List<int>();
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) =>
+        {
+            calls.Add(pageNumber);
+            return pageNumber == 2
+                ? Loaded(40, new WidgetRow(4, "D"), new WidgetRow(5, "E"), new WidgetRow(6, "F"))
+                : Loaded(40, new WidgetRow(7, "G"), new WidgetRow(8, "H"), new WidgetRow(9, "I"));
+        };
+
+        var data = await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 4, count: 3));
+
+        calls.Should().Equal(2, 3);
+        // The concatenated pages are sliced to exactly the requested window.
+        data.Items.Select(r => r.Name).Should().Equal("E", "F", "G");
+        data.TotalItems.Should().Be(40);
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_AtTheEndOfTheData_ReturnsFewerRowsThanRequested()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, pageNumber, _, _, _, _) => pageNumber == 2
+            ? Loaded(7, new WidgetRow(4, "D"), new WidgetRow(5, "E"), new WidgetRow(6, "F"))
+            : Loaded(7, new WidgetRow(7, "G"));
+
+        var data = await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 4, count: 3));
+
+        data.Items.Select(r => r.Name).Should().Equal("E", "F", "G");
+        data.TotalItems.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_WhenFetchFails_SetsLoadFailedAndReturnsAnEmptyGrid()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => LoadFailure("The widget service is unavailable.");
+
+        var act = async () => await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 0, count: 10));
+        await act.Should().NotThrowAsync();
+
+        var data = await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 0, count: 10));
+        data.Items.Should().BeEmpty();
+        data.TotalItems.Should().Be(0);
+        cut.Instance.LoadFailedNow.Should().BeTrue();
+        cut.Instance.LoadingNow.Should().BeFalse("the loading flag must always be reset");
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_AppliesAdditionalFilters()
+    {
+        var cut = Render<TestGridPage>();
+        Dictionary<string, (string Operator, string Value)>? seenFilters = null;
+        cut.Instance.Fetch = (filters, _, _, _, _, _) =>
+        {
+            seenFilters = filters;
+            return Loaded(0);
+        };
+
+        await LoadVirtualizedOnDispatcherAsync(
+            cut,
+            VirtualState(startIndex: 0, count: 10),
+            additionalFilters: filters => filters["search"] = ("contains", "blue"));
+
+        seenFilters.Should().NotBeNull();
+        seenFilters!.Should().ContainKey("search").WhoseValue.Should().Be(("contains", "blue"));
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_MapsSortDefinitionsIntoTheFetchCall()
+    {
+        var cut = Render<TestGridPage>();
+        string? seenColumn = null;
+        string? seenDirection = null;
+        cut.Instance.Fetch = (_, _, _, sortColumn, sortDirection, _) =>
+        {
+            seenColumn = sortColumn;
+            seenDirection = sortDirection;
+            return Loaded(0);
+        };
+
+        await LoadVirtualizedOnDispatcherAsync(
+            cut,
+            VirtualState(startIndex: 0, count: 10, sortBy: "Name", descending: true));
+
+        seenColumn.Should().Be("Name", "GridStateVirtualize carries the same SortDefinitions as GridState");
+        seenDirection.Should().Be("desc");
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_WhenFetchCanceled_StaysSilent()
+    {
+        // Scroll bursts supersede in-flight window fetches constantly, so a cancel toast would fire
+        // continuously during ordinary scrolling. The paged funnel still toasts; this one never does.
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => throw new OperationCanceledException();
+
+        var data = await LoadVirtualizedOnDispatcherAsync(cut, VirtualState(startIndex: 0, count: 10));
+
+        data.Items.Should().BeEmpty();
+        cut.Instance.LoadFailedNow.Should().BeFalse("a superseded window is not a failure");
+        _toast.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task LoadVirtualizedServerDataAsync_PersistsSortWithoutMirroringPagerStateToTheUrl()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(100, new WidgetRow(1, "First"));
+
+        await LoadVirtualizedOnDispatcherAsync(
+            cut,
+            VirtualState(startIndex: 40, count: 20, sortBy: "Name", descending: true));
+
+        var saved = Services.GetRequiredService<ListPageStateService>().GetState("/");
+        saved.Should().NotBeNull();
+        saved!.SortColumn.Should().Be("Name");
+        saved.SortDescending.Should().BeTrue();
+        saved.Page.Should().Be(0, "a virtualized grid has no page number to remember");
+        saved.PageSize.Should().Be(0);
+        navigation.Uri.Should().Contain("s=Name").And.Contain("sd=desc");
+        navigation.Uri.Should().NotContain("p=").And.NotContain("ps=");
+    }
+
+    // == Virtualization: opt-in defaults and the skipped pager machinery ==
+    [Fact]
+    public void VirtualizeGrid_DefaultsToFalse_WithTheDocumentedHeightAndItemSize()
+    {
+        var cut = Render<TestGridPage>();
+
+        cut.Instance.VirtualizeGridNow.Should().BeFalse("virtualization is opt-in, never the default");
+        cut.Instance.VirtualizedGridHeightNow.Should().Be("70vh");
+        cut.Instance.VirtualizedItemSizeNow.Should().Be(52);
+    }
+
+    [Fact]
+    public void RestoreGridState_WhenPaged_RestoresRowsPerPageOntoTheGrid()
+    {
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=0&ps=50");
+        var grid = Render<MudDataGrid<WidgetRow>>().Instance;
+
+        Render<GridBackedTestPage>(ps => ps
+            .Add(p => p.Grid, grid)
+            .Add(p => p.Virtualize, false));
+
+        grid.RowsPerPage.Should().Be(50, "the paged page restores the saved rows-per-page after first render");
+    }
+
+    [Fact]
+    public void RestoreGridState_WhenVirtualized_SkipsTheRowsPerPageRestore()
+    {
+        // Same saved state, same grid: the only difference is the opt-in flag, and it must short-circuit
+        // the whole pager-restore block (a virtualized grid renders no pager to restore).
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=0&ps=50");
+        var grid = Render<MudDataGrid<WidgetRow>>().Instance;
+
+        Render<GridBackedTestPage>(ps => ps
+            .Add(p => p.Grid, grid)
+            .Add(p => p.Virtualize, true));
+
+        grid.RowsPerPage.Should().Be(10, "MudDataGrid's own default is left untouched");
     }
 }

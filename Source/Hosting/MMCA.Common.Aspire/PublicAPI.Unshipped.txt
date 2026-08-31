@@ -18,3 +18,6 @@ static MMCA.Common.Aspire.Logging.SerilogHostExtensions.CreateBootstrapLoggerFac
 *REMOVED*static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireSqlServer = false) -> TBuilder
 MMCA.Common.Aspire.Extensions.extension<TBuilder>(TBuilder).AddInfrastructureHealthChecks(bool requireDatabase = false) -> TBuilder
 static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(this TBuilder builder, bool requireDatabase = false) -> TBuilder
+MMCA.Common.Aspire.Security.CspNonce
+const MMCA.Common.Aspire.Security.CspNonce.ItemKey = "MMCA.CspNonce" -> string!
+static MMCA.Common.Aspire.Security.CspNonce.Get(Microsoft.AspNetCore.Http.HttpContext! context) -> string?

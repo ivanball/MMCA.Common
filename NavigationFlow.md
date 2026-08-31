@@ -18,13 +18,25 @@
 | `/auth/oauth-complete` | `Auth/OAuthComplete` | Anonymous | External-login callback landing. |
 | `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. Route carries `[Authorize]`. |
 | `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). Route carries `[Authorize]`. |
+| `/notifications/inbox/{Id:int}` | `Notifications/NotificationInbox` | Authenticated | Typed deep link to one notification: highlights it and scrolls it into view. The `:int` constraint is the validation boundary (a malformed id renders `NotFound`); an id that is valid but absent from the loaded page degrades silently to the plain inbox. Route carries `[Authorize]`. |
 | `/notifications/send` | `Notifications/NotificationSend` | Authenticated | Admin/sender surface. Route carries `[Authorize]`; the sender role/claim gate is consumer-declared (NavItem filter) and enforced server-side by the send API. |
 | `/profile/sessions` | `Auth/Sessions` | Authenticated | Signed-in devices: one row per live refresh session, with a per-device sign-out and a sign-out-everywhere. Route carries `[Authorize]`; reachable from the shared nav menu's account section. |
 | `/not-found` | `NotFound` | Any | 404 within the app shell (`Router.NotFoundPage`). |
 | `/forbidden` | `Forbidden` | Any | 403 within the app shell (see below); rendered for authenticated-but-unauthorized hits via `AuthorizeRouteView`, but the route itself is open (a direct anonymous visit just shows the 403 page). |
 
+The table covers `MMCA.Common.UI` only. `MMCA.Common.UI.Web`'s `/Error` page is a server-rendered
+host page (the ASP.NET exception-handler landing, no interactive render mode), so it is deliberately
+outside this contract and outside the drift gate's reflection anchor.
+
 ## Guards & wayfinding (the §25 contract)
 
+- **Typed route parameters, not free-form strings.** Every route parameter carries a type constraint
+  (`/notifications/inbox/{Id:int}`), so validation happens at the router: a malformed id never
+  reaches a page and renders `NotFound` instead of failing somewhere downstream. A deep link whose id
+  is well-formed but not present (a later page, a deleted row, another user's notification) degrades
+  to the plain page silently, because the user cannot act on a toast about it. Build these links from
+  the `*RoutePaths` helpers (`NotificationRoutePaths.NotificationInboxItem`), never by string
+  concatenation, so the URL always matches the constraint.
 - **Route-level authorization, not UI hiding.** `Routes.razor` wraps routing in
   `AuthorizeRouteView`. Hiding a nav item is convenience only; the route itself is the boundary, and
   the API re-validates server-side (ADR-022/ADR-004) — UI hiding is never the security control.

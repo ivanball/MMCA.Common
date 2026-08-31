@@ -312,3 +312,43 @@ MMCA.Common.UI.Services.Auth.ISecureTokenStore.GetRefreshTokenAsync() -> System.
 MMCA.Common.UI.Services.Auth.ISecureTokenStore.SetTokensAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Notifications.INotificationScopeProvider.GetCurrentScopeDisplayNameAsync(System.Threading.CancellationToken ct = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
 override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitializedAsync() -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.IPushRegistrationService! pushRegistration) -> void
+*REMOVED*MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService) -> void
+*REMOVED*MMCA.Common.UI.Services.Notifications.NotificationState.NotificationState() -> void
+MMCA.Common.UI.Common.Settings.NotificationBellOptions
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.get -> System.TimeSpan
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.init -> void
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.NotificationBellOptions() -> void
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.PollInterval.get -> System.TimeSpan
+MMCA.Common.UI.Common.Settings.NotificationBellOptions.PollInterval.init -> void
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.get -> System.TimeSpan
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.DefaultTtl.init -> void
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.get -> bool
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.Enabled.init -> void
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.RoutePrefixTtls.get -> System.Collections.Generic.Dictionary<string!, System.TimeSpan>!
+MMCA.Common.UI.Common.Settings.UiReadCacheOptions.UiReadCacheOptions() -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
+MMCA.Common.UI.Services.Caching.IUiReadCache
+MMCA.Common.UI.Services.Caching.IUiReadCache.Clear() -> void
+MMCA.Common.UI.Services.Caching.IUiReadCache.InvalidatePrefix(string! routePrefix) -> void
+MMCA.Common.UI.Services.Caching.IUiReadCache.Set<T>(string! url, T value) -> void
+MMCA.Common.UI.Services.Caching.IUiReadCache.TryGetFresh<T>(string! url, out T? value) -> bool
+MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.EntityServiceBase(string! endpoint, System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
+MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.GetCachedAsync<T>(string! url, System.Threading.CancellationToken cancellationToken, bool bypassCache = false) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<T>!>!
+MMCA.Common.UI.Services.EntityServiceBase<TEntityDTO, TIdentifierType>.ReadCache.get -> MMCA.Common.UI.Services.Caching.IUiReadCache?
+MMCA.Common.UI.Services.Notifications.NotificationState.IsStale(System.TimeSpan maxAge) -> bool
+MMCA.Common.UI.Services.Notifications.NotificationState.LastFetchedUtc.get -> System.DateTimeOffset?
+MMCA.Common.UI.Services.Notifications.NotificationState.MarkStale() -> void
+MMCA.Common.UI.Services.Notifications.NotificationState.NotificationState(System.TimeProvider? timeProvider = null) -> void
+static readonly MMCA.Common.UI.Common.Settings.NotificationBellOptions.SectionName -> string!
+static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
+MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.LoadVirtualizedServerDataAsync(MudBlazor.GridStateVirtualize<TDto>! state, System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TDto>! Items, int TotalItems)>!>!>! fetchAsync, System.Action<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!>? additionalFilters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MudBlazor.GridData<TDto>!>!
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedGridHeight.get -> string!
+virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedItemSize.get -> int
+MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.get -> int?
+MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.set -> void
+override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnParametersSet() -> void
+static MMCA.Common.UI.Common.NotificationRoutePaths.NotificationInboxItem(int id) -> string!

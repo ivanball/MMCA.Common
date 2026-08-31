@@ -13,6 +13,8 @@ namespace MMCA.Common.Architecture.Tests;
 /// moving in the same change fails the build, and so does an auth-posture lie in either direction:
 /// a route the doc calls Authenticated must carry <see cref="AuthorizeAttribute"/>, and a route the
 /// doc calls Anonymous (or Any) must not. A minimum-route floor keeps the reflection non-vacuous.
+/// The same gate also holds the typed-deep-link half of §25: every route parameter must carry a type
+/// constraint, so the router validates the value before any page sees it.
 /// </summary>
 public sealed partial class NavigationContractTests
 {
@@ -76,6 +78,27 @@ public sealed partial class NavigationContractTests
             because: "the documented auth posture is the §25 route-guard contract; the RouteAttribute/AuthorizeAttribute reality must match it exactly");
     }
 
+    [Fact]
+    public void RouteTemplateParameters_AllCarryTypeConstraints()
+    {
+        var violations = new List<string>();
+        foreach (var template in DiscoverRoutedPages().Keys.Order(StringComparer.Ordinal))
+        {
+            foreach (Match segment in RouteParameterRegex.Matches(template))
+            {
+                var body = segment.Groups["param"].Value;
+                if (!body.Contains(':', StringComparison.Ordinal))
+                {
+                    violations.Add(
+                        $"{template}: route parameter '{{{body}}}' carries no type constraint, so it accepts arbitrary strings and the page, not the router, becomes the validation boundary; a typed deep link must constrain its parameter (e.g. '{{{body}:int}}') so a malformed value renders NotFound instead of reaching the component (rubric §25)");
+                }
+            }
+        }
+
+        violations.Should().BeEmpty(
+            because: "every route parameter shipped by MMCA.Common.UI must be type-constrained; an unconstrained parameter bypasses the typed deep-link validation the §25 navigation contract promises");
+    }
+
     private static Dictionary<string, bool> DiscoverRoutedPages()
     {
         var pages = new Dictionary<string, bool>(StringComparer.Ordinal);
@@ -115,4 +138,7 @@ public sealed partial class NavigationContractTests
 
     [GeneratedRegex(@"^\|\s*`(?<route>/[^`]*)`\s*\|[^|]*\|\s*(?<auth>[^|]+)\|", RegexOptions.Multiline | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
     private static partial Regex RouteRowRegex { get; }
+
+    [GeneratedRegex(@"\{(?<param>[^{}]+)\}", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex RouteParameterRegex { get; }
 }
