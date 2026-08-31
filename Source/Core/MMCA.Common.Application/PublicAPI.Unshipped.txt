@@ -242,10 +242,14 @@ MMCA.Common.Application.Validation.AbsoluteUrlRules<T>
 MMCA.Common.Application.Validation.AbsoluteUrlRules<T>.AbsoluteUrlRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector, string! fieldName, int maxLength, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.EmailRules<T>.EmailRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string! fieldName, int maxLength, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.NonNegativeIntRules<T>.NonNegativeIntRules(System.Linq.Expressions.Expression<System.Func<T, int>!>! selector, string! fieldName, string? errorCode = null) -> void
+MMCA.Common.Application.Validation.OptionalPositiveIdRules<T, TId>
+MMCA.Common.Application.Validation.OptionalPositiveIdRules<T, TId>.OptionalPositiveIdRules(System.Linq.Expressions.Expression<System.Func<T, TId?>!>! selector, string! fieldName, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.OptionalStringRules<T>.OptionalStringRules(System.Linq.Expressions.Expression<System.Func<T, string?>!>! selector, string! fieldName, int maxLength, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.PasswordRules<T>.PasswordRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.PositiveDecimalRules<T>.PositiveDecimalRules(System.Linq.Expressions.Expression<System.Func<T, decimal>!>! selector, string! fieldName, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.PositiveIntRules<T>.PositiveIntRules(System.Linq.Expressions.Expression<System.Func<T, int>!>! selector, string! fieldName, string? errorCode = null) -> void
+MMCA.Common.Application.Validation.RequiredIdRules<T, TId>
+MMCA.Common.Application.Validation.RequiredIdRules<T, TId>.RequiredIdRules(System.Linq.Expressions.Expression<System.Func<T, TId>!>! selector, string! fieldName, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.RequiredStringRules<T>.RequiredStringRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string! fieldName, int maxLength, string? errorCode = null) -> void
 MMCA.Common.Application.Validation.StrongPasswordRules<T>.StrongPasswordRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string? errorCode = null) -> void
 abstract MMCA.Common.Application.DomainEvents.ScopedIntegrationEventHandlerBase<TIntegrationEvent>.HandleScopedAsync(TIntegrationEvent integrationEvent, System.IServiceProvider! services, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!

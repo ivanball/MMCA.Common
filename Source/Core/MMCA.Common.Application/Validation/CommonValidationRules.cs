@@ -127,6 +127,46 @@ public class NonNegativeIntRules<T> : AbstractValidator<T>
 }
 
 /// <summary>
+/// Reusable validation rules for a required identifier field: the field must carry a value that is
+/// not the identifier type's default.
+/// </summary>
+/// <remarks>
+/// <c>NotEmpty</c> is the deliberate check: it rejects zero for an integer key and
+/// <see cref="Guid.Empty"/> for a <see cref="Guid"/> key, which is exactly what "an id was never
+/// supplied" looks like on the wire for both shapes. The field phrase is interpolated verbatim
+/// into "You must specify {fieldName}", so the caller supplies the article and any qualifier:
+/// "a Category", "an Event for the Session".
+/// </remarks>
+/// <typeparam name="T">The parent type containing the field.</typeparam>
+/// <typeparam name="TId">The identifier type of the field.</typeparam>
+public class RequiredIdRules<T, TId> : AbstractValidator<T>
+    where TId : notnull
+{
+    public RequiredIdRules(Expression<Func<T, TId>> selector, string fieldName, string? errorCode = null)
+        => RuleFor(selector)
+            .NotEmpty().WithMessage($"You must specify {fieldName}").WithOptionalErrorCode(errorCode);
+}
+
+/// <summary>
+/// Reusable validation rules for an optional identifier field: when a value is supplied it must be
+/// positive. A <see langword="null"/> value passes.
+/// </summary>
+/// <remarks>
+/// FluentValidation skips a comparison rule when the nullable property holds
+/// <see langword="null"/>, so the "when provided" part needs no <c>When</c> clause and no compiled
+/// selector re-evaluated per validation pass.
+/// </remarks>
+/// <typeparam name="T">The parent type containing the field.</typeparam>
+/// <typeparam name="TId">The underlying identifier type of the nullable field.</typeparam>
+public class OptionalPositiveIdRules<T, TId> : AbstractValidator<T>
+    where TId : struct, IComparable<TId>, IComparable
+{
+    public OptionalPositiveIdRules(Expression<Func<T, TId?>> selector, string fieldName, string? errorCode = null)
+        => RuleFor(selector)
+            .GreaterThan(default(TId)).WithMessage($"{fieldName} must be a valid positive value when provided.").WithOptionalErrorCode(errorCode);
+}
+
+/// <summary>
 /// Reusable validation rules for a password field: required, min 8, max 128 characters.
 /// For stricter complexity requirements, use <see cref="StrongPasswordRules{T}"/> instead.
 /// </summary>

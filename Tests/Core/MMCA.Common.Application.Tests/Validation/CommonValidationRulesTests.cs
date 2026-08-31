@@ -207,6 +207,124 @@ public sealed class CommonValidationRulesTests
         result.ShouldNotHaveValidationErrorFor(x => x.Quantity);
     }
 
+    // ── RequiredIdRules ──
+    [Fact]
+    public void RequiredIdRules_WhenIntIsZero_HasValidationError()
+    {
+        var validator = new RequiredIdRules<TestIntModel, int>(x => x.Quantity, "a Category");
+        var model = new TestIntModel { Quantity = 0 };
+
+        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Quantity)
+            .WithErrorMessage("You must specify a Category");
+    }
+
+    [Fact]
+    public void RequiredIdRules_WhenIntIsPositive_NoErrors()
+    {
+        var validator = new RequiredIdRules<TestIntModel, int>(x => x.Quantity, "Category");
+        var model = new TestIntModel { Quantity = 7 };
+
+        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.Quantity);
+    }
+
+    [Fact]
+    public void RequiredIdRules_WhenGuidIsEmpty_HasValidationError()
+    {
+        var validator = new RequiredIdRules<TestGuidModel, Guid>(x => x.OwnerId, "an Owner");
+        var model = new TestGuidModel { OwnerId = Guid.Empty };
+
+        TestValidationResult<TestGuidModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.OwnerId)
+            .WithErrorMessage("You must specify an Owner");
+    }
+
+    [Fact]
+    public void RequiredIdRules_WhenGuidIsPopulated_NoErrors()
+    {
+        var validator = new RequiredIdRules<TestGuidModel, Guid>(x => x.OwnerId, "Owner");
+        var model = new TestGuidModel { OwnerId = Guid.NewGuid() };
+
+        TestValidationResult<TestGuidModel> result = validator.TestValidate(model);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.OwnerId);
+    }
+
+    [Fact]
+    public void RequiredIdRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new RequiredIdRules<TestIntModel, int>(x => x.Quantity, "Event", "Session.EventId.Required");
+        var model = new TestIntModel { Quantity = 0 };
+
+        TestValidationResult<TestIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.Quantity)
+            .WithErrorCode("Session.EventId.Required");
+    }
+
+    // ── OptionalPositiveIdRules ──
+    [Fact]
+    public void OptionalPositiveIdRules_WhenNull_NoErrors()
+    {
+        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID");
+        var model = new TestOptionalIntModel { CategoryId = null };
+
+        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.CategoryId);
+    }
+
+    [Fact]
+    public void OptionalPositiveIdRules_WhenZero_HasValidationError()
+    {
+        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID");
+        var model = new TestOptionalIntModel { CategoryId = 0 };
+
+        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.CategoryId)
+            .WithErrorMessage("Category ID must be a valid positive value when provided.");
+    }
+
+    [Fact]
+    public void OptionalPositiveIdRules_WhenNegative_HasValidationError()
+    {
+        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID");
+        var model = new TestOptionalIntModel { CategoryId = -1 };
+
+        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.CategoryId);
+    }
+
+    [Fact]
+    public void OptionalPositiveIdRules_WhenPositive_NoErrors()
+    {
+        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(x => x.CategoryId, "Category ID");
+        var model = new TestOptionalIntModel { CategoryId = 42 };
+
+        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
+
+        result.ShouldNotHaveValidationErrorFor(x => x.CategoryId);
+    }
+
+    [Fact]
+    public void OptionalPositiveIdRules_WhenErrorCodeSupplied_AppliesIt()
+    {
+        var validator = new OptionalPositiveIdRules<TestOptionalIntModel, int>(
+            x => x.CategoryId, "Category ID", "Product.CategoryId.Invalid");
+        var model = new TestOptionalIntModel { CategoryId = 0 };
+
+        TestValidationResult<TestOptionalIntModel> result = validator.TestValidate(model);
+
+        result.ShouldHaveValidationErrorFor(x => x.CategoryId)
+            .WithErrorCode("Product.CategoryId.Invalid");
+    }
+
     // ── PasswordRules ──
     [Fact]
     public void PasswordRules_WhenEmpty_HasValidationError()
@@ -514,4 +632,14 @@ public sealed record TestIntModel
 public sealed record TestDecimalModel
 {
     public decimal Price { get; init; }
+}
+
+public sealed record TestOptionalIntModel
+{
+    public int? CategoryId { get; init; }
+}
+
+public sealed record TestGuidModel
+{
+    public Guid OwnerId { get; init; }
 }
