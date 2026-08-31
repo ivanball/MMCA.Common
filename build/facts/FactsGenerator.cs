@@ -205,7 +205,7 @@ _As of: {{AS_OF}} (framework {{VERSION}}) — **generated from source by `build/
   rollout).
 
 ## Published packages — **{{PKG_COUNT}}**
-Released in lockstep to GitHub Packages (the packable projects under `Source/` carrying a `<PackageId>`):
+Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 {{PKG_LIST}}
 

@@ -17,7 +17,7 @@ _As of: 2026-08-31 (framework v1.174.0) — **generated from source by `build/fa
   rollout).
 
 ## Published packages — **17**
-Released in lockstep to GitHub Packages (the packable projects under `Source/` carrying a `<PackageId>`):
+Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.Application`
 2. `MMCA.Common.Domain`

@@ -153,7 +153,7 @@ build as the final word.
 ## Releases are separate
 
 Do **not** bump versions in a feature PR. A release is cut after merge by the maintainer via the
-`/push-release` flow: tag `vX.Y.Z` on the merged `main` (publishes all 15 packages in lockstep),
+`/push-release` flow: tag `vX.Y.Z` on the merged `main` (publishes every package in lockstep),
 then a follow-up FACTS-regen PR and one lockstep version-bump PR per consumer. See
 [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html).
 
