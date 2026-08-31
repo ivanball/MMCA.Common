@@ -4,6 +4,34 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.177.0] - 2026-08-31
+
+Write-side registration and validation quality-of-life: `AddEntityCrud` now completes the update
+command's validator bridge on its own, and the common validation rules gain identifier-field bases,
+so consumers stop hand-registering the bridge and stop re-deriving per-app id rule classes. No
+breaking changes.
+
+### Added
+
+- **`RequiredIdRules<T, TId>`** (`MMCA.Common.Application`). Reusable rules for a required
+  identifier field via `NotEmpty` (rejects zero for an integer key and `Guid.Empty` for a Guid key).
+  The field phrase interpolates verbatim into "You must specify {fieldName}", so the caller supplies
+  the article and any qualifier ("a Category", "an Event for the Session") and existing consumer
+  messages can be preserved byte-exact; optional error code like the other rule classes.
+- **`OptionalPositiveIdRules<T, TId>`** (`MMCA.Common.Application`). Reusable rules for an optional
+  identifier field: null passes, a supplied value must be positive (`GreaterThan(default)`, which
+  FluentValidation skips for null, so no `When` clause and no per-validation compiled selector).
+
+### Changed
+
+- **`AddEntityCrud` registers the update command's validator bridge** (`MMCA.Common.Application`).
+  The same `CommandRequestValidator` bridge `AddEntityUpdateVerb` and `AddEntityUpdate` already
+  register now also closes over `UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>`
+  inside `AddEntityCrud`, so a module's update-request rules run in the validating decorator without
+  a hand-registered bridge. `TryAdd` semantics: an explicitly registered `IValidator` for the
+  command still wins, so existing hand-registered bridges in consumers are harmless no-ops until
+  they are deleted.
+
 ## [1.176.0] - 2026-08-31
 
 Local-vs-prod broker parity for consumers: the Aspire AppHost can now provision the Azure Service Bus
