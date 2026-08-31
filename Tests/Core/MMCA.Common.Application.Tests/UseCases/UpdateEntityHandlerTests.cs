@@ -1,8 +1,10 @@
 ﻿using AwesomeAssertions;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Validation;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
 
@@ -225,9 +227,43 @@ public sealed class AddEntityCrudTests
 
         services.AddEntityCrud<OrderAggregate, OrderDTO, int, OrderCreateRequest, OrderUpdateRequest>();
 
-        services.Should().HaveCount(3);
-        services.Should().OnlyContain(d =>
-            d.Lifetime == ServiceLifetime.Scoped && !d.ServiceType.ContainsGenericParameters);
+        // Three handlers plus the update command's validator bridge.
+        services.Should().HaveCount(4);
+        services.Should().OnlyContain(d => !d.ServiceType.ContainsGenericParameters);
+        services.Where(d => d.ServiceType.IsGenericType
+                && d.ServiceType.GetGenericTypeDefinition() == typeof(ICommandHandler<,>))
+            .Should().HaveCount(3)
+            .And.OnlyContain(d => d.Lifetime == ServiceLifetime.Scoped);
+    }
+
+    // The generic controller constructs UpdateEntityCommand itself, so the closed generic never
+    // appears in a scanned module assembly: without this bridge the request's rules never run.
+    [Fact]
+    public void AddEntityCrud_BridgesTheUpdateCommandToItsRequestValidators()
+    {
+        using ServiceProvider provider = BuildProvider();
+
+        provider.GetRequiredService<IValidator<
+                UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>>>()
+            .Should().BeOfType<CommandRequestValidator<
+                UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>, OrderUpdateRequest>>();
+    }
+
+    // TryAdd semantics for the bridge too: an aggregate whose update needs cross-field rules over
+    // the whole command registers its own IValidator first and keeps it.
+    [Fact]
+    public void AddEntityCrud_LeavesAnExplicitCommandValidatorAlone()
+    {
+        var services = new ServiceCollection();
+        services.AddTransient<
+            IValidator<UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>>,
+            ExplicitOrderUpdateCommandValidator>();
+
+        services.AddEntityCrud<OrderAggregate, OrderDTO, int, OrderCreateRequest, OrderUpdateRequest>();
+
+        ServiceDescriptor descriptor = services.Single(
+            d => d.ServiceType == typeof(IValidator<UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>>));
+        descriptor.ImplementationType.Should().Be<ExplicitOrderUpdateCommandValidator>();
     }
 
     // TryAdd semantics: an aggregate that outgrows one of the three registers its own handler first
@@ -261,6 +297,9 @@ public sealed class AddEntityCrudTests
 
 // ── Test doubles (public so Moq's DynamicProxy can see them) ─────────────────
 public sealed record OrderUpdateRequest(string Name);
+
+public sealed class ExplicitOrderUpdateCommandValidator
+    : AbstractValidator<UpdateEntityCommand<OrderAggregate, OrderUpdateRequest, int>>;
 
 public sealed class CustomDeleteOrderHandler : ICommandHandler<DeleteEntityCommand<OrderAggregate, int>, Result>
 {

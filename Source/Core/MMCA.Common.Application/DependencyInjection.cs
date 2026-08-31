@@ -272,8 +272,9 @@ public static class DependencyInjection
 
         /// <summary>
         /// Registers the framework's generic write side for one aggregate: the create, update and
-        /// delete handlers, each closed over that aggregate's own types. One call replaces the three
-        /// hand-written handler classes a straightforward CRUD aggregate would otherwise need.
+        /// delete handlers, each closed over that aggregate's own types, plus the validator bridge
+        /// for the update command. One call replaces the three hand-written handler classes a
+        /// straightforward CRUD aggregate would otherwise need.
         /// </summary>
         /// <typeparam name="TEntity">The aggregate root.</typeparam>
         /// <typeparam name="TEntityDTO">The DTO the create and update handlers return.</typeparam>
@@ -305,6 +306,16 @@ public static class DependencyInjection
         /// generic pair for the other two.
         /// </para>
         /// <para>
+        /// <b>The update command's validator bridge is registered too</b>, exactly as
+        /// <see cref="AddEntityUpdateVerb{TEntity, TEntityDTO, TIdentifierType, TUpdateRequest, TApplier}"/>
+        /// does for a verb: a <see cref="CommandRequestValidator{TCommand, TRequest}"/> closed over
+        /// <c>UpdateEntityCommand</c> and <typeparamref name="TUpdateRequest"/>, so the rules a module
+        /// writes for the request run against the command the generic controller constructs. The
+        /// command is a closed generic built at registration time, so the module scan's reflection
+        /// bridge cannot see it. <c>TryAdd</c> semantics, like the scan: an explicitly registered
+        /// <c>IValidator</c> for that command wins.
+        /// </para>
+        /// <para>
         /// Call it where a module registers its handlers, which means before
         /// <c>AddApplicationDecorators()</c>: inside the module's own <c>Register</c>, or inside the
         /// <c>AddMmcaApplicationPipeline(...)</c> callback.
@@ -334,6 +345,10 @@ public static class DependencyInjection
             services.TryAddScoped<
                 ICommandHandler<DeleteEntityCommand<TEntity, TIdentifierType>, Result>,
                 DeleteEntityHandler<TEntity, TIdentifierType>>();
+
+            services.AddCommandRequestValidator<
+                UpdateEntityCommand<TEntity, TUpdateRequest, TIdentifierType>,
+                TUpdateRequest>();
 
             return services;
         }
