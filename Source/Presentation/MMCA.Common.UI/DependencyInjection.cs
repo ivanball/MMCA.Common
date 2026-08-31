@@ -9,6 +9,7 @@ using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Navigation;
 
@@ -37,6 +38,23 @@ public static class DependencyInjection
             // Bind layout settings (footer text, etc.) — optional, defaults to empty values
             services.AddOptions<LayoutSettings>()
                 .Bind(configuration.GetSection(LayoutSettings.SectionName));
+
+            // Client-side staleness policy (§19). Both sections are optional: an absent section leaves
+            // the compiled-in defaults, which is the behaviour a host gets without configuring anything.
+            services.AddOptions<UiReadCacheOptions>()
+                .Bind(configuration.GetSection(UiReadCacheOptions.SectionName));
+
+            services.AddOptions<NotificationBellOptions>()
+                .Bind(configuration.GetSection(NotificationBellOptions.SectionName));
+
+            // The clock the staleness policy is measured against. TryAdd, because a host that already
+            // registered one (AddInfrastructure does) keeps it, and a test substitutes a FakeTimeProvider.
+            services.TryAddSingleton(TimeProvider.System);
+
+            // Read-through cache over the API client, scoped so it is per-circuit on Blazor Server.
+            // On WebAssembly and MAUI the scope is the app lifetime, which is why the sign-out path
+            // clears it (AuthUIService.LogoutAsync): otherwise one account's reads outlive its session.
+            services.TryAddScoped<IUiReadCache, UiReadCache>();
 
             // Resource-based localization for IStringLocalizer<T> across all UI hosts (ADR-027).
             services.AddLocalization();

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Http;
+using MMCA.Common.UI.Services.Caching;
 using MMCA.Common.UI.Services.Capabilities;
 
 namespace MMCA.Common.UI.Services.Auth;
@@ -20,12 +21,23 @@ namespace MMCA.Common.UI.Services.Auth;
 /// <see cref="TokenStorageUnavailableCode"/> rather than swallowed into a null.
 /// </para>
 /// </summary>
+/// <param name="httpClientFactory">Factory for the named <c>"APIClient"</c> HttpClient.</param>
+/// <param name="tokenStorageService">Store the access/refresh tokens are persisted in.</param>
+/// <param name="tokenRefresher">Host-specific refresher used to renew an expired access token.</param>
+/// <param name="authStateProvider">Blazor's auth-state provider, notified on sign-in and sign-out.</param>
+/// <param name="pushRegistration">Native push registration, unregistered on sign-out (ADR-044).</param>
+/// <param name="readCache">
+/// Optional client-side read cache, emptied on sign-out. It matters most where the DI scope outlives
+/// the session (WebAssembly and MAUI resolve one scope for the app's lifetime): without the clear, the
+/// next account signing in on the same client could be served the previous account's cached reads.
+/// </param>
 public sealed class AuthUIService(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService,
     ITokenRefresher tokenRefresher,
     AuthenticationStateProvider authStateProvider,
-    IPushRegistrationService pushRegistration) : IAuthUIService
+    IPushRegistrationService pushRegistration,
+    IUiReadCache? readCache = null) : IAuthUIService
 {
     /// <summary>
     /// Error code reported when the authentication succeeded but the tokens could not be persisted
@@ -109,6 +121,11 @@ public sealed class AuthUIService(
             // JS interop not available
         }
 
+        // Everything the previous session read is now another user's data. The scope that holds the
+        // cache outlives the session on WebAssembly and MAUI, so leaving entries behind would show
+        // them to whoever signs in next on this client.
+        readCache?.Clear();
+
         if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
         {
             jwtProvider.NotifyUserLogout();
@@ -133,6 +150,10 @@ public sealed class AuthUIService(
             {
                 // JS interop not available (SSR prerender / disconnected circuit)
             }
+
+            // The same reasoning as LogoutAsync: an unrefreshable session IS a sign-out, and the
+            // cached reads belong to the session that just ended.
+            readCache?.Clear();
 
             if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
             {
