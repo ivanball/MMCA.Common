@@ -88,3 +88,6 @@ virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.AllowedSharedCode
 virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.IsCodePrefixAllowed(string! code) -> bool
 virtual MMCA.Common.Testing.Architecture.ErrorCatalogTestsBase.MinimumErrorCodes.get -> int
 virtual MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.AllowedHardDeleteTypes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleInternalLayersAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+MMCA.Common.Testing.Architecture.ModuleIsolationTestsBase.ModuleInternalLayers_ShouldNotReach_OtherModuleInternalLayers() -> void

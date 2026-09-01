@@ -26,4 +26,12 @@ public abstract class ModuleIsolationTestsBase
 
     [Fact]
     public void ModuleApplications_ShouldNotReach_OtherModuleInfrastructures() => ArchitectureRules.ModuleApplicationsDoNotReachOtherInfrastructures(Map);
+
+    /// <summary>
+    /// Closes the coverage the six rules above leave open: every remaining internal-layer pair across
+    /// modules (Domain to another Application or Api, Application to another Domain or Api,
+    /// Infrastructure and Api to anything but their own module). UI is excluded on purpose.
+    /// </summary>
+    [Fact]
+    public void ModuleInternalLayers_ShouldNotReach_OtherModuleInternalLayers() => ArchitectureRules.ModuleInternalLayersAreIsolated(Map);
 }

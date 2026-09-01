@@ -7,6 +7,12 @@
     <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA1056;MA0009;MA0110;SYSLIB1045</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Lets the ui-e2e tier cover AuthOutcomeRules directly: the four-way auth classification is a
+         pure function, and asserting it needs no browser. -->
+    <InternalsVisibleTo Include="MMCA.Common.UI.E2E.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
     <!-- Explicit pin of the transitive Deque.AxeCore.Commons (deterministic restore — see Directory.Packages.props). -->
     <PackageReference Include="Deque.AxeCore.Commons" />

@@ -50,6 +50,34 @@ consumer at bump time beyond the pin.
   `LoadMobileDataAsync` saved `MobilePageSize` into the state the desktop grid shares, so narrowing
   the viewport replaced a user's 50-rows-per-page choice with 10 on the next visit. It now saves 0,
   which the restore guards skip, exactly as the virtualized path already did.
+- **`E2ETestBase` no longer reports success on a silent auth failure**
+  (`MMCA.Common.Testing.E2E`). `LoginAsync` and `RegisterNewUserAsync` raced three signals and
+  returned normally when ALL of them timed out, which is what a submit that fails with neither a
+  navigation nor a rendered error alert looks like (a 500 that renders nothing, a dropped request, a
+  JS exception mid-submit). The caller's follow-up interactivity wait was already satisfied by the
+  still-rendered auth page, so the helper reported a sign-in that never happened. The four-way
+  classification is now explicit (`AuthOutcomeRules.Classify`) and the silent case throws an
+  `InvalidOperationException` naming the operation, the budget and the URL. The losing waits are also
+  observed, so their timeouts cannot surface as unobserved task exceptions elsewhere in a run.
+  **Consumer-visible at bump time:** an E2E suite whose login is genuinely broken but was passing
+  silently will turn RED. That is the point, but expect it.
+- **`ConfigureTestFeatureFlags` layers onto the host configuration** (`MMCA.Common.Testing`). It
+  built a flags-only `IConfiguration` and registered it, and .NET DI hands a non-collection
+  dependency the LAST registration, so anything constructed afterwards that injects `IConfiguration`
+  directly saw no connection strings, no authentication settings and no data sources, contradicting
+  the helper's own docstring. It now chains the host's configuration and adds the flags on top (the
+  flags still win). Behind a factory registration of `IConfiguration` there is nothing to read, and
+  the flags stand alone exactly as before.
+- **Module isolation covers the full internal-layer cross product**
+  (`MMCA.Common.Testing.Architecture`). Six rules checked each internal layer against its own layer
+  in other modules, plus Domain and Application against another module's Infrastructure. A module's
+  Domain reaching another module's Application or Api (and the other unchecked pairs) passed every
+  gate: the per-module layer rules forbid only the SAME module's higher layers, and the compile-time
+  guard only knows `MMCA.Common.*` references. New `ArchitectureRules.ModuleInternalLayersAreIsolated`
+  plus a `ModuleIsolationTestsBase` fact close it. UI is deliberately excluded (a module's UI
+  composing another module's UI is intended). **Consumer-visible at bump time:** the new fact runs in
+  every repo that subclasses the base; ADC and Store cross-module project references are Shared-only
+  today, so it should be green.
 - **`ApnsTokenBridge` re-arms its rendezvous per registration attempt** (`MMCA.Common.UI.Maui`). A
   single one-shot `TaskCompletionSource` handed every later caller the first attempt's outcome
   instantly, so after a failed APNs registration the next `GetTokenAsync` re-registered and then
