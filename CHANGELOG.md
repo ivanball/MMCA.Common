@@ -50,6 +50,12 @@ consumer at bump time beyond the pin.
   `LoadMobileDataAsync` saved `MobilePageSize` into the state the desktop grid shares, so narrowing
   the viewport replaced a user's 50-rows-per-page choice with 10 on the next visit. It now saves 0,
   which the restore guards skip, exactly as the virtualized path already did.
+- **`ApnsTokenBridge` re-arms its rendezvous per registration attempt** (`MMCA.Common.UI.Maui`). A
+  single one-shot `TaskCompletionSource` handed every later caller the first attempt's outcome
+  instantly, so after a failed APNs registration the next `GetTokenAsync` re-registered and then
+  reported failure without waiting for the callback it had just triggered. `WaitForTokenAsync` now
+  completes on the NEXT callback, and `Publish` swaps in the new source before completing the old
+  one. Call `WaitForTokenAsync` before asking UIKit to register, as the shipped provider does.
 - **`NotificationBell` cannot start a poll loop after disposal** (`MMCA.Common.UI`). Disposal during
   the first unread-count read left it creating a `PeriodicTimer` nothing would dispose and starting a
   loop whose first act was to read an already-disposed `CancellationTokenSource`, faulting a

@@ -53,6 +53,9 @@ public sealed partial class ApnsPushDeviceTokenProvider(
                     UNAuthorizationOptions.Alert | UNAuthorizationOptions.Badge | UNAuthorizationOptions.Sound)
                 .ConfigureAwait(false);
 
+            // Taken BEFORE RegisterForRemoteNotifications: the bridge re-arms its rendezvous on each
+            // published callback, so this is the handle for the attempt started on the next line
+            // rather than a previous attempt's already-decided outcome.
             var wait = ApnsTokenBridge.WaitForTokenAsync();
             await MainThread.InvokeOnMainThreadAsync(static () =>
                 UIApplication.SharedApplication.RegisterForRemoteNotifications()).ConfigureAwait(false);
