@@ -28,6 +28,10 @@ consumer at bump time beyond the pin.
   short-circuited on the dedup lookup and reported success forever. The whole sequence is now one
   unit, so a failed attempt rolls back and a retry re-runs the send. The sender calls now run inside
   the transaction.
+- **`OwnerOrAdminFilter` parses owner ids invariantly** (`MMCA.Common.API`). The route-value and
+  bound-argument parses used the host's ambient culture, unlike every other machine-data parse in the
+  framework. They now pass `NumberStyles.Integer` and `CultureInfo.InvariantCulture`. The filter
+  already failed closed on a non-parse, so this is a convention fix rather than a security fix.
 - **`CommandRequestValidator` runs every registered `IValidator<TRequest>`**
   (`MMCA.Common.Application`). It took `FirstOrDefault()`, so a module that authored a validator
   beside a framework-supplied one for the same request type had one of them silently turned into

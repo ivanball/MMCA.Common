@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
@@ -85,18 +86,22 @@ public sealed class OwnerOrAdminFilter(
 
     // The owner identifier can arrive as a route value (/customers/{id}) or as a model-bound
     // query/body argument (/bookmarks?userId=42); check the route first, then the bound arguments.
+    //
+    // Both parses are invariant, which is the convention every machine-data parse in the framework
+    // follows: an owner id off the wire is not a number the request's ambient culture formatted, so
+    // the host's CurrentCulture must not decide which strings are ids.
     private static bool TryGetOwnerParameter(ActionExecutingContext context, string parameterName, out int value)
     {
         if (context.RouteData.Values.TryGetValue(parameterName, out var routeValue)
             && routeValue is not null
-            && int.TryParse(routeValue.ToString(), out value))
+            && int.TryParse(routeValue.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
         {
             return true;
         }
 
         if (context.ActionArguments.TryGetValue(parameterName, out var argumentValue)
             && argumentValue is not null
-            && int.TryParse(argumentValue.ToString(), out value))
+            && int.TryParse(argumentValue.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
         {
             return true;
         }
