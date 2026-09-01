@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
@@ -33,6 +33,55 @@ public static class Extensions
     /// keeps the real anti-abuse throttle.
     /// </summary>
     public const int E2eRegistrationsPerIpPerHour = 1000;
+
+    /// <summary>
+    /// The environment variable an E2E workflow sets to ask for both E2E lifts (the Identity
+    /// registration throttle and the gateway edge limiter). Absent locally and in production, which
+    /// is what makes every lift a no-op there.
+    /// </summary>
+    internal const string E2eLiftTriggerVariable = "E2E_LIFT_REGISTRATION_THROTTLE";
+
+    /// <summary>
+    /// Requests per window per client IP the gateway allows while an E2E suite is running (see
+    /// <c>WithE2eGatewayRateLimitLift</c>). High enough that no suite can reach it.
+    /// </summary>
+    internal const int E2eGatewayPermitLimit = 100000;
+
+    /// <summary>
+    /// Concurrent requests in flight the gateway allows while an E2E suite is running (see
+    /// <c>WithE2eGatewayRateLimitLift</c>).
+    /// </summary>
+    internal const int E2eGatewayGlobalConcurrencyLimit = 10000;
+
+    /// <summary>
+    /// Requests per window the tighter named auth policy allows while an E2E suite is running (see
+    /// <c>WithE2eGatewayRateLimitLift</c>).
+    /// </summary>
+    internal const int E2eAuthTightPermitLimit = 100000;
+
+    /// <summary>
+    /// Configuration section the gateway's edge rate limiter binds from. Mirrors
+    /// <c>MMCA.Common.Aspire</c>'s <c>GatewayRateLimitingSettings.SectionName</c> rather than
+    /// referencing it: this AppHost-tier package must not pull in the service-defaults graph (Azure
+    /// Monitor, OpenTelemetry, Key Vault) to spell one configuration key, the same reasoning
+    /// <c>MMCA.Common.Gateway</c> records for its own independence. A unit test cross-asserts the two
+    /// are equal, so a section rename cannot silently orphan the lift.
+    /// </summary>
+    internal const string GatewayRateLimitingSection = "GatewayRateLimiting";
+
+    /// <summary>
+    /// Configuration section the YARP gateway building blocks bind from (mirrors
+    /// <c>MMCA.Common.Gateway</c>'s <c>GatewaySettings.SectionName</c>, cross-asserted by the same
+    /// test as <see cref="GatewayRateLimitingSection"/>).
+    /// </summary>
+    internal const string MmcaGatewaySection = "MmcaGateway";
+
+    /// <summary>
+    /// Named per-route rate-limiter policy the auth route carries in both consumers' gateway
+    /// configuration. A route policy name is app configuration rather than a framework constant, so
+    /// this is the one part of the key with no type to derive it from.
+    /// </summary>
+    internal const string AuthTightPolicyName = "auth-tight";
 
     /// <summary>
     /// Default Aspire resource name used for the Azure Service Bus emulator container.
@@ -346,7 +395,7 @@ public static class Extensions
 
             var lift = alsoLiftWhen
                 || string.Equals(
-                    Environment.GetEnvironmentVariable("E2E_LIFT_REGISTRATION_THROTTLE"),
+                    Environment.GetEnvironmentVariable(E2eLiftTriggerVariable),
                     "true",
                     StringComparison.OrdinalIgnoreCase);
 
@@ -360,6 +409,61 @@ public static class Extensions
 
     extension(IResourceBuilder<ProjectResource> service)
     {
+        /// <summary>
+        /// CI/E2E only: lifts the gateway's edge rate limiter (the <c>GatewayRateLimiting</c> per-client-IP
+        /// fixed window chained with the replica-wide concurrency ceiling, plus the tighter named
+        /// <c>auth-tight</c> route policy) to allowances no suite can reach.
+        /// <para>
+        /// The whole E2E suite arrives from ONE loopback client IP, so the per-IP window that protects
+        /// production from a single-source flood reads the suite itself as that flood (2026-08-18 ADC run
+        /// 32185349945: 12 login failures once the window saturated). The named auth policy has the same
+        /// problem for the same reason: the suite logs in and registers far more often than a human ever
+        /// would, all from the one loopback IP the policy partitions on, so the anti-credential-stuffing
+        /// window would read the suite as the attack. Production keeps the real limits from the gateway's
+        /// own <c>appsettings.json</c>.
+        /// </para>
+        /// <para>
+        /// The trigger is the same <c>E2E_LIFT_REGISTRATION_THROTTLE</c> environment variable the Identity
+        /// throttle lift reads (set by the E2E workflow, absent locally and in production, so this is a
+        /// no-op there), OR <paramref name="alsoLiftWhen"/> for an AppHost that implies the lift from
+        /// another E2E switch of its own. A silent regression here surfaces as login/register E2E reds,
+        /// never as a build failure.
+        /// </para>
+        /// </summary>
+        /// <param name="alsoLiftWhen">
+        /// An extra trigger evaluated at the call site and OR-ed with the environment variable. Pass the
+        /// AppHost's own E2E flag (for example a forced-render-mode switch that implies the same request
+        /// volume); defaults to <see langword="false"/>, leaving the environment variable as the only
+        /// trigger.
+        /// </param>
+        /// <returns>The gateway resource builder for chaining.</returns>
+        public IResourceBuilder<ProjectResource> WithE2eGatewayRateLimitLift(bool alsoLiftWhen = false)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+
+            var lift = alsoLiftWhen
+                || string.Equals(
+                    Environment.GetEnvironmentVariable(E2eLiftTriggerVariable),
+                    "true",
+                    StringComparison.OrdinalIgnoreCase);
+
+            if (!lift)
+            {
+                return service;
+            }
+
+            return service
+                .WithEnvironment(
+                    $"{GatewayRateLimitingSection}__PermitLimit",
+                    E2eGatewayPermitLimit.ToString(CultureInfo.InvariantCulture))
+                .WithEnvironment(
+                    $"{GatewayRateLimitingSection}__GlobalConcurrencyLimit",
+                    E2eGatewayGlobalConcurrencyLimit.ToString(CultureInfo.InvariantCulture))
+                .WithEnvironment(
+                    $"{MmcaGatewaySection}__RateLimiterPolicies__{AuthTightPolicyName}__PermitLimit",
+                    E2eAuthTightPermitLimit.ToString(CultureInfo.InvariantCulture));
+        }
+
         /// <summary>
         /// Wires a service project to its own SQL Server database ("database per microservice", ADR-006).
         /// References the given database and injects its connection string as

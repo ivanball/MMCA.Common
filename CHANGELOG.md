@@ -4,6 +4,52 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.178.0] - 2026-09-01
+
+Two move-to-Common extractions from the 2026-08-31 drift run: the E2E gateway rate-limit lift both
+AppHosts carried inline, and the Azure Service Bus emulator test fixture both consumers hand-copied.
+Both are additive, and both stay inert until a consumer opts in. No breaking changes.
+
+### Added
+
+- **`WithE2eGatewayRateLimitLift`** (`MMCA.Common.Aspire.Hosting`). AppHost extension on a
+  `ProjectResource` (the gateway) that lifts the edge rate limiter for an E2E run: it reads
+  `E2E_LIFT_REGISTRATION_THROTTLE` itself, OR-ed with an optional `alsoLiftWhen` call-site flag for a
+  host that implies the lift from another E2E switch of its own, and when triggered sets
+  `GatewayRateLimiting__PermitLimit`, `GatewayRateLimiting__GlobalConcurrencyLimit` and
+  `MmcaGateway__RateLimiterPolicies__auth-tight__PermitLimit`. Untriggered it returns the builder
+  unchanged, so it is a no-op locally and in production, where the gateway keeps the real limits from
+  its own `appsettings.json`. The lift exists because a whole E2E suite arrives from ONE loopback
+  client IP, which the per-IP fixed window reads as the single-source flood it was built to stop. A
+  unit test cross-asserts the emitted keys against `GatewayRateLimitingSettings.SectionName` and
+  `GatewaySettings.SectionName`, so a section rename cannot silently orphan the lift. Mirrors the
+  shipped `WithE2eRegistrationThrottleLift`, and both lifts now read one shared trigger constant.
+- **`ServiceBusEmulatorFixtureBase`** (`MMCA.Common.Testing`). Collection-fixture base for the Azure
+  Service Bus emulator broker-parity tier, beside `CrossServiceFixtureBase`. It owns the pinned
+  emulator container (`DefaultEmulatorImage` 2.0.1, overridable through a virtual `EmulatorImage`),
+  the process-global MassTransit v8 entity-default override the emulator's one-hour TTL quota
+  requires, the AMQP and admin-plane (5300) clients with a pure static
+  `ComposeAdminConnectionString`, and wall-clock-bounded start and stop phases (virtual
+  `ContainerStartTimeout` / `BusStartTimeout` / `BusStopTimeout` with named PHASE 1 / PHASE 2
+  `TimeoutException` text, so a hang names its phase instead of being killed at the job timeout with
+  its log discarded). Hosting the tier's one bus is opt-in through virtual `ReceiveQueueName` plus
+  `ConfigureReceiveEndpoint`, with a `Consumed` bag on the base; the base provisions exactly ONE
+  receive endpoint, so each additional contract costs a topic and a subscription rather than another
+  queue against an admin plane throttled at roughly one operation per second. The sealed subclass,
+  the `[CollectionDefinition]` class, the integration-event contracts and the assertions stay
+  app-side. Adds `Testcontainers.ServiceBus`, `Azure.Messaging.ServiceBus` and
+  `MassTransit.Azure.ServiceBus.Core` (v8 by policy) to the package, the same Docker-only test-tier
+  profile as its existing Testcontainers references.
+
+### Dependencies
+
+- `System.Linq.Dynamic.Core` 1.7.3 -> 1.7.4.
+- `Meziantou.Analyzer` 3.0.190 -> 3.0.200; no new finding at error severity, so the shared
+  `.editorconfig` baseline is unchanged.
+- New test-tier pins for the fixture base above: `Testcontainers.ServiceBus` 4.14.0 and
+  `Azure.Messaging.ServiceBus` 7.20.2 (the first line with working emulator admin-plane support).
+  `MassTransit.Azure.ServiceBus.Core` reuses the existing 8.5.10 pin.
+
 ## [1.177.0] - 2026-08-31
 
 Write-side registration and validation quality-of-life: `AddEntityCrud` now completes the update

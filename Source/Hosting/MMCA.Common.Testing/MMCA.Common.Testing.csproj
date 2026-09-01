@@ -29,6 +29,13 @@
          SqlServerIntegrationTestFixtureBase does not touch these. -->
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Testcontainers.RabbitMq" />
+    <!-- ServiceBusEmulatorFixtureBase owns the Azure Service Bus emulator container, its two clients and
+         the one MassTransit bus for the broker-parity tier. Same Docker-only profile as the two
+         Testcontainers packages above. MassTransit stays on v8 by policy (v9 is commercial-licensed);
+         Azure.Messaging.ServiceBus 7.20.2 is the first line with working emulator admin-plane support. -->
+    <PackageReference Include="Testcontainers.ServiceBus" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" />
     <!-- Direct only to lift the vulnerable SSH.NET that Testcontainers floors at 2025.1.0
          (GHSA-q939-rpr3-3284); no code here uses it. See the pin comment in Directory.Packages.props. -->
     <PackageReference Include="SSH.NET" />

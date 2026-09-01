@@ -14,9 +14,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.190, )",
-        "resolved": "3.0.190",
-        "contentHash": "CFX3BWg27iLO78RORLAGWghpP+1afiAaijAIfhU7+JI+n6V0uVpNIr6H7LYVnRTFb2WAH/450FcvarFl7STOQA=="
+        "requested": "[3.0.200, )",
+        "resolved": "3.0.200",
+        "contentHash": "xDYQDG/pBdvC3r1PcqQw9d8/9dRYxh9xxljjgVydBezpxOUSABjuRjVWNoUmqNByrtWqwJ+nRdAwUuWPbU8uXQ=="
       },
       "Microsoft.AspNetCore.Components.WebView.Maui": {
         "type": "Direct",
@@ -2408,9 +2408,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.190, )",
-        "resolved": "3.0.190",
-        "contentHash": "CFX3BWg27iLO78RORLAGWghpP+1afiAaijAIfhU7+JI+n6V0uVpNIr6H7LYVnRTFb2WAH/450FcvarFl7STOQA=="
+        "requested": "[3.0.200, )",
+        "resolved": "3.0.200",
+        "contentHash": "xDYQDG/pBdvC3r1PcqQw9d8/9dRYxh9xxljjgVydBezpxOUSABjuRjVWNoUmqNByrtWqwJ+nRdAwUuWPbU8uXQ=="
       },
       "Microsoft.AspNetCore.Components.WebView.Maui": {
         "type": "Direct",
@@ -3310,9 +3310,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.190, )",
-        "resolved": "3.0.190",
-        "contentHash": "CFX3BWg27iLO78RORLAGWghpP+1afiAaijAIfhU7+JI+n6V0uVpNIr6H7LYVnRTFb2WAH/450FcvarFl7STOQA=="
+        "requested": "[3.0.200, )",
+        "resolved": "3.0.200",
+        "contentHash": "xDYQDG/pBdvC3r1PcqQw9d8/9dRYxh9xxljjgVydBezpxOUSABjuRjVWNoUmqNByrtWqwJ+nRdAwUuWPbU8uXQ=="
       },
       "Microsoft.AspNetCore.Components.WebView.Maui": {
         "type": "Direct",
@@ -4212,9 +4212,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.190, )",
-        "resolved": "3.0.190",
-        "contentHash": "CFX3BWg27iLO78RORLAGWghpP+1afiAaijAIfhU7+JI+n6V0uVpNIr6H7LYVnRTFb2WAH/450FcvarFl7STOQA=="
+        "requested": "[3.0.200, )",
+        "resolved": "3.0.200",
+        "contentHash": "xDYQDG/pBdvC3r1PcqQw9d8/9dRYxh9xxljjgVydBezpxOUSABjuRjVWNoUmqNByrtWqwJ+nRdAwUuWPbU8uXQ=="
       },
       "Microsoft.AspNetCore.Components.WebView.Maui": {
         "type": "Direct",

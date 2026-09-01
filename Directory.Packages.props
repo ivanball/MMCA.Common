@@ -41,7 +41,7 @@
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.17.2" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
-    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.3" />
+    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.11" />
     <!-- Pinned to a patched version to override the vulnerable MessagePack pulled transitively by
@@ -95,6 +95,11 @@
     <PackageVersion Include="MassTransit" Version="8.5.10" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
     <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.10" />
+    <!-- Service Bus emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing): the two
+         clients the MassTransit v8 custom-clients Host() overload takes. 7.20.2 is the first line with
+         working emulator admin-plane support (>= 7.20.1 required), and it also lifts the older
+         transitive MassTransit.Azure.ServiceBus.Core would otherwise resolve. -->
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.20.2" />
     <!-- Native push (ADR-044): Azure Notification Hubs installations + FCM v1 / APNs native sends. -->
     <PackageVersion Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <!-- Managed file storage + avatar image normalization (ADR-045). ImageSharp is under the
@@ -186,7 +191,7 @@
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.190" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.200" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -218,6 +223,10 @@
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.14.0" />
+    <!-- Service Bus emulator fixture base in MMCA.Common.Testing: same Testcontainers family version.
+         The module starts the emulator plus its companion SQL container, so consumer broker-parity
+         tiers need a Docker daemon (nightly/dispatch jobs only, never a merge gate). -->
+    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.14.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via

@@ -13,6 +13,19 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <!-- Matches the FrameworkReference on MMCA.Common.Aspire, referenced below. Without it the
+         ASP.NET Core pieces that package touches (DataProtection above all) resolve as standalone
+         packages instead of being pruned to the shared framework, which drags in a vulnerable
+         System.Security.Cryptography.Xml that the framework itself does not ship. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire.Hosting\MMCA.Common.Aspire.Hosting.csproj" />
+    <!-- E2eLiftTests cross-asserts the gateway rate-limit lift's mirrored section-name constants
+         against the settings types that own them. The two settings packages are referenced HERE and
+         deliberately not from MMCA.Common.Aspire.Hosting itself: an AppHost-tier package must not
+         drag in the service-defaults / YARP graphs to spell a configuration key. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Gateway\MMCA.Common.Gateway.csproj" />
   </ItemGroup>
 </Project>
