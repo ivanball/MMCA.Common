@@ -26,6 +26,15 @@ MMCA.Common.Testing.RecordingHttpForwarder.RouteTraceHeaderName.get -> string!
 MMCA.Common.Testing.RecordingHttpForwarder.RouteTraceHeaderName.init -> void
 MMCA.Common.Testing.RecordingHttpForwarder.SendAsync(Microsoft.AspNetCore.Http.HttpContext! context, string! destinationPrefix, System.Net.Http.HttpMessageInvoker! httpClient, Yarp.ReverseProxy.Forwarder.ForwarderRequestConfig! requestConfig, Yarp.ReverseProxy.Forwarder.HttpTransformer! transformer) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Forwarder.ForwarderError>
 MMCA.Common.Testing.RecordingHttpForwarder.SendAsync(Microsoft.AspNetCore.Http.HttpContext! context, string! destinationPrefix, System.Net.Http.HttpMessageInvoker! httpClient, Yarp.ReverseProxy.Forwarder.ForwarderRequestConfig! requestConfig, Yarp.ReverseProxy.Forwarder.HttpTransformer! transformer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Forwarder.ForwarderError>
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
 abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.DownstreamServices.get -> System.Collections.Generic.IReadOnlyList<string!>!
 abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Factory.get -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
 abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.LimitedPath.get -> string!
@@ -38,7 +47,10 @@ const MMCA.Common.Testing.RecordingHttpForwarder.RouteTraceEchoHeader = "X-Test-
 const MMCA.Common.Testing.RecordingHttpForwarder.UnsetValue = "(unset)" -> string!
 const MMCA.Common.Testing.RecordingHttpForwarder.VersionHeader = "X-Test-Forward-Version" -> string!
 const MMCA.Common.Testing.RecordingHttpForwarder.VersionPolicyHeader = "X-Test-Forward-Version-Policy" -> string!
+const MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
+const MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
 static MMCA.Common.Testing.RateLimiterTestExtensions.NeutralizeGlobalRateLimiter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! partitionName = "tests") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
 virtual MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.Configure.get -> System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>?
 virtual MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.ExpectedStepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeInterval.get -> System.TimeSpan
@@ -50,3 +62,9 @@ virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Downstrea
 virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.ForwardedForHeader.get -> string!
 virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPath.get -> string?
 virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPermitLimit.get -> int
+virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
+virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
+virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?
