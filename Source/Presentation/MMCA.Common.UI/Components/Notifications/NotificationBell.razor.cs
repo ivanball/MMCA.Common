@@ -78,6 +78,15 @@ public partial class NotificationBell : IDisposable
         // The first read is unconditional: nothing has established the count yet.
         await RefreshUnreadCountAsync();
 
+        // Re-check after the await: Dispose may have run while that read was in flight, and it has
+        // already disposed the (then null) timer and the token source. Starting the loop now would
+        // leak a PeriodicTimer nothing disposes and fault the discarded task on a disposed _cts. The
+        // slot was released by Dispose through UnregisterPoller, so there is nothing else to undo.
+        if (_disposed)
+        {
+            return;
+        }
+
         // The TimeProvider overload rather than the ambient system clock, so a test drives the loop
         // deterministically instead of waiting out a real interval.
         _pollTimer = new PeriodicTimer(Options.Value.PollInterval, Clock);
@@ -123,6 +132,11 @@ public partial class NotificationBell : IDisposable
         catch (OperationCanceledException)
         {
             // Expected on disposal
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposed between the timer creation and the first wait: reading _cts.Token throws
+            // rather than cancelling. Nothing to observe, and this task is discarded.
         }
     }
 

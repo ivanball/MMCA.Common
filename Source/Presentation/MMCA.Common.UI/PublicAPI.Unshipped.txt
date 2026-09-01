@@ -74,6 +74,11 @@ MMCA.Common.UI.Common.Interfaces.ToastSeverity.Info = 1 -> MMCA.Common.UI.Common
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Normal = 0 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Success = 2 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
 MMCA.Common.UI.Common.Interfaces.ToastSeverity.Warning = 3 -> MMCA.Common.UI.Common.Interfaces.ToastSeverity
+MMCA.Common.UI.Common.LatestLoadGuard
+MMCA.Common.UI.Common.LatestLoadGuard.Begin() -> (System.Threading.CancellationToken Token, int Generation)
+MMCA.Common.UI.Common.LatestLoadGuard.Dispose() -> void
+MMCA.Common.UI.Common.LatestLoadGuard.IsCurrent(int generation) -> bool
+MMCA.Common.UI.Common.LatestLoadGuard.LatestLoadGuard() -> void
 MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
 MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
 MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type!

@@ -18,7 +18,13 @@ public partial class ApiFileDownloadButton
     [EditorRequired]
     public string RelativeApiPath { get; set; } = string.Empty;
 
-    /// <summary>File name for the staged temp file on native heads, e.g. <c>session-42.ics</c>.</summary>
+    /// <summary>
+    /// File name for the staged temp file on native heads, e.g. <c>session-42.ics</c>.
+    /// <para>
+    /// Directory segments and rooted paths are stripped to the file name before staging, so a value
+    /// built from entity data cannot steer the write out of the temp directory.
+    /// </para>
+    /// </summary>
     [Parameter]
     [EditorRequired]
     public string FileName { get; set; } = string.Empty;
@@ -101,21 +107,18 @@ public partial class ApiFileDownloadButton
         _isExporting = true;
         try
         {
+            // Sanitized BEFORE the fetch: a name that cannot be staged must not cost a download.
+            var safeName = ResolveStagedFileName(FileName);
+            if (safeName is null)
+            {
+                Toast.Warning(FailureMessage ?? L["Snackbar.DownloadFailed"].Value);
+                return;
+            }
+
             using var client = HttpClientFactory.CreateClient(HttpClientName);
             var bytes = await client.GetByteArrayAsync(new Uri(RelativeApiPath, UriKind.Relative));
 
-            var filePath = Path.Combine(Path.GetTempPath(), FileName);
-
-            // The staged file is not deleted after the share: on Android the share intent returns
-            // as soon as it launches, so deleting here would race the receiving app reading it.
-            // The path is per-entity, so a stale copy from a previous tap is simply replaced.
-            // Clearing it first keeps a truncated or half-written leftover from being shared.
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-
-            await File.WriteAllBytesAsync(filePath, bytes);
+            var filePath = await StageFileAsync(safeName, bytes);
 
             if (!await Share.ShareFileAsync(ShareTitle, filePath, ContentType))
             {
@@ -143,5 +146,48 @@ public partial class ApiFileDownloadButton
         {
             _isExporting = false;
         }
+    }
+
+    /// <summary>
+    /// Reduces <paramref name="fileName"/> to a bare file name, or returns null when nothing usable
+    /// is left.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Path.Combine(string, string)"/> discards the temp root outright when its second
+    /// argument is rooted, and <c>..</c> segments walk out of it, so a name built from entity data
+    /// would otherwise decide where the staging delete and write land on the native head's
+    /// filesystem. <see cref="Path.GetFileName(string)"/> strips separators and directory segments;
+    /// the two relative-directory names it leaves intact are rejected here.
+    /// </remarks>
+    private static string? ResolveStagedFileName(string? fileName)
+    {
+        var safeName = Path.GetFileName(fileName?.Trim() ?? string.Empty);
+
+        return string.IsNullOrEmpty(safeName)
+            || string.Equals(safeName, ".", StringComparison.Ordinal)
+            || string.Equals(safeName, "..", StringComparison.Ordinal)
+                ? null
+                : safeName;
+    }
+
+    /// <summary>Writes the payload into the temp directory under an already-sanitized name.</summary>
+    /// <remarks>
+    /// The staged file is not deleted after the share: on Android the share intent returns as soon
+    /// as it launches, so deleting here would race the receiving app reading it. The path is
+    /// per-entity, so a stale copy from a previous tap is simply replaced; clearing it first keeps a
+    /// truncated or half-written leftover from being shared.
+    /// </remarks>
+    private static async Task<string> StageFileAsync(string safeName, byte[] bytes)
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), safeName);
+
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+
+        await File.WriteAllBytesAsync(filePath, bytes);
+
+        return filePath;
     }
 }

@@ -28,6 +28,32 @@ consumer at bump time beyond the pin.
   short-circuited on the dedup lookup and reported success forever. The whole sequence is now one
   unit, so a failed attempt rolls back and a retry re-runs the send. The sender calls now run inside
   the transaction.
+- **The retry policy disposes every retried HTTP response** (`MMCA.Common.UI`). Polly hands the
+  caller only the final outcome, so each intermediate 5xx/408/429 attempt leaked its content buffer
+  and kept its connection out of the handler pool until finalization, under exactly the sustained
+  backend failure the retries exist to survive. The final response is still the caller's to dispose.
+- **`DeepLinkDispatcher.Publish` decides under its lock** (`MMCA.Common.UI`). The handler was read
+  outside the lock, so a native callback publishing while a listener was subscribing and draining
+  could buffer the route after that drain, stranding it with no future consumer (the warm-boot deep
+  link on a MAUI head). The raise-or-buffer decision is now one locked step; the event is still
+  invoked outside the lock.
+- **The Admin nav section is hidden from anonymous visitors** (`MMCA.Common.UI`). It was gated on
+  item count alone, unlike the User section beside it, so a module registering a `Section.Admin`
+  `NavItem` without a `RequiredRole` (which defaults to null) disclosed the feature's existence and
+  URL. Consumers that already set a role on every admin item see no change.
+- **`ApiFileDownloadButton` sanitizes `FileName` before staging** (`MMCA.Common.UI`). The parameter
+  went into `Path.Combine(Path.GetTempPath(), FileName)` verbatim, so a rooted value discarded the
+  temp root and `..` segments walked out of it: reachable for a consumer that builds the name from
+  entity data. Directory segments are now stripped to the bare file name, and an unusable name warns
+  without even performing the download.
+- **The mobile card fetch no longer overwrites the persisted `RowsPerPage`** (`MMCA.Common.UI`).
+  `LoadMobileDataAsync` saved `MobilePageSize` into the state the desktop grid shares, so narrowing
+  the viewport replaced a user's 50-rows-per-page choice with 10 on the next visit. It now saves 0,
+  which the restore guards skip, exactly as the virtualized path already did.
+- **`NotificationBell` cannot start a poll loop after disposal** (`MMCA.Common.UI`). Disposal during
+  the first unread-count read left it creating a `PeriodicTimer` nothing would dispose and starting a
+  loop whose first act was to read an already-disposed `CancellationTokenSource`, faulting a
+  discarded task. It re-checks after the await, and the loop also catches `ObjectDisposedException`.
 - **`OwnerOrAdminFilter` parses owner ids invariantly** (`MMCA.Common.API`). The route-value and
   bound-argument parses used the host's ambient culture, unlike every other machine-data parse in the
   framework. They now pass `NumberStyles.Integer` and `CultureInfo.InvariantCulture`. The filter
@@ -42,6 +68,12 @@ consumer at bump time beyond the pin.
 
 ### Added
 
+- **`LatestLoadGuard`** (`MMCA.Common.UI`, `MMCA.Common.UI.Common`). Small disposable helper for
+  routed detail pages: `Begin()` cancels the previous load and hands back a token plus a generation,
+  and `IsCurrent(generation)` says whether that load's result may still be assigned. Blazor reuses a
+  routed component instance across route-parameter changes, so a slow load for one id otherwise
+  overwrites the page after a faster load for the next id has rendered. Not thread-safe by contract
+  (renderer synchronization context only).
 - **`IRefreshSessionStore.TryRotateAsync`** (`MMCA.Common.Application`). Additive interface member
   with a default implementation (revoke, add, save), so an existing custom or test store keeps
   compiling and behaving as it did; the shipped EF store overrides it with the database-arbitrated

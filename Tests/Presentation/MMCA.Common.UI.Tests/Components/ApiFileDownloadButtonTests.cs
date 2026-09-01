@@ -25,6 +25,8 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
 {
     private static readonly byte[] PayloadBytes = "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"u8.ToArray();
 
+    private int _requestsSeen;
+
     public ApiFileDownloadButtonTests()
     {
         // The button injects both capabilities unconditionally (it branches on InterceptsLinks at
@@ -148,22 +150,116 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
     }
 
     [Fact]
-    public async Task OnNativeHead_WhenStagingTheFileFails_WarnsInsteadOfKillingTheHost()
+    public async Task OnNativeHead_WhenStagingOrSharingFails_WarnsInsteadOfKillingTheHost()
     {
-        // An IOException from the temp-file write escaped the HttpRequestException-only catch.
-        // A file name that is a directory separator makes the write fail deterministically.
+        // An IOException from the staging write or the share sheet escaped the
+        // HttpRequestException-only catch. The file name can no longer be the failure injection
+        // (directory segments are stripped now), so the share surface throws instead.
         var toast = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new ByteArrayContent(PayloadBytes),
         });
 
+        var share = new Mock<IShareService>();
+        share
+            .Setup(x => x.ShareFileAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("the share surface failed"));
+        Services.AddSingleton(share.Object);
+
         var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
             .Add(c => c.RelativeApiPath, "Sessions/42/ics")
-            .Add(c => c.FileName, "no-such-directory/session-42.ics")
+            .Add(c => c.FileName, "staging-failure.ics")
+            .Add(c => c.ShareTitle, "Intro to Blazor"));
+        try
+        {
+            await cut.Find("button").ClickAsync(new MouseEventArgs());
+
+            VerifyToast(toast, "Could not download the file");
+        }
+        finally
+        {
+            File.Delete(Path.Combine(Path.GetTempPath(), "staging-failure.ics"));
+        }
+    }
+
+    // The FileName parameter is caller-supplied and a consumer may build it from entity data, so it
+    // must never steer the staging write: Path.Combine drops the temp root for a rooted second
+    // argument, and ".." segments walk out of it.
+    [Fact]
+    public async Task OnNativeHead_StripsDirectoryTraversalFromTheFileName()
+    {
+        var sharedPath = await ShareWithFileNameAsync("../../evil.ics");
+
+        sharedPath.Should().Be(Path.Combine(Path.GetTempPath(), "evil.ics"));
+        File.Delete(sharedPath!);
+    }
+
+    [Fact]
+    public async Task OnNativeHead_IgnoresARootedFileName()
+    {
+        var rooted = Path.Combine(Path.GetTempPath(), "sub", "escaped.ics");
+
+        var sharedPath = await ShareWithFileNameAsync(rooted);
+
+        sharedPath.Should().Be(Path.Combine(Path.GetTempPath(), "escaped.ics"));
+        File.Delete(sharedPath!);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData("some/directory/")]
+    public async Task OnNativeHead_WithAnUnusableFileName_WarnsWithoutFetching(string fileName)
+    {
+        var toast = ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(PayloadBytes),
+        });
+
+        var share = new Mock<IShareService>();
+        Services.AddSingleton(share.Object);
+
+        var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
+            .Add(c => c.RelativeApiPath, "Sessions/42/ics")
+            .Add(c => c.FileName, fileName)
             .Add(c => c.ShareTitle, "Intro to Blazor"));
         await cut.Find("button").ClickAsync(new MouseEventArgs());
 
         VerifyToast(toast, "Could not download the file");
+        _requestsSeen.Should().Be(0, "a name that cannot be staged must not cost a download");
+        share.Verify(
+            x => x.ShareFileAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private async Task<string?> ShareWithFileNameAsync(string fileName)
+    {
+        ArrangeNativeHead(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(PayloadBytes),
+        });
+
+        string? sharedPath = null;
+        var share = new Mock<IShareService>();
+        share
+            .Setup(x => x.ShareFileAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, string path, string _, CancellationToken _) => sharedPath = path)
+            .ReturnsAsync(true);
+        Services.AddSingleton(share.Object);
+
+        var cut = RenderUnderTest<ApiFileDownloadButton>(p => p
+            .Add(c => c.RelativeApiPath, "Sessions/42/ics")
+            .Add(c => c.FileName, fileName)
+            .Add(c => c.ShareTitle, "Intro to Blazor"));
+        await cut.Find("button").ClickAsync(new MouseEventArgs());
+
+        sharedPath.Should().NotBeNull();
+        return sharedPath;
     }
 
     [Fact]
@@ -263,7 +359,11 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
         ArrangeWebHead();
         ArrangeLinkInterceptingHead();
 
-        var handler = new CapturingHttpMessageHandler(respond);
+        var handler = new CapturingHttpMessageHandler(request =>
+        {
+            _requestsSeen++;
+            return respond(request);
+        });
         Services.AddSingleton(HttpTestDoubles.ClientFactory(handler));
 
         // Last registration wins, so this recording double replaces the base's real toast service.

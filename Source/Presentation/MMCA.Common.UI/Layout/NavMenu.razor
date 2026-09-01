@@ -101,7 +101,10 @@
             }
         }
 
-        @if (_adminItems.Count > 0)
+        @* Authentication is checked here as well as per item: NavItem.RequiredRole defaults to null,
+           so a module that registers a Section.Admin item without one would otherwise disclose the
+           admin feature's existence and URL to anonymous visitors. *@
+        @if (_adminItems.Count > 0 && _user?.Identity?.IsAuthenticated == true)
         {
             <div class="nav-section-label" role="heading" aria-level="2">@L["Nav.Administration"]</div>
             @foreach (var group in _adminItems.GroupBy(i => i.Group))

@@ -170,6 +170,29 @@ public sealed class NotificationBellTests : BunitTestBase
     }
 
     [Fact]
+    public async Task DisposingWhileTheFirstReadIsInFlight_DoesNotStartThePollTimer()
+    {
+        // BecomeActivePollerAsync checked _disposed only on entry, then awaited the first read. A
+        // teardown during that await left it creating a PeriodicTimer nothing would ever dispose and
+        // starting a loop whose first act is to read an already-disposed CancellationTokenSource.
+        var counting = new TimerCountingTimeProvider(_clock);
+        Services.AddSingleton<TimeProvider>(counting);
+
+        var gate = new TaskCompletionSource<Result<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _inbox.Setup(x => x.GetUnreadCountAsync(It.IsAny<CancellationToken>())).Returns(gate.Task);
+
+        RenderUnderTest<NotificationBell>(_ => { });
+        counting.TimersCreated.Should().Be(0, "the first read has not returned yet");
+
+        await DisposeComponentsAsync();
+        gate.SetResult(Result.Success(3));
+        await Task.Yield();
+
+        counting.TimersCreated.Should().Be(0, "a disposed bell must not start a poll loop");
+        VerifyFetchCount(Times.Once());
+    }
+
+    [Fact]
     public void WhenTheActiveBellIsTornDown_TheSurvivingBellTakesOverPolling()
     {
         CountIs(0);
@@ -323,5 +346,32 @@ public sealed class NotificationBellTests : BunitTestBase
 
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("7"));
         _state.UnreadCount.Should().Be(7);
+    }
+
+    /// <summary>
+    /// Delegates the clock to the driveable <see cref="FakeTimeProvider"/> and counts timer
+    /// creations: <c>new PeriodicTimer(TimeSpan, TimeProvider)</c> goes through
+    /// <see cref="TimeProvider.CreateTimer"/>, so the count is how a test observes whether the poll
+    /// loop was ever started.
+    /// </summary>
+    private sealed class TimerCountingTimeProvider(FakeTimeProvider inner) : TimeProvider
+    {
+        private int _timersCreated;
+
+        public int TimersCreated => Volatile.Read(ref _timersCreated);
+
+        public override DateTimeOffset GetUtcNow() => inner.GetUtcNow();
+
+        public override long GetTimestamp() => inner.GetTimestamp();
+
+        public override TimeZoneInfo LocalTimeZone => inner.LocalTimeZone;
+
+        public override long TimestampFrequency => inner.TimestampFrequency;
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            Interlocked.Increment(ref _timersCreated);
+            return inner.CreateTimer(callback, state, dueTime, period);
+        }
     }
 }

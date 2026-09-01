@@ -66,6 +66,51 @@ public sealed class DeepLinkDispatcherTests
         route.Should().Be("/notifications");
     }
 
+    /// <summary>
+    /// The warm-boot deep link: a native callback publishes while the listener component is
+    /// subscribing and draining. Reading the handler outside the lock allowed
+    /// publish-sees-nothing, subscribe, drain-finds-nothing, buffer, which strands the route with
+    /// no future consumer.
+    /// <para>
+    /// The lock placement is the guarantee; this is a regression net, not a proof. The window is a
+    /// few instructions wide, so a reverted fix fails this probabilistically rather than always.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task Publish_ConcurrentWithSubscribeAndDrain_NeverLosesTheRoute()
+    {
+        for (var i = 0; i < 2000; i++)
+        {
+            var sut = new DeepLinkDispatcher();
+            var deliveries = 0;
+            using var barrier = new Barrier(2);
+
+            var publisher = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                sut.Publish("/conference/sessions/42");
+            });
+
+            var listener = Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                sut.RouteRequested += (_, _) => Interlocked.Increment(ref deliveries);
+                if (sut.TryConsumePending(out _))
+                {
+                    Interlocked.Increment(ref deliveries);
+                }
+            });
+
+            await Task.WhenAll(publisher, listener);
+
+            deliveries.Should().Be(
+                1,
+                "the listener must receive the route exactly once, through the event or through its own drain");
+            sut.TryConsumePending(out _).Should().BeFalse(
+                "a route left in the buffer after the listener has subscribed and drained has no future consumer");
+        }
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
