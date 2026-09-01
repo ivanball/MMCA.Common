@@ -41,7 +41,7 @@
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.17.2" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
-    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.3" />
+    <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.11" />
     <!-- Pinned to a patched version to override the vulnerable MessagePack pulled transitively by
@@ -191,7 +191,7 @@
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.190" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.200" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
