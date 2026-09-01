@@ -186,7 +186,7 @@
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.190" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.200" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
