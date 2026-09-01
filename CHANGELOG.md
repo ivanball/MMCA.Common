@@ -4,6 +4,45 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+Bug-hunt remediation (2026-09-01 run): a refresh-token rotation race, a non-atomic push-notification
+send, request validators that were silently dropped, and a set of UI, API and test-package defects.
+Everything is additive: no signature breaks and no schema changes, so nothing is required of a
+consumer at bump time beyond the pin.
+
+### Fixed
+
+- **Concurrent refresh-token rotation is now claimed atomically** (`MMCA.Common.Application`,
+  `MMCA.Common.Infrastructure`). Two requests presenting the SAME still-live refresh token each read
+  their own un-revoked copy of the session row, so both used to mint a successor and the presented
+  row could never fire reuse detection again, leaving one permanently undetected extra session.
+  Rotation now runs through the new `IRefreshSessionStore.TryRotateAsync`, which the EF store
+  implements as a conditional `UPDATE ... WHERE Id = @id AND RevokedAt IS NULL` plus the successor
+  insert in one transaction. The request that loses the claim gets the answer a replay gets: the
+  user's whole live family is revoked (BR-206) and the refresh fails with `Auth.InvalidRefreshToken`.
+  No schema change and no migration: the row still carries no concurrency token.
+- **`SendPushNotificationCommand` is `ITransactional`** (`MMCA.Common.Application`). The handler
+  committed the audit row (carrying `DedupKey`) before the per-recipient rows and the sends, so a
+  fault in between left a committed row nothing ever delivered, and every retry with that key
+  short-circuited on the dedup lookup and reported success forever. The whole sequence is now one
+  unit, so a failed attempt rolls back and a retry re-runs the send. The sender calls now run inside
+  the transaction.
+- **`CommandRequestValidator` runs every registered `IValidator<TRequest>`**
+  (`MMCA.Common.Application`). It took `FirstOrDefault()`, so a module that authored a validator
+  beside a framework-supplied one for the same request type had one of them silently turned into
+  dead code, in DI registration order. All of them now run and their failures are unioned, matching
+  the policy the command and query decorators already apply to `IValidator<TCommand>` (ADR-014);
+  duplicate registrations of one validator class are de-duplicated by runtime type. A module with two
+  validators for one request will now surface failures that were previously not reported.
+
+### Added
+
+- **`IRefreshSessionStore.TryRotateAsync`** (`MMCA.Common.Application`). Additive interface member
+  with a default implementation (revoke, add, save), so an existing custom or test store keeps
+  compiling and behaving as it did; the shipped EF store overrides it with the database-arbitrated
+  claim described above.
+
 ## [1.178.0] - 2026-09-01
 
 Two move-to-Common extractions from the 2026-08-31 drift run: the E2E gateway rate-limit lift both

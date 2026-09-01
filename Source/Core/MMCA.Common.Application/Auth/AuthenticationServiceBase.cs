@@ -38,7 +38,10 @@ namespace MMCA.Common.Application.Auth;
 /// and the store holds only
 /// <see cref="RefreshSession.HashToken"/> digests. Rotation revokes the presented session and links it
 /// to its successor; presenting an already-rotated token lands on that revoked row, which is the reuse
-/// signal that revokes the user's whole live family (BR-206). An expired session is not a reuse signal
+/// signal that revokes the user's whole live family (BR-206). Two requests presenting the same live
+/// token at the same instant are covered by the same rule: the rotation is claimed atomically through
+/// <see cref="IRefreshSessionStore.TryRotateAsync"/>, and the request that loses the claim is answered
+/// as a replay rather than being handed a second successor. An expired session is not a reuse signal
 /// and fails alone. A per-user cap (<see cref="MaxActiveSessionsPerUser"/>) evicts the oldest live
 /// session on a new sign-in so one account cannot grow the table without bound.
 /// </para>
@@ -643,8 +646,14 @@ public abstract class AuthenticationServiceBase<TUser>(
     }
 
     /// <summary>
-    /// Revokes the presented session, links it to a freshly minted successor, and stages both
+    /// Revokes the presented session, links it to a freshly minted successor, and persists both
     /// (BR-205 rotation). Rotation replaces one session with one, so the cap is not re-evaluated here.
+    /// <para>
+    /// The revocation is a <see cref="IRefreshSessionStore.TryRotateAsync"/> claim rather than an
+    /// in-memory mutation: two requests presenting the same still-live token both read an un-revoked
+    /// row, and the store is what decides which of them owns the rotation. The loser is answered
+    /// exactly like a replay (family revoked, BR-206), since a caller cannot tell the two apart.
+    /// </para>
     /// </summary>
     /// <returns>The plaintext successor token to hand to the client, and the successor's session id.</returns>
     private async Task<Result<IssuedSession>> RotateAsync(
@@ -670,9 +679,21 @@ public abstract class AuthenticationServiceBase<TUser>(
         }
 
         var successor = successorResult.Value!;
-        session.Revoke(now, RefreshSession.ReasonRotated, successor.TokenHash);
-        await refreshSessions.AddAsync(successor, cancellationToken).ConfigureAwait(false);
-        await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var rotated = await refreshSessions
+            .TryRotateAsync(session, successor, now, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!rotated)
+        {
+            // Another request rotated this exact token in the same instant, so this one is holding a
+            // token that has already been spent. That is indistinguishable from a replay, and it
+            // gets the replay answer: the whole live family goes (BR-206).
+            await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
+                .ConfigureAwait(false);
+            await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return Result.Failure<IssuedSession>(InvalidRefreshTokenError());
+        }
 
         return Result.Success(new IssuedSession(refreshToken, successor.Id));
     }

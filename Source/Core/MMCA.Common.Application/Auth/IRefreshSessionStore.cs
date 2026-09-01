@@ -10,6 +10,8 @@ namespace MMCA.Common.Application.Auth;
 /// user for the cap and for family revocation, and mutated only through
 /// <see cref="RefreshSession.Revoke"/> on instances this store returned, so an implementation that
 /// tracks its entities (the shipped EF one) persists a revocation with no update method at all.
+/// <see cref="TryRotateAsync"/> is the one exception: rotation is a claim, not a mutation, so it
+/// needs a write the store itself decides the outcome of.
 /// </para>
 /// <para>
 /// Implementations must return <b>tracked</b> instances: a no-tracking read would take revocations and
@@ -63,4 +65,50 @@ public interface IRefreshSessionStore
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The number of rows written.</returns>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Atomically claims <paramref name="presented"/> for rotation (revoking it as
+    /// <see cref="RefreshSession.ReasonRotated"/> and linking it to
+    /// <paramref name="successor"/>), then stages and persists the successor.
+    /// <para>
+    /// The return value is the whole point: two requests presenting the SAME still-live token both
+    /// read an un-revoked row, so a check-then-act rotation mints two successors from one token and
+    /// the presented row can never fire reuse detection again (BR-206). Returning
+    /// <see langword="false"/> tells the caller it lost that claim, which is indistinguishable from
+    /// a replay and gets the same answer.
+    /// </para>
+    /// <para>
+    /// The default implementation is the shape the interface always had (revoke in memory, add,
+    /// save). It is atomic only per instance, which is all an in-memory or test store can offer;
+    /// the shipped EF store overrides it with a conditional UPDATE the database arbitrates.
+    /// </para>
+    /// </summary>
+    /// <param name="presented">The tracked session behind the presented refresh token.</param>
+    /// <param name="successor">The freshly minted session to persist in its place.</param>
+    /// <param name="revokedAt">The UTC instant to record on the presented session.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// <see langword="true"/> when this caller claimed the rotation and the successor is persisted;
+    /// <see langword="false"/> when the presented session was already revoked, in which case
+    /// nothing was written.
+    /// </returns>
+    async Task<bool> TryRotateAsync(
+        RefreshSession presented,
+        RefreshSession successor,
+        DateTime revokedAt,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(presented);
+        ArgumentNullException.ThrowIfNull(successor);
+
+        if (presented.Revoke(revokedAt, RefreshSession.ReasonRotated, successor.TokenHash).IsFailure)
+        {
+            return false;
+        }
+
+        await AddAsync(successor, cancellationToken).ConfigureAwait(false);
+        await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return true;
+    }
 }

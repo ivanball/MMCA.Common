@@ -1,9 +1,10 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
+using MMCA.Common.Application.UseCases;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 using MMCA.Common.Shared.Abstractions;
@@ -279,6 +280,35 @@ public class SendPushNotificationHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().Contain(e => e.Code == "PushNotification.ScopeKey.TooLong");
+    }
+
+    // -- Atomicity (M86) --
+
+    // The handler commits the audit row (carrying DedupKey) before the recipient rows and the sends.
+    // Without one transaction around the whole sequence, a fault in between leaves that row
+    // committed and every retry of the same key short-circuits on it, reporting success for a
+    // notification nobody ever received.
+    [Fact]
+    public void SendPushNotificationCommand_IsTransactional_SoAPartialSendRollsBack() =>
+        typeof(SendPushNotificationCommand).Should().Implement<ITransactional>(
+            "the audit row must roll back with the recipient rows, or a retry with the same DedupKey "
+            + "short-circuits on an undelivered notification forever");
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRecipientSaveThrows_PropagatesInsteadOfReportingSuccess()
+    {
+        var (sut, mocks) = CreateSut();
+
+        // First save (the audit row) commits; the second (the per-recipient rows) faults.
+        mocks.UnitOfWork.SetupSequence(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .ThrowsAsync(new InvalidOperationException("recipient rows failed"));
+
+        Func<Task> act = () => sut.HandleAsync(CreateCommand());
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("recipient rows failed");
+        VerifyNoSend(mocks);
     }
 
     // -- Helpers --

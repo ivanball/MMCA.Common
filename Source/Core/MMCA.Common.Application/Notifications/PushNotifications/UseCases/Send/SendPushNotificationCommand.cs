@@ -7,10 +7,19 @@ namespace MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 /// Command to send a push notification to all recipients.
 /// Embeds the <see cref="SendPushNotificationRequest"/> for automatic FluentValidation via
 /// <see cref="ICommandWithRequest{TRequest}"/>.
+/// <para>
+/// <b>Transactional on purpose.</b> The handler writes the audit row first and the per-recipient rows
+/// second, so without a transaction a fault between the two leaves a committed notification row
+/// carrying <see cref="DedupKey"/> that nothing ever delivered: every retry with that key then
+/// short-circuits on the dedup lookup and reports success forever. Under
+/// <see cref="ITransactional"/> the failed attempt rolls back whole, so the retry re-runs the send.
+/// The cost is that the sender calls run inside the transaction; both are bounded by their own
+/// timeouts and hold locks only on rows this request just inserted.
+/// </para>
 /// </summary>
 public sealed record SendPushNotificationCommand(
     SendPushNotificationRequest Request,
-    UserIdentifierType SentByUserId) : ICommandWithRequest<SendPushNotificationRequest>
+    UserIdentifierType SentByUserId) : ICommandWithRequest<SendPushNotificationRequest>, ITransactional
 {
     /// <summary>
     /// Gets an optional deduplication key for the send (typically the caller's

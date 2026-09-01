@@ -569,6 +569,52 @@ public sealed class AuthenticationServiceBaseTests
         mocks.Sessions.Saved.Should().OnlyContain(s => s.IsRevoked, "the successor minted by the first call goes too");
     }
 
+    // H35: two requests presenting the same still-live token both read an un-revoked row. The store
+    // arbitrates; the request that loses the claim must not walk away with a second live successor.
+    [Fact]
+    public async Task RefreshTokenAsync_WhenTheRotationLosesTheRace_FailsAndRevokesTheFamily()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var presented = SeedSession(mocks, userId: 1, token: "stored-refresh");
+        var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
+        var otherUsersSession = SeedSession(mocks, userId: 2, token: "someone-elses");
+        ArrangeRefreshFetch(mocks, user);
+        mocks.Sessions.RotationOutcome = () => false;
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        mocks.Sessions.Saved.Should().NotContain(
+            s => string.Equals(s.TokenHash, RefreshSession.HashToken("refresh-1"), StringComparison.Ordinal),
+            "the loser of the claim mints nothing");
+        presented.IsRevoked.Should().BeTrue();
+        otherDevice.IsRevoked.Should().BeTrue("losing the claim is indistinguishable from a replay (BR-206)");
+        otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
+        otherUsersSession.IsRevoked.Should().BeFalse("family revocation is scoped to the token's own user");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WhenTheRotationWinsTheClaim_StillRotates()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var presented = SeedSession(mocks, userId: 1, token: "stored-refresh");
+        ArrangeRefreshFetch(mocks, user);
+        mocks.Sessions.RotationOutcome = () => true;
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.RefreshToken.Should().Be("refresh-1");
+        presented.IsRevoked.Should().BeTrue();
+        presented.ReplacedByTokenHash.Should().Be(RefreshSession.HashToken("refresh-1"));
+        mocks.Sessions.Saved.Should().ContainSingle(s => !s.IsRevoked);
+    }
+
     [Fact]
     public async Task RefreshTokenAsync_WhenSessionExpired_FailsWithoutRevokingTheFamily()
     {
@@ -847,6 +893,13 @@ public sealed class FakeRefreshSessionStore : IRefreshSessionStore
     /// <summary>How many times the workflow flushed.</summary>
     public int SaveCount { get; private set; }
 
+    /// <summary>
+    /// When set, decides whether <see cref="TryRotateAsync"/> claims the rotation. A false outcome
+    /// stands in for the database arbitrating a concurrent rotation of the same token: the loser
+    /// writes nothing at all.
+    /// </summary>
+    public Func<bool>? RotationOutcome { get; set; }
+
     /// <summary>Places an already-persisted session in the store.</summary>
     public void Seed(RefreshSession session) => _saved.Add(session);
 
@@ -886,6 +939,29 @@ public sealed class FakeRefreshSessionStore : IRefreshSessionStore
         _saved.AddRange(_staged);
         _staged.Clear();
         return Task.FromResult(written);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TryRotateAsync(
+        RefreshSession presented,
+        RefreshSession successor,
+        DateTime revokedAt,
+        CancellationToken cancellationToken = default)
+    {
+        if (RotationOutcome is not null && !RotationOutcome())
+        {
+            return false;
+        }
+
+        if (presented.Revoke(revokedAt, RefreshSession.ReasonRotated, successor.TokenHash).IsFailure)
+        {
+            return false;
+        }
+
+        await AddAsync(successor, cancellationToken);
+        await SaveChangesAsync(cancellationToken);
+
+        return true;
     }
 }
 
