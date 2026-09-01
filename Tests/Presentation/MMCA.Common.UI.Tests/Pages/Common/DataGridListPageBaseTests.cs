@@ -465,6 +465,30 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
     }
 
+    [Fact]
+    public async Task LoadMobileDataAsync_DoesNotOverwriteThePersistedRowsPerPage()
+    {
+        // The mobile card fetch shares the persisted state with the desktop grid, and MobilePageSize
+        // is never restored from it. Writing it there only clobbered the user's real RowsPerPage:
+        // set 50 rows, narrow the viewport past the mobile breakpoint, come back to 10.
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/widgets?p=0&ps=50");
+        var cut = Render<TestGridPage>();
+        cut.Instance.RowsPerPageNow.Should().Be(50);
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(8, new WidgetRow(1, "First"));
+
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        var saved = Services.GetRequiredService<ListPageStateService>().GetState("/widgets");
+        saved.Should().NotBeNull();
+        saved!.PageSize.Should().Be(
+            0,
+            "0 is skipped by the restore guards, exactly as the virtualized path already saves it");
+        navigation.Uri.Should().NotContain(
+            "ps=10",
+            "MobilePageSize is a layout constant, not a row-count preference the user expressed");
+    }
+
     // == Virtualization: window arithmetic ==
     [Theory]
     // startIndex, count -> firstPage, pageSize, offset, needsSecondPage

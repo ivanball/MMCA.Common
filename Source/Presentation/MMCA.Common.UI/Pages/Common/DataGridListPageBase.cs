@@ -751,7 +751,12 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
             MobileItems = page.Items;
             MobileTotalItems = page.TotalItems;
-            SaveCurrentState(0, MobilePageSize, _savedSortColumn, _savedSortDescending);
+
+            // Page size 0, like the virtualized path above: the restore guards skip a saved size of
+            // 0, and MobilePageSize is never restored from state anyway. Persisting it would only
+            // overwrite the desktop grid's RowsPerPage, so a user who set 50 rows and then narrowed
+            // the viewport would come back to 10.
+            SaveCurrentState(0, 0, _savedSortColumn, _savedSortDescending);
         }
         catch (OperationCanceledException)
         {

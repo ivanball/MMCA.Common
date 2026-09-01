@@ -47,6 +47,7 @@ MMCA.Common.Application.Auth.IRefreshSessionStore.FindByIdAsync(System.Guid id, 
 MMCA.Common.Application.Auth.IRefreshSessionStore.FindByTokenHashAsync(string! tokenHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
 MMCA.Common.Application.Auth.IRefreshSessionStore.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Application.Auth.IRefreshSessionStore.TryRotateAsync(MMCA.Common.Domain.Auth.RefreshSession! presented, MMCA.Common.Domain.Auth.RefreshSession! successor, System.DateTime revokedAt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.Application.Auth.PasswordResetSettings
 MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.get -> int
 MMCA.Common.Application.Auth.PasswordResetSettings.MaxRequestsPerEmail.init -> void

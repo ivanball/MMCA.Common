@@ -28,6 +28,35 @@ public static partial class ArchitectureRules
         ModuleLayerIsolated(map, Layer.Application, Layer.Infrastructure,
             "use Shared contracts, not another module's Infrastructure");
 
+    /// <summary>
+    /// The complete internal-layer cross product: every module's Domain, Application, Infrastructure
+    /// and Api against every OTHER module's Domain, Application, Infrastructure and Api.
+    /// <para>
+    /// The six named rules above cover the pairs worth their own failure message; this covers the
+    /// rest, which nothing checked before. A per-module layer rule
+    /// (<c>DomainDoesNotDependOnApplication</c> and friends) only forbids the SAME module's higher
+    /// layers, and the compile-time layer guard only knows about <c>MMCA.Common.*</c> references, so
+    /// a <c>Sales.Domain -> Catalog.Application</c> project reference passed every gate while
+    /// compile-coupling two modules that ADR-007/008 promise can be extracted separately.
+    /// </para>
+    /// <para>
+    /// <see cref="Layer.Ui"/> is deliberately NOT in the product: a module's UI composing another
+    /// module's UI is a real, intended arrangement in the shipped apps.
+    /// </para>
+    /// </summary>
+    public static void ModuleInternalLayersAreIsolated(IArchitectureMap map)
+    {
+        Layer[] internalLayers = [Layer.Domain, Layer.Application, Layer.Infrastructure, Layer.Api];
+        foreach (var from in internalLayers)
+        {
+            foreach (var to in internalLayers)
+            {
+                ModuleLayerIsolated(map, from, to,
+                    "a module reaches another module only through its Shared contracts");
+            }
+        }
+    }
+
     // ── Shared (contract) layer isolation: a module's Shared is contracts-only. ──
     public static void ModuleSharedDoesNotDependOnOwnInternalLayers(IArchitectureMap map)
     {

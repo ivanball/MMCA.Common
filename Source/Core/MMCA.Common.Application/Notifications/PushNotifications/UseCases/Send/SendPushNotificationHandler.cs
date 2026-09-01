@@ -13,6 +13,15 @@ namespace MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 /// Handles sending a push notification to all recipients. Creates a <see cref="PushNotification"/>
 /// entity for audit, queries recipient user IDs via <see cref="INotificationRecipientProvider"/>, and
 /// dispatches via <see cref="IPushNotificationSender"/>.
+/// <para>
+/// <b>Atomicity.</b> The three saves below (audit row, recipient rows, terminal status) are one unit:
+/// <see cref="SendPushNotificationCommand"/> is <c>ITransactional</c>, so a fault anywhere in the
+/// sequence rolls the audit row back with everything else. That is what keeps the dedup
+/// short-circuit honest, since a committed row is otherwise indistinguishable from a delivered one
+/// and would answer every retry of that key with success. A business failure (no recipients) returns
+/// before the first write, and a delivery that fails is still recorded, because
+/// <c>MarkAsFailed</c> ends in a success result.
+/// </para>
 /// </summary>
 public sealed partial class SendPushNotificationHandler(
     IUnitOfWork unitOfWork,

@@ -4,6 +4,115 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+Bug-hunt remediation (2026-09-01 run): a refresh-token rotation race, a non-atomic push-notification
+send, request validators that were silently dropped, and a set of UI, API and test-package defects.
+Everything is additive: no signature breaks and no schema changes, so nothing is required of a
+consumer at bump time beyond the pin.
+
+### Fixed
+
+- **Concurrent refresh-token rotation is now claimed atomically** (`MMCA.Common.Application`,
+  `MMCA.Common.Infrastructure`). Two requests presenting the SAME still-live refresh token each read
+  their own un-revoked copy of the session row, so both used to mint a successor and the presented
+  row could never fire reuse detection again, leaving one permanently undetected extra session.
+  Rotation now runs through the new `IRefreshSessionStore.TryRotateAsync`, which the EF store
+  implements as a conditional `UPDATE ... WHERE Id = @id AND RevokedAt IS NULL` plus the successor
+  insert in one transaction. The request that loses the claim gets the answer a replay gets: the
+  user's whole live family is revoked (BR-206) and the refresh fails with `Auth.InvalidRefreshToken`.
+  No schema change and no migration: the row still carries no concurrency token.
+- **`SendPushNotificationCommand` is `ITransactional`** (`MMCA.Common.Application`). The handler
+  committed the audit row (carrying `DedupKey`) before the per-recipient rows and the sends, so a
+  fault in between left a committed row nothing ever delivered, and every retry with that key
+  short-circuited on the dedup lookup and reported success forever. The whole sequence is now one
+  unit, so a failed attempt rolls back and a retry re-runs the send. The sender calls now run inside
+  the transaction.
+- **The retry policy disposes every retried HTTP response** (`MMCA.Common.UI`). Polly hands the
+  caller only the final outcome, so each intermediate 5xx/408/429 attempt leaked its content buffer
+  and kept its connection out of the handler pool until finalization, under exactly the sustained
+  backend failure the retries exist to survive. The final response is still the caller's to dispose.
+- **`DeepLinkDispatcher.Publish` decides under its lock** (`MMCA.Common.UI`). The handler was read
+  outside the lock, so a native callback publishing while a listener was subscribing and draining
+  could buffer the route after that drain, stranding it with no future consumer (the warm-boot deep
+  link on a MAUI head). The raise-or-buffer decision is now one locked step; the event is still
+  invoked outside the lock.
+- **The Admin nav section is hidden from anonymous visitors** (`MMCA.Common.UI`). It was gated on
+  item count alone, unlike the User section beside it, so a module registering a `Section.Admin`
+  `NavItem` without a `RequiredRole` (which defaults to null) disclosed the feature's existence and
+  URL. Consumers that already set a role on every admin item see no change.
+- **`ApiFileDownloadButton` sanitizes `FileName` before staging** (`MMCA.Common.UI`). The parameter
+  went into `Path.Combine(Path.GetTempPath(), FileName)` verbatim, so a rooted value discarded the
+  temp root and `..` segments walked out of it: reachable for a consumer that builds the name from
+  entity data. Directory segments are now stripped to the bare file name, and an unusable name warns
+  without even performing the download.
+- **The mobile card fetch no longer overwrites the persisted `RowsPerPage`** (`MMCA.Common.UI`).
+  `LoadMobileDataAsync` saved `MobilePageSize` into the state the desktop grid shares, so narrowing
+  the viewport replaced a user's 50-rows-per-page choice with 10 on the next visit. It now saves 0,
+  which the restore guards skip, exactly as the virtualized path already did.
+- **`E2ETestBase` no longer reports success on a silent auth failure**
+  (`MMCA.Common.Testing.E2E`). `LoginAsync` and `RegisterNewUserAsync` raced three signals and
+  returned normally when ALL of them timed out, which is what a submit that fails with neither a
+  navigation nor a rendered error alert looks like (a 500 that renders nothing, a dropped request, a
+  JS exception mid-submit). The caller's follow-up interactivity wait was already satisfied by the
+  still-rendered auth page, so the helper reported a sign-in that never happened. The four-way
+  classification is now explicit (`AuthOutcomeRules.Classify`) and the silent case throws an
+  `InvalidOperationException` naming the operation, the budget and the URL. The losing waits are also
+  observed, so their timeouts cannot surface as unobserved task exceptions elsewhere in a run.
+  **Consumer-visible at bump time:** an E2E suite whose login is genuinely broken but was passing
+  silently will turn RED. That is the point, but expect it.
+- **`ConfigureTestFeatureFlags` layers onto the host configuration** (`MMCA.Common.Testing`). It
+  built a flags-only `IConfiguration` and registered it, and .NET DI hands a non-collection
+  dependency the LAST registration, so anything constructed afterwards that injects `IConfiguration`
+  directly saw no connection strings, no authentication settings and no data sources, contradicting
+  the helper's own docstring. It now chains the host's configuration and adds the flags on top (the
+  flags still win). Behind a factory registration of `IConfiguration` there is nothing to read, and
+  the flags stand alone exactly as before.
+- **Module isolation covers the full internal-layer cross product**
+  (`MMCA.Common.Testing.Architecture`). Six rules checked each internal layer against its own layer
+  in other modules, plus Domain and Application against another module's Infrastructure. A module's
+  Domain reaching another module's Application or Api (and the other unchecked pairs) passed every
+  gate: the per-module layer rules forbid only the SAME module's higher layers, and the compile-time
+  guard only knows `MMCA.Common.*` references. New `ArchitectureRules.ModuleInternalLayersAreIsolated`
+  plus a `ModuleIsolationTestsBase` fact close it. UI is deliberately excluded (a module's UI
+  composing another module's UI is intended). **Consumer-visible at bump time:** the new fact runs in
+  every repo that subclasses the base; ADC and Store cross-module project references are Shared-only
+  today, so it should be green.
+- **`ApnsTokenBridge` re-arms its rendezvous per registration attempt** (`MMCA.Common.UI.Maui`). A
+  single one-shot `TaskCompletionSource` handed every later caller the first attempt's outcome
+  instantly, so after a failed APNs registration the next `GetTokenAsync` re-registered and then
+  reported failure without waiting for the callback it had just triggered. `WaitForTokenAsync` now
+  completes on the NEXT callback, and `Publish` swaps in the new source before completing the old
+  one. Call `WaitForTokenAsync` before asking UIKit to register, as the shipped provider does.
+- **`NotificationBell` cannot start a poll loop after disposal** (`MMCA.Common.UI`). Disposal during
+  the first unread-count read left it creating a `PeriodicTimer` nothing would dispose and starting a
+  loop whose first act was to read an already-disposed `CancellationTokenSource`, faulting a
+  discarded task. It re-checks after the await, and the loop also catches `ObjectDisposedException`.
+- **`OwnerOrAdminFilter` parses owner ids invariantly** (`MMCA.Common.API`). The route-value and
+  bound-argument parses used the host's ambient culture, unlike every other machine-data parse in the
+  framework. They now pass `NumberStyles.Integer` and `CultureInfo.InvariantCulture`. The filter
+  already failed closed on a non-parse, so this is a convention fix rather than a security fix.
+- **`CommandRequestValidator` runs every registered `IValidator<TRequest>`**
+  (`MMCA.Common.Application`). It took `FirstOrDefault()`, so a module that authored a validator
+  beside a framework-supplied one for the same request type had one of them silently turned into
+  dead code, in DI registration order. All of them now run and their failures are unioned, matching
+  the policy the command and query decorators already apply to `IValidator<TCommand>` (ADR-014);
+  duplicate registrations of one validator class are de-duplicated by runtime type. A module with two
+  validators for one request will now surface failures that were previously not reported.
+
+### Added
+
+- **`LatestLoadGuard`** (`MMCA.Common.UI`, `MMCA.Common.UI.Common`). Small disposable helper for
+  routed detail pages: `Begin()` cancels the previous load and hands back a token plus a generation,
+  and `IsCurrent(generation)` says whether that load's result may still be assigned. Blazor reuses a
+  routed component instance across route-parameter changes, so a slow load for one id otherwise
+  overwrites the page after a faster load for the next id has rendered. Not thread-safe by contract
+  (renderer synchronization context only).
+- **`IRefreshSessionStore.TryRotateAsync`** (`MMCA.Common.Application`). Additive interface member
+  with a default implementation (revoke, add, save), so an existing custom or test store keeps
+  compiling and behaving as it did; the shipped EF store overrides it with the database-arbitrated
+  claim described above.
+
 ## [1.178.0] - 2026-09-01
 
 Two move-to-Common extractions from the 2026-08-31 drift run: the E2E gateway rate-limit lift both

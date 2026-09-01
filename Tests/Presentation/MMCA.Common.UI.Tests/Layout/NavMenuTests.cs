@@ -134,6 +134,36 @@ public sealed class NavMenuTests : BunitTestBase
         cut.Markup.Should().Contain("Manage Events");
     }
 
+    // NavItem.RequiredRole defaults to null and is independent of Section, so an Admin item
+    // registered without one used to render for anonymous visitors: the section itself was gated on
+    // item count alone, unlike the User section beside it.
+    [Fact]
+    public void WhenAnonymous_HidesAdminItemsEvenWithoutARequiredRole()
+    {
+        RegisterModule(
+            new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
+            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), Section: NavSection.Admin));
+
+        RenderMudProviders();
+        var cut = RenderUnderTest<NavMenu>(_ => { });
+
+        cut.Markup.Should().Contain("Browse Catalog");
+        cut.Markup.Should().NotContain("Manage Events", "an admin URL is not for anonymous visitors");
+        cut.Markup.Should().NotContain("Administration");
+    }
+
+    [Fact]
+    public void WhenAuthenticated_ShowsAdminItemsWithoutARequiredRole()
+    {
+        RegisterModule(
+            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), Section: NavSection.Admin));
+
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
+
+        cut.Markup.Should().Contain("Manage Events", "the guard is authentication, not a role the item never declared");
+    }
+
     [Fact]
     public void WithoutBrandLogoUrl_RendersTheTextOnlyBrand()
     {

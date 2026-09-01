@@ -16,21 +16,13 @@ public abstract class AuthenticatedServiceBase(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService)
 {
-#pragma warning disable S2245, CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
-
     /// <summary>
     /// Polly retry policy: 3 retries on <see cref="HttpRequestException"/> or a retryable response
     /// status (see <c>IsRetryableResponse</c>), with exponential backoff (2s, 4s, 8s) plus up to
     /// one second of random jitter so a fleet of clients does not re-converge on the same instant.
+    /// Every retried response is disposed; the caller owns the final one.
     /// </summary>
-    protected static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy = Policy
-        .Handle<HttpRequestException>()
-        .OrResult<HttpResponseMessage>(IsRetryableResponse)
-        .WaitAndRetryAsync(
-            3,
-            attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt))
-                + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000)));
-#pragma warning restore S2245
+    protected static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy = BuildRetryPolicy(DefaultBackoff);
 
     private const string ApiClientName = "APIClient";
 
@@ -115,4 +107,29 @@ public abstract class AuthenticatedServiceBase(
         return (int)response.StatusCode >= 500
             || response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
     }
+
+#pragma warning disable S2245, CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
+
+    /// <summary>The shipped backoff: 2s, 4s, 8s plus up to one second of jitter.</summary>
+    private static TimeSpan DefaultBackoff(int attempt) =>
+        TimeSpan.FromSeconds(Math.Pow(2, attempt))
+            + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
+#pragma warning restore S2245, CA5394
+
+    /// <summary>
+    /// Builds the retry policy. Internal and backoff-injectable so a test can exercise the disposal
+    /// contract below without waiting out the real delays.
+    /// </summary>
+    /// <remarks>
+    /// <c>onRetry</c> disposes the retried attempt's response. Polly hands the caller only the FINAL
+    /// outcome, so without this every intermediate 5xx/408/429 response leaks its content buffer and
+    /// keeps its connection out of the handler pool until finalization: exactly under the sustained
+    /// backend failure the retries exist to survive. A retried <see cref="HttpRequestException"/>
+    /// carries no result, hence the null-conditional. The final response is NOT disposed here, since
+    /// the caller owns it.
+    /// </remarks>
+    internal static AsyncRetryPolicy<HttpResponseMessage> BuildRetryPolicy(Func<int, TimeSpan> backoff) => Policy
+        .Handle<HttpRequestException>()
+        .OrResult<HttpResponseMessage>(IsRetryableResponse)
+        .WaitAndRetryAsync(3, backoff, onRetry: (outcome, _) => outcome.Result?.Dispose());
 }

@@ -48,21 +48,61 @@ public sealed class CommandRequestValidatorTests
             .WithErrorMessage("Name is required");
     }
 
-    // ── Uses only the first registered validator ──
+    // ── Every registered validator runs, not just the first ──
     [Fact]
-    public void Validate_MultipleRequestValidatorsRegistered_UsesFirstValidator()
+    public void Validate_MultipleRequestValidatorsRegistered_RunsEveryValidator()
     {
         IEnumerable<IValidator<TestRequest>> requestValidators =
         [
             new TestRequestValidator(),
-            new PermissiveTestRequestValidator()
+            new SecondTestRequestValidator()
+        ];
+        var sut = new CommandRequestValidator<TestCommandWithRequest, TestRequest>(requestValidators);
+
+        FluentValidation.Results.ValidationResult result = sut.Validate(
+            new TestCommandWithRequest(new TestRequest(string.Empty)));
+
+        result.Errors.Select(e => e.ErrorMessage).Should()
+            .Contain("Name is required").And
+            .Contain(
+                "Name must be on the approved list",
+                "honoring only the first registration turns every other validator's rules into dead code");
+    }
+
+    // ── The same validator class registered twice must not double-report ──
+    [Fact]
+    public void Validate_TheSameValidatorTypeRegisteredTwice_ReportsEachFailureOnce()
+    {
+        IEnumerable<IValidator<TestRequest>> requestValidators =
+        [
+            new TestRequestValidator(),
+            new TestRequestValidator()
+        ];
+        var sut = new CommandRequestValidator<TestCommandWithRequest, TestRequest>(requestValidators);
+
+        FluentValidation.Results.ValidationResult result = sut.Validate(
+            new TestCommandWithRequest(new TestRequest(string.Empty)));
+
+        result.Errors.Should().ContainSingle(
+            "duplicate registrations of one validator class are de-duplicated by runtime type");
+    }
+
+    // ── A permissive validator alongside a strict one still reports the strict failure ──
+    [Fact]
+    public void Validate_APermissiveValidatorRegisteredFirst_StillReportsTheStrictFailure()
+    {
+        IEnumerable<IValidator<TestRequest>> requestValidators =
+        [
+            new PermissiveTestRequestValidator(),
+            new TestRequestValidator()
         ];
         var sut = new CommandRequestValidator<TestCommandWithRequest, TestRequest>(requestValidators);
 
         TestValidationResult<TestCommandWithRequest> result = sut.TestValidate(
             new TestCommandWithRequest(new TestRequest(string.Empty)));
 
-        result.ShouldHaveValidationErrorFor(c => c.Request.Name);
+        result.ShouldHaveValidationErrorFor(c => c.Request.Name)
+            .WithErrorMessage("Name is required");
     }
 }
 
@@ -79,7 +119,15 @@ public sealed class TestRequestValidator : AbstractValidator<TestRequest>
             .WithMessage("Name is required");
 }
 
+public sealed class SecondTestRequestValidator : AbstractValidator<TestRequest>
+{
+    public SecondTestRequestValidator() =>
+        RuleFor(x => x.Name)
+            .Must(name => string.Equals(name, "Approved", StringComparison.Ordinal))
+            .WithMessage("Name must be on the approved list");
+}
+
 public sealed class PermissiveTestRequestValidator : AbstractValidator<TestRequest>
 {
-    // No rules — always passes
+    // No rules: always passes.
 }

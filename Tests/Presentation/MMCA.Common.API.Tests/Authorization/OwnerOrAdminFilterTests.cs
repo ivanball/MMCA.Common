@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -223,6 +224,68 @@ public sealed class OwnerOrAdminFilterTests
                 new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor), [], null!)));
 
         context.Result.Should().BeOfType<ForbidResult>();
+    }
+
+    // ── Owner ids are machine data: parsed invariantly, never with the host's culture ──
+    [Theory]
+    [InlineData("sv-SE")]
+    [InlineData("ar-SA")]
+    [InlineData("fa-IR")]
+    public async Task OnActionExecutionAsync_UnderAnyAmbientCulture_StillAuthorizesTheOwner(string cultureName)
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
+            _currentUserService.Setup(s => s.Role).Returns("Customer");
+            _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
+            var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "42" });
+            var nextCalled = false;
+            var sut = CreateFilter();
+
+            await sut.OnActionExecutionAsync(context, () =>
+            {
+                nextCalled = true;
+                return Task.FromResult(new ActionExecutedContext(
+                    new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor), [], null!));
+            });
+
+            nextCalled.Should().BeTrue();
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public async Task OnActionExecutionAsync_ACultureFormattedOwnerId_IsNotAccepted()
+    {
+        // Pins the convention rather than a real-world input: an owner id arrives off the wire, so
+        // whichever strings the host's CurrentCulture would accept as numbers is not the question.
+        // The custom negative sign is what makes the assertion deterministic across ICU versions.
+        var culture = (CultureInfo)CultureInfo.GetCultureInfo("sv-SE").Clone();
+        culture.NumberFormat.NegativeSign = "\u2212";
+        CultureInfo original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = culture;
+            _currentUserService.Setup(s => s.Role).Returns("Customer");
+            _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(-5);
+            var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "\u22125" });
+            var sut = CreateFilter();
+
+            await sut.OnActionExecutionAsync(context, () =>
+                Task.FromResult(new ActionExecutedContext(
+                    new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor), [], null!)));
+
+            context.Result.Should().BeOfType<ForbidResult>(
+                "an ambient-culture parse would have accepted this id, and the filter must not depend on the host's culture");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 
     // ── Explicit opt-out ──

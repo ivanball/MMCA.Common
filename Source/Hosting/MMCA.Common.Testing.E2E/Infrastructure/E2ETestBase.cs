@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Playwright;
 using Xunit;
 using static Microsoft.Playwright.Assertions;
@@ -219,21 +220,61 @@ public abstract class E2ETestBase : IAsyncLifetime
             url => !url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
             new() { Timeout = E2ETestConfiguration.AuthTimeout });
 
-        await Task.WhenAny(
-            leftAuthPage,
-            logoutButton.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout }),
-            errorAlert.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout })).ConfigureAwait(false);
+        var logoutVisible = logoutButton.WaitForAsync(
+            new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
+        var errorVisible = errorAlert.WaitForAsync(
+            new() { State = WaitForSelectorState.Visible, Timeout = E2ETestConfiguration.AuthTimeout });
 
-        // Success is unambiguous once the forceLoad has navigated away from the auth page. Only treat an
-        // error alert STILL on the auth page (after the grace window, with no navigation) as a failure.
-        if (await errorAlert.IsVisibleAsync().ConfigureAwait(false)
-            && Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase)
-            && !await AuthSucceededWithinGraceAsync(authPagePath, logoutButton).ConfigureAwait(false))
+        await Task.WhenAny(leftAuthPage, logoutVisible, errorVisible).ConfigureAwait(false);
+
+        // The losers time out and fault; nothing awaits them, so observe their exceptions here rather
+        // than letting them surface as unobserved-task failures in an unrelated test.
+        Observe(leftAuthPage);
+        Observe(logoutVisible);
+        Observe(errorVisible);
+
+        var outcome = AuthOutcomeRules.Classify(
+            navigatedAway: !Page.Url.Contains(authPagePath, StringComparison.OrdinalIgnoreCase),
+            errorAlertVisible: await errorAlert.IsVisibleAsync().ConfigureAwait(false),
+            logoutVisible: await logoutButton.IsVisibleAsync().ConfigureAwait(false));
+
+        if (outcome == AuthOutcome.Succeeded)
+        {
+            return;
+        }
+
+        // Both remaining outcomes get the grace window once: a slow Server-mode success can flash an
+        // error alert on its way out, and can also still be finishing when all three waits time out.
+        if (await AuthSucceededWithinGraceAsync(authPagePath, logoutButton).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        if (outcome == AuthOutcome.ErrorShown)
         {
             var errorText = await errorAlert.TextContentAsync().ConfigureAwait(false);
             throw new InvalidOperationException($"{operation} failed: {errorText}");
         }
+
+        // Silent: all three waits timed out and the grace window added nothing. The auth page is
+        // still showing with nothing rendered to say why, so the submit was never accepted. Returning
+        // here is what used to let a broken login report success (the caller's interactivity wait is
+        // already satisfied by the still-rendered auth page), so fail with the diagnostics instead.
+        var budget = (E2ETestConfiguration.AuthTimeout + E2ETestConfiguration.AuthGraceTimeout)
+            .ToString(CultureInfo.InvariantCulture);
+        throw new InvalidOperationException(
+            $"{operation} produced neither a navigation away from {authPagePath}, a signed-in state, "
+            + $"nor an error alert within {budget} ms (url: {Page.Url}).");
     }
+
+    // The two losing waits of the three-way race always fault on timeout. Observing them keeps a
+    // finalized faulted Task from raising TaskScheduler.UnobservedTaskException later.
+    private static void Observe(Task task) =>
+        _ = task.ContinueWith(
+            static t => _ = t.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
 
     // Within the grace window, treats EITHER the forceLoad navigating away from the auth page OR the
     // interactive logout button appearing as success — so a transient error-alert flash during a slow
