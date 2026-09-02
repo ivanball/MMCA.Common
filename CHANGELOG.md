@@ -6,6 +6,24 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`Telemetry:FilterProbeTelemetry` cost knob** (`MMCA.Common.Aspire`, rubric §31). Keeps
+  health-probe traces out of Application Insights / Log Analytics: the ASP.NET Core instrumentation
+  refuses inbound `/alive`, `/health` and `/health/*` requests, the HttpClient instrumentation
+  refuses outbound calls to the same paths (YARP active health checks and the gateway's
+  `DownstreamServiceHealthCheck` probes, which have no request ancestor), and a new
+  `ProbeTelemetryFilterProcessor` un-records the dependency spans hanging off a probe request (the
+  health check's SQL `SELECT 1`, the Redis PING). Container Apps probes, gateway aggregate probes
+  and the availability web test accounted for 100% of the AppRequests rows in both production
+  workspaces, and `Telemetry:TracesSampleRatio` does not reduce them. **Defaults to `true`**, unlike
+  the metrics knobs: a host that wants to see its own probe traces sets it to `false`. Metrics are
+  deliberately untouched, so `http.server.request.duration`, Kestrel and routing instruments keep
+  feeding dashboards.
+- **`HealthEndpointPaths`** (`MMCA.Common.Aspire`). The `/health`, `/alive` and `/health/ready`
+  paths `MapDefaultEndpoints()` maps, plus an `IsProbePath` predicate, declared once so the mapping
+  and the probe telemetry filters cannot drift apart.
+
 ## [1.181.0] - 2026-09-02
 
 Readiness-safe Redis registration and authoritative metric cost toggles. One consumer action is

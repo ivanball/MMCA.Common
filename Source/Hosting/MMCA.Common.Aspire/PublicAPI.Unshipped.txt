@@ -32,3 +32,12 @@ MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder).
 const MMCA.Common.Aspire.Caching.RedisCachingExtensions.DefaultConnectionName = "redis" -> string!
 static MMCA.Common.Aspire.Caching.RedisCachingExtensions.AddRedisCaching<TBuilder>(this TBuilder builder, string! connectionName = "redis") -> TBuilder
 static MMCA.Common.Aspire.Caching.RedisCachingExtensions.AddRedisOutputCaching<TBuilder>(this TBuilder builder, string! connectionName = "redis") -> TBuilder
+MMCA.Common.Aspire.HealthEndpointPaths
+const MMCA.Common.Aspire.HealthEndpointPaths.Alive = "/alive" -> string!
+const MMCA.Common.Aspire.HealthEndpointPaths.Health = "/health" -> string!
+const MMCA.Common.Aspire.HealthEndpointPaths.Ready = "/health/ready" -> string!
+static MMCA.Common.Aspire.HealthEndpointPaths.IsProbePath(string? path) -> bool
+MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor
+MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.ProbeTelemetryFilterProcessor() -> void
+override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnEnd(System.Diagnostics.Activity! data) -> void
+override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnStart(System.Diagnostics.Activity! data) -> void
