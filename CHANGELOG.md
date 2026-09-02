@@ -6,6 +6,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.182.0] - 2026-09-02
+
+Cost release: health-probe traces stay out of Application Insights / Log Analytics by default. No
+consumer action is required at bump time; hosts that want to see their own probe traces set
+`Telemetry:FilterProbeTelemetry=false`.
+
 ### Added
 
 - **`Telemetry:FilterProbeTelemetry` cost knob** (`MMCA.Common.Aspire`, rubric §31). Keeps
