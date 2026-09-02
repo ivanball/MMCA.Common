@@ -25,3 +25,10 @@ static MMCA.Common.Aspire.Extensions.AddInfrastructureHealthChecks<TBuilder>(thi
 MMCA.Common.Aspire.Security.CspNonce
 const MMCA.Common.Aspire.Security.CspNonce.ItemKey = "MMCA.CspNonce" -> string!
 static MMCA.Common.Aspire.Security.CspNonce.Get(Microsoft.AspNetCore.Http.HttpContext! context) -> string?
+MMCA.Common.Aspire.Caching.RedisCachingExtensions
+MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder)
+MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder).AddRedisCaching(string! connectionName = "redis") -> TBuilder
+MMCA.Common.Aspire.Caching.RedisCachingExtensions.extension<TBuilder>(TBuilder).AddRedisOutputCaching(string! connectionName = "redis") -> TBuilder
+const MMCA.Common.Aspire.Caching.RedisCachingExtensions.DefaultConnectionName = "redis" -> string!
+static MMCA.Common.Aspire.Caching.RedisCachingExtensions.AddRedisCaching<TBuilder>(this TBuilder builder, string! connectionName = "redis") -> TBuilder
+static MMCA.Common.Aspire.Caching.RedisCachingExtensions.AddRedisOutputCaching<TBuilder>(this TBuilder builder, string! connectionName = "redis") -> TBuilder
