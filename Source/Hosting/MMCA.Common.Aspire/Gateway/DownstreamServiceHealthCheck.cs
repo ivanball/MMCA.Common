@@ -43,7 +43,7 @@ internal sealed class DownstreamServiceHealthCheck(
     DownstreamProbeVersion probeVersion) : IHealthCheck
 {
     /// <summary>The relative path probed on the downstream service.</summary>
-    internal static readonly Uri ProbePath = new("/alive", UriKind.Relative);
+    internal static readonly Uri ProbePath = new(HealthEndpointPaths.Alive, UriKind.Relative);
 
     /// <summary>
     /// The version <see cref="DownstreamProbeVersion.Auto"/> has settled on, held as the underlying

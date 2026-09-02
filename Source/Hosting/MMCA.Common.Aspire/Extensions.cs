@@ -28,6 +28,12 @@ namespace MMCA.Common.Aspire;
     Justification = "False positive: with multiple extension(T) blocks in one static class, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
 public static class Extensions
 {
+    /// <summary>
+    /// Configuration key of the probe-telemetry cost knob. Defaults to <see langword="true"/>; see
+    /// <see cref="IsProbeTelemetryFilterEnabled"/>.
+    /// </summary>
+    internal const string FilterProbeTelemetryConfigKey = "Telemetry:FilterProbeTelemetry";
+
     extension<TBuilder>(TBuilder builder)
         where TBuilder : IHostApplicationBuilder
     {
@@ -201,16 +207,51 @@ public static class Extensions
                 .WithTracing(tracing =>
                 {
                     tracing.AddSource(builder.Environment.ApplicationName)
-                        .AddSource("MMCA.Common.Outbox")
-                        .AddAspNetCoreInstrumentation()
-                        .AddHttpClientInstrumentation()
+                        .AddSource("MMCA.Common.Outbox");
 
-                        // Drops recurring outbox poll spans (and their SqlClient children from the
-                        // Azure Monitor distro) from export — idle polling would otherwise dominate
-                        // telemetry ingestion cost. Must be registered here, before
-                        // AddOpenTelemetryExporters() below, so its OnEnd clears the Recorded flag
-                        // before the exporters' batch processors check it.
-                        .AddProcessor(new Telemetry.OutboxPollFilterProcessor());
+                    // Cost control (rubric §31): health-probe traces. Container Apps liveness and
+                    // readiness probes, the gateway's downstream aggregate probes, YARP active
+                    // health checks and the availability web test made up 100% of the AppRequests
+                    // rows in both production workspaces, and their children (the health check's
+                    // SQL SELECT 1, the Redis PING, the gateway's HttpClient calls to each
+                    // backend's /alive) most of the AppDependencies rows. None of it carries
+                    // end-user signal and none of it is touched by Telemetry:TracesSampleRatio,
+                    // because probe spans are what the sampler is asked to keep proportionally.
+                    // On by default (this is chatter no host wants billed); a host that is
+                    // debugging its own probes sets Telemetry:FilterProbeTelemetry=false.
+                    // Metrics are deliberately untouched: http.server.request.duration, Kestrel
+                    // and routing instruments keep flowing, so probe traffic stays on dashboards.
+                    var filterProbeTelemetry = IsProbeTelemetryFilterEnabled(builder.Configuration);
+                    if (filterProbeTelemetry)
+                    {
+                        // Both filters configure the DEFAULT-named instrumentation options, so they
+                        // also apply to the instrumentation the Azure Monitor distro adds: unlike
+                        // the metrics toggles above, these are authoritative without a View.
+                        tracing.AddAspNetCoreInstrumentation(options =>
+                                options.Filter = Telemetry.ProbeTelemetryFilter.ShouldCollectRequest)
+                            .AddHttpClientInstrumentation(options =>
+                                options.FilterHttpRequestMessage = Telemetry.ProbeTelemetryFilter.ShouldCollectOutgoing);
+                    }
+                    else
+                    {
+                        tracing.AddAspNetCoreInstrumentation()
+                            .AddHttpClientInstrumentation();
+                    }
+
+                    // Drops recurring outbox poll spans (and their SqlClient children from the
+                    // Azure Monitor distro) from export — idle polling would otherwise dominate
+                    // telemetry ingestion cost. Must be registered here, before
+                    // AddOpenTelemetryExporters() below, so its OnEnd clears the Recorded flag
+                    // before the exporters' batch processors check it.
+                    tracing.AddProcessor(new Telemetry.OutboxPollFilterProcessor());
+
+                    if (filterProbeTelemetry)
+                    {
+                        // Same registration-order requirement, same reason: the inbound filter only
+                        // refuses the probe request span itself, while its dependency children are
+                        // sampled independently and need un-recording before the exporters look.
+                        tracing.AddProcessor(new Telemetry.ProbeTelemetryFilterProcessor());
+                    }
 
                     // Cost control (rubric §31): head-based trace sampling. Unset by default, so a
                     // host samples everything (no behavior change). A deployed host sets
@@ -369,11 +410,11 @@ public static class Extensions
         /// <returns>The same application instance for chaining.</returns>
         public WebApplication MapDefaultEndpoints()
         {
-            app.MapHealthChecks("/health");
+            app.MapHealthChecks(HealthEndpointPaths.Health);
 
             // Liveness: only the "self" check (tagged "live") — avoids marking the
             // process as dead when an external dependency (e.g., SQL Server) is down.
-            app.MapHealthChecks("/alive", new HealthCheckOptions
+            app.MapHealthChecks(HealthEndpointPaths.Alive, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains(HealthCheckTags.Live)
             });
@@ -389,7 +430,7 @@ public static class Extensions
             // into a total outage, because every replica goes unready at once and the app stops
             // serving traffic it was perfectly capable of serving. Those checks still surface on
             // /health, so the degradation is visible without being self-inflicted.
-            app.MapHealthChecks("/health/ready", new HealthCheckOptions
+            app.MapHealthChecks(HealthEndpointPaths.Ready, new HealthCheckOptions
             {
                 Predicate = r => !r.Tags.Contains(HealthCheckTags.Live) && !r.Tags.Contains(HealthCheckTags.Optional)
             });
@@ -429,6 +470,18 @@ public static class Extensions
     /// </summary>
     internal static bool IsInstrumentationDisabled(IConfiguration configuration, string configKey)
         => bool.TryParse(configuration[configKey], out var disabled) && disabled;
+
+    /// <summary>
+    /// Reads the <c>Telemetry:FilterProbeTelemetry</c> cost knob (rubric §31), which keeps health-probe
+    /// requests and their dependency children out of trace export. Unlike the metrics knobs this one
+    /// defaults to <see langword="true"/>: probe chatter is ingestion no host wants billed, so absent,
+    /// blank or unparseable all mean "filter", and only an explicit boolean <see langword="false"/>
+    /// turns the filtering off (for a host debugging its own probes).
+    /// </summary>
+    /// <param name="configuration">Configuration carrying the knob.</param>
+    /// <returns><see langword="true"/> when probe telemetry must be filtered.</returns>
+    internal static bool IsProbeTelemetryFilterEnabled(IConfiguration configuration)
+        => !bool.TryParse(configuration[FilterProbeTelemetryConfigKey], out var enabled) || enabled;
 
     /// <summary>
     /// Registers the relational database checks and enforces the "the database must be there" rule
