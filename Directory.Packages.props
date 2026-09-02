@@ -247,6 +247,11 @@
          ServiceDiscovery) above. -->
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
+    <!-- Test tier only (Tests/Hosting/MMCA.Common.Aspire.Tests): an in-memory metric reader is the
+         only way to prove that the Telemetry:Disable*Metrics knobs actually drop a stream, rather
+         than merely skipping one AddXInstrumentation call that another component re-adds. Version
+         tracks the OpenTelemetry family pinned below. -->
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.18.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.0" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase):
@@ -258,8 +263,14 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
-    <!-- Health Checks -->
-    <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
+    <!-- Health Checks. AspNetCore.HealthChecks.Redis is deliberately absent: its check issues
+         CLUSTER INFO against any server StackExchange.Redis 3.x reports as clustered, which Azure
+         Managed Redis (Enterprise tier) refuses outside admin mode, so every probe threw against a
+         healthy cache. MMCA.Common.Aspire ships a PING-only replacement instead
+         (Health/RedisPingHealthCheck). The package still arrives transitively through
+         Aspire.StackExchange.Redis, which is harmless because the Aspire checks are switched off at
+         registration (Caching/RedisCachingExtensions) and this repo does not enable central
+         transitive pinning, so no PackageVersion entry is required to keep the restore graph valid. -->
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.Sqlite" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
@@ -289,6 +300,14 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <!-- Redis client integrations (MMCA.Common.Aspire.Caching.RedisCachingExtensions). Held at the
+         same 13.5.3 the hosting stack sits on, and matching the pins both consumer apps already
+         carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
+         exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
+         shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.5.3" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.11" />
     <!-- Aspire AppHost -->
     <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.3" />

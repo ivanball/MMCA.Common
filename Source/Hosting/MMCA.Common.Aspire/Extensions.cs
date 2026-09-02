@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -138,7 +139,25 @@ public static class Extensions
                     // A deployed host sets Telemetry:DisableHttpClientMetrics=true to drop them; outbound
                     // dependency latency is still captured as AppDependencies traces. Unset (default) keeps
                     // them, so no behavior change for a host that does not opt in.
-                    if (!IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableHttpClientMetrics"))
+                    if (IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableHttpClientMetrics"))
+                    {
+                        // Skipping AddHttpClientInstrumentation is NOT enough on its own. A deployed
+                        // host also calls UseAzureMonitor() (see AddOpenTelemetryExporters below), and
+                        // the Azure Monitor distro adds the System.Net.Http meter itself, so
+                        // http.client.open_connections kept flowing and stayed the single largest
+                        // AppMetrics stream in both production workspaces despite the toggle being on.
+                        // A View applies to the whole MeterProvider regardless of which component added
+                        // the meter, so dropping every instrument on those two meters makes the toggle
+                        // authoritative instead of advisory. System.Net.NameResolution rides along
+                        // because DNS-lookup metrics are part of the same HttpClient family and carry
+                        // no signal without it.
+                        metrics.AddView(instrument =>
+                            string.Equals(instrument.Meter.Name, "System.Net.Http", StringComparison.Ordinal)
+                            || string.Equals(instrument.Meter.Name, "System.Net.NameResolution", StringComparison.Ordinal)
+                                ? MetricStreamConfiguration.Drop
+                                : null);
+                    }
+                    else
                     {
                         metrics.AddHttpClientInstrumentation();
                     }
@@ -147,7 +166,17 @@ public static class Extensions
                     // ~17 instruments emitted every collection interval regardless of traffic) are the second
                     // highest-volume contributor and are rarely consulted operationally for these apps. A
                     // deployed host sets Telemetry:DisableRuntimeMetrics=true to drop them. Unset keeps them.
-                    if (!IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableRuntimeMetrics"))
+                    if (IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableRuntimeMetrics"))
+                    {
+                        // Same reasoning as the HttpClient branch above: the Azure Monitor distro adds
+                        // the System.Runtime meter on its own, so the toggle only becomes authoritative
+                        // once a View drops the whole meter.
+                        metrics.AddView(instrument =>
+                            string.Equals(instrument.Meter.Name, "System.Runtime", StringComparison.Ordinal)
+                                ? MetricStreamConfiguration.Drop
+                                : null);
+                    }
+                    else
                     {
                         metrics.AddRuntimeInstrumentation();
                     }
@@ -244,7 +273,20 @@ public static class Extensions
             var redisConnectionString = builder.Configuration.GetConnectionString("redis");
             if (!string.IsNullOrWhiteSpace(redisConnectionString))
             {
-                healthChecks.AddRedis(redisConnectionString, name: "redis", tags: [HealthCheckTags.Optional]);
+                // PING only, never an administrative command. The AspNetCore.HealthChecks.Redis check
+                // this replaced issued CLUSTER INFO against any server it detected as clustered, which
+                // is how StackExchange.Redis 3.x sees Azure Managed Redis (Enterprise tier), and the
+                // server refuses that command outside admin mode: every probe threw against a healthy
+                // cache. The check is registered as a singleton so the fallback multiplexer is built
+                // once, not per probe, and disposed with the container.
+                builder.Services.TryAddSingleton(
+                    sp => new Health.RedisPingHealthCheck(redisConnectionString, sp));
+
+                healthChecks.Add(new HealthCheckRegistration(
+                    "redis",
+                    sp => sp.GetRequiredService<Health.RedisPingHealthCheck>(),
+                    failureStatus: null,
+                    tags: [HealthCheckTags.Optional]));
             }
 
             var rabbitConnectionString = builder.Configuration.GetConnectionString("rabbitmq")

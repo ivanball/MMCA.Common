@@ -14,6 +14,11 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Moq" />
+    <!-- Proves the metrics cost knobs are authoritative: a MeterProvider built through the same
+         configuration path exports into this reader, so a dropped instrument is asserted as absent
+         rather than inferred from which Add*Instrumentation call was skipped. -->
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

@@ -14,9 +14,17 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" />
-    <PackageReference Include="AspNetCore.HealthChecks.Redis" />
     <PackageReference Include="AspNetCore.HealthChecks.Sqlite" />
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <!-- Redis wiring is owned by the framework (Caching/RedisCachingExtensions): the raw Aspire
+         integrations register an untagged health check that gates readiness and issues CLUSTER INFO,
+         which Azure Managed Redis refuses. The wrapper turns those checks off and Common contributes
+         a PING-only check instead (Health/RedisPingHealthCheck), which is why StackExchange.Redis is
+         a direct reference here and AspNetCore.HealthChecks.Redis is deliberately NOT referenced. -->
+    <PackageReference Include="Aspire.StackExchange.Redis" />
+    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+    <PackageReference Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" />
+    <PackageReference Include="StackExchange.Redis" />
     <!-- Shared DataProtection key ring: blob persistence (required for multi-replica cookie and
          antiforgery decryption) plus the optional Key Vault at-rest encryption, both config-gated
          in DataProtection/DataProtectionExtensions.cs. Azure.Identity supplies the
