@@ -6,6 +6,28 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.180.0] - 2026-09-01
+
+The edge rate limiter learns to recognize a synthetic capacity proof. Additive: one new optional
+configuration section entry, off by default; nothing is required of a consumer at bump time beyond
+the pin unless it wants the bypass, in which case it supplies the secret from its secret store.
+
+### Added
+
+- **Secret-gated synthetic-traffic bypass for the edge rate limiter** (`MMCA.Common.Aspire`).
+  `GatewayRateLimitingSettings` gains `SyntheticTrafficHeaderName` (default
+  `X-Synthetic-Traffic-Key`) and `SyntheticTrafficSecret`; a request presenting that header with
+  that secret takes the no-limiter partition on BOTH chained limiters, exactly as a bypassed path
+  does. A scheduled capacity proof drives its whole run from ONE runner IP, which the per-IP fixed
+  window cannot tell from an unauthenticated flood, so the run measured the limiter instead of the
+  system. Off by default: the bypass cannot be claimed while the secret is unset, the comparison is
+  constant time over UTF-8 bytes, exactly one header value is accepted, and a configured secret
+  shorter than 32 characters fails at registration. Supply it from a secret store or the
+  environment (`GatewayRateLimiting__SyntheticTrafficSecret`), never from a checked-in
+  `appsettings` file.
+
+## [1.179.0] - 2026-09-01
+
 Bug-hunt remediation (2026-09-01 run): a refresh-token rotation race, a non-atomic push-notification
 send, request validators that were silently dropped, and a set of UI, API and test-package defects.
 Everything is additive: no signature breaks and no schema changes, so nothing is required of a
@@ -108,17 +130,6 @@ consumer at bump time beyond the pin.
   routed component instance across route-parameter changes, so a slow load for one id otherwise
   overwrites the page after a faster load for the next id has rendered. Not thread-safe by contract
   (renderer synchronization context only).
-- **Secret-gated synthetic-traffic bypass for the edge rate limiter** (`MMCA.Common.Aspire`).
-  `GatewayRateLimitingSettings` gains `SyntheticTrafficHeaderName` (default
-  `X-Synthetic-Traffic-Key`) and `SyntheticTrafficSecret`; a request presenting that header with
-  that secret takes the no-limiter partition on BOTH chained limiters, exactly as a bypassed path
-  does. A scheduled capacity proof drives its whole run from ONE runner IP, which the per-IP fixed
-  window cannot tell from an unauthenticated flood, so the run measured the limiter instead of the
-  system. Off by default: the bypass cannot be claimed while the secret is unset, the comparison is
-  constant time over UTF-8 bytes, exactly one header value is accepted, and a configured secret
-  shorter than 32 characters fails at registration. Supply it from a secret store or the
-  environment (`GatewayRateLimiting__SyntheticTrafficSecret`), never from a checked-in
-  `appsettings` file.
 - **`IRefreshSessionStore.TryRotateAsync`** (`MMCA.Common.Application`). Additive interface member
   with a default implementation (revoke, add, save), so an existing custom or test store keeps
   compiling and behaving as it did; the shipped EF store overrides it with the database-arbitrated
