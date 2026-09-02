@@ -8,6 +8,10 @@ MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.GatewayDownstream
 MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeVersion.get -> MMCA.Common.Aspire.Gateway.DownstreamProbeVersion
 MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions.ProbeVersion.set -> void
 MMCA.Common.Aspire.Gateway.GatewayHealthCheckExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddGatewayDownstreamHealthChecks(System.Action<MMCA.Common.Aspire.Gateway.GatewayDownstreamHealthCheckOptions!>? configure, params string![]! serviceNames) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.SyntheticTrafficHeaderName.get -> string!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.SyntheticTrafficHeaderName.init -> void
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.SyntheticTrafficSecret.get -> string?
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.SyntheticTrafficSecret.init -> void
 MMCA.Common.Aspire.Logging.SerilogHostExtensions
 MMCA.Common.Aspire.Logging.SerilogHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
 MMCA.Common.Aspire.Logging.SerilogHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).AddCommonSerilog(string! logFilePath, System.Action<Serilog.LoggerConfiguration!>? configure = null) -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!

@@ -25,6 +25,13 @@ namespace MMCA.Common.Aspire.Gateway;
 /// attributed to the ingress. An unresolvable IP fails open rather than collapsing into one shared
 /// bucket that would throttle an in-process TestServer to a standstill.
 /// </para>
+/// <para>
+/// <b>Synthetic traffic.</b> A scheduled capacity proof runs its whole load from ONE runner IP, so
+/// the per-IP window reads it as a flood and answers almost entirely with <c>429</c>. Setting
+/// <see cref="SyntheticTrafficSecret"/> lets such a run present
+/// <see cref="SyntheticTrafficHeaderName"/> and take the same no-limiter partition a bypassed path
+/// takes. It is off unless the secret is configured.
+/// </para>
 /// </remarks>
 /// <example>
 /// <code>
@@ -32,7 +39,8 @@ namespace MMCA.Common.Aspire.Gateway;
 ///   "PermitLimit": 240,
 ///   "WindowSeconds": 60,
 ///   "GlobalConcurrencyLimit": 300,
-///   "BypassPathPrefixes": [ "/metrics" ]
+///   "BypassPathPrefixes": [ "/metrics" ],
+///   "SyntheticTrafficHeaderName": "X-Synthetic-Traffic-Key"
 /// }
 /// </code>
 /// </example>
@@ -72,4 +80,37 @@ public sealed class GatewayRateLimitingSettings
     /// liveness probe and a container restart.
     /// </summary>
     public IReadOnlyList<string> BypassPathPrefixes { get; init; } = [];
+
+    /// <summary>
+    /// Name of the request header a synthetic-traffic run presents to claim the bypass. Only the
+    /// NAME lives here: the header is worthless without <see cref="SyntheticTrafficSecret"/>, which
+    /// is why this one is safe in <c>appsettings.json</c> and the secret is not. Renaming it is a
+    /// coordination change, not a security control.
+    /// </summary>
+    [Required]
+    public string SyntheticTrafficHeaderName { get; init; } = "X-Synthetic-Traffic-Key";
+
+    /// <summary>
+    /// Shared secret that <see cref="SyntheticTrafficHeaderName"/> must carry, compared in constant
+    /// time. Null or empty (the default) disables the bypass entirely, so no header value can claim
+    /// it. When set it must be at least 32 characters.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why it exists.</b> A load or capacity proof drives its whole run from ONE runner IP, which
+    /// the per-IP fixed window cannot tell from an unauthenticated flood: the run measures the
+    /// limiter instead of the system. A run holding this secret takes the no-limiter partition on
+    /// BOTH chained limiters and measures the thing it was pointed at.
+    /// </para>
+    /// <para>
+    /// <b>Where it belongs.</b> Production must supply it from a secret store or the environment
+    /// (<c>GatewayRateLimiting__SyntheticTrafficSecret</c>), NEVER from a checked-in
+    /// <c>appsettings</c> file: a value in source control is a published key to the edge limiter.
+    /// The 32-character minimum is validated at registration, so a short value fails startup rather
+    /// than shipping a guessable bypass. <c>StringLength</c> treats null as valid, which is exactly
+    /// the intended "off" state.
+    /// </para>
+    /// </remarks>
+    [StringLength(int.MaxValue, MinimumLength = 32)]
+    public string? SyntheticTrafficSecret { get; init; }
 }

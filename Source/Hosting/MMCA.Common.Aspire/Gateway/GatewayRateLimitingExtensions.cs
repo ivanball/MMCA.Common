@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +24,12 @@ namespace MMCA.Common.Aspire.Gateway;
 /// The two limiters are chained rather than merged because they answer different questions: the
 /// fixed window bounds how fast ONE caller may arrive, the concurrency limiter bounds how much work
 /// the replica will hold at once regardless of who sent it. A request must satisfy both.
+/// </para>
+/// <para>
+/// Three kinds of request take the no-limiter partition on BOTH limiters: an always-bypassed
+/// infrastructure prefix, a host-configured bypass prefix, and a synthetic-traffic request proving
+/// the configured secret in the configured header (off unless
+/// <see cref="GatewayRateLimitingSettings.SyntheticTrafficSecret"/> is set).
 /// </para>
 /// </summary>
 [SuppressMessage(
@@ -68,8 +76,46 @@ public static class GatewayRateLimitingExtensions
     }
 
     /// <summary>
-    /// Per-client-IP partition: no limiter for bypassed paths, no limiter for an unresolvable IP
-    /// (fail open), otherwise one fixed window per IP.
+    /// Whether this request proves the configured synthetic-traffic secret and is therefore exempt
+    /// from BOTH edge limiters. Always <see langword="false"/> when no secret is configured, so the
+    /// bypass cannot be claimed by presenting the header alone.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="settings">The bound gateway settings.</param>
+    /// <returns><see langword="true"/> when the request carries the configured secret.</returns>
+    /// <remarks>
+    /// The comparison runs over UTF-8 bytes through
+    /// <see cref="CryptographicOperations.FixedTimeEquals(ReadOnlySpan{byte}, ReadOnlySpan{byte})"/>,
+    /// which is constant time for equal-length inputs and returns false for unequal lengths without
+    /// leaking anything past the length an attacker already chose. Exactly one header value is
+    /// required, so a caller cannot spray candidates in a multi-valued header. Internal (not
+    /// private) so the check is unit-testable via <c>InternalsVisibleTo</c>.
+    /// </remarks>
+    internal static bool IsSyntheticTraffic(HttpContext httpContext, GatewayRateLimitingSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        if (string.IsNullOrWhiteSpace(settings.SyntheticTrafficSecret))
+        {
+            return false;
+        }
+
+        var presented = httpContext.Request.Headers[settings.SyntheticTrafficHeaderName];
+        if (presented.Count != 1)
+        {
+            return false;
+        }
+
+        var presentedBytes = Encoding.UTF8.GetBytes(presented[0] ?? string.Empty);
+        var expectedBytes = Encoding.UTF8.GetBytes(settings.SyntheticTrafficSecret);
+
+        return CryptographicOperations.FixedTimeEquals(presentedBytes, expectedBytes);
+    }
+
+    /// <summary>
+    /// Per-client-IP partition: no limiter for bypassed paths or proven synthetic traffic, no
+    /// limiter for an unresolvable IP (fail open), otherwise one fixed window per IP.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
@@ -82,7 +128,7 @@ public static class GatewayRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (IsBypassed(httpContext.Request.Path, settings))
+        if (IsBypassed(httpContext.Request.Path, settings) || IsSyntheticTraffic(httpContext, settings))
         {
             return RateLimitPartition.GetNoLimiter(BypassPartitionKey);
         }
@@ -106,8 +152,8 @@ public static class GatewayRateLimitingExtensions
     }
 
     /// <summary>
-    /// Process-wide concurrency partition: one bucket for the whole replica, bypassed on the same
-    /// paths the per-IP window is.
+    /// Process-wide concurrency partition: one bucket for the whole replica, bypassed for the same
+    /// paths and the same proven synthetic traffic the per-IP window is.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound gateway settings.</param>
@@ -120,7 +166,7 @@ public static class GatewayRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        return IsBypassed(httpContext.Request.Path, settings)
+        return IsBypassed(httpContext.Request.Path, settings) || IsSyntheticTraffic(httpContext, settings)
             ? RateLimitPartition.GetNoLimiter(BypassPartitionKey)
             : RateLimitPartition.GetConcurrencyLimiter(ConcurrencyPartitionKey, _ => new ConcurrencyLimiterOptions
             {
