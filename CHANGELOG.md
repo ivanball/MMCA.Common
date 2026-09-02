@@ -6,6 +6,42 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.181.0] - 2026-09-02
+
+Readiness-safe Redis registration and authoritative metric cost toggles. One consumer action is
+REQUIRED at bump time: replace direct `builder.AddRedisDistributedCache("redis")` /
+`builder.AddRedisClient("redis")` calls in service hosts with `builder.AddRedisCaching()` (and
+`AddRedisOutputCaching()` where a Redis-backed output cache is used). Without that swap the Aspire
+integrations keep registering their untagged `StackExchange.Redis` health check, which lands in
+`/health/ready` and, under StackExchange.Redis 3.x against Azure Managed Redis, fails every probe
+with `This operation is not available unless admin mode is enabled: CLUSTER`, so a new Container
+Apps revision never activates while the previous one keeps serving.
+
+### Added
+
+- **`AddRedisCaching` / `AddRedisOutputCaching`** (`MMCA.Common.Aspire`, `RedisCachingExtensions`).
+  Framework-owned Redis registration for hosts: wraps Aspire's distributed-cache and client
+  integrations with their automatic health checks disabled (they arrive untagged and therefore gate
+  readiness) and the output-cache integration alongside. Both are no-ops when the named connection
+  string is absent, so a host without Redis is unchanged.
+
+### Changed
+
+- **The `redis` infrastructure health check is PING-only** (`MMCA.Common.Aspire`). It is now a
+  Common-owned `RedisPingHealthCheck` (name `redis`, tag `optional`, singleton, resolves the DI
+  `IConnectionMultiplexer` or lazily owns one) that issues a single `PING`. Readiness checks are
+  PING-class, never admin-class (ADR-025). The `AspNetCore.HealthChecks.Redis` dependency is
+  removed; it still arrives transitively through Aspire.
+
+### Fixed
+
+- **`Telemetry:DisableHttpClientMetrics` and `Telemetry:DisableRuntimeMetrics` now hold under the
+  Azure Monitor distro** (`MMCA.Common.Aspire`). Skipping the OpenTelemetry instrumentation call was
+  not enough because `UseAzureMonitor()` subscribes the `System.Net.Http` meter itself; the toggles
+  now also register `MetricStreamConfiguration.Drop` views for `System.Net.Http`,
+  `System.Net.NameResolution` and `System.Runtime`, so the instruments are dropped whoever added the
+  meter.
+
 ## [1.180.0] - 2026-09-01
 
 The edge rate limiter learns to recognize a synthetic capacity proof. Additive: one new optional
