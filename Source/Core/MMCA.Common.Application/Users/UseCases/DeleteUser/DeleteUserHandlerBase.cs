@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Auth;
@@ -9,11 +11,29 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 
 /// <summary>
 /// The shared account-erasure workflow: owner-or-privileged-role authorization, soft-delete the
-/// account, irreversibly anonymize its personal data in place (ADR-005), persist, then run whatever
-/// post-commit tail the app added. Keeping the row preserves cross-context scalar references and the
-/// audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
+/// account, irreversibly anonymize its personal data in place (ADR-005), persist, write the shared
+/// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
+/// whatever post-commit tail the app added. Keeping the row preserves cross-context scalar references
+/// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The marker write is part of this shared workflow rather than each app's tail, so every app gets
+/// the identical revocation window: without it a deleted account keeps making authenticated requests
+/// until its access token expires, because the API middleware reads
+/// <see cref="SoftDeletedUserCache"/> and only falls back to a database lookup once the marker has
+/// gone. It is written <b>best effort</b>: the erasure is already committed by this point, so a cache
+/// fault must not turn a successful, irreversible deletion into a failure the caller would retry
+/// against an account that no longer holds the personal data. A failed write costs only the
+/// shortening: the token keeps working until it expires, exactly as it did before the marker existed,
+/// and the failure is logged as a warning.
+/// </para>
+/// <para>
+/// It runs <b>before</b> the app's post-commit tail because that tail is unbounded app work (deleting
+/// a blob, calling out to storage) that can be slow or can throw, and every second it takes is a
+/// second the deleted account's token still works. Revoking first bounds the exposure window to the
+/// cache round-trip regardless of what the app queued behind it.
+/// </para>
 /// <para>
 /// Everything genuinely app-specific stays in the subclass:
 /// <list type="bullet">
@@ -37,6 +57,7 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// <typeparam name="TCommand">The app's delete-user command record.</typeparam>
 public abstract class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
+    ICacheService cacheService,
     ILogger logger) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IErasableUser
     where TCommand : IUserOwnedRequest
@@ -113,6 +134,20 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        // Revoke the account's already-issued access tokens (ADR-047), ahead of the app's tail: the
+        // erasure is committed, so this is best effort, and it comes first so unbounded app work
+        // queued behind it cannot stretch the window in which a deleted user's token still works.
+        try
+        {
+            await SoftDeletedUserCache
+                .MarkDeletedAsync(cacheService, command.UserId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            UserUseCaseLog.SoftDeletedMarkerFailed(logger, command.UserId, ex);
+        }
+
         foreach (var action in afterCommit)
         {
             await action(cancellationToken).ConfigureAwait(false);
@@ -138,9 +173,11 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
     /// <param name="user">The tracked user being erased; its personal data is still intact here.</param>
     /// <param name="command">The originating command.</param>
     /// <param name="afterCommit">
-    /// Actions to run, in order, once the erasure has been committed. Use this for side effects that
-    /// must not happen if the save fails (deleting a blob, writing a cache marker); a post-commit
-    /// action owns its own failure handling, since the erasure has already succeeded by then.
+    /// Actions to run, in order, once the erasure has been committed and the shared soft-deleted
+    /// marker has been written. Use this for side effects that must not happen if the save fails
+    /// (deleting a blob, notifying another system); a post-commit action owns its own failure
+    /// handling, since the erasure has already succeeded by then. Do not queue a soft-deleted marker
+    /// write here: the base already wrote it, ahead of this tail.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A success result, or the failure that aborts the erasure.</returns>

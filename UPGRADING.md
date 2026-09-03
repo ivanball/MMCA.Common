@@ -32,6 +32,33 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.185.0] - unreleased
+
+**Breaking: one added constructor parameter on `DeleteUserHandlerBase<TUser, TCommand>`.** No
+namespace, type or configuration key moved.
+
+The shared account-erasure workflow now writes the soft-deleted user marker itself (ADR-047), so it
+needs the cache:
+
+```diff
+-DeleteUserHandlerBase(IUnitOfWork unitOfWork, ILogger logger)
++DeleteUserHandlerBase(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger)
+```
+
+The mechanical fix, in each app's `DeleteUserHandler`:
+
+1. Add `ICacheService cacheService` to the handler's own constructor (if it is not already there) and
+   pass it to the base as the **second** argument, between `unitOfWork` and `logger`. `ICacheService`
+   lives in `MMCA.Common.Application.Interfaces` and is already registered by `AddCaching()`, so no
+   DI change is needed.
+2. Delete any hand-rolled marker write the handler queued on the `afterCommit` collection from
+   `OnAfterSoftDeleteAsync`, together with the `LoggerMessage` partial that logged its failure. The
+   base writes the marker first, ahead of the whole `afterCommit` tail, and handles the failure the
+   same way. A handler that kept its own copy would only re-stamp the same key under the same
+   lifetime.
+3. If deleting that write leaves `ICacheService` unused elsewhere in the handler, keep the
+   constructor parameter anyway: the base needs it.
+
 ## [1.184.0] - 2026-09-03
 
 **Breaking: namespace moves only.** No type, member, signature, configuration key, database object

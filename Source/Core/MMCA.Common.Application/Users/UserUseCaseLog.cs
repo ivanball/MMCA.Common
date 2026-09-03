@@ -19,6 +19,9 @@ internal static partial class UserUseCaseLog
     [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} account deleted and personal data anonymized")]
     internal static partial void UserErased(ILogger logger, UserIdentifierType userId);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the soft-deleted marker for user {UserId}; the deleted user's existing access token stays usable until it expires")]
+    internal static partial void SoftDeletedMarkerFailed(ILogger logger, UserIdentifierType userId, Exception exception);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Data-subject export section {Section} unavailable for user {UserId}; export continues with Available=false")]
     internal static partial void ExportSectionUnavailable(ILogger logger, Exception exception, string section, UserIdentifierType userId);
 
