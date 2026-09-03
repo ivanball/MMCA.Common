@@ -69,7 +69,10 @@ the PR description, and sweep the consumers in the same release. Two folders are
 folder-only by design and IDE0130-exempt: `Testing.Architecture/Rules/` and `Bases/` keep the flat
 `MMCA.Common.Testing.Architecture` namespace consumers subclass (ADR-015). Never name a sub-folder
 `Domain`, `Application`, `Infrastructure`, `API` or `UI` inside a module project: `ModuleNameConventions`
-derives the module (and so the schema and data-source name) from those namespace segments.
+derives the module (and so the schema and data-source name) from those namespace segments. In the consumer
+repos the same rule reads: aggregate first in Domain, Application and Shared; a documented technical root
+(`Pages/`, `Services/`, `Components/`, `Controllers/`, `Persistence/`) first in UI, API and Infrastructure with the
+aggregate beneath it; one plural aggregate name in every project of the module.
 
 ## Architecture
 
@@ -154,11 +157,11 @@ xUnit v3 + AwesomeAssertions + Moq + coverlet under Microsoft Testing Platform. 
 
 ## Repository Governance Docs & Commit Convention
 
-Most documentation moved to its canonical home in the Website repo (`Website/docs-src/`, published at `https://ivanball.github.io/docs/`) on 2026-07-20. What remains here and what moved:
-- **Stays in this repo:** `FACTS.md` (single source of truth for framework-wide facts: version, package list, fitness counts; generated and CI-gated by `build/facts`; never hand-edit computed values; link to it, do not restate the numbers), `CHANGELOG.md`, `SECURITY.md`, `NavigationFlow.md` (embedded resource parsed by `NavigationContractTests`, the rubric §25 drift gate: it must stay next to the code), `CONTRIBUTING.md`, `samples/deployment/DEPLOYMENT.md`.
-- **Moved to `Website/docs-src/adr/`:** the canonical ADRs; its `README.md` owns the count/range and summaries. Read the relevant ADR before changing a pattern it describes; add new ADRs there (never here).
-- **Moved to `Website/docs-src/governance/`:** the 34-category rubric (`ArchitectureEvaluationCriteria.md`) plus this repo's scorecard and remediation backlog (`common-ArchitectureScorecard.md` / `common-RemediationBacklog.md`).
-- **Moved to `Website/docs-src/guides/`:** `common-GETTING-STARTED.md` (the six-step `dotnet new mmca-app` adoption path), `common-BUILD-BY-HAND.md` (the same solution phase by phase, for retrofitting an existing solution; MMCA.Helpdesk is its runnable companion), `common-TEMPLATES.md` (the `MMCA.Templates` pack reference), `common-VERSIONING.md` (SemVer + lockstep release policy), `common-COST.md` (FinOps defaults, rubric §31), `common-RESPONSIVE.md` (rubric §22), `common-RESILIENCE.md` (rubric §29), `common-ACCESSIBILITY.md` (rubric §21).
+The documentation library is canonical in the Website repo (`Website/docs-src/`, published at `https://ivanball.github.io/docs/`). Where each document lives:
+- **In this repo:** `FACTS.md` (single source of truth for framework-wide facts: version, package list, fitness counts; generated and CI-gated by `build/facts`; never hand-edit computed values; link to it, do not restate the numbers), `CHANGELOG.md`, `SECURITY.md`, `NavigationFlow.md` (embedded resource parsed by `NavigationContractTests`, the rubric §25 drift gate: it must stay next to the code), `CONTRIBUTING.md`, `samples/deployment/DEPLOYMENT.md`.
+- **`Website/docs-src/adr/`:** the canonical ADRs; its `README.md` owns the count/range and summaries. Read the relevant ADR before changing a pattern it describes; add new ADRs there (never here).
+- **`Website/docs-src/governance/`:** the 34-category rubric (`ArchitectureEvaluationCriteria.md`) plus this repo's scorecard and remediation backlog (`common-ArchitectureScorecard.md` / `common-RemediationBacklog.md`).
+- **`Website/docs-src/guides/`:** `common-GETTING-STARTED.md` (the six-step `dotnet new mmca-app` adoption path), `common-BUILD-BY-HAND.md` (the same solution phase by phase, for retrofitting an existing solution; MMCA.Helpdesk is its runnable companion), `common-TEMPLATES.md` (the `MMCA.Templates` pack reference), `common-VERSIONING.md` (SemVer + lockstep release policy), `common-COST.md` (FinOps defaults, rubric §31), `common-RESPONSIVE.md` (rubric §22), `common-RESILIENCE.md` (rubric §29), `common-ACCESSIBILITY.md` (rubric §21).
 - After editing anything under `Website/docs-src/`, re-render with `cd ../Website/tools && npm run build` and land via a Website PR.
 
 **Commit-message convention**: remediation work is tagged by scorecard category, `§<m>: <summary>` (e.g. `§30: ...`); update the published backlog (`Website/docs-src/governance/common-RemediationBacklog.md`) when continuing remediation work.
