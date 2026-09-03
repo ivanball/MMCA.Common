@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.185.0] - 2026-09-03
+
 **Breaking:** `DeleteUserHandlerBase<TUser, TCommand>` gained a required `ICacheService` constructor
 parameter, in the middle of the existing pair: the signature is now
 `(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger)`. Every subclass has to inject
