@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.183.0] - 2026-09-02
+
 **Breaking:** feature-by-folder reorganization of the framework packages (rubric §5). Namespaces
 follow folders (IDE0130), so the buckets below were renamed; no type, member or behavior changed, and
 the consumer sweep is a mechanical `using` rewrite (`Tools/Scripts/move-namespace.ps1` in the
