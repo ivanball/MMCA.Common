@@ -1,4 +1,3 @@
-
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Gallery.Stubs;
