@@ -1,4 +1,5 @@
 using System.Reflection;
+using MMCA.Common.Application.UseCases.Contracts;
 
 namespace MMCA.Common.Application.UseCases;
 

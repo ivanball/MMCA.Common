@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 
 namespace MMCA.Common.UI.Services.Auth.Tokens;
 

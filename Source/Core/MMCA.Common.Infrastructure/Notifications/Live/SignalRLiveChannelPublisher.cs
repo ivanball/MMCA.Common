@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 
 namespace MMCA.Common.Infrastructure.Notifications.Live;
 

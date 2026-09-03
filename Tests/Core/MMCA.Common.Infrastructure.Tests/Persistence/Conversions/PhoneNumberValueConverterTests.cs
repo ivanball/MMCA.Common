@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using MMCA.Common.Infrastructure.Persistence.Conversions;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.Conversions;
 

@@ -1,6 +1,6 @@
 using System.Reflection;
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Navigation;
 
 namespace MMCA.Common.Application.Tests;
 

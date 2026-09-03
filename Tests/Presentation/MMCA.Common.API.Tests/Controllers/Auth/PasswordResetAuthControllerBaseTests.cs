@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.API.Startup;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Controllers.Auth;

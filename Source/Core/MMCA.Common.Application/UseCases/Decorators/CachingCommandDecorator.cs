@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Markers;
 
 namespace MMCA.Common.Application.UseCases.Decorators;
 

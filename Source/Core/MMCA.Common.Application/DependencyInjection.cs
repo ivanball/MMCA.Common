@@ -3,17 +3,19 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Application.Validation;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.Application;
@@ -577,8 +579,8 @@ public static class DependencyInjection
         /// </summary>
         /// <param name="configure">
         /// Registers this host's handlers. Everything that puts an
-        /// <see cref="UseCases.ICommandHandler{TCommand, TResult}"/> or
-        /// <see cref="UseCases.IQueryHandler{TQuery, TResult}"/> into the container belongs here:
+        /// <see cref="UseCases.Contracts.ICommandHandler{TCommand, TResult}"/> or
+        /// <see cref="UseCases.Contracts.IQueryHandler{TQuery, TResult}"/> into the container belongs here:
         /// module assembly scans, a <see cref="Modules.ModuleLoader"/> run, cross-service client
         /// registrations that replace a handler's dependencies, broker wiring. May be
         /// <see langword="null"/> for a host with no modules.

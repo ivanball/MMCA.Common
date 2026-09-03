@@ -5,14 +5,14 @@ namespace MMCA.Common.Application.Messaging;
 /// <summary>
 /// Abstraction for publishing integration events across module or service boundaries.
 /// Application code that needs to publish cross-cutting events should depend on this
-/// interface rather than on <see cref="MMCA.Common.Application.Interfaces.IEventBus"/>
+/// interface rather than on <see cref="MMCA.Common.Application.Interfaces.Events.IEventBus"/>
 /// or on a transport-specific client.
 /// <para>
 /// Two implementations are provided in <c>MMCA.Common.Infrastructure</c>:
 /// <list type="bullet">
 ///   <item>
 ///     <c>InProcessMessageBus</c> — dispatches synchronously through the existing
-///     <see cref="MMCA.Common.Application.Interfaces.IDomainEventDispatcher"/> path.
+///     <see cref="MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher"/> path.
 ///     Used by the modular monolith deployment.
 ///   </item>
 ///   <item>

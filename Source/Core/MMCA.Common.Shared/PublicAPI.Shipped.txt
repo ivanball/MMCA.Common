@@ -86,99 +86,99 @@ MMCA.Common.Shared.Abstractions.ServiceContractAttribute.ServiceContractAttribut
 MMCA.Common.Shared.Abstractions.ServiceContractAttribute.ServiceContractAttribute(string! version) -> void
 MMCA.Common.Shared.Abstractions.ServiceContractAttribute.Version.get -> string!
 MMCA.Common.Shared.Auth.AuthClaimTypes
-MMCA.Common.Shared.Auth.AuthenticationResponse
-MMCA.Common.Shared.Auth.AuthenticationResponse.AccessToken.get -> string!
-MMCA.Common.Shared.Auth.AuthenticationResponse.AccessToken.init -> void
-MMCA.Common.Shared.Auth.AuthenticationResponse.AccessTokenExpiry.get -> System.DateTime
-MMCA.Common.Shared.Auth.AuthenticationResponse.AccessTokenExpiry.init -> void
-MMCA.Common.Shared.Auth.AuthenticationResponse.AuthenticationResponse() -> void
-MMCA.Common.Shared.Auth.AuthenticationResponse.AuthenticationResponse(string! AccessToken, string! RefreshToken, System.DateTime AccessTokenExpiry) -> void
-MMCA.Common.Shared.Auth.AuthenticationResponse.Deconstruct(out string! AccessToken, out string! RefreshToken, out System.DateTime AccessTokenExpiry) -> void
-MMCA.Common.Shared.Auth.AuthenticationResponse.Equals(MMCA.Common.Shared.Auth.AuthenticationResponse other) -> bool
-MMCA.Common.Shared.Auth.AuthenticationResponse.RefreshToken.get -> string!
-MMCA.Common.Shared.Auth.AuthenticationResponse.RefreshToken.init -> void
-MMCA.Common.Shared.Auth.ChangePasswordRequest
-MMCA.Common.Shared.Auth.ChangePasswordRequest.ChangePasswordRequest() -> void
-MMCA.Common.Shared.Auth.ChangePasswordRequest.ChangePasswordRequest(string! CurrentPassword, string! NewPassword) -> void
-MMCA.Common.Shared.Auth.ChangePasswordRequest.CurrentPassword.get -> string!
-MMCA.Common.Shared.Auth.ChangePasswordRequest.CurrentPassword.init -> void
-MMCA.Common.Shared.Auth.ChangePasswordRequest.Deconstruct(out string! CurrentPassword, out string! NewPassword) -> void
-MMCA.Common.Shared.Auth.ChangePasswordRequest.Equals(MMCA.Common.Shared.Auth.ChangePasswordRequest other) -> bool
-MMCA.Common.Shared.Auth.ChangePasswordRequest.NewPassword.get -> string!
-MMCA.Common.Shared.Auth.ChangePasswordRequest.NewPassword.init -> void
-MMCA.Common.Shared.Auth.ChangePreferencesRequest
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.<Clone>$() -> MMCA.Common.Shared.Auth.ChangePreferencesRequest!
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.ChangePreferencesRequest(string? Culture, string? Theme) -> void
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.Culture.get -> string?
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.Culture.init -> void
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.Deconstruct(out string? Culture, out string? Theme) -> void
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.Equals(MMCA.Common.Shared.Auth.ChangePreferencesRequest? other) -> bool
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.Theme.get -> string?
-MMCA.Common.Shared.Auth.ChangePreferencesRequest.Theme.init -> void
-MMCA.Common.Shared.Auth.IPermissionRegistry
-MMCA.Common.Shared.Auth.IPermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
-MMCA.Common.Shared.Auth.IPermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
-MMCA.Common.Shared.Auth.LoginRequest
-MMCA.Common.Shared.Auth.LoginRequest.Deconstruct(out string! Email, out string! Password) -> void
-MMCA.Common.Shared.Auth.LoginRequest.Email.get -> string!
-MMCA.Common.Shared.Auth.LoginRequest.Email.init -> void
-MMCA.Common.Shared.Auth.LoginRequest.Equals(MMCA.Common.Shared.Auth.LoginRequest other) -> bool
-MMCA.Common.Shared.Auth.LoginRequest.LoginRequest() -> void
-MMCA.Common.Shared.Auth.LoginRequest.LoginRequest(string! Email, string! Password) -> void
-MMCA.Common.Shared.Auth.LoginRequest.Password.get -> string!
-MMCA.Common.Shared.Auth.LoginRequest.Password.init -> void
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Code.get -> string!
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Code.init -> void
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Deconstruct(out string! Code) -> void
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Equals(MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest other) -> bool
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest() -> void
-MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest(string! Code) -> void
-MMCA.Common.Shared.Auth.PermissionRegistry
-MMCA.Common.Shared.Auth.PermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
-MMCA.Common.Shared.Auth.PermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
-MMCA.Common.Shared.Auth.PermissionRegistry.PermissionRegistry(System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlySet<string!>!>! rolePermissions) -> void
-MMCA.Common.Shared.Auth.PermissionRegistryBuilder
-MMCA.Common.Shared.Auth.PermissionRegistryBuilder.Build() -> MMCA.Common.Shared.Auth.PermissionRegistry!
-MMCA.Common.Shared.Auth.PermissionRegistryBuilder.Grant(string! role, params string![]! permissions) -> MMCA.Common.Shared.Auth.PermissionRegistryBuilder!
-MMCA.Common.Shared.Auth.PermissionRegistryBuilder.PermissionRegistryBuilder() -> void
-MMCA.Common.Shared.Auth.RefreshTokenRequest
-MMCA.Common.Shared.Auth.RefreshTokenRequest.AccessToken.get -> string!
-MMCA.Common.Shared.Auth.RefreshTokenRequest.AccessToken.init -> void
-MMCA.Common.Shared.Auth.RefreshTokenRequest.Deconstruct(out string! AccessToken, out string! RefreshToken) -> void
-MMCA.Common.Shared.Auth.RefreshTokenRequest.Equals(MMCA.Common.Shared.Auth.RefreshTokenRequest other) -> bool
-MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshToken.get -> string!
-MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshToken.init -> void
-MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshTokenRequest() -> void
-MMCA.Common.Shared.Auth.RefreshTokenRequest.RefreshTokenRequest(string! AccessToken, string! RefreshToken) -> void
-MMCA.Common.Shared.Auth.RegisterRequest
-MMCA.Common.Shared.Auth.RegisterRequest.Address.get -> MMCA.Common.Shared.ValueObjects.Address?
-MMCA.Common.Shared.Auth.RegisterRequest.Address.init -> void
-MMCA.Common.Shared.Auth.RegisterRequest.Deconstruct(out string! Email, out string! Password, out string! FirstName, out string! LastName, out MMCA.Common.Shared.ValueObjects.Address? Address) -> void
-MMCA.Common.Shared.Auth.RegisterRequest.Email.get -> string!
-MMCA.Common.Shared.Auth.RegisterRequest.Email.init -> void
-MMCA.Common.Shared.Auth.RegisterRequest.Equals(MMCA.Common.Shared.Auth.RegisterRequest other) -> bool
-MMCA.Common.Shared.Auth.RegisterRequest.FirstName.get -> string!
-MMCA.Common.Shared.Auth.RegisterRequest.FirstName.init -> void
-MMCA.Common.Shared.Auth.RegisterRequest.LastName.get -> string!
-MMCA.Common.Shared.Auth.RegisterRequest.LastName.init -> void
-MMCA.Common.Shared.Auth.RegisterRequest.Password.get -> string!
-MMCA.Common.Shared.Auth.RegisterRequest.Password.init -> void
-MMCA.Common.Shared.Auth.RegisterRequest.RegisterRequest() -> void
-MMCA.Common.Shared.Auth.RegisterRequest.RegisterRequest(string! Email, string! Password, string! FirstName, string! LastName, MMCA.Common.Shared.ValueObjects.Address? Address = null) -> void
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.AccessToken.init -> void
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.AccessTokenExpiry.get -> System.DateTime
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.AccessTokenExpiry.init -> void
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.AuthenticationResponse() -> void
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.AuthenticationResponse(string! AccessToken, string! RefreshToken, System.DateTime AccessTokenExpiry) -> void
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.Deconstruct(out string! AccessToken, out string! RefreshToken, out System.DateTime AccessTokenExpiry) -> void
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.Equals(MMCA.Common.Shared.Auth.Responses.AuthenticationResponse other) -> bool
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.RefreshToken.get -> string!
+MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.RefreshToken.init -> void
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.ChangePasswordRequest() -> void
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.ChangePasswordRequest(string! CurrentPassword, string! NewPassword) -> void
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.CurrentPassword.get -> string!
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.CurrentPassword.init -> void
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.Deconstruct(out string! CurrentPassword, out string! NewPassword) -> void
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.Equals(MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.NewPassword.get -> string!
+MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.NewPassword.init -> void
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest!
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.ChangePreferencesRequest(string? Culture, string? Theme) -> void
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Culture.get -> string?
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Culture.init -> void
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Deconstruct(out string? Culture, out string? Theme) -> void
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Equals(MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? other) -> bool
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Theme.get -> string?
+MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Theme.init -> void
+MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry
+MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
+MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
+MMCA.Common.Shared.Auth.Requests.LoginRequest
+MMCA.Common.Shared.Auth.Requests.LoginRequest.Deconstruct(out string! Email, out string! Password) -> void
+MMCA.Common.Shared.Auth.Requests.LoginRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.LoginRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.LoginRequest.Equals(MMCA.Common.Shared.Auth.Requests.LoginRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.LoginRequest.LoginRequest() -> void
+MMCA.Common.Shared.Auth.Requests.LoginRequest.LoginRequest(string! Email, string! Password) -> void
+MMCA.Common.Shared.Auth.Requests.LoginRequest.Password.get -> string!
+MMCA.Common.Shared.Auth.Requests.LoginRequest.Password.init -> void
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Code.get -> string!
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Code.init -> void
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Deconstruct(out string! Code) -> void
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Equals(MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest() -> void
+MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.OAuthCodeExchangeRequest(string! Code) -> void
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistry
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistry.PermissionRegistry(System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlySet<string!>!>! rolePermissions) -> void
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistryBuilder
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistryBuilder.Build() -> MMCA.Common.Shared.Auth.Permissions.PermissionRegistry!
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistryBuilder.Grant(string! role, params string![]! permissions) -> MMCA.Common.Shared.Auth.Permissions.PermissionRegistryBuilder!
+MMCA.Common.Shared.Auth.Permissions.PermissionRegistryBuilder.PermissionRegistryBuilder() -> void
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.AccessToken.get -> string!
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.AccessToken.init -> void
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.Deconstruct(out string! AccessToken, out string! RefreshToken) -> void
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.Equals(MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshToken.get -> string!
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshToken.init -> void
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshTokenRequest() -> void
+MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.RefreshTokenRequest(string! AccessToken, string! RefreshToken) -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Address.get -> MMCA.Common.Shared.ValueObjects.Contact.Address?
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Address.init -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Deconstruct(out string! Email, out string! Password, out string! FirstName, out string! LastName, out MMCA.Common.Shared.ValueObjects.Contact.Address? Address) -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Equals(MMCA.Common.Shared.Auth.Requests.RegisterRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.FirstName.get -> string!
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.FirstName.init -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.LastName.get -> string!
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.LastName.init -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Password.get -> string!
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.Password.init -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.RegisterRequest() -> void
+MMCA.Common.Shared.Auth.Requests.RegisterRequest.RegisterRequest(string! Email, string! Password, string! FirstName, string! LastName, MMCA.Common.Shared.ValueObjects.Contact.Address? Address = null) -> void
 MMCA.Common.Shared.Auth.RoleNames
 MMCA.Common.Shared.Auth.RoleValue
 MMCA.Common.Shared.Auth.RoleValue.RoleValue(string! value) -> void
 MMCA.Common.Shared.Auth.RoleValue.Value.get -> string!
-MMCA.Common.Shared.Auth.UserPreferencesResponse
-MMCA.Common.Shared.Auth.UserPreferencesResponse.<Clone>$() -> MMCA.Common.Shared.Auth.UserPreferencesResponse!
-MMCA.Common.Shared.Auth.UserPreferencesResponse.Culture.get -> string?
-MMCA.Common.Shared.Auth.UserPreferencesResponse.Culture.init -> void
-MMCA.Common.Shared.Auth.UserPreferencesResponse.Deconstruct(out string? Culture, out string? Theme) -> void
-MMCA.Common.Shared.Auth.UserPreferencesResponse.Equals(MMCA.Common.Shared.Auth.UserPreferencesResponse? other) -> bool
-MMCA.Common.Shared.Auth.UserPreferencesResponse.Theme.get -> string?
-MMCA.Common.Shared.Auth.UserPreferencesResponse.Theme.init -> void
-MMCA.Common.Shared.Auth.UserPreferencesResponse.UserPreferencesResponse(string? Culture, string? Theme) -> void
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse!
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Culture.get -> string?
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Culture.init -> void
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Deconstruct(out string? Culture, out string? Theme) -> void
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Equals(MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Theme.get -> string?
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Theme.init -> void
+MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.UserPreferencesResponse(string? Culture, string? Theme) -> void
 MMCA.Common.Shared.AuthenticationRequest
 MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest() -> void
 MMCA.Common.Shared.AuthenticationRequest.AuthenticationRequest(string! DeviceId, string! Email, string! DeviceFormFactor, string! DevicePlatform, string! DeviceModel, string! DeviceManufacturer, string! DeviceName, string! DeviceType) -> void
@@ -343,59 +343,59 @@ MMCA.Common.Shared.Resilience.BrokerResilienceDefaults
 MMCA.Common.Shared.Resilience.HttpResilienceDefaults
 MMCA.Common.Shared.Serialization.ResultJsonConverterFactory
 MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.ResultJsonConverterFactory() -> void
-MMCA.Common.Shared.ValueObjects.Address
-MMCA.Common.Shared.ValueObjects.Address.AddressLine1.get -> string!
-MMCA.Common.Shared.ValueObjects.Address.AddressLine2.get -> string?
-MMCA.Common.Shared.ValueObjects.Address.City.get -> string?
-MMCA.Common.Shared.ValueObjects.Address.Country.get -> string?
-MMCA.Common.Shared.ValueObjects.Address.Equals(MMCA.Common.Shared.ValueObjects.Address? other) -> bool
-MMCA.Common.Shared.ValueObjects.Address.State.get -> string?
-MMCA.Common.Shared.ValueObjects.Address.ZipCode.get -> string?
-MMCA.Common.Shared.ValueObjects.AddressInvariants
-MMCA.Common.Shared.ValueObjects.Currency
-MMCA.Common.Shared.ValueObjects.Currency.Code.get -> string!
-MMCA.Common.Shared.ValueObjects.Currency.Code.init -> void
-MMCA.Common.Shared.ValueObjects.Currency.Equals(MMCA.Common.Shared.ValueObjects.Currency? other) -> bool
-MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter
-MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter.CurrencyJsonConverter() -> void
-MMCA.Common.Shared.ValueObjects.DateRange
-MMCA.Common.Shared.ValueObjects.DateRange.Contains(System.DateOnly instant) -> bool
-MMCA.Common.Shared.ValueObjects.DateRange.Deconstruct(out System.DateOnly start, out System.DateOnly end) -> void
-MMCA.Common.Shared.ValueObjects.DateRange.End.get -> System.DateOnly
-MMCA.Common.Shared.ValueObjects.DateRange.Equals(MMCA.Common.Shared.ValueObjects.DateRange? other) -> bool
-MMCA.Common.Shared.ValueObjects.DateRange.LengthInDays.get -> int
-MMCA.Common.Shared.ValueObjects.DateRange.Overlaps(MMCA.Common.Shared.ValueObjects.DateRange! other) -> bool
-MMCA.Common.Shared.ValueObjects.DateRange.Start.get -> System.DateOnly
-MMCA.Common.Shared.ValueObjects.DateTimeRange
-MMCA.Common.Shared.ValueObjects.DateTimeRange.Contains(System.DateTime instant) -> bool
-MMCA.Common.Shared.ValueObjects.DateTimeRange.Deconstruct(out System.DateTime start, out System.DateTime end) -> void
-MMCA.Common.Shared.ValueObjects.DateTimeRange.Duration.get -> System.TimeSpan
-MMCA.Common.Shared.ValueObjects.DateTimeRange.End.get -> System.DateTime
-MMCA.Common.Shared.ValueObjects.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.DateTimeRange? other) -> bool
-MMCA.Common.Shared.ValueObjects.DateTimeRange.Overlaps(MMCA.Common.Shared.ValueObjects.DateTimeRange! other) -> bool
-MMCA.Common.Shared.ValueObjects.DateTimeRange.Start.get -> System.DateTime
-MMCA.Common.Shared.ValueObjects.Email
-MMCA.Common.Shared.ValueObjects.Email.Equals(MMCA.Common.Shared.ValueObjects.Email? other) -> bool
-MMCA.Common.Shared.ValueObjects.Email.Value.get -> string!
-MMCA.Common.Shared.ValueObjects.EmailInvariants
+MMCA.Common.Shared.ValueObjects.Contact.Address
+MMCA.Common.Shared.ValueObjects.Contact.Address.AddressLine1.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.Address.AddressLine2.get -> string?
+MMCA.Common.Shared.ValueObjects.Contact.Address.City.get -> string?
+MMCA.Common.Shared.ValueObjects.Contact.Address.Country.get -> string?
+MMCA.Common.Shared.ValueObjects.Contact.Address.Equals(MMCA.Common.Shared.ValueObjects.Contact.Address? other) -> bool
+MMCA.Common.Shared.ValueObjects.Contact.Address.State.get -> string?
+MMCA.Common.Shared.ValueObjects.Contact.Address.ZipCode.get -> string?
+MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants
+MMCA.Common.Shared.ValueObjects.Financial.Currency
+MMCA.Common.Shared.ValueObjects.Financial.Currency.Code.get -> string!
+MMCA.Common.Shared.ValueObjects.Financial.Currency.Code.init -> void
+MMCA.Common.Shared.ValueObjects.Financial.Currency.Equals(MMCA.Common.Shared.ValueObjects.Financial.Currency? other) -> bool
+MMCA.Common.Shared.ValueObjects.Financial.CurrencyJsonConverter
+MMCA.Common.Shared.ValueObjects.Financial.CurrencyJsonConverter.CurrencyJsonConverter() -> void
+MMCA.Common.Shared.ValueObjects.Time.DateRange
+MMCA.Common.Shared.ValueObjects.Time.DateRange.Contains(System.DateOnly instant) -> bool
+MMCA.Common.Shared.ValueObjects.Time.DateRange.Deconstruct(out System.DateOnly start, out System.DateOnly end) -> void
+MMCA.Common.Shared.ValueObjects.Time.DateRange.End.get -> System.DateOnly
+MMCA.Common.Shared.ValueObjects.Time.DateRange.Equals(MMCA.Common.Shared.ValueObjects.Time.DateRange? other) -> bool
+MMCA.Common.Shared.ValueObjects.Time.DateRange.LengthInDays.get -> int
+MMCA.Common.Shared.ValueObjects.Time.DateRange.Overlaps(MMCA.Common.Shared.ValueObjects.Time.DateRange! other) -> bool
+MMCA.Common.Shared.ValueObjects.Time.DateRange.Start.get -> System.DateOnly
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Contains(System.DateTime instant) -> bool
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Deconstruct(out System.DateTime start, out System.DateTime end) -> void
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Duration.get -> System.TimeSpan
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.End.get -> System.DateTime
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? other) -> bool
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Overlaps(MMCA.Common.Shared.ValueObjects.Time.DateTimeRange! other) -> bool
+MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Start.get -> System.DateTime
+MMCA.Common.Shared.ValueObjects.Contact.Email
+MMCA.Common.Shared.ValueObjects.Contact.Email.Equals(MMCA.Common.Shared.ValueObjects.Contact.Email? other) -> bool
+MMCA.Common.Shared.ValueObjects.Contact.Email.Value.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.EmailInvariants
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Enumeration(int value, string! name) -> void
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Name.get -> string!
 MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Value.get -> int
 MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory
 MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory.EnumerationJsonConverterFactory() -> void
-MMCA.Common.Shared.ValueObjects.Money
-MMCA.Common.Shared.ValueObjects.Money.Amount.get -> decimal
-MMCA.Common.Shared.ValueObjects.Money.Amount.init -> void
-MMCA.Common.Shared.ValueObjects.Money.Currency.get -> MMCA.Common.Shared.ValueObjects.Currency!
-MMCA.Common.Shared.ValueObjects.Money.Currency.init -> void
-MMCA.Common.Shared.ValueObjects.Money.Equals(MMCA.Common.Shared.ValueObjects.Money? other) -> bool
-MMCA.Common.Shared.ValueObjects.Money.IsNegative.get -> bool
-MMCA.Common.Shared.ValueObjects.Money.IsZero() -> bool
-MMCA.Common.Shared.ValueObjects.PhoneNumber
-MMCA.Common.Shared.ValueObjects.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.PhoneNumber? other) -> bool
-MMCA.Common.Shared.ValueObjects.PhoneNumber.Value.get -> string!
-MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants
+MMCA.Common.Shared.ValueObjects.Financial.Money
+MMCA.Common.Shared.ValueObjects.Financial.Money.Amount.get -> decimal
+MMCA.Common.Shared.ValueObjects.Financial.Money.Amount.init -> void
+MMCA.Common.Shared.ValueObjects.Financial.Money.Currency.get -> MMCA.Common.Shared.ValueObjects.Financial.Currency!
+MMCA.Common.Shared.ValueObjects.Financial.Money.Currency.init -> void
+MMCA.Common.Shared.ValueObjects.Financial.Money.Equals(MMCA.Common.Shared.ValueObjects.Financial.Money? other) -> bool
+MMCA.Common.Shared.ValueObjects.Financial.Money.IsNegative.get -> bool
+MMCA.Common.Shared.ValueObjects.Financial.Money.IsZero() -> bool
+MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber
+MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? other) -> bool
+MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Value.get -> string!
+MMCA.Common.Shared.ValueObjects.Contact.PhoneNumberInvariants
 MMCA.Common.Shared.ValueObjects.ValueObject
 MMCA.Common.Shared.ValueObjects.ValueObject.ValueObject() -> void
 MMCA.Common.Shared.ValueObjects.ValueObject.ValueObject(MMCA.Common.Shared.ValueObjects.ValueObject! original) -> void
@@ -436,21 +436,21 @@ override MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.ToString() -> 
 override MMCA.Common.Shared.Abstractions.PaginationMetadata.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Abstractions.PaginationMetadata.GetHashCode() -> int
 override MMCA.Common.Shared.Abstractions.PaginationMetadata.ToString() -> string!
-override MMCA.Common.Shared.Auth.AuthenticationResponse.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.ChangePasswordRequest.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.ChangePreferencesRequest.Equals(object? obj) -> bool
-override MMCA.Common.Shared.Auth.ChangePreferencesRequest.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.ChangePreferencesRequest.ToString() -> string!
-override MMCA.Common.Shared.Auth.LoginRequest.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.RefreshTokenRequest.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.RegisterRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Requests.LoginRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.RegisterRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.RoleValue.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Auth.RoleValue.GetHashCode() -> int
 override MMCA.Common.Shared.Auth.RoleValue.ToString() -> string!
-override MMCA.Common.Shared.Auth.UserPreferencesResponse.Equals(object? obj) -> bool
-override MMCA.Common.Shared.Auth.UserPreferencesResponse.GetHashCode() -> int
-override MMCA.Common.Shared.Auth.UserPreferencesResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.ToString() -> string!
 override MMCA.Common.Shared.AuthenticationRequest.GetHashCode() -> int
 override MMCA.Common.Shared.Calendars.IcsEvent.Equals(object? obj) -> bool
 override MMCA.Common.Shared.Calendars.IcsEvent.GetHashCode() -> int
@@ -479,53 +479,53 @@ override MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.GetHashCode() -> in
 override MMCA.Common.Shared.Privacy.UserDataExportSectionDTO.ToString() -> string!
 override MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.CanConvert(System.Type! typeToConvert) -> bool
 override MMCA.Common.Shared.Serialization.ResultJsonConverterFactory.CreateConverter(System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> System.Text.Json.Serialization.JsonConverter?
-override MMCA.Common.Shared.ValueObjects.Address.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Address!
-override MMCA.Common.Shared.ValueObjects.Address.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.Address.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.Address.ToString() -> string!
-override MMCA.Common.Shared.ValueObjects.Currency.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Currency!
-override MMCA.Common.Shared.ValueObjects.Currency.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.Currency.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.Currency.ToString() -> string!
-override MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> MMCA.Common.Shared.ValueObjects.Currency?
-override MMCA.Common.Shared.ValueObjects.CurrencyJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, MMCA.Common.Shared.ValueObjects.Currency! value, System.Text.Json.JsonSerializerOptions! options) -> void
-override MMCA.Common.Shared.ValueObjects.DateRange.<Clone>$() -> MMCA.Common.Shared.ValueObjects.DateRange!
-override MMCA.Common.Shared.ValueObjects.DateRange.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.DateRange.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.DateRange.ToString() -> string!
-override MMCA.Common.Shared.ValueObjects.DateTimeRange.<Clone>$() -> MMCA.Common.Shared.ValueObjects.DateTimeRange!
-override MMCA.Common.Shared.ValueObjects.DateTimeRange.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.DateTimeRange.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.DateTimeRange.ToString() -> string!
-override MMCA.Common.Shared.ValueObjects.Email.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Email!
-override MMCA.Common.Shared.ValueObjects.Email.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.Email.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.Email.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Contact.Address.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Contact.Address!
+override MMCA.Common.Shared.ValueObjects.Contact.Address.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Contact.Address.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Contact.Address.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Financial.Currency.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Financial.Currency!
+override MMCA.Common.Shared.ValueObjects.Financial.Currency.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Financial.Currency.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Financial.Currency.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Financial.CurrencyJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> MMCA.Common.Shared.ValueObjects.Financial.Currency?
+override MMCA.Common.Shared.ValueObjects.Financial.CurrencyJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, MMCA.Common.Shared.ValueObjects.Financial.Currency! value, System.Text.Json.JsonSerializerOptions! options) -> void
+override MMCA.Common.Shared.ValueObjects.Time.DateRange.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Time.DateRange!
+override MMCA.Common.Shared.ValueObjects.Time.DateRange.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Time.DateRange.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Time.DateRange.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Time.DateTimeRange!
+override MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Contact.Email.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Contact.Email!
+override MMCA.Common.Shared.ValueObjects.Contact.Email.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Contact.Email.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Contact.Email.ToString() -> string!
 override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.Equals(object? obj) -> bool
 override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.GetHashCode() -> int
 override MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.ToString() -> string!
 override MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory.CanConvert(System.Type! typeToConvert) -> bool
 override MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory.CreateConverter(System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> System.Text.Json.Serialization.JsonConverter?
-override MMCA.Common.Shared.ValueObjects.Money.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Money!
-override MMCA.Common.Shared.ValueObjects.Money.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.Money.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.Money.ToString() -> string!
-override MMCA.Common.Shared.ValueObjects.PhoneNumber.<Clone>$() -> MMCA.Common.Shared.ValueObjects.PhoneNumber!
-override MMCA.Common.Shared.ValueObjects.PhoneNumber.Equals(object? obj) -> bool
-override MMCA.Common.Shared.ValueObjects.PhoneNumber.GetHashCode() -> int
-override MMCA.Common.Shared.ValueObjects.PhoneNumber.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Financial.Money.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Financial.Money!
+override MMCA.Common.Shared.ValueObjects.Financial.Money.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Financial.Money.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Financial.Money.ToString() -> string!
+override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.<Clone>$() -> MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber!
+override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Equals(object? obj) -> bool
+override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.GetHashCode() -> int
+override MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.ToString() -> string!
 override MMCA.Common.Shared.ValueObjects.ValueObject.Equals(object? obj) -> bool
 override MMCA.Common.Shared.ValueObjects.ValueObject.GetHashCode() -> int
 override MMCA.Common.Shared.ValueObjects.ValueObject.ToString() -> string!
 override sealed MMCA.Common.Shared.Abstractions.KeysetCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
 override sealed MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.Address.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.Currency.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.DateRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.Email.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.Money.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
-override sealed MMCA.Common.Shared.ValueObjects.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Contact.Address.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Financial.Currency.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Time.DateRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Contact.Email.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Financial.Money.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
+override sealed MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
 static MMCA.Common.Shared.Abstractions.CollectionResult<T>.operator !=(MMCA.Common.Shared.Abstractions.CollectionResult<T>? left, MMCA.Common.Shared.Abstractions.CollectionResult<T>? right) -> bool
 static MMCA.Common.Shared.Abstractions.CollectionResult<T>.operator ==(MMCA.Common.Shared.Abstractions.CollectionResult<T>? left, MMCA.Common.Shared.Abstractions.CollectionResult<T>? right) -> bool
 static MMCA.Common.Shared.Abstractions.Error.Conflict(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -555,24 +555,24 @@ static MMCA.Common.Shared.Abstractions.Result.Failure<T>(MMCA.Common.Shared.Abst
 static MMCA.Common.Shared.Abstractions.Result.Failure<T>(System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>! errors) -> MMCA.Common.Shared.Abstractions.Result<T>!
 static MMCA.Common.Shared.Abstractions.Result.Success() -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.Abstractions.Result.Success<T>(T value) -> MMCA.Common.Shared.Abstractions.Result<T>!
-static MMCA.Common.Shared.Auth.AuthenticationResponse.operator !=(MMCA.Common.Shared.Auth.AuthenticationResponse left, MMCA.Common.Shared.Auth.AuthenticationResponse right) -> bool
-static MMCA.Common.Shared.Auth.AuthenticationResponse.operator ==(MMCA.Common.Shared.Auth.AuthenticationResponse left, MMCA.Common.Shared.Auth.AuthenticationResponse right) -> bool
-static MMCA.Common.Shared.Auth.ChangePasswordRequest.operator !=(MMCA.Common.Shared.Auth.ChangePasswordRequest left, MMCA.Common.Shared.Auth.ChangePasswordRequest right) -> bool
-static MMCA.Common.Shared.Auth.ChangePasswordRequest.operator ==(MMCA.Common.Shared.Auth.ChangePasswordRequest left, MMCA.Common.Shared.Auth.ChangePasswordRequest right) -> bool
-static MMCA.Common.Shared.Auth.ChangePreferencesRequest.operator !=(MMCA.Common.Shared.Auth.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.ChangePreferencesRequest? right) -> bool
-static MMCA.Common.Shared.Auth.ChangePreferencesRequest.operator ==(MMCA.Common.Shared.Auth.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.ChangePreferencesRequest? right) -> bool
-static MMCA.Common.Shared.Auth.LoginRequest.operator !=(MMCA.Common.Shared.Auth.LoginRequest left, MMCA.Common.Shared.Auth.LoginRequest right) -> bool
-static MMCA.Common.Shared.Auth.LoginRequest.operator ==(MMCA.Common.Shared.Auth.LoginRequest left, MMCA.Common.Shared.Auth.LoginRequest right) -> bool
-static MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.operator !=(MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest right) -> bool
-static MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.operator ==(MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest right) -> bool
-static MMCA.Common.Shared.Auth.RefreshTokenRequest.operator !=(MMCA.Common.Shared.Auth.RefreshTokenRequest left, MMCA.Common.Shared.Auth.RefreshTokenRequest right) -> bool
-static MMCA.Common.Shared.Auth.RefreshTokenRequest.operator ==(MMCA.Common.Shared.Auth.RefreshTokenRequest left, MMCA.Common.Shared.Auth.RefreshTokenRequest right) -> bool
-static MMCA.Common.Shared.Auth.RegisterRequest.operator !=(MMCA.Common.Shared.Auth.RegisterRequest left, MMCA.Common.Shared.Auth.RegisterRequest right) -> bool
-static MMCA.Common.Shared.Auth.RegisterRequest.operator ==(MMCA.Common.Shared.Auth.RegisterRequest left, MMCA.Common.Shared.Auth.RegisterRequest right) -> bool
+static MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.operator !=(MMCA.Common.Shared.Auth.Responses.AuthenticationResponse left, MMCA.Common.Shared.Auth.Responses.AuthenticationResponse right) -> bool
+static MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.operator ==(MMCA.Common.Shared.Auth.Responses.AuthenticationResponse left, MMCA.Common.Shared.Auth.Responses.AuthenticationResponse right) -> bool
+static MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest left, MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest left, MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.LoginRequest.operator !=(MMCA.Common.Shared.Auth.Requests.LoginRequest left, MMCA.Common.Shared.Auth.Requests.LoginRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.LoginRequest.operator ==(MMCA.Common.Shared.Auth.Requests.LoginRequest left, MMCA.Common.Shared.Auth.Requests.LoginRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.operator !=(MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.operator ==(MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest left, MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.operator !=(MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest left, MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.operator ==(MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest left, MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RegisterRequest.operator !=(MMCA.Common.Shared.Auth.Requests.RegisterRequest left, MMCA.Common.Shared.Auth.Requests.RegisterRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.RegisterRequest.operator ==(MMCA.Common.Shared.Auth.Requests.RegisterRequest left, MMCA.Common.Shared.Auth.Requests.RegisterRequest right) -> bool
 static MMCA.Common.Shared.Auth.RoleValue.BuildLookup<TRole>(params TRole![]! roles) -> System.Collections.Frozen.FrozenDictionary<string!, TRole!>!
 static MMCA.Common.Shared.Auth.RoleValue.Validate(string! role, System.Collections.Generic.IReadOnlySet<string!>! knownRoles, string! source) -> MMCA.Common.Shared.Abstractions.Result!
-static MMCA.Common.Shared.Auth.UserPreferencesResponse.operator !=(MMCA.Common.Shared.Auth.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.UserPreferencesResponse? right) -> bool
-static MMCA.Common.Shared.Auth.UserPreferencesResponse.operator ==(MMCA.Common.Shared.Auth.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.UserPreferencesResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.operator !=(MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse.operator ==(MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? left, MMCA.Common.Shared.Auth.Responses.UserPreferencesResponse? right) -> bool
 static MMCA.Common.Shared.AuthenticationRequest.operator !=(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
 static MMCA.Common.Shared.AuthenticationRequest.operator ==(MMCA.Common.Shared.AuthenticationRequest left, MMCA.Common.Shared.AuthenticationRequest right) -> bool
 static MMCA.Common.Shared.Calendars.IcsCalendarBuilder.Build(string! productId, System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.Calendars.IcsEvent!>! events, System.DateTimeOffset dtStamp) -> string!
@@ -612,61 +612,61 @@ static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.MaxRetryAttempts.get
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.PooledConnectionIdleTimeout.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.PooledConnectionLifetime.get -> System.TimeSpan
 static MMCA.Common.Shared.Resilience.HttpResilienceDefaults.TotalRequestTimeout.get -> System.TimeSpan
-static MMCA.Common.Shared.ValueObjects.Address.Create(string! addressLine1, string? addressLine2, string? city, string? state, string? zipCode, string? country) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Address!>!
-static MMCA.Common.Shared.ValueObjects.Address.operator !=(MMCA.Common.Shared.ValueObjects.Address? left, MMCA.Common.Shared.ValueObjects.Address? right) -> bool
-static MMCA.Common.Shared.ValueObjects.Address.operator ==(MMCA.Common.Shared.ValueObjects.Address? left, MMCA.Common.Shared.ValueObjects.Address? right) -> bool
-static MMCA.Common.Shared.ValueObjects.AddressInvariants.EnsureAddressIsValid(MMCA.Common.Shared.ValueObjects.Address? address, string! source) -> MMCA.Common.Shared.Abstractions.Result!
-static MMCA.Common.Shared.ValueObjects.AddressInvariants.EnsureAddressLine1IsValid(string! addressLine1, string! source) -> MMCA.Common.Shared.Abstractions.Result!
-static MMCA.Common.Shared.ValueObjects.Currency.FromCode(string! code) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Currency!>!
-static MMCA.Common.Shared.ValueObjects.Currency.operator !=(MMCA.Common.Shared.ValueObjects.Currency? left, MMCA.Common.Shared.ValueObjects.Currency? right) -> bool
-static MMCA.Common.Shared.ValueObjects.Currency.operator ==(MMCA.Common.Shared.ValueObjects.Currency? left, MMCA.Common.Shared.ValueObjects.Currency? right) -> bool
-static MMCA.Common.Shared.ValueObjects.DateRange.Create(System.DateOnly start, System.DateOnly end) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.DateRange!>!
-static MMCA.Common.Shared.ValueObjects.DateRange.operator !=(MMCA.Common.Shared.ValueObjects.DateRange? left, MMCA.Common.Shared.ValueObjects.DateRange? right) -> bool
-static MMCA.Common.Shared.ValueObjects.DateRange.operator ==(MMCA.Common.Shared.ValueObjects.DateRange? left, MMCA.Common.Shared.ValueObjects.DateRange? right) -> bool
-static MMCA.Common.Shared.ValueObjects.DateTimeRange.Create(System.DateTime start, System.DateTime end) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.DateTimeRange!>!
-static MMCA.Common.Shared.ValueObjects.DateTimeRange.operator !=(MMCA.Common.Shared.ValueObjects.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.DateTimeRange? right) -> bool
-static MMCA.Common.Shared.ValueObjects.DateTimeRange.operator ==(MMCA.Common.Shared.ValueObjects.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.DateTimeRange? right) -> bool
-static MMCA.Common.Shared.ValueObjects.Email.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Email!>!
-static MMCA.Common.Shared.ValueObjects.Email.operator !=(MMCA.Common.Shared.ValueObjects.Email? left, MMCA.Common.Shared.ValueObjects.Email? right) -> bool
-static MMCA.Common.Shared.ValueObjects.Email.operator ==(MMCA.Common.Shared.ValueObjects.Email? left, MMCA.Common.Shared.ValueObjects.Email? right) -> bool
-static MMCA.Common.Shared.ValueObjects.EmailInvariants.EnsureEmailIsValid(string! email, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Contact.Address.Create(string! addressLine1, string? addressLine2, string? city, string? state, string? zipCode, string? country) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Contact.Address!>!
+static MMCA.Common.Shared.ValueObjects.Contact.Address.operator !=(MMCA.Common.Shared.ValueObjects.Contact.Address? left, MMCA.Common.Shared.ValueObjects.Contact.Address? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.Address.operator ==(MMCA.Common.Shared.ValueObjects.Contact.Address? left, MMCA.Common.Shared.ValueObjects.Contact.Address? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.EnsureAddressIsValid(MMCA.Common.Shared.ValueObjects.Contact.Address? address, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.EnsureAddressLine1IsValid(string! addressLine1, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Financial.Currency.FromCode(string! code) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Financial.Currency!>!
+static MMCA.Common.Shared.ValueObjects.Financial.Currency.operator !=(MMCA.Common.Shared.ValueObjects.Financial.Currency? left, MMCA.Common.Shared.ValueObjects.Financial.Currency? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Financial.Currency.operator ==(MMCA.Common.Shared.ValueObjects.Financial.Currency? left, MMCA.Common.Shared.ValueObjects.Financial.Currency? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Time.DateRange.Create(System.DateOnly start, System.DateOnly end) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Time.DateRange!>!
+static MMCA.Common.Shared.ValueObjects.Time.DateRange.operator !=(MMCA.Common.Shared.ValueObjects.Time.DateRange? left, MMCA.Common.Shared.ValueObjects.Time.DateRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Time.DateRange.operator ==(MMCA.Common.Shared.ValueObjects.Time.DateRange? left, MMCA.Common.Shared.ValueObjects.Time.DateRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.Create(System.DateTime start, System.DateTime end) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Time.DateTimeRange!>!
+static MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.operator !=(MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Time.DateTimeRange.operator ==(MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? left, MMCA.Common.Shared.ValueObjects.Time.DateTimeRange? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.Email.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Contact.Email!>!
+static MMCA.Common.Shared.ValueObjects.Contact.Email.operator !=(MMCA.Common.Shared.ValueObjects.Contact.Email? left, MMCA.Common.Shared.ValueObjects.Contact.Email? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.Email.operator ==(MMCA.Common.Shared.ValueObjects.Contact.Email? left, MMCA.Common.Shared.ValueObjects.Contact.Email? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.EmailInvariants.EnsureEmailIsValid(string! email, string! source) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.All.get -> System.Collections.Generic.IReadOnlyCollection<TEnumeration!>!
 static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.FromName(string! name) -> MMCA.Common.Shared.Abstractions.Result<TEnumeration!>!
 static MMCA.Common.Shared.ValueObjects.Enumeration<TEnumeration>.FromValue(int value) -> MMCA.Common.Shared.Abstractions.Result<TEnumeration!>!
-static MMCA.Common.Shared.ValueObjects.Money.Add(MMCA.Common.Shared.ValueObjects.Money! first, MMCA.Common.Shared.ValueObjects.Money! second) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Money!>!
-static MMCA.Common.Shared.ValueObjects.Money.Create(decimal amount, MMCA.Common.Shared.ValueObjects.Currency! currency) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Money!>!
-static MMCA.Common.Shared.ValueObjects.Money.Multiply(MMCA.Common.Shared.ValueObjects.Money! first, int quantity) -> MMCA.Common.Shared.ValueObjects.Money!
-static MMCA.Common.Shared.ValueObjects.Money.Zero() -> MMCA.Common.Shared.ValueObjects.Money!
-static MMCA.Common.Shared.ValueObjects.Money.Zero(MMCA.Common.Shared.ValueObjects.Currency! currency) -> MMCA.Common.Shared.ValueObjects.Money!
-static MMCA.Common.Shared.ValueObjects.Money.operator !=(MMCA.Common.Shared.ValueObjects.Money? left, MMCA.Common.Shared.ValueObjects.Money? right) -> bool
-static MMCA.Common.Shared.ValueObjects.Money.operator *(MMCA.Common.Shared.ValueObjects.Money! first, int quantity) -> MMCA.Common.Shared.ValueObjects.Money!
-static MMCA.Common.Shared.ValueObjects.Money.operator +(MMCA.Common.Shared.ValueObjects.Money! first, MMCA.Common.Shared.ValueObjects.Money! second) -> MMCA.Common.Shared.ValueObjects.Money!
-static MMCA.Common.Shared.ValueObjects.Money.operator ==(MMCA.Common.Shared.ValueObjects.Money? left, MMCA.Common.Shared.ValueObjects.Money? right) -> bool
-static MMCA.Common.Shared.ValueObjects.PhoneNumber.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.PhoneNumber!>!
-static MMCA.Common.Shared.ValueObjects.PhoneNumber.operator !=(MMCA.Common.Shared.ValueObjects.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.PhoneNumber? right) -> bool
-static MMCA.Common.Shared.ValueObjects.PhoneNumber.operator ==(MMCA.Common.Shared.ValueObjects.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.PhoneNumber? right) -> bool
-static MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.EnsurePhoneNumberIsValid(string! phoneNumber, string! source) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.Add(MMCA.Common.Shared.ValueObjects.Financial.Money! first, MMCA.Common.Shared.ValueObjects.Financial.Money! second) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Financial.Money!>!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.Create(decimal amount, MMCA.Common.Shared.ValueObjects.Financial.Currency! currency) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Financial.Money!>!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.Multiply(MMCA.Common.Shared.ValueObjects.Financial.Money! first, int quantity) -> MMCA.Common.Shared.ValueObjects.Financial.Money!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.Zero() -> MMCA.Common.Shared.ValueObjects.Financial.Money!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.Zero(MMCA.Common.Shared.ValueObjects.Financial.Currency! currency) -> MMCA.Common.Shared.ValueObjects.Financial.Money!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.operator !=(MMCA.Common.Shared.ValueObjects.Financial.Money? left, MMCA.Common.Shared.ValueObjects.Financial.Money? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Financial.Money.operator *(MMCA.Common.Shared.ValueObjects.Financial.Money! first, int quantity) -> MMCA.Common.Shared.ValueObjects.Financial.Money!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.operator +(MMCA.Common.Shared.ValueObjects.Financial.Money! first, MMCA.Common.Shared.ValueObjects.Financial.Money! second) -> MMCA.Common.Shared.ValueObjects.Financial.Money!
+static MMCA.Common.Shared.ValueObjects.Financial.Money.operator ==(MMCA.Common.Shared.ValueObjects.Financial.Money? left, MMCA.Common.Shared.ValueObjects.Financial.Money? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.Create(string! value) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber!>!
+static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.operator !=(MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber.operator ==(MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? left, MMCA.Common.Shared.ValueObjects.Contact.PhoneNumber? right) -> bool
+static MMCA.Common.Shared.ValueObjects.Contact.PhoneNumberInvariants.EnsurePhoneNumberIsValid(string! phoneNumber, string! source) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Shared.ValueObjects.ValueObject.operator !=(MMCA.Common.Shared.ValueObjects.ValueObject? left, MMCA.Common.Shared.ValueObjects.ValueObject? right) -> bool
 static MMCA.Common.Shared.ValueObjects.ValueObject.operator ==(MMCA.Common.Shared.ValueObjects.ValueObject? left, MMCA.Common.Shared.ValueObjects.ValueObject? right) -> bool
 static readonly MMCA.Common.Shared.Abstractions.Error.AlreadyDeleted -> MMCA.Common.Shared.Abstractions.Error!
 static readonly MMCA.Common.Shared.Abstractions.Error.InvalidEntityField -> MMCA.Common.Shared.Abstractions.Error!
 static readonly MMCA.Common.Shared.Abstractions.Error.NotFound -> MMCA.Common.Shared.Abstractions.Error!
-static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.AddressLine1MaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.AddressLine2MaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.CityMaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.CountryMaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.StateMaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.AddressInvariants.ZipCodeMaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.Currency.All -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Currency!>!
-static readonly MMCA.Common.Shared.ValueObjects.Currency.EmptyCurrency -> MMCA.Common.Shared.Abstractions.Error!
-static readonly MMCA.Common.Shared.ValueObjects.Currency.Eur -> MMCA.Common.Shared.ValueObjects.Currency!
-static readonly MMCA.Common.Shared.ValueObjects.Currency.InvalidCurrency -> MMCA.Common.Shared.Abstractions.Error!
-static readonly MMCA.Common.Shared.ValueObjects.Currency.Usd -> MMCA.Common.Shared.ValueObjects.Currency!
-static readonly MMCA.Common.Shared.ValueObjects.EmailInvariants.MaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.Money.CurrencyMismatch -> MMCA.Common.Shared.Abstractions.Error!
-static readonly MMCA.Common.Shared.ValueObjects.Money.NoCurrency -> MMCA.Common.Shared.Abstractions.Error!
-static readonly MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.MaxLength -> int
-static readonly MMCA.Common.Shared.ValueObjects.PhoneNumberInvariants.MinLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.AddressLine1MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.AddressLine2MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.CityMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.CountryMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.StateMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.AddressInvariants.ZipCodeMaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Currency.All -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Currency!>!
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Currency.EmptyCurrency -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Currency.Eur -> MMCA.Common.Shared.ValueObjects.Financial.Currency!
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Currency.InvalidCurrency -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Currency.Usd -> MMCA.Common.Shared.ValueObjects.Financial.Currency!
+static readonly MMCA.Common.Shared.ValueObjects.Contact.EmailInvariants.MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Money.CurrencyMismatch -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Financial.Money.NoCurrency -> MMCA.Common.Shared.Abstractions.Error!
+static readonly MMCA.Common.Shared.ValueObjects.Contact.PhoneNumberInvariants.MaxLength -> int
+static readonly MMCA.Common.Shared.ValueObjects.Contact.PhoneNumberInvariants.MinLength -> int
 virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.<Clone>$() -> MMCA.Common.Shared.Abstractions.CollectionResult<T>!
 virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.EqualityContract.get -> System.Type!
 virtual MMCA.Common.Shared.Abstractions.CollectionResult<T>.Equals(MMCA.Common.Shared.Abstractions.CollectionResult<T>? other) -> bool
@@ -686,18 +686,18 @@ virtual MMCA.Common.Shared.Notifications.PushNotifications.PushNotificationDTO.P
 virtual MMCA.Common.Shared.ValueObjects.ValueObject.EqualityContract.get -> System.Type!
 virtual MMCA.Common.Shared.ValueObjects.ValueObject.Equals(MMCA.Common.Shared.ValueObjects.ValueObject? other) -> bool
 virtual MMCA.Common.Shared.ValueObjects.ValueObject.PrintMembers(System.Text.StringBuilder! builder) -> bool
-~override MMCA.Common.Shared.Auth.AuthenticationResponse.Equals(object obj) -> bool
-~override MMCA.Common.Shared.Auth.AuthenticationResponse.ToString() -> string
-~override MMCA.Common.Shared.Auth.ChangePasswordRequest.Equals(object obj) -> bool
-~override MMCA.Common.Shared.Auth.ChangePasswordRequest.ToString() -> string
-~override MMCA.Common.Shared.Auth.LoginRequest.Equals(object obj) -> bool
-~override MMCA.Common.Shared.Auth.LoginRequest.ToString() -> string
-~override MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.Equals(object obj) -> bool
-~override MMCA.Common.Shared.Auth.OAuthCodeExchangeRequest.ToString() -> string
-~override MMCA.Common.Shared.Auth.RefreshTokenRequest.Equals(object obj) -> bool
-~override MMCA.Common.Shared.Auth.RefreshTokenRequest.ToString() -> string
-~override MMCA.Common.Shared.Auth.RegisterRequest.Equals(object obj) -> bool
-~override MMCA.Common.Shared.Auth.RegisterRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Responses.AuthenticationResponse.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.LoginRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.LoginRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.OAuthCodeExchangeRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.RegisterRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.RegisterRequest.ToString() -> string
 ~override MMCA.Common.Shared.AuthenticationRequest.Equals(object obj) -> bool
 ~override MMCA.Common.Shared.AuthenticationRequest.ToString() -> string
 ~override MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.Releaser.Equals(object obj) -> bool

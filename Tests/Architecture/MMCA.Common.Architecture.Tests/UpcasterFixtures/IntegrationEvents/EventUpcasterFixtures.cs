@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.DomainEvents;
 
 namespace MMCA.Common.Architecture.Tests.UpcasterFixtures.IntegrationEvents;

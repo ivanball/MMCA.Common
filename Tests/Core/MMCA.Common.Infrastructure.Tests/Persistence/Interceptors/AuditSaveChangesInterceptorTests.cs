@@ -257,9 +257,9 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
             services.AddSingleton(interceptor);
             services.AddSingleton<DomainEventSaveChangesInterceptor>(sp =>
             {
-                var dispatcher = new Mock<Application.Interfaces.IDomainEventDispatcher>();
+                var dispatcher = new Mock<Application.Interfaces.Events.IDomainEventDispatcher>();
                 var logger = new Mock<Microsoft.Extensions.Logging.ILogger<DomainEventSaveChangesInterceptor>>();
-                var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+                var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
                 return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
             });
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
@@ -284,7 +284,7 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
             });
     }
 
-    private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider
+    private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider
     {
         public IReadOnlyList<System.Reflection.Assembly> GetConfigurationAssemblies() => [];
     }

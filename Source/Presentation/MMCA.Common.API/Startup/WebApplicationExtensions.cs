@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using MMCA.Common.API.Startup.Endpoints;
+using MMCA.Common.API.Startup.Pipeline;
 using MMCA.Common.Shared.Globalization;
 
 namespace MMCA.Common.API.Startup;

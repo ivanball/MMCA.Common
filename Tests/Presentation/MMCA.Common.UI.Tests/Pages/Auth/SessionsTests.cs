@@ -5,7 +5,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Pages.Auth;

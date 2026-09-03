@@ -19,15 +19,16 @@ public sealed class FolderWidthTests : FolderWidthTestsBase
 {
     protected override string RepoRoot { get; } = ArchitectureMapBase.FindRepoRoot("MMCA.Common.slnx");
 
+    /// <summary>
+    /// One-concept folders kept flat on purpose: the decorator pipeline (nine cross-cutting concerns
+    /// times command and query, so a split yields nine two-file folders), its test twin, and the
+    /// entity marker interfaces. Every other formerly flat public namespace was split by concern in
+    /// the second rubric §5 pass (see UPGRADING.md).
+    /// </summary>
     protected override IReadOnlyCollection<string> ExemptFolderSuffixes =>
     [
-        "MMCA.Common.Application/Interfaces",
-        "MMCA.Common.Application/Interfaces/Infrastructure",
-        "MMCA.Common.Application/UseCases",
         "MMCA.Common.Application/UseCases/Decorators",
         "MMCA.Common.Application.Tests/Decorators",
-        "MMCA.Common.Shared/Auth",
-        "MMCA.Common.API/Startup",
-        "Source/Hosting/MMCA.Common.Testing",
+        "MMCA.Common.Domain/Interfaces",
     ];
 }

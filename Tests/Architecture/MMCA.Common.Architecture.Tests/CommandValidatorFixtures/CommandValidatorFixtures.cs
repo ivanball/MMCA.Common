@@ -1,5 +1,5 @@
 using FluentValidation;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Architecture.Tests.CommandValidatorFixtures;

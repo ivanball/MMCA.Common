@@ -1,5 +1,5 @@
 using FluentValidation;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
 
 namespace MMCA.Common.Application.Validation;
 

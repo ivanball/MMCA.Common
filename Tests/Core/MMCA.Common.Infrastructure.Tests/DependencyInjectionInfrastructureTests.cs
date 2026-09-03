@@ -2,11 +2,12 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Mail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
-using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 
 namespace MMCA.Common.Infrastructure.Tests;
 
@@ -145,7 +146,7 @@ public sealed class DependencyInjectionInfrastructureTests
 
         ServiceDescriptor? descriptor = services.FirstOrDefault(
             d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) &&
-                d.ImplementationType == typeof(Infrastructure.Persistence.Outbox.OutboxProcessor));
+                d.ImplementationType == typeof(OutboxProcessor));
 
         descriptor.Should().NotBeNull();
     }

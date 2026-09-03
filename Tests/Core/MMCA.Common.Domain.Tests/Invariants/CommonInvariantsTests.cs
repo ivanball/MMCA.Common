@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using MMCA.Common.Domain.Invariants;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Globalization;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Financial;
 
 namespace MMCA.Common.Domain.Tests.Invariants;
 

@@ -6,6 +6,63 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Breaking:** second feature-by-folder pass (rubric §5), this time over the eight flat public
+namespaces the first pass left alone because every consumer imports them. Namespaces follow folders
+(IDE0130), so each bucket below was split by concern; no type, member, signature, configuration key,
+database object or behavior changed, and the consumer sweep is a mechanical `using` rewrite
+(`Tools/Scripts/move-namespace.ps1` in the workspace applied it to ADC, Store and Helpdesk in the same
+release). The full old-to-new map with every type, and the fix for a consumer outside the workspace,
+is in [UPGRADING.md](UPGRADING.md).
+
+### Changed
+
+- **`MMCA.Common.Application.Interfaces.Infrastructure` dissolved** into `.Persistence`
+  (repository, unit of work, query execution, data sources, outbox administration),
+  `.Notifications` (push, native push, device registrar, live channel, recipient provider),
+  `.Storage` (file storage, image processing), `.Auth` (current user, password hasher, token
+  service, soft-deleted user validator) and `.Mail` (`IEmailSender`); the five names are the
+  `MMCA.Common.Infrastructure` folders that implement them.
+- **`MMCA.Common.Application.Interfaces`** keeps the six cross-cutting contracts (cache,
+  correlation, distributed lock, scheduled job, tenant, audit trail reader) and gained `.Events`
+  (event bus, upcasters, domain and integration event handlers), `.Mapping` (DTO mapper, projector,
+  entity query service, `ICreateRequest`) and `.Navigation`.
+- **`MMCA.Common.Application.UseCases`** keeps `CqrsContractInspector` and gained `.Contracts`
+  (`ICommand`, `IQuery`, the handler interfaces, `ICommandWithRequest`), `.Markers` (the six
+  decorator opt-in interfaces) and `.Crud` (the create, update, delete and child-entity handler
+  bases). `UseCases.Decorators` is unchanged.
+- **`MMCA.Common.Shared.Auth`** keeps the claim types, role names and `ClaimsPrincipalExtensions`
+  and gained `.Requests` (the eight auth request records), `.Responses` and `.Permissions`
+  (the permission registry and its builder).
+- **`MMCA.Common.Shared.ValueObjects`** keeps `ValueObject` and `Enumeration` and gained
+  `.Contact` (`Address`, `Email`, `PhoneNumber` and their invariants), `.Financial` (`Money`,
+  `Currency`) and `.Time` (`DateRange`, `DateTimeRange`).
+- **`MMCA.Common.API.Startup`** keeps the host and module extensions and gained `.Pipeline`
+  (the middleware pipeline builder), `.Endpoints` (app association, JWKS, OIDC discovery, OpenAPI)
+  and `.Auth` (JWT authority, insecure-metadata warning filter). Extension-method call sites
+  (`MapJwksEndpoint`, ...) surface the move as CS1061, not as a missing type.
+- **`MMCA.Common.Testing` dissolved** into `.Fixtures` (SQL Server, Service Bus emulator and
+  cross-service fixture bases, `IntegrationTestBase`, `ProductionHostApplicationFactory`),
+  `.Conformance` (the eight ADR-058 runtime contract bases) and `.Support` (JWT generator, polling,
+  recording forwarder, DI assert, feature-management and rate-limiter test extensions,
+  `HandlerTestBase`). `Testing.Builders` is unchanged.
+- **`MMCA.Common.Infrastructure.Persistence.Outbox`** keeps `OutboxMessage` and gained
+  `.Processing` (processor, finalizer, signal, metrics, event name resolver) and `.Administration`
+  (administration, cleanup, disabled notice, `OutboxSettings`).
+- `FolderWidthTests` in this repo now exempts only `Application/UseCases/Decorators`, its test
+  twin and `Domain/Interfaces` (one concept each); the five other exemptions are gone.
+
+### Added
+
+- `UPGRADING.md` at the repo root: one section per breaking release, newest first, with the
+  old-to-new namespace map and the mechanical fix; retro-filled for v1.183.0.
+
+### Consumer action
+
+- Rebuild against the new namespaces: replace each old `using` with its successors listed in
+  `UPGRADING.md` (or run the workspace `move-namespace.ps1` map), let IDE0005 drop the extras, then
+  add the `using` behind any CS1061 on an extension method. No configuration, database or behavior
+  change.
+
 ## [1.183.0] - 2026-09-02
 
 **Breaking:** feature-by-folder reorganization of the framework packages (rubric §5). Namespaces

@@ -31,7 +31,7 @@ public sealed class DataSourcesSettings
                 throw new InvalidOperationException("DataSources entry names must be non-empty.");
             }
 
-            if (string.Equals(name, Application.Interfaces.Infrastructure.DataSourceKey.DefaultName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(name, Application.Interfaces.Infrastructure.Persistence.DataSourceKey.DefaultName, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     $"The DataSources entry name \"{name}\" is reserved. The Default source is configured " +

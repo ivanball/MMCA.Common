@@ -15,7 +15,7 @@ public static class IntegrationEventConsumerExtensions
     {
         /// <summary>
         /// Registers a MassTransit consumer for <typeparamref name="TEvent"/> that delegates
-        /// to all <see cref="MMCA.Common.Application.Interfaces.IIntegrationEventHandler{TEvent}"/>
+        /// to all <see cref="MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler{TEvent}"/>
         /// implementations resolved from DI. Use one call per integration event type the
         /// service consumes.
         /// <para>
@@ -52,7 +52,7 @@ public static class IntegrationEventConsumerExtensions
         /// <summary>
         /// Registers a MassTransit consumer for a RETIRED contract <typeparamref name="TEvent"/> that
         /// upcasts each message to its terminal successor and delegates to the
-        /// <see cref="MMCA.Common.Application.Interfaces.IIntegrationEventHandler{T}"/> implementations
+        /// <see cref="MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler{T}"/> implementations
         /// registered for THAT contract. Use it while the old type is still being published or is still
         /// sitting in a queue, so handlers only ever have to exist for the newest contract (ADR-090).
         /// <para>

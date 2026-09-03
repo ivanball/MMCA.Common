@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;

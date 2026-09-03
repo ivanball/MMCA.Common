@@ -1,6 +1,6 @@
 using System.Text.Json;
 using AwesomeAssertions;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Financial;
 
 namespace MMCA.Common.Shared.Tests.ValueObjects.Serialization;
 

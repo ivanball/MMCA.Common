@@ -19,6 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.API.Authorization;
 using MMCA.Common.API.OpenApi;
 using MMCA.Common.API.RateLimiting;
+using MMCA.Common.API.Startup.Auth;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Shared.Auth;
 using StackExchange.Redis;

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -12,6 +12,7 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 
@@ -372,7 +373,7 @@ public sealed class DomainEventSaveChangesInterceptorOutboxRoutingTests : IDispo
         }
     }
 
-    private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider
+    private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider
     {
         public IReadOnlyList<System.Reflection.Assembly> GetConfigurationAssemblies() => [];
     }

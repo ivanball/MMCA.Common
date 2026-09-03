@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Testing.Architecture;

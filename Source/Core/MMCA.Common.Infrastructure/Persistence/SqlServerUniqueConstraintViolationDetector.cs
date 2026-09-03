@@ -1,5 +1,5 @@
 using Microsoft.Data.SqlClient;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 
 namespace MMCA.Common.Infrastructure.Persistence;
 

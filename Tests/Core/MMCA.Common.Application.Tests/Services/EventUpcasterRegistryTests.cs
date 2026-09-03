@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Interfaces;

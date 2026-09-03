@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using FluentValidation;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Auth;

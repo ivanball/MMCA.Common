@@ -9,29 +9,29 @@ MMCA.Common.API.Controllers.AuthControllerBase.ClientUserAgent.get -> string?
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.SetConcurrencyETag(object? dto) -> void
 MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>
-MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordHandler.get -> MMCA.Common.Application.UseCases.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.PasswordResetAuthControllerBase(MMCA.Common.Application.UseCases.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! forgotPasswordHandler, MMCA.Common.Application.UseCases.ICommandHandler<TResetPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! resetPasswordHandler) -> void
-MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ResetPasswordHandler.get -> MMCA.Common.Application.UseCases.ICommandHandler<TResetPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!
-MMCA.Common.API.Startup.JwtAuthorityExtensions
-MMCA.Common.API.Startup.JwtAuthorityExtensions.extension(Microsoft.Extensions.Configuration.IConfiguration!)
-MMCA.Common.API.Startup.JwtAuthorityExtensions.extension(Microsoft.Extensions.Configuration.IConfiguration!).GetRequiredJwtAuthority() -> string!
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder.Build() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.API.Startup.MiddlewarePipelineStep!>!
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder.InsertAfter(string! anchor, MMCA.Common.API.Startup.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder.InsertBefore(string! anchor, MMCA.Common.API.Startup.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder.Remove(string! name) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder.Replace(string! name, MMCA.Common.API.Startup.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
-MMCA.Common.API.Startup.MiddlewarePipelineBuilder.StepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
-MMCA.Common.API.Startup.MiddlewarePipelineStep
-MMCA.Common.API.Startup.MiddlewarePipelineStep.<Clone>$() -> MMCA.Common.API.Startup.MiddlewarePipelineStep!
-MMCA.Common.API.Startup.MiddlewarePipelineStep.Configure.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplication!>!
-MMCA.Common.API.Startup.MiddlewarePipelineStep.Configure.init -> void
-MMCA.Common.API.Startup.MiddlewarePipelineStep.Deconstruct(out string! Name, out System.Action<Microsoft.AspNetCore.Builder.WebApplication!>! Configure) -> void
-MMCA.Common.API.Startup.MiddlewarePipelineStep.Equals(MMCA.Common.API.Startup.MiddlewarePipelineStep? other) -> bool
-MMCA.Common.API.Startup.MiddlewarePipelineStep.MiddlewarePipelineStep(string! Name, System.Action<Microsoft.AspNetCore.Builder.WebApplication!>! Configure) -> void
-MMCA.Common.API.Startup.MiddlewarePipelineStep.Name.get -> string!
-MMCA.Common.API.Startup.MiddlewarePipelineStep.Name.init -> void
-MMCA.Common.API.Startup.MiddlewarePipelineStepNames
+MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.PasswordResetAuthControllerBase(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! forgotPasswordHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TResetPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! resetPasswordHandler) -> void
+MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ResetPasswordHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TResetPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions
+MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.extension(Microsoft.Extensions.Configuration.IConfiguration!)
+MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.extension(Microsoft.Extensions.Configuration.IConfiguration!).GetRequiredJwtAuthority() -> string!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.Build() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep!>!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.InsertAfter(string! anchor, MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.InsertBefore(string! anchor, MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.Remove(string! name) -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.Replace(string! name, MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep! step) -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.StepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.<Clone>$() -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Configure.get -> System.Action<Microsoft.AspNetCore.Builder.WebApplication!>!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Configure.init -> void
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Deconstruct(out string! Name, out System.Action<Microsoft.AspNetCore.Builder.WebApplication!>! Configure) -> void
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Equals(MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep? other) -> bool
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.MiddlewarePipelineStep(string! Name, System.Action<Microsoft.AspNetCore.Builder.WebApplication!>! Configure) -> void
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Name.get -> string!
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Name.init -> void
+MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames
 MMCA.Common.API.Startup.ModuleHostContext
 MMCA.Common.API.Startup.ModuleHostContext.ApplicationSettings.get -> MMCA.Common.Application.Settings.ApplicationSettings!
 MMCA.Common.API.Startup.ModuleHostContext.ModuleLoader.get -> MMCA.Common.Application.Modules.ModuleLoader!
@@ -41,49 +41,49 @@ MMCA.Common.API.Startup.ModuleHostExtensions
 MMCA.Common.API.Startup.ModuleHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!)
 MMCA.Common.API.Startup.ModuleHostExtensions.extension(Microsoft.AspNetCore.Builder.WebApplicationBuilder!).AddModuleHost(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! moduleAssemblies, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Modules.ModuleLoader!>? moduleLoaderLogger = null) -> MMCA.Common.API.Startup.ModuleHostContext!
 MMCA.Common.API.Startup.WebApplicationBuilderExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddForwardedJwtBearer(string! authority, string! audience, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, bool? requireHttpsMetadata = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline(System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
-abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateForgotPasswordCommand(MMCA.Common.Shared.Auth.ForgotPasswordRequest request) -> TForgotPasswordCommand
-abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateResetPasswordCommand(MMCA.Common.Shared.Auth.ResetPasswordRequest request) -> TResetPasswordCommand
-const MMCA.Common.API.Startup.JwtAuthorityExtensions.JwtAuthorityConfigKey = "Authentication:JwtBearer:Authority" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Authentication = "Authentication" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Authorization = "Authorization" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Controllers = "Controllers" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.CorrelationId = "CorrelationId" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Cors = "Cors" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ExceptionHandler = "ExceptionHandler" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ForwardedHeaders = "ForwardedHeaders" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.HttpsRedirection = "HttpsRedirection" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.JwksEndpoint = "JwksEndpoint" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.OidcDiscoveryEndpoint = "OidcDiscoveryEndpoint" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.OutputCache = "OutputCache" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.PreForwardedCapture = "PreForwardedCapture" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.RateLimiting = "RateLimiting" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.RequestLocalization = "RequestLocalization" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.ResponseCompression = "ResponseCompression" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.Routing = "Routing" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.SoftDeletedUserFilter = "SoftDeletedUserFilter" -> string!
-const MMCA.Common.API.Startup.MiddlewarePipelineStepNames.TenantResolution = "TenantResolution" -> string!
+MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).UseCommonMiddlewarePipeline(System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
+abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateForgotPasswordCommand(MMCA.Common.Shared.Auth.Requests.ForgotPasswordRequest request) -> TForgotPasswordCommand
+abstract MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.CreateResetPasswordCommand(MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest request) -> TResetPasswordCommand
+const MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.JwtAuthorityConfigKey = "Authentication:JwtBearer:Authority" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.Authentication = "Authentication" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.Authorization = "Authorization" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.Controllers = "Controllers" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.CorrelationId = "CorrelationId" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.Cors = "Cors" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.ExceptionHandler = "ExceptionHandler" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.ForwardedHeaders = "ForwardedHeaders" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.HttpsRedirection = "HttpsRedirection" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.JwksEndpoint = "JwksEndpoint" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.OidcDiscoveryEndpoint = "OidcDiscoveryEndpoint" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.OutputCache = "OutputCache" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.PreForwardedCapture = "PreForwardedCapture" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.RateLimiting = "RateLimiting" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.RequestLocalization = "RequestLocalization" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.ResponseCompression = "ResponseCompression" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.Routing = "Routing" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.SoftDeletedUserFilter = "SoftDeletedUserFilter" -> string!
+const MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStepNames.TenantResolution = "TenantResolution" -> string!
 const MMCA.Common.API.Startup.WebApplicationBuilderExtensions.RequireHttpsMetadataConfigKey = "Authentication:JwtBearer:RequireHttpsMetadata" -> string!
-override MMCA.Common.API.Startup.MiddlewarePipelineStep.Equals(object? obj) -> bool
-override MMCA.Common.API.Startup.MiddlewarePipelineStep.GetHashCode() -> int
-override MMCA.Common.API.Startup.MiddlewarePipelineStep.ToString() -> string!
+override MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.Equals(object? obj) -> bool
+override MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.GetHashCode() -> int
+override MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.ToString() -> string!
 static MMCA.Common.API.Caching.OutputCacheEvictionExtensions.EvictTagsAsync(this Microsoft.AspNetCore.OutputCaching.IOutputCacheStore! store, System.Threading.CancellationToken cancellationToken, params string![]! tags) -> System.Threading.Tasks.ValueTask
 static MMCA.Common.API.Caching.OutputCacheEvictionExtensions.TryEvictTagsAsync(this Microsoft.AspNetCore.OutputCaching.IOutputCacheStore! store, Microsoft.Extensions.Logging.ILogger! logger, params string![]! tags) -> System.Threading.Tasks.ValueTask
-static MMCA.Common.API.Startup.JwtAuthorityExtensions.GetRequiredJwtAuthority(this Microsoft.Extensions.Configuration.IConfiguration! configuration) -> string!
-static MMCA.Common.API.Startup.MiddlewarePipelineBuilder.CreateDefault() -> MMCA.Common.API.Startup.MiddlewarePipelineBuilder!
-static MMCA.Common.API.Startup.MiddlewarePipelineStep.operator !=(MMCA.Common.API.Startup.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.MiddlewarePipelineStep? right) -> bool
-static MMCA.Common.API.Startup.MiddlewarePipelineStep.operator ==(MMCA.Common.API.Startup.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.MiddlewarePipelineStep? right) -> bool
+static MMCA.Common.API.Startup.Auth.JwtAuthorityExtensions.GetRequiredJwtAuthority(this Microsoft.Extensions.Configuration.IConfiguration! configuration) -> string!
+static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.CreateDefault() -> MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!
+static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.operator !=(MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep? right) -> bool
+static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep.operator ==(MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep? left, MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineStep? right) -> bool
 static MMCA.Common.API.Startup.ModuleHostExtensions.AddModuleHost(this Microsoft.AspNetCore.Builder.WebApplicationBuilder! builder, System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! moduleAssemblies, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Application.Modules.ModuleLoader!>? moduleLoaderLogger = null) -> MMCA.Common.API.Startup.ModuleHostContext!
 static MMCA.Common.API.Startup.WebApplicationBuilderExtensions.AddForwardedJwtBearer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authority, string! audience, Microsoft.Extensions.Configuration.IConfiguration! configuration, Microsoft.Extensions.Hosting.IHostEnvironment! environment, bool? requireHttpsMetadata = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
-virtual MMCA.Common.API.Controllers.AuthControllerBase.GetMySessionsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.RefreshSessionSummaryResponse!>!>!>!
+static MMCA.Common.API.Startup.WebApplicationExtensions.UseCommonMiddlewarePipeline(this Microsoft.AspNetCore.Builder.WebApplication! app, System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>! configure) -> Microsoft.AspNetCore.Builder.WebApplication!
+virtual MMCA.Common.API.Controllers.AuthControllerBase.GetMySessionsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.GetReadSpecificationAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.Domain.Specifications.Specification<TEntity!, TIdentifierType>?>
-virtual MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordAsync(MMCA.Common.Shared.Auth.ForgotPasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
-virtual MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ResetPasswordAsync(MMCA.Common.Shared.Auth.ResetPasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordAsync(MMCA.Common.Shared.Auth.Requests.ForgotPasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
+virtual MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ResetPasswordAsync(MMCA.Common.Shared.Auth.Requests.ResetPasswordRequest request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>
-MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.CrudEntityControllerBase(MMCA.Common.Application.Interfaces.IEntityQueryService<TEntity!, TEntityDTO, TIdentifierType>! queryService, MMCA.Common.Application.UseCases.ICommandHandler<TCreateRequest, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! createHandler, MMCA.Common.Application.UseCases.ICommandHandler<MMCA.Common.Application.UseCases.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! updateHandler, MMCA.Common.Application.UseCases.ICommandHandler<MMCA.Common.Application.UseCases.DeleteEntityCommand<TEntity!, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result!>! deleteHandler, Microsoft.Extensions.Logging.ILogger<MMCA.Common.API.Controllers.EntityControllerBase<TEntity!, TEntityDTO, TIdentifierType>!>! logger) -> void
-MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateHandler.get -> MMCA.Common.Application.UseCases.ICommandHandler<MMCA.Common.Application.UseCases.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
+MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.CrudEntityControllerBase(MMCA.Common.Application.Interfaces.Mapping.IEntityQueryService<TEntity!, TEntityDTO, TIdentifierType>! queryService, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TCreateRequest, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! createHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>! updateHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<MMCA.Common.Application.UseCases.Crud.DeleteEntityCommand<TEntity!, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result!>! deleteHandler, Microsoft.Extensions.Logging.ILogger<MMCA.Common.API.Controllers.EntityControllerBase<TEntity!, TEntityDTO, TIdentifierType>!>! logger) -> void
+MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<MMCA.Common.Application.UseCases.Crud.UpdateEntityCommand<TEntity!, TUpdateRequest, TIdentifierType>!, MMCA.Common.Shared.Abstractions.Result<TEntityDTO>!>!
 virtual MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateAsync(TIdentifierType id, TUpdateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
 const MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.TokenItemKey = "MMCA.Common.API.Concurrency.IfMatchToken" -> string!
 static MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.RequiredToken(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> byte[]!

@@ -5,7 +5,7 @@ namespace MMCA.Common.API.Authorization;
 /// <summary>
 /// Requires the authenticated principal to hold a specific permission to access the decorated
 /// controller or action. The permission is resolved against the registered
-/// <see cref="MMCA.Common.Shared.Auth.IPermissionRegistry"/> (role-derived) or an explicit
+/// <see cref="MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry"/> (role-derived) or an explicit
 /// permission claim. Prefer this over role-based <c>[Authorize(Policy = ...)]</c> checks so
 /// endpoints depend on capabilities, not role names.
 /// </summary>

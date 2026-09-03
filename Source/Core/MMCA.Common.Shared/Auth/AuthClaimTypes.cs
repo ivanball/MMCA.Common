@@ -1,3 +1,5 @@
+using MMCA.Common.Shared.Auth.Permissions;
+
 namespace MMCA.Common.Shared.Auth;
 
 /// <summary>

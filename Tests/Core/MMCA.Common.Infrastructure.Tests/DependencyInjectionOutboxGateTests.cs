@@ -2,7 +2,8 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 
 namespace MMCA.Common.Infrastructure.Tests;
 

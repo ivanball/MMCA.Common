@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 
 namespace MMCA.Common.Infrastructure.Auth;
 

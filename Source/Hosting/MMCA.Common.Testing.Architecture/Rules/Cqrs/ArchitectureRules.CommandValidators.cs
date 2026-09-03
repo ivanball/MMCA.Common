@@ -2,7 +2,7 @@ namespace MMCA.Common.Testing.Architecture;
 
 public static partial class ArchitectureRules
 {
-    private const string CommandWithRequestInterfaceFullName = "MMCA.Common.Application.UseCases.ICommandWithRequest`1";
+    private const string CommandWithRequestInterfaceFullName = "MMCA.Common.Application.UseCases.Contracts.ICommandWithRequest`1";
     private const string ValidatorInterfaceFullName = "FluentValidation.IValidator`1";
 
     /// <summary>

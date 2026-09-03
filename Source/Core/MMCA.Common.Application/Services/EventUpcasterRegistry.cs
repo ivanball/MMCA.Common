@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Interfaces;
 
 namespace MMCA.Common.Application.Services;

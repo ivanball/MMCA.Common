@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.IntegrationEvents;
 
 namespace MMCA.Common.API.Caching;

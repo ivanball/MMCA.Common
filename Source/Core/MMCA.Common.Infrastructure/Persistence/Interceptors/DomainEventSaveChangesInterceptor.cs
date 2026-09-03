@@ -2,10 +2,11 @@ using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 
 namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 
@@ -45,7 +46,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<DomainEventSaveChangesInterceptor> logger,
-    Outbox.IOutboxSignal outboxSignal,
+    Outbox.Processing.IOutboxSignal outboxSignal,
     TimeProvider? timeProvider = null,
     Microsoft.Extensions.Options.IOptions<Messaging.MessageBusSettings>? messageBusOptions = null) : SaveChangesInterceptor
 {

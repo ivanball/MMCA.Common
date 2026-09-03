@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 
 namespace MMCA.Common.API.Authorization;
 

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Extensions;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application.UseCases.Decorators;

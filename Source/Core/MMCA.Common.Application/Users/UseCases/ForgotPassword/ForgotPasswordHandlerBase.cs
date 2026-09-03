@@ -3,12 +3,13 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Application.Users.UseCases.ForgotPassword;
 

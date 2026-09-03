@@ -35,7 +35,7 @@ public sealed class NotificationHub(IOptions<PushNotificationSettings> settings)
 
     /// <summary>
     /// Adds the calling connection to a channel (SignalR group) so it receives events published via
-    /// <see cref="Application.Interfaces.Infrastructure.ILiveChannelPublisher"/> for that channel key.
+    /// <see cref="Application.Interfaces.Infrastructure.Notifications.ILiveChannelPublisher"/> for that channel key.
     /// </summary>
     /// <param name="channelKey">The channel key, validated against <see cref="PushNotificationSettings.ChannelKeyPattern"/>.</param>
     /// <returns>A task representing the asynchronous operation.</returns>

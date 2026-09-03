@@ -1,7 +1,8 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;

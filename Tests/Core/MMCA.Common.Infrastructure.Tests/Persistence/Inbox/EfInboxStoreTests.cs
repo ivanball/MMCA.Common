@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
-using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
@@ -43,7 +43,7 @@ public sealed class EfInboxStoreTests : IDisposable
         var dispatcher = Mock.Of<IDomainEventDispatcher>();
         contextServices.AddSingleton(dispatcher);
         contextServices.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
-        var outboxSignal = Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+        var outboxSignal = Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
         contextServices.AddSingleton(new DomainEventSaveChangesInterceptor(
             dispatcher, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal));
         contextServices.AddSingleton(Mock.Of<IEntityConfigurationAssemblyProvider>(

@@ -85,6 +85,10 @@ Packages are published to **nuget.org** and mirrored to GitHub Packages (ADR-053
 - **[MMCA.Helpdesk](https://github.com/ivanball/MMCA.Helpdesk)**: the minimal reference app and the companion to Getting Started.
 - Two production applications (conference platform, e-commerce store) track the framework in lockstep and are the source of the case-study material in the docs.
 
+## Upgrading
+
+Breaking changes ship as MINOR bumps ([policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)). Read [CHANGELOG.md](CHANGELOG.md) before every bump; [UPGRADING.md](UPGRADING.md) keeps the old-to-new map and the mechanical fix for every release that broke a consumer.
+
 ## Contributing
 
 `main` is protected: branch, open a pull request, let the required checks go green, then squash-merge. See [CONTRIBUTING.md](https://github.com/ivanball/MMCA.Common/blob/main/CONTRIBUTING.md) for the exact checks and [CLAUDE.md](https://github.com/ivanball/MMCA.Common/blob/main/CLAUDE.md) for package layout and layer dependency rules.

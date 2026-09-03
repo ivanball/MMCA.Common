@@ -56,12 +56,16 @@ build/           facts (FACTS.md generator, CI drift gate) and perfgate (benchma
 folder level names the feature or concern (`Messaging/`, `Notifications/Push/`, `Capabilities/Geo/`,
 `Notifications/UserNotifications/UseCases/MarkRead/`), technical nouns appear only beneath it, and a
 folder holds at most **12 direct code files** (a `.razor` with its `.razor.cs` and `.resx` counts once).
-`FolderWidthTests` enforces the cap in CI; its exemption list is the set of deliberately flat public
-namespaces every consumer imports (`Application/Interfaces*`, `Application/UseCases*`, `Shared/Auth`,
-`API/Startup`, the `MMCA.Common.Testing` root). Namespaces follow folders (IDE0130 is an error), so a
-folder move is a public-API rename: land it through the workspace `Tools/Scripts/move-namespace.ps1`
-(moves, namespace lines, and every `using` across this repo and the consumers), record it under
-**Breaking:** in `CHANGELOG.md`, and sweep the consumers in the same release. Two folders are
+`FolderWidthTests` enforces the cap in CI; its exemption list is three one-concept folders
+(`Application/UseCases/Decorators`, its test twin, `Domain/Interfaces`). The formerly flat public
+namespaces (`Application/Interfaces*`, `Application/UseCases`, `Shared/Auth`, `Shared/ValueObjects`,
+`API/Startup`, the `MMCA.Common.Testing` root) were split by concern in the second §5 pass even though
+the packages are public on nuget.org: that is a recorded decision, not an oversight. Namespaces follow
+folders (IDE0130 is an error), so a folder move is a public-API rename: land it through the workspace
+`Tools/Scripts/move-namespace.ps1` (moves, namespace lines, and every `using` across this repo and the
+consumers), record it under **Breaking:** in `CHANGELOG.md` AND as a section of `UPGRADING.md` (the
+old-to-new map plus the mechanical fix, kept identical to the changelog block), state it at the top of
+the PR description, and sweep the consumers in the same release. Two folders are
 folder-only by design and IDE0130-exempt: `Testing.Architecture/Rules/` and `Bases/` keep the flat
 `MMCA.Common.Testing.Architecture` namespace consumers subclass (ADR-015). Never name a sub-folder
 `Domain`, `Application`, `Infrastructure`, `API` or `UI` inside a module project: `ModuleNameConventions`
