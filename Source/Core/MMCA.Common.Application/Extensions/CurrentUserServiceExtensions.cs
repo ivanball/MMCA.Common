@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application.Extensions;

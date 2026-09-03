@@ -13,7 +13,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Caching;
@@ -31,7 +36,7 @@ using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigurati
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
-using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
@@ -184,7 +189,7 @@ public static class DependencyInjection
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, EventUpcasterStartupValidator>());
 
-            services.TryAddSingleton<Persistence.Outbox.IOutboxSignal, Persistence.Outbox.OutboxSignal>();
+            services.TryAddSingleton<Persistence.Outbox.Processing.IOutboxSignal, Persistence.Outbox.Processing.OutboxSignal>();
 
             // The outbox is a transport decision, not a persistence one: a broker deployment cannot
             // deliver without it, while a single-process host dispatches every event inside the
@@ -198,18 +203,18 @@ public static class DependencyInjection
 
             if (messageBusSettings.IsOutboxEnabled)
             {
-                services.AddHostedService<Persistence.Outbox.OutboxProcessor>();
-                services.AddHostedService<Persistence.Outbox.OutboxCleanupService>();
+                services.AddHostedService<Persistence.Outbox.Processing.OutboxProcessor>();
+                services.AddHostedService<Persistence.Outbox.Administration.OutboxCleanupService>();
             }
             else
             {
-                services.AddHostedService<Persistence.Outbox.OutboxDisabledNoticeService>();
+                services.AddHostedService<Persistence.Outbox.Administration.OutboxDisabledNoticeService>();
             }
 
             // Operator surface over the same outbox tables: list, replay and count. Scoped, because
             // it creates one child scope per data source it visits and holds no state of its own.
-            services.TryAddScoped<Application.Interfaces.Infrastructure.IOutboxAdministration,
-                Persistence.Outbox.OutboxAdministration>();
+            services.TryAddScoped<Application.Interfaces.Infrastructure.Persistence.IOutboxAdministration,
+                Persistence.Outbox.Administration.OutboxAdministration>();
 
             services.AddServices();
 

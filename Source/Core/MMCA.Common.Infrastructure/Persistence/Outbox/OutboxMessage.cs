@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;
 

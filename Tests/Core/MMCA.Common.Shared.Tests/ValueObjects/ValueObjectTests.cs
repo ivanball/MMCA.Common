@@ -1,5 +1,8 @@
 using AwesomeAssertions;
 using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Contact;
+using MMCA.Common.Shared.ValueObjects.Financial;
+using MMCA.Common.Shared.ValueObjects.Time;
 
 namespace MMCA.Common.Shared.Tests.ValueObjects;
 

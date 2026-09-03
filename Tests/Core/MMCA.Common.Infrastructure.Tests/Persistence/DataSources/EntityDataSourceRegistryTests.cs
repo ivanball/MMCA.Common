@@ -3,7 +3,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Infrastructure.Persistence;

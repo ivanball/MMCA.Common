@@ -5,12 +5,15 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
+using MMCA.Common.Shared.ValueObjects.Contact;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Auth;

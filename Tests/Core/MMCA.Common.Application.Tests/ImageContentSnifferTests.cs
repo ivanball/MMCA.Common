@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 
 namespace MMCA.Common.Application.Tests;
 

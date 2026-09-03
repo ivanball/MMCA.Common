@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Linq.Expressions;
 using FluentValidation;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Application.Validation;
 

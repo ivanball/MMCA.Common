@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using MMCA.Common.Infrastructure.Persistence.Configuration;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Financial;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.Configuration;
 

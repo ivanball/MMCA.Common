@@ -1,10 +1,10 @@
 ﻿using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
-using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Scheduling;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.DataSources;

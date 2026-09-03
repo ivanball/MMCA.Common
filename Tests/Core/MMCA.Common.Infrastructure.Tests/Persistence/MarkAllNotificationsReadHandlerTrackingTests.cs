@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;

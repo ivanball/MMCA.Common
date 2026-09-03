@@ -1,70 +1,70 @@
 #nullable enable
-MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase
-MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.EdgePipeline_OrdersSteps_InDocumentedOrder() -> void
-MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.EdgePipeline_SatisfiesLoadBearingInvariants() -> void
-MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.MiddlewarePipelineOrderTestsBase() -> void
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.BypassedPaths_AreNotThrottledEvenAfterTheWindowIsExhausted() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.EveryCluster_CarriesAnActiveHealthCheckProbingAlive() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.MmcaGatewayHardeningTestsBase() -> void
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyRoute_IsThrottledAtItsOwnTighterAllowance() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.RateLimiter_PartitionsByForwardedClientIp_NotByProxyIp() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Readiness_IncludesADownstreamCheckPerService() -> void
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Response_CarriesAGeneratedCorrelationId_WhenTheCallerSuppliesNone() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Response_EchoesTheCallerSuppliedCorrelationId() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Route_IsThrottledOnceTheClientExhaustsItsWindow() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.SendAsync(string! path, System.Net.IPAddress! clientIp) -> System.Threading.Tasks.Task<int>!
-MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.SendForwardedAsync(string! path, System.Net.IPAddress! proxyIp, string! forwardedFor) -> System.Threading.Tasks.Task<int>!
-MMCA.Common.Testing.RateLimiterTestExtensions
-MMCA.Common.Testing.RateLimiterTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
-MMCA.Common.Testing.RateLimiterTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).NeutralizeGlobalRateLimiter(string! partitionName = "tests") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Testing.RecordingHttpForwarder
-MMCA.Common.Testing.RecordingHttpForwarder.ClusterTraceHeaderName.get -> string!
-MMCA.Common.Testing.RecordingHttpForwarder.ClusterTraceHeaderName.init -> void
-MMCA.Common.Testing.RecordingHttpForwarder.RecordingHttpForwarder() -> void
-MMCA.Common.Testing.RecordingHttpForwarder.RouteTraceHeaderName.get -> string!
-MMCA.Common.Testing.RecordingHttpForwarder.RouteTraceHeaderName.init -> void
-MMCA.Common.Testing.RecordingHttpForwarder.SendAsync(Microsoft.AspNetCore.Http.HttpContext! context, string! destinationPrefix, System.Net.Http.HttpMessageInvoker! httpClient, Yarp.ReverseProxy.Forwarder.ForwarderRequestConfig! requestConfig, Yarp.ReverseProxy.Forwarder.HttpTransformer! transformer) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Forwarder.ForwarderError>
-MMCA.Common.Testing.RecordingHttpForwarder.SendAsync(Microsoft.AspNetCore.Http.HttpContext! context, string! destinationPrefix, System.Net.Http.HttpMessageInvoker! httpClient, Yarp.ReverseProxy.Forwarder.ForwarderRequestConfig! requestConfig, Yarp.ReverseProxy.Forwarder.HttpTransformer! transformer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Forwarder.ForwarderError>
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
-abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.DownstreamServices.get -> System.Collections.Generic.IReadOnlyList<string!>!
-abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.Factory.get -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
-abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.LimitedPath.get -> string!
-abstract MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.PermitLimit.get -> int
-const MMCA.Common.Testing.RecordingHttpForwarder.ActivityTimeoutHeader = "X-Test-Forward-Activity-Timeout" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.ClusterHeader = "X-Test-Forward-Cluster" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.ClusterTraceEchoHeader = "X-Test-Forward-Cluster-Trace" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.DestinationHeader = "X-Test-Forward-Destination" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.RouteTraceEchoHeader = "X-Test-Forward-Route-Trace" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.UnsetValue = "(unset)" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.VersionHeader = "X-Test-Forward-Version" -> string!
-const MMCA.Common.Testing.RecordingHttpForwarder.VersionPolicyHeader = "X-Test-Forward-Version-Policy" -> string!
-const MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
-const MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
-static MMCA.Common.Testing.RateLimiterTestExtensions.NeutralizeGlobalRateLimiter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! partitionName = "tests") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
-virtual MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.Configure.get -> System.Action<MMCA.Common.API.Startup.MiddlewarePipelineBuilder!>?
-virtual MMCA.Common.Testing.MiddlewarePipelineOrderTestsBase.ExpectedStepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeInterval.get -> System.TimeSpan
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbePath.get -> string!
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.BypassedPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.CorrelationHeader.get -> string!
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.DownstreamCheckPrefix.get -> string!
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.ForwardedForHeader.get -> string!
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPath.get -> string?
-virtual MMCA.Common.Testing.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPermitLimit.get -> int
-virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
-virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
-virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
-virtual MMCA.Common.Testing.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?
+MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase
+MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.EdgePipeline_OrdersSteps_InDocumentedOrder() -> void
+MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.EdgePipeline_SatisfiesLoadBearingInvariants() -> void
+MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.MiddlewarePipelineOrderTestsBase() -> void
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.BypassedPaths_AreNotThrottledEvenAfterTheWindowIsExhausted() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.EveryCluster_CarriesAnActiveHealthCheckProbingAlive() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.MmcaGatewayHardeningTestsBase() -> void
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyRoute_IsThrottledAtItsOwnTighterAllowance() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.RateLimiter_PartitionsByForwardedClientIp_NotByProxyIp() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Readiness_IncludesADownstreamCheckPerService() -> void
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Response_CarriesAGeneratedCorrelationId_WhenTheCallerSuppliesNone() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Response_EchoesTheCallerSuppliedCorrelationId() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Route_IsThrottledOnceTheClientExhaustsItsWindow() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.SendAsync(string! path, System.Net.IPAddress! clientIp) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.SendForwardedAsync(string! path, System.Net.IPAddress! proxyIp, string! forwardedFor) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Testing.Support.RateLimiterTestExtensions
+MMCA.Common.Testing.Support.RateLimiterTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Testing.Support.RateLimiterTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).NeutralizeGlobalRateLimiter(string! partitionName = "tests") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Testing.Support.RecordingHttpForwarder
+MMCA.Common.Testing.Support.RecordingHttpForwarder.ClusterTraceHeaderName.get -> string!
+MMCA.Common.Testing.Support.RecordingHttpForwarder.ClusterTraceHeaderName.init -> void
+MMCA.Common.Testing.Support.RecordingHttpForwarder.RecordingHttpForwarder() -> void
+MMCA.Common.Testing.Support.RecordingHttpForwarder.RouteTraceHeaderName.get -> string!
+MMCA.Common.Testing.Support.RecordingHttpForwarder.RouteTraceHeaderName.init -> void
+MMCA.Common.Testing.Support.RecordingHttpForwarder.SendAsync(Microsoft.AspNetCore.Http.HttpContext! context, string! destinationPrefix, System.Net.Http.HttpMessageInvoker! httpClient, Yarp.ReverseProxy.Forwarder.ForwarderRequestConfig! requestConfig, Yarp.ReverseProxy.Forwarder.HttpTransformer! transformer) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Forwarder.ForwarderError>
+MMCA.Common.Testing.Support.RecordingHttpForwarder.SendAsync(Microsoft.AspNetCore.Http.HttpContext! context, string! destinationPrefix, System.Net.Http.HttpMessageInvoker! httpClient, Yarp.ReverseProxy.Forwarder.ForwarderRequestConfig! requestConfig, Yarp.ReverseProxy.Forwarder.HttpTransformer! transformer, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<Yarp.ReverseProxy.Forwarder.ForwarderError>
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminClient.get -> Azure.Messaging.ServiceBus.Administration.ServiceBusAdministrationClient!
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusControl.get -> MassTransit.IBusControl!
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.Client.get -> Azure.Messaging.ServiceBus.ServiceBusClient!
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.Consumed.get -> System.Collections.Concurrent.ConcurrentBag<object!>!
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.HostAddress.get -> System.Uri!
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ServiceBusEmulatorFixtureBase() -> void
+abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.DownstreamServices.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.Factory.get -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
+abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.LimitedPath.get -> string!
+abstract MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.PermitLimit.get -> int
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.ActivityTimeoutHeader = "X-Test-Forward-Activity-Timeout" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.ClusterHeader = "X-Test-Forward-Cluster" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.ClusterTraceEchoHeader = "X-Test-Forward-Cluster-Trace" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.DestinationHeader = "X-Test-Forward-Destination" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.RouteTraceEchoHeader = "X-Test-Forward-Route-Trace" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.UnsetValue = "(unset)" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.VersionHeader = "X-Test-Forward-Version" -> string!
+const MMCA.Common.Testing.Support.RecordingHttpForwarder.VersionPolicyHeader = "X-Test-Forward-Version-Policy" -> string!
+const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.AdminPlanePort = 5300 -> int
+const MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.DefaultEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1" -> string!
+static MMCA.Common.Testing.Support.RateLimiterTestExtensions.NeutralizeGlobalRateLimiter(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! partitionName = "tests") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
+virtual MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.Configure.get -> System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>?
+virtual MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.ExpectedStepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeInterval.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbePath.get -> string!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.BypassedPaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.CorrelationHeader.get -> string!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.DownstreamCheckPrefix.get -> string!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ForwardedForHeader.get -> string!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPath.get -> string?
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.NamedPolicyPermitLimit.get -> int
+virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStartTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.BusStopTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureReceiveEndpoint(MassTransit.IServiceBusReceiveEndpointConfigurator! endpoint) -> void
+virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
+virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
+virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?

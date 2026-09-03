@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Domain.Attributes;
 
 namespace MMCA.Common.Application.Services.Query;

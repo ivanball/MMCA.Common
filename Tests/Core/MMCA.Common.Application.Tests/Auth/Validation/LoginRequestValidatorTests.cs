@@ -1,6 +1,6 @@
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Auth.Validation;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Application.Tests.Auth.Validation;
 

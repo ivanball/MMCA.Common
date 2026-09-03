@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using AwesomeAssertions;
 using MMCA.Common.Application.Extensions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
 

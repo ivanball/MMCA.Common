@@ -82,7 +82,7 @@ MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSaveChangesIntercept
 MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSaveChangesInterceptor.AuditTrailSaveChangesInterceptor(System.TimeProvider! timeProvider) -> void
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.extension<TOwner>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!)
-MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.extension<TOwner>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!).OwnsMoney(System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Money?>!>! navigationExpression, string! amountColumnName, string! currencyColumnName, bool required = true) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
+MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.extension<TOwner>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!).OwnsMoney(System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Financial.Money?>!>! navigationExpression, string! amountColumnName, string! currencyColumnName, bool required = true) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfiguration<TEntity, TIdentifierType>
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfiguration<TEntity, TIdentifierType>.EntityTypeConfiguration() -> void
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationBase<TEntity, TIdentifierType>
@@ -97,13 +97,13 @@ MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.IEn
 MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.IEntityTypeConfigurationBase<TEntity, TIdentifierType>.Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder) -> void
 MMCA.Common.Infrastructure.Persistence.Configuration.IndexBuilderExtensions
 MMCA.Common.Infrastructure.Persistence.Configuration.IndexBuilderExtensions.extension(Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!)
-MMCA.Common.Infrastructure.Persistence.Configuration.IndexBuilderExtensions.extension(Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!).HasSoftDeleteFilter(MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine = MMCA.Common.Application.Interfaces.Infrastructure.DataSource.SQLServer, string? additionalFilter = null) -> Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!
+MMCA.Common.Infrastructure.Persistence.Configuration.IndexBuilderExtensions.extension(Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!).HasSoftDeleteFilter(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine = MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource.SQLServer, string? additionalFilter = null) -> Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!
 MMCA.Common.Infrastructure.Persistence.Conventions.CrossDataSourceDegradeConvention
-MMCA.Common.Infrastructure.Persistence.Conventions.CrossDataSourceDegradeConvention.CrossDataSourceDegradeConvention(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey contextKey, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! registry) -> void
+MMCA.Common.Infrastructure.Persistence.Conventions.CrossDataSourceDegradeConvention.CrossDataSourceDegradeConvention(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey contextKey, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! registry) -> void
 MMCA.Common.Infrastructure.Persistence.Conventions.CrossDataSourceDegradeConvention.ProcessModelFinalizing(Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder! modelBuilder, Microsoft.EntityFrameworkCore.Metadata.Conventions.IConventionContext<Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder!>! context) -> void
 MMCA.Common.Infrastructure.Persistence.Conventions.SoftDeleteUniqueIndexConvention
 MMCA.Common.Infrastructure.Persistence.Conventions.SoftDeleteUniqueIndexConvention.ProcessModelFinalizing(Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder! modelBuilder, Microsoft.EntityFrameworkCore.Metadata.Conventions.IConventionContext<Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder!>! context) -> void
-MMCA.Common.Infrastructure.Persistence.Conventions.SoftDeleteUniqueIndexConvention.SoftDeleteUniqueIndexConvention(MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine) -> void
+MMCA.Common.Infrastructure.Persistence.Conventions.SoftDeleteUniqueIndexConvention.SoftDeleteUniqueIndexConvention(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine) -> void
 MMCA.Common.Infrastructure.Persistence.Conversions.EmailValueConverter
 MMCA.Common.Infrastructure.Persistence.Conversions.EmailValueConverter.EmailValueConverter() -> void
 MMCA.Common.Infrastructure.Persistence.Conversions.EnumerationValueConverter<TEnumeration>
@@ -117,56 +117,56 @@ MMCA.Common.Infrastructure.Persistence.Conversions.NullablePhoneNumberValueConve
 MMCA.Common.Infrastructure.Persistence.Conversions.PhoneNumberValueConverter
 MMCA.Common.Infrastructure.Persistence.Conversions.PhoneNumberValueConverter.PhoneNumberValueConverter() -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceResolver
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceResolver.GetPhysical(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource!
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceResolver.ResolveLogical(MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine, string! logicalName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceResolver.GetPhysical(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource!
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceResolver.ResolveLogical(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine, string! logicalName) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
 MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry
-MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.EntityDataSourceRegistry(MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! resolver) -> void
-MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
-MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
-MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.GetPhysicalSourcesInUse() -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey>!
-MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.TryGetDataSourceKey(string! entityFullName, out MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key) -> bool
+MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.EntityDataSourceRegistry(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! resolver) -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.GetPhysicalSourcesInUse() -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey>!
+MMCA.Common.Infrastructure.Persistence.DataSources.EntityDataSourceRegistry.TryGetDataSourceKey(string! entityFullName, out MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key) -> bool
 MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver
-MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver.GetPhysical(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource!
-MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver.ResolveLogical(MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine, string! logicalName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver.GetPhysical(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource!
+MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver.ResolveLogical(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine, string! logicalName) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
 MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry
-MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
-MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
-MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.GetPhysicalSourcesInUse() -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey>!
-MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.TryGetDataSourceKey(string! entityFullName, out MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key) -> bool
+MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.GetPhysicalSourcesInUse() -> System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey>!
+MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry.TryGetDataSourceKey(string! entityFullName, out MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key) -> bool
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.<Clone>$() -> MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource!
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.ConnectionString.get -> string!
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.ConnectionString.init -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.CosmosDatabaseName.get -> string!
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.CosmosDatabaseName.init -> void
-MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.Deconstruct(out MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey Key, out string! ConnectionString, out string? SqlServerMigrationsAssembly, out string! CosmosDatabaseName) -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.Deconstruct(out MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey Key, out string! ConnectionString, out string? SqlServerMigrationsAssembly, out string! CosmosDatabaseName) -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.Equals(MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource? other) -> bool
-MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.Key.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.Key.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.Key.init -> void
-MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PhysicalDataSource(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey Key, string! ConnectionString, string? SqlServerMigrationsAssembly, string! CosmosDatabaseName) -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PhysicalDataSource(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey Key, string! ConnectionString, string? SqlServerMigrationsAssembly, string! CosmosDatabaseName) -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqlServerMigrationsAssembly.get -> string?
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqlServerMigrationsAssembly.init -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget
-MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Deconstruct(out MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey Source, out string? TenantId) -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Deconstruct(out MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey Source, out string? TenantId) -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Equals(MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget other) -> bool
-MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Source.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Source.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Source.init -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.TenantDataSourceTarget() -> void
-MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.TenantDataSourceTarget(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey Source, string? TenantId) -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.TenantDataSourceTarget(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey Source, string? TenantId) -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.TenantId.get -> string?
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.TenantId.init -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTargets
 MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext
-MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ApplicationDbContext(Microsoft.EntityFrameworkCore.DbContextOptions! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
-MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ApplyConfigurationsForEntitiesInContext(MMCA.Common.Application.Interfaces.Infrastructure.DataSource dataSource, Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ApplicationDbContext(Microsoft.EntityFrameworkCore.DbContextOptions! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ApplyConfigurationsForEntitiesInContext(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource dataSource, Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ApplyTenantFilters(Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ConfigureConcurrencyTokens(Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.CurrentTenantId.get -> string?
-MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.DataSourceKey.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.DataSourceKey.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
 MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.SaveChanges(int? userId) -> int
 MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.SaveChangesAsync(int? userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Infrastructure.Persistence.DbContexts.CosmosDbContext
-MMCA.Common.Infrastructure.Persistence.DbContexts.CosmosDbContext.CosmosDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.CosmosDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.CosmosDbContext.CosmosDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.CosmosDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.DataSourceModelCacheKeyFactory
 MMCA.Common.Infrastructure.Persistence.DbContexts.DataSourceModelCacheKeyFactory.Create(Microsoft.EntityFrameworkCore.DbContext! context, bool designTime) -> object!
 MMCA.Common.Infrastructure.Persistence.DbContexts.DataSourceModelCacheKeyFactory.DataSourceModelCacheKeyFactory() -> void
@@ -191,7 +191,7 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.Dispo
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.EnsureCreatedAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.ExecuteInTransactionAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! operation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.GetDbContext(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey dataSourceKey) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.GetDbContext(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey dataSourceKey) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.HasPendingMigrationsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.MigrateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.RequestIdentityInsert() -> void
@@ -203,7 +203,7 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.Begi
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.CommitTransaction() -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.EnsureCreatedAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.ExecuteInTransactionAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>!>! operation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<TResult>!
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.GetDbContext(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey dataSourceKey) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.GetDbContext(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey dataSourceKey) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.HasPendingMigrationsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.MigrateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.RequestIdentityInsert() -> void
@@ -211,12 +211,12 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.Roll
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.SaveChanges() -> int
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey key, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory.PhysicalDbContextFactory(System.IServiceProvider! serviceProvider, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! resolver, MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider! assemblyProvider) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory.Create(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey key, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.PhysicalDbContextFactory.PhysicalDbContextFactory(System.IServiceProvider! serviceProvider, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! resolver, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.AmbiguousSource.get -> string?
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.CommittedSources.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -227,15 +227,15 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbig
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.TransactionCommitAmbiguousException(string! message) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.TransactionCommitAmbiguousException.TransactionCommitAmbiguousException(string! message, System.Exception! innerException) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext
-MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext.SQLServerDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext.SQLServerDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.DbSeeder() -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IDbSeeder
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IDbSeeder.SeedAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>
-MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.IdentityModuleDbSeederBase(MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher! passwordHasher) -> void
-MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.PasswordHasher.get -> MMCA.Common.Application.Interfaces.Infrastructure.IPasswordHasher!
-MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.IdentityModuleDbSeederBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.PasswordHasher.get -> MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher!
+MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.<Clone>$() -> MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount!
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.Deconstruct(out string! Email, out string! Password, out string! Role, out string? FirstName, out string? LastName) -> void
@@ -252,7 +252,7 @@ MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.Role.get -
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.Role.init -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount.SeedAccount(string! Email, string! Password, string! Role, string? FirstName = null, string? LastName = null) -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext
-MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext.SqliteDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext.SqliteDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.SqliteDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
 MMCA.Common.Infrastructure.Persistence.DefaultEntityConfigurationAssemblyProvider
 MMCA.Common.Infrastructure.Persistence.DefaultEntityConfigurationAssemblyProvider.DefaultEntityConfigurationAssemblyProvider(Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.EntityConfigurationOptions!>! options) -> void
 MMCA.Common.Infrastructure.Persistence.DefaultEntityConfigurationAssemblyProvider.GetConfigurationAssemblies() -> System.Collections.Generic.IReadOnlyList<System.Reflection.Assembly!>!
@@ -264,7 +264,7 @@ MMCA.Common.Infrastructure.Persistence.EntityConfigurationOptions.AdditionalAsse
 MMCA.Common.Infrastructure.Persistence.EntityConfigurationOptions.EntityConfigurationOptions() -> void
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.AlreadyProcessedAsync(System.Guid messageId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
-MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.EfInboxStore(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings!>! outboxOptions, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore!>! logger) -> void
+MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.EfInboxStore(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore!>! logger) -> void
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.MarkProcessedAsync(System.Guid messageId, string! eventType, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore
 MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore.AlreadyProcessedAsync(System.Guid messageId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
@@ -289,14 +289,14 @@ MMCA.Common.Infrastructure.Persistence.Interceptors.CrossTenantWriteException.Cu
 MMCA.Common.Infrastructure.Persistence.Interceptors.CrossTenantWriteException.EntityTenantId.get -> string?
 MMCA.Common.Infrastructure.Persistence.Interceptors.CrossTenantWriteException.EntityType.get -> string?
 MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor
-MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor.DomainEventSaveChangesInterceptor(MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor!>! logger, MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal! outboxSignal) -> void
+MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor.DomainEventSaveChangesInterceptor(MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher! domainEventDispatcher, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor!>! logger, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal) -> void
 MMCA.Common.Infrastructure.Persistence.Interceptors.TenantSaveChangesInterceptor
 MMCA.Common.Infrastructure.Persistence.Interceptors.TenantSaveChangesInterceptor.TenantSaveChangesInterceptor() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal
-MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal.Signal() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal.WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxCleanupService
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxCleanupService.OutboxCleanupService(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxCleanupService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings!>! outboxOptions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Messaging.MessageBusSettings!>! messageBusOptions, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal.Signal() -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal.WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService.OutboxCleanupService(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Messaging.MessageBusSettings!>! messageBusOptions, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.DeserializeEvent() -> MMCA.Common.Domain.Interfaces.IDomainEvent?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.EventType.get -> string!
@@ -322,19 +322,19 @@ MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.SpanId.get -> string
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.SpanId.init -> void
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceId.get -> string?
 MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TraceId.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxProcessor
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxProcessor.OutboxProcessor(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxProcessor!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings!>! outboxOptions, MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal! outboxSignal, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSignal
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSignal.Dispose() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSignal.OutboxSignal() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSignal.Signal() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSignal.WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxProcessor
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxProcessor.OutboxProcessor(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxProcessor!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxSignal
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxSignal.Dispose() -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxSignal.OutboxSignal() -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxSignal.Signal() -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Processing.OutboxSignal.WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.Repositories.Factory.IRepositoryFactory
-MMCA.Common.Infrastructure.Persistence.Repositories.Factory.IRepositoryFactory.Create<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.IRepository<TEntity!, TIdentifierType>!
-MMCA.Common.Infrastructure.Persistence.Repositories.Factory.IRepositoryFactory.CreateReadOnly<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!
+MMCA.Common.Infrastructure.Persistence.Repositories.Factory.IRepositoryFactory.Create<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRepository<TEntity!, TIdentifierType>!
+MMCA.Common.Infrastructure.Persistence.Repositories.Factory.IRepositoryFactory.CreateReadOnly<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IReadRepository<TEntity!, TIdentifierType>!
 MMCA.Common.Infrastructure.Persistence.Repositories.Factory.RepositoryFactory
-MMCA.Common.Infrastructure.Persistence.Repositories.Factory.RepositoryFactory.Create<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.IRepository<TEntity!, TIdentifierType>!
-MMCA.Common.Infrastructure.Persistence.Repositories.Factory.RepositoryFactory.CreateReadOnly<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!
+MMCA.Common.Infrastructure.Persistence.Repositories.Factory.RepositoryFactory.Create<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRepository<TEntity!, TIdentifierType>!
+MMCA.Common.Infrastructure.Persistence.Repositories.Factory.RepositoryFactory.CreateReadOnly<TEntity, TIdentifierType>(Microsoft.EntityFrameworkCore.DbContext! dbContext) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IReadRepository<TEntity!, TIdentifierType>!
 MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator
 MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator.CosmosIntIdValueGenerator() -> void
 MMCA.Common.Infrastructure.Scheduling.ScheduledJobEntry
@@ -373,7 +373,7 @@ MMCA.Common.Infrastructure.Notifications.Push.AzureNotificationHubNativePushSend
 MMCA.Common.Infrastructure.Notifications.Push.AzureNotificationHubNativePushSender.BroadcastAsync(string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Push.AzureNotificationHubNativePushSender.SendToUsersAsync(System.Collections.Generic.IEnumerable<int>! userIds, string! title, string! body, System.Collections.Generic.Dictionary<string!, string!>? metadata = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus
-MMCA.Common.Infrastructure.Messaging.BrokerEventBus.BrokerEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal! outboxSignal, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings!>! outboxOptions) -> void
+MMCA.Common.Infrastructure.Messaging.BrokerEventBus.BrokerEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions) -> void
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.BrokerEventBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.BrokerMessageBus
@@ -395,11 +395,11 @@ MMCA.Common.Infrastructure.Context.CurrentUserService.User.get -> System.Securit
 MMCA.Common.Infrastructure.Context.CurrentUserService.UserId.get -> int?
 MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService
 MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.DataSourceService(MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! registry) -> void
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSource(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSource(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey
-MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.HaveIncludeSupport(MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey first, MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey second) -> bool
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSource(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSource(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSourceKey(System.Type! entityType) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.GetDataSourceKey(string! entityFullName) -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.HaveIncludeSupport(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey first, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey second) -> bool
 MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceService.HaveIncludeSupport(string! firstEntityFullName, string! secondEntityFullName) -> bool
 MMCA.Common.Infrastructure.Messaging.Consumers.FaultIntegrationEventConsumer<TEvent>
 MMCA.Common.Infrastructure.Messaging.Consumers.FaultIntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<MassTransit.Fault<TEvent!>!>! context) -> System.Threading.Tasks.Task!
@@ -408,16 +408,16 @@ MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor
 MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.ImageSharpImageProcessor() -> void
 MMCA.Common.Infrastructure.Storage.ImageSharpImageProcessor.NormalizeToSquareJpegAsync(System.IO.Stream! content, int size, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<byte[]!>!>!
 MMCA.Common.Infrastructure.Messaging.InProcessEventBus
-MMCA.Common.Infrastructure.Messaging.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings!>! outboxOptions) -> void
+MMCA.Common.Infrastructure.Messaging.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions) -> void
 MMCA.Common.Infrastructure.Messaging.InProcessEventBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.InProcessEventBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.InProcessMessageBus
-MMCA.Common.Infrastructure.Messaging.InProcessMessageBus.InProcessMessageBus(MMCA.Common.Application.Interfaces.IDomainEventDispatcher! domainEventDispatcher) -> void
+MMCA.Common.Infrastructure.Messaging.InProcessMessageBus.InProcessMessageBus(MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher! domainEventDispatcher) -> void
 MMCA.Common.Infrastructure.Messaging.InProcessMessageBus.PublishAsync(MMCA.Common.Domain.Interfaces.IIntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.InProcessMessageBus.PublishAsync(System.Collections.Generic.IEnumerable<MMCA.Common.Domain.Interfaces.IIntegrationEvent!>! integrationEvents, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.Consume(MassTransit.ConsumeContext<TEvent!>! context) -> System.Threading.Tasks.Task!
-MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.IntegrationEventConsumer(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.IIntegrationEventHandler<TEvent!>!>! handlers, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent!>!>! logger) -> void
+MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.IntegrationEventConsumer(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler<TEvent!>!>! handlers, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent!>!>! logger) -> void
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!)
 MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumerExtensions.extension(MassTransit.IBusRegistrationConfigurator!).RegisterIntegrationEventConsumer<TEvent>(bool registerFaultConsumer = true) -> MassTransit.IBusRegistrationConfigurator!
@@ -475,7 +475,7 @@ MMCA.Common.Infrastructure.Auth.TokenService.RefreshTokenLifetime.get -> System.
 MMCA.Common.Infrastructure.Auth.TokenService.TokenService(MMCA.Common.Infrastructure.Settings.IJwtSettings! jwtSettings, System.TimeProvider? timeProvider = null) -> void
 MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings
 MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings.AuditTrailSettings() -> void
-MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
 MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings.DataSource.init -> void
 MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings.Enabled.get -> bool
 MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailSettings.Enabled.init -> void
@@ -580,30 +580,30 @@ MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings.Enabled.init ->
 MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings.HubName.get -> string?
 MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings.HubName.init -> void
 MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings.NativePushSettings() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.BatchSize.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.BatchSize.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.CleanupIntervalHours.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.CleanupIntervalHours.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.DataSource.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.DatabaseName.get -> string!
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.DatabaseName.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.DeadLetterRetentionDays.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.DeadLetterRetentionDays.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.LeaseSeconds.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.LeaseSeconds.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.MaxRetries.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.MaxRetries.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.OutboxSettings() -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.PollingIntervalSeconds.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.PollingIntervalSeconds.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.ProcessingDelaySeconds.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.ProcessingDelaySeconds.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.RetentionDays.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.RetentionDays.init -> void
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.RetryBackoffBaseSeconds.get -> int
-MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.RetryBackoffBaseSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.BatchSize.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.BatchSize.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.CleanupIntervalHours.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.CleanupIntervalHours.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.DataSource.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.DatabaseName.get -> string!
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.DatabaseName.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.DeadLetterRetentionDays.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.DeadLetterRetentionDays.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.LeaseSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.LeaseSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.MaxRetries.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.MaxRetries.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.OutboxSettings() -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.PollingIntervalSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.PollingIntervalSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.ProcessingDelaySeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.ProcessingDelaySeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.RetentionDays.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.RetentionDays.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.RetryBackoffBaseSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.RetryBackoffBaseSeconds.init -> void
 MMCA.Common.Infrastructure.Persistence.PersistenceSettings
 MMCA.Common.Infrastructure.Persistence.PersistenceSettings.CommandTimeoutSeconds.get -> int
 MMCA.Common.Infrastructure.Persistence.PersistenceSettings.CommandTimeoutSeconds.init -> void
@@ -621,7 +621,7 @@ MMCA.Common.Infrastructure.Scheduling.ScheduledJobOverrideSettings.Cron.get -> s
 MMCA.Common.Infrastructure.Scheduling.ScheduledJobOverrideSettings.Cron.init -> void
 MMCA.Common.Infrastructure.Scheduling.ScheduledJobOverrideSettings.ScheduledJobOverrideSettings() -> void
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings
-MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
+MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.DataSource.init -> void
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.Enabled.get -> bool
 MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.Enabled.init -> void
@@ -680,15 +680,15 @@ MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy.Claim = 
 MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy.Header = 1 -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy
 MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy.Host = 2 -> MMCA.Common.Infrastructure.Persistence.Tenancy.TenantResolutionStrategy
 MMCA.Common.Infrastructure.UseDataSourceAttribute
-MMCA.Common.Infrastructure.UseDataSourceAttribute.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.DataSource
-MMCA.Common.Infrastructure.UseDataSourceAttribute.UseDataSourceAttribute(MMCA.Common.Application.Interfaces.Infrastructure.DataSource dataSource) -> void
+MMCA.Common.Infrastructure.UseDataSourceAttribute.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
+MMCA.Common.Infrastructure.UseDataSourceAttribute.UseDataSourceAttribute(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource dataSource) -> void
 MMCA.Common.Infrastructure.UseDatabaseAttribute
 MMCA.Common.Infrastructure.UseDatabaseAttribute.Name.get -> string!
 MMCA.Common.Infrastructure.UseDatabaseAttribute.UseDatabaseAttribute(string! name) -> void
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.SeedAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.Accounts.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount!>!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.CreateUser(MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount! account, byte[]! passwordHash, byte[]! passwordSalt) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
-abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.EmailExistsAsync(MMCA.Common.Shared.ValueObjects.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.EmailExistsAsync(MMCA.Common.Shared.ValueObjects.Contact.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 abstract MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.ExecuteCycleAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
 abstract MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.Interval.get -> System.TimeSpan
 const MMCA.Common.Infrastructure.Auth.LoginProtectionSettings.SectionName = "LoginProtection" -> string!
@@ -746,14 +746,14 @@ static MMCA.Common.Infrastructure.DependencyInjection.AddScheduledJob<TJob>(this
 static MMCA.Common.Infrastructure.DependencyInjection.AddScheduledJobs(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddTypedServiceClient<TInterface, TImplementation>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
-static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.OwnsMoney<TOwner>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>! builder, System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Money?>!>! navigationExpression, string! amountColumnName, string! currencyColumnName, bool required = true) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
-static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfiguration<TEntity, TIdentifierType>.ApplyEngineConventions(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder, MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine) -> void
-static MMCA.Common.Infrastructure.Persistence.Configuration.IndexBuilderExtensions.HasSoftDeleteFilter(this Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder! indexBuilder, MMCA.Common.Application.Interfaces.Infrastructure.DataSource engine = MMCA.Common.Application.Interfaces.Infrastructure.DataSource.SQLServer, string? additionalFilter = null) -> Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!
+static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeBuilderExtensions.OwnsMoney<TOwner>(this Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>! builder, System.Linq.Expressions.Expression<System.Func<TOwner!, MMCA.Common.Shared.ValueObjects.Financial.Money?>!>! navigationExpression, string! amountColumnName, string! currencyColumnName, bool required = true) -> Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TOwner!>!
+static MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfiguration<TEntity, TIdentifierType>.ApplyEngineConventions(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine) -> void
+static MMCA.Common.Infrastructure.Persistence.Configuration.IndexBuilderExtensions.HasSoftDeleteFilter(this Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder! indexBuilder, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource engine = MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource.SQLServer, string? additionalFilter = null) -> Microsoft.EntityFrameworkCore.Metadata.Builders.IndexBuilder!
 static MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.operator !=(MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource? left, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource? right) -> bool
 static MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.operator ==(MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource? left, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource? right) -> bool
 static MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.operator !=(MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget left, MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget right) -> bool
 static MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.operator ==(MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget left, MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget right) -> bool
-static MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTargets.Expand(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.Infrastructure.DataSourceKey>! sources, MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings? settings) -> System.Collections.Generic.List<MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget>!
+static MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTargets.Expand(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSourceKey>! sources, MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings? settings) -> System.Collections.Generic.List<MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget>!
 static MMCA.Common.Infrastructure.Persistence.DbContexts.ApplicationDbContext.ApplySoftDeleteFilters(Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder) -> void
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreateSqlServer(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.SQLServerDbContext!
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.GetId<TIdentifier>(int id) -> TIdentifier
@@ -773,7 +773,7 @@ static readonly MMCA.Common.Infrastructure.Auth.JwksSettings.SectionName -> stri
 static readonly MMCA.Common.Infrastructure.Auth.JwtSettings.SectionName -> string!
 static readonly MMCA.Common.Infrastructure.Messaging.MessageBusSettings.SectionName -> string!
 static readonly MMCA.Common.Infrastructure.Notifications.Push.NativePushSettings.SectionName -> string!
-static readonly MMCA.Common.Infrastructure.Persistence.Outbox.OutboxSettings.SectionName -> string!
+static readonly MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings.SectionName -> string!
 static readonly MMCA.Common.Infrastructure.Persistence.PersistenceSettings.SectionName -> string!
 static readonly MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.SectionName -> string!
 static readonly MMCA.Common.Infrastructure.Scheduling.SchedulerSettings.SectionName -> string!

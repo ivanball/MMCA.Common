@@ -9,7 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.SessionCookies;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Concurrency;
 using Moq;
 

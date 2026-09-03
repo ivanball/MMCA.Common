@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Financial;
 using MMCA.Common.UI.Extensions;
 
 namespace MMCA.Common.UI.Tests.Extensions;

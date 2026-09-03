@@ -1,5 +1,5 @@
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Navigation;
 
 namespace MMCA.Common.Application.Services.Navigation;
 

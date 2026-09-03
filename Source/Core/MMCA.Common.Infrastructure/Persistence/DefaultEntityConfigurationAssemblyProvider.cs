@@ -1,6 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 
 namespace MMCA.Common.Infrastructure.Persistence;
 

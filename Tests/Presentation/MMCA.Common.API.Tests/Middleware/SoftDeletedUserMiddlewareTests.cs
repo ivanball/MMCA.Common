@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Middleware;

@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Concurrency;
 
 namespace MMCA.Common.API.SessionCookies;

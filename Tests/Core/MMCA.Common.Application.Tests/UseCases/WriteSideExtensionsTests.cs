@@ -1,9 +1,11 @@
 ﻿using AwesomeAssertions;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Mapping;
+using MMCA.Common.Application.Tests.UseCases.Crud;
+using MMCA.Common.Application.UseCases.Contracts;
+using MMCA.Common.Application.UseCases.Crud;
 using MMCA.Common.Application.Validation;
 using MMCA.Common.Shared.Abstractions;
 using Moq;

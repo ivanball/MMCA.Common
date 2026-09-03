@@ -1,7 +1,7 @@
 using System.Globalization;
 using FluentValidation.TestHelper;
 using MMCA.Common.Application.Validation;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Application.Tests.Validation;
 

@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.RateLimiting;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 
 namespace MMCA.Common.API.Tests.Controllers.Auth;
 

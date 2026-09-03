@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;

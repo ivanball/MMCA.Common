@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Domain.Entities;
 
 namespace MMCA.Common.Application.Services.Query;

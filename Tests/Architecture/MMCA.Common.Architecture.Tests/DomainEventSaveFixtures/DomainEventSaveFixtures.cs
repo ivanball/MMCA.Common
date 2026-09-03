@@ -1,5 +1,5 @@
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
 
 namespace MMCA.Common.Architecture.Tests.DomainEventSaveFixtures;

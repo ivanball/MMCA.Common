@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.ExportUserData;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Privacy;

@@ -33,7 +33,7 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // Outbox and inbox retention (PurgeAsync, PurgeInboxAsync, SweepDeadLettersAsync). These
         // rows are delivery plumbing with a bounded lifetime, and the sweep IS the retention policy;
         // soft-deleting them would grow the table the job exists to bound.
-        "MMCA.Common.Infrastructure.Persistence.Outbox.OutboxCleanupService",
+        "MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService",
 
         // Audit-trail retention. Erasing past the retention window IS the requirement (keeping an
         // audit row forever is the privacy defect, not the safeguard).

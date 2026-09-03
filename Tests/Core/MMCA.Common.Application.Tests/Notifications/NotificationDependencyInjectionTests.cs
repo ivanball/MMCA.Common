@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
+using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Application.Notifications;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory;
@@ -10,7 +10,7 @@ using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetInbox;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.GetUnreadCount;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;

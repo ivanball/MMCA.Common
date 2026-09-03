@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.API.Controllers;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;

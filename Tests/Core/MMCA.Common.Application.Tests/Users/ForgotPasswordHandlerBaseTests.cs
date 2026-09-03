@@ -2,12 +2,13 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Infrastructure.Mail;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Users.UseCases.ForgotPassword;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.ValueObjects.Contact;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Users;

@@ -1,126 +1,126 @@
 #nullable enable
 MMCA.Common.Testing.Builders.EntityBuilderBase<TBuilder, TEntity>
 MMCA.Common.Testing.Builders.EntityBuilderBase<TBuilder, TEntity>.EntityBuilderBase() -> void
-MMCA.Common.Testing.CrossServiceDataSource
-MMCA.Common.Testing.CrossServiceDataSource.<Clone>$() -> MMCA.Common.Testing.CrossServiceDataSource!
-MMCA.Common.Testing.CrossServiceDataSource.CrossServiceDataSource(string! LogicalName, string! DatabaseName) -> void
-MMCA.Common.Testing.CrossServiceDataSource.DatabaseName.get -> string!
-MMCA.Common.Testing.CrossServiceDataSource.DatabaseName.init -> void
-MMCA.Common.Testing.CrossServiceDataSource.Deconstruct(out string! LogicalName, out string! DatabaseName) -> void
-MMCA.Common.Testing.CrossServiceDataSource.Equals(MMCA.Common.Testing.CrossServiceDataSource? other) -> bool
-MMCA.Common.Testing.CrossServiceDataSource.LogicalName.get -> string!
-MMCA.Common.Testing.CrossServiceDataSource.LogicalName.init -> void
-MMCA.Common.Testing.CrossServiceFixtureBase
-MMCA.Common.Testing.CrossServiceFixtureBase.BuildConnectionString(string! databaseName) -> string!
-MMCA.Common.Testing.CrossServiceFixtureBase.CrossServiceFixtureBase() -> void
-MMCA.Common.Testing.CrossServiceFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.CrossServiceFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.CrossServiceFixtureBase.RabbitMqConnectionString.get -> string!
-MMCA.Common.Testing.CrossServiceFixtureBase.SetEnvironmentVariable(string! key, string? value) -> void
-MMCA.Common.Testing.CrossServiceFixtureBase.SetHostConnectionString(string! connectionString) -> void
-MMCA.Common.Testing.CrossServiceFixtureBase.SqlServerBaseConnectionString.get -> string!
-MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>
-MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.CommandPipeline_NestsDecorators_InAdr014Order() -> void
-MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.DecoratorPipelineOrderTestsBase() -> void
-MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.QueryPipeline_NestsDecorators_InAdr014Order() -> void
-MMCA.Common.Testing.DependencyInjectionAssert
-MMCA.Common.Testing.FeatureManagementTestExtensions
-MMCA.Common.Testing.FeatureManagementTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
-MMCA.Common.Testing.FeatureManagementTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ConfigureTestFeatureFlags(System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-MMCA.Common.Testing.GracefulShutdownTestsBase<TEntryPoint>
-MMCA.Common.Testing.GracefulShutdownTestsBase<TEntryPoint>.GracefulShutdownTestsBase() -> void
-MMCA.Common.Testing.GracefulShutdownTestsBase<TEntryPoint>.Host_StopsGracefully_FiringLifetimeEventsWithinTimeout() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.HandlerTestBase<THandler>
-MMCA.Common.Testing.HandlerTestBase<THandler>.HandlerTestBase() -> void
-MMCA.Common.Testing.HandlerTestBase<THandler>.Logger.get -> Microsoft.Extensions.Logging.ILogger<THandler!>!
-MMCA.Common.Testing.HandlerTestBase<THandler>.RegisterReadRepository<TEntity, TIdentifierType>() -> Moq.Mock<MMCA.Common.Application.Interfaces.Infrastructure.IReadRepository<TEntity!, TIdentifierType>!>!
-MMCA.Common.Testing.HandlerTestBase<THandler>.RegisterRepository<TEntity, TIdentifierType>() -> Moq.Mock<MMCA.Common.Application.Interfaces.Infrastructure.IRepository<TEntity!, TIdentifierType>!>!
-MMCA.Common.Testing.HandlerTestBase<THandler>.UnitOfWork.get -> Moq.Mock<MMCA.Common.Application.Interfaces.Infrastructure.IUnitOfWork!>!
-MMCA.Common.Testing.IIntegrationTestFixture
-MMCA.Common.Testing.IIntegrationTestFixture.CreateClient() -> System.Net.Http.HttpClient!
-MMCA.Common.Testing.IIntegrationTestFixture.ResetDatabaseAsync() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.ClearAuthentication() -> void
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.Client.get -> System.Net.Http.HttpClient!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.DeleteAsync(string! url) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.Fixture.get -> TFixture
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.GetAsync<T>(string! url) -> System.Threading.Tasks.Task<T?>!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.InitializeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.IntegrationTestBase(TFixture fixture) -> void
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.PostAsync<T>(string! url, T body) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.PutAsync(string! url) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.PutAsync<T>(string! url, T body) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
-MMCA.Common.Testing.IntegrationTestBase<TFixture>.SetBearerToken(string! token) -> void
-MMCA.Common.Testing.JwtTokenGenerator
-MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>
-MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.GetOpenApiJsonAsync() -> System.Threading.Tasks.Task<string!>!
-MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.OpenApiContractTestsBase(TFixture fixture) -> void
-MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.OpenApiDocument_DescribesEveryCorePublicResource() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.OpenApiDocument_IsServed_AsWellFormedOpenApiDescribingTheApiSurface() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>
-MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>.NotFound_404_HasProblemDetailsShape() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>.ProblemDetailsContractTestsBase(TFixture fixture) -> void
-MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>.Validation_400_HasProblemDetailsShape() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.ProductionHostApplicationFactory<TEntryPoint>
-MMCA.Common.Testing.ProductionHostApplicationFactory<TEntryPoint>.ProductionHostApplicationFactory() -> void
-MMCA.Common.Testing.ProductionHostApplicationFactory<TEntryPoint>.StartedHost.get -> Microsoft.Extensions.Hosting.IHost?
-MMCA.Common.Testing.SecurityHeadersTestsBase
-MMCA.Common.Testing.SecurityHeadersTestsBase.AliveResponse_CarriesHardenedSecurityHeaders() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.SecurityHeadersTestsBase.SecurityHeadersTestsBase() -> void
-MMCA.Common.Testing.ServiceInfoVersioningContractTestsBase<TFixture>
-MMCA.Common.Testing.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfoVersioningContractTestsBase(TFixture fixture) -> void
-MMCA.Common.Testing.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V1_ReturnsMinimalShape_AndIsReportedDeprecated() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V2_ReturnsEvolvedShape_AndIsReportedSupported() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Client.get -> System.Net.Http.HttpClient?
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ConnectionString.get -> string!
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.CreateClient() -> System.Net.Http.HttpClient!
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DisposeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.InitializeAsync() -> System.Threading.Tasks.ValueTask
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ResetDatabaseAsync() -> System.Threading.Tasks.Task!
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Services.get -> System.IServiceProvider!
-MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlServerIntegrationTestFixtureBase() -> void
-MMCA.Common.Testing.TestPolling
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.<Clone>$() -> MMCA.Common.Testing.Fixtures.CrossServiceDataSource!
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.CrossServiceDataSource(string! LogicalName, string! DatabaseName) -> void
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.DatabaseName.get -> string!
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.DatabaseName.init -> void
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.Deconstruct(out string! LogicalName, out string! DatabaseName) -> void
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.Equals(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? other) -> bool
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.LogicalName.get -> string!
+MMCA.Common.Testing.Fixtures.CrossServiceDataSource.LogicalName.init -> void
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.BuildConnectionString(string! databaseName) -> string!
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.CrossServiceFixtureBase() -> void
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.RabbitMqConnectionString.get -> string!
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.SetEnvironmentVariable(string! key, string? value) -> void
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.SetHostConnectionString(string! connectionString) -> void
+MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.SqlServerBaseConnectionString.get -> string!
+MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>
+MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.CommandPipeline_NestsDecorators_InAdr014Order() -> void
+MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.DecoratorPipelineOrderTestsBase() -> void
+MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.QueryPipeline_NestsDecorators_InAdr014Order() -> void
+MMCA.Common.Testing.Support.DependencyInjectionAssert
+MMCA.Common.Testing.Support.FeatureManagementTestExtensions
+MMCA.Common.Testing.Support.FeatureManagementTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Testing.Support.FeatureManagementTestExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).ConfigureTestFeatureFlags(System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>
+MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>.GracefulShutdownTestsBase() -> void
+MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>.Host_StopsGracefully_FiringLifetimeEventsWithinTimeout() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Support.HandlerTestBase<THandler>
+MMCA.Common.Testing.Support.HandlerTestBase<THandler>.HandlerTestBase() -> void
+MMCA.Common.Testing.Support.HandlerTestBase<THandler>.Logger.get -> Microsoft.Extensions.Logging.ILogger<THandler!>!
+MMCA.Common.Testing.Support.HandlerTestBase<THandler>.RegisterReadRepository<TEntity, TIdentifierType>() -> Moq.Mock<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IReadRepository<TEntity!, TIdentifierType>!>!
+MMCA.Common.Testing.Support.HandlerTestBase<THandler>.RegisterRepository<TEntity, TIdentifierType>() -> Moq.Mock<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRepository<TEntity!, TIdentifierType>!>!
+MMCA.Common.Testing.Support.HandlerTestBase<THandler>.UnitOfWork.get -> Moq.Mock<MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!>!
+MMCA.Common.Testing.Fixtures.IIntegrationTestFixture
+MMCA.Common.Testing.Fixtures.IIntegrationTestFixture.CreateClient() -> System.Net.Http.HttpClient!
+MMCA.Common.Testing.Fixtures.IIntegrationTestFixture.ResetDatabaseAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.ClearAuthentication() -> void
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.Client.get -> System.Net.Http.HttpClient!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.DeleteAsync(string! url) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.Fixture.get -> TFixture
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.GetAsync<T>(string! url) -> System.Threading.Tasks.Task<T?>!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.IntegrationTestBase(TFixture fixture) -> void
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.PostAsync<T>(string! url, T body) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.PutAsync(string! url) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.PutAsync<T>(string! url, T body) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.SetBearerToken(string! token) -> void
+MMCA.Common.Testing.Support.JwtTokenGenerator
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.GetOpenApiJsonAsync() -> System.Threading.Tasks.Task<string!>!
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiContractTestsBase(TFixture fixture) -> void
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocument_DescribesEveryCorePublicResource() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocument_IsServed_AsWellFormedOpenApiDescribingTheApiSurface() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>
+MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.NotFound_404_HasProblemDetailsShape() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.ProblemDetailsContractTestsBase(TFixture fixture) -> void
+MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.Validation_400_HasProblemDetailsShape() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>
+MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>.ProductionHostApplicationFactory() -> void
+MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>.StartedHost.get -> Microsoft.Extensions.Hosting.IHost?
+MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase
+MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.AliveResponse_CarriesHardenedSecurityHeaders() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.SecurityHeadersTestsBase() -> void
+MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>
+MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfoVersioningContractTestsBase(TFixture fixture) -> void
+MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V1_ReturnsMinimalShape_AndIsReportedDeprecated() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Conformance.ServiceInfoVersioningContractTestsBase<TFixture>.ServiceInfo_V2_ReturnsEvolvedShape_AndIsReportedSupported() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Client.get -> System.Net.Http.HttpClient?
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ConnectionString.get -> string!
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.CreateClient() -> System.Net.Http.HttpClient!
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ResetDatabaseAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.Services.get -> System.IServiceProvider!
+MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlServerIntegrationTestFixtureBase() -> void
+MMCA.Common.Testing.Support.TestPolling
 abstract MMCA.Common.Testing.Builders.EntityBuilderBase<TBuilder, TEntity>.Build() -> TEntity
-abstract MMCA.Common.Testing.CrossServiceFixtureBase.BootHostsAsync() -> System.Threading.Tasks.ValueTask
-abstract MMCA.Common.Testing.CrossServiceFixtureBase.DataSources.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.CrossServiceDataSource!>!
-abstract MMCA.Common.Testing.CrossServiceFixtureBase.DisposeHostsAsync() -> System.Threading.Tasks.ValueTask
-abstract MMCA.Common.Testing.CrossServiceFixtureBase.MigrationsAssemblyPrefix.get -> string!
-abstract MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
-abstract MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.CorePublicResources.get -> System.Collections.Generic.IReadOnlyList<string!>!
-abstract MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.MinimumPathCount.get -> int
-abstract MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>.SendNotFoundProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
-abstract MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>.SendValidationErrorProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
-abstract MMCA.Common.Testing.SecurityHeadersTestsBase.CreateClient() -> System.Net.Http.HttpClient!
-abstract MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.CreateFactory() -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
-abstract MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DatabaseNamePrefix.get -> string!
-abstract MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlBaseEnvironmentVariable.get -> string!
-const MMCA.Common.Testing.JwtTokenGenerator.DefaultIssuer = "https://localhost:6001" -> string!
-const MMCA.Common.Testing.JwtTokenGenerator.DefaultKeyId = "mmca-test-key" -> string!
-const MMCA.Common.Testing.JwtTokenGenerator.DefaultPrivateKeyPem = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCedtKTDLOuAnty\nz7CUuupqR+sK9s4iIMzj4C3At9FPsiZmQkBBgr50NFTxJd1nVTL2w+PXK8GyEV8A\no5h/ZvSsRyNm9T8meJ5F5w0NiS55yruymVezGtF0oG/3LWVEyBBy7U2jHyuYQMRE\nsSATEulXjJPez0Yo8WiU/5pXtEm1XliZYYGM9KfMCjKSJiUoLDESNFVWqNNDH9ns\ngrFaUMX6XOWv9eeYMKJ7gbm2KGEX5AS/I0GXl7ctCzn98Z8797YUjsVfXB402vX+\nQ9dVwn2U5qR+8um9pZgZhjsj3QoF8eza+oG/AqOHIT9pGIOlDLcU1gHkGR8mu1Ra\n6UGNh3iNAgMBAAECggEAJ3pEtZu5e8VkidLSFAuI8Ndf6AhajEgNo0urOlLRE4C3\nbkxdA7UVy49qBfW/9clU/AMLVQSyqbEIMPmQuVSl6fGDEVhR1jzAeXu5VcDyUic+\noZzwK0+oFN0PZ83oZ71L08XozJWsX67q9o4GBpp0hXohMKYEvZh+zHftNKJWppco\n1G6Lto3ELzlShhbOosoNce1Y8jByY2cc617MO1S/I6tB3NPsiZMRKgC/j3ATWimD\nx9ElTIc3lsT+aopol95pkGsIvfh3tCXeaUuCZ+rWEX4xtVtPpm+f1hjDxZcGHwL4\nDxGZKtTAmkbA9u2beMEhtCYE6fwVKDzD/K4ZF8HzYQKBgQDbZD9t7i3EYTuF4Ej2\nLoDeRIG1g7eXBcHqWWeBZnQa/fqlFnzqkphVOKxzVB9s9HDK0Ku3khe9wJI5XHFx\ntDWUaIMTdAGUIXs9aMPbRz1RKXXuKDGdDlyoNhziy21NI6wJiwQh8ul4mImZ3AzV\n9kcleRwrscRhgVVBONcg6LVBhQKBgQC45+/SSC/Z8mlrhizzHfjm9bsb40o5Lz9b\nDOTJF7y0o1FXaXMSSotKuEo8TE8PastMmcRmArtx69gcmESn+7VglMCOW6m554Jd\nM3T7dEbU9Dl8WOciWphplOkGljOQco4HR9iEQttCDxMmlTyvuyYt0bsLBVy0K636\nRiXrLcgFaQKBgFy1WhBsK67mn66M/of5Ur+aF23KwVPyPOV47kJCNyII3VfRzuuZ\nEwJANq9thvIVwWwTDd0+wQWQULoolE/GJTYXi/w2c0xTca6bjNgmnISljo4bMgv6\nO7FhXIeCCygjwNkvg4mNCpfJbaw0zr/DmID/UqYsMp45dvtet5nSfHW5AoGACD5/\nGNcTGxqNzLd8xZIuiM2n/ARUSNxsbLjUcorWZQ9rDwSqlsQwFbLFzI5yb/OJAO9S\nLGIuzVOAnTXEyeCVI6s+MpqvpJRH4bProVJ73f7NmVe1Zni3lu2Gvj5wKh6Rao2v\nf6YjdHyLlArPW95yQ1S4jDM/AOF5rlD2W9f8tRECgYB4i3qu1eOUP8ND29qpiz3Z\nkX0Kz8MJF/W8SI3EuWR06iOtnEQvUA19GGl+eP31+eeOLEDyJceGGGMHH42ERxq0\nNLZaLd5FHebRvFwxbzD24nYBU8q/WawRmyG/u2TEGZ09jvtzX/XgkrxCFNFQpEoZ\nDuIPM0H4W9l7v/kASh6DKQ==\n-----END PRIVATE KEY-----" -> string!
-const MMCA.Common.Testing.JwtTokenGenerator.DefaultPublicKeyPem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnnbSkwyzrgJ7cs+wlLrq\nakfrCvbOIiDM4+AtwLfRT7ImZkJAQYK+dDRU8SXdZ1Uy9sPj1yvBshFfAKOYf2b0\nrEcjZvU/JnieRecNDYkuecq7splXsxrRdKBv9y1lRMgQcu1Nox8rmEDERLEgExLp\nV4yT3s9GKPFolP+aV7RJtV5YmWGBjPSnzAoykiYlKCwxEjRVVqjTQx/Z7IKxWlDF\n+lzlr/XnmDCie4G5tihhF+QEvyNBl5e3LQs5/fGfO/e2FI7FX1weNNr1/kPXVcJ9\nlOakfvLpvaWYGYY7I90KBfHs2vqBvwKjhyE/aRiDpQy3FNYB5BkfJrtUWulBjYd4\njQIDAQAB\n-----END PUBLIC KEY-----" -> string!
-override MMCA.Common.Testing.CrossServiceDataSource.Equals(object? obj) -> bool
-override MMCA.Common.Testing.CrossServiceDataSource.GetHashCode() -> int
-override MMCA.Common.Testing.CrossServiceDataSource.ToString() -> string!
-override MMCA.Common.Testing.ProductionHostApplicationFactory<TEntryPoint>.CreateHost(Microsoft.Extensions.Hosting.IHostBuilder! builder) -> Microsoft.Extensions.Hosting.IHost!
-static MMCA.Common.Testing.CrossServiceDataSource.operator !=(MMCA.Common.Testing.CrossServiceDataSource? left, MMCA.Common.Testing.CrossServiceDataSource? right) -> bool
-static MMCA.Common.Testing.CrossServiceDataSource.operator ==(MMCA.Common.Testing.CrossServiceDataSource? left, MMCA.Common.Testing.CrossServiceDataSource? right) -> bool
-static MMCA.Common.Testing.CrossServiceFixtureBase.ComposeConnectionString(string! baseConnectionString, string! databaseName, string? applicationName = null) -> string!
-static MMCA.Common.Testing.DependencyInjectionAssert.ReturnsSameCollection(System.Func<Microsoft.Extensions.DependencyInjection.IServiceCollection!, Microsoft.Extensions.DependencyInjection.IServiceCollection!>! register) -> void
-static MMCA.Common.Testing.FeatureManagementTestExtensions.ConfigureTestFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.Testing.IntegrationTestBase<TFixture>.NextId() -> int
-static MMCA.Common.Testing.JwtTokenGenerator.ConfigureInProcessTokenValidation(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions! options, string! audience) -> void
-static MMCA.Common.Testing.JwtTokenGenerator.GenerateToken(string! audience, int userId, string! role, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims = null, string? privateKeyPem = null, string! issuer = "https://localhost:6001", string! keyId = "mmca-test-key") -> string!
-static MMCA.Common.Testing.ProblemDetailsContractTestsBase<TFixture>.AssertProblemDetailsShapeAsync(System.Net.Http.HttpResponseMessage! response, System.Net.HttpStatusCode expected) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement>!
-static MMCA.Common.Testing.TestPolling.PollUntilAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! probe, System.Func<T, bool>! isSatisfied, System.TimeSpan? timeout = null, System.TimeSpan? interval = null) -> System.Threading.Tasks.Task<T>!
-virtual MMCA.Common.Testing.CrossServiceFixtureBase.ConfigureSharedEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void
-virtual MMCA.Common.Testing.CrossServiceFixtureBase.OnContainersStartedAsync() -> System.Threading.Tasks.ValueTask
-virtual MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ExpectedCommandDecorators.get -> System.Collections.Generic.IReadOnlyList<string!>!
-virtual MMCA.Common.Testing.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ExpectedQueryDecorators.get -> System.Collections.Generic.IReadOnlyList<string!>!
-virtual MMCA.Common.Testing.GracefulShutdownTestsBase<TEntryPoint>.CreateFactory() -> MMCA.Common.Testing.ProductionHostApplicationFactory<TEntryPoint!>!
-virtual MMCA.Common.Testing.GracefulShutdownTestsBase<TEntryPoint>.ShutdownTimeoutSeconds.get -> int
-virtual MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.MinimumPathCountBecause.get -> string!
-virtual MMCA.Common.Testing.OpenApiContractTestsBase<TFixture>.OpenApiDocumentPath.get -> string!
-virtual MMCA.Common.Testing.SecurityHeadersTestsBase.ProbePath.get -> string!
-virtual MMCA.Common.Testing.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ConfigureTestEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void
+abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.BootHostsAsync() -> System.Threading.Tasks.ValueTask
+abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DataSources.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.Fixtures.CrossServiceDataSource!>!
+abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.DisposeHostsAsync() -> System.Threading.Tasks.ValueTask
+abstract MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.MigrationsAssemblyPrefix.get -> string!
+abstract MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+abstract MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.CorePublicResources.get -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.MinimumPathCount.get -> int
+abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.SendNotFoundProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+abstract MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.SendValidationErrorProbeAsync() -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+abstract MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.CreateClient() -> System.Net.Http.HttpClient!
+abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.CreateFactory() -> Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TEntryPoint!>!
+abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.DatabaseNamePrefix.get -> string!
+abstract MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.SqlBaseEnvironmentVariable.get -> string!
+const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultIssuer = "https://localhost:6001" -> string!
+const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultKeyId = "mmca-test-key" -> string!
+const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultPrivateKeyPem = "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCedtKTDLOuAnty\nz7CUuupqR+sK9s4iIMzj4C3At9FPsiZmQkBBgr50NFTxJd1nVTL2w+PXK8GyEV8A\no5h/ZvSsRyNm9T8meJ5F5w0NiS55yruymVezGtF0oG/3LWVEyBBy7U2jHyuYQMRE\nsSATEulXjJPez0Yo8WiU/5pXtEm1XliZYYGM9KfMCjKSJiUoLDESNFVWqNNDH9ns\ngrFaUMX6XOWv9eeYMKJ7gbm2KGEX5AS/I0GXl7ctCzn98Z8797YUjsVfXB402vX+\nQ9dVwn2U5qR+8um9pZgZhjsj3QoF8eza+oG/AqOHIT9pGIOlDLcU1gHkGR8mu1Ra\n6UGNh3iNAgMBAAECggEAJ3pEtZu5e8VkidLSFAuI8Ndf6AhajEgNo0urOlLRE4C3\nbkxdA7UVy49qBfW/9clU/AMLVQSyqbEIMPmQuVSl6fGDEVhR1jzAeXu5VcDyUic+\noZzwK0+oFN0PZ83oZ71L08XozJWsX67q9o4GBpp0hXohMKYEvZh+zHftNKJWppco\n1G6Lto3ELzlShhbOosoNce1Y8jByY2cc617MO1S/I6tB3NPsiZMRKgC/j3ATWimD\nx9ElTIc3lsT+aopol95pkGsIvfh3tCXeaUuCZ+rWEX4xtVtPpm+f1hjDxZcGHwL4\nDxGZKtTAmkbA9u2beMEhtCYE6fwVKDzD/K4ZF8HzYQKBgQDbZD9t7i3EYTuF4Ej2\nLoDeRIG1g7eXBcHqWWeBZnQa/fqlFnzqkphVOKxzVB9s9HDK0Ku3khe9wJI5XHFx\ntDWUaIMTdAGUIXs9aMPbRz1RKXXuKDGdDlyoNhziy21NI6wJiwQh8ul4mImZ3AzV\n9kcleRwrscRhgVVBONcg6LVBhQKBgQC45+/SSC/Z8mlrhizzHfjm9bsb40o5Lz9b\nDOTJF7y0o1FXaXMSSotKuEo8TE8PastMmcRmArtx69gcmESn+7VglMCOW6m554Jd\nM3T7dEbU9Dl8WOciWphplOkGljOQco4HR9iEQttCDxMmlTyvuyYt0bsLBVy0K636\nRiXrLcgFaQKBgFy1WhBsK67mn66M/of5Ur+aF23KwVPyPOV47kJCNyII3VfRzuuZ\nEwJANq9thvIVwWwTDd0+wQWQULoolE/GJTYXi/w2c0xTca6bjNgmnISljo4bMgv6\nO7FhXIeCCygjwNkvg4mNCpfJbaw0zr/DmID/UqYsMp45dvtet5nSfHW5AoGACD5/\nGNcTGxqNzLd8xZIuiM2n/ARUSNxsbLjUcorWZQ9rDwSqlsQwFbLFzI5yb/OJAO9S\nLGIuzVOAnTXEyeCVI6s+MpqvpJRH4bProVJ73f7NmVe1Zni3lu2Gvj5wKh6Rao2v\nf6YjdHyLlArPW95yQ1S4jDM/AOF5rlD2W9f8tRECgYB4i3qu1eOUP8ND29qpiz3Z\nkX0Kz8MJF/W8SI3EuWR06iOtnEQvUA19GGl+eP31+eeOLEDyJceGGGMHH42ERxq0\nNLZaLd5FHebRvFwxbzD24nYBU8q/WawRmyG/u2TEGZ09jvtzX/XgkrxCFNFQpEoZ\nDuIPM0H4W9l7v/kASh6DKQ==\n-----END PRIVATE KEY-----" -> string!
+const MMCA.Common.Testing.Support.JwtTokenGenerator.DefaultPublicKeyPem = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnnbSkwyzrgJ7cs+wlLrq\nakfrCvbOIiDM4+AtwLfRT7ImZkJAQYK+dDRU8SXdZ1Uy9sPj1yvBshFfAKOYf2b0\nrEcjZvU/JnieRecNDYkuecq7splXsxrRdKBv9y1lRMgQcu1Nox8rmEDERLEgExLp\nV4yT3s9GKPFolP+aV7RJtV5YmWGBjPSnzAoykiYlKCwxEjRVVqjTQx/Z7IKxWlDF\n+lzlr/XnmDCie4G5tihhF+QEvyNBl5e3LQs5/fGfO/e2FI7FX1weNNr1/kPXVcJ9\nlOakfvLpvaWYGYY7I90KBfHs2vqBvwKjhyE/aRiDpQy3FNYB5BkfJrtUWulBjYd4\njQIDAQAB\n-----END PUBLIC KEY-----" -> string!
+override MMCA.Common.Testing.Fixtures.CrossServiceDataSource.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Fixtures.CrossServiceDataSource.GetHashCode() -> int
+override MMCA.Common.Testing.Fixtures.CrossServiceDataSource.ToString() -> string!
+override MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint>.CreateHost(Microsoft.Extensions.Hosting.IHostBuilder! builder) -> Microsoft.Extensions.Hosting.IHost!
+static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator !=(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
+static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator ==(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
+static MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ComposeConnectionString(string! baseConnectionString, string! databaseName, string? applicationName = null) -> string!
+static MMCA.Common.Testing.Support.DependencyInjectionAssert.ReturnsSameCollection(System.Func<Microsoft.Extensions.DependencyInjection.IServiceCollection!, Microsoft.Extensions.DependencyInjection.IServiceCollection!>! register) -> void
+static MMCA.Common.Testing.Support.FeatureManagementTestExtensions.ConfigureTestFeatureFlags(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Collections.Generic.Dictionary<string!, bool>! features) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.NextId() -> int
+static MMCA.Common.Testing.Support.JwtTokenGenerator.ConfigureInProcessTokenValidation(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerOptions! options, string! audience) -> void
+static MMCA.Common.Testing.Support.JwtTokenGenerator.GenerateToken(string! audience, int userId, string! role, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims = null, string? privateKeyPem = null, string! issuer = "https://localhost:6001", string! keyId = "mmca-test-key") -> string!
+static MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>.AssertProblemDetailsShapeAsync(System.Net.Http.HttpResponseMessage! response, System.Net.HttpStatusCode expected) -> System.Threading.Tasks.Task<System.Text.Json.JsonElement>!
+static MMCA.Common.Testing.Support.TestPolling.PollUntilAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! probe, System.Func<T, bool>! isSatisfied, System.TimeSpan? timeout = null, System.TimeSpan? interval = null) -> System.Threading.Tasks.Task<T>!
+virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ConfigureSharedEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void
+virtual MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.OnContainersStartedAsync() -> System.Threading.Tasks.ValueTask
+virtual MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ExpectedCommandDecorators.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Conformance.DecoratorPipelineOrderTestsBase<TCommand, TCommandResult, TQuery, TQueryResult>.ExpectedQueryDecorators.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>.CreateFactory() -> MMCA.Common.Testing.Fixtures.ProductionHostApplicationFactory<TEntryPoint!>!
+virtual MMCA.Common.Testing.Conformance.GracefulShutdownTestsBase<TEntryPoint>.ShutdownTimeoutSeconds.get -> int
+virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.MinimumPathCountBecause.get -> string!
+virtual MMCA.Common.Testing.Conformance.OpenApiContractTestsBase<TFixture>.OpenApiDocumentPath.get -> string!
+virtual MMCA.Common.Testing.Conformance.SecurityHeadersTestsBase.ProbePath.get -> string!
+virtual MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase<TEntryPoint>.ConfigureTestEnvironment(System.Action<string!, string?>! setEnvironmentVariable) -> void

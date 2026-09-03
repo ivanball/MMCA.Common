@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Permissions;
 
 namespace MMCA.Common.Application.Auth;
 
 /// <summary>
 /// Fallback <see cref="IPermissionRegistry"/> for a host that wired the CQRS pipeline without
 /// declaring any role to permission grants. It grants nothing, so an
-/// <see cref="UseCases.IRequiresPermission"/> command or query is denied rather than allowed, and it
+/// <see cref="UseCases.Markers.IRequiresPermission"/> command or query is denied rather than allowed, and it
 /// says so once in the log naming the call that would fix it.
 /// <para>
 /// Registered by <c>AddApplicationDecorators()</c> with <c>TryAdd</c>, so a host that calls

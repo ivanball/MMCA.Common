@@ -2,7 +2,7 @@
 using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Shared.Auth;
 using Moq;

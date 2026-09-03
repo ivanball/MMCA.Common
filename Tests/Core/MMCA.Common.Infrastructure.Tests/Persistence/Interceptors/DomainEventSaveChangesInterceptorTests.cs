@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -23,7 +23,7 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
 
     public DomainEventSaveChangesInterceptorTests()
     {
-        var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+        var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
         _sut = new DomainEventSaveChangesInterceptor(_mockDispatcher.Object, _mockLogger.Object, outboxSignal.Object);
         _dbContext = TestDomainEventDbContext.Create(_sut);
     }
@@ -216,7 +216,7 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
             });
     }
 
-    private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.IEntityConfigurationAssemblyProvider
+    private sealed class NullAssemblyProvider : Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider
     {
         public IReadOnlyList<System.Reflection.Assembly> GetConfigurationAssemblies() => [];
     }

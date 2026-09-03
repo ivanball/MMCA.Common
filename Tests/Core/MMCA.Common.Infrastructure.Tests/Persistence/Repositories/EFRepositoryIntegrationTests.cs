@@ -3,7 +3,7 @@ using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using Moq;

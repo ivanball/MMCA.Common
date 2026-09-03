@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Shared.DTOs;
 
 namespace MMCA.Common.API.Controllers;

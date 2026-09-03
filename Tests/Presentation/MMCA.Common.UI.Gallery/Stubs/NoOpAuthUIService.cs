@@ -1,5 +1,6 @@
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.UI.Services.Auth;
 
 namespace MMCA.Common.UI.Gallery.Stubs;

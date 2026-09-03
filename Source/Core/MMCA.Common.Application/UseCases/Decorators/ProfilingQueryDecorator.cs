@@ -1,3 +1,4 @@
+using MMCA.Common.Application.UseCases.Contracts;
 using StackExchange.Profiling;
 
 namespace MMCA.Common.Application.UseCases.Decorators;

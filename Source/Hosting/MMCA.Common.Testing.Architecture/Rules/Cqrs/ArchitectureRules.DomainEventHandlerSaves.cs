@@ -6,7 +6,7 @@ public static partial class ArchitectureRules
 {
     /// <summary>The framework's domain-event-handler interface, with Cecil's generic-arity marker.</summary>
     private const string DomainEventHandlerInterfaceFullName =
-        "MMCA.Common.Application.Interfaces.IDomainEventHandler`1";
+        "MMCA.Common.Application.Interfaces.Events.IDomainEventHandler`1";
 
     /// <summary>The member names that flush a unit of work to the database.</summary>
     private static readonly string[] SaveMemberNames = ["SaveChanges", "SaveChangesAsync"];

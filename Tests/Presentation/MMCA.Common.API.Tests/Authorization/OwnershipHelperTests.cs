@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using AwesomeAssertions;
 using MMCA.Common.API.Authorization;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 using Moq;

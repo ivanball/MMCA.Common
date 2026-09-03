@@ -202,10 +202,10 @@ MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInje
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUIShared(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddWasmFormFactor() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.UI.Extensions.MoneyExtensions
-MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObjects.Money!)
-MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObjects.Money!).ToDisplayString() -> string!
-MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Money!>!)
-MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Money!>!).ToDisplayRange() -> string!
+MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObjects.Financial.Money!)
+MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObjects.Financial.Money!).ToDisplayString() -> string!
+MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>!)
+MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>!).ToDisplayRange() -> string!
 MMCA.Common.UI.Extensions.WebApplicationExtensions
 MMCA.Common.UI.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
 MMCA.Common.UI.Extensions.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseAuthenticatedNoStore() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
@@ -345,11 +345,11 @@ MMCA.Common.UI.Services.Auth.AuthDelegatingHandler.AuthDelegatingHandler(MMCA.Co
 MMCA.Common.UI.Services.Auth.AuthUIService
 MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration) -> void
 MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
-MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse?>!
 MMCA.Common.UI.Services.Auth.AuthUIService.LastError.get -> string?
-MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+MMCA.Common.UI.Services.Auth.AuthUIService.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse?>!
 MMCA.Common.UI.Services.Auth.AuthUIService.LogoutAsync() -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Auth.AuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.Requests.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse?>!
 MMCA.Common.UI.Services.Auth.AuthUIService.TryRefreshTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.OAuth.ConfigurationOAuthUISettings
 MMCA.Common.UI.Services.Auth.OAuth.ConfigurationOAuthUISettings.ConfigurationOAuthUISettings(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> void
@@ -360,11 +360,11 @@ MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher.AcquireAccessTokenAs
 MMCA.Common.UI.Services.Auth.Tokens.DirectApiTokenRefresher.DirectApiTokenRefresher(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.Auth.IAuthUIService
 MMCA.Common.UI.Services.Auth.IAuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
-MMCA.Common.UI.Services.Auth.IAuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse?>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.LastError.get -> string?
-MMCA.Common.UI.Services.Auth.IAuthUIService.LoginAsync(MMCA.Common.Shared.Auth.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse?>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.LogoutAsync() -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Auth.IAuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.AuthenticationResponse?>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.RegisterAsync(MMCA.Common.Shared.Auth.Requests.RegisterRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse?>!
 MMCA.Common.UI.Services.Auth.IAuthUIService.TryRefreshTokenAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Auth.OAuth.IOAuthUISettings
 MMCA.Common.UI.Services.Auth.OAuth.IOAuthUISettings.GitHubEnabled.get -> bool
@@ -876,8 +876,8 @@ static MMCA.Common.UI.DependencyInjection.AddClientAuthSessionCookieSync(this Mi
 static MMCA.Common.UI.DependencyInjection.AddUIModule<TModule>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddUIShared(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.UI.DependencyInjection.AddWasmFormFactor(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayRange(this System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Money!>! prices) -> string!
-static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Common.Shared.ValueObjects.Money! price) -> string!
+static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayRange(this System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>! prices) -> string!
+static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Common.Shared.ValueObjects.Financial.Money! price) -> string!
 static MMCA.Common.UI.Extensions.WebApplicationExtensions.UseAuthenticatedNoStore(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static MMCA.Common.UI.Globalization.PseudoLocalizer.Transform(string! value) -> string!
 static MMCA.Common.UI.Notifications.DependencyInjection.AddNotificationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

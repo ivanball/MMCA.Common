@@ -1,5 +1,5 @@
 using FluentValidation;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Application.Auth.Validation;
 

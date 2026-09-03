@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using MassTransit;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Infrastructure.Messaging.Consumers;

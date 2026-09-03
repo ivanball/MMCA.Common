@@ -2,7 +2,7 @@ using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -109,9 +109,9 @@ public sealed class ApplicationDbContextTests : IDisposable
             services.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
             services.AddSingleton<DomainEventSaveChangesInterceptor>(_ =>
             {
-                var dispatcher = new Mock<Application.Interfaces.IDomainEventDispatcher>();
+                var dispatcher = new Mock<Application.Interfaces.Events.IDomainEventDispatcher>();
                 var logger = new Mock<Microsoft.Extensions.Logging.ILogger<DomainEventSaveChangesInterceptor>>();
-                var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.IOutboxSignal>();
+                var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
                 return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
             });
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());

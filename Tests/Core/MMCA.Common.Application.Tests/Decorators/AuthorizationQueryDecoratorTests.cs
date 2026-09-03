@@ -1,9 +1,10 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
+using MMCA.Common.Application.UseCases.Markers;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Permissions;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Decorators;

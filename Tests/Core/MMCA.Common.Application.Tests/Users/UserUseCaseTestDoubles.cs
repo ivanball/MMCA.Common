@@ -2,7 +2,7 @@ using MMCA.Common.Application.Users;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 
 namespace MMCA.Common.Application.Tests.Users;
 

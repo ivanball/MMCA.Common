@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.API.Caching;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.IntegrationEvents;
 using Moq;
 

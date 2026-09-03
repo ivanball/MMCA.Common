@@ -1,9 +1,10 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.ChangePassword;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Users;

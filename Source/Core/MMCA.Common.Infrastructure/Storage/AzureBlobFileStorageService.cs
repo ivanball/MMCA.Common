@@ -2,7 +2,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Storage;

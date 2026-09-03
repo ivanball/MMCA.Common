@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.API.Startup;
+using MMCA.Common.API.Startup.Endpoints;
 
 namespace MMCA.Common.API.Tests.OpenApi;
 

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Financial;
 
 namespace MMCA.Common.UI.Extensions;
 

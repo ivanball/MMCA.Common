@@ -1,6 +1,6 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
 

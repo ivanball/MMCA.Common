@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 
 namespace MMCA.Common.Infrastructure.Persistence.Repositories.Factory;

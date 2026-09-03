@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;

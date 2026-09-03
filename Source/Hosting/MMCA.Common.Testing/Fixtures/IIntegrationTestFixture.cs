@@ -1,0 +1,20 @@
+namespace MMCA.Common.Testing.Fixtures;
+
+/// <summary>
+/// Abstraction for integration test fixtures that manage the WebApplicationFactory lifecycle
+/// and database reset between tests. Downstream projects implement this with their specific
+/// application configuration.
+/// </summary>
+public interface IIntegrationTestFixture
+{
+    /// <summary>Creates a new <see cref="HttpClient"/> configured for the test server.</summary>
+    HttpClient CreateClient();
+
+    /// <summary>
+    /// Resets the database to a clean state between tests (e.g., via Respawn).
+    /// Hosts using multiple physical data sources ("database per microservice") must reset
+    /// <b>every</b> relational source — fixtures can resolve <c>IEntityDataSourceRegistry</c> and
+    /// <c>IDataSourceResolver</c> from the host's services to enumerate the connection strings.
+    /// </summary>
+    Task ResetDatabaseAsync();
+}

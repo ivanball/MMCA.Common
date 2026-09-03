@@ -11,7 +11,8 @@ using MMCA.Common.API.Authentication;
 using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 using IAuthenticationService = MMCA.Common.Application.Auth.IAuthenticationService;
 
 namespace MMCA.Common.API.Controllers;

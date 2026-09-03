@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
-using MMCA.Common.Shared.ValueObjects;
+using MMCA.Common.Shared.ValueObjects.Financial;
 using ApiCurrencyJsonConverter = MMCA.Common.API.JsonConverters.CurrencyJsonConverter;
 
 namespace MMCA.Common.API.Tests.JsonConverters;

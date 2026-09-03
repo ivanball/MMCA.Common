@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;

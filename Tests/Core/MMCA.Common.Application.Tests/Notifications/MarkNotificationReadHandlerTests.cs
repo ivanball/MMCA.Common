@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkRead;
 using MMCA.Common.Domain.Notifications.UserNotifications;
 using MMCA.Common.Shared.Abstractions;

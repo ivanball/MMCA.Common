@@ -1,6 +1,6 @@
 using System.Collections.Frozen;
 using System.Reflection;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;

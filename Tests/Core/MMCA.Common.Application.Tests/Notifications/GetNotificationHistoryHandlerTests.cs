@@ -1,6 +1,6 @@
 using System.Globalization;
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Notifications.PushNotifications.DTOs;
 using MMCA.Common.Application.Notifications.PushNotifications.UseCases.GetHistory;
 using MMCA.Common.Domain.Notifications.PushNotifications;

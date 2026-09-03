@@ -4,7 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 
 namespace MMCA.Common.Infrastructure.Auth;
 

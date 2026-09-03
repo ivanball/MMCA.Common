@@ -4,8 +4,8 @@ public static partial class ArchitectureRules
 {
     // Full names of the framework CQRS handler interfaces and Result types, matched by string so
     // the rule library keeps zero compile dependencies on the framework assemblies.
-    private const string CommandHandlerInterfaceFullName = "MMCA.Common.Application.UseCases.ICommandHandler`2";
-    private const string QueryHandlerInterfaceFullName = "MMCA.Common.Application.UseCases.IQueryHandler`2";
+    private const string CommandHandlerInterfaceFullName = "MMCA.Common.Application.UseCases.Contracts.ICommandHandler`2";
+    private const string QueryHandlerInterfaceFullName = "MMCA.Common.Application.UseCases.Contracts.IQueryHandler`2";
     private const string ResultFullName = "MMCA.Common.Shared.Abstractions.Result";
     private const string GenericResultFullName = "MMCA.Common.Shared.Abstractions.Result`1";
 

@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Tests.Fakes.Billing.Domain;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Shared.Abstractions;
 using Moq;

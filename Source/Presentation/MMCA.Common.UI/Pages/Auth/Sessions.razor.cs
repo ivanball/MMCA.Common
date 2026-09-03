@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;

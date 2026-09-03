@@ -1,8 +1,8 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.GetPreferences;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Responses;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Users;

@@ -1,9 +1,9 @@
 using MassTransit;
 using Microsoft.Extensions.Logging;
-using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
-using MMCA.Common.Infrastructure.Persistence.Outbox;
+using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 
 namespace MMCA.Common.Infrastructure.Messaging.Consumers;
 

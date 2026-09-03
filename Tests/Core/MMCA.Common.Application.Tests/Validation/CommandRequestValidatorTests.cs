@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using FluentValidation;
 using FluentValidation.TestHelper;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Validation;
 
 namespace MMCA.Common.Application.Tests.Validation;

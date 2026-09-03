@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.API.Controllers;
 using MMCA.Common.Application.Auth;
-using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Application.UseCases;
+using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Users;
 using MMCA.Common.Application.Users.UseCases.GetPreferences;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Requests;
+using MMCA.Common.Shared.Auth.Responses;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Controllers.Auth;
