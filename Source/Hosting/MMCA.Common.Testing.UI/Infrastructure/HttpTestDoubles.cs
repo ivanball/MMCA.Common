@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.Testing.UI;
 

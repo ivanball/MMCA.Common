@@ -7,7 +7,6 @@ using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Scheduling;
-using MMCA.Common.Infrastructure.Settings;
 using Moq;
 using static MMCA.Common.Infrastructure.Tests.Scheduling.SchedulerTestHarness;
 

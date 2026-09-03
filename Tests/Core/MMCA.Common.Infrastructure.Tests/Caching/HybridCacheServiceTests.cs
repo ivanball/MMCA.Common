@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Caching;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Tests.Caching;
 

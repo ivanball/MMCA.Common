@@ -7,7 +7,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox;

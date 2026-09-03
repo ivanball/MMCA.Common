@@ -1,5 +1,5 @@
 using System.Reflection;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 

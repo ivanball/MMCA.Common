@@ -1,4 +1,4 @@
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Maui.Services;
 

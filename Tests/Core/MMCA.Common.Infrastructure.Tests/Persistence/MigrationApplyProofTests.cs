@@ -11,7 +11,7 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Tests.MigrationsFixture;
 using Moq;
 

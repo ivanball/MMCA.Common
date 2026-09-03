@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Notifications;
 using Moq;
 

@@ -1,5 +1,5 @@
 using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 

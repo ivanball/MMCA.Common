@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Testing.UI;
-using MMCA.Common.UI.Services;
-using MMCA.Common.UI.Services.Capabilities;
-using MMCA.Common.UI.Services.Capabilities.Fallbacks;
+using MMCA.Common.UI.Services.Capabilities.Auth;
+using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
+using MMCA.Common.UI.Services.Culture;
+using MMCA.Common.UI.Services.Navigation;
+using MMCA.Common.UI.Theme;
 
 namespace MMCA.Common.UI.Tests;
 

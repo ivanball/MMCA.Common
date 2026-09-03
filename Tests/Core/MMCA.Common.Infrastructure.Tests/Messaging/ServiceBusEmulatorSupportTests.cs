@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using MMCA.Common.Infrastructure.Messaging;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Tests.Messaging;
 

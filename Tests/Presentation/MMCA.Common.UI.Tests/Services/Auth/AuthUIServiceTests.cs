@@ -9,9 +9,10 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth;
-using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth;
-using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Auth.Tokens;
+using MMCA.Common.UI.Services.Capabilities.Notifications;
 using MMCA.Common.UI.Tests.Infrastructure;
 using Moq;
 

@@ -1,4 +1,4 @@
-using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Capabilities.Navigation;
 using Plugin.LocalNotification;
 using Plugin.LocalNotification.EventArgs;
 

@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Components.Capabilities;
-using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Capabilities.Auth;
+using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 
 namespace MMCA.Common.UI.Tests.Components.Capabilities;
 
@@ -26,7 +27,7 @@ public sealed class BiometricGateTests : BunitTestBase
     {
         Services.AddSingleton<IBiometricAuthenticator>(_biometrics);
         Services.AddSingleton<IDevicePreferences>(_preferences);
-        Services.AddSingleton<MMCA.Common.UI.Services.Auth.ITokenStorageService>(_tokenStorage);
+        Services.AddSingleton<MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService>(_tokenStorage);
     }
 
     private Task EnableAppLockAsync() =>

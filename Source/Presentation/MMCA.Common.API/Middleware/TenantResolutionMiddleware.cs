@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.API.Middleware;
 

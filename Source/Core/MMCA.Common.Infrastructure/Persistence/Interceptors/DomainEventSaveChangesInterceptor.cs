@@ -47,7 +47,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     ILogger<DomainEventSaveChangesInterceptor> logger,
     Outbox.IOutboxSignal outboxSignal,
     TimeProvider? timeProvider = null,
-    Microsoft.Extensions.Options.IOptions<Settings.MessageBusSettings>? messageBusOptions = null) : SaveChangesInterceptor
+    Microsoft.Extensions.Options.IOptions<Messaging.MessageBusSettings>? messageBusOptions = null) : SaveChangesInterceptor
 {
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 

@@ -9,7 +9,7 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// <remarks>
 /// These are the hard-coded framework defaults and the source of truth for their values. To change
 /// the policy per host, configure the <c>Cache</c> section instead
-/// (<c>MMCA.Common.Infrastructure.Settings.CacheSettings</c>), which defaults every value to what
+/// (<c>MMCA.Common.Infrastructure.Caching.CacheSettings</c>), which defaults every value to what
 /// this class exposes.
 /// </remarks>
 public static class CacheOptions

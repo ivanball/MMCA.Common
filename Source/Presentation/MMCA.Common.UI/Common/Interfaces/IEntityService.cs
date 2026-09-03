@@ -5,7 +5,7 @@ namespace MMCA.Common.UI.Common.Interfaces;
 
 /// <summary>
 /// Generic CRUD service contract for UI modules. Each module provides an implementation
-/// (via <see cref="MMCA.Common.UI.Services.EntityServiceBase{TEntityDTO, TIdentifierType}"/>)
+/// (via <see cref="MMCA.Common.UI.Services.Api.EntityServiceBase{TEntityDTO, TIdentifierType}"/>)
 /// that calls the corresponding WebAPI endpoints over HTTP.
 /// <para>
 /// Every member returns a <see cref="Result"/>: the same railway type the server produced, read

@@ -3,7 +3,8 @@ using Bunit;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Interfaces;
-using MMCA.Common.UI.Components;
+using MMCA.Common.UI.Components.Forms;
+using MMCA.Common.UI.Components.Lists;
 using MMCA.Common.UI.Pages.Common;
 using Moq;
 

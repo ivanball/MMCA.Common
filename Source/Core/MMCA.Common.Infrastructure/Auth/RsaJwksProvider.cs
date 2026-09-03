@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Auth;
 

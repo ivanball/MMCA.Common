@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI.Maui.Services;
 

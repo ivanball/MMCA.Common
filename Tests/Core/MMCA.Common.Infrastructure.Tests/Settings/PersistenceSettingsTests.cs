@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using AwesomeAssertions;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence;
 
 namespace MMCA.Common.Infrastructure.Tests.Settings;
 

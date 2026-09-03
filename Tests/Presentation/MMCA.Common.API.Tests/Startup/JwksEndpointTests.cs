@@ -11,7 +11,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.API.Startup;
 using MMCA.Common.Infrastructure.Auth;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.API.Tests.Startup;
 

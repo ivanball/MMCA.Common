@@ -1,6 +1,6 @@
 using AwesomeAssertions;
 using MMCA.Common.Testing.UI;
-using MMCA.Common.UI.Components;
+using MMCA.Common.UI.Components.PageState;
 
 namespace MMCA.Common.UI.Tests.Components;
 
