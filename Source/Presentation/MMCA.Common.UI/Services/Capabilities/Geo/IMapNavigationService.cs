@@ -1,4 +1,4 @@
-namespace MMCA.Common.UI.Services.Capabilities.Location;
+namespace MMCA.Common.UI.Services.Capabilities.Geo;
 
 /// <summary>
 /// Opens the platform maps experience for a street address (MAUI launches the native maps

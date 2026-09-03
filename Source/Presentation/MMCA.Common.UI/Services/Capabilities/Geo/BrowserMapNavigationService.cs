@@ -1,6 +1,6 @@
 using MMCA.Common.UI.Services.Capabilities.Interop;
 
-namespace MMCA.Common.UI.Services.Capabilities.Location;
+namespace MMCA.Common.UI.Services.Capabilities.Geo;
 
 /// <summary>
 /// Browser <see cref="IMapNavigationService"/>: opens a Google Maps search for the address

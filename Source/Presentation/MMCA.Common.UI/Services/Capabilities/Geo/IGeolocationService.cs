@@ -1,4 +1,4 @@
-namespace MMCA.Common.UI.Services.Capabilities.Location;
+namespace MMCA.Common.UI.Services.Capabilities.Geo;
 
 /// <summary>
 /// Soft, one-shot device location for proximity hints ("~3 km from the venue"). Never

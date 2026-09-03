@@ -53,7 +53,7 @@ build/           facts (FACTS.md generator, CI drift gate) and perfgate (benchma
 ```
 
 **Folder convention (feature by folder, use case by leaf; rubric §5).** Inside a project the first
-folder level names the feature or concern (`Messaging/`, `Notifications/Push/`, `Capabilities/Location/`,
+folder level names the feature or concern (`Messaging/`, `Notifications/Push/`, `Capabilities/Geo/`,
 `Notifications/UserNotifications/UseCases/MarkRead/`), technical nouns appear only beneath it, and a
 folder holds at most **12 direct code files** (a `.razor` with its `.razor.cs` and `.resx` counts once).
 `FolderWidthTests` enforces the cap in CI; its exemption list is the set of deliberately flat public

@@ -21,7 +21,7 @@ workspace applied it to ADC, Store and Helpdesk in the same wave).
   (it was one half of a namespace cycle with the senders that use it).
 - **`MMCA.Common.UI.Services.Capabilities`** (with its `Browser` and `Fallbacks` sub-namespaces)
   regrouped by capability family: `Accessibility`, `Auth`, `DeviceStatus`, `DeviceStorage`,
-  `Interop`, `Location`, `Media`, `Navigation`, `Notifications`; each family holds the contract, the
+  `Geo`, `Interop`, `Media`, `Navigation`, `Notifications`; each family holds the contract, the
   browser implementation and the null fallback together. `MMCA.Common.UI.Maui.Capabilities` mirrors
   the same families.
 - **`MMCA.Common.UI.Services`** root grab-bag split into `Services.Api` (the typed HTTP service

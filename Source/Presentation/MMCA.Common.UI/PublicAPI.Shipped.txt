@@ -429,9 +429,9 @@ MMCA.Common.UI.Services.Capabilities.DeviceStorage.BrowserLocalCacheStore.GetAsy
 MMCA.Common.UI.Services.Capabilities.DeviceStorage.BrowserLocalCacheStore.IsAvailable.get -> bool
 MMCA.Common.UI.Services.Capabilities.DeviceStorage.BrowserLocalCacheStore.RemoveAsync(string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.DeviceStorage.BrowserLocalCacheStore.SetAsync<T>(string! key, T value, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Capabilities.Location.BrowserMapNavigationService
-MMCA.Common.UI.Services.Capabilities.Location.BrowserMapNavigationService.BrowserMapNavigationService(MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService! externalLinkService) -> void
-MMCA.Common.UI.Services.Capabilities.Location.BrowserMapNavigationService.OpenAddressAsync(string! address, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Geo.BrowserMapNavigationService
+MMCA.Common.UI.Services.Capabilities.Geo.BrowserMapNavigationService.BrowserMapNavigationService(MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService! externalLinkService) -> void
+MMCA.Common.UI.Services.Capabilities.Geo.BrowserMapNavigationService.OpenAddressAsync(string! address, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Interop.BrowserShareService
 MMCA.Common.UI.Services.Capabilities.Interop.BrowserShareService.BrowserShareService(MMCA.Common.UI.Services.Capabilities.CapabilitiesJsModule! module) -> void
 MMCA.Common.UI.Services.Capabilities.Interop.BrowserShareService.ShareFileAsync(string! title, string! filePath, string! contentType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
@@ -485,14 +485,14 @@ MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService
 MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService.InterceptsLinks.get -> bool
 MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService.NullExternalLinkService() -> void
 MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Capabilities.Location.NullGeocodingService
-MMCA.Common.UI.Services.Capabilities.Location.NullGeocodingService.GeocodeAsync(string! address, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Location.GeoPoint?>!
-MMCA.Common.UI.Services.Capabilities.Location.NullGeocodingService.IsSupported.get -> bool
-MMCA.Common.UI.Services.Capabilities.Location.NullGeocodingService.NullGeocodingService() -> void
-MMCA.Common.UI.Services.Capabilities.Location.NullGeolocationService
-MMCA.Common.UI.Services.Capabilities.Location.NullGeolocationService.GetCurrentOrLastKnownAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Location.GeoPoint?>!
-MMCA.Common.UI.Services.Capabilities.Location.NullGeolocationService.IsSupported.get -> bool
-MMCA.Common.UI.Services.Capabilities.Location.NullGeolocationService.NullGeolocationService() -> void
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeocodingService
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeocodingService.GeocodeAsync(string! address, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint?>!
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeocodingService.IsSupported.get -> bool
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeocodingService.NullGeocodingService() -> void
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeolocationService
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeolocationService.GetCurrentOrLastKnownAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint?>!
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeolocationService.IsSupported.get -> bool
+MMCA.Common.UI.Services.Capabilities.Geo.NullGeolocationService.NullGeolocationService() -> void
 MMCA.Common.UI.Services.Capabilities.DeviceStatus.NullHapticFeedbackService
 MMCA.Common.UI.Services.Capabilities.DeviceStatus.NullHapticFeedbackService.Click() -> void
 MMCA.Common.UI.Services.Capabilities.DeviceStatus.NullHapticFeedbackService.IsSupported.get -> bool
@@ -512,9 +512,9 @@ MMCA.Common.UI.Services.Capabilities.Notifications.NullLocalNotificationService.
 MMCA.Common.UI.Services.Capabilities.Notifications.NullLocalNotificationService.NullLocalNotificationService() -> void
 MMCA.Common.UI.Services.Capabilities.Notifications.NullLocalNotificationService.RequestPermissionAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Notifications.NullLocalNotificationService.ScheduleAsync(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Capabilities.Location.NullMapNavigationService
-MMCA.Common.UI.Services.Capabilities.Location.NullMapNavigationService.NullMapNavigationService() -> void
-MMCA.Common.UI.Services.Capabilities.Location.NullMapNavigationService.OpenAddressAsync(string! address, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Geo.NullMapNavigationService
+MMCA.Common.UI.Services.Capabilities.Geo.NullMapNavigationService.NullMapNavigationService() -> void
+MMCA.Common.UI.Services.Capabilities.Geo.NullMapNavigationService.OpenAddressAsync(string! address, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Media.NullMediaPickerService
 MMCA.Common.UI.Services.Capabilities.Media.NullMediaPickerService.CapturePhotoAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Media.PickedMedia?>!
 MMCA.Common.UI.Services.Capabilities.Media.NullMediaPickerService.IsSupported.get -> bool
@@ -549,16 +549,16 @@ MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.IsAvailable.get -> bool
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.SignInAsync(string! provider, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Auth.UnavailableExternalAuthBroker.UnavailableExternalAuthBroker() -> void
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.<Clone>$() -> MMCA.Common.UI.Services.Capabilities.Location.GeoPoint!
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Deconstruct(out double Latitude, out double Longitude) -> void
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.DistanceKmTo(MMCA.Common.UI.Services.Capabilities.Location.GeoPoint! other) -> double
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Equals(MMCA.Common.UI.Services.Capabilities.Location.GeoPoint? other) -> bool
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.GeoPoint(double Latitude, double Longitude) -> void
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Latitude.get -> double
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Latitude.init -> void
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Longitude.get -> double
-MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Longitude.init -> void
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.<Clone>$() -> MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint!
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Deconstruct(out double Latitude, out double Longitude) -> void
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.DistanceKmTo(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint! other) -> double
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Equals(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? other) -> bool
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.GeoPoint(double Latitude, double Longitude) -> void
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Latitude.get -> double
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Latitude.init -> void
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Longitude.get -> double
+MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Longitude.init -> void
 MMCA.Common.UI.Services.Capabilities.Accessibility.IAccessibilityAnnouncer
 MMCA.Common.UI.Services.Capabilities.Accessibility.IAccessibilityAnnouncer.AnnounceAsync(string! message, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.Media.IBarcodeScannerService
@@ -591,12 +591,12 @@ MMCA.Common.UI.Services.Capabilities.Auth.IExternalAuthBroker.SignInAsync(string
 MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService
 MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService.InterceptsLinks.get -> bool
 MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Capabilities.Location.IGeocodingService
-MMCA.Common.UI.Services.Capabilities.Location.IGeocodingService.GeocodeAsync(string! address, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Location.GeoPoint?>!
-MMCA.Common.UI.Services.Capabilities.Location.IGeocodingService.IsSupported.get -> bool
-MMCA.Common.UI.Services.Capabilities.Location.IGeolocationService
-MMCA.Common.UI.Services.Capabilities.Location.IGeolocationService.GetCurrentOrLastKnownAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Location.GeoPoint?>!
-MMCA.Common.UI.Services.Capabilities.Location.IGeolocationService.IsSupported.get -> bool
+MMCA.Common.UI.Services.Capabilities.Geo.IGeocodingService
+MMCA.Common.UI.Services.Capabilities.Geo.IGeocodingService.GeocodeAsync(string! address, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint?>!
+MMCA.Common.UI.Services.Capabilities.Geo.IGeocodingService.IsSupported.get -> bool
+MMCA.Common.UI.Services.Capabilities.Geo.IGeolocationService
+MMCA.Common.UI.Services.Capabilities.Geo.IGeolocationService.GetCurrentOrLastKnownAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint?>!
+MMCA.Common.UI.Services.Capabilities.Geo.IGeolocationService.IsSupported.get -> bool
 MMCA.Common.UI.Services.Capabilities.DeviceStatus.IHapticFeedbackService
 MMCA.Common.UI.Services.Capabilities.DeviceStatus.IHapticFeedbackService.Click() -> void
 MMCA.Common.UI.Services.Capabilities.DeviceStatus.IHapticFeedbackService.IsSupported.get -> bool
@@ -613,8 +613,8 @@ MMCA.Common.UI.Services.Capabilities.Notifications.ILocalNotificationService.Can
 MMCA.Common.UI.Services.Capabilities.Notifications.ILocalNotificationService.IsSupported.get -> bool
 MMCA.Common.UI.Services.Capabilities.Notifications.ILocalNotificationService.RequestPermissionAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Notifications.ILocalNotificationService.ScheduleAsync(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-MMCA.Common.UI.Services.Capabilities.Location.IMapNavigationService
-MMCA.Common.UI.Services.Capabilities.Location.IMapNavigationService.OpenAddressAsync(string! address, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Geo.IMapNavigationService
+MMCA.Common.UI.Services.Capabilities.Geo.IMapNavigationService.OpenAddressAsync(string! address, string? label, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService.CapturePhotoAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.UI.Services.Capabilities.Media.PickedMedia?>!
 MMCA.Common.UI.Services.Capabilities.Media.IMediaPickerService.IsSupported.get -> bool
@@ -850,9 +850,9 @@ override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnInitializedAsync
 override MMCA.Common.UI.Pages.Notifications.NotificationList.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitialized() -> void
 override MMCA.Common.UI.Services.Auth.JwtAuthenticationStateProvider.GetAuthenticationStateAsync() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState!>!
-override MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.Equals(object? obj) -> bool
-override MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.GetHashCode() -> int
-override MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.ToString() -> string!
+override MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.Equals(object? obj) -> bool
+override MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.GetHashCode() -> int
+override MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.ToString() -> string!
 override MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.Equals(object? obj) -> bool
 override MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.GetHashCode() -> int
 override MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.ToString() -> string!
@@ -891,8 +891,8 @@ static MMCA.Common.UI.Pages.Common.ErrorMessages.ValidationError.get -> string!
 static MMCA.Common.UI.Services.Auth.Tokens.JwtTokenInfo.IsFresh(string? token, System.TimeSpan skew) -> bool
 static MMCA.Common.UI.Services.Api.AuthenticatedServiceBase.NewIdempotencyKey() -> string!
 static MMCA.Common.UI.Services.Capabilities.DependencyInjection.AddBrowserDeviceCapabilities(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.operator !=(MMCA.Common.UI.Services.Capabilities.Location.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Location.GeoPoint? right) -> bool
-static MMCA.Common.UI.Services.Capabilities.Location.GeoPoint.operator ==(MMCA.Common.UI.Services.Capabilities.Location.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Location.GeoPoint? right) -> bool
+static MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.operator !=(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? right) -> bool
+static MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint.operator ==(MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? left, MMCA.Common.UI.Services.Capabilities.Geo.GeoPoint? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.operator !=(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? left, MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest.operator ==(MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? left, MMCA.Common.UI.Services.Capabilities.Notifications.LocalNotificationRequest? right) -> bool
 static MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken.operator !=(MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? left, MMCA.Common.UI.Services.Capabilities.Notifications.PushDeviceToken? right) -> bool

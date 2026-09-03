@@ -1,4 +1,4 @@
-namespace MMCA.Common.UI.Services.Capabilities.Location;
+namespace MMCA.Common.UI.Services.Capabilities.Geo;
 
 /// <summary>Default <see cref="IGeolocationService"/>: no location source; always <see langword="null"/>.</summary>
 public sealed class NullGeolocationService : IGeolocationService

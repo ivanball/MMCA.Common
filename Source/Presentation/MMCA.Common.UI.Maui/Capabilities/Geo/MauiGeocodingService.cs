@@ -1,7 +1,8 @@
 
-using MMCA.Common.UI.Services.Capabilities.Location;
 
-namespace MMCA.Common.UI.Maui.Capabilities.Location;
+using MMCA.Common.UI.Services.Capabilities.Geo;
+
+namespace MMCA.Common.UI.Maui.Capabilities.Geo;
 
 /// <summary>
 /// MAUI <see cref="IGeocodingService"/> over <c>Geocoding.Default</c>. No permissions apply

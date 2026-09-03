@@ -1,4 +1,4 @@
-namespace MMCA.Common.UI.Services.Capabilities.Location;
+namespace MMCA.Common.UI.Services.Capabilities.Geo;
 
 /// <summary>
 /// Resolves a street address to coordinates for proximity hints ("~3 km from the venue").
