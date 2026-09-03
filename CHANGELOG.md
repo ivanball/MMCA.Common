@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.184.0] - 2026-09-03
+
 **Breaking:** second feature-by-folder pass (rubric §5), this time over the eight flat public
 namespaces the first pass left alone because every consumer imports them. Namespaces follow folders
 (IDE0130), so each bucket below was split by concern; no type, member, signature, configuration key,

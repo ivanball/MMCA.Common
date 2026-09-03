@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.184.0] - 2026-09-03
 
 **Breaking: namespace moves only.** No type, member, signature, configuration key, database object
 or runtime behavior changed. Eight flat public namespaces that each held 17 to 23 types were split
