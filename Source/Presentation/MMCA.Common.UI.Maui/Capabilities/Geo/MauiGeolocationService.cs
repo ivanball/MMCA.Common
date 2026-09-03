@@ -1,5 +1,3 @@
-
-
 using MMCA.Common.UI.Services.Capabilities.Geo;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Geo;

@@ -1,4 +1,3 @@
-
 using MMCA.Common.UI.Services.Capabilities.Media;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Media;

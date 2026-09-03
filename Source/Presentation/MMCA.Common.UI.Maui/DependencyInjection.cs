@@ -10,7 +10,6 @@ using MMCA.Common.UI.Maui.Capabilities.Notifications;
 using MMCA.Common.UI.Maui.Services;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth.Tokens;
-using MMCA.Common.UI.Services.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Accessibility;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;

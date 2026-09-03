@@ -1,4 +1,3 @@
-
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 
 namespace MMCA.Common.UI.Maui.Capabilities.DeviceStatus;

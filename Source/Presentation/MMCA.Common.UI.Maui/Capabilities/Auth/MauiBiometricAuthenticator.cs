@@ -1,4 +1,3 @@
-
 using MMCA.Common.UI.Services.Capabilities.Auth;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Auth;

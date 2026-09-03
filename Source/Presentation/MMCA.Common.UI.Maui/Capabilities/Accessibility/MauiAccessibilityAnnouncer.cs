@@ -1,4 +1,3 @@
-
 using MMCA.Common.UI.Services.Capabilities.Accessibility;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Accessibility;

@@ -1,4 +1,3 @@
-
 using MMCA.Common.UI.Services.Capabilities.Interop;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Interop;
