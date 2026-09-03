@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Resilience;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Settings;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Tests.Services;
 

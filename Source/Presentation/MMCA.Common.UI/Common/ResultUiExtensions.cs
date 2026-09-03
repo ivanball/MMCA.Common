@@ -198,7 +198,7 @@ public static class ResultUiExtensions
 
     /// <summary>
     /// Hands the composed failure message to the page's own error field (the one an inline
-    /// <c>MudAlert</c> or <see cref="MMCA.Common.UI.Components.PageErrorState"/> renders), and
+    /// <c>MudAlert</c> or <see cref="MMCA.Common.UI.Components.PageState.PageErrorState"/> renders), and
     /// clears it on success. Returns the same result so the call can sit inline.
     /// </summary>
     /// <param name="result">The result to inspect.</param>

@@ -8,7 +8,7 @@ using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.API.Startup;
 

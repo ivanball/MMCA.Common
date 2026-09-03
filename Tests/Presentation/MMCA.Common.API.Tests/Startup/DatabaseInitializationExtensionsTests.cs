@@ -11,13 +11,12 @@ using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Infrastructure;
+using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
-using MMCA.Common.Infrastructure.Services;
-using MMCA.Common.Infrastructure.Settings;
 using MMCA.Common.Infrastructure.Tests.MigrationsFixture;
 using Moq;
 

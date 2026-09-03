@@ -97,7 +97,7 @@ static MMCA.Common.Testing.UI.HttpTestDoubles.ClientFactory(System.Net.Http.Http
 static MMCA.Common.Testing.UI.HttpTestDoubles.EmptyResponse(System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.NoContent) -> System.Net.Http.HttpResponseMessage!
 static MMCA.Common.Testing.UI.HttpTestDoubles.JsonResponse<T>(T payload, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK) -> System.Net.Http.HttpResponseMessage!
 static MMCA.Common.Testing.UI.HttpTestDoubles.ProblemResponse(string! detail, string! title = "Domain Exception", System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.BadRequest) -> System.Net.Http.HttpResponseMessage!
-static MMCA.Common.Testing.UI.HttpTestDoubles.TokenStorage(string? accessToken = "test-token") -> MMCA.Common.UI.Services.Auth.ITokenStorageService!
+static MMCA.Common.Testing.UI.HttpTestDoubles.TokenStorage(string? accessToken = "test-token") -> MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService!
 static MMCA.Common.Testing.UI.MarkupSnapshot.Match(string! markup, string! snapshotName, string! callerFilePath = "") -> MMCA.Common.Testing.UI.MarkupSnapshotResult
 static MMCA.Common.Testing.UI.MarkupSnapshotResult.operator !=(MMCA.Common.Testing.UI.MarkupSnapshotResult left, MMCA.Common.Testing.UI.MarkupSnapshotResult right) -> bool
 static MMCA.Common.Testing.UI.MarkupSnapshotResult.operator ==(MMCA.Common.Testing.UI.MarkupSnapshotResult left, MMCA.Common.Testing.UI.MarkupSnapshotResult right) -> bool

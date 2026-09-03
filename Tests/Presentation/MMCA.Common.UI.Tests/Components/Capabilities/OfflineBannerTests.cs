@@ -2,8 +2,7 @@ using AwesomeAssertions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.UI.Components.Capabilities;
-using MMCA.Common.UI.Services.Capabilities;
-using MMCA.Common.UI.Services.Capabilities.Fallbacks;
+using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 
 namespace MMCA.Common.UI.Tests.Components.Capabilities;
 

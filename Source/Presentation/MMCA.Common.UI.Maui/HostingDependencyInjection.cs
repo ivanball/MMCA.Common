@@ -1,7 +1,7 @@
-using MMCA.Common.UI.Maui.Capabilities;
+using MMCA.Common.UI.Maui.Capabilities.Media;
 using MMCA.Common.UI.Maui.Globalization;
-using MMCA.Common.UI.Services;
-using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Capabilities.Media;
+using MMCA.Common.UI.Services.Culture;
 using Plugin.LocalNotification;
 using ZXing.Net.Maui.Controls;
 

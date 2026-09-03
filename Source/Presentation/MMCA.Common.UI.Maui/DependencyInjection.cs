@@ -1,8 +1,25 @@
 using MMCA.Common.UI.Maui.Capabilities;
+using MMCA.Common.UI.Maui.Capabilities.Accessibility;
+using MMCA.Common.UI.Maui.Capabilities.Auth;
+using MMCA.Common.UI.Maui.Capabilities.DeviceStatus;
+using MMCA.Common.UI.Maui.Capabilities.DeviceStorage;
+using MMCA.Common.UI.Maui.Capabilities.Interop;
+using MMCA.Common.UI.Maui.Capabilities.Location;
+using MMCA.Common.UI.Maui.Capabilities.Media;
+using MMCA.Common.UI.Maui.Capabilities.Notifications;
 using MMCA.Common.UI.Maui.Services;
 using MMCA.Common.UI.Services;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Capabilities.Accessibility;
+using MMCA.Common.UI.Services.Capabilities.Auth;
+using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
+using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
+using MMCA.Common.UI.Services.Capabilities.Interop;
+using MMCA.Common.UI.Services.Capabilities.Location;
+using MMCA.Common.UI.Services.Capabilities.Media;
+using MMCA.Common.UI.Services.Capabilities.Notifications;
+using MMCA.Common.UI.Services.Navigation;
 
 namespace MMCA.Common.UI.Maui;
 

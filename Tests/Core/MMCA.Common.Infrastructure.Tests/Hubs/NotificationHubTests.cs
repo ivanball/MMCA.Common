@@ -2,8 +2,8 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Infrastructure.Hubs;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Notifications;
+using MMCA.Common.Infrastructure.Notifications.Push;
 using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Hubs;

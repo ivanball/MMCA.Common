@@ -3,7 +3,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Infrastructure.Settings;
 using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure.Caching;

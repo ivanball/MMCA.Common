@@ -91,3 +91,10 @@ virtual MMCA.Common.Testing.Architecture.SoftDeleteEnforcementTestsBase.AllowedH
 
 static MMCA.Common.Testing.Architecture.ArchitectureRules.ModuleInternalLayersAreIsolated(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 MMCA.Common.Testing.Architecture.ModuleIsolationTestsBase.ModuleInternalLayers_ShouldNotReach_OtherModuleInternalLayers() -> void
+MMCA.Common.Testing.Architecture.FolderWidthTestsBase
+MMCA.Common.Testing.Architecture.FolderWidthTestsBase.FolderWidthTestsBase() -> void
+MMCA.Common.Testing.Architecture.FolderWidthTestsBase.Folders_stay_narrow() -> void
+abstract MMCA.Common.Testing.Architecture.FolderWidthTestsBase.RepoRoot.get -> string!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.FoldersStayNarrow(string! repoRoot, int maxDirectFiles, System.Collections.Generic.IReadOnlyCollection<string!>! exemptFolderSuffixes) -> void
+virtual MMCA.Common.Testing.Architecture.FolderWidthTestsBase.ExemptFolderSuffixes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.FolderWidthTestsBase.MaxDirectFiles.get -> int

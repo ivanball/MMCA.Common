@@ -1,7 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using MMCA.Common.UI.Services.Capabilities.Browser;
-using MMCA.Common.UI.Services.Capabilities.Fallbacks;
+using MMCA.Common.UI.Services.Capabilities.Accessibility;
+using MMCA.Common.UI.Services.Capabilities.Auth;
+using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
+using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
+using MMCA.Common.UI.Services.Capabilities.Interop;
+using MMCA.Common.UI.Services.Capabilities.Location;
+using MMCA.Common.UI.Services.Capabilities.Media;
+using MMCA.Common.UI.Services.Capabilities.Navigation;
+using MMCA.Common.UI.Services.Capabilities.Notifications;
 
 namespace MMCA.Common.UI.Services.Capabilities;
 

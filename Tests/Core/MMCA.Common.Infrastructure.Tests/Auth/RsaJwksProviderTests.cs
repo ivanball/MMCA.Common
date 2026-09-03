@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Auth;
-using MMCA.Common.Infrastructure.Settings;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
 

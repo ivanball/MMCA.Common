@@ -1,0 +1,16 @@
+@using MMCA.Common.UI.Components.PageState
+
+@* Bottom-of-list marker: when it scrolls into view the page appends its next page. The class names
+   are the shared ones from MMCA.Common.UI's app.css, so the sentinel and its progress row look the
+   same here as inside MobileInfiniteScrollList. *@
+<div @ref="_sentinelRef" class="infinite-scroll-sentinel">
+    @if (IsLoading)
+    {
+        @* role="status" + aria-live="polite" matches PageLoadingState's politeness: a screen reader
+           hears that more items are loading without the announcement interrupting reading. *@
+        <div class="infinite-scroll-loading" role="status" aria-live="polite" aria-busy="true">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary"
+                                 aria-label="@LoadingLabel" />
+        </div>
+    }
+</div>

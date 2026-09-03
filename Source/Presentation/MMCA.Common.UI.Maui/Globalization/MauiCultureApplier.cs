@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using MMCA.Common.Shared.Globalization;
-using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Culture;
 
 namespace MMCA.Common.UI.Maui.Globalization;
 

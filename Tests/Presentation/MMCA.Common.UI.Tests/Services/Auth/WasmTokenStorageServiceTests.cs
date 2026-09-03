@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using AwesomeAssertions;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 using Moq;
 
 namespace MMCA.Common.UI.Tests.Services.Auth;

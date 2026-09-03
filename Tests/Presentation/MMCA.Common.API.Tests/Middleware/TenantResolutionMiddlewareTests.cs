@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using Moq;
 
 namespace MMCA.Common.API.Tests.Middleware;

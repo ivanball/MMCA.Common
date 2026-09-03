@@ -1,0 +1,597 @@
+﻿using System.Diagnostics.CodeAnalysis;
+using AwesomeAssertions;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
+using MMCA.Common.Application.Interfaces.Infrastructure;
+using MMCA.Common.Domain.Entities;
+using MMCA.Common.Infrastructure.Persistence.Repositories;
+using Moq;
+
+namespace MMCA.Common.Infrastructure.Tests.Persistence.Repositories;
+
+public sealed class EFRepositoryIntegrationTests : IDisposable
+{
+    private readonly SqliteConnection _connection;
+    private readonly TestDbContext _context;
+    private readonly EFRepository<TestEntity, int> _sut;
+
+    public EFRepositoryIntegrationTests()
+    {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _context = new TestDbContext(options);
+        _context.Database.EnsureCreated();
+        _sut = new EFRepository<TestEntity, int>(_context);
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+        _connection.Dispose();
+    }
+
+    // ── AddAsync ──
+    [Fact]
+    public async Task AddAsync_PersistsEntity()
+    {
+        var entity = TestEntity.Create(1, "Test Item");
+
+        await _sut.AddAsync(entity);
+        await _context.SaveChangesAsync();
+
+        var found = await _sut.GetByIdAsync(1);
+        found.Should().NotBeNull();
+        found!.Name.Should().Be("Test Item");
+    }
+
+    [Fact]
+    public async Task AddAsync_NullEntity_Throws()
+    {
+        var act = () => _sut.AddAsync(null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // ── UpdateAsync ──
+    [Fact]
+    public async Task UpdateAsync_ModifiesTrackedEntity()
+    {
+        var entity = TestEntity.Create(1, "Original");
+        await _sut.AddAsync(entity);
+        await _context.SaveChangesAsync();
+
+        entity.Name = "Updated";
+        await _sut.UpdateAsync(entity);
+        await _context.SaveChangesAsync();
+
+        var found = await _sut.GetByIdAsync(1);
+        found!.Name.Should().Be("Updated");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NullEntity_Throws()
+    {
+        var act = () => _sut.UpdateAsync(null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UntrackedEntity_AttachesAndUpdates()
+    {
+        var entity = TestEntity.Create(1, "Original");
+        await _sut.AddAsync(entity);
+        await _context.SaveChangesAsync();
+
+        _context.ChangeTracker.Clear();
+
+        var detached = TestEntity.Create(1, "Detached Update");
+        await _sut.UpdateAsync(detached);
+        await _context.SaveChangesAsync();
+
+        _context.ChangeTracker.Clear();
+        var found = await _sut.GetByIdAsync(1);
+        found!.Name.Should().Be("Detached Update");
+    }
+
+    // ── GetByIdAsync ──
+    [Fact]
+    public async Task GetByIdAsync_ExistingEntity_ReturnsEntity()
+    {
+        var entity = TestEntity.Create(1, "Item");
+        await _sut.AddAsync(entity);
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetByIdAsync(1);
+
+        result.Should().NotBeNull();
+        result!.Id.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NonExistent_ReturnsNull()
+    {
+        var result = await _sut.GetByIdAsync(999);
+        result.Should().BeNull();
+    }
+
+    // ── GetAllAsync ──
+    [Fact]
+    public async Task GetAllAsync_ReturnsAllEntities()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _sut.AddAsync(TestEntity.Create(2, "B"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync([]);
+
+        result.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithWhere_FiltersCorrectly()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Alpha"));
+        await _sut.AddAsync(TestEntity.Create(2, "Beta"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync([], where: e => e.Name == "Alpha");
+
+        result.Should().HaveCount(1);
+        result.First().Name.Should().Be("Alpha");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithOrderBy_SortsCorrectly()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Zebra"));
+        await _sut.AddAsync(TestEntity.Create(2, "Apple"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync([], orderBy: e => e.Name);
+
+        result.Should().HaveCount(2);
+        result.First().Name.Should().Be("Apple");
+        result.Last().Name.Should().Be("Zebra");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithSelect_ProjectsCorrectly()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Selected"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync(
+            [],
+            select: e => new TestEntity { Id = e.Id, Name = e.Name });
+
+        result.Should().HaveCount(1);
+        result.First().Name.Should().Be("Selected");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithAsTracking_ReturnsTrackedEntities()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Tracked"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync([], asTracking: true);
+
+        result.Should().HaveCount(1);
+        var entry = _context.Entry(result.First());
+        entry.State.Should().Be(EntityState.Unchanged);
+    }
+
+    // ── GetAllForLookupAsync ──
+    [Fact]
+    public async Task GetAllForLookupAsync_ReturnsLookupProjection()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "LookupItem"));
+        await _sut.AddAsync(TestEntity.Create(2, "AnotherItem"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllForLookupAsync("Name");
+
+        result.Should().HaveCount(2);
+        result.Should().Contain(l => l.Name == "LookupItem");
+        result.Should().Contain(l => l.Name == "AnotherItem");
+    }
+
+    [Fact]
+    public async Task GetAllForLookupAsync_WithWhere_FiltersCorrectly()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Keep"));
+        await _sut.AddAsync(TestEntity.Create(2, "Discard"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllForLookupAsync(
+            "Name",
+            where: e => e.Name == "Keep");
+
+        result.Should().HaveCount(1);
+        result.First().Name.Should().Be("Keep");
+    }
+
+    [Fact]
+    public async Task GetAllForLookupAsync_OrdersByName()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Zebra"));
+        await _sut.AddAsync(TestEntity.Create(2, "Apple"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllForLookupAsync("Name");
+
+        result.First().Name.Should().Be("Apple");
+        result.Last().Name.Should().Be("Zebra");
+    }
+
+    [Fact]
+    public async Task GetAllForLookupAsync_WithNonStringProperty_UsesToString()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Item"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllForLookupAsync("Id");
+
+        result.Should().HaveCount(1);
+        result.First().Name.Should().Be("1");
+    }
+
+    // ── CountAsync ──
+    [Fact]
+    public async Task CountAsync_ReturnsCorrectCount()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _sut.AddAsync(TestEntity.Create(2, "B"));
+        await _context.SaveChangesAsync();
+
+        var count = await _sut.CountAsync();
+
+        count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CountAsync_WithPredicate_FiltersCorrectly()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _sut.AddAsync(TestEntity.Create(2, "B"));
+        await _context.SaveChangesAsync();
+
+        var count = await _sut.CountAsync(e => e.Name == "A");
+
+        count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CountAsync_WithNullPredicate_Throws()
+    {
+        var act = () => _sut.CountAsync((System.Linq.Expressions.Expression<Func<TestEntity, bool>>)null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // ── ExistsAsync ──
+    [Fact]
+    public async Task ExistsAsync_ExistingEntity_ReturnsTrue()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _context.SaveChangesAsync();
+
+        var exists = await _sut.ExistsAsync(1);
+
+        exists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_NonExistent_ReturnsFalse()
+    {
+        var exists = await _sut.ExistsAsync(999);
+        exists.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithPredicate_Works()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _context.SaveChangesAsync();
+
+        var exists = await _sut.ExistsAsync(e => e.Name == "A");
+
+        exists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithPredicate_NonExistent_ReturnsFalse()
+    {
+        var exists = await _sut.ExistsAsync(e => e.Name == "DoesNotExist");
+        exists.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithNullPredicate_Throws()
+    {
+        var act = () => _sut.ExistsAsync(null!);
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_ById_WithIgnoreQueryFilters_ReturnsTrue()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _context.SaveChangesAsync();
+
+        var exists = await _sut.ExistsAsync(1, ignoreQueryFilters: true);
+
+        exists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_ById_WithIgnoreQueryFilters_NonExistent_ReturnsFalse()
+    {
+        var exists = await _sut.ExistsAsync(999, ignoreQueryFilters: true);
+        exists.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithPredicate_IgnoreQueryFilters_Works()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _context.SaveChangesAsync();
+
+        var exists = await _sut.ExistsAsync(e => e.Name == "A", ignoreQueryFilters: true);
+
+        exists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_WithPredicate_IgnoreQueryFilters_NonExistent_ReturnsFalse()
+    {
+        var exists = await _sut.ExistsAsync(e => e.Name == "Missing", ignoreQueryFilters: true);
+        exists.Should().BeFalse();
+    }
+
+    // ── Staged adds flushed by the owning context's synchronous save ──
+    [Fact]
+    [SuppressMessage(
+        "Performance",
+        "CA1849:Call async methods when in an async method",
+        Justification = "The synchronous ApplicationDbContext.SaveChanges path is the subject under test.")]
+    [SuppressMessage(
+        "Major Code Smell",
+        "S6966:Awaitable method should be used",
+        Justification = "The synchronous ApplicationDbContext.SaveChanges path is the subject under test.")]
+    public async Task AddAsync_WithSynchronousContextSave_PersistsChanges()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "Sync"));
+        var count = _context.SaveChanges();
+
+        count.Should().BeGreaterThan(0);
+        var found = await _sut.GetByIdAsync(1);
+        found.Should().NotBeNull();
+    }
+
+    // ── Table properties ──
+    [Fact]
+    public void Table_ReturnsQueryable()
+    {
+        _sut.Table.Should().NotBeNull();
+        _sut.TableNoTracking.Should().NotBeNull();
+        _sut.TableNoTrackingSingleQuery.Should().NotBeNull();
+        _sut.TableNoTrackingSplitQuery.Should().NotBeNull();
+    }
+
+    // ── ApplyIncludes ──
+    [Fact]
+    public async Task GetAllAsync_WithEmptyIncludes_DoesNotThrow()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _context.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync([string.Empty, "  "]);
+
+        result.Should().HaveCount(1);
+    }
+
+    // ── Constructor null guard ──
+    [Fact]
+    public void Constructor_NullContext_Throws()
+    {
+        var act = () => new EFReadRepository<TestEntity, int>(null!);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    // ── Every staged add reaches the database in one flush ──
+    [Fact]
+    public async Task AddAsync_MultipleEntities_ContextSaveReturnsAffectedCount()
+    {
+        await _sut.AddAsync(TestEntity.Create(1, "A"));
+        await _sut.AddAsync(TestEntity.Create(2, "B"));
+
+        var count = await _context.SaveChangesAsync();
+
+        count.Should().Be(2);
+    }
+
+    // ── GetFullErrorTextAndRollbackEntityChanges (via constraint violation) ──
+    [Fact]
+    public async Task UpdateAsync_TrackedEntity_WithConflictingValues_CompletesWithoutException()
+    {
+        // Arrange: add two entities
+        var entity1 = TestEntity.Create(1, "First");
+        var entity2 = TestEntity.Create(2, "Second");
+        await _sut.AddAsync(entity1);
+        await _sut.AddAsync(entity2);
+        await _context.SaveChangesAsync();
+
+        // Act: update tracked entity with same values as another entity (no unique constraint, so this succeeds)
+        var updatedEntity = TestEntity.Create(1, "Second");
+        await _sut.UpdateAsync(updatedEntity);
+
+        // Assert: the update completed
+        var found = await _sut.GetByIdAsync(1);
+        found!.Name.Should().Be("Second");
+    }
+
+    // ── SetOriginalRowVersion (child-entity overload, ADR-035) ──
+    // The aggregate-typed overload cannot reach child entities (the repository's TEntity is the
+    // root), so the IRowVersioned overload must set the token on any OTHER tracked entity type.
+    [Fact]
+    public async Task SetOriginalRowVersion_OnChildEntity_SetsTheTrackedOriginalToken()
+    {
+        var child = new TestChildEntity { Id = 10, Label = "variant" };
+        _context.Add(child);
+        await _context.SaveChangesAsync();
+        var clientToken = new byte[] { 1, 2, 3, 4 };
+
+        _sut.SetOriginalRowVersion(child, clientToken);
+
+        _context.Entry(child).Property(nameof(TestChildEntity.RowVersion)).OriginalValue
+            .Should().BeEquivalentTo(clientToken,
+                because: "the child overload must stamp the client's last-observed token as the tracked ORIGINAL value, so a mismatching database row raises DbUpdateConcurrencyException (409) on save");
+    }
+
+    [Fact]
+    public async Task SetOriginalRowVersion_OnChildEntity_RejectsANullToken()
+    {
+        var child = new TestChildEntity { Id = 11, Label = "variant" };
+        _context.Add(child);
+        await _context.SaveChangesAsync();
+
+        var act = () => _sut.SetOriginalRowVersion(child, null!);
+
+        act.Should().Throw<ArgumentNullException>(
+            because: "the token is required end to end: a conditional write without one never reaches the repository");
+    }
+
+    // ── ExecuteUpdateAsync (set-based conditional update) ──
+    [Fact]
+    public async Task ExecuteUpdateAsync_UpdatesMatchingRows_AndAutoStampsAudit()
+    {
+        var fakeTime = new FakeTimeProvider(new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero));
+        var currentUser = new Mock<ICurrentUserService>();
+        currentUser.SetupGet(u => u.UserId).Returns(42);
+        var sut = new EFRepository<TestEntity, int>(_context, fakeTime, currentUser.Object);
+
+        _context.Add(TestEntity.Create(1, "before"));
+        _context.Add(TestEntity.Create(2, "untouched"));
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        var affected = await sut.ExecuteUpdateAsync(
+            e => e.Id == 1,
+            setters => setters.Set(e => e.Name, "after"));
+
+        affected.Should().Be(1);
+        var updated = await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1);
+        updated.Name.Should().Be("after");
+        updated.LastModifiedOn.Should().Be(fakeTime.GetUtcNow().UtcDateTime,
+            because: "ExecuteUpdate bypasses the audit interceptor, so the repository stamps LastModifiedOn itself");
+        updated.LastModifiedBy.Should().Be(42,
+            because: "the current user is stamped when an ICurrentUserService is available");
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 2)).Name.Should().Be("untouched");
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_ConditionalCounterDecrement_ZeroRowsWhenGuardFails()
+    {
+        _context.Add(TestEntity.Create(1, "stock", counter: 1));
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        // First conditional decrement wins.
+        var first = await _sut.ExecuteUpdateAsync(
+            e => e.Id == 1 && e.Counter >= 1,
+            setters => setters.Set(e => e.Counter, e => e.Counter - 1));
+
+        // Second decrement finds no row satisfying the guard: the database arbitrated the race.
+        var second = await _sut.ExecuteUpdateAsync(
+            e => e.Id == 1 && e.Counter >= 1,
+            setters => setters.Set(e => e.Counter, e => e.Counter - 1));
+
+        first.Should().Be(1);
+        second.Should().Be(0, because: "zero rows affected is the insufficient-stock signal");
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1)).Counter
+            .Should().Be(0, because: "the counter must never go below the guard");
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_ExplicitAuditValue_IsNotOverwritten()
+    {
+        var fakeTime = new FakeTimeProvider(new DateTimeOffset(2026, 7, 24, 12, 0, 0, TimeSpan.Zero));
+        var sut = new EFRepository<TestEntity, int>(_context, fakeTime);
+        var explicitStamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        _context.Add(TestEntity.Create(1, "x"));
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        await sut.ExecuteUpdateAsync(
+            e => e.Id == 1,
+            setters => setters
+                .Set(e => e.Name, "y")
+                .Set(e => e.LastModifiedOn, (DateTime?)explicitStamp));
+
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1)).LastModifiedOn
+            .Should().Be(explicitStamp, because: "a caller-supplied audit value wins over the automatic stamp");
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_WithoutSetters_Throws()
+    {
+        var act = () => _sut.ExecuteUpdateAsync(e => e.Id == 1, _ => { });
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task ExecuteUpdateAsync_NullArguments_Throw()
+    {
+        var actWhere = () => _sut.ExecuteUpdateAsync(null!, s => s.Set(e => e.Name, "x"));
+        var actSetters = () => _sut.ExecuteUpdateAsync(e => true, null!);
+
+        await actWhere.Should().ThrowAsync<ArgumentNullException>();
+        await actSetters.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    // ── Test entity & context ──
+    public sealed class TestEntity : AuditableAggregateRootEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public int Counter { get; set; }
+
+        public static TestEntity Create(int id, string name, int counter = 0) =>
+            new() { Id = id, Name = name, Counter = counter };
+    }
+
+    /// <summary>A NON-aggregate child entity (a different CLR type than the repository's TEntity).</summary>
+    public sealed class TestChildEntity : AuditableBaseEntity<int>
+    {
+        public string Label { get; set; } = string.Empty;
+    }
+
+    public sealed class TestDbContext(DbContextOptions options) : DbContext(options)
+    {
+        public DbSet<TestEntity> TestEntities => Set<TestEntity>();
+
+        public DbSet<TestChildEntity> TestChildEntities => Set<TestChildEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<TestEntity>(b =>
+            {
+                b.HasKey(e => e.Id);
+                b.Property(e => e.Id).ValueGeneratedNever();
+                b.Property(e => e.Name);
+            });
+            modelBuilder.Entity<TestChildEntity>(b =>
+            {
+                b.HasKey(e => e.Id);
+                b.Property(e => e.Id).ValueGeneratedNever();
+                b.Property(e => e.Label);
+            });
+        }
+    }
+}

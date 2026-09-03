@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Culture;
 using MudBlazor.Services;
 
 namespace MMCA.Common.UI.Tests.Globalization;

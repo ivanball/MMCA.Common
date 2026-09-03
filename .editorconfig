@@ -857,7 +857,7 @@ dotnet_diagnostic.S8969.severity = suggestion
 
 # IDE0130 (namespace must match folder structure): warning in the shared baseline. The
 # locations below diverge DELIBERATELY, so the rule is disabled for them:
-#   - Testing.Architecture/Bases/ and Testing.UI/Infrastructure/: the folder is organizational,
+#   - Testing.Architecture/Bases/ and Rules/ (the ArchitectureRules partials) and Testing.UI/Infrastructure/: the folder is organizational,
 #     but the namespace is the package's flat public API surface (consumers subclass these
 #     bases; ADR-015). Renaming the namespace would be a breaking change for every consumer.
 #   - Aspire/DataProtection/ and Aspire/Configuration/: extension methods stay in the
@@ -865,6 +865,9 @@ dotnet_diagnostic.S8969.severity = suggestion
 #   - API.Tests/Fakes/: the fake controller deliberately carries a consumer-shaped namespace
 #     (Fakes.MMCA.Store...) because the convention under test keys on namespace shape.
 [Source/Hosting/MMCA.Common.Testing.Architecture/Bases/**.cs]
+dotnet_diagnostic.IDE0130.severity = none
+
+[Source/Hosting/MMCA.Common.Testing.Architecture/Rules/**.cs]
 dotnet_diagnostic.IDE0130.severity = none
 
 [Source/Hosting/MMCA.Common.Testing.UI/Infrastructure/**.cs]

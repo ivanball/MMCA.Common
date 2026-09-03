@@ -3,7 +3,8 @@ using System.Net;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Http;
 using MMCA.Common.Shared.Notifications.UserNotifications;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Api;
+using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Notifications;
 

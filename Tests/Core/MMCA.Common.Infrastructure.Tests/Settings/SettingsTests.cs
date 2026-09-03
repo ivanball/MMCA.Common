@@ -1,7 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Auth;
+using MMCA.Common.Infrastructure.Mail;
+using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Notifications.Push;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.Outbox;
 
 namespace MMCA.Common.Infrastructure.Tests.Settings;
 

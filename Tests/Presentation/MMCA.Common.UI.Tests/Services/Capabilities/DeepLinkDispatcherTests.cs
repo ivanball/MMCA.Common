@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Capabilities.Navigation;
 
 namespace MMCA.Common.UI.Tests.Services.Capabilities;
 

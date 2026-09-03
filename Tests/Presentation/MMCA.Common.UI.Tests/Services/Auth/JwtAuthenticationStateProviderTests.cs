@@ -6,6 +6,7 @@ using AwesomeAssertions;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 using Moq;
 
 namespace MMCA.Common.UI.Tests.Services.Auth;

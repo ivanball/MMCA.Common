@@ -1,7 +1,8 @@
 using System.Text.Json;
 using AwesomeAssertions;
 using MMCA.Common.UI.Pages.Common;
-using MMCA.Common.UI.Services.Capabilities;
+using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
+using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 
 namespace MMCA.Common.UI.Tests.Pages.Common;
 

@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Aspire.Security;
 using MMCA.Common.UI.Services;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Web.Services;
 
 namespace MMCA.Common.UI.Web.Tests.Services;

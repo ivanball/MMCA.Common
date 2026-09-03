@@ -6,6 +6,50 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+**Breaking:** feature-by-folder reorganization of the framework packages (rubric §5). Namespaces
+follow folders (IDE0130), so the buckets below were renamed; no type, member or behavior changed, and
+the consumer sweep is a mechanical `using` rewrite (`Tools/Scripts/move-namespace.ps1` in the
+workspace applied it to ADC, Store and Helpdesk in the same wave).
+
+### Changed
+
+- **`MMCA.Common.Infrastructure.Services` and `.Settings` dissolved** into the features they
+  implement or configure: `Messaging` (+ `Messaging.Consumers`), `Notifications.Push`,
+  `Notifications.Live`, `Storage`, `Auth`, `Context` (current user, correlation, tenant),
+  `Mail`, `Scheduling`, `Caching`, `Persistence` (+ `.DataSources`, `.AuditTrail`, `.Outbox`,
+  `.Tenancy`). `NotificationHub` moved from `Infrastructure.Hubs` to `Infrastructure.Notifications`
+  (it was one half of a namespace cycle with the senders that use it).
+- **`MMCA.Common.UI.Services.Capabilities`** (with its `Browser` and `Fallbacks` sub-namespaces)
+  regrouped by capability family: `Accessibility`, `Auth`, `DeviceStatus`, `DeviceStorage`,
+  `Interop`, `Location`, `Media`, `Navigation`, `Notifications`; each family holds the contract, the
+  browser implementation and the null fallback together. `MMCA.Common.UI.Maui.Capabilities` mirrors
+  the same families.
+- **`MMCA.Common.UI.Services`** root grab-bag split into `Services.Api` (the typed HTTP service
+  bases and `HttpResultExecutor`), `Services.Culture`, `Services.Preferences`, `Services.Navigation`
+  (the public link builder joins it); `ThemeService` joined `MMCA.Common.UI.Theme`.
+  `MMCA.Common.UI.Services.Auth` gained `Auth.Tokens` (token storage and refreshers) and `Auth.OAuth`.
+- **`MMCA.Common.UI.Components`** split into `Components.PageState`, `Components.Lists`,
+  `Components.Sharing`, `Components.Forms`, `Components.Auth`; the theme components joined
+  `MMCA.Common.UI.Theme` and the culture components joined `MMCA.Common.UI.Globalization`.
+  Consumer `_Imports.razor` files need the new `@using` lines (the script adds them).
+- `MMCA.Common.Testing.Architecture` is folder-only reorganized (`Rules/{Topic}/`, `Bases/{Topic}/`);
+  its namespace is unchanged, it stays the flat public surface consumers subclass (ADR-015).
+- The accepted `MMCA.Common.Infrastructure` namespace cycle allowance names `Messaging` where it
+  named the dissolved `Settings` (same three-node component, same edges, see `NamespaceCycleTests`).
+
+### Added
+
+- **Folder-width fitness rule** (`ArchitectureRules.FoldersStayNarrow` + `FolderWidthTestsBase`,
+  rubric §5): a folder under `Source/` or `Tests/` holds at most 12 direct code files (a Razor
+  component with its code-behind and resx counts once; `Migrations/`, MAUI `Platforms/` and
+  `Resources/` are skipped; a repo lists its own documented exemptions). Every repo subclasses it,
+  so the layout is a CI merge gate like the other layout rules.
+
+### Consumer action
+
+- Rebuild against the new namespaces: run the workspace `move-namespace.ps1` maps or fix the
+  `using` lines the compiler reports. No configuration, database or behavior change.
+
 ## [1.182.0] - 2026-09-02
 
 Cost release: health-probe traces stay out of Application Insights / Log Analytics by default. No

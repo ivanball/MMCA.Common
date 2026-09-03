@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Auth;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Tests.Infrastructure;
 using Moq;
 

@@ -1,0 +1,36 @@
+@using Microsoft.Extensions.Options
+@using MMCA.Common.UI.Common.Settings
+@using MMCA.Common.UI.Services.Capabilities.Interop
+@inject IExternalLinkService ExternalLink
+@inject IShareService Share
+@inject IHttpClientFactory HttpClientFactory
+@inject IOptions<ApiSettings> ApiOptions
+@inject IToastService Toast
+@inject IStringLocalizer<ApiFileDownloadButton> L
+
+@* Downloads a file produced by an API endpoint (ADR-042). Browsers get a plain download link to
+   the endpoint (the response's attachment disposition does the rest). Native heads cannot download
+   through the WebView, so they fetch the bytes over the API client, stage a temp file, and open the
+   share sheet, which is where "save to Files", "open in Calendar" and the rest live on both
+   platforms. Callers supply the endpoint, the file name, the MIME type and the labels; the button
+   itself knows nothing about what the payload is. *@
+
+@if (ExternalLink.InterceptsLinks)
+{
+    <MudIconButton Icon="@Icon"
+                   Size="@Size"
+                   aria-label="@AccessibleLabel"
+                   title="@AccessibleLabel"
+                   Disabled="_isExporting"
+                   OnClick="ShareDownloadedFileAsync" />
+}
+else
+{
+    <MudIconButton Icon="@Icon"
+                   Size="@Size"
+                   aria-label="@AccessibleLabel"
+                   title="@AccessibleLabel"
+                   Href="@BrowserDownloadUrl" />
+}
+
+@* Logic lives in ApiFileDownloadButton.razor.cs (inline @code stays presentational, §18). *@

@@ -11,7 +11,7 @@ using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
-using MMCA.Common.Infrastructure.Settings;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Resilience;
 using Polly;
 using Polly.CircuitBreaker;

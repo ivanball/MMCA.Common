@@ -8,6 +8,7 @@ using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.Auth;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.Conventions;
@@ -16,7 +17,6 @@ using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Scheduling;
-using MMCA.Common.Infrastructure.Settings;
 using StackExchange.Profiling;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;

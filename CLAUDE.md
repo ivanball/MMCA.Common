@@ -40,20 +40,32 @@ Gotchas:
 
 ## Source Layout
 
+All `Source/` projects are packable (bulk NuGet metadata via `Directory.Build.props`, versions from MinVer).
+
 ```
 Source/
-├── Build/MMCA.Common.LayerEnforcement.targets   # compile-time layer guard
-├── Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}
-├── Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web}     (+ UI.Maui, outside the slnx)
-└── Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Testing,Testing.E2E,Testing.UI,Testing.Architecture}
-
-Tests/             # mirrors Source/; plus Architecture/ (NetArchTest), Performance/ (Benchmarks +
-                   # perf-baseline.json), and the out-of-slnx Presentation/UI.Gallery + UI.E2E.Tests
-                   # (CI ui-e2e job only)
-build/             # facts (FACTS.md generator, CI drift gate) and perfgate (benchmark baseline gate)
+  Build/         MMCA.Common.LayerEnforcement.targets (compile-time layer guard)
+  Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}
+  Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx)
+  Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,Testing,Testing.E2E,Testing.UI,Testing.Architecture}
+Tests/           mirrors Source/ folder for folder, plus Architecture/ (NetArchTest) and Performance/
+build/           facts (FACTS.md generator, CI drift gate) and perfgate (benchmark baseline gate)
 ```
 
-All `Source/` projects are packable (bulk NuGet metadata via `Directory.Build.props`, versions from MinVer).
+**Folder convention (feature by folder, use case by leaf; rubric §5).** Inside a project the first
+folder level names the feature or concern (`Messaging/`, `Notifications/Push/`, `Capabilities/Location/`,
+`Notifications/UserNotifications/UseCases/MarkRead/`), technical nouns appear only beneath it, and a
+folder holds at most **12 direct code files** (a `.razor` with its `.razor.cs` and `.resx` counts once).
+`FolderWidthTests` enforces the cap in CI; its exemption list is the set of deliberately flat public
+namespaces every consumer imports (`Application/Interfaces*`, `Application/UseCases*`, `Shared/Auth`,
+`API/Startup`, the `MMCA.Common.Testing` root). Namespaces follow folders (IDE0130 is an error), so a
+folder move is a public-API rename: land it through the workspace `Tools/Scripts/move-namespace.ps1`
+(moves, namespace lines, and every `using` across this repo and the consumers), record it under
+**Breaking:** in `CHANGELOG.md`, and sweep the consumers in the same release. Two folders are
+folder-only by design and IDE0130-exempt: `Testing.Architecture/Rules/` and `Bases/` keep the flat
+`MMCA.Common.Testing.Architecture` namespace consumers subclass (ADR-015). Never name a sub-folder
+`Domain`, `Application`, `Infrastructure`, `API` or `UI` inside a module project: `ModuleNameConventions`
+derives the module (and so the schema and data-source name) from those namespace segments.
 
 ## Architecture
 

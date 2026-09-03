@@ -2,7 +2,8 @@ using System.Globalization;
 using System.Net.Http.Json;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
-using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Api;
+using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Notifications;
 
