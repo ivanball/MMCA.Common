@@ -1,5 +1,7 @@
 using AwesomeAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.DeleteUser;
 using MMCA.Common.Shared.Abstractions;
@@ -9,7 +11,8 @@ namespace MMCA.Common.Application.Tests.Users;
 
 /// <summary>
 /// Exercises the shared account-erasure workflow: the owner-or-privileged-role gate, the
-/// delete-then-anonymize-then-save ordering, the app tail hook, and the post-commit queue.
+/// delete-then-anonymize-then-save ordering, the app tail hook, the shared soft-deleted marker
+/// write (ADR-047), and the post-commit queue.
 /// </summary>
 public sealed class DeleteUserHandlerBaseTests
 {
@@ -163,6 +166,128 @@ public sealed class DeleteUserHandlerBaseTests
         trace.Should().Equal("save", "marker", "blob");
     }
 
+    [Fact]
+    public async Task HandleAsync_WritesTheSoftDeletedMarkerExactlyOnceAndOnlyAfterTheSave()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestHidingDeleteUser { Id = 1 };
+        ArrangeUser(mocks, user);
+
+        var trace = new List<string>();
+        mocks.UnitOfWork
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .Callback(() => trace.Add("save"));
+        mocks.Cache
+            .Setup(x => x.SetAsync(
+                SoftDeletedUserCache.KeyFor(1),
+                true,
+                (TimeSpan?)SoftDeletedUserCache.MarkerDuration,
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Callback(() => trace.Add("marker"));
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        trace.Should().Equal("save", "marker");
+        mocks.Cache.Verify(
+            x => x.SetAsync(
+                SoftDeletedUserCache.KeyFor(1),
+                true,
+                (TimeSpan?)SoftDeletedUserCache.MarkerDuration,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WritesTheSoftDeletedMarkerBeforeTheAppsPostCommitActions()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestHidingDeleteUser { Id = 1 };
+        ArrangeUser(mocks, user);
+
+        var trace = new List<string>();
+        mocks.Cache
+            .Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Callback(() => trace.Add("marker"));
+        sut.PostCommitActions =
+        [
+            _ => TraceAsync(trace, "blob"),
+        ];
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue();
+        trace.Should().Equal(
+            "marker",
+            "blob");
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheMarkerWriteThrows_StillSucceedsAndLogsAWarning()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestHidingDeleteUser { Id = 1 };
+        ArrangeUser(mocks, user);
+
+        mocks.Cache
+            .Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("cache unreachable"));
+
+        var ran = false;
+        sut.PostCommitActions =
+        [
+            _ =>
+            {
+                ran = true;
+                return Task.CompletedTask;
+            },
+        ];
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 1, null));
+
+        result.IsSuccess.Should().BeTrue("the erasure is already committed, so the marker is best effort");
+        ran.Should().BeTrue("a marker fault must not skip the app's post-commit tail");
+        mocks.Logger.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.Is<EventId>(e => e.Name == "SoftDeletedMarkerFailed"),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<InvalidOperationException>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheErasureFails_NeverTouchesTheCache()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.Repository
+            .Setup(x => x.GetByIdAsync(404, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TestHidingDeleteUser?)null);
+
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 404, CurrentUserId: 404, null));
+
+        result.IsFailure.Should().BeTrue();
+        mocks.Cache.Verify(
+            x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static Task TraceAsync(List<string> trace, string entry)
     {
         trace.Add(entry);
@@ -176,24 +301,29 @@ public sealed class DeleteUserHandlerBaseTests
 
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
-        Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>> Repository);
+        Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>> Repository,
+        Mock<ICacheService> Cache,
+        Mock<ILogger> Logger);
 
     private static (TestDeleteUserHandler Sut, HandlerMocks Mocks) CreateSut()
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<TestHidingDeleteUser, UserIdentifierType>>();
+        var cache = new Mock<ICacheService>();
+        var logger = new Mock<ILogger>();
 
+        logger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
         unitOfWork.Setup(x => x.GetRepository<TestHidingDeleteUser, UserIdentifierType>()).Returns(repository.Object);
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
-        var sut = new TestDeleteUserHandler(unitOfWork.Object);
-        return (sut, new HandlerMocks(unitOfWork, repository));
+        var sut = new TestDeleteUserHandler(unitOfWork.Object, cache.Object, logger.Object);
+        return (sut, new HandlerMocks(unitOfWork, repository, cache, logger));
     }
 }
 
 /// <summary>Concrete subclass standing in for an app's <c>DeleteUserHandler</c> plus its erasure tail.</summary>
-public sealed class TestDeleteUserHandler(IUnitOfWork unitOfWork)
-    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, NullLogger.Instance)
+public sealed class TestDeleteUserHandler(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger)
+    : DeleteUserHandlerBase<TestHidingDeleteUser, TestDeleteUserCommand>(unitOfWork, cacheService, logger)
 {
     public int TailInvocations { get; private set; }
 

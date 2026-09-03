@@ -6,6 +6,26 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.185.0] - 2026-09-03
+
+**Breaking:** `DeleteUserHandlerBase<TUser, TCommand>` gained a required `ICacheService` constructor
+parameter, in the middle of the existing pair: the signature is now
+`(IUnitOfWork unitOfWork, ICacheService cacheService, ILogger logger)`. Every subclass has to inject
+`ICacheService` and forward it to the base. See [UPGRADING.md](UPGRADING.md) for the mechanical fix.
+
+### Changed
+
+- **The soft-deleted user marker is written by the shared erasure workflow** (ADR-047). After
+  `SaveChangesAsync` succeeds, and before the app's `afterCommit` tail runs,
+  `DeleteUserHandlerBase` writes `SoftDeletedUserCache.MarkDeletedAsync(...)` itself, so every app
+  gets the identical token-revocation window instead of one app hand-rolling it and another shipping
+  none. The write is best effort: a cache fault is caught (bar cancellation) and logged as a warning,
+  never turned into a failure the caller would retry against an already-erased account. It runs ahead
+  of the app tail deliberately, so unbounded post-commit app work cannot stretch the window in which
+  a deleted account's already-issued access token still passes the API middleware check.
+- Apps that queued their own marker write on `afterCommit` should delete it; the base now writes it
+  first, and a duplicate write only re-stamps the same key.
+
 ## [1.184.0] - 2026-09-03
 
 **Breaking:** second feature-by-folder pass (rubric §5), this time over the eight flat public
