@@ -69,7 +69,10 @@ the PR description, and sweep the consumers in the same release. Two folders are
 folder-only by design and IDE0130-exempt: `Testing.Architecture/Rules/` and `Bases/` keep the flat
 `MMCA.Common.Testing.Architecture` namespace consumers subclass (ADR-015). Never name a sub-folder
 `Domain`, `Application`, `Infrastructure`, `API` or `UI` inside a module project: `ModuleNameConventions`
-derives the module (and so the schema and data-source name) from those namespace segments.
+derives the module (and so the schema and data-source name) from those namespace segments. In the consumer
+repos the same rule reads: aggregate first in Domain, Application and Shared; a documented technical root
+(`Pages/`, `Services/`, `Components/`, `Controllers/`, `Persistence/`) first in UI, API and Infrastructure with the
+aggregate beneath it; one plural aggregate name in every project of the module.
 
 ## Architecture
 
