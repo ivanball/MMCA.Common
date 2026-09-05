@@ -12,6 +12,16 @@ namespace MMCA.Common.Grpc;
 /// typed-client convention that wires Aspire service discovery, Polly resilience, and
 /// JWT bearer forwarding via <see cref="JwtForwardingClientInterceptor"/>.
 /// </summary>
+/// <remarks>
+/// This package is the extraction boundary for a module lifted out of the modular monolith: it
+/// carries transport concerns only. The h2c (HTTP/2 cleartext) address scheme used by
+/// <c>AddTypedGrpcClient</c> is deliberate for in-cluster service-to-service calls (the Aspire
+/// service-discovery rationale is on that method). Consuming modules keep the generated protobuf
+/// types out of their application and domain code by placing a hand-written adapter between the
+/// typed client and their own interface contract: that adapter is the module's Anti-Corruption
+/// Layer (ADR-007), and the monolith-to-service move itself follows the Strangler Fig route
+/// (ADR-008).
+/// </remarks>
 public static class DependencyInjection
 {
     extension(IServiceCollection services)
@@ -55,9 +65,20 @@ public static class DependencyInjection
         /// </list>
         /// <para>
         /// Generated gRPC client classes (e.g. <c>Catalog.V1.ProductVariantService.ProductVariantServiceClient</c>)
-        /// can be passed as <typeparamref name="TClient"/>. Application code should typically
-        /// register a hand-written adapter that implements the C# interface contract
-        /// (<c>IProductVariantService</c>) and delegates to this typed gRPC client.
+        /// can be passed as <typeparamref name="TClient"/>. Application code should not consume that
+        /// generated client directly: register a hand-written adapter that implements the consuming
+        /// module's own C# interface contract (<c>IProductVariantService</c>) and delegates to this
+        /// typed gRPC client. That adapter IS the consuming module's Anti-Corruption Layer: the only
+        /// place where the peer's wire model (the generated protobuf types) is translated into the
+        /// module's own interface contract and domain types, so the peer's contract never leaks
+        /// inward past it. ADR-007 names the pattern
+        /// (https://ivanball.github.io/docs/adr/007-grpc-extraction.html).
+        /// </para>
+        /// <para>
+        /// Extraction itself follows the Strangler Fig route recorded in ADR-008
+        /// (https://ivanball.github.io/docs/adr/008-service-extraction-topology.html): the new service
+        /// host is stood up beside the modular monolith, the typed client and its Anti-Corruption
+        /// Layer adapter move traffic to it, and the in-process path is retired last.
         /// </para>
         /// </summary>
         /// <typeparam name="TClient">The generated gRPC client class.</typeparam>
