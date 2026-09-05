@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.186.0] - 2026-09-05
+
 ### Changed
 
 - **The gRPC typed-client convention now names its patterns.** `AddTypedGrpcClient<TClient>` and the
