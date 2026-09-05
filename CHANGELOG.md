@@ -16,8 +16,20 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   monolith, move traffic through the typed client and adapter, retire the in-process path last.
   Documentation only, no behavior change.
 
+### Added
+
+- **`E2ETestBase.SignOutAsync()`** (`MMCA.Common.Testing.E2E`): clicks "Sign out of your account" and
+  waits until the browser has landed on `/login`, absorbing Firefox's `NS_BINDING_ABORTED` when the
+  logout forceLoad is superseded by the app's own redirect. `ProfileManagementTestsBase` and
+  `UserLoginTestsBase` use it; consumer suites with a hand-rolled sign-out-then-login sequence should
+  switch to it.
+
 ### Fixed
 
+- **Firefox no longer fails the shared change-password and login E2E workflows on sign-out.** Both
+  bases waited for `/login` with a single `WaitForURLAsync`, which Firefox rejects with
+  `NS_BINDING_ABORTED` when the logout navigation is superseded mid-flight (chromium and webkit
+  follow the surviving navigation silently). The wait now goes through `SignOutAsync()` above.
 - **The reference deployment sample no longer fails to deploy on a dangling secret reference.**
   `samples/deployment/main.bicep` bound the container env var
   `ConnectionStrings__SQLServerConnectionString` to `secretRef: 'sql-conn'` while declaring no

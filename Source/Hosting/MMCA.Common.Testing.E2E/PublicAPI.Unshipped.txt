@@ -65,3 +65,4 @@ virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsB
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.PseudoLocale.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Sentinel.get -> string!
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Timeout.get -> float
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.SignOutAsync() -> System.Threading.Tasks.Task!

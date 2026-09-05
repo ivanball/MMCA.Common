@@ -24,8 +24,7 @@ public abstract class UserLoginTestsBase : E2ETestBase
         // Wait for that URL, not for LoadState.Load: the CURRENT document's load event fired long ago,
         // so WaitForLoadState returns immediately and LoginAsync would race the in-flight logout
         // navigation (its pre-login cleanup evaluate dies with "execution context was destroyed").
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync().ConfigureAwait(false);
-        await Page.WaitForURLAsync(new Regex("/login"), new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await SignOutAsync().ConfigureAwait(false);
 
         // Act — log in with the registered credentials
         await LoginAsync(email, password).ConfigureAwait(false);

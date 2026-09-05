@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Microsoft.Playwright;
 using MMCA.Common.Testing.E2E.Infrastructure;
@@ -103,8 +102,7 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         // dies with ERR_ABORTED / "interrupted by another navigation"). Same fix as
         // UserLoginTestsBase.Login_WithValidCredentials (v1.103.1); this was the one remaining
         // sign-out-then-login site still on the racy pattern.
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync().ConfigureAwait(false);
-        await Page.WaitForURLAsync(new Regex("/login"), new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await SignOutAsync().ConfigureAwait(false);
         await LoginAsync(email, newPassword).ConfigureAwait(false);
         await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" })).ToBeVisibleAsync().ConfigureAwait(false);
     }
