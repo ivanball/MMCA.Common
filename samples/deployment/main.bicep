@@ -95,6 +95,19 @@ resource appDb 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   sku: { name: 'Basic', tier: 'Basic' } // §31: cheap tier sized to measured load, not worst case
 }
 
+// The runtime connection string is composed here and stored ONLY in Key Vault. The Container App
+// below binds it by reference (keyVaultUrl + the app UAMI), so the value never lands in the app's
+// configuration as plaintext. Writing the secret needs the DEPLOY principal to hold Key Vault
+// Secrets Officer on the vault; reading it at runtime needs the APP UAMI to hold Key Vault Secrets
+// User (both granted out of band, see DEPLOYMENT.md and the header note above).
+var appSqlConnectionString = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Database=${appDb.name};User ID=${sqlAdminLogin};Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+
+resource kvSqlConn 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'sql-conn'
+  properties: { value: appSqlConnectionString }
+}
+
 resource allowAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
   parent: sqlServer
   name: 'AllowAllAzureIps'
@@ -130,6 +143,12 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
       ingress: { external: true, targetPort: 8080, transport: 'auto' }
       // Pull from ACR with the UAMI's AcrPull — no registry admin password.
       registries: [ { server: acr.properties.loginServer, identity: appIdentityResourceId } ]
+      // Runtime secrets are Key Vault references resolved by the platform at revision start using
+      // the same UAMI (it needs Key Vault Secrets User on the vault, granted out of band). The
+      // value is never stored as a plaintext Container App secret.
+      secrets: [
+        { name: 'sql-conn', keyVaultUrl: kvSqlConn.properties.secretUri, identity: appIdentityResourceId }
+      ]
     }
     template: {
       containers: [

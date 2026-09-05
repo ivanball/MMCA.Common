@@ -6,6 +6,39 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Changed
+
+- **The gRPC typed-client convention now names its patterns.** `AddTypedGrpcClient<TClient>` and the
+  `MMCA.Common.Grpc` class-level remarks state that the hand-written adapter over a generated client
+  is the consuming module's Anti-Corruption Layer (the only place the peer's wire model is translated
+  into the module's own interface contract and domain types, ADR-007), and that lifting a module out
+  of the monolith follows the Strangler Fig route (ADR-008): stand the service host up beside the
+  monolith, move traffic through the typed client and adapter, retire the in-process path last.
+  Documentation only, no behavior change.
+
+### Added
+
+- **`E2ETestBase.SignOutAsync()`** (`MMCA.Common.Testing.E2E`): clicks "Sign out of your account" and
+  waits until the browser has landed on `/login`, absorbing Firefox's `NS_BINDING_ABORTED` when the
+  logout forceLoad is superseded by the app's own redirect. `ProfileManagementTestsBase` and
+  `UserLoginTestsBase` use it; consumer suites with a hand-rolled sign-out-then-login sequence should
+  switch to it.
+
+### Fixed
+
+- **Firefox no longer fails the shared change-password and login E2E workflows on sign-out.** Both
+  bases waited for `/login` with a single `WaitForURLAsync`, which Firefox rejects with
+  `NS_BINDING_ABORTED` when the logout navigation is superseded mid-flight (chromium and webkit
+  follow the surviving navigation silently). The wait now goes through `SignOutAsync()` above.
+- **The reference deployment sample no longer fails to deploy on a dangling secret reference.**
+  `samples/deployment/main.bicep` bound the container env var
+  `ConnectionStrings__SQLServerConnectionString` to `secretRef: 'sql-conn'` while declaring no
+  `secrets` array and no such Key Vault secret. The template now creates the `sql-conn` Key Vault
+  secret from the deployed SQL server, database and admin login, and the Container App declares it as
+  a Key Vault reference (`keyVaultUrl` + the app's user-assigned identity), which is what the file
+  header promised: runtime secrets in Key Vault, read via the same identity, no plaintext Container
+  App secrets.
+
 ## [1.185.0] - 2026-09-03
 
 **Breaking:** `DeleteUserHandlerBase<TUser, TCommand>` gained a required `ICacheService` constructor

@@ -67,7 +67,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Application` | CQRS handlers, decorator pipeline, module system, query service, `IMessageBus` |
 | `MMCA.Common.Infrastructure` | EF Core multi-DB, repositories, UoW, caching, JWT, JWKS, outbox, message bus, SignalR |
 | `MMCA.Common.API` | Base controllers, middleware, idempotency, error-to-HTTP mapping, JWKS endpoint |
-| `MMCA.Common.Grpc` | gRPC server defaults, Result to RpcException mapping, JWT-forwarding client interceptor, typed gRPC clients |
+| `MMCA.Common.Grpc` | gRPC server defaults, Result to RpcException mapping, JWT-forwarding client interceptor, typed gRPC clients behind an Anti-Corruption Layer adapter |
 | `MMCA.Common.UI` | Blazor shared components, auth state, MudBlazor theme |
 | `MMCA.Common.UI.Web` | Blazor Web (Server + WASM) UI host helpers built on `MMCA.Common.UI` |
 | `MMCA.Common.UI.Maui` | .NET MAUI UI head (the one MAUI-TFM package; built and packed by dedicated windows jobs, outside `MMCA.Common.slnx`, ADR-042) |

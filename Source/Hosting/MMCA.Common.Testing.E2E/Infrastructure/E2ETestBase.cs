@@ -144,6 +144,37 @@ public abstract class E2ETestBase : IAsyncLifetime
         await WaitForInteractiveOrReloadAsync().ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Clicks "Sign out of your account" and waits until the browser has actually landed on
+    /// <c>/login</c>, so a <see cref="LoginAsync"/> that follows does not race the in-flight logout
+    /// navigation.
+    /// </summary>
+    /// <remarks>
+    /// Waiting for the URL rather than <c>LoadState.Load</c> matters because the CURRENT document's
+    /// load event fired long ago, so a load-state wait returns immediately and the next goto dies
+    /// with "execution context was destroyed" / "interrupted by another navigation" (v1.103.1 and
+    /// v1.104.2 fixes). Firefox adds one more wrinkle: the logout forceLoad is superseded mid-flight
+    /// by the app's own redirect onto <c>/login</c>, and Firefox surfaces the abandoned first request
+    /// to the URL waiter as <c>NS_BINDING_ABORTED</c> instead of following the survivor (ADC dispatch
+    /// run 33941831649: 3/3 tries, chromium and webkit never raise it). The destination is
+    /// unchanged, so the wait is simply repeated once for the navigation that won.
+    /// </remarks>
+    protected async Task SignOutAsync()
+    {
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Sign out of your account" }).ClickAsync().ConfigureAwait(false);
+        try
+        {
+            await Page.WaitForURLAsync(LoginUrlPattern, new() { Timeout = 15_000 }).ConfigureAwait(false);
+        }
+        catch (PlaywrightException ex) when (ex.Message.Contains("NS_BINDING_ABORTED", StringComparison.Ordinal))
+        {
+            await Page.WaitForURLAsync(LoginUrlPattern, new() { Timeout = 15_000 }).ConfigureAwait(false);
+        }
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex LoginUrlPattern =
+        new("/login", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+
     protected async Task<(string Email, string Password)> RegisterNewUserAsync(
         string? firstName = null,
         string? lastName = null)
