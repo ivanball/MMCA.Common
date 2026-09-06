@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.187.0] - 2026-09-06
+
 ### Fixed
 
 - **`MainLayout` clips horizontal page overflow at every width** (`MMCA.Common.UI`). `.page` now
