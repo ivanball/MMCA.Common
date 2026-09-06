@@ -6,6 +6,20 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.187.0] - 2026-09-06
+
+### Fixed
+
+- **`MainLayout` clips horizontal page overflow at every width** (`MMCA.Common.UI`). `.page` now
+  carries `overflow-x: clip` in its base rule instead of only inside the desktop breakpoint. An
+  absolutely positioned descendant parked off-screen to the right (an app's closed temporary
+  drawer, 100vw wide on phones) otherwise extends the document's scrollable width, and mobile
+  Chrome widens the layout viewport to match while the visual viewport stays at device width, so
+  every viewport-fixed element centered with `left: 50%` (the MudBlazor snackbar and dialog
+  containers) lands at the right screen edge, clipped. Reproduced and verified against MMCA.Store
+  production in Pixel 7 emulation (`window.innerWidth` 824 to 412 with the rule in place).
+  `clip`, not `hidden`, so `.page` never becomes a scroll container.
+
 ## [1.186.0] - 2026-09-05
 
 ### Changed
