@@ -24,6 +24,19 @@
     flex-direction: column;
     min-height: 100vh;
     min-height: 100dvh;
+    /* Clip horizontal overflow at EVERY width, not only on desktop. Any absolutely positioned
+       descendant parked off-screen to the right (an app's closed temporary drawer at
+       right: calc(-1 * var(--mud-drawer-width)), 100vw wide on phones) otherwise extends the
+       document's scrollable width, and mobile Chrome widens the LAYOUT viewport to that content
+       width while the visual viewport stays at device width. Every viewport-fixed element centered
+       with left: 50% (MudBlazor's snackbar container, the dialog container) is then centered
+       against the doubled width and lands at the right screen edge, clipped. Clipping the
+       containing block keeps the overflow out of the document, so the layout viewport stays at
+       device width. Root-level overflow-x on html/body does not change that calculation; this
+       does. clip, NOT hidden: a non-visible overflow-x forces the computed overflow-y from visible
+       to auto, which would turn .page into a scroll container (see the desktop block below for
+       what that does to the sticky sidebar). */
+    overflow-x: clip;
 }
 
 main {
@@ -127,14 +140,14 @@ main {
         flex-wrap: wrap;
         width: 100%;
         max-width: 100vw;
-        /* clip, NOT hidden: per spec a non-visible overflow-x forces the computed overflow-y
-           from visible to auto, which turns .page into a scroll container. The sticky sidebar
-           below then resolves against .page's scrollport instead of the viewport, and since
-           .page grows with its content and never scrolls itself, the sidebar never sticks: it
-           scrolled off with the document and its background stopped one viewport down. clip
+        /* overflow-x: clip is inherited from the base .page rule above and must stay clip, NOT
+           hidden, here of all places: per spec a non-visible overflow-x forces the computed
+           overflow-y from visible to auto, which turns .page into a scroll container. The sticky
+           sidebar below then resolves against .page's scrollport instead of the viewport, and
+           since .page grows with its content and never scrolls itself, the sidebar never sticks:
+           it scrolled off with the document and its background stopped one viewport down. clip
            bounds the horizontal overflow the same way without creating a scrollport. Same
            reasoning as main's overflow-x below. */
-        overflow-x: clip;
     }
 
     /* Force the footer onto the next flex line so it spans full width instead of
