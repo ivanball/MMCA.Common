@@ -107,3 +107,8 @@ static readonly MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOpti
 *REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 *REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 *REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+MMCA.Common.API.RateLimiting.RateLimitingSettings.AnonymousHubPermitLimit.get -> int
+MMCA.Common.API.RateLimiting.RateLimitingSettings.AnonymousHubPermitLimit.init -> void
+MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.init -> void
+static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.IsCleartextHttp2(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> bool

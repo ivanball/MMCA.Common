@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Application.Services.Filtering;
@@ -14,7 +15,7 @@ namespace MMCA.Common.Application.Services.Filtering;
 /// Supports DTO-to-entity property name mapping and nested property filtering
 /// (e.g. <c>"Category.Name"</c>). A nested path is walked segment by segment to its leaf, and the
 /// leaf's type picks the strategy, so <c>"Category.Id"</c> filters as a Guid rather than as a
-/// string. A path whose leaf cannot be reached is rejected by <see cref="ValidateFilters"/> as an
+/// string. A path whose leaf cannot be reached is rejected by <c>ValidateFilters</c> as an
 /// unknown property.
 /// </para>
 /// </summary>
@@ -78,13 +79,43 @@ public static class QueryFilterService
         IQueryable<TEntity> query,
         Dictionary<string, (string Operator, string Value)> filters,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap)
+        => ApplyFilters(query, filters, dtoToEntityPropertyMap, fieldContract: null);
+
+    /// <summary>
+    /// Applies all filters, resolving an unmapped filter key against
+    /// <paramref name="fieldContract"/> rather than against the entity (SEC-Common-25, SEC-ADC-09).
+    /// A key the contract does not declare, and any dotted key the map did not author, is dropped
+    /// rather than turned into a predicate over a column the response never carries.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type being queried.</typeparam>
+    /// <param name="query">The base queryable to filter.</param>
+    /// <param name="filters">Dictionary of property name to (operator, value) pairs.</param>
+    /// <param name="dtoToEntityPropertyMap">Maps DTO property names to entity property paths.</param>
+    /// <param name="fieldContract">
+    /// The response contract; <see langword="null"/> keeps the historical entity-reflection
+    /// behaviour, which is only correct for a caller whose filter keys are server-authored.
+    /// </param>
+    /// <returns>The filtered queryable.</returns>
+    public static IQueryable<TEntity> ApplyFilters<TEntity>(
+        IQueryable<TEntity> query,
+        Dictionary<string, (string Operator, string Value)> filters,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        QueryFieldContract? fieldContract)
     {
+        ArgumentNullException.ThrowIfNull(filters);
+        ArgumentNullException.ThrowIfNull(dtoToEntityPropertyMap);
+
         foreach (var (property, (op, value)) in filters)
         {
             // Resolve DTO property name to entity property path (e.g. "CategoryName" -> "Category.Name")
-            var entityProperty = dtoToEntityPropertyMap.TryGetValue(property, out var mapped)
-                ? mapped
-                : property;
+            var mappedByServer = dtoToEntityPropertyMap.TryGetValue(property, out var mapped);
+            var entityProperty = mappedByServer ? mapped! : property;
+
+            // Same gate ValidateFilters applies, so a caller that skipped validation cannot reach
+            // the Dynamic LINQ builder with a key the contract refuses or a path deeper than the
+            // ceiling.
+            if (!IsAdmissibleKey(mappedByServer, property, entityProperty, fieldContract))
+                continue;
 
             var propertyInfo = ResolvePropertyInfo<TEntity>(property, entityProperty);
 
@@ -119,18 +150,63 @@ public static class QueryFilterService
     public static Result ValidateFilters<TEntity>(
         Dictionary<string, (string Operator, string Value)>? filters,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap)
+        => ValidateFilters<TEntity>(filters, dtoToEntityPropertyMap, fieldContract: null);
+
+    /// <summary>
+    /// Validates all filter properties against <paramref name="fieldContract"/> (the response
+    /// contract) before the entity, so validation refuses exactly what
+    /// <see cref="ApplyFilters{TEntity}(IQueryable{TEntity}, Dictionary{string, ValueTuple{string, string}}, IReadOnlyDictionary{string, string}, QueryFieldContract)"/>
+    /// drops (SEC-Common-25, SEC-ADC-09).
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type to validate against.</typeparam>
+    /// <param name="filters">The filters to validate.</param>
+    /// <param name="dtoToEntityPropertyMap">Maps DTO property names to entity property paths.</param>
+    /// <param name="fieldContract">The response contract, or <see langword="null"/> for the historical entity-only check.</param>
+    /// <returns>A success result, or a failure containing all validation errors.</returns>
+    public static Result ValidateFilters<TEntity>(
+        Dictionary<string, (string Operator, string Value)>? filters,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        QueryFieldContract? fieldContract)
     {
+        ArgumentNullException.ThrowIfNull(dtoToEntityPropertyMap);
+
         if (filters is null || filters.Count == 0)
             return Result.Success();
 
         List<Error> errors = [];
 
         foreach (var (property, (op, value)) in filters)
-            ValidateSingleFilter<TEntity>(property, op, value, dtoToEntityPropertyMap, errors);
+            ValidateSingleFilter<TEntity>(property, op, value, dtoToEntityPropertyMap, fieldContract, errors);
 
         return errors.Count == 0
             ? Result.Success()
             : Result.Failure(errors);
+    }
+
+    /// <summary>
+    /// Whether a filter key may be resolved at all.
+    /// <para>
+    /// A server-authored map entry is trusted for WHAT it names (the server wrote it) but not for
+    /// how deep it goes: past <see cref="QueryFieldContract.MaxNavigationDepth"/> segments every
+    /// extra segment is another LEFT JOIN in the emitted SQL, which is the join-explosion load a
+    /// self-referencing navigation repeated hundreds of times produces (SEC-Store-13).
+    /// </para>
+    /// <para>
+    /// A key the map did NOT author is client input: it must name a field the response contract
+    /// declares and must not be a navigation path at all, so a caller can neither walk the object
+    /// graph nor address a column no DTO exposes (SEC-Common-25).
+    /// </para>
+    /// </summary>
+    private static bool IsAdmissibleKey(
+        bool mappedByServer,
+        string property,
+        string entityProperty,
+        QueryFieldContract? fieldContract)
+    {
+        if (!QueryFieldContract.IsWithinNavigationDepth(entityProperty))
+            return false;
+
+        return mappedByServer || fieldContract is null || fieldContract.AllowsClientKey(property);
     }
 
     private static void ValidateSingleFilter<TEntity>(
@@ -138,11 +214,21 @@ public static class QueryFilterService
         string op,
         string value,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        QueryFieldContract? fieldContract,
         List<Error> errors)
     {
-        var entityProperty = dtoToEntityPropertyMap.TryGetValue(property, out var mapped)
-            ? mapped
-            : property;
+        var mappedByServer = dtoToEntityPropertyMap.TryGetValue(property, out var mapped);
+        var entityProperty = mappedByServer ? mapped! : property;
+
+        if (!IsAdmissibleKey(mappedByServer, property, entityProperty, fieldContract))
+        {
+            errors.Add(Error.Validation(
+                "Filter.Property.NotFound",
+                $"Filter property '{property}' is not filterable on type '{typeof(TEntity).Name}'.",
+                source: nameof(ValidateFilters),
+                target: typeof(TEntity).Name));
+            return;
+        }
 
         var propertyInfo = ResolvePropertyInfo<TEntity>(property, entityProperty);
 
@@ -227,7 +313,7 @@ public static class QueryFilterService
     /// Resolves the <see cref="PropertyInfo"/> backing a filter: the DTO-facing name first, then the
     /// mapped entity name (its root segment for a nested path like <c>"Category.Name"</c>).
     /// <para>
-    /// Shared by <see cref="ApplyFilters"/> and <see cref="ValidateFilters"/> so both agree on what
+    /// Shared by <c>ApplyFilters</c> and <c>ValidateFilters</c> so both agree on what
     /// resolves. They used to disagree on the fallback: validation tried the mapped entity name
     /// while application retried the DTO name, so a plain rename entry (for example
     /// <c>["Name"] = "Title"</c>) passed validation and was then silently dropped, returning an

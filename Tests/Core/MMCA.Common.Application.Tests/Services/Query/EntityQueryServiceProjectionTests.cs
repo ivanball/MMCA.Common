@@ -31,6 +31,14 @@ public sealed class EntityQueryServiceProjectionTests
         public required int Id { get; init; }
 
         public string Name { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Declared on the DTO because the sort/filter tests below name it. Since SEC-ADC-09 the
+        /// query service resolves client-supplied sort columns and filter keys against the RESPONSE
+        /// CONTRACT, so a field only the entity carries is refused with a 400 rather than silently
+        /// ordering a page by a column the caller cannot see.
+        /// </summary>
+        public int Rank { get; set; }
     }
 
     /// <summary>A mapper that records every call, so a test can prove it was bypassed.</summary>
@@ -155,6 +163,21 @@ public sealed class EntityQueryServiceProjectionTests
             pageSize: 10);
 
         result.Value!.Items.Cast<ProjectedEntityDTO>().Select(d => d.Id).Should().Equal(3, 2);
+    }
+
+    /// <summary>
+    /// SEC-ADC-09: the counterpart of the test above. A field the entity has and the DTO does not is
+    /// refused, so an anonymous caller cannot order a public page by a redacted or audit-only column
+    /// and read its total order.
+    /// </summary>
+    [Fact]
+    public async Task GetAllAsync_RefusesASortColumnTheResponseContractDoesNotDeclare()
+    {
+        var sut = CreateSut(withProjector: true);
+
+        var result = await sut.GetAllAsync(filters: null, sortColumn: "CreatedBy");
+
+        result.IsFailure.Should().BeTrue();
     }
 
     [Fact]

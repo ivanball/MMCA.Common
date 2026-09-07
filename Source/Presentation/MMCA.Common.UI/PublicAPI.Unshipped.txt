@@ -387,3 +387,4 @@ MMCA.Common.UI.Services.Capabilities.DeviceStorage.NullLocalCacheStore.ClearAsyn
 const MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.StorageKey = "auth.oauth-flow" -> string!
 override MMCA.Common.UI.Pages.Auth.Login.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+static MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.IsAppRelativeRoute(string? route) -> bool

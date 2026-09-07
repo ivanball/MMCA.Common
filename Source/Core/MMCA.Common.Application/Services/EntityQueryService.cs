@@ -100,6 +100,40 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
     /// </summary>
     protected virtual IReadOnlyDictionary<string, string> DTOToEntityPropertyMap { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// The contract a client-supplied sort column, filter key or lookup name property must belong
+    /// to. Defaults to <typeparamref name="TEntityDTO"/>'s own property names, so a caller can only
+    /// order, filter and project by data the response actually carries
+    /// (SEC-Common-24, SEC-Common-25, SEC-ADC-09).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Names covered by <see cref="DTOToEntityPropertyMap"/> are unaffected: the map is
+    /// server-authored, so its entries stay the escape hatch for a navigation path or a Dynamic LINQ
+    /// expression that no DTO property matches.
+    /// </para>
+    /// <para>
+    /// Override to NARROW the contract (<c>QueryFieldContract.ForNames</c>) for a DTO that declares
+    /// a field the mapper redacts per role: a declared-but-redacted field is still orderable
+    /// otherwise, which discloses its total order. Returning <see langword="null"/> restores the
+    /// pre-hardening behaviour of resolving client names against the ENTITY, and should be a
+    /// deliberate, documented decision rather than a convenience.
+    /// </para>
+    /// </remarks>
+    protected virtual QueryFieldContract? FieldContract { get; } = QueryFieldContract.For<TEntityDTO>();
+
+    /// <summary>
+    /// The name properties <see cref="GetAllForLookupAsync"/> will project. Defaults to
+    /// <see cref="FieldContract"/>, so a lookup can only surface a column the DTO declares
+    /// (SEC-Common-24): before this gate existed, <c>?nameProperty=</c> projected ANY public entity
+    /// property, unpaginated, for every row.
+    /// </summary>
+    /// <remarks>
+    /// Override with <c>QueryFieldContract.ForNames</c> to pin the lookup to the one or two columns
+    /// it is meant to label rows with, which is stricter still.
+    /// </remarks>
+    protected virtual QueryFieldContract? LookupNameContract => FieldContract;
+
     private const string IdField = "Id";
 
     // Cached TypeConverter per identifier type: the by-id fast path parses the string id into the
@@ -262,9 +296,9 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         // Step 1: Validate all query parameters upfront before touching the database
         var validateResult = Result.Combine(
             QueryFieldService.Validate<TEntity>(fields, allowWriteableFields: false),
-            QueryFieldService.Validate<TEntity>(sortColumn, DTOToEntityPropertyMap, allowWriteableFields: true),
+            QueryFieldService.Validate<TEntity>(sortColumn, DTOToEntityPropertyMap, allowWriteableFields: true, FieldContract),
             QueryFieldService.ValidateSortDirection(sortDirection),
-            QueryFilterService.ValidateFilters<TEntity>(filters, DTOToEntityPropertyMap)
+            QueryFilterService.ValidateFilters<TEntity>(filters, DTOToEntityPropertyMap, FieldContract)
             );
         if (validateResult.IsFailure)
         {
@@ -293,7 +327,8 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             PageSize = pageSize,
             IncludeFKs = includeFKs,
             IncludeChildren = includeChildren,
-            DTOToEntityPropertyMap = DTOToEntityPropertyMap
+            DTOToEntityPropertyMap = DTOToEntityPropertyMap,
+            FieldContract = FieldContract
         };
 
         var baseQuery = asTracking ? Repository.Table : Repository.TableNoTracking;
@@ -352,6 +387,22 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
         bool asTracking = false,
         CancellationToken cancellationToken = default)
     {
+        // SECURITY (SEC-Common-24): the lookup projects the named column verbatim for every row, so
+        // an existence check against the ENTITY was enough to dump a column the DTO deliberately
+        // never exposes. The allow-list is the response contract, not the entity.
+        if (LookupNameContract is { } lookupContract && !lookupContract.AllowsClientKey(nameProperty))
+        {
+            return Result.Failure<IReadOnlyCollection<BaseLookup<TIdentifierType>>>(
+            [
+                Error.InvalidEntityField with
+                {
+                    Message = $"Lookup name property '{nameProperty}' is not part of the response contract for type '{typeof(TEntity).Name}'.",
+                    Source = nameof(GetAllForLookupAsync),
+                    Target = typeof(TEntity).Name
+                }
+            ]);
+        }
+
         Result validateResult = QueryFieldService.Validate<TEntity>(nameProperty, allowWriteableFields: true);
         if (validateResult.IsFailure)
         {
@@ -525,7 +576,8 @@ public class EntityQueryService<TEntity, TEntityDTO, TIdentifierType>(
             PageSize = pageSize,
             IncludeFKs = includeFKs,
             IncludeChildren = includeChildren,
-            DTOToEntityPropertyMap = DTOToEntityPropertyMap
+            DTOToEntityPropertyMap = DTOToEntityPropertyMap,
+            FieldContract = FieldContract
         };
 
         return await QueryPipeline.ExecuteAsync<TEntity, TIdentifierType>(

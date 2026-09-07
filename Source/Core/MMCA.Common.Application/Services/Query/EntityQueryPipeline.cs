@@ -74,7 +74,7 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             query = query.Where(parameters.Criteria);
 
         if (parameters.Filters is not null && parameters.Filters.Count != 0)
-            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap);
+            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap, parameters.FieldContract);
 
         bool isPaginated = parameters.PageNumber.HasValue && parameters.PageSize.HasValue;
 
@@ -83,7 +83,8 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             parameters.SortColumn,
             parameters.SortDirection,
             parameters.DTOToEntityPropertyMap,
-            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null);
+            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null,
+            fieldContract: parameters.FieldContract);
 
         int totalCount = 0;
         var unpagedQuery = query;
@@ -148,7 +149,7 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             query = query.Where(parameters.Criteria);
 
         if (parameters.Filters is not null && parameters.Filters.Count != 0)
-            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap);
+            query = QueryFilterService.ApplyFilters(query, parameters.Filters, parameters.DTOToEntityPropertyMap, parameters.FieldContract);
 
         return query;
     }
@@ -177,7 +178,8 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             parameters.SortColumn,
             parameters.SortDirection,
             parameters.DTOToEntityPropertyMap,
-            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null);
+            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null,
+            fieldContract: parameters.FieldContract);
 
         var unpagedQuery = query;
 
@@ -229,7 +231,8 @@ public sealed class EntityQueryPipeline(IQueryableExecutor queryableExecutor) : 
             parameters.SortColumn,
             parameters.SortDirection,
             parameters.DTOToEntityPropertyMap,
-            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null);
+            tieBreakProperty: isPaginated ? PaginationTieBreakProperty : null,
+            fieldContract: parameters.FieldContract);
 
         int totalCount = 0;
         var unpagedQuery = query;

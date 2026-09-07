@@ -42,3 +42,18 @@ MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.ProbeTelemetryFilterP
 override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnEnd(System.Diagnostics.Activity! data) -> void
 override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnStart(System.Diagnostics.Activity! data) -> void
 MMCA.Common.Aspire.Security.SecurityHeadersSettings.CredentialPathPrefixes.get -> System.Collections.Generic.IList<string!>!
+MMCA.Common.Aspire.Health.CachedHealthReportProvider
+MMCA.Common.Aspire.Health.CachedHealthReportProvider.CachedHealthReportProvider(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService! healthCheckService, Microsoft.Extensions.Options.IOptions<MMCA.Common.Aspire.Health.HealthReportCacheOptions!>! options, System.TimeProvider! timeProvider) -> void
+MMCA.Common.Aspire.Health.CachedHealthReportProvider.Dispose() -> void
+MMCA.Common.Aspire.Health.CachedHealthReportProvider.GetReportAsync(string! endpointKey, System.Func<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckRegistration!, bool>? predicate, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthReport!>!
+MMCA.Common.Aspire.Health.HealthReportCacheOptions
+MMCA.Common.Aspire.Health.HealthReportCacheOptions.CacheSeconds.get -> int
+MMCA.Common.Aspire.Health.HealthReportCacheOptions.CacheSeconds.init -> void
+MMCA.Common.Aspire.Health.HealthReportCacheOptions.HealthReportCacheOptions() -> void
+static readonly MMCA.Common.Aspire.Health.HealthReportCacheOptions.SectionName -> string!
+MMCA.Common.Aspire.Extensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapCachedHealthChecks(string! path, System.Func<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckRegistration!, bool>? predicate) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+static MMCA.Common.Aspire.Extensions.MapCachedHealthChecks(this Microsoft.AspNetCore.Builder.WebApplication! app, string! path, System.Func<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckRegistration!, bool>? predicate) -> Microsoft.AspNetCore.Builder.IEndpointConventionBuilder!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerHeaderName.get -> string!
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerHeaderName.init -> void
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerSecret.get -> string?
+MMCA.Common.Aspire.Gateway.GatewayRateLimitingSettings.TrustedCallerSecret.init -> void

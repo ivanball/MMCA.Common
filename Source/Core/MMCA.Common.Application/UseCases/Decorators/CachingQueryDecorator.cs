@@ -48,14 +48,15 @@ public sealed partial class CachingQueryDecorator<TQuery, TResult>(
     IOptions<QueryCachePipelineSettings>? pipelineSettings = null) : IQueryHandler<TQuery, TResult>
 {
     /// <summary>
-    /// The cache key for this query in the current tenant: the query's own key, prefixed with the
-    /// tenant when one is resolved. Two tenants therefore never share an entry, and a host that
-    /// resolves no tenant keeps byte-identical keys to the pre-tenancy framework.
+    /// The cache key for this query in the current tenant AND for the caller it is addressed at:
+    /// the query's own key, prefixed with the target user when the query is caller-scoped, then with
+    /// the tenant when one is resolved. Two tenants and two users therefore never share an entry,
+    /// and a host with neither keeps byte-identical keys to the pre-tenancy framework.
     /// </summary>
     /// <param name="cacheable">The cacheable query carrying the key.</param>
     /// <returns>The effective cache key.</returns>
     private string EffectiveKey(IQueryCacheable cacheable) =>
-        TenantCacheKey.Scope(tenantContext, cacheable.CacheKey);
+        TenantCacheKey.Scope(tenantContext, UserCacheKey.Scope(cacheable, cacheable.CacheKey));
 
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)

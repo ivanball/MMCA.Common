@@ -26,10 +26,14 @@ namespace MMCA.Common.Aspire.Gateway;
 /// the replica will hold at once regardless of who sent it. A request must satisfy both.
 /// </para>
 /// <para>
-/// Three kinds of request take the no-limiter partition on BOTH limiters: an always-bypassed
-/// infrastructure prefix, a host-configured bypass prefix, and a synthetic-traffic request proving
-/// the configured secret in the configured header (off unless
-/// <see cref="GatewayRateLimitingSettings.SyntheticTrafficSecret"/> is set).
+/// Four kinds of request take the no-limiter partition on BOTH limiters: an always-bypassed
+/// infrastructure prefix, a host-configured bypass prefix, a synthetic-traffic request proving the
+/// configured secret in the configured header (off unless
+/// <see cref="GatewayRateLimitingSettings.SyntheticTrafficSecret"/> is set), and a trusted internal
+/// caller proving <see cref="GatewayRateLimitingSettings.TrustedCallerSecret"/> (off unless that is
+/// set). The last exists because a server-rendered UI host makes every back-end call, refreshes
+/// included, from ONE address, which the per-IP window would otherwise collapse into a single
+/// partition and throttle the whole site.
 /// </para>
 /// </summary>
 [SuppressMessage(
@@ -96,22 +100,79 @@ public static class GatewayRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (string.IsNullOrWhiteSpace(settings.SyntheticTrafficSecret))
+        return PresentsSecret(
+            httpContext,
+            settings.SyntheticTrafficHeaderName,
+            settings.SyntheticTrafficSecret);
+    }
+
+    /// <summary>
+    /// Whether this request proves the configured trusted-internal-caller secret and is therefore
+    /// exempt from BOTH edge limiters. Always <see langword="false"/> when no secret is configured.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="settings">The bound gateway settings.</param>
+    /// <returns><see langword="true"/> when the request carries the configured secret.</returns>
+    /// <remarks>
+    /// <para>
+    /// Generalizes the synthetic-traffic bypass above from a load-test runner to any component the
+    /// deployment trusts. The case it exists for is a server-rendered UI host: every one of its
+    /// back-end calls, including the token refresh it makes on behalf of each signed-in visitor,
+    /// leaves from ONE address, so the per-IP window collapses the whole site into one partition and
+    /// starts answering 429 under normal load.
+    /// </para>
+    /// <para>
+    /// The comparison runs over UTF-8 bytes through
+    /// <see cref="CryptographicOperations.FixedTimeEquals(ReadOnlySpan{byte}, ReadOnlySpan{byte})"/>
+    /// and requires exactly one header value, exactly as the synthetic-traffic check does. Internal
+    /// (not private) so the check is unit-testable via <c>InternalsVisibleTo</c>.
+    /// </para>
+    /// </remarks>
+    internal static bool IsTrustedInternalCaller(HttpContext httpContext, GatewayRateLimitingSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        return PresentsSecret(
+            httpContext,
+            settings.TrustedCallerHeaderName,
+            settings.TrustedCallerSecret);
+    }
+
+    /// <summary>
+    /// Constant-time header-secret check shared by both bypasses: off when no secret is configured,
+    /// and a multi-valued header never matches, so a caller cannot spray candidates.
+    /// </summary>
+    private static bool PresentsSecret(HttpContext httpContext, string headerName, string? expectedSecret)
+    {
+        if (string.IsNullOrWhiteSpace(expectedSecret) || string.IsNullOrWhiteSpace(headerName))
         {
             return false;
         }
 
-        var presented = httpContext.Request.Headers[settings.SyntheticTrafficHeaderName];
+        var presented = httpContext.Request.Headers[headerName];
         if (presented.Count != 1)
         {
             return false;
         }
 
         var presentedBytes = Encoding.UTF8.GetBytes(presented[0] ?? string.Empty);
-        var expectedBytes = Encoding.UTF8.GetBytes(settings.SyntheticTrafficSecret);
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedSecret);
 
         return CryptographicOperations.FixedTimeEquals(presentedBytes, expectedBytes);
     }
+
+    /// <summary>
+    /// Whether this request takes the no-limiter partition on both edge limiters: a bypassed path,
+    /// proven synthetic traffic, or a proven trusted internal caller.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="settings">The bound gateway settings.</param>
+    /// <returns><see langword="true"/> when neither limiter applies.</returns>
+    internal static bool IsExemptFromLimiters(HttpContext httpContext, GatewayRateLimitingSettings settings) =>
+        IsBypassed(httpContext.Request.Path, settings)
+        || IsSyntheticTraffic(httpContext, settings)
+        || IsTrustedInternalCaller(httpContext, settings);
 
     /// <summary>
     /// Per-client-IP partition: no limiter for bypassed paths or proven synthetic traffic, no
@@ -128,7 +189,7 @@ public static class GatewayRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        if (IsBypassed(httpContext.Request.Path, settings) || IsSyntheticTraffic(httpContext, settings))
+        if (IsExemptFromLimiters(httpContext, settings))
         {
             return RateLimitPartition.GetNoLimiter(BypassPartitionKey);
         }
@@ -166,7 +227,7 @@ public static class GatewayRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        return IsBypassed(httpContext.Request.Path, settings) || IsSyntheticTraffic(httpContext, settings)
+        return IsExemptFromLimiters(httpContext, settings)
             ? RateLimitPartition.GetNoLimiter(BypassPartitionKey)
             : RateLimitPartition.GetConcurrencyLimiter(ConcurrencyPartitionKey, _ => new ConcurrencyLimiterOptions
             {

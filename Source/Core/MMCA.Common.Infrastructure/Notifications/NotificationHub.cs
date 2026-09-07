@@ -44,6 +44,71 @@ public sealed class NotificationHub(
     private static readonly ConcurrentDictionary<string, Regex> ChannelKeyRegexCache = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Live connection count per user identifier on THIS replica (SEC-ADC-25). Per replica, like the
+    /// in-memory rate limiters: it bounds what one token can do to one process, which is the
+    /// resource actually being exhausted.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, int> ConnectionsPerUser = new(StringComparer.Ordinal);
+
+    /// <inheritdoc />
+    public override async Task OnConnectedAsync()
+    {
+        var cap = settings.Value.MaxConnectionsPerUser;
+        var userId = Context.UserIdentifier;
+
+        if (cap > 0 && !string.IsNullOrEmpty(userId))
+        {
+            var count = ConnectionsPerUser.AddOrUpdate(userId, 1, static (_, current) => current + 1);
+            if (count > cap)
+            {
+                // Give the slot straight back: the connection is refused, so it must not keep
+                // counting against the user and lock them out once the aborted ones drain.
+                Decrement(userId);
+                throw new HubException("Too many concurrent connections for this account.");
+            }
+        }
+
+        await base.OnConnectedAsync().ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var userId = Context.UserIdentifier;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            Decrement(userId);
+        }
+
+        await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Releases one connection slot, removing the entry entirely at zero so the dictionary tracks
+    /// only users who are actually connected rather than everyone who ever was.
+    /// </summary>
+    private static void Decrement(string userId)
+    {
+        while (ConnectionsPerUser.TryGetValue(userId, out var current))
+        {
+            if (current <= 1)
+            {
+                if (ConnectionsPerUser.TryRemove(new KeyValuePair<string, int>(userId, current)))
+                {
+                    return;
+                }
+
+                continue;
+            }
+
+            if (ConnectionsPerUser.TryUpdate(userId, current - 1, current))
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>
     /// Adds the calling connection to a channel (SignalR group) so it receives events published via
     /// <see cref="Application.Interfaces.Infrastructure.Notifications.ILiveChannelPublisher"/> for that channel key.
     /// </summary>

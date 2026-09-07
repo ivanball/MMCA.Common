@@ -62,6 +62,89 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   the `Referer` header. `ResetPassword` reads it from `location.hash` and scrubs it, and
   `/reset-password` and `/auth/oauth-complete` answer with `Referrer-Policy: no-referrer` and
   `Cache-Control: no-store`.
+- **SEC-Common-24: a lookup projects only fields the response contract declares, and is capped.**
+  `EntityQueryService.GetAllForLookupAsync` resolves `nameProperty` through the new
+  `LookupNameContract` (defaulting to the DTO's own property names, narrowable with
+  `QueryFieldContract.ForNames`) and answers 400 for anything else, and
+  `EFReadRepository.GetAllForLookupAsync` applies `EntityQueryPipeline.MaxUnboundedResultLimit`,
+  the one read that never entered the pipeline enforcing it.
+- **SEC-Common-25 / SEC-ADC-09: dynamic sort columns and filter keys resolve against the response
+  contract, not the entity.** `EntityQueryService.FieldContract` defaults to
+  `QueryFieldContract.For<TEntityDTO>()` and flows through `EntityQueryParameters` into
+  `QueryFieldService.ApplySorting` and `QueryFilterService.ApplyFilters`/`ValidateFilters` (new
+  overloads; the existing signatures are unchanged and keep the old behaviour). A key the map does
+  not cover must name a contract field, and a dotted path the server did not author is refused, so a
+  caller can neither order a public page by a redacted column nor turn a list endpoint into an
+  inference oracle over the object graph.
+  **Adopting this is a behaviour change:** a client key naming a field only the entity carries now
+  answers 400. Add the field to the DTO, map it in `DTOToEntityPropertyMap`, or override
+  `FieldContract` (returning `null` restores entity resolution).
+- **SEC-Store-13: a navigation path is capped at `QueryFieldContract.MaxNavigationDepth` (3)
+  segments**, whoever authored it, so a self-referencing segment repeated hundreds of times cannot
+  become that many LEFT JOINs from one anonymous request.
+- **SEC-Store-14: the lookup-selector cache is keyed on the property's canonical name and bounded.**
+  Every case permutation of a real column used to mint its own never-evicted entry; they now collapse
+  onto one, and past 512 entries the selector is built per request.
+- **SEC-Common-28: image decoding has a pixel and dimension ceiling.**
+  `ImageSharpImageProcessor` reads the header with `Image.IdentifyAsync` and refuses anything past
+  `MaxDecodedPixels` (50 MP) or `MaxDecodedDimension` (20000) as `Image.TooLarge`, before the frame
+  buffer a decompression bomb declares is ever allocated; the decoded frame is re-checked.
+- **SEC-Common-37: a caller-scoped query cache key includes the caller.** `CachingQueryDecorator`
+  appends the target user to the key for a query that implements `IUserScopedRequest`, so one
+  caller's rows are not served to another from a shared entry; the new `ISharedQueryCache` marker
+  opts a genuinely public result back out. The segment is a suffix, so prefix invalidation still
+  clears every caller's copy.
+- **SEC-Common-44: the gRPC rate-limit and HTTPS-redirect exemptions no longer trust a request
+  header.** `IsRateLimitBypassed` keys on gRPC endpoint metadata (produced by routing from the
+  server's own `MapGrpcService` registrations), and the HTTPS-redirect skip keys on the negotiated
+  protocol via `MiddlewarePipelineBuilder.IsCleartextHttp2`. Stamping
+  `Content-Type: application/grpc` on ordinary requests no longer switches off the per-user cap or
+  the redirect.
+- **SEC-Common-53: shared Redis and broker resources are namespaced per application by default.**
+  `ApplicationNamespace.Resolve` derives one namespace from `Application:Namespace`, falling back to
+  the host application name, and it now defaults `Cache:KeyPrefix` (and so the distributed-lock
+  keyspace), the SignalR Redis backplane `ChannelPrefix` and `MessageBus:EndpointPrefix`.
+  **Adopting this changes resource names:** cache keys and lock keys gain a prefix (a cold cache
+  after deploy), the backplane moves channel, and unset `EndpointPrefix` now yields prefixed queue
+  names. Set `Application:Namespace` explicitly where two hosts of the same application must share a
+  keyspace, and drain old broker queues on cutover.
+- **SEC-Common-54: SMTP TLS is on by default outside Development.** `SmtpTransportSecurity` resolves
+  `EnableSsl` in the `RequireHttpsMetadata` three steps (explicit `Smtp:EnableSsl`, then secure
+  outside Development) and logs one startup warning when a deployed host disables it for a
+  configured relay, so an adopter who omits the key no longer authenticates in the clear on the path
+  that carries password-reset tokens.
+- **SEC-Common-71 / SEC-ADC-17: `/health` and `/health/ready` serve a cached report.**
+  `CachedHealthReportProvider` runs the dependency probes at most once per
+  `HealthChecks:CacheSeconds` (default 5) with single flight, so an anonymous flood on these
+  rate-limit-exempt paths costs one probe round per window instead of one per request. `/alive` is
+  unchanged and still uncached.
+- **SEC-ADC-25: anonymous hub traffic is metered and a hub connection is capped per user.** The
+  service-side global limiter partitions anonymous requests to `RateLimiting:HubPathPrefixes`
+  (default `/hubs`) per client IP at `AnonymousHubPermitLimit` (default 60/min) instead of exempting
+  them, so an edge that bypasses `/hubs` is now covered service-side; `NotificationHub` refuses a
+  connection past `PushNotifications:MaxConnectionsPerUser` (default 20).
+- **SEC-Common-77: an If-Match precondition is enforced even when only child rows changed.**
+  `IWriteRepository.TouchConcurrencyToken` (a default no-op, implemented by `EFRepository`) marks an
+  otherwise-`Unchanged` aggregate root as modified under a conditional write, so the save always
+  emits a root UPDATE carrying the caller's token and a stale one answers 412 instead of silently
+  discarding a concurrent edit.
+
+### Added
+
+- **`DeepLinkDispatcher.Publish` validates the route shape.** Only a single-leading-slash
+  app-relative path with no scheme, backslash or control character is accepted, so a hostile explicit
+  intent on a native head cannot publish `//attacker.example/p` and have the web view resolve it
+  protocol-relative off the app origin. `IsAppRelativeRoute` is public for a head that wants the same
+  check earlier.
+- **A trusted-internal-caller exemption for the gateway rate limiter.**
+  `GatewayRateLimitingSettings.TrustedCallerSecret`/`TrustedCallerHeaderName` generalize the
+  synthetic-traffic bypass, so a server-rendered UI host's back-end calls (token refreshes above all)
+  are not collapsed into one client-IP partition. Off unless the secret is configured, compared in
+  constant time, single-valued header only.
+- **`IConcurrencyConflictDetector` and `EfCoreConcurrencyConflictDetector`**, beside
+  `IUniqueConstraintViolationDetector`: a handler that claims work by writing a row can recognise
+  losing that claim without catching `DbUpdateConcurrencyException` in the Application layer.
+  Registered by `AddInfrastructure` with `TryAdd`.
 
 ## [1.187.0] - 2026-09-06
 
