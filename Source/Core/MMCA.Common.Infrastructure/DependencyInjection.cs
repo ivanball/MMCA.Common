@@ -789,12 +789,19 @@ public static class DependencyInjection
                 // prefix". An omitted setting used to put two applications' consumers on the same
                 // queue names on a shared broker, so one application's messages were delivered to
                 // the other's consumers.
-                var endpointPrefix = string.IsNullOrWhiteSpace(settings.EndpointPrefix)
-                    ? ApplicationNamespace.Resolve(configuration, environment: null)
-                    : settings.EndpointPrefix;
+                //
+                // PreserveDefaultEndpointNames keeps the pre-1.188.0 names (MassTransit's default
+                // formatter, no prefix) so an existing deployment does not rename its queues and
+                // subscriptions at cutover; it is the documented opt-out, not the default.
+                if (!settings.PreserveDefaultEndpointNames)
+                {
+                    var endpointPrefix = string.IsNullOrWhiteSpace(settings.EndpointPrefix)
+                        ? ApplicationNamespace.Resolve(configuration, environment: null)
+                        : settings.EndpointPrefix;
 
-                x.SetEndpointNameFormatter(
-                    new KebabCaseEndpointNameFormatter(endpointPrefix, includeNamespace: false));
+                    x.SetEndpointNameFormatter(
+                        new KebabCaseEndpointNameFormatter(endpointPrefix, includeNamespace: false));
+                }
 
                 configureConsumers?.Invoke(x);
                 ConfigureBrokerTransport(x, settings, connectionString);

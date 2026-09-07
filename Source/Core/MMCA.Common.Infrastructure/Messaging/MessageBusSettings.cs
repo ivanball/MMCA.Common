@@ -73,6 +73,16 @@ public sealed class MessageBusSettings
     public string? EndpointPrefix { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the broker keeps MassTransit's default endpoint names (no
+    /// prefix, default formatter), which is what every release before 1.188.0 produced when
+    /// <see cref="EndpointPrefix"/> was unset. Set to <see langword="true"/> on an existing deployment so queue
+    /// and subscription names stay stable across the upgrade; the per-application prefix
+    /// (<see cref="EndpointPrefix"/>, or the resolved application namespace) applies only when this
+    /// is <see langword="false"/>. Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool PreserveDefaultEndpointNames { get; init; }
+
+    /// <summary>
     /// Gets the maximum number of in-process redelivery attempts MassTransit makes (via
     /// <c>UseMessageRetry</c>) before a faulted message is moved to the <c>_error</c> queue.
     /// Applies to every broker receive endpoint. Set to <c>0</c> to disable retries.

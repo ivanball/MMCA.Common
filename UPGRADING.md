@@ -56,10 +56,14 @@ per item:
    `DTOToEntityPropertyMap` entry, or override `EntityQueryService.FieldContract` /
    `LookupNameContract` for that endpoint. Navigation paths are capped at three segments and lookups
    at 1000 rows.
-3. **Application namespace.** Set `Application:Namespace` (or the explicit `Cache:KeyPrefix` and
-   `MessageBus:EndpointPrefix` values you ran with before) so cache keys, lock keys, the SignalR
-   backplane channel and broker endpoints do not move on cutover; an unset value now derives a
-   prefix from the application name, which renames queues and cold-starts caches.
+3. **Application namespace.** An unset `Application:Namespace` now derives a prefix from the
+   application name for cache keys, lock keys, the SignalR backplane channel and broker endpoints.
+   A cold cache is harmless; a broker rename is not. The broker formatter also changed (kebab-case
+   with a prefix instead of MassTransit's default), so **no `MessageBus:EndpointPrefix` value
+   reproduces the pre-upgrade queue names**: an existing deployment sets
+   `MessageBus:PreserveDefaultEndpointNames=true` to keep its queues and subscriptions, and pins
+   `Cache:KeyPrefix` explicitly if it wants a stable keyspace. A fresh deployment, or one that
+   drains its queues at cutover, takes the new prefixed names.
 4. **SMTP transport security.** `Smtp:EnableSsl` unset resolves to `true` outside Development. A
    relay that offers no TLS must set it to `false` explicitly (one startup warning is logged).
 5. **Password change and reset revoke sessions** only when the app passes `IRefreshSessionStore`

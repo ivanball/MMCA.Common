@@ -87,3 +87,5 @@ override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnConnectedAsy
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnDisconnectedAsync(System.Exception? exception) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.MaxConnectionsPerUser.get -> int
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.MaxConnectionsPerUser.init -> void
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.get -> bool
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.init -> void

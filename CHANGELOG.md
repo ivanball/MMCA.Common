@@ -15,7 +15,9 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   authorization policy is on, so an endpoint or proxied gateway route that declares nothing now
   requires an authenticated caller; (2) client sort, filter and lookup keys resolve against the DTO
   contract and an entity-only name returns 400; (3) `Application:Namespace` prefixes cache keys,
-  lock keys, the SignalR backplane channel and the message-bus endpoint prefix when those are unset;
+  lock keys, the SignalR backplane channel and the message-bus endpoint prefix when those are unset
+  (an existing deployment sets `MessageBus:PreserveDefaultEndpointNames=true` to keep its queue
+  names, since the formatter change means no prefix value reproduces the old names);
   (4) `Smtp:EnableSsl` unset means TLS on outside Development. Also: a client-supplied
   `Content-Type: application/grpc` no longer bypasses the global limiter or HTTPS redirection,
   anonymous hub traffic is metered per IP, `/health` and `/health/ready` are cached for

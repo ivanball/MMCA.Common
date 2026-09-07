@@ -112,6 +112,55 @@ public sealed class DependencyInjectionBrokerMessagingTests
         formatter.Consumer<OrderPlacedConsumer>().Should().Be("store-catalog-order-placed");
     }
 
+    [Fact]
+    public void AddBrokerMessaging_PreserveDefaultEndpointNames_RegistersNoFormatter()
+    {
+        // The opt-out for an existing deployment: with no formatter registered MassTransit derives
+        // the same queue and subscription names it did before 1.188.0, so an upgrade does not
+        // strand in-flight messages on renamed endpoints.
+        var services = new ServiceCollection();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = "RabbitMq",
+                ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
+                ["MessageBus:PreserveDefaultEndpointNames"] = "true",
+            })
+            .Build();
+
+        services.AddBrokerMessaging(configuration);
+
+        services
+            .Select(d => d.ImplementationInstance)
+            .OfType<IEndpointNameFormatter>()
+            .Should().BeEmpty("the opt-out must leave MassTransit's default naming untouched");
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_UnsetPrefix_FallsBackToTheApplicationNamespace()
+    {
+        // SEC-Common-53: an unset prefix no longer means "no prefix". The formatter carries the
+        // resolved application namespace so two applications on one broker never share a queue.
+        var services = new ServiceCollection();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = "RabbitMq",
+                ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
+                ["Application:Namespace"] = "adc-conference",
+            })
+            .Build();
+
+        services.AddBrokerMessaging(configuration);
+
+        var formatter = services
+            .Select(d => d.ImplementationInstance)
+            .OfType<IEndpointNameFormatter>()
+            .Should().ContainSingle().Subject;
+
+        formatter.Consumer<OrderPlacedConsumer>().Should().Be("adc-conference-order-placed");
+    }
+
     /// <summary>A consumer that exists only to be named by the endpoint name formatter.</summary>
     private sealed class OrderPlacedConsumer : IConsumer<OrderPlacedTestEvent>
     {
