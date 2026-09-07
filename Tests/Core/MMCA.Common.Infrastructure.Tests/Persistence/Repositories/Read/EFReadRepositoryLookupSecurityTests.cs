@@ -79,7 +79,6 @@ public sealed class EFReadRepositoryLookupSecurityTests : IDisposable
     {
         Seed(3);
         var cache = SelectorCache();
-        var before = cache.Count;
 
         foreach (var spelling in new[] { "Name", "name", "NAME", "nAmE", "NaMe" })
         {
@@ -88,10 +87,15 @@ public sealed class EFReadRepositoryLookupSecurityTests : IDisposable
         }
 
         // Five spellings of one real column: one entry, not five. That is what stops an anonymous
-        // caller growing a process-lifetime dictionary by permuting case.
-        (cache.Count - before).Should().Be(1);
-        cache.Keys.Should().Contain(key => key.EntityType == typeof(SpecTestEntity) && key.PropertyName == "Name");
-        cache.Keys.Should().NotContain(key => key.PropertyName == "nAmE");
+        // caller growing a process-lifetime dictionary by permuting case. The cache is static and
+        // shared with every other test that looks up this entity, so the assertion is on the set of
+        // entries for the column, not on a count delta (the canonical entry may already exist).
+        var nameEntries = cache.Keys
+            .Where(key => key.EntityType == typeof(SpecTestEntity)
+                && string.Equals(key.PropertyName, "Name", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        nameEntries.Should().ContainSingle();
+        nameEntries[0].PropertyName.Should().Be("Name");
     }
 
     [Fact]
