@@ -10,28 +10,56 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Deployment gate for an IRREVERSIBLE action (SEC-Common-64): nuget.org versions can never be
+    # withdrawn (ADR-053), so the publish waits on the `release` environment's protection rules
+    # (required reviewer + a deployment policy limited to v* tags), configured in repo settings.
+    environment: release
     permissions:
       packages: write
       contents: read
       id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v6
+      # SEC-Common-64: a v* tag is the one ref pushed directly, outside the branch-protection PR
+      # flow, and this workflow re-runs only restore/build/test/SBOM. So refuse to publish unless the
+      # tagged commit is actually reachable from origin/main: that is what makes the checks which ran
+      # on the merged PR (FACTS drift gate, vulnerability audit, Helpdesk consumer canary,
+      # package-consumption canary, ui-e2e, perf gate) the checks that really covered this tree.
+      # Pairs with the `release` environment protection rule declared on this job. The checkout above
+      # uses fetch-depth 0, so only the main branch tip still has to be fetched.
+      - name: Assert the tagged commit is on merged main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "::error::Tagged commit $GITHUB_SHA is not reachable from origin/main; refusing to publish. Tag a commit that landed on main through a PR."
+            exit 1
+          fi
+          echo "Tagged commit $GITHUB_SHA is an ancestor of origin/main."
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           cache: true
           cache-dependency-path: |
             **/packages.lock.json
             Directory.Packages.props
 
       - name: Restore
-        run: dotnet restore MMCA.Common.slnx
+        # --locked-mode (SEC-ADC-34 / SEC-Common-63): the packages that get packed, SBOM'd and pushed
+        # irreversibly to nuget.org must come from the committed lock graph, which is what ADR-038
+        # decision 2 claims. Without it a feed movement between the PR run and the tag build silently
+        # ships a transitive version nobody reviewed.
+        run: dotnet restore MMCA.Common.slnx --locked-mode
 
       - name: Determine version from tag
         id: version
@@ -52,13 +80,13 @@ jobs:
       # tooling was being validated in CI — now promoted to a blocking step).
       - name: Generate SBOM (CycloneDX)
         run: |
-          dotnet tool install --global CycloneDX
+          dotnet tool install --global CycloneDX --version 6.2.0
           dotnet CycloneDX MMCA.Common.slnx --output ./sbom --json
           ls -la ./sbom
           test -n "$(ls -A ./sbom 2>/dev/null)" || { echo "::error::SBOM generation produced no output"; exit 1; }
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom
           path: ./sbom
@@ -78,7 +106,7 @@ jobs:
       # Request the key immediately before the push: it expires in an hour and is single-use.
       - name: NuGet login (OIDC to short-lived key)
         if: github.repository_owner == 'ivanball'
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
         id: nuget-login
         with:
           user: ivanball # nuget.org profile name, not an email; public, so not a secret
@@ -94,21 +122,45 @@ jobs:
   publish-maui:
     runs-on: windows-latest
     timeout-minutes: 40
+    # Same irreversible-publish gate as the `publish` job (SEC-Common-64); both jobs push to
+    # nuget.org, so both wait on the `release` environment.
+    environment: release
     permissions:
       packages: write
       contents: read
       id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v6
+      # SEC-Common-64: a v* tag is the one ref pushed directly, outside the branch-protection PR
+      # flow, and this workflow re-runs only restore/build/test/SBOM. So refuse to publish unless the
+      # tagged commit is actually reachable from origin/main: that is what makes the checks which ran
+      # on the merged PR (FACTS drift gate, vulnerability audit, Helpdesk consumer canary,
+      # package-consumption canary, ui-e2e, perf gate) the checks that really covered this tree.
+      # Pairs with the `release` environment protection rule declared on this job. The checkout above
+      # uses fetch-depth 0, so only the main branch tip still has to be fetched.
+      - name: Assert the tagged commit is on merged main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "::error::Tagged commit $GITHUB_SHA is not reachable from origin/main; refusing to publish. Tag a commit that landed on main through a PR."
+            exit 1
+          fi
+          echo "Tagged commit $GITHUB_SHA is an ancestor of origin/main."
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           cache: true
           cache-dependency-path: |
             **/packages.lock.json
@@ -131,13 +183,13 @@ jobs:
       - name: Generate SBOM (CycloneDX)
         shell: bash
         run: |
-          dotnet tool install --global CycloneDX
+          dotnet tool install --global CycloneDX --version 6.2.0
           dotnet CycloneDX Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj --output ./sbom-maui --json
           ls -la ./sbom-maui
           test -n "$(ls -A ./sbom-maui 2>/dev/null)" || { echo "::error::SBOM generation produced no output"; exit 1; }
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-maui
           path: ./sbom-maui
@@ -155,7 +207,7 @@ jobs:
       # exchange: a short-lived key is single-use and cannot cross a job boundary.
       - name: NuGet login (OIDC to short-lived key)
         if: github.repository_owner == 'ivanball'
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
         id: nuget-login
         with:
           user: ivanball # nuget.org profile name, not an email; public, so not a secret

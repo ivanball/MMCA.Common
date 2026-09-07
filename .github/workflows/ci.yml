@@ -15,6 +15,15 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege for GITHUB_TOKEN (SEC-Common-61). Without this block the token scope is whatever
+# the repo/org default happens to be, so a same-repo PR job could hold a write-capable token that
+# actions/checkout then persists into .git/config. Nothing in this workflow writes to the repo: no
+# job comments on a PR, publishes a package, or pushes a ref, so no job widens this. The checkout
+# steps below additionally pass persist-credentials: false, so the token is never left on disk for a
+# later step (or for anything a compromised analyzer, test or tool could read).
+permissions:
+  contents: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Redirect Playwright's browser install out of ~/.cache/ms-playwright and into the workspace so
@@ -39,16 +48,22 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Classify changed paths
         id: filter
+        # Ref names reach the script through env, never through ${{ }} template substitution
+        # (SEC-Common-60): template values are pasted in before the shell parses the line, so a name
+        # containing a quote would break out of the assignment and run as code.
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
-          base="origin/${{ github.base_ref }}"
-          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}" >/dev/null 2>&1 || true
+          base="origin/$BASE_REF"
+          git fetch --no-tags --depth=1 origin "$BASE_REF" >/dev/null 2>&1 || true
           if ! git rev-parse --verify --quiet "$base" >/dev/null; then
             echo "Cannot resolve base ref '$base' — assuming code changed."
             echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
@@ -73,16 +88,19 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
@@ -101,7 +119,14 @@ jobs:
 
       - name: Restore
         if: needs.changes.outputs.code == 'true'
-        run: dotnet restore MMCA.Common.slnx
+        # --locked-mode (SEC-Common-63 / SEC-ADC-34): restore from the committed packages.lock.json
+        # graph or fail. Without it restore silently re-resolves and regenerates the lock files on the
+        # runner, so CI builds, audits and packs a graph nobody reviewed. A deliberate dependency
+        # change regenerates the lock files locally with `dotnet restore --force-evaluate` and commits
+        # them in the same PR. Every project in MMCA.Common.slnx has a lock file (34 of them); the
+        # three that do not (build/facts, build/perfgate, Tests/Performance/MMCA.Common.Benchmarks)
+        # are outside the slnx and are unaffected.
+        run: dotnet restore MMCA.Common.slnx --locked-mode
 
       - name: Build
         if: needs.changes.outputs.code == 'true'
@@ -109,12 +134,26 @@ jobs:
 
       - name: Audit dependencies (fail on known vulnerabilities)
         if: needs.changes.outputs.code == 'true'
+        # Fails CLOSED (SEC-Common-62). The verdict used to be derived purely from grepping stdout for
+        # vulnerable-package rows, with the command's own exit code discarded, so every way the tool
+        # itself can fail (a transient nuget.org 5xx while fetching the advisory index, an auth or
+        # proxy error, an slnx parse change, an SDK band that renames the output) produced an empty
+        # grep and a green "no vulnerabilities". Two assertions must now hold before that conclusion
+        # is allowed: the command exited 0, AND the log is actually a `dotnet list package` report
+        # (which always prints the sources header first).
         run: |
-          dotnet list MMCA.Common.slnx package --vulnerable --include-transitive > audit.log 2>&1 || true
+          rc=0
+          dotnet list MMCA.Common.slnx package --vulnerable --include-transitive > audit.log 2>&1 || rc=$?
           cat audit.log
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::dotnet list --vulnerable exited $rc: the vulnerability gate did not run, so it fails"; exit 1
+          fi
+          if ! grep -q 'The following sources were used' audit.log; then
+            echo "::error::audit.log is not a dotnet list package report (no sources header): the vulnerability gate did not run, so it fails"; exit 1
+          fi
           # `dotnet list --vulnerable` ignores NuGetAuditSuppress, so honor the same accepted-advisory
           # list here (single source of truth: Directory.Build.props). Fail only on a vulnerable-package
-          # row (">") whose advisory is NOT suppressed — e.g. the unpatched SQLite advisory is accepted.
+          # row (">") whose advisory is NOT suppressed (e.g. the unpatched SQLite advisory is accepted).
           # Scoped to actual <NuGetAuditSuppress> lines: a GHSA id mentioned in a comment about a
           # NON-accepted advisory must not silently suppress it here.
           suppressed=$(grep -E '<NuGetAuditSuppress\b' Directory.Build.props | grep -oE 'GHSA-[a-z0-9-]+' | sort -u | paste -sd'|' -)
@@ -124,13 +163,13 @@ jobs:
             vulns=$(printf '%s\n' "$vulns" | grep -vE "$suppressed" || true)
           fi
           if printf '%s' "$vulns" | grep -q .; then
-            echo "::error::Non-suppressed vulnerable NuGet packages detected — see log above"; exit 1
+            echo "::error::Non-suppressed vulnerable NuGet packages detected (see log above)"; exit 1
           fi
           echo "No non-suppressed vulnerable packages."
 
       - name: Install coverage tool
         if: needs.changes.outputs.code == 'true'
-        run: dotnet tool install --global dotnet-coverage
+        run: dotnet tool install --global dotnet-coverage --version 18.11.0
 
       - name: Test (with coverage)
         if: needs.changes.outputs.code == 'true'
@@ -145,7 +184,7 @@ jobs:
 
       - name: Upload coverage (unit + architecture + bUnit)
         if: always() && needs.changes.outputs.code == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-unit
           path: coverage.unit.cobertura.xml
@@ -163,16 +202,19 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
@@ -200,7 +242,7 @@ jobs:
       - name: Cache MAUI workload packs
         if: needs.changes.outputs.code == 'true'
         id: maui-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: |
             ${{ steps.sdk.outputs.root }}/sdk-manifests
@@ -239,16 +281,19 @@ jobs:
     # observed streak, webkit promoted 2026-07-16 after 11 consecutive green main runs since its
     # last flake (2026-07-12 00:45). Add the webkit check to branch protection alongside the others.
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
@@ -269,7 +314,7 @@ jobs:
       - name: Cache Playwright browsers (${{ matrix.browser }})
         if: needs.changes.outputs.code == 'true'
         id: playwright-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ github.workspace }}/.ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('Tests/Presentation/MMCA.Common.UI.E2E.Tests/packages.lock.json', 'Directory.Packages.props') }}
@@ -288,7 +333,7 @@ jobs:
 
       - name: Install coverage tool
         if: needs.changes.outputs.code == 'true' && matrix.browser == 'chromium'
-        run: dotnet tool install --global dotnet-coverage
+        run: dotnet tool install --global dotnet-coverage --version 18.11.0
 
       - name: Run UI E2E (axe + render smoke)
         if: needs.changes.outputs.code == 'true'
@@ -307,7 +352,7 @@ jobs:
 
       - name: Upload coverage (E2E)
         if: ${{ always() && needs.changes.outputs.code == 'true' && matrix.browser == 'chromium' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-e2e
           path: coverage.e2e.cobertura.xml
@@ -315,7 +360,7 @@ jobs:
 
       - name: Upload Playwright traces on failure
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ui-e2e-traces-${{ matrix.browser }}
           path: Tests/Presentation/MMCA.Common.UI.E2E.Tests/bin/Release/net10.0/playwright-traces/**
@@ -335,16 +380,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer (on the referenced Source projects) needs full history
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
@@ -378,13 +426,13 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
 
       - name: Download coverage artifacts
         if: needs.changes.outputs.code == 'true'
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: coverage-*
           path: coverage
@@ -393,7 +441,7 @@ jobs:
       - name: Generate merged coverage report
         if: needs.changes.outputs.code == 'true'
         run: |
-          dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.11
           export PATH="$PATH:$HOME/.dotnet/tools"
           reportgenerator \
             -reports:'coverage/**/*.cobertura.xml' \
@@ -407,7 +455,7 @@ jobs:
 
       - name: Upload HTML coverage report
         if: needs.changes.outputs.code == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-report-html
           path: coverage-report
@@ -461,8 +509,9 @@ jobs:
       HELPDESK_TICKETS_DB: HelpdeskMigrationCanary
     steps:
       - name: Checkout MMCA.Common (this PR)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           path: MMCA.Common
           fetch-depth: 0 # MinVer needs full history
 
@@ -473,9 +522,15 @@ jobs:
       # No matching branch means main, i.e. the original behavior.
       - name: Resolve Helpdesk canary ref (same-name branch, else main)
         id: helpdesk-ref
+        # HEAD_REF reaches the script through env, never through ${{ }} template substitution
+        # (SEC-Common-60): github.head_ref is the PR author's branch name, git ref rules permit a
+        # single quote, and a template value is pasted in before the shell parses the line, so a fork
+        # branch named a'$(...)'b would otherwise break out of this assignment and run as code here.
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           ref=main
-          head='${{ github.head_ref }}'
+          head="${HEAD_REF:-}"
           if [ -n "$head" ] && git ls-remote --exit-code --heads https://github.com/ivanball/MMCA.Helpdesk.git "$head" >/dev/null 2>&1; then
             ref="$head"
           fi
@@ -483,8 +538,9 @@ jobs:
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
       - name: Checkout MMCA.Helpdesk (consumer canary)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           repository: ivanball/MMCA.Helpdesk
           ref: ${{ steps.helpdesk-ref.outputs.ref }}
           path: MMCA.Helpdesk
@@ -493,12 +549,14 @@ jobs:
           # CONSUMER_CANARY_PAT secret with contents:read on it.
           token: ${{ secrets.CONSUMER_CANARY_PAT || github.token }}
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
@@ -597,7 +655,9 @@ jobs:
       - name: Assert migrations were recorded and the schema exists
         if: needs.changes.outputs.code == 'true'
         run: |
-          db='${{ env.HELPDESK_TICKETS_DB }}'
+          # Read the job env var directly rather than interpolating ${{ env.* }} into the script:
+          # same quoting hazard as HEAD_REF above (SEC-Common-60).
+          db="$HELPDESK_TICKETS_DB"
           query() {
             sqlcmd -S localhost,1433 -U sa -P "$MSSQL_SA_PASSWORD" -C -d "$db" -h -1 -W \
               -Q "SET NOCOUNT ON; $1"
@@ -639,16 +699,19 @@ jobs:
     env:
       PACK_VERSION: 0.0.1-ci.${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history (MinVerSkip pins the version, but keep parity)
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
@@ -728,7 +791,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Compile foundation.bicep
         if: needs.changes.outputs.code == 'true'
@@ -749,16 +814,19 @@ jobs:
     # against a server. This tier runs the shipped cache against a real Redis. Ubuntu runners ship a
     # Docker daemon, so Testcontainers works with no extra setup.
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
           fetch-depth: 0 # MinVer needs full history
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: '10.0.x'
           # Cache ~/.nuget/packages. Keyed on the committed lock files PLUS Directory.Packages.props,
-          # because build/facts and build/perfgate have no lock file and this repo does not pass
-          # --locked-mode, so the props file is what actually pins their versions.
+          # because build/facts, build/perfgate and the Benchmarks project sit outside
+          # MMCA.Common.slnx and carry no lock file, so the props file is what pins their versions.
+          # Every project the slnx restore touches DOES have one, and that restore now runs
+          # --locked-mode, so it fails rather than silently re-resolving a drifted graph.
           # Gated on the code flag: on a docs-only PR every restore step is skipped, so
           # ~/.nuget/packages is never created and setup-dotnet's cache-SAVE step fails the whole
           # job with "Cache folder path ... doesn't exist on disk".
