@@ -6,6 +6,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.188.0] - 2026-09-07
+
+### Changed
+
+- **Breaking (behaviour, not compile):** four defaults moved to the secure side. Consumers upgrading
+  from 1.187.0 read [UPGRADING.md](UPGRADING.md) section 1.188.0 before deploying: (1) the fallback
+  authorization policy is on, so an endpoint or proxied gateway route that declares nothing now
+  requires an authenticated caller; (2) client sort, filter and lookup keys resolve against the DTO
+  contract and an entity-only name returns 400; (3) `Application:Namespace` prefixes cache keys,
+  lock keys, the SignalR backplane channel and the message-bus endpoint prefix when those are unset;
+  (4) `Smtp:EnableSsl` unset means TLS on outside Development. Also: a client-supplied
+  `Content-Type: application/grpc` no longer bypasses the global limiter or HTTPS redirection,
+  anonymous hub traffic is metered per IP, `/health` and `/health/ready` are cached for
+  `HealthChecks:CacheSeconds`, and `DeepLinkDispatcher.Publish` throws on a non-app-relative route.
+
 ### Security
 
 - **SEC-Common-01 (Critical): an empty stored password hash no longer verifies against any password.**
