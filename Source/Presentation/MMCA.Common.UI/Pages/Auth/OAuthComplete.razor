@@ -1,11 +1,15 @@
-@page "/auth/oauth-complete"
+﻿@page "/auth/oauth-complete"
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
+@using MMCA.Common.UI.Services.Auth.OAuth
 @using MMCA.Common.UI.Services.Navigation
+@using Microsoft.AspNetCore.Authorization
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
+@inject OAuthFlowStateStore OAuthFlowState
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> L
+@attribute [AllowAnonymous]
 
 <PageTitle>@L["Auth.OAuth.CompletingSignIn"]</PageTitle>
 
@@ -36,6 +40,12 @@
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
+    // SECURITY: the per-attempt value this client wrote before the challenge, handed back by the
+    // completion redirect. It is what separates "the code from the flow the user started here" from
+    // "a code someone else minted and deep-linked into this app".
+    [SupplyParameterFromQuery]
+    public string? State { get; set; }
+
     [SupplyParameterFromQuery]
     public string? Error { get; set; }
 
@@ -56,6 +66,15 @@
         if (string.IsNullOrEmpty(Code))
         {
             _error = L["Auth.OAuth.MissingCode"];
+            StateHasChanged();
+            return;
+        }
+
+        if (!await OAuthFlowState.TryCompleteAsync(State))
+        {
+            // No attempt was started on this client, it expired, or the value came back different:
+            // exchanging would sign this app in as whoever the code was minted for.
+            _error = L["Auth.OAuth.UnexpectedCompletion"];
             StateHasChanged();
             return;
         }

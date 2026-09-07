@@ -1,8 +1,9 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
 
 namespace MMCA.Common.Infrastructure.Notifications;
@@ -13,8 +14,17 @@ namespace MMCA.Common.Infrastructure.Notifications;
 /// handled by <see cref="Notifications.Push.SignalRPushNotificationSender"/> and channel event delivery by
 /// <see cref="Notifications.Live.SignalRLiveChannelPublisher"/>, both using <see cref="IHubContext{THub}"/>.
 /// </summary>
+/// <param name="settings">Push settings, including the channel-key shape pattern.</param>
+/// <param name="joinAuthorizer">
+/// Optional entitlement check consulted before a connection joins a channel. Optional and defaulted
+/// so an existing host keeps working unchanged; a host that publishes anything to a channel that is
+/// not public to every signed-in user must register one, because the shape pattern alone lets any
+/// authenticated caller subscribe to any well-formed key.
+/// </param>
 [Authorize]
-public sealed class NotificationHub(IOptions<PushNotificationSettings> settings) : Hub
+public sealed class NotificationHub(
+    IOptions<PushNotificationSettings> settings,
+    IChannelJoinAuthorizer? joinAuthorizer = null) : Hub
 {
     /// <summary>The SignalR method name clients listen on to receive notifications.</summary>
     public const string ReceiveNotificationMethod = "ReceiveNotification";
@@ -34,6 +44,71 @@ public sealed class NotificationHub(IOptions<PushNotificationSettings> settings)
     private static readonly ConcurrentDictionary<string, Regex> ChannelKeyRegexCache = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Live connection count per user identifier on THIS replica (SEC-ADC-25). Per replica, like the
+    /// in-memory rate limiters: it bounds what one token can do to one process, which is the
+    /// resource actually being exhausted.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, int> ConnectionsPerUser = new(StringComparer.Ordinal);
+
+    /// <inheritdoc />
+    public override async Task OnConnectedAsync()
+    {
+        var cap = settings.Value.MaxConnectionsPerUser;
+        var userId = Context.UserIdentifier;
+
+        if (cap > 0 && !string.IsNullOrEmpty(userId))
+        {
+            var count = ConnectionsPerUser.AddOrUpdate(userId, 1, static (_, current) => current + 1);
+            if (count > cap)
+            {
+                // Give the slot straight back: the connection is refused, so it must not keep
+                // counting against the user and lock them out once the aborted ones drain.
+                Decrement(userId);
+                throw new HubException("Too many concurrent connections for this account.");
+            }
+        }
+
+        await base.OnConnectedAsync().ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var userId = Context.UserIdentifier;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            Decrement(userId);
+        }
+
+        await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Releases one connection slot, removing the entry entirely at zero so the dictionary tracks
+    /// only users who are actually connected rather than everyone who ever was.
+    /// </summary>
+    private static void Decrement(string userId)
+    {
+        while (ConnectionsPerUser.TryGetValue(userId, out var current))
+        {
+            if (current <= 1)
+            {
+                if (ConnectionsPerUser.TryRemove(new KeyValuePair<string, int>(userId, current)))
+                {
+                    return;
+                }
+
+                continue;
+            }
+
+            if (ConnectionsPerUser.TryUpdate(userId, current - 1, current))
+            {
+                return;
+            }
+        }
+    }
+
+    /// <summary>
     /// Adds the calling connection to a channel (SignalR group) so it receives events published via
     /// <see cref="Application.Interfaces.Infrastructure.Notifications.ILiveChannelPublisher"/> for that channel key.
     /// </summary>
@@ -44,6 +119,7 @@ public sealed class NotificationHub(IOptions<PushNotificationSettings> settings)
     public async Task JoinChannelAsync(string channelKey)
     {
         EnsureValidChannelKey(channelKey);
+        await EnsureAuthorizedForChannelAsync(channelKey).ConfigureAwait(false);
 
         // The cancellation token comes from the connection rather than a method parameter: the hub
         // method signature is the client-visible RPC contract, bound by SignalR's dispatcher, so it
@@ -64,6 +140,27 @@ public sealed class NotificationHub(IOptions<PushNotificationSettings> settings)
         // Same as JoinChannelAsync: the token is the connection's, not a parameter on the RPC contract.
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, channelKey, Context.ConnectionAborted)
             .ConfigureAwait(false);
+    }
+
+    // SECURITY: shape is not entitlement. Without an authorizer the hub keeps its historical
+    // behaviour (any authenticated caller may join any well-formed key); with one, a caller who is
+    // not entitled to the channel is refused before the group membership is created, so it never
+    // receives a single published payload.
+    private async Task EnsureAuthorizedForChannelAsync(string channelKey)
+    {
+        if (joinAuthorizer is null)
+        {
+            return;
+        }
+
+        var allowed = await joinAuthorizer
+            .CanJoinAsync(Context.User, channelKey, Context.ConnectionAborted)
+            .ConfigureAwait(false);
+
+        if (!allowed)
+        {
+            throw new HubException("Not authorized for this channel.");
+        }
     }
 
     private void EnsureValidChannelKey(string channelKey)

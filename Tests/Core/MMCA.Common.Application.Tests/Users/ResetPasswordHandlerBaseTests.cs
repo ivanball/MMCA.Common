@@ -1,10 +1,11 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.Users.UseCases.ResetPassword;
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using Moq;
@@ -132,6 +133,30 @@ public sealed class ResetPasswordHandlerBaseTests
         order.Should().Equal("consume", "save");
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenTheResetSucceeds_RevokesEveryLiveRefreshSession()
+    {
+        var (sut, mocks) = CreateSut();
+        mocks.Repository
+            .Setup(x => x.GetByIdAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TestIdentityUser { Id = 42 });
+        var live = RefreshSession.Create(
+            42,
+            "stolen-chain",
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 1, 8, 0, 0, 0, DateTimeKind.Utc)).Value!;
+        mocks.RefreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([live]);
+
+        Result result = await sut.HandleAsync(Command());
+
+        result.IsSuccess.Should().BeTrue();
+        live.RevokedAt.Should().NotBeNull(
+            "a reset is the remediation for a suspected intruder, so the intruder's chain dies with the old password");
+        mocks.RefreshSessions.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static TestResetPasswordCommand Command() =>
         new(new ResetPasswordRequest(Email, Token, NewPassword));
 
@@ -140,7 +165,8 @@ public sealed class ResetPasswordHandlerBaseTests
         Mock<IRepository<TestIdentityUser, UserIdentifierType>> Repository,
         Mock<IPasswordHasher> PasswordHasher,
         Mock<IPasswordResetTokenService> TokenService,
-        Mock<ILoginProtectionService> LoginProtection);
+        Mock<ILoginProtectionService> LoginProtection,
+        Mock<IRefreshSessionStore> RefreshSessions);
 
     private static (TestResetPasswordHandler Sut, HandlerMocks Mocks) CreateSut()
     {
@@ -159,13 +185,20 @@ public sealed class ResetPasswordHandlerBaseTests
             .Setup(x => x.ValidateAndConsumeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<UserIdentifierType>(42));
 
+        var refreshSessions = new Mock<IRefreshSessionStore>();
+        refreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
         var sut = new TestResetPasswordHandler(
             unitOfWork.Object,
             passwordHasher.Object,
             tokenService.Object,
-            loginProtection.Object);
+            loginProtection.Object,
+            refreshSessions.Object);
 
-        return (sut, new HandlerMocks(unitOfWork, repository, passwordHasher, tokenService, loginProtection));
+        return (sut, new HandlerMocks(
+            unitOfWork, repository, passwordHasher, tokenService, loginProtection, refreshSessions));
     }
 }
 
@@ -178,6 +211,7 @@ public sealed class TestResetPasswordHandler(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     IPasswordResetTokenService tokenService,
-    ILoginProtectionService loginProtection)
+    ILoginProtectionService loginProtection,
+    IRefreshSessionStore? refreshSessions = null)
     : ResetPasswordHandlerBase<TestIdentityUser, TestResetPasswordCommand>(
-        unitOfWork, passwordHasher, tokenService, loginProtection, NullLogger.Instance);
+        unitOfWork, passwordHasher, tokenService, loginProtection, NullLogger.Instance, refreshSessions);

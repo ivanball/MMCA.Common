@@ -45,6 +45,10 @@ internal sealed class EFRepositoryDecorator<TEntity, TIdentifierType>(IRepositor
     public void SetOriginalRowVersion(IRowVersioned childEntity, byte[] rowVersion) =>
         _inner.SetOriginalRowVersion(childEntity, rowVersion);
 
+    /// <inheritdoc />
+    public void TouchConcurrencyToken(TEntity entity) =>
+        _inner.TouchConcurrencyToken(entity);
+
     public Task<int> ExecuteDeleteAsync(
         System.Linq.Expressions.Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default) =>

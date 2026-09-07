@@ -152,3 +152,43 @@ export function storageRemove(key) {
         return false;
     }
 }
+
+// Removes every entry under a prefix. Used to wipe the offline document cache at sign-out, so the
+// next account on this browser cannot be served the previous one's rows while offline.
+export function storageClearPrefix(prefix) {
+    try {
+        const doomed = [];
+        for (let index = 0; index < window.localStorage.length; index++) {
+            const key = window.localStorage.key(index);
+            if (key !== null && key.startsWith(prefix)) {
+                doomed.push(key);
+            }
+        }
+
+        for (const key of doomed) {
+            window.localStorage.removeItem(key);
+        }
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Reads window.location.hash and immediately scrubs it from the address bar and the history entry.
+// Credential links (password reset) carry their token in the fragment precisely so it never reaches
+// a server log; leaving it in the URL would put it back into browser history and any Referer.
+export function locationHashTake() {
+    try {
+        const hash = window.location.hash;
+        if (hash.length > 1) {
+            const clean = window.location.pathname + window.location.search;
+            window.history.replaceState(null, "", clean);
+            return hash.substring(1);
+        }
+
+        return null;
+    } catch {
+        return null;
+    }
+}

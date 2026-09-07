@@ -1,4 +1,4 @@
-using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
+﻿using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 
 namespace MMCA.Common.UI.Pages.Common;
@@ -19,11 +19,23 @@ namespace MMCA.Common.UI.Pages.Common;
 /// head shows the same list for different tenants or events), since a shared key would let one page
 /// serve another page's rows.
 /// </param>
+/// <param name="userScope">
+/// Optional identifier of the signed-in subject, folded into the stored key. A device is shared, so
+/// a snapshot written for one account must not be readable by the next one: sign-out wipes the store
+/// (<see cref="ILocalCacheStore.ClearAsync"/>) and this scope is the defence in depth for the paths
+/// that never reach sign-out (an app killed mid-session, a token that simply expired). Pass the
+/// authenticated subject id on any surface whose rows depend on who is signed in.
+/// </param>
 public sealed class OfflineFirstPageSnapshot<TItem>(
     ILocalCacheStore store,
     IConnectivityStatusService connectivity,
-    string cacheKey)
+    string cacheKey,
+    string? userScope = null)
 {
+    private readonly string _scopedKey = string.IsNullOrWhiteSpace(userScope)
+        ? cacheKey
+        : $"{cacheKey}.u{userScope}";
+
     private sealed record CachedPage(List<TItem> Items, int TotalItems);
 
     /// <summary>True when a failed first-page fetch may be answered from the snapshot.</summary>
@@ -42,7 +54,7 @@ public sealed class OfflineFirstPageSnapshot<TItem>(
         if (page == 1 && store.IsAvailable)
         {
             await store.SetAsync(
-                cacheKey, new CachedPage([.. fetched.Items], fetched.TotalItems), cancellationToken);
+                _scopedKey, new CachedPage([.. fetched.Items], fetched.TotalItems), cancellationToken);
         }
     }
 
@@ -61,7 +73,7 @@ public sealed class OfflineFirstPageSnapshot<TItem>(
             return null;
         }
 
-        var cached = await store.GetAsync<CachedPage>(cacheKey, cancellationToken);
+        var cached = await store.GetAsync<CachedPage>(_scopedKey, cancellationToken);
         return cached is null ? null : (cached.Items, cached.TotalItems);
     }
 }

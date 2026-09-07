@@ -288,8 +288,12 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
         // last-write-wins. A handler serving an unconditional endpoint reports no token and the
         // stamp is skipped; a conditional endpoint always has one, because a request without an
         // If-Match header never reaches the action.
+        var conditionalWrite = false;
         if (RowVersion(command) is { Length: > 0 } rowVersion)
+        {
             repository.SetOriginalRowVersion(entity, rowVersion);
+            conditionalWrite = true;
+        }
 
         var result = await MutateAsync(entity, command, context, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
@@ -299,6 +303,15 @@ public abstract class MutateEntityHandlerCore<TCommand, TEntity, TIdentifierType
         // nothing to report as written. Neither post-save hook runs.
         if (context.SaveSkipped)
             return Result.Success(entity);
+
+        // SECURITY (SEC-Common-77): stamping the original token does not make the root dirty, so an
+        // applier that touched only child rows left the root Unchanged, EF emitted no root UPDATE,
+        // and the caller's If-Match was never evaluated: two writers holding the same ETag both
+        // succeeded and the second silently discarded the first's edit. Touching the root makes
+        // every conditional write emit an UPDATE carrying the caller's token, so a stale one answers
+        // 412 as ADR-035 states.
+        if (conditionalWrite)
+            repository.TouchConcurrencyToken(entity);
 
         await attemptUnitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

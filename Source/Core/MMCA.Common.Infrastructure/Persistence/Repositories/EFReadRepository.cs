@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Specifications;
@@ -22,6 +23,12 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     where TEntity : AuditableBaseEntity<TIdentifierType>
     where TIdentifierType : notnull
 {
+    /// <summary>
+    /// Upper bound on the lookup-selector cache. Past it the selector is built per request rather
+    /// than admitted, which is correct and only slightly slower.
+    /// </summary>
+    private const int MaxLookupSelectorCacheEntries = 512;
+
     protected readonly DbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     /// <summary>
@@ -227,9 +234,14 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 
         var selector = GetOrBuildLookupSelector(nameProperty);
 
+        // SECURITY (SEC-Common-24): this path never enters EntityQueryPipeline, so the framework's
+        // row ceiling has to be applied here or a lookup stays the one unpaginated, uncapped read in
+        // the framework. Take runs BEFORE the projection is materialized, so the provider emits the
+        // ceiling as a TOP/LIMIT rather than reading the table and trimming in memory.
         return await query
             .Select(selector)
             .OrderBy(l => l.Name)
+            .Take(EntityQueryPipeline.MaxUnboundedResultLimit)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -237,36 +249,65 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// <summary>
     /// Caches compiled expression trees per name property so repeated lookup queries
     /// avoid the overhead of building the projection expression each time.
-    /// Keyed by property name; safe across concurrent requests via <see cref="ConcurrentDictionary{TKey,TValue}"/>.
+    /// Keyed by the property's CANONICAL name; safe across concurrent requests via
+    /// <see cref="ConcurrentDictionary{TKey,TValue}"/>.
     /// </summary>
+    /// <remarks>
+    /// Canonical, not the client's spelling (SEC-Store-14). Reflection resolves a property name
+    /// case-insensitively, so every case permutation of a real column used to mint its own
+    /// never-evicted entry: 2^N spellings of an N-letter name, from an anonymous endpoint. Resolving
+    /// the <see cref="PropertyInfo"/> first collapses them onto one entry, and
+    /// <see cref="MaxLookupSelectorCacheEntries"/> bounds what remains, mirroring the sibling caps in
+    /// <c>QueryFieldService</c>.
+    /// </remarks>
     private static readonly ConcurrentDictionary<(Type EntityType, string PropertyName), LambdaExpression> LookupSelectorCache = new();
 
     /// <summary>
     /// Gets or builds a projection expression mapping the entity's Id and the named property to <see cref="BaseLookup{TIdentifierType}"/>.
     /// </summary>
-    private static Expression<Func<TEntity, BaseLookup<TIdentifierType>>> GetOrBuildLookupSelector(string nameProperty) =>
-        (Expression<Func<TEntity, BaseLookup<TIdentifierType>>>)LookupSelectorCache.GetOrAdd(
-            (typeof(TEntity), nameProperty),
-            static key =>
-            {
-                var param = Expression.Parameter(typeof(TEntity), "e");
-                var idAccess = Expression.Property(param, "Id");
-                var nameAccess = Expression.Property(param, key.PropertyName);
+    private static Expression<Func<TEntity, BaseLookup<TIdentifierType>>> GetOrBuildLookupSelector(string nameProperty)
+    {
+        // The canonical name is what the expression tree would have resolved to anyway, so keying on
+        // it changes nothing about the built selector, only about how many copies of it exist.
+        var canonicalName = typeof(TEntity)
+            .GetProperty(nameProperty, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+            ?.Name ?? nameProperty;
 
-                Expression nameExpr = nameAccess.Type == typeof(string)
-                    ? Expression.Coalesce(nameAccess, Expression.Constant(string.Empty))
-                    : Expression.Call(
-                        nameAccess,
-                        nameAccess.Type.GetMethod("ToString", Type.EmptyTypes)!);
+        var key = (typeof(TEntity), canonicalName);
 
-                var lookupType = typeof(BaseLookup<TIdentifierType>);
-                var body = Expression.MemberInit(
-                    Expression.New(lookupType),
-                    Expression.Bind(lookupType.GetProperty(nameof(BaseLookup<>.Id))!, idAccess),
-                    Expression.Bind(lookupType.GetProperty(nameof(BaseLookup<>.Name))!, nameExpr));
+        if (LookupSelectorCache.TryGetValue(key, out var cached))
+            return (Expression<Func<TEntity, BaseLookup<TIdentifierType>>>)cached;
 
-                return Expression.Lambda<Func<TEntity, BaseLookup<TIdentifierType>>>(body, param);
-            });
+        // The Count check (which takes every bucket lock) runs only on a miss, exactly like the
+        // capped caches in QueryFieldService.
+        if (LookupSelectorCache.Count >= MaxLookupSelectorCacheEntries)
+            return BuildLookupSelector(canonicalName);
+
+        return (Expression<Func<TEntity, BaseLookup<TIdentifierType>>>)LookupSelectorCache.GetOrAdd(
+            key,
+            static key => BuildLookupSelector(key.PropertyName));
+    }
+
+    private static Expression<Func<TEntity, BaseLookup<TIdentifierType>>> BuildLookupSelector(string canonicalName)
+    {
+        var param = Expression.Parameter(typeof(TEntity), "e");
+        var idAccess = Expression.Property(param, "Id");
+        var nameAccess = Expression.Property(param, canonicalName);
+
+        Expression nameExpr = nameAccess.Type == typeof(string)
+            ? Expression.Coalesce(nameAccess, Expression.Constant(string.Empty))
+            : Expression.Call(
+                nameAccess,
+                nameAccess.Type.GetMethod("ToString", Type.EmptyTypes)!);
+
+        var lookupType = typeof(BaseLookup<TIdentifierType>);
+        var body = Expression.MemberInit(
+            Expression.New(lookupType),
+            Expression.Bind(lookupType.GetProperty(nameof(BaseLookup<>.Id))!, idAccess),
+            Expression.Bind(lookupType.GetProperty(nameof(BaseLookup<>.Name))!, nameExpr));
+
+        return Expression.Lambda<Func<TEntity, BaseLookup<TIdentifierType>>>(body, param);
+    }
 
     /// <inheritdoc />
     public virtual async Task<IReadOnlyCollection<TEntity>> GetByIdsAsync(

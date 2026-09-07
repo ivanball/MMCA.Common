@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Security.Cryptography;
 using AspNet.Security.OAuth.Apple;
 using AspNet.Security.OAuth.GitHub;
@@ -43,23 +43,31 @@ public abstract class OAuthControllerBase(
     // token pair waits server-side in the cache for the UI's out-of-band exchange call. Short TTL
     // because the round trip is a single redirect → page load → POST.
     private const string OAuthExchangeCodePrefix = "oauth-exchange:";
+
+    // Authentication-properties key the client's opaque per-attempt state rides in. Not "state":
+    // that name belongs to the OAuth handler's own protocol value.
+    private const string ClientStateItemKey = "clientState";
     private static readonly TimeSpan OAuthExchangeCodeLifetime = TimeSpan.FromMinutes(2);
 
     /// <summary>
     /// Initiates the Google OAuth2 login flow by redirecting to Google's consent screen.
     /// </summary>
     /// <param name="returnUrl">The URL to redirect to after successful authentication.</param>
+    /// <param name="state">Opaque per-attempt value the client round-trips to bind the completion to the flow it started.</param>
     [HttpGet("google")]
-    public ChallengeResult GoogleLogin([FromQuery] Uri? returnUrl = null) =>
-        ChallengeProvider(GoogleDefaults.AuthenticationScheme, returnUrl);
+    [AllowAnonymous]
+    public ChallengeResult GoogleLogin([FromQuery] Uri? returnUrl = null, [FromQuery] string? state = null) =>
+        ChallengeProvider(GoogleDefaults.AuthenticationScheme, returnUrl, state);
 
     /// <summary>
     /// Initiates the GitHub OAuth login flow by redirecting to GitHub's authorization page.
     /// </summary>
     /// <param name="returnUrl">The URL to redirect to after successful authentication.</param>
+    /// <param name="state">Opaque per-attempt value the client round-trips to bind the completion to the flow it started.</param>
     [HttpGet("github")]
-    public ChallengeResult GitHubLogin([FromQuery] Uri? returnUrl = null) =>
-        ChallengeProvider(GitHubAuthenticationDefaults.AuthenticationScheme, returnUrl);
+    [AllowAnonymous]
+    public ChallengeResult GitHubLogin([FromQuery] Uri? returnUrl = null, [FromQuery] string? state = null) =>
+        ChallengeProvider(GitHubAuthenticationDefaults.AuthenticationScheme, returnUrl, state);
 
     /// <summary>
     /// Initiates the Sign in with Apple flow by redirecting to Apple's authorization page.
@@ -68,9 +76,11 @@ public abstract class OAuthControllerBase(
     /// like any other provider callback.
     /// </summary>
     /// <param name="returnUrl">The URL to redirect to after successful authentication.</param>
+    /// <param name="state">Opaque per-attempt value the client round-trips to bind the completion to the flow it started.</param>
     [HttpGet("apple")]
-    public ChallengeResult AppleLogin([FromQuery] Uri? returnUrl = null) =>
-        ChallengeProvider(AppleAuthenticationDefaults.AuthenticationScheme, returnUrl);
+    [AllowAnonymous]
+    public ChallengeResult AppleLogin([FromQuery] Uri? returnUrl = null, [FromQuery] string? state = null) =>
+        ChallengeProvider(AppleAuthenticationDefaults.AuthenticationScheme, returnUrl, state);
 
     /// <summary>
     /// Completes the OAuth flow after the middleware has processed the provider callback.
@@ -85,6 +95,7 @@ public abstract class OAuthControllerBase(
     /// </para>
     /// </summary>
     [HttpGet("complete")]
+    [AllowAnonymous]
     [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> CompleteAsync()
     {
@@ -101,7 +112,7 @@ public abstract class OAuthControllerBase(
         // Safe lookup (GetString is TryGetValue under the hood): the challenge normally stashes
         // returnUrl, but a ticket minted without it (custom challenge, provider round-trip edge)
         // must fall back to "/" instead of throwing KeyNotFoundException on the Items indexer.
-        var returnUrl = authenticateResult.Properties?.GetString("returnUrl") ?? "/";
+        var (returnUrl, clientState) = ReadChallengeState(authenticateResult.Properties);
         var mobileReturnUrl = GetAllowedMobileReturnUrl(returnUrl);
 
         var (providerName, providerKey, email, firstName, lastName) = ExtractClaims(authenticateResult.Principal);
@@ -131,13 +142,30 @@ public abstract class OAuthControllerBase(
         await cacheService.SetAsync(
             OAuthExchangeCodePrefix + exchangeCode, response, OAuthExchangeCodeLifetime, HttpContext.RequestAborted).ConfigureAwait(false);
 
-        return Redirect(BuildSuccessRedirectUrl(uiBaseUrl, mobileReturnUrl, exchangeCode, returnUrl));
+        return Redirect(BuildSuccessRedirectUrl(uiBaseUrl, mobileReturnUrl, exchangeCode, returnUrl, clientState));
     }
 
-    private static string BuildSuccessRedirectUrl(string uiBaseUrl, Uri? mobileReturnUrl, string exchangeCode, string returnUrl) =>
-        mobileReturnUrl is null
-            ? $"{uiBaseUrl}/auth/oauth-complete?code={exchangeCode}&returnUrl={Uri.EscapeDataString(returnUrl)}"
-            : AppendQuery(mobileReturnUrl, $"code={exchangeCode}");
+    // Safe lookups (GetString is TryGetValue under the hood): the challenge normally stashes both,
+    // but a ticket minted without them (custom challenge, provider round-trip edge) must fall back
+    // instead of throwing on the Items indexer.
+    private static (string ReturnUrl, string? ClientState) ReadChallengeState(AuthenticationProperties? properties) =>
+        (properties?.GetString("returnUrl") ?? "/", properties?.GetString(ClientStateItemKey));
+
+    private static string BuildSuccessRedirectUrl(
+        string uiBaseUrl,
+        Uri? mobileReturnUrl,
+        string exchangeCode,
+        string returnUrl,
+        string? clientState)
+    {
+        var stateSuffix = string.IsNullOrEmpty(clientState)
+            ? string.Empty
+            : $"&state={Uri.EscapeDataString(clientState)}";
+
+        return mobileReturnUrl is null
+            ? $"{uiBaseUrl}/auth/oauth-complete?code={exchangeCode}&returnUrl={Uri.EscapeDataString(returnUrl)}{stateSuffix}"
+            : AppendQuery(mobileReturnUrl, $"code={exchangeCode}{stateSuffix}");
+    }
 
     /// <summary>
     /// Exchanges a single-use OAuth completion code for the access/refresh token pair. Called by the
@@ -270,12 +298,20 @@ public abstract class OAuthControllerBase(
         return $"{target.OriginalString}{separator}{queryFragment}";
     }
 
-    private ChallengeResult ChallengeProvider(string scheme, Uri? returnUrl)
+    private ChallengeResult ChallengeProvider(string scheme, Uri? returnUrl, string? clientState)
     {
         var properties = new AuthenticationProperties
         {
             RedirectUri = "/auth/oauth/complete",
-            Items = { ["returnUrl"] = returnUrl?.ToString() ?? "/" }
+            Items =
+            {
+                ["returnUrl"] = returnUrl?.ToString() ?? "/",
+
+                // SECURITY: carried through the provider round trip and handed back on the
+                // completion redirect so the client can prove the code belongs to the flow IT
+                // started. The value is opaque here: the server never interprets or trusts it.
+                [ClientStateItemKey] = clientState,
+            }
         };
         return Challenge(properties, scheme);
     }

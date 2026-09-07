@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MMCA.Common.Testing.Architecture;
 
@@ -70,6 +70,67 @@ public sealed class AnonymousEndpointTestsBaseTests
             $"{typeof(InheritingFixtureController).FullName}.{nameof(AbstractAnonymousFixtureControllerBase.InheritedAnonymousAsync)}");
     }
 
+    // ── Undecorated endpoints (SEC-ADC-03) ──
+    [Fact]
+    public void Base_Fails_WhenAControllerCarriesNoAuthorizationDecisionAtAll()
+    {
+        var assert = new StrictDriftedTests().Endpoints_DeclareAnAuthorizationDecision;
+
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain(
+                nameof(UndecoratedFixtureController),
+                "a controller that forgot [Authorize] is invisible to the [AllowAnonymous] allow-list, "
+                + "which is the whole gap this check exists to close");
+    }
+
+    [Fact]
+    public void Base_DoesNotReport_AControllerThatInheritsItsDecisionFromAnAbstractBase()
+    {
+        var reported = new StrictConformantTests().UndecoratedEndpointsForTest();
+
+        reported.Should().NotContain(
+            typeof(InheritingFixtureController).FullName!,
+            "the decision was made once on the base's action, exactly as ASP.NET Core resolves it");
+        reported.Should().NotContain(
+            typeof(AbstractAnonymousFixtureControllerBase).FullName!,
+            "an abstract base is never routed, so it declares no endpoint of its own");
+    }
+
+    [Fact]
+    public void Base_Accepts_AnUndecoratedEndpointThatIsAllowListed()
+    {
+        var assert = new StrictConformantTests().Endpoints_DeclareAnAuthorizationDecision;
+
+        assert.Should().NotThrow("a reviewed entry is what the allow-list is for");
+    }
+
+    [Fact]
+    public void Base_Fails_WhenTheUndecoratedAllowListHasAStaleEntry()
+    {
+        var assert = new StaleUndecoratedAllowListTests().UndecoratedAllowList_HasNoStaleEntries;
+
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain("NoLongerUndecorated");
+    }
+
+    [Fact]
+    public void Base_WhenNotOptedIn_StillAssertsTheTwoScansCannotOverlap()
+    {
+        var assert = new DriftedTests().Endpoints_DeclareAnAuthorizationDecision;
+
+        assert.Should().NotThrow(
+            "an endpoint is either explicitly anonymous or undecorated, never reported as both");
+    }
+
+    /// <summary>Carries no authorization attribute at all: the forgotten-[Authorize] shape.</summary>
+    public sealed class UndecoratedFixtureController : ControllerBase
+    {
+        /// <summary>An action whose only gate would be the fallback policy.</summary>
+        /// <returns>An empty 200.</returns>
+        [HttpGet("undecorated")]
+        public IActionResult ListAsync() => Ok();
+    }
+
     /// <summary>Carries the anonymous action the drifted subclass deliberately fails to allow-list.</summary>
     public sealed class AnonymousFixtureController : ControllerBase
     {
@@ -121,6 +182,42 @@ public sealed class AnonymousEndpointTestsBaseTests
             [typeof(Shared.Abstractions.Result).Assembly];
 
         protected override IReadOnlyCollection<string> AllowedAnonymousEndpoints => [];
+    }
+
+    private sealed class StrictDriftedTests : AnonymousEndpointTestsBase
+    {
+        protected override IReadOnlyCollection<Assembly> TargetAssemblies =>
+            [typeof(AnonymousEndpointTestsBaseTests).Assembly];
+
+        protected override IReadOnlyCollection<string> AllowedAnonymousEndpoints => [];
+
+        protected override bool RequireExplicitAuthorizationDecision => true;
+    }
+
+    private sealed class StaleUndecoratedAllowListTests : AnonymousEndpointTestsBase
+    {
+        protected override IReadOnlyCollection<Assembly> TargetAssemblies =>
+            [typeof(AnonymousEndpointTestsBaseTests).Assembly];
+
+        protected override IReadOnlyCollection<string> AllowedAnonymousEndpoints => [];
+
+        protected override IReadOnlyCollection<string> EndpointsWithoutAuthorizationAttribute =>
+            ["MMCA.Common.Architecture.Tests.NoLongerUndecoratedController"];
+    }
+
+    private sealed class StrictConformantTests : AnonymousEndpointTestsBase
+    {
+        protected override IReadOnlyCollection<Assembly> TargetAssemblies =>
+            [typeof(AnonymousEndpointTestsBaseTests).Assembly];
+
+        protected override IReadOnlyCollection<string> AllowedAnonymousEndpoints => [];
+
+        protected override bool RequireExplicitAuthorizationDecision => true;
+
+        protected override IReadOnlyCollection<string> EndpointsWithoutAuthorizationAttribute =>
+            [.. UndecoratedEndpoints()];
+
+        internal IReadOnlyCollection<string> UndecoratedEndpointsForTest() => [.. UndecoratedEndpoints()];
     }
 
     private sealed class ConformantTests : AnonymousEndpointTestsBase

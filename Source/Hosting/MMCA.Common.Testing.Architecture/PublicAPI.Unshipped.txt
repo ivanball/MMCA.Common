@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase
 MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AllowList_HasNoStaleEntries() -> void
 MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.AnonymousEndpointTestsBase() -> void
@@ -98,3 +98,8 @@ abstract MMCA.Common.Testing.Architecture.FolderWidthTestsBase.RepoRoot.get -> s
 static MMCA.Common.Testing.Architecture.ArchitectureRules.FoldersStayNarrow(string! repoRoot, int maxDirectFiles, System.Collections.Generic.IReadOnlyCollection<string!>! exemptFolderSuffixes) -> void
 virtual MMCA.Common.Testing.Architecture.FolderWidthTestsBase.ExemptFolderSuffixes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.FolderWidthTestsBase.MaxDirectFiles.get -> int
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.Endpoints_DeclareAnAuthorizationDecision() -> void
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.UndecoratedAllowList_HasNoStaleEntries() -> void
+MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.UndecoratedEndpoints() -> System.Collections.Generic.IEnumerable<string!>!
+virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.EndpointsWithoutAuthorizationAttribute.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.RequireExplicitAuthorizationDecision.get -> bool

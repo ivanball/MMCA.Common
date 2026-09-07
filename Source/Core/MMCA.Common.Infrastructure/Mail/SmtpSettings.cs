@@ -27,7 +27,15 @@ public sealed class SmtpSettings
     /// <summary>Gets the SMTP authentication password.</summary>
     public string Password { get; init; } = string.Empty;
 
-    /// <summary>Gets a value indicating whether SSL/TLS is enabled for the SMTP connection.</summary>
+    /// <summary>
+    /// Gets a value indicating whether SSL/TLS is enabled for the SMTP connection.
+    /// <para>
+    /// Leaving <c>Smtp:EnableSsl</c> unset no longer means "off": the framework resolves it through
+    /// <see cref="SmtpTransportSecurity"/>, which turns TLS ON outside Development (SEC-Common-54).
+    /// Set the key explicitly to <see langword="false"/> only for a relay that genuinely offers no
+    /// TLS, and expect one startup warning naming the key.
+    /// </para>
+    /// </summary>
     public bool EnableSsl { get; init; }
 
     /// <summary>Gets the default sender email address.</summary>

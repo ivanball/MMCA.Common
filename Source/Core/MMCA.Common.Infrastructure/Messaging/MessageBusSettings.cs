@@ -59,12 +59,28 @@ public sealed class MessageBusSettings
     /// <para>
     /// The consumer's namespace is deliberately left out of the generated name: the prefix is the
     /// only namespacing applied, so a queue name stays readable and survives a type moving between
-    /// folders. Leave the setting unset and endpoint names are formatted by MassTransit's default,
-    /// which is the right choice for a single service on its own broker.
+    /// folders.
+    /// </para>
+    /// <para>
+    /// Unset means the APPLICATION NAMESPACE (see
+    /// <see cref="MMCA.Common.Infrastructure.Configuration.ApplicationNamespace"/>), not "no prefix"
+    /// (SEC-Common-53): two applications on one broker used to derive identical queue names from
+    /// identical consumer type names and became competing consumers of each other's events. Set the
+    /// value explicitly only to pin a name two hosts of the same application must share.
     /// </para>
     /// </summary>
     [StringLength(64)]
     public string? EndpointPrefix { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the broker keeps MassTransit's default endpoint names (no
+    /// prefix, default formatter), which is what every release before 1.188.0 produced when
+    /// <see cref="EndpointPrefix"/> was unset. Set to <see langword="true"/> on an existing deployment so queue
+    /// and subscription names stay stable across the upgrade; the per-application prefix
+    /// (<see cref="EndpointPrefix"/>, or the resolved application namespace) applies only when this
+    /// is <see langword="false"/>. Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool PreserveDefaultEndpointNames { get; init; }
 
     /// <summary>
     /// Gets the maximum number of in-process redelivery attempts MassTransit makes (via

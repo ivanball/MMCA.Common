@@ -42,4 +42,12 @@ public sealed record EntityQueryParameters<TEntity>
     /// on DTO names that differ from entity properties (e.g. "CategoryName" -> "Category.Name").
     /// </summary>
     public IReadOnlyDictionary<string, string> DTOToEntityPropertyMap { get; init; } = FrozenDictionary<string, string>.Empty;
+
+    /// <summary>
+    /// The response contract a client-supplied sort column or filter key must belong to when
+    /// <see cref="DTOToEntityPropertyMap"/> does not cover it (SEC-Common-25, SEC-ADC-09).
+    /// <see langword="null"/> leaves the pipeline resolving names against the entity, which is the
+    /// pre-hardening behaviour and is only correct for a caller whose keys are server-authored.
+    /// </summary>
+    public QueryFieldContract? FieldContract { get; init; }
 }

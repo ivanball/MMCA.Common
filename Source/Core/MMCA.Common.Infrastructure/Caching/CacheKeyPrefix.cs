@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace MMCA.Common.Infrastructure.Caching;
@@ -31,9 +34,15 @@ public sealed class CacheKeyPrefixOptions
     public const string SectionName = "Cache";
 
     /// <summary>
-    /// Prefix prepended to every cache key. Empty (the default) keeps keys exactly as callers
-    /// write them, which is correct for a host that does not share its cache.
+    /// Prefix prepended to every cache key. Leave it empty to take the framework's per-application
+    /// default (<c>"{application namespace}:"</c>, see
+    /// <see cref="MMCA.Common.Infrastructure.Configuration.ApplicationNamespace"/>); set it
+    /// explicitly only to pin a keyspace two hosts of the same application must share.
     /// </summary>
+    /// <remarks>
+    /// SEC-Common-53. This used to default to no prefix at all, so two applications sharing one
+    /// Redis shared one keyspace for both cache entries and distributed locks, silently.
+    /// </remarks>
     public string KeyPrefix { get; init; } = string.Empty;
 }
 
@@ -51,6 +60,31 @@ internal sealed class CacheKeyNamespace(string prefix)
     {
         var prefix = options?.Value.KeyPrefix;
         return string.IsNullOrEmpty(prefix) ? None : new CacheKeyNamespace(prefix);
+    }
+
+    /// <summary>
+    /// Builds the namespace from the container: the configured prefix when a host set one,
+    /// otherwise the per-application default derived from
+    /// <see cref="Configuration.ApplicationNamespace"/> (SEC-Common-53), so two applications sharing
+    /// one Redis never share a keyspace by accident.
+    /// </summary>
+    /// <param name="serviceProvider">The resolving provider.</param>
+    /// <returns>The namespace to qualify cache and lock keys with.</returns>
+    public static CacheKeyNamespace From(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        var configured = serviceProvider.GetService<IOptions<CacheKeyPrefixOptions>>()?.Value.KeyPrefix;
+        if (!string.IsNullOrEmpty(configured))
+        {
+            return new CacheKeyNamespace(configured);
+        }
+
+        var applicationNamespace = Configuration.ApplicationNamespace.Resolve(
+            serviceProvider.GetService<IConfiguration>(),
+            serviceProvider.GetService<IHostEnvironment>());
+
+        return new CacheKeyNamespace(string.Concat(applicationNamespace, ":"));
     }
 
     /// <summary>Qualifies a caller-supplied key.</summary>

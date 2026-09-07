@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Services.Auth.OAuth;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 
 namespace MMCA.Common.UI.Maui.Capabilities.Auth;
@@ -20,18 +21,21 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
 {
     private readonly NavigationManager _navigationManager;
     private readonly IOptions<ApiSettings> _apiSettings;
+    private readonly OAuthFlowStateStore _flowState;
     private readonly string? _callbackScheme;
 
     /// <summary>Initializes the broker from the head's configuration.</summary>
     public MauiExternalAuthBroker(
         NavigationManager navigationManager,
         IOptions<ApiSettings> apiSettings,
+        OAuthFlowStateStore flowState,
         IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
         _navigationManager = navigationManager;
         _apiSettings = apiSettings;
+        _flowState = flowState;
         _callbackScheme = configuration["OAuth:MobileRedirectScheme"];
     }
 
@@ -55,8 +59,16 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
         }
 
         var callbackUrl = new Uri($"{_callbackScheme}://oauth-complete");
+
+        // SECURITY: the completion page refuses a code that does not belong to an attempt started
+        // on this device (a deep link carrying someone else's code would otherwise sign the app in
+        // as them), so the brokered flow starts one too and round-trips its value.
+        var flowState = await _flowState.BeginAsync(cancellationToken).ConfigureAwait(false);
+        var stateQuery = string.IsNullOrEmpty(flowState)
+            ? string.Empty
+            : $"&state={Uri.EscapeDataString(flowState)}";
         var authorizeUrl = new Uri(
-            $"{apiBase}/auth/oauth/{Uri.EscapeDataString(provider)}?returnUrl={Uri.EscapeDataString(callbackUrl.OriginalString)}");
+            $"{apiBase}/auth/oauth/{Uri.EscapeDataString(provider)}?returnUrl={Uri.EscapeDataString(callbackUrl.OriginalString)}{stateQuery}");
 
         try
         {
@@ -75,9 +87,15 @@ public sealed class MauiExternalAuthBroker : IExternalAuthBroker
                 return false;
             }
 
+            result.Properties.TryGetValue("state", out var returnedState);
+
             // The shared completion page owns the exchange + token storage + auth-state refresh.
             // Reusing it keeps the single-use-code contract in exactly one place.
-            _navigationManager.NavigateTo($"/auth/oauth-complete?code={Uri.EscapeDataString(code)}");
+            var returnedStateQuery = string.IsNullOrEmpty(returnedState)
+                ? string.Empty
+                : $"&state={Uri.EscapeDataString(returnedState)}";
+            _navigationManager.NavigateTo(
+                $"/auth/oauth-complete?code={Uri.EscapeDataString(code)}{returnedStateQuery}");
             return true;
         }
         catch (TaskCanceledException)

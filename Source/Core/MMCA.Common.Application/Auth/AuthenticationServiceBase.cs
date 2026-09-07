@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Extensions;
@@ -144,19 +144,16 @@ public abstract class AuthenticationServiceBase<TUser>(
         // Step 1: Untracked fetch — validate credentials without change-tracker overhead.
         // Soft-deleted accounts are excluded by EF query filters, returning the generic 401.
         var untracked = await FindUntrackedByEmailAsync(loginEmail, cancellationToken).ConfigureAwait(false);
-        if (untracked is null)
+
+        // SECURITY: an account with no stored credential material (the shape an external-OAuth
+        // account carries, ADR-036) can never be reached by password login. It is answered exactly
+        // like an unknown address, cost included, so the two are indistinguishable.
+        if (untracked is null || !HasStoredCredential(untracked))
         {
+            BurnPasswordVerificationCost(request.Password);
             await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
             return Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
-        }
-
-        // App gate (e.g. deactivated-account rejection) — before password verification, no
-        // failed-attempt increment (matches the pre-hoist behavior).
-        var candidateResult = await ValidateLoginCandidateAsync(untracked, cancellationToken).ConfigureAwait(false);
-        if (candidateResult.IsFailure)
-        {
-            return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
         }
 
         if (!passwordHasher.VerifyPassword(request.Password, untracked.PasswordHash, untracked.PasswordSalt))
@@ -164,6 +161,16 @@ public abstract class AuthenticationServiceBase<TUser>(
             await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
             return Result.Failure<AuthenticationResponse>(
                 Error.Unauthorized("Auth.InvalidCredentials", "Invalid email or password.", nameof(LoginAsync)));
+        }
+
+        // App gate (e.g. deactivated-account rejection) runs AFTER the password check on purpose:
+        // reaching it proves the caller owns the account, so the gate's distinct status message is
+        // told to the owner rather than to anyone sweeping addresses. Running it first made account
+        // state readable with no credential at all, and skipped the failed-attempt counter.
+        var candidateResult = await ValidateLoginCandidateAsync(untracked, cancellationToken).ConfigureAwait(false);
+        if (candidateResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
         }
 
         // Step 2: Tracked re-fetch. Refresh tokens live in their own session rows, so this fetch is
@@ -743,6 +750,30 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </summary>
     private static Error InvalidRefreshTokenError() =>
         Error.Unauthorized("Auth.InvalidRefreshToken", "Invalid or expired refresh token.", nameof(RefreshTokenAsync));
+
+    /// <summary>
+    /// Whether the account carries stored password material at all. An external-OAuth account
+    /// carries none (ADR-036), and password login is not a path such an account has.
+    /// </summary>
+    private static bool HasStoredCredential(TUser user) =>
+        user.PasswordHash.Length > 0 && user.PasswordSalt.Length > 0;
+
+    /// <summary>
+    /// Runs one throwaway verification so a login branch that never reaches the real one still pays
+    /// the key-derivation cost. Without it the 401 for an address with no usable credential comes
+    /// back in a fraction of the time a real check takes, which is a membership oracle.
+    /// </summary>
+    private void BurnPasswordVerificationCost(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return;
+        }
+
+        // Canonical-shaped material that matches no password: allocated per call rather than held
+        // statically, because a static field on a generic base is per-closed-type anyway.
+        _ = passwordHasher.VerifyPassword(password, new byte[64], new byte[32]);
+    }
 
     /// <summary>
     /// The registration conflict, returned both by the up-front email check and by the

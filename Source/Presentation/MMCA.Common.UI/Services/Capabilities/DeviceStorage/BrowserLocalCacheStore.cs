@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 
@@ -62,4 +62,10 @@ public sealed class BrowserLocalCacheStore : ILocalCacheStore
             .InvokeOrDefaultAsync<bool?>("storageRemove", [KeyPrefix + key], cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task ClearAsync(CancellationToken cancellationToken = default) =>
+        await _module
+            .InvokeOrDefaultAsync<bool?>("storageClearPrefix", [KeyPrefix], cancellationToken)
+            .ConfigureAwait(false);
 }

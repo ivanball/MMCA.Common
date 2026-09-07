@@ -1,11 +1,13 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Components.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Auth;
+using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 
 namespace MMCA.Common.UI.Tests.Components.Capabilities;
@@ -22,12 +24,54 @@ public sealed class BiometricGateTests : BunitTestBase
     private readonly FakeBiometricAuthenticator _biometrics = new();
     private readonly FakeDevicePreferences _preferences = new();
     private readonly StubTokenStorageService _tokenStorage = new();
+    private readonly FakeTimeProvider _time = new();
+    private readonly AppLifecycleNotifier _lifecycle;
 
     public BiometricGateTests()
     {
+        _lifecycle = new AppLifecycleNotifier(_time);
         Services.AddSingleton<IBiometricAuthenticator>(_biometrics);
         Services.AddSingleton<IDevicePreferences>(_preferences);
         Services.AddSingleton<MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService>(_tokenStorage);
+        Services.AddSingleton<IAppLifecycleNotifier>(_lifecycle);
+    }
+
+    // ── Re-lock on resume (SEC-ADC-67) ──
+    [Fact]
+    public async Task WhenTheAppReturnsFromABackgroundLongerThanTheThreshold_TheGateReArms()
+    {
+        await EnableAppLockAsync();
+        _biometrics.NextResult = true;
+
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Trim().Should().BeEmpty("the owner verified at start-up"));
+        _biometrics.NextResult = false;
+
+        _lifecycle.NotifyEnteredBackground();
+        _time.Advance(TimeSpan.FromMinutes(5));
+        _lifecycle.NotifyResumed();
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(
+            "mud-overlay",
+            "the render tree survives a background cycle, so the gate has to engage again"));
+        _biometrics.PromptReasons.Should().HaveCount(2, "resuming re-prompts the owner");
+    }
+
+    [Fact]
+    public async Task WhenTheAppReturnsAlmostImmediately_TheGateStaysOpen()
+    {
+        await EnableAppLockAsync();
+        _biometrics.NextResult = true;
+
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+        await cut.WaitForAssertionAsync(() => cut.Markup.Trim().Should().BeEmpty());
+
+        _lifecycle.NotifyEnteredBackground();
+        _time.Advance(TimeSpan.FromSeconds(2));
+        _lifecycle.NotifyResumed();
+
+        cut.Markup.Trim().Should().BeEmpty("a glance at a notification is not a hand-off of the device");
+        _biometrics.PromptReasons.Should().ContainSingle();
     }
 
     private Task EnableAppLockAsync() =>

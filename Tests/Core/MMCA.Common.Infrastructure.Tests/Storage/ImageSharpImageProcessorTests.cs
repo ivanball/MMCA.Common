@@ -84,4 +84,62 @@ public sealed class ImageSharpImageProcessorTests
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Image.Undecodable");
     }
+
+    // ── SEC-Common-28: pixel and dimension ceiling ──
+    /// <summary>
+    /// A PNG whose HEADER declares an enormous frame while the file itself stays small: exactly the
+    /// decompression bomb ADR-045's 2 MB compressed cap cannot see. The header is rewritten rather
+    /// than a real image encoded, because encoding one would cost the allocation under test.
+    /// </summary>
+    private static MemoryStream CreatePngWithDeclaredSize(int width, int height)
+    {
+        using var small = new Image<Rgba32>(4, 4, new Rgba32(1, 2, 3));
+        using var buffer = new MemoryStream();
+        small.Save(buffer, new PngEncoder());
+        var bytes = buffer.ToArray();
+
+        // PNG layout: 8-byte signature, then the IHDR chunk (4-byte length, 4-byte type, then
+        // width and height as big-endian uint32). Rewrite the two dimensions and the chunk CRC.
+        const int ihdrDataOffset = 16;
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(ihdrDataOffset, 4), (uint)width);
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(ihdrDataOffset + 4, 4), (uint)height);
+
+        var crc = System.IO.Hashing.Crc32.HashToUInt32(bytes.AsSpan(12, 17));
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(29, 4), crc);
+
+        return new MemoryStream(bytes);
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithADeclaredPixelBomb_FailsValidationWithoutDecoding()
+    {
+        await using var input = CreatePngWithDeclaredSize(40_000, 40_000);
+
+        var result = await _sut.NormalizeToSquareJpegAsync(input, 256, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Image.TooLarge");
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_WithAnOversizedSingleDimension_FailsValidation()
+    {
+        // Inside the 50 MP area ceiling, past the per-edge one: a strip is still pathological.
+        await using var input = CreatePngWithDeclaredSize(ImageSharpImageProcessor.MaxDecodedDimension + 1, 2);
+
+        var result = await _sut.NormalizeToSquareJpegAsync(input, 256, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Image.TooLarge");
+    }
+
+    [Fact]
+    public async Task NormalizeToSquareJpeg_StillAcceptsARealCameraSizedImage()
+    {
+        await using var input = await CreatePngAsync(4000, 3000);
+
+        var result = await _sut.NormalizeToSquareJpegAsync(input, 256, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+    }
 }

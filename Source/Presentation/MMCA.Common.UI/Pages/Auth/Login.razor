@@ -1,4 +1,4 @@
-@page "/login"
+﻿@page "/login"
 @using Microsoft.Extensions.Options
 @using MMCA.Common.Shared.Auth.Requests
 @using MMCA.Common.UI.Common
@@ -7,8 +7,10 @@
 @using MMCA.Common.UI.Services.Auth.OAuth
 @using MMCA.Common.UI.Services.Capabilities.Auth
 @using MMCA.Common.UI.Services.Navigation
+@using Microsoft.AspNetCore.Authorization
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
+@inject OAuthFlowStateStore OAuthFlowState
 @inject IOAuthUISettings OAuthSettings
 @inject IOptions<ApiSettings> ApiSettingsOptions
 @inject NavigationManager Navigation
@@ -17,6 +19,7 @@
 @inject ThemeService ThemeService
 @inject IExternalAuthBroker ExternalAuthBroker
 @inject IStringLocalizer<SharedResource> L
+@attribute [AllowAnonymous]
 
 <PageTitle>@L["Auth.Login.PageTitle"]</PageTitle>
 
@@ -162,6 +165,7 @@
     private bool _isLoading;
     private bool _hasExternalProviders;
     private string _apiBase = string.Empty;
+    private string? _oauthState;
 
     protected override void OnInitialized()
     {
@@ -169,15 +173,38 @@
         _apiBase = ApiSettingsOptions.Value.ApiEndpoint?.TrimEnd('/') ?? string.Empty;
     }
 
+    // The per-attempt value the completion page requires back. Written once interactivity exists,
+    // because it has to reach device-local storage to survive the provider round trip.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !_hasExternalProviders || _oauthState is not null)
+        {
+            return;
+        }
+
+        _oauthState = await OAuthFlowState.BeginAsync();
+        if (_oauthState is not null)
+        {
+            StateHasChanged();
+        }
+    }
+
     private string BuildOAuthUrl(string provider)
     {
         var url = $"{_apiBase}/auth/oauth/{provider}";
         var safeReturnUrl = ReturnUrlProtector.Sanitize(ReturnUrl, "/");
+        var query = new List<string>();
         if (!string.Equals(safeReturnUrl, "/", StringComparison.Ordinal))
         {
-            url += $"?returnUrl={Uri.EscapeDataString(safeReturnUrl)}";
+            query.Add($"returnUrl={Uri.EscapeDataString(safeReturnUrl)}");
         }
-        return url;
+
+        if (!string.IsNullOrEmpty(_oauthState))
+        {
+            query.Add($"state={Uri.EscapeDataString(_oauthState)}");
+        }
+
+        return query.Count == 0 ? url : $"{url}?{string.Join("&", query)}";
     }
 
     private async Task SignInWithBrokerAsync(string provider)

@@ -1,14 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MMCA.Common.Aspire.Health;
 using MMCA.Common.Aspire.Warmup;
 using MMCA.Common.Shared.Resilience;
 using OpenTelemetry;
@@ -278,6 +280,16 @@ public static class Extensions
             builder.Services.AddHealthChecks()
                 .AddCheck("self", () => HealthCheckResult.Healthy(), [HealthCheckTags.Live]);
 
+            // SECURITY (SEC-Common-71, SEC-ADC-17): the short-TTL, single-flight report cache that
+            // MapDefaultEndpoints serves /health and /health/ready from, so an anonymous flood on
+            // either path cannot amplify into one probe round per request.
+            builder.Services.AddOptions<HealthReportCacheOptions>()
+                .Bind(builder.Configuration.GetSection(HealthReportCacheOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            builder.Services.TryAddSingleton(TimeProvider.System);
+            builder.Services.TryAddSingleton<CachedHealthReportProvider>();
+
             return builder;
         }
 
@@ -410,14 +422,23 @@ public static class Extensions
         /// <returns>The same application instance for chaining.</returns>
         public WebApplication MapDefaultEndpoints()
         {
-            app.MapHealthChecks(HealthEndpointPaths.Health);
+            // SECURITY: probes are declared anonymous explicitly. A host that adopts the
+            // framework's fallback authorization policy would otherwise 401 its own liveness and
+            // readiness probes, and a probe that cannot answer takes the replica out of rotation.
+            //
+            // SECURITY (SEC-Common-71, SEC-ADC-17): /health and /health/ready run the dependency
+            // probes through a short-TTL single-flight cache, so an anonymous flood on either path
+            // costs one probe round per window instead of one per request. The rate-limit bypass
+            // these paths sit on cannot bound that amplification; the cache can. /alive below is
+            // deliberately left uncached.
+            app.MapCachedHealthChecks(HealthEndpointPaths.Health, predicate: null);
 
             // Liveness: only the "self" check (tagged "live") — avoids marking the
             // process as dead when an external dependency (e.g., SQL Server) is down.
             app.MapHealthChecks(HealthEndpointPaths.Alive, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains(HealthCheckTags.Live)
-            });
+            }).AllowAnonymous();
 
             // Readiness: everything except "live"-only and "optional" checks. Warm-up gate is
             // tagged "ready" and reports unhealthy until WarmupHostedService finishes; untagged
@@ -430,13 +451,45 @@ public static class Extensions
             // into a total outage, because every replica goes unready at once and the app stops
             // serving traffic it was perfectly capable of serving. Those checks still surface on
             // /health, so the degradation is visible without being self-inflicted.
-            app.MapHealthChecks(HealthEndpointPaths.Ready, new HealthCheckOptions
-            {
-                Predicate = r => !r.Tags.Contains(HealthCheckTags.Live) && !r.Tags.Contains(HealthCheckTags.Optional)
-            });
+            app.MapCachedHealthChecks(
+                HealthEndpointPaths.Ready,
+                static r => !r.Tags.Contains(HealthCheckTags.Live) && !r.Tags.Contains(HealthCheckTags.Optional));
 
             return app;
         }
+
+        /// <summary>
+        /// Maps one anonymous probe endpoint served from <see cref="CachedHealthReportProvider"/>,
+        /// answering exactly as <c>MapHealthChecks</c> does (the status name as
+        /// <c>text/plain</c>, <c>503</c> only when unhealthy) but running the dependency probes at
+        /// most once per cache window (SEC-Common-71, SEC-ADC-17).
+        /// </summary>
+        /// <param name="path">The endpoint path, used as the cache key so two endpoints never share a report.</param>
+        /// <param name="predicate">Which registered checks take part; <see langword="null"/> means all of them.</param>
+        /// <returns>The endpoint builder, so a host can add its own metadata.</returns>
+        public IEndpointConventionBuilder MapCachedHealthChecks(
+            string path,
+            Func<HealthCheckRegistration, bool>? predicate)
+            => app.MapMethods(
+                path,
+                [HttpMethods.Get, HttpMethods.Head],
+                async (HttpContext httpContext, CachedHealthReportProvider provider, CancellationToken cancellationToken) =>
+                {
+                    var report = await provider
+                        .GetReportAsync(path, predicate, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    httpContext.Response.StatusCode = report.Status == HealthStatus.Unhealthy
+                        ? StatusCodes.Status503ServiceUnavailable
+                        : StatusCodes.Status200OK;
+                    httpContext.Response.ContentType = "text/plain";
+
+                    await httpContext.Response
+                        .WriteAsync(report.Status.ToString(), cancellationToken)
+                        .ConfigureAwait(false);
+                })
+                .AllowAnonymous()
+                .ExcludeFromDescription();
     }
 
     /// <summary>

@@ -85,6 +85,29 @@ public sealed class MauiLocalCacheStore : ILocalCacheStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public Task ClearAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var directory = Path.Combine(FileSystem.AppDataDirectory, "mmca-cache");
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+            // Best-effort cache.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Same disposition.
+        }
+
+        return Task.CompletedTask;
+    }
+
     private static string GetPath(string key, bool ensureDirectory)
     {
         var directory = Path.Combine(FileSystem.AppDataDirectory, "mmca-cache");

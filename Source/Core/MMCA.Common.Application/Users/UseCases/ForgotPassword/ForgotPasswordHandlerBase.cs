@@ -142,8 +142,15 @@ public abstract class ForgotPasswordHandlerBase<TUser, TCommand>(
     /// <param name="email">The normalized address the token was issued for.</param>
     /// <param name="token">The raw single-use token.</param>
     /// <returns>The reset URL, or <see langword="null"/>.</returns>
+    /// <remarks>
+    /// SECURITY: the address and the single-use token ride in the URL FRAGMENT, not the query
+    /// string. A fragment is never sent to a server, so the live token stays out of ingress access
+    /// logs, out of request telemetry (<c>url.query</c> is exported unredacted), and out of any
+    /// <c>Referer</c> the page emits. The reset page reads it from <c>location.hash</c> and scrubs
+    /// it from the address bar.
+    /// </remarks>
     protected virtual string? ComposeResetLink(string email, string token) =>
         string.IsNullOrWhiteSpace(Settings.ResetUrl)
             ? null
-            : $"{Settings.ResetUrl}?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+            : $"{Settings.ResetUrl}#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
 }

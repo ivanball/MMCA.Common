@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
@@ -74,6 +74,23 @@ public sealed class ForgotPasswordHandlerBaseTests
         mocks.SentBody.Should().Contain(ResetUrl);
         mocks.SentBody.Should().Contain("email=user%40example.com");
         mocks.SentBody.Should().Contain($"token={IssuedToken}");
+    }
+
+    [Fact]
+    public async Task HandleAsync_PutsTheAddressAndTokenInTheUrlFragment_NotTheQueryString()
+    {
+        var (sut, mocks) = CreateSut();
+        sut.Found = new TestIdentityUser { Id = 7 };
+
+        await sut.HandleAsync(new TestForgotPasswordCommand(new ForgotPasswordRequest("User@Example.com")));
+
+        mocks.SentBody.Should().Contain(
+            $"{ResetUrl}#email=user%40example.com&amp;token={IssuedToken}",
+            "a fragment is never sent to a server, so the live token stays out of ingress access logs, "
+            + "out of request telemetry, and out of any Referer the reset page emits");
+        mocks.SentBody.Should().NotContain(
+            $"{ResetUrl}?",
+            "a query string would put the single-use token into every log on the path");
     }
 
     [Fact]

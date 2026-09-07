@@ -114,3 +114,5 @@ static MMCA.Common.Shared.Http.ConcurrencyETag.Format(byte[]! rowVersion) -> str
 static MMCA.Common.Shared.Http.ConcurrencyETag.TryParse(string? value, out byte[]? rowVersion) -> bool
 MMCA.Common.Shared.Notifications.NotificationPermissions
 const MMCA.Common.Shared.Notifications.NotificationPermissions.Manage = "notifications:manage" -> string!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetRoleValues(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Collections.Generic.IEnumerable<string!>!
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasRole(this System.Security.Claims.ClaimsPrincipal? principal, string! role) -> bool

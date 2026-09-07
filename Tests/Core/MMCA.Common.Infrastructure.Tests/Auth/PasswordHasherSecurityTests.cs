@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using AwesomeAssertions;
@@ -112,6 +112,42 @@ public sealed class PasswordHasherSecurityTests
         _sut.VerifyPassword(password, legacyDigest, legacySalt).Should().BeFalse(
             "the HMAC-SHA512 verification branch is gone: a credential still stored in the legacy shape "
             + "must fail verification rather than authenticate through an unsalted, single-round digest");
+    }
+
+    [Fact]
+    // The empty pair is the shape an external-OAuth account carries (ADR-036). Deriving an output
+    // the length of the stored hash produced an empty span, and a fixed-time comparison of two empty
+    // spans is true, so this row used to verify against ANY password.
+    public void VerifyPassword_AgainstAnEmptyStoredHashAndSalt_IsRejected() =>
+        _sut.VerifyPassword("literally anything", [], []).Should().BeFalse(
+            "an account with no stored credential material must not authenticate by password");
+
+    [Theory]
+    [InlineData(0, PinnedSaltSize)]
+    [InlineData(PinnedHashSize, 0)]
+    [InlineData(PinnedHashSize - 1, PinnedSaltSize)]
+    [InlineData(PinnedHashSize + 1, PinnedSaltSize)]
+    [InlineData(PinnedHashSize, PinnedSaltSize - 1)]
+    [InlineData(PinnedHashSize, PinnedSaltSize + 1)]
+    public void VerifyPassword_WithNonCanonicalMaterial_IsRejected(int hashLength, int saltLength)
+    {
+        var hash = new byte[hashLength];
+        var salt = new byte[saltLength];
+
+        _sut.VerifyPassword("any password", hash, salt).Should().BeFalse(
+            "material this hasher never produced verifies nothing: only exactly {0}-byte hashes over "
+            + "exactly {1}-byte salts are candidates",
+            PinnedHashSize,
+            PinnedSaltSize);
+    }
+
+    [Fact]
+    public void VerifyPassword_StillAcceptsTheMaterialItProduces()
+    {
+        var (hash, salt) = _sut.HashPassword("correct horse battery staple");
+
+        _sut.VerifyPassword("correct horse battery staple", hash, salt).Should().BeTrue(
+            "the length guard must reject non-canonical material without breaking the real path");
     }
 
     private static byte[] DeterministicSalt()

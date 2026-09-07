@@ -86,10 +86,16 @@ public sealed class MiddlewarePipelineBuilder
                 // cleartext (h2c) on the HTTP endpoint of extracted services: Aspire's project-
                 // resource service discovery doesn't reliably expose an https key, so the resolver
                 // hands out the http URL. Issuing a 307 redirect on those requests breaks the gRPC
-                // call (the client retries against HTTPS, which then has its own issues). Skip
-                // HTTPS redirect for any request whose Content-Type starts with "application/grpc".
+                // call (the client retries against HTTPS, which then has its own issues).
+                //
+                // SECURITY (SEC-Common-44): the exemption is keyed on the NEGOTIATED PROTOCOL, not
+                // on the request's Content-Type. This step runs before UseRouting, so no endpoint
+                // metadata exists here; what does exist is the protocol Kestrel negotiated, which no
+                // header can fake. h2c (HTTP/2 without TLS) is exactly the gRPC-over-cleartext case,
+                // and every browser-reachable request is HTTP/1.1 or HTTP/2-over-TLS, so it keeps
+                // being redirected instead of being served plaintext on a forged header.
                 static app => app.UseWhen(
-                    ctx => !(ctx.Request.ContentType?.StartsWith("application/grpc", StringComparison.OrdinalIgnoreCase) ?? false),
+                    static ctx => !MiddlewarePipelineBuilder.IsCleartextHttp2(ctx),
                     builder => builder.UseHttpsRedirection())),
 
             new MiddlewarePipelineStep(
@@ -340,5 +346,24 @@ public sealed class MiddlewarePipelineBuilder
 
         throw new InvalidOperationException(
             $"Middleware pipeline invariant violated: '{first}' must run before '{second}' ({rationale}). Current order: {string.Join(" -> ", StepNames)}.");
+    }
+
+    /// <summary>
+    /// Whether the request arrived over HTTP/2 without TLS (h2c), the one profile the framework's
+    /// gRPC transport uses on an extracted service's cleartext endpoint.
+    /// </summary>
+    /// <param name="httpContext">The request, before routing.</param>
+    /// <returns><see langword="true"/> when the negotiated protocol is HTTP/2 or later over plaintext.</returns>
+    /// <remarks>
+    /// Public so a host that rebuilds the HTTPS-redirection step keeps the same predicate rather
+    /// than reintroducing the forgeable Content-Type check this replaced (SEC-Common-44). The
+    /// protocol is settled by Kestrel during connection setup and is not influenced by any header.
+    /// </remarks>
+    public static bool IsCleartextHttp2(Microsoft.AspNetCore.Http.HttpContext httpContext)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        return !httpContext.Request.IsHttps
+            && Microsoft.AspNetCore.Http.HttpProtocol.IsHttp2(httpContext.Request.Protocol);
     }
 }

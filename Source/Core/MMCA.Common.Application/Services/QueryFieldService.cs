@@ -159,8 +159,37 @@ public sealed class QueryFieldService
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
         Expression<Func<TEntity, object>>? defaultSort = null,
         string? tieBreakProperty = null)
+        => ApplySorting(query, sortColumn, sortDirection, dtoToEntityPropertyMap, fieldContract: null, defaultSort, tieBreakProperty);
+
+    /// <summary>
+    /// Applies dynamic sorting, resolving a client-supplied column against
+    /// <paramref name="fieldContract"/> when the server-authored map does not cover it
+    /// (SEC-ADC-09). A column the contract does not declare falls back to
+    /// <paramref name="defaultSort"/> instead of ordering the page by a column the response never
+    /// carries.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type.</typeparam>
+    /// <param name="query">The queryable to sort.</param>
+    /// <param name="sortColumn">The property name to sort by.</param>
+    /// <param name="sortDirection">"asc" or "desc".</param>
+    /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored; entries may be navigation paths or expressions).</param>
+    /// <param name="fieldContract">
+    /// The response contract; <see langword="null"/> keeps the historical entity-reflection
+    /// behaviour, which is only correct for a caller whose sort columns are server-authored.
+    /// </param>
+    /// <param name="defaultSort">Fallback sort expression when no valid sort column is specified.</param>
+    /// <param name="tieBreakProperty">Server-supplied final ascending key; see the other overload.</param>
+    /// <returns>The sorted queryable.</returns>
+    public static IQueryable<TEntity> ApplySorting<TEntity>(
+        IQueryable<TEntity> query,
+        string? sortColumn,
+        string? sortDirection,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        Query.QueryFieldContract? fieldContract,
+        Expression<Func<TEntity, object>>? defaultSort = null,
+        string? tieBreakProperty = null)
     {
-        var sortExpr = ResolveSortExpression<TEntity>(sortColumn, dtoToEntityPropertyMap);
+        var sortExpr = ResolveSortExpression<TEntity>(sortColumn, dtoToEntityPropertyMap, fieldContract);
 
         if (sortExpr is not null)
         {
@@ -187,18 +216,38 @@ public sealed class QueryFieldService
     /// server-authored map entry when there is one, otherwise the name of a real public property of
     /// the entity, otherwise <see langword="null"/> (the caller falls back).
     /// </summary>
+    /// <remarks>
+    /// With a <paramref name="fieldContract"/> the unmapped branch is gated on the RESPONSE
+    /// contract before the entity is reflected over (SEC-ADC-09): a column the DTO does not declare
+    /// falls back to the default sort instead of ordering the page by a column the caller cannot
+    /// see. Whatever the source, the resolved path is refused past
+    /// <see cref="Query.QueryFieldContract.MaxNavigationDepth"/> segments (SEC-Store-13).
+    /// </remarks>
     private static string? ResolveSortExpression<TEntity>(
         string? sortColumn,
-        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap)
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        Query.QueryFieldContract? fieldContract)
     {
         if (string.IsNullOrWhiteSpace(sortColumn))
             return null;
 
-        return dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped)
-            ? mapped
-            : typeof(TEntity).GetProperty(
+        string? resolved;
+        if (dtoToEntityPropertyMap.TryGetValue(sortColumn, out var mapped))
+        {
+            resolved = mapped;
+        }
+        else if (fieldContract is not null && !fieldContract.AllowsClientKey(sortColumn))
+        {
+            return null;
+        }
+        else
+        {
+            resolved = typeof(TEntity).GetProperty(
                 sortColumn,
                 BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name;
+        }
+
+        return Query.QueryFieldContract.IsWithinNavigationDepth(resolved) ? resolved : null;
     }
 
     /// <summary>
@@ -331,7 +380,7 @@ public sealed class QueryFieldService
     /// <typeparamref name="TEntity"/>: they may be nested navigation paths such as
     /// <c>"Category.Name"</c> or Dynamic LINQ expressions. Reflecting over them would reject exactly
     /// the DTO names the map exists to enable, which is what made a mapped sort column fail
-    /// validation while <see cref="ApplySorting"/> would have sorted by it happily.
+    /// validation while <c>ApplySorting</c> would have sorted by it happily.
     /// </para>
     /// <para>
     /// A name with NO map entry falls back to the entity-property check below unchanged (existence,
@@ -340,7 +389,7 @@ public sealed class QueryFieldService
     /// </para>
     /// <para>
     /// A <see langword="null"/> map is treated as an empty one, matching how the other map-aware
-    /// members of this layer (<see cref="ApplySorting"/>, <c>QueryFilterService.ValidateFilters</c>)
+    /// members of this layer (<c>ApplySorting</c>, <c>QueryFilterService.ValidateFilters</c>)
     /// treat a caller that has no mappings.
     /// </para>
     /// </remarks>
@@ -353,7 +402,30 @@ public sealed class QueryFieldService
         string? fields,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
         bool allowWriteableFields = false)
-        => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap, allowWriteableFields);
+        => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap, allowWriteableFields, fieldContract: null);
+
+    /// <summary>
+    /// Validates requested field names against the RESPONSE CONTRACT first and
+    /// <typeparamref name="TEntity"/> second, resolving DTO-facing names through
+    /// <paramref name="dtoToEntityPropertyMap"/> before either (SEC-ADC-09).
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type to validate fields against.</typeparam>
+    /// <param name="fields">Comma-separated field names to validate.</param>
+    /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored).</param>
+    /// <param name="allowWriteableFields">If false, rejects read-only properties.</param>
+    /// <param name="fieldContract">
+    /// The response contract an unmapped name must belong to. A name the contract does not declare
+    /// is rejected before the entity is reflected over, so validation refuses exactly what
+    /// <see cref="ApplySorting{TEntity}(IQueryable{TEntity}, string, string, IReadOnlyDictionary{string, string}, Query.QueryFieldContract, Expression{Func{TEntity, object}}, string)"/>
+    /// refuses. <see langword="null"/> keeps the historical entity-only check.
+    /// </param>
+    /// <returns>A success result, or a failure with validation errors.</returns>
+    public static Result Validate<TEntity>(
+        string? fields,
+        IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,
+        bool allowWriteableFields,
+        Query.QueryFieldContract? fieldContract)
+        => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap, allowWriteableFields, fieldContract);
 
     /// <summary>
     /// Shared body of both <c>Validate</c> overloads. See the map-aware overload for why a map hit
@@ -362,7 +434,8 @@ public sealed class QueryFieldService
     private static Result ValidateFields<TEntity>(
         string? fields,
         IReadOnlyDictionary<string, string>? dtoToEntityPropertyMap,
-        bool allowWriteableFields)
+        bool allowWriteableFields,
+        Query.QueryFieldContract? fieldContract = null)
     {
         if (string.IsNullOrWhiteSpace(fields))
             return Result.Success();
@@ -374,37 +447,78 @@ public sealed class QueryFieldService
 
         foreach (string field in fieldsSet)
         {
-            // Server-authored mapping wins outright: the mapped value is not a name to reflect over.
-            if (dtoToEntityPropertyMap is not null && dtoToEntityPropertyMap.ContainsKey(field))
-                continue;
-
-            PropertyInfo? property = propertyInfos
-                .FirstOrDefault(p => p.Name.Equals(field, StringComparison.OrdinalIgnoreCase));
-
-            if (property is null)
-            {
-                errors.Add(Error.InvalidEntityField with
-                {
-                    Message = $"Field '{field}' does not exist on type '{typeof(TEntity).Name}'.",
-                    Target = typeof(TEntity).Name
-                });
-
-                continue;
-            }
-
-            if (!allowWriteableFields && !property.CanWrite)
-            {
-                errors.Add(Error.InvalidEntityField with
-                {
-                    Message = $"Field '{field}' on type '{typeof(TEntity).Name}' is read-only and cannot be used for data shaping.",
-                    Target = typeof(TEntity).Name
-                });
-            }
+            ValidateSingleField<TEntity>(field, propertyInfos, dtoToEntityPropertyMap, allowWriteableFields, fieldContract, errors);
         }
 
         return errors.Count == 0
             ? Result.Success()
             : Result.Failure(errors);
+    }
+
+    /// <summary>
+    /// Validates one field name: server-authored map entry, then response contract, then the
+    /// entity's own property set.
+    /// </summary>
+    private static void ValidateSingleField<TEntity>(
+        string field,
+        PropertyInfo[] propertyInfos,
+        IReadOnlyDictionary<string, string>? dtoToEntityPropertyMap,
+        bool allowWriteableFields,
+        Query.QueryFieldContract? fieldContract,
+        List<Error> errors)
+    {
+        // Server-authored mapping wins outright: the mapped value is not a name to reflect over.
+        if (dtoToEntityPropertyMap is not null && dtoToEntityPropertyMap.TryGetValue(field, out var mappedPath))
+        {
+            if (!Query.QueryFieldContract.IsWithinNavigationDepth(mappedPath))
+            {
+                errors.Add(Error.InvalidEntityField with
+                {
+                    Message = $"Field '{field}' resolves to a navigation path deeper than {Query.QueryFieldContract.MaxNavigationDepth} segments.",
+                    Target = typeof(TEntity).Name
+                });
+            }
+
+            return;
+        }
+
+        // SECURITY (SEC-ADC-09): the RESPONSE contract, not the entity, decides what a client may
+        // name. A field the DTO does not declare is refused here even when the entity has it, which
+        // is what stops an anonymous caller ordering a public page by a redacted or audit-only
+        // column.
+        if (fieldContract is not null && !fieldContract.AllowsClientKey(field))
+        {
+            errors.Add(Error.InvalidEntityField with
+            {
+                Message = $"Field '{field}' is not part of the response contract for type '{typeof(TEntity).Name}'.",
+                Target = typeof(TEntity).Name
+            });
+
+            return;
+        }
+
+        PropertyInfo? property = propertyInfos
+            .FirstOrDefault(p => p.Name.Equals(field, StringComparison.OrdinalIgnoreCase));
+
+        if (property is null)
+        {
+            errors.Add(Error.InvalidEntityField with
+            {
+                Message = $"Field '{field}' does not exist on type '{typeof(TEntity).Name}'.",
+                Target = typeof(TEntity).Name
+            });
+
+            return;
+        }
+
+        if (!allowWriteableFields && !property.CanWrite)
+        {
+            errors.Add(Error.InvalidEntityField with
+            {
+                Message = $"Field '{field}' on type '{typeof(TEntity).Name}' is read-only and cannot be used for data shaping.",
+                Target = typeof(TEntity).Name
+            });
+        }
     }
 
     /// <summary>

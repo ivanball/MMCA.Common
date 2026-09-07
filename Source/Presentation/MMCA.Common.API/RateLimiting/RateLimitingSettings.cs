@@ -70,4 +70,31 @@ public sealed class RateLimitingSettings
     /// because per-account login protection already backs it.
     /// </summary>
     public bool Distributed { get; init; }
+
+    /// <summary>
+    /// Path prefixes that host a real-time hub. Anonymous traffic to these paths is metered per
+    /// client IP instead of taking the anonymous no-limiter partition (SEC-ADC-25).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The global limiter exempts anonymous callers on purpose: public reads are output-cached and
+    /// server-rendered Blazor traffic shares one host IP. A hub is the exception. A gateway that
+    /// bypasses <c>/hubs</c> at the edge (which ADR-024 requires, because the hub authenticates from
+    /// a query-string token the edge cannot read) left <c>/hubs/*/negotiate</c> metered NOWHERE: an
+    /// unauthenticated loop cost full middleware plus auth-reject CPU on every request with nothing
+    /// counting it, unlike every other anonymous route, which the edge still limits.
+    /// </para>
+    /// <para>
+    /// Authenticated hub traffic is unaffected: it already takes the per-user partition.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<string> HubPathPrefixes { get; init; } = ["/hubs"];
+
+    /// <summary>
+    /// Requests per minute per client IP for ANONYMOUS traffic to
+    /// <see cref="HubPathPrefixes"/>. Generous, because one browser tab reconnecting behind a
+    /// flaky network legitimately negotiates several times a minute.
+    /// </summary>
+    [Range(1, 1_000_000)]
+    public int AnonymousHubPermitLimit { get; init; } = 60;
 }

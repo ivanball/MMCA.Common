@@ -23,8 +23,13 @@ public static class SessionCookieEndpoints
         {
             ArgumentNullException.ThrowIfNull(endpoints);
 
+            // Both endpoints run before or after a session exists (the POST seeds the cookie jar at
+            // login, the DELETE clears it at logout), so they declare anonymity explicitly: under the
+            // default fallback authorization policy (SEC-Common-16) an undeclared endpoint requires an
+            // authenticated caller, which would make sign-in impossible on a Blazor host.
             var group = endpoints.MapGroup("/auth/session-cookie")
-                .ExcludeFromDescription();
+                .ExcludeFromDescription()
+                .AllowAnonymous();
 
             group.MapPost(string.Empty, (SessionCookieRequest request, HttpContext httpContext, IWebHostEnvironment env) =>
             {

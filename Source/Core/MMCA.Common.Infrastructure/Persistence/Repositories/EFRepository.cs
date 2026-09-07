@@ -94,6 +94,27 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
     }
 
     /// <inheritdoc />
+    public void TouchConcurrencyToken(TEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+
+        var entry = _context.Entry(entity);
+
+        // Only an UNCHANGED root needs the nudge. A root the applier already modified emits its own
+        // UPDATE, which already carries the concurrency predicate, and marking a property modified on
+        // a Deleted or Detached entry would be wrong rather than merely redundant.
+        if (entry.State != EntityState.Unchanged)
+        {
+            return;
+        }
+
+        // Marking the audit stamp modified is what puts the row in the UPDATE statement. The audit
+        // interceptor then fills in the value, so the write is a real edit record rather than a
+        // no-op touch, and EF appends WHERE RowVersion = @original from the token the caller sent.
+        entry.Property(nameof(AuditableBaseEntity<>.LastModifiedOn)).IsModified = true;
+    }
+
+    /// <inheritdoc />
     public async Task<int> ExecuteDeleteAsync(
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken = default)

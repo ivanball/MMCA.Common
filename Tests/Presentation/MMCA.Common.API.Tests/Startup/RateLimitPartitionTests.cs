@@ -25,9 +25,15 @@ public sealed class RateLimitPartitionTests
     public void IsRateLimitBypassed_ForInfrastructurePath_ReturnsTrue(string path) =>
         WebApplicationBuilderExtensions.IsRateLimitBypassed(Ctx(path: path)).Should().BeTrue();
 
+    /// <summary>
+    /// SEC-Common-44: the gRPC exemption used to be keyed on the request's own <c>Content-Type</c>,
+    /// so an authenticated caller stamping <c>application/grpc</c> on ordinary requests switched off
+    /// their 300/min cap entirely. A header is caller-supplied and unverifiable; the routed endpoint
+    /// is not.
+    /// </summary>
     [Fact]
-    public void IsRateLimitBypassed_ForGrpcContentType_ReturnsTrue() =>
-        WebApplicationBuilderExtensions.IsRateLimitBypassed(Ctx(contentType: "application/grpc")).Should().BeTrue();
+    public void IsRateLimitBypassed_ForAForgedGrpcContentType_ReturnsFalse() =>
+        WebApplicationBuilderExtensions.IsRateLimitBypassed(Ctx(contentType: "application/grpc")).Should().BeFalse();
 
     [Fact]
     public void IsRateLimitBypassed_ForRegularApiRequest_ReturnsFalse() =>

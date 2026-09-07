@@ -6,6 +6,163 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.188.0] - 2026-09-07
+
+### Changed
+
+- **Breaking (behaviour, not compile):** four defaults moved to the secure side. Consumers upgrading
+  from 1.187.0 read [UPGRADING.md](UPGRADING.md) section 1.188.0 before deploying: (1) the fallback
+  authorization policy is on, so an endpoint or proxied gateway route that declares nothing now
+  requires an authenticated caller; (2) client sort, filter and lookup keys resolve against the DTO
+  contract and an entity-only name returns 400; (3) `Application:Namespace` prefixes cache keys,
+  lock keys, the SignalR backplane channel and the message-bus endpoint prefix when those are unset
+  (an existing deployment sets `MessageBus:PreserveDefaultEndpointNames=true` to keep its queue
+  names, since the formatter change means no prefix value reproduces the old names);
+  (4) `Smtp:EnableSsl` unset means TLS on outside Development. Also: a client-supplied
+  `Content-Type: application/grpc` no longer bypasses the global limiter or HTTPS redirection,
+  anonymous hub traffic is metered per IP, `/health` and `/health/ready` are cached for
+  `HealthChecks:CacheSeconds`, and `DeepLinkDispatcher.Publish` throws on a non-app-relative route.
+
+### Security
+
+- **SEC-Common-01 (Critical): an empty stored password hash no longer verifies against any password.**
+  `PasswordHasher.VerifyPassword` rejects credential material it never produced (anything other than a
+  64-byte hash over a 32-byte salt), `AuthenticationServiceBase.LoginAsync` refuses password login for
+  an account with no stored credential, and `ChangePasswordHandlerBase` refuses to treat such an
+  account's current password as provable.
+- **SEC-Common-02: changing or resetting a password evicts every live refresh session.**
+  `ChangePasswordHandlerBase` and `ResetPasswordHandlerBase` take an optional `IRefreshSessionStore`
+  (and `TimeProvider`) and revoke the account's un-revoked sessions after a successful save, so a
+  stolen refresh chain dies with the old credential.
+- **SEC-Common-05: the login account-state gate runs after the password check.** A caller who cannot
+  prove the password gets the generic `Auth.InvalidCredentials` answer whatever the account's state
+  is, and a wrong password against a gated account now counts toward the lockout.
+- **SEC-Common-16: an endpoint that declares no authorization requires an authenticated caller.**
+  `AddAuthorizationPolicies()` registers a fallback authorization policy; framework and static
+  surfaces (Blazor framework files and circuit, static asset roots, health probes, well-known
+  documents) are exempt by path prefix, and the documented opt-out is
+  `AddAuthorizationPolicies(options => options.Enabled = false)`. The framework's own anonymous
+  endpoints (`OAuthControllerBase` challenge and completion actions, the credential and landing pages
+  in `MMCA.Common.UI`, the Aspire health endpoints) declare `[AllowAnonymous]`.
+  **Adopting this is a behaviour change for hosts:** a YARP gateway's public routes need
+  `"AuthorizationPolicy": "anonymous"` in route config (proxied routes carry no metadata of their
+  own), and any controller or minimal-API endpoint meant to stay public needs `[AllowAnonymous]` /
+  `.AllowAnonymous()`. A Blazor page is unaffected at the component level: `AuthorizeRouteView` reads
+  attributes and ignores the fallback policy.
+- **SEC-Common-17: the output-cache bypass reads roles the way the permission handler does.**
+  `ClaimsPrincipalExtensions.GetRoleValues`/`HasRole` is the one role read (`ClaimTypes.Role`,
+  `role`, `roles`, case-insensitive), so a privileged caller under an unmapped claim type can no
+  longer have an elevated response stored under the shared public cache key.
+- **SEC-Common-18: live-channel subscription can be gated.** `NotificationHub` consults an optional
+  `IChannelJoinAuthorizer` after the channel-key shape check; a host publishing anything that is not
+  public to every signed-in user registers one.
+- **SEC-Common-46: the public output-cache key varies by the resolved tenant**, so a multi-tenant host
+  cannot serve one tenant's rows to another from a shared entry.
+- **SEC-Common-78: login pays the same key-derivation cost whether or not the address has an account**,
+  closing the response-time membership oracle.
+- **SEC-Common-85: an OAuth completion is bound to the flow this client started.**
+  `OAuthFlowStateStore` mints a per-attempt value before the challenge, the challenge and completion
+  endpoints round-trip it, and `OAuthComplete` drops a code that arrives without a matching local
+  attempt, so a deep-linked completion cannot force sign-in as the attacker's account.
+- **SEC-Common-86: offline snapshots do not survive sign-out.** `ILocalCacheStore.ClearAsync()` wipes
+  the device-local document cache and `AuthUIService` calls it at logout and when a session can no
+  longer be refreshed; `OfflineFirstPageSnapshot` takes an optional user scope folded into its key.
+- **SEC-ADC-03: the anonymous-endpoint fitness gate can see undecorated endpoints.**
+  `AnonymousEndpointTestsBase` enumerates every concrete controller and routable page that carries no
+  authorization attribute at all and asserts it against an allow-list, opt-in per repo via
+  `RequireExplicitAuthorizationDecision` (MMCA.Common holds itself to it).
+- **SEC-ADC-67: the biometric app lock re-arms on resume.** `IAppLifecycleNotifier` reports the
+  background interval and `BiometricGate` re-locks when the app was away longer than `ReLockAfter`
+  (30 seconds by default); MAUI heads wire it with `window.AttachMmcaAppLifecycle(services)`.
+- **SEC-Store-22: the password-reset link carries its token in the URL fragment**, which browsers never
+  send to a server, so a live single-use token stays out of ingress access logs, request telemetry and
+  the `Referer` header. `ResetPassword` reads it from `location.hash` and scrubs it, and
+  `/reset-password` and `/auth/oauth-complete` answer with `Referrer-Policy: no-referrer` and
+  `Cache-Control: no-store`.
+- **SEC-Common-24: a lookup projects only fields the response contract declares, and is capped.**
+  `EntityQueryService.GetAllForLookupAsync` resolves `nameProperty` through the new
+  `LookupNameContract` (defaulting to the DTO's own property names, narrowable with
+  `QueryFieldContract.ForNames`) and answers 400 for anything else, and
+  `EFReadRepository.GetAllForLookupAsync` applies `EntityQueryPipeline.MaxUnboundedResultLimit`,
+  the one read that never entered the pipeline enforcing it.
+- **SEC-Common-25 / SEC-ADC-09: dynamic sort columns and filter keys resolve against the response
+  contract, not the entity.** `EntityQueryService.FieldContract` defaults to
+  `QueryFieldContract.For<TEntityDTO>()` and flows through `EntityQueryParameters` into
+  `QueryFieldService.ApplySorting` and `QueryFilterService.ApplyFilters`/`ValidateFilters` (new
+  overloads; the existing signatures are unchanged and keep the old behaviour). A key the map does
+  not cover must name a contract field, and a dotted path the server did not author is refused, so a
+  caller can neither order a public page by a redacted column nor turn a list endpoint into an
+  inference oracle over the object graph.
+  **Adopting this is a behaviour change:** a client key naming a field only the entity carries now
+  answers 400. Add the field to the DTO, map it in `DTOToEntityPropertyMap`, or override
+  `FieldContract` (returning `null` restores entity resolution).
+- **SEC-Store-13: a navigation path is capped at `QueryFieldContract.MaxNavigationDepth` (3)
+  segments**, whoever authored it, so a self-referencing segment repeated hundreds of times cannot
+  become that many LEFT JOINs from one anonymous request.
+- **SEC-Store-14: the lookup-selector cache is keyed on the property's canonical name and bounded.**
+  Every case permutation of a real column used to mint its own never-evicted entry; they now collapse
+  onto one, and past 512 entries the selector is built per request.
+- **SEC-Common-28: image decoding has a pixel and dimension ceiling.**
+  `ImageSharpImageProcessor` reads the header with `Image.IdentifyAsync` and refuses anything past
+  `MaxDecodedPixels` (50 MP) or `MaxDecodedDimension` (20000) as `Image.TooLarge`, before the frame
+  buffer a decompression bomb declares is ever allocated; the decoded frame is re-checked.
+- **SEC-Common-37: a caller-scoped query cache key includes the caller.** `CachingQueryDecorator`
+  appends the target user to the key for a query that implements `IUserScopedRequest`, so one
+  caller's rows are not served to another from a shared entry; the new `ISharedQueryCache` marker
+  opts a genuinely public result back out. The segment is a suffix, so prefix invalidation still
+  clears every caller's copy.
+- **SEC-Common-44: the gRPC rate-limit and HTTPS-redirect exemptions no longer trust a request
+  header.** `IsRateLimitBypassed` keys on gRPC endpoint metadata (produced by routing from the
+  server's own `MapGrpcService` registrations), and the HTTPS-redirect skip keys on the negotiated
+  protocol via `MiddlewarePipelineBuilder.IsCleartextHttp2`. Stamping
+  `Content-Type: application/grpc` on ordinary requests no longer switches off the per-user cap or
+  the redirect.
+- **SEC-Common-53: shared Redis and broker resources are namespaced per application by default.**
+  `ApplicationNamespace.Resolve` derives one namespace from `Application:Namespace`, falling back to
+  the host application name, and it now defaults `Cache:KeyPrefix` (and so the distributed-lock
+  keyspace), the SignalR Redis backplane `ChannelPrefix` and `MessageBus:EndpointPrefix`.
+  **Adopting this changes resource names:** cache keys and lock keys gain a prefix (a cold cache
+  after deploy), the backplane moves channel, and unset `EndpointPrefix` now yields prefixed queue
+  names. Set `Application:Namespace` explicitly where two hosts of the same application must share a
+  keyspace, and drain old broker queues on cutover.
+- **SEC-Common-54: SMTP TLS is on by default outside Development.** `SmtpTransportSecurity` resolves
+  `EnableSsl` in the `RequireHttpsMetadata` three steps (explicit `Smtp:EnableSsl`, then secure
+  outside Development) and logs one startup warning when a deployed host disables it for a
+  configured relay, so an adopter who omits the key no longer authenticates in the clear on the path
+  that carries password-reset tokens.
+- **SEC-Common-71 / SEC-ADC-17: `/health` and `/health/ready` serve a cached report.**
+  `CachedHealthReportProvider` runs the dependency probes at most once per
+  `HealthChecks:CacheSeconds` (default 5) with single flight, so an anonymous flood on these
+  rate-limit-exempt paths costs one probe round per window instead of one per request. `/alive` is
+  unchanged and still uncached.
+- **SEC-ADC-25: anonymous hub traffic is metered and a hub connection is capped per user.** The
+  service-side global limiter partitions anonymous requests to `RateLimiting:HubPathPrefixes`
+  (default `/hubs`) per client IP at `AnonymousHubPermitLimit` (default 60/min) instead of exempting
+  them, so an edge that bypasses `/hubs` is now covered service-side; `NotificationHub` refuses a
+  connection past `PushNotifications:MaxConnectionsPerUser` (default 20).
+- **SEC-Common-77: an If-Match precondition is enforced even when only child rows changed.**
+  `IWriteRepository.TouchConcurrencyToken` (a default no-op, implemented by `EFRepository`) marks an
+  otherwise-`Unchanged` aggregate root as modified under a conditional write, so the save always
+  emits a root UPDATE carrying the caller's token and a stale one answers 412 instead of silently
+  discarding a concurrent edit.
+
+### Added
+
+- **`DeepLinkDispatcher.Publish` validates the route shape.** Only a single-leading-slash
+  app-relative path with no scheme, backslash or control character is accepted, so a hostile explicit
+  intent on a native head cannot publish `//attacker.example/p` and have the web view resolve it
+  protocol-relative off the app origin. `IsAppRelativeRoute` is public for a head that wants the same
+  check earlier.
+- **A trusted-internal-caller exemption for the gateway rate limiter.**
+  `GatewayRateLimitingSettings.TrustedCallerSecret`/`TrustedCallerHeaderName` generalize the
+  synthetic-traffic bypass, so a server-rendered UI host's back-end calls (token refreshes above all)
+  are not collapsed into one client-IP partition. Off unless the secret is configured, compared in
+  constant time, single-valued header only.
+- **`IConcurrencyConflictDetector` and `EfCoreConcurrencyConflictDetector`**, beside
+  `IUniqueConstraintViolationDetector`: a handler that claims work by writing a row can recognise
+  losing that claim without catching `DbUpdateConcurrencyException` in the Application layer.
+  Registered by `AddInfrastructure` with `TryAdd`.
+
 ## [1.187.0] - 2026-09-06
 
 ### Fixed

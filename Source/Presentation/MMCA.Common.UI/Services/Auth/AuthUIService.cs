@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using MMCA.Common.Shared.Abstractions;
@@ -8,6 +8,7 @@ using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Services.Caching;
+using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 using MMCA.Common.UI.Services.Capabilities.Notifications;
 
 namespace MMCA.Common.UI.Services.Auth;
@@ -34,13 +35,20 @@ namespace MMCA.Common.UI.Services.Auth;
 /// the session (WebAssembly and MAUI resolve one scope for the app's lifetime): without the clear, the
 /// next account signing in on the same client could be served the previous account's cached reads.
 /// </param>
+/// <param name="localCache">
+/// Optional device-local document cache (offline list snapshots), wiped on sign-out. Snapshots are
+/// written in plaintext, survive process restarts, and are keyed by surface rather than by user, so
+/// leaving them behind would show the previous account's rows to whoever signs in next on this
+/// device the first time the network is unavailable.
+/// </param>
 public sealed class AuthUIService(
     IHttpClientFactory httpClientFactory,
     ITokenStorageService tokenStorageService,
     ITokenRefresher tokenRefresher,
     AuthenticationStateProvider authStateProvider,
     IPushRegistrationService pushRegistration,
-    IUiReadCache? readCache = null) : IAuthUIService
+    IUiReadCache? readCache = null,
+    ILocalCacheStore? localCache = null) : IAuthUIService
 {
     /// <summary>
     /// Error code reported when the authentication succeeded but the tokens could not be persisted
@@ -128,6 +136,7 @@ public sealed class AuthUIService(
         // cache outlives the session on WebAssembly and MAUI, so leaving entries behind would show
         // them to whoever signs in next on this client.
         readCache?.Clear();
+        await ClearLocalCacheAsync().ConfigureAwait(false);
 
         if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
         {
@@ -157,6 +166,7 @@ public sealed class AuthUIService(
             // The same reasoning as LogoutAsync: an unrefreshable session IS a sign-out, and the
             // cached reads belong to the session that just ended.
             readCache?.Clear();
+            await ClearLocalCacheAsync().ConfigureAwait(false);
 
             if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
             {
@@ -338,6 +348,26 @@ public sealed class AuthUIService(
             // JS interop not available during SSR prerender: proceed without a token and let the
             // API answer 401, which the caller renders like any other failure.
             return null;
+        }
+    }
+
+    // Wipes the device-local document cache. Best-effort for the same reason the token clear is:
+    // a store that cannot be reached (JS interop gone, disk error) must not strand a user inside a
+    // session they asked to leave.
+    private async Task ClearLocalCacheAsync()
+    {
+        if (localCache is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await localCache.ClearAsync().ConfigureAwait(false);
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop not available (SSR prerender / disconnected circuit).
         }
     }
 }

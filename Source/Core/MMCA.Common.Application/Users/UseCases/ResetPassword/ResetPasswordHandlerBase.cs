@@ -28,12 +28,26 @@ namespace MMCA.Common.Application.Users.UseCases.ResetPassword;
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's reset-password command record.</typeparam>
+/// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
+/// <param name="passwordHasher">Derives the new credential material.</param>
+/// <param name="tokenService">Redeems the single-use reset token.</param>
+/// <param name="loginProtection">Clears the account's lockout after a successful reset.</param>
+/// <param name="logger">Logger for the reset audit lines.</param>
+/// <param name="refreshSessions">
+/// Optional refresh-session store. When supplied, a successful reset revokes every live session on
+/// the account (ADR-097), so the reset actually evicts whoever else was signed in. Optional and
+/// defaulted so an existing subclass keeps compiling; a host that wired refresh sessions should
+/// pass it.
+/// </param>
+/// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
 public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     IPasswordResetTokenService tokenService,
     ILoginProtectionService loginProtection,
-    ILogger logger) : ICommandHandler<TCommand, Result>
+    ILogger logger,
+    IRefreshSessionStore? refreshSessions = null,
+    TimeProvider? timeProvider = null) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IPasswordChangeableUser
     where TCommand : ICommandWithRequest<ResetPasswordRequest>
 {
@@ -85,6 +99,12 @@ public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Credential rotation evicts every live refresh session: a reset is the remediation for a
+        // suspected intruder, so the intruder's rotating chain has to die with the old password.
+        await RefreshSessionRevocation
+            .RevokeAllAsync(refreshSessions, timeProvider, userId, cancellationToken)
+            .ConfigureAwait(false);
 
         // A user who reset the password because of a lockout must not stay locked out.
         await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);

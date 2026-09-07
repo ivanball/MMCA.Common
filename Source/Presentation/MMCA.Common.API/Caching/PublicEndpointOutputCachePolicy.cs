@@ -1,7 +1,10 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
+using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.API.Caching;
 
@@ -31,9 +34,21 @@ namespace MMCA.Common.API.Caching;
 /// stays cacheable. Responses that set cookies or return non-200 status codes are never
 /// stored.
 /// </para>
+/// <para>
+/// SECURITY (tenancy): when a tenant has been resolved for the request the cache key varies by it,
+/// so one tenant's rows can never be served to another from the shared entry. That vary rule is a
+/// backstop, not a licence: an endpoint whose payload depends on the caller (rather than only on
+/// the tenant) still must not use this policy.
+/// </para>
 /// </summary>
 public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
 {
+    /// <summary>
+    /// The <c>VaryByValues</c> key the resolved tenant is stamped under, mirroring the
+    /// <c>t:{tenantId}</c> prefix the caching CQRS decorators use.
+    /// </summary>
+    private const string TenantVaryByKey = "t";
+
     private readonly TimeSpan _expiration;
     private readonly string[] _bypassRoles;
     private readonly string[] _tags;
@@ -80,6 +95,16 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
         // (search, paging, filters, field projections) is its own cache entry.
         context.CacheVaryByRules.QueryKeys = "*";
 
+        // SECURITY: on a multi-tenant host the same path and query mean different rows per tenant,
+        // and the entry is shared, so the resolved tenant has to be part of the key. Tenant
+        // resolution runs before output caching in the framework pipeline, so the value is already
+        // there; an unresolved tenant (single-tenant host, background call) adds nothing.
+        var tenantId = context.HttpContext.RequestServices?.GetService<ITenantContext>()?.TenantId;
+        if (!string.IsNullOrEmpty(tenantId))
+        {
+            context.CacheVaryByRules.VaryByValues[TenantVaryByKey] = tenantId;
+        }
+
         foreach (var tag in _tags)
             context.Tags.Add(tag);
 
@@ -109,6 +134,10 @@ public sealed class PublicEndpointOutputCachePolicy : IOutputCachePolicy
     private static bool IsCacheableRequest(HttpRequest request) =>
         HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method);
 
+    // SECURITY: the wide role read, not ClaimsPrincipal.IsInRole. IsInRole only matches the
+    // identity's own role claim type, so against an identity provider that emits bare "role"/"roles"
+    // claims the permission handler would grant the elevated payload while this check missed the
+    // bypass, and that response would be stored under the shared public key.
     private bool IsBypassedCaller(ClaimsPrincipal user) =>
-        Array.Exists(_bypassRoles, user.IsInRole);
+        Array.Exists(_bypassRoles, user.HasRole);
 }

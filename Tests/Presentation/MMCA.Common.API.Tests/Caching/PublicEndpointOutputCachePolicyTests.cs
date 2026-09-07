@@ -1,8 +1,10 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.API.Caching;
+using MMCA.Common.Application.Interfaces;
 
 namespace MMCA.Common.API.Tests.Caching;
 
@@ -25,6 +27,95 @@ public class PublicEndpointOutputCachePolicyTests
         }
 
         return new OutputCacheContext { HttpContext = httpContext };
+    }
+
+    private static OutputCacheContext CreateContextWithRoleClaimType(string claimType, string role)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = HttpMethods.Get;
+        httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(claimType, role)],
+            authenticationType: "TestAuth"));
+
+        return new OutputCacheContext { HttpContext = httpContext };
+    }
+
+    private static OutputCacheContext CreateContextWithTenant(string? tenantId)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITenantContext>(new StubTenantContext(tenantId));
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services.BuildServiceProvider(),
+        };
+        httpContext.Request.Method = HttpMethods.Get;
+
+        return new OutputCacheContext { HttpContext = httpContext };
+    }
+
+    // ── Bypass roles are read the way the permission handler reads them (SEC-Common-17) ──
+    [Theory]
+    [InlineData("role")]
+    [InlineData("roles")]
+    public async Task CacheRequest_BypassRoleUnderAnUnmappedClaimType_StillBypasses(string claimType)
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration, ["Organizer"], []);
+        var context = CreateContextWithRoleClaimType(claimType, "Organizer");
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.AllowCacheStorage.Should().BeFalse(
+            "the permission handler grants this caller the elevated payload through the same claim, so a "
+            + "narrower read here would store that payload under the shared public key");
+        context.AllowCacheLookup.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CacheRequest_BypassRoleDifferingOnlyInCase_StillBypasses()
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration, ["Organizer"], []);
+        var context = CreateContextWithRoleClaimType("roles", "organizer");
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.AllowCacheStorage.Should().BeFalse("role comparison is case-insensitive, as everywhere else");
+    }
+
+    // ── Tenancy is part of the cache key (SEC-Common-46) ──
+    [Fact]
+    public async Task CacheRequest_WhenATenantIsResolved_VariesTheKeyByIt()
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration);
+        var context = CreateContextWithTenant("tenant-b");
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.CacheVaryByRules.VaryByValues.Should().ContainKey("t")
+            .WhoseValue.Should().Be(
+                "tenant-b",
+                "the entry is shared, so one tenant must never be served another tenant's rows");
+    }
+
+    [Fact]
+    public async Task CacheRequest_WhenNoTenantIsResolved_AddsNoVaryValue()
+    {
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration);
+        var context = CreateContextWithTenant(tenantId: null);
+
+        await sut.CacheRequestAsync(context, CancellationToken.None);
+
+        context.CacheVaryByRules.VaryByValues.Should().BeEmpty(
+            "a single-tenant host keeps exactly the cache key it had");
+    }
+
+    private sealed class StubTenantContext(string? tenantId) : ITenantContext
+    {
+        public string? TenantId => tenantId;
+
+        public bool IsResolved => tenantId is not null;
+
+        public void SetTenant(string tenantId) => throw new NotSupportedException();
     }
 
     // ── The point of the policy: Authorization does not bypass the cache ──

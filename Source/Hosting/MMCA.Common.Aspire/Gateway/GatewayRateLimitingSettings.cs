@@ -113,4 +113,40 @@ public sealed class GatewayRateLimitingSettings
     /// </remarks>
     [StringLength(int.MaxValue, MinimumLength = 32)]
     public string? SyntheticTrafficSecret { get; init; }
+
+    /// <summary>
+    /// Name of the request header a TRUSTED INTERNAL caller presents to claim the same no-limiter
+    /// partition. Only the name lives here; the header is worthless without
+    /// <see cref="TrustedCallerSecret"/>.
+    /// </summary>
+    [Required]
+    public string TrustedCallerHeaderName { get; init; } = "X-Internal-Caller-Key";
+
+    /// <summary>
+    /// Shared secret a server-to-server caller must present in
+    /// <see cref="TrustedCallerHeaderName"/>, compared in constant time. Null or empty (the
+    /// default) disables the exemption entirely, so no header value can claim it. When set it must
+    /// be at least 32 characters.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why it exists.</b> The per-IP window partitions on the connecting address, and a
+    /// server-rendered UI host makes all of its back-end calls (token refreshes above all) from ONE
+    /// address on behalf of every signed-in visitor. Those calls collapse into a single partition
+    /// and start answering 429 as soon as the site is busy: the limiter throttles the application
+    /// rather than a caller. This is the same mechanism as
+    /// <see cref="SyntheticTrafficSecret"/>, generalized from a load-test runner to any internal
+    /// caller the deployment trusts.
+    /// </para>
+    /// <para>
+    /// <b>Where it belongs.</b> Production must supply it from a secret store or the environment
+    /// (<c>GatewayRateLimiting__TrustedCallerSecret</c>), NEVER from a checked-in
+    /// <c>appsettings</c> file, and the calling host must read the same secret from the same place.
+    /// A value in source control is a published bypass to the edge limiter. It exempts an
+    /// application component you deployed, never an end user's browser, so it must not be handed to
+    /// any client-side code.
+    /// </para>
+    /// </remarks>
+    [StringLength(int.MaxValue, MinimumLength = 32)]
+    public string? TrustedCallerSecret { get; init; }
 }

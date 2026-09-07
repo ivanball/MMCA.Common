@@ -57,13 +57,102 @@ public static class WebApplicationBuilderExtensions
 
     /// <summary>True for traffic that must bypass rate limiting: health/liveness probes, JWKS
     /// discovery, and gRPC inter-service calls — all legitimately high-frequency.</summary>
-    /// <remarks>Internal (not private) so the partition/exemption logic is unit-testable via
-    /// <c>InternalsVisibleTo</c> rather than only through a full request flood.</remarks>
+    /// <remarks>
+    /// <para>
+    /// The gRPC arm is keyed on the ROUTED ENDPOINT, never on the request's <c>Content-Type</c>
+    /// (SEC-Common-44). A header is caller-supplied and unverifiable: stamping
+    /// <c>Content-Type: application/grpc</c> on ordinary requests used to hand any authenticated
+    /// account the no-limiter partition and switch off its 300/min cap entirely. Endpoint metadata
+    /// is produced by routing from the server's own <c>MapGrpcService</c> registrations, so it
+    /// cannot be forged. This predicate runs from the rate-limiting middleware, which sits AFTER
+    /// <c>UseRouting</c> (see <c>MiddlewarePipelineBuilder</c>), so the endpoint is already resolved.
+    /// </para>
+    /// <para>
+    /// Internal (not private) so the partition/exemption logic is unit-testable via
+    /// <c>InternalsVisibleTo</c> rather than only through a full request flood.
+    /// </para>
+    /// </remarks>
     internal static bool IsRateLimitBypassed(HttpContext httpContext) =>
         httpContext.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase)
         || httpContext.Request.Path.StartsWithSegments("/alive", StringComparison.OrdinalIgnoreCase)
         || httpContext.Request.Path.StartsWithSegments("/.well-known", StringComparison.OrdinalIgnoreCase)
-        || (httpContext.Request.ContentType?.StartsWith("application/grpc", StringComparison.OrdinalIgnoreCase) ?? false);
+        || IsGrpcEndpoint(httpContext);
+
+    /// <summary>
+    /// The partition an UNAUTHENTICATED request counts against: none, except on a real-time hub
+    /// path, where it is metered per client IP (SEC-ADC-25).
+    /// </summary>
+    /// <remarks>
+    /// Anonymous traffic is exempt everywhere else on purpose: public reads are output-cached and
+    /// server-rendered Blazor traffic shares one host IP. A gateway that bypasses <c>/hubs</c> at the
+    /// edge (ADR-024 requires it, because the hub authenticates from a query-string token the edge
+    /// cannot read) left an anonymous negotiate flood metered nowhere at all.
+    /// </remarks>
+    private static RateLimitPartition<string> AnonymousPartition(HttpContext httpContext, RateLimitingSettings settings) =>
+        IsAnonymousHubRequest(httpContext, settings)
+            ? CreateLimitedPartition(
+                httpContext,
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous-hub",
+                redisScope: "hub",
+                permitLimit: settings.AnonymousHubPermitLimit,
+                queueLimit: 0,
+                settings,
+                allowDistributed: true)
+            : RateLimitPartition.GetNoLimiter("__anonymous");
+
+    /// <summary>
+    /// Whether an unauthenticated request targets one of the configured hub path prefixes
+    /// (SEC-ADC-25).
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="settings">The bound rate-limiting settings.</param>
+    /// <returns><see langword="true"/> when the anonymous request must be metered per client IP.</returns>
+    /// <remarks>Internal so the path match is unit-testable via <c>InternalsVisibleTo</c>.</remarks>
+    internal static bool IsAnonymousHubRequest(HttpContext httpContext, RateLimitingSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var path = httpContext.Request.Path;
+
+        return settings.HubPathPrefixes.Any(prefix =>
+            !string.IsNullOrWhiteSpace(prefix)
+            && path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// The namespace every metadata type Grpc.AspNetCore.Server attaches to a mapped gRPC method
+    /// lives in. Matched by name so MMCA.Common.API needs no package reference on the gRPC server
+    /// stack, which only the extracted service hosts take.
+    /// </summary>
+    private const string GrpcServerMetadataNamespace = "Grpc.AspNetCore.Server";
+
+    /// <summary>
+    /// Whether the request routed to a mapped gRPC method.
+    /// </summary>
+    /// <param name="httpContext">The request, after routing.</param>
+    /// <returns><see langword="true"/> only for an endpoint the server itself mapped as gRPC.</returns>
+    /// <remarks>Internal so the metadata match is unit-testable.</remarks>
+    internal static bool IsGrpcEndpoint(HttpContext httpContext)
+    {
+        var endpoint = httpContext.GetEndpoint();
+        if (endpoint is null)
+        {
+            return false;
+        }
+
+        foreach (var metadata in endpoint.Metadata)
+        {
+            var metadataNamespace = metadata?.GetType().Namespace;
+            if (metadataNamespace is not null
+                && metadataNamespace.StartsWith(GrpcServerMetadataNamespace, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests,
     /// and limits authenticated callers per user (name → subject claim → IP).</summary>
@@ -86,7 +175,7 @@ public static class WebApplicationBuilderExtensions
 
         if (httpContext.User?.Identity?.IsAuthenticated != true)
         {
-            return RateLimitPartition.GetNoLimiter("__anonymous");
+            return AnonymousPartition(httpContext, settings);
         }
 
         var partitionKey = httpContext.User.Identity.Name

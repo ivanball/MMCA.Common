@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Security.Claims;
 using AwesomeAssertions;
 using FluentValidation;
@@ -81,7 +81,7 @@ public sealed class AuthenticationServiceBaseTests
     }
 
     [Fact]
-    public async Task LoginAsync_WhenCandidateGateFails_ReturnsGateFailureWithoutIncrementOrPasswordCheck()
+    public async Task LoginAsync_WhenCandidateGateFails_ReturnsGateFailureOnlyAfterThePasswordIsVerified()
     {
         var (sut, mocks) = CreateSut();
         sut.UntrackedUser = CreateTestUser(id: 1);
@@ -94,12 +94,68 @@ public sealed class AuthenticationServiceBaseTests
         result.Errors.Should().ContainSingle(e => e.Code == "Auth.AccountDeactivated");
         mocks.PasswordHasher.Verify(
             x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()),
-            Times.Never,
-            "the app gate runs before password verification");
+            Times.Once,
+            "the gate's distinct status is told only to a caller who proved the password, so account state is not readable without a credential");
         mocks.LoginProtection.Verify(
             x => x.IncrementFailedAttemptsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never,
-            "a gate rejection is not a failed credential attempt");
+            "a gate rejection after a correct password is not a failed credential attempt");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenCandidateGateFailsAndThePasswordIsWrong_ReturnsInvalidCredentials()
+    {
+        var (sut, mocks) = CreateSut();
+        sut.UntrackedUser = CreateTestUser(id: 1);
+        sut.LoginCandidateResult = Result.Failure(
+            Error.Unauthorized("Auth.AccountDeactivated", "Account is deactivated."));
+        mocks.PasswordHasher
+            .Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()))
+            .Returns(false);
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "wrong"));
+
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidCredentials",
+            "an attacker with no credential must not be able to tell a deactivated account from a live one");
+        mocks.LoginProtection.Verify(
+            x => x.IncrementFailedAttemptsAsync("user@example.com", It.IsAny<CancellationToken>()),
+            Times.Once,
+            "a wrong password against a gated account is still a failed attempt and must count toward lockout");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenTheAccountHasNoStoredCredential_ReturnsInvalidCredentialsWithoutVerifyingAgainstIt()
+    {
+        var (sut, mocks) = CreateSut();
+        sut.UntrackedUser = CreateTestUser(id: 1, passwordHash: [], passwordSalt: []);
+        mocks.PasswordHasher
+            .Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()))
+            .Returns(true);
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "anything"));
+
+        result.IsFailure.Should().BeTrue(
+            "an external-OAuth account carries empty credential material and must never authenticate by password");
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidCredentials");
+        mocks.PasswordHasher.Verify(
+            x => x.VerifyPassword(It.IsAny<string>(), It.Is<byte[]>(h => h.Length == 0), It.IsAny<byte[]>()),
+            Times.Never,
+            "the stored empty material is never handed to the hasher at all");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenTheEmailIsUnknown_StillPaysThePasswordVerificationCost()
+    {
+        var (sut, mocks) = CreateSut();
+        sut.UntrackedUser = null;
+
+        Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("unknown@example.com", "pw"));
+
+        result.IsFailure.Should().BeTrue();
+        mocks.PasswordHasher.Verify(
+            x => x.VerifyPassword("pw", It.IsAny<byte[]>(), It.IsAny<byte[]>()),
+            Times.Once,
+            "an unknown address must answer on the same timescale as a known one, or the response time is a membership oracle");
     }
 
     [Fact]
@@ -754,6 +810,9 @@ public sealed class AuthenticationServiceBaseTests
 
     // ── Helpers ──
     private static TestAuthUser CreateTestUser(UserIdentifierType id) => new() { Id = id };
+
+    private static TestAuthUser CreateTestUser(UserIdentifierType id, byte[] passwordHash, byte[] passwordSalt) =>
+        new() { Id = id, PasswordHash = passwordHash, PasswordSalt = passwordSalt };
 
     private static ClaimsPrincipal CreatePrincipal(params Claim[] claims) =>
         new(new ClaimsIdentity(claims, authenticationType: "Test"));

@@ -7,7 +7,6 @@ MMCA.Common.API.Caching.OutputCacheEvictionExtensions.extension(Microsoft.AspNet
 MMCA.Common.API.Controllers.AuthControllerBase.ClientIpAddress.get -> string?
 MMCA.Common.API.Controllers.AuthControllerBase.ClientUserAgent.get -> string?
 MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.SetConcurrencyETag(object? dto) -> void
-MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.ForgotPasswordHandler.get -> MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.API.Controllers.PasswordResetAuthControllerBase<TForgotPasswordCommand, TResetPasswordCommand>.PasswordResetAuthControllerBase(MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TForgotPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! forgotPasswordHandler, MMCA.Common.Application.UseCases.Contracts.ICommandHandler<TResetPasswordCommand, MMCA.Common.Shared.Abstractions.Result!>! resetPasswordHandler) -> void
@@ -90,3 +89,26 @@ static MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.RequiredToken(Micros
 MMCA.Common.API.Idempotency.IdempotencyRecord.Deconstruct(out int StatusCode, out string! ResponseBody, out string! RequestBodyHash) -> void
 MMCA.Common.API.Idempotency.IdempotencyRecord.IdempotencyRecord(int StatusCode, string! ResponseBody, string! RequestBodyHash) -> void
 MMCA.Common.API.Idempotency.IdempotencyRecord.RequestBodyHash.get -> string!
+MMCA.Common.API.Authorization.AuthorizationExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAuthorizationPolicies(System.Action<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>? configureFallback) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationHandler
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationHandler.FallbackAuthorizationHandler(Microsoft.Extensions.Options.IOptions<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>! options) -> void
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.Enabled.get -> bool
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.Enabled.set -> void
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.ExemptPathPrefixes.get -> System.Collections.Generic.IList<string!>!
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.FallbackAuthorizationOptions() -> void
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationRequirement
+MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationRequirement.FallbackAuthorizationRequirement() -> void
+MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null, string? state = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin(System.Uri? returnUrl = null, string? state = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin(System.Uri? returnUrl = null, string? state = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+static MMCA.Common.API.Authorization.AuthorizationExtensions.AddAuthorizationPolicies(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>? configureFallback) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static readonly MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.DefaultExemptPathPrefixes -> System.Collections.Generic.IReadOnlyList<string!>!
+*REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+*REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+*REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
+MMCA.Common.API.RateLimiting.RateLimitingSettings.AnonymousHubPermitLimit.get -> int
+MMCA.Common.API.RateLimiting.RateLimitingSettings.AnonymousHubPermitLimit.init -> void
+MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.init -> void
+static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.IsCleartextHttp2(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> bool

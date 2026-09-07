@@ -32,6 +32,52 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## 1.188.0
+
+Security hardening release (the 2026-09-07 review). Nothing is removed or renamed; every change is
+a default that moved to the secure side or a new check on caller-supplied input. The mechanical fix
+per item:
+
+1. **Fallback authorization policy.** `AddAuthorizationPolicies()` (also reached through
+   `AddForwardedJwtBearer`) now sets `AuthorizationOptions.FallbackPolicy` to
+   `RequireAuthenticatedUser`. Put `[AllowAnonymous]` on every controller action and
+   `.AllowAnonymous()` on every minimal-API endpoint that is meant to be public; give every public
+   YARP route `"AuthorizationPolicy": "anonymous"` in the gateway route config (a proxied route has
+   no endpoint metadata of its own); add extra static roots to
+   `FallbackAuthorizationOptions.ExemptPathPrefixes`. Add the framework's own anonymous surfaces
+   (`OAuthControllerBase` challenge and completion actions, the `MMCA.Common.UI.Pages.*` credential
+   and landing pages) to the repo's `AnonymousEndpointTests` allow-list when the test reports them,
+   and consider `RequireExplicitAuthorizationDecision => true`. Opt-out for a host that cannot adopt
+   yet: `AddAuthorizationPolicies(options => options.Enabled = false)`. An issuer-less host with no
+   authentication handler gets a 500 rather than a 401 on the first gated endpoint; register a
+   denying scheme or keep every endpoint declared.
+2. **Query contract.** A `sortColumn`, filter key or lookup `nameProperty` that names a property
+   only the entity carries returns 400. For each such key either add the field to the DTO, add a
+   `DTOToEntityPropertyMap` entry, or override `EntityQueryService.FieldContract` /
+   `LookupNameContract` for that endpoint. Navigation paths are capped at three segments and lookups
+   at 1000 rows.
+3. **Application namespace.** An unset `Application:Namespace` now derives a prefix from the
+   application name for cache keys, lock keys, the SignalR backplane channel and broker endpoints.
+   A cold cache is harmless; a broker rename is not. The broker formatter also changed (kebab-case
+   with a prefix instead of MassTransit's default), so **no `MessageBus:EndpointPrefix` value
+   reproduces the pre-upgrade queue names**: an existing deployment sets
+   `MessageBus:PreserveDefaultEndpointNames=true` to keep its queues and subscriptions, and pins
+   `Cache:KeyPrefix` explicitly if it wants a stable keyspace. A fresh deployment, or one that
+   drains its queues at cutover, takes the new prefixed names.
+4. **SMTP transport security.** `Smtp:EnableSsl` unset resolves to `true` outside Development. A
+   relay that offers no TLS must set it to `false` explicitly (one startup warning is logged).
+5. **Password change and reset revoke sessions** only when the app passes `IRefreshSessionStore`
+   (and `TimeProvider`) to its `ChangePasswordHandler` / `ResetPasswordHandler` base call.
+6. **Reset links** carry `#email=...&token=...` in the URL fragment; update mail templates and E2E
+   assertions that expect the query-string form.
+7. **Rate limiting and health.** `RateLimiting:HubPathPrefixes` (default `/hubs`) and
+   `RateLimiting:AnonymousHubPermitLimit` (60 per minute) meter anonymous hub traffic;
+   `PushNotifications:MaxConnectionsPerUser` defaults to 20; `HealthChecks:CacheSeconds` defaults to
+   5 (0 disables); `GatewayRateLimiting:TrustedCallerSecret` and `TrustedCallerHeaderName` let a UI
+   host's server-to-server calls escape the per-IP partition.
+8. **MAUI heads** call `window.AttachMmcaAppLifecycle(services)` in `App.CreateWindow` for the
+   biometric re-lock; custom `ILocalCacheStore` implementations override `ClearAsync()`.
+
 ## [1.185.0] - 2026-09-03
 
 **Breaking: one added constructor parameter on `DeleteUserHandlerBase<TUser, TCommand>`.** No

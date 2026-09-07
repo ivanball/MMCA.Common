@@ -417,6 +417,32 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     void SetOriginalRowVersion(Domain.Interfaces.IRowVersioned childEntity, byte[] rowVersion);
 
     /// <summary>
+    /// Forces the aggregate ROOT to take part in the next save when a conditional write left it
+    /// untouched, so the precondition the caller sent is actually evaluated (SEC-Common-77).
+    /// </summary>
+    /// <param name="entity">The tracked aggregate root.</param>
+    /// <remarks>
+    /// <para>
+    /// <see cref="SetOriginalRowVersion(TEntity, byte[])"/> only stamps the tracked entry's ORIGINAL
+    /// value; it does not make the entry dirty. An applier that changes only child rows therefore
+    /// leaves the root <c>Unchanged</c>, EF emits no root UPDATE, no <c>WHERE RowVersion = @token</c>
+    /// reaches the database, and the stale-token check silently does not happen: two organizers
+    /// editing different children of the same aggregate from the same ETag both get 200 and the
+    /// second silently discards the first's edit. Touching the root turns that back into the 412
+    /// ADR-035 promises.
+    /// </para>
+    /// <para>
+    /// A default no-op implementation keeps this addition source- and binary-compatible for an
+    /// existing implementer; the EF repository overrides it. A repository that does not implement it
+    /// keeps the pre-hardening behaviour rather than failing to compile.
+    /// </para>
+    /// </remarks>
+    void TouchConcurrencyToken(TEntity entity)
+    {
+        // Default: do nothing. See the remarks.
+    }
+
+    /// <summary>
     /// Executes a bulk delete directly in the database, bypassing change tracking.
     /// WARNING: Does NOT trigger domain events, audit stamps, or soft-delete behavior.
     /// Use only for maintenance scenarios where domain events are not needed.

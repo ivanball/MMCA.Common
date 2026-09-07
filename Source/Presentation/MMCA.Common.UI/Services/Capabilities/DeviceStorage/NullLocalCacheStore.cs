@@ -16,4 +16,7 @@ public sealed class NullLocalCacheStore : ILocalCacheStore
 
     /// <inheritdoc />
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public Task ClearAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

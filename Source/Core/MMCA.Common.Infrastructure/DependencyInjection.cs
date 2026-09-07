@@ -23,6 +23,7 @@ using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Concurrency;
+using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Http;
 using MMCA.Common.Infrastructure.Mail;
@@ -115,6 +116,11 @@ public static class DependencyInjection
             // insert race can answer with its own conflict instead of a raw 500. TryAdd, so a host
             // on another engine can register its own implementation first and keep it.
             services.TryAddSingleton<IUniqueConstraintViolationDetector, Persistence.SqlServerUniqueConstraintViolationDetector>();
+
+            // Sibling classifier for a save rejected by a moved concurrency token, so a handler that
+            // claims work by writing a row can recognise losing that claim without catching an EF
+            // exception type in the Application layer. TryAdd, like the one above.
+            services.TryAddSingleton<IConcurrencyConflictDetector, Persistence.EfCoreConcurrencyConflictDetector>();
 
             services.TryAddScoped(typeof(IRepository<,>), typeof(EFRepository<,>));
             services.TryAddScoped<IRepositoryFactory, RepositoryFactory>();
@@ -267,7 +273,7 @@ public static class DependencyInjection
                     var multiplexer = sp.GetService<IConnectionMultiplexer>();
                     var logger = sp.GetService<ILogger<DistributedCacheService>>()
                         ?? NullLogger<DistributedCacheService>.Instance;
-                    var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+                    var keyNamespace = CacheKeyNamespace.From(sp);
                     return new DistributedCacheService(
                         distributedCache,
                         logger,
@@ -291,7 +297,7 @@ public static class DependencyInjection
                 {
                     var redisLogger = sp.GetService<ILogger<RedisDistributedLock>>()
                         ?? NullLogger<RedisDistributedLock>.Instance;
-                    var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+                    var keyNamespace = CacheKeyNamespace.From(sp);
                     return new RedisDistributedLock(multiplexer, redisLogger, keyNamespace);
                 }
 
@@ -369,7 +375,7 @@ public static class DependencyInjection
                 var logger = sp.GetService<ILogger<HybridCacheService>>()
                     ?? NullLogger<HybridCacheService>.Instance;
                 var multiplexer = sp.GetService<IConnectionMultiplexer>();
-                var keyNamespace = CacheKeyNamespace.From(sp.GetService<IOptions<CacheKeyPrefixOptions>>());
+                var keyNamespace = CacheKeyNamespace.From(sp);
 
                 return new HybridCacheService(
                     sp.GetRequiredService<HybridCache>(),
@@ -638,7 +644,15 @@ public static class DependencyInjection
             var redisConnectionString = configuration.GetConnectionString("redis");
             if (!string.IsNullOrEmpty(redisConnectionString))
             {
-                signalRBuilder.AddStackExchangeRedis(redisConnectionString);
+                // SECURITY (SEC-Common-53): the backplane channel name derives from the HUB TYPE, and
+                // NotificationHub ships in this framework, so every consumer application computes the
+                // identical channel on a shared Redis. Without a prefix a user-targeted push or a
+                // live-channel event published by one application was delivered to another
+                // application's clients holding the same numeric user id. The prefix is per
+                // application by default and needs no configuration.
+                var channelPrefix = ApplicationNamespace.Resolve(configuration, environment: null);
+                signalRBuilder.AddStackExchangeRedis(redisConnectionString, options =>
+                    options.Configuration.ChannelPrefix = RedisChannel.Literal(channelPrefix));
             }
 
             // Replace the default Null implementations with the SignalR-backed ones.
@@ -766,14 +780,27 @@ public static class DependencyInjection
 
             services.AddMassTransit(x =>
             {
-                if (!string.IsNullOrWhiteSpace(settings.EndpointPrefix))
+                // The prefix is the whole point: the formatter has to carry it, or every service on a
+                // shared broker derives the same kebab-case queue name from the same consumer type
+                // and they collide. includeNamespace: false keeps the name to the consumer's short
+                // type name, so the prefix is the only namespacing applied.
+                //
+                // SECURITY (SEC-Common-53): unset now means "the application namespace", not "no
+                // prefix". An omitted setting used to put two applications' consumers on the same
+                // queue names on a shared broker, so one application's messages were delivered to
+                // the other's consumers.
+                //
+                // PreserveDefaultEndpointNames keeps the pre-1.188.0 names (MassTransit's default
+                // formatter, no prefix) so an existing deployment does not rename its queues and
+                // subscriptions at cutover; it is the documented opt-out, not the default.
+                if (!settings.PreserveDefaultEndpointNames)
                 {
-                    // The prefix is the whole point: the formatter has to carry it, or every service
-                    // on a shared broker derives the same kebab-case queue name from the same
-                    // consumer type and they collide. includeNamespace: false keeps the name to the
-                    // consumer's short type name, so the prefix is the only namespacing applied.
+                    var endpointPrefix = string.IsNullOrWhiteSpace(settings.EndpointPrefix)
+                        ? ApplicationNamespace.Resolve(configuration, environment: null)
+                        : settings.EndpointPrefix;
+
                     x.SetEndpointNameFormatter(
-                        new KebabCaseEndpointNameFormatter(settings.EndpointPrefix, includeNamespace: false));
+                        new KebabCaseEndpointNameFormatter(endpointPrefix, includeNamespace: false));
                 }
 
                 configureConsumers?.Invoke(x);
