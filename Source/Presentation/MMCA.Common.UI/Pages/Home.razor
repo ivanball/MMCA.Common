@@ -1,7 +1,9 @@
-@page "/"
+﻿@page "/"
 @using MMCA.Common.UI.Common.Interfaces
+@using Microsoft.AspNetCore.Authorization
 @inject IEnumerable<IHomePageContent> HomePageProviders
 @inject IStringLocalizer<SharedResource> L
+@attribute [AllowAnonymous]
 
 <PageTitle>@_pageTitle</PageTitle>
 

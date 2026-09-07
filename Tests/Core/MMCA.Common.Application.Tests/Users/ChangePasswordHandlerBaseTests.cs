@@ -1,8 +1,10 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Users.UseCases.ChangePassword;
+using MMCA.Common.Domain.Auth;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Requests;
 using Moq;
@@ -90,6 +92,71 @@ public sealed class ChangePasswordHandlerBaseTests
             "an invariant failure must not persist");
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenTheAccountHasNoStoredCredential_IsRejectedWithoutVerifyingAgainstIt()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestIdentityUser { Id = 1 };
+        user.SeedCredential([], []);
+        ArrangeUser(mocks, user);
+
+        Result result = await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("anything", "new")));
+
+        result.IsFailure.Should().BeTrue(
+            "an external-OAuth account has no current password to prove, so it has no change-password path");
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidCurrentPassword");
+        mocks.PasswordHasher.Verify(
+            x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()),
+            Times.Never);
+        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheChangeSucceeds_RevokesEveryLiveRefreshSession()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeUser(mocks, new TestIdentityUser { Id = 1 });
+        var live = CreateSession(1);
+        mocks.RefreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([live]);
+
+        Result result = await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
+
+        result.IsSuccess.Should().BeTrue();
+        live.RevokedAt.Should().NotBeNull(
+            "rotating the credential must evict a stolen refresh chain, or the remediation does not remediate");
+        mocks.RefreshSessions.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheChangeFails_LeavesLiveSessionsAlone()
+    {
+        var (sut, mocks) = CreateSut();
+        var user = new TestIdentityUser
+        {
+            Id = 1,
+            ForcedFailure = Error.Invariant("User.PasswordReused", "New password must differ."),
+        };
+        ArrangeUser(mocks, user);
+        var live = CreateSession(1);
+        mocks.RefreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([live]);
+
+        Result result = await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
+
+        result.IsFailure.Should().BeTrue();
+        live.RevokedAt.Should().BeNull("the credential never changed, so nothing had to be evicted");
+    }
+
+    private static RefreshSession CreateSession(UserIdentifierType userId) =>
+        RefreshSession.Create(
+            userId,
+            "token-" + userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 1, 8, 0, 0, 0, DateTimeKind.Utc)).Value!;
+
     private static void ArrangeUser(HandlerMocks mocks, TestIdentityUser user) =>
         mocks.Repository
             .Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
@@ -98,7 +165,8 @@ public sealed class ChangePasswordHandlerBaseTests
     private sealed record HandlerMocks(
         Mock<IUnitOfWork> UnitOfWork,
         Mock<IRepository<TestIdentityUser, UserIdentifierType>> Repository,
-        Mock<IPasswordHasher> PasswordHasher);
+        Mock<IPasswordHasher> PasswordHasher,
+        Mock<IRefreshSessionStore> RefreshSessions);
 
     private static (TestChangePasswordHandler Sut, HandlerMocks Mocks) CreateSut()
     {
@@ -114,12 +182,20 @@ public sealed class ChangePasswordHandlerBaseTests
             .Returns(true);
         passwordHasher.Setup(x => x.HashPassword(It.IsAny<string>())).Returns((NewHash, NewSalt));
 
-        var sut = new TestChangePasswordHandler(unitOfWork.Object, passwordHasher.Object);
-        return (sut, new HandlerMocks(unitOfWork, repository, passwordHasher));
+        var refreshSessions = new Mock<IRefreshSessionStore>();
+        refreshSessions
+            .Setup(x => x.GetUnrevokedByUserAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var sut = new TestChangePasswordHandler(unitOfWork.Object, passwordHasher.Object, refreshSessions.Object);
+        return (sut, new HandlerMocks(unitOfWork, repository, passwordHasher, refreshSessions));
     }
 }
 
 /// <summary>Concrete subclass standing in for an app's <c>ChangePasswordHandler</c>.</summary>
-public sealed class TestChangePasswordHandler(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher)
+public sealed class TestChangePasswordHandler(
+    IUnitOfWork unitOfWork,
+    IPasswordHasher passwordHasher,
+    IRefreshSessionStore? refreshSessions = null)
     : ChangePasswordHandlerBase<TestIdentityUser, TestChangePasswordCommand>(
-        unitOfWork, passwordHasher, NullLogger.Instance);
+        unitOfWork, passwordHasher, NullLogger.Instance, refreshSessions);

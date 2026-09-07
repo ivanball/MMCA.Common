@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
@@ -28,23 +27,11 @@ public sealed class PermissionAuthorizationHandler(IPermissionRegistry permissio
         }
 
         if (context.User.HasClaim(AuthClaimTypes.Permission, requirement.Permission)
-            || permissionRegistry.HasPermission(GetRoles(context.User), requirement.Permission))
+            || permissionRegistry.HasPermission(context.User.GetRoleValues(), requirement.Permission))
         {
             context.Succeed(requirement);
         }
 
         return Task.CompletedTask;
     }
-
-    // Gather roles regardless of how the JWT middleware mapped the role claim type: the standard
-    // ClaimTypes.Role URI, or the raw "role"/"roles" claim when inbound-claim mapping is disabled.
-    // Same rule as ICurrentUserService.Roles; this handler has no ICurrentUserService to read from
-    // (it runs on the raw principal), so the predicate is stated once here and once there.
-    private static IEnumerable<string> GetRoles(ClaimsPrincipal user) =>
-        user.Claims
-            .Where(claim =>
-                string.Equals(claim.Type, ClaimTypes.Role, StringComparison.Ordinal)
-                || string.Equals(claim.Type, "role", StringComparison.Ordinal)
-                || string.Equals(claim.Type, "roles", StringComparison.Ordinal))
-            .Select(claim => claim.Value);
 }

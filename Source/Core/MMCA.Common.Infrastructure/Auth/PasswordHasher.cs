@@ -46,7 +46,18 @@ public sealed class PasswordHasher : IPasswordHasher
         ArgumentNullException.ThrowIfNull(hash);
         ArgumentNullException.ThrowIfNull(salt);
 
-        var computedHash = ComputePbkdf2Hash(password, salt, hash.Length);
+        // SECURITY: only canonical credential material can verify. The output length used to be
+        // taken from the stored hash, so a row holding an empty hash and salt (the shape an
+        // external-OAuth account carries, ADR-036) derived an empty hash and compared two empty
+        // spans, which FixedTimeEquals answers true for: any password verified against it. A row
+        // whose material is not exactly SaltSize/HashSize bytes is not something this hasher ever
+        // produced, so it verifies nothing.
+        if (hash.Length != HashSize || salt.Length != SaltSize)
+        {
+            return false;
+        }
+
+        var computedHash = ComputePbkdf2Hash(password, salt, HashSize);
 
         // FixedTimeEquals prevents timing side-channel attacks by always comparing
         // the full length regardless of where the first difference occurs.

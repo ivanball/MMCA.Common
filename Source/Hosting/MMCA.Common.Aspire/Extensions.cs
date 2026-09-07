@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -410,14 +410,17 @@ public static class Extensions
         /// <returns>The same application instance for chaining.</returns>
         public WebApplication MapDefaultEndpoints()
         {
-            app.MapHealthChecks(HealthEndpointPaths.Health);
+            // SECURITY: probes are declared anonymous explicitly. A host that adopts the
+            // framework's fallback authorization policy would otherwise 401 its own liveness and
+            // readiness probes, and a probe that cannot answer takes the replica out of rotation.
+            app.MapHealthChecks(HealthEndpointPaths.Health).AllowAnonymous();
 
             // Liveness: only the "self" check (tagged "live") — avoids marking the
             // process as dead when an external dependency (e.g., SQL Server) is down.
             app.MapHealthChecks(HealthEndpointPaths.Alive, new HealthCheckOptions
             {
                 Predicate = r => r.Tags.Contains(HealthCheckTags.Live)
-            });
+            }).AllowAnonymous();
 
             // Readiness: everything except "live"-only and "optional" checks. Warm-up gate is
             // tagged "ready" and reports unhealthy until WarmupHostedService finishes; untagged
@@ -433,7 +436,7 @@ public static class Extensions
             app.MapHealthChecks(HealthEndpointPaths.Ready, new HealthCheckOptions
             {
                 Predicate = r => !r.Tags.Contains(HealthCheckTags.Live) && !r.Tags.Contains(HealthCheckTags.Optional)
-            });
+            }).AllowAnonymous();
 
             return app;
         }

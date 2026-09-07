@@ -1,4 +1,4 @@
-using MMCA.Common.API.Controllers;
+﻿using MMCA.Common.API.Controllers;
 using MMCA.Common.Testing.Architecture;
 using MMCA.Common.UI;
 
@@ -36,7 +36,31 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // arity suffix.
         "MMCA.Common.API.Controllers.PasswordResetAuthControllerBase`2.ForgotPasswordAsync",
         "MMCA.Common.API.Controllers.PasswordResetAuthControllerBase`2.ResetPasswordAsync",
+        // The three OAuth challenge endpoints and the provider-callback completion run before any
+        // local token exists, so they declare their anonymity rather than relying on the absence of
+        // an attribute: the framework's fallback authorization policy would otherwise break login.
+        "MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin",
+        "MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin",
+        "MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin",
+        "MMCA.Common.API.Controllers.OAuthControllerBase.CompleteAsync",
+        // Credential pages: a caller who has to sign in, register or recover cannot already hold a
+        // token. AuthorizeRouteView reads attributes and ignores the fallback policy, so these
+        // declare themselves.
+        "MMCA.Common.UI.Pages.Auth.ForgotPassword",
+        "MMCA.Common.UI.Pages.Auth.Login",
+        "MMCA.Common.UI.Pages.Auth.OAuthComplete",
+        "MMCA.Common.UI.Pages.Auth.Register",
+        "MMCA.Common.UI.Pages.Auth.ResetPassword",
+        // Landing and outcome pages: they render nothing that depends on the caller.
+        "MMCA.Common.UI.Pages.Forbidden",
+        "MMCA.Common.UI.Pages.Home",
+        "MMCA.Common.UI.Pages.NotFound",
     ];
+
+    // The framework holds itself to the stricter gate: every concrete controller and every routable
+    // page in MMCA.Common declares its authorization decision, so none of them depends on a reader
+    // noticing a missing attribute.
+    protected override bool RequireExplicitAuthorizationDecision => true;
 
     // A floor, not an equality: 12 API controller types plus the routable UI pages. Removing a
     // scanned type is a failure rather than a quietly smaller scan.

@@ -77,6 +77,10 @@ public static class DependencyInjection
             // Web heads have no native publishers, so the shared buffer is inert there.
             services.TryAddSingleton<IDeepLinkDispatcher, DeepLinkDispatcher>();
 
+            // Same contract, same reason: the native window's background/foreground callbacks run
+            // outside any scope, and the app-lock overlay listens for them so it can re-arm.
+            services.TryAddSingleton<IAppLifecycleNotifier, AppLifecycleNotifier>();
+
             return services;
         }
 

@@ -44,6 +44,39 @@ public static class ClaimsPrincipalExtensions
     }
 
     /// <summary>
+    /// Returns every role value the principal carries, regardless of how the authentication
+    /// pipeline mapped the role claim: the standard <see cref="ClaimTypes.Role"/> URI, or the raw
+    /// <c>role</c>/<c>roles</c> claim an identity provider emits when inbound-claim mapping is off.
+    /// </summary>
+    /// <remarks>
+    /// SECURITY: this is the framework's ONE definition of "the caller's roles". A reader that uses
+    /// the narrower BCL <see cref="ClaimsPrincipal.IsInRole(string)"/> sees only the identity's own
+    /// role claim type, so it can disagree with the authorization handler about who is privileged,
+    /// and a check built on that disagreement (a cache bypass, an elevated payload) silently fails
+    /// open. Every role read goes through here.
+    /// </remarks>
+    /// <param name="principal">The principal to read; a null principal yields an empty sequence.</param>
+    public static IEnumerable<string> GetRoleValues(this ClaimsPrincipal? principal) =>
+        principal is null
+            ? []
+            : principal.Claims
+                .Where(claim =>
+                    string.Equals(claim.Type, ClaimTypes.Role, StringComparison.Ordinal)
+                    || string.Equals(claim.Type, "role", StringComparison.Ordinal)
+                    || string.Equals(claim.Type, "roles", StringComparison.Ordinal))
+                .Select(claim => claim.Value);
+
+    /// <summary>
+    /// Whether the principal holds <paramref name="role"/> under any of the claim types
+    /// <see cref="GetRoleValues"/> reads, compared case-insensitively.
+    /// </summary>
+    /// <param name="principal">The principal to read; a null principal holds no role.</param>
+    /// <param name="role">The role name to look for.</param>
+    public static bool HasRole(this ClaimsPrincipal? principal, string role) =>
+        !string.IsNullOrEmpty(role)
+        && principal.GetRoleValues().Contains(role, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Returns the refresh-session identifier the token was minted for (the <c>sid</c> claim), or
     /// <see langword="null"/> when the principal carries none or carries an unparsable value.
     /// </summary>

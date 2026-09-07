@@ -1,4 +1,4 @@
-#pragma warning disable VSTHRD002 // Synchronous wait on an already-completed task raised by the auth state provider
+﻿#pragma warning disable VSTHRD002 // Synchronous wait on an already-completed task raised by the auth state provider
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
@@ -13,6 +13,7 @@ using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.UI.Services.Api;
 using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
+using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
 using MMCA.Common.UI.Services.Capabilities.Notifications;
 using MMCA.Common.UI.Tests.Infrastructure;
 using Moq;
@@ -52,6 +53,7 @@ public sealed class AuthUIServiceTests : IDisposable
     private readonly Mock<ITokenStorageService> _tokenStorage = new();
     private readonly Mock<ITokenRefresher> _tokenRefresher = new();
     private readonly Mock<IPushRegistrationService> _pushRegistration = new();
+    private readonly Mock<ILocalCacheStore> _localCache = new();
     private readonly JwtAuthenticationStateProvider _authStateProvider;
     private readonly List<AuthenticationState> _authStates = [];
 
@@ -81,7 +83,9 @@ public sealed class AuthUIServiceTests : IDisposable
             _tokenStorage.Object,
             _tokenRefresher.Object,
             _authStateProvider,
-            _pushRegistration.Object);
+            _pushRegistration.Object,
+            readCache: null,
+            _localCache.Object);
     }
 
     private AuthUIService CreateSut(HttpStatusCode statusCode, string? json = null) =>
@@ -338,6 +342,48 @@ public sealed class AuthUIServiceTests : IDisposable
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle().Subject.Type.Should().Be(ErrorType.Unauthorized);
         _authStates.Should().BeEmpty();
+    }
+
+    // ==================== Offline snapshots do not survive sign-out (SEC-Common-86) ====================
+    [Fact]
+    public async Task LogoutAsync_WipesTheDeviceLocalDocumentCache()
+    {
+        var sut = CreateSut(HttpStatusCode.NoContent);
+
+        await sut.LogoutAsync();
+
+        _localCache.Verify(
+            c => c.ClearAsync(It.IsAny<CancellationToken>()),
+            Times.Once,
+            "offline snapshots are plaintext, survive restarts, and are keyed by surface rather than by "
+            + "user, so leaving them would show the previous account's rows to whoever signs in next");
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WhenWipingTheLocalCacheIsUnavailable_StillSignsOut()
+    {
+        _localCache
+            .Setup(c => c.ClearAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("JS interop unavailable"));
+        var sut = CreateSut(HttpStatusCode.NoContent);
+
+        Func<Task> logout = sut.LogoutAsync;
+
+        await logout.Should().NotThrowAsync("a failing store must never strand a user inside a session");
+    }
+
+    [Fact]
+    public async Task TryRefreshTokenAsync_WhenTheSessionIsGone_AlsoWipesTheDeviceLocalDocumentCache()
+    {
+        _tokenRefresher.Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        var sut = CreateSut(HttpStatusCode.Unauthorized);
+
+        await sut.TryRefreshTokenAsync(Ct);
+
+        _localCache.Verify(
+            c => c.ClearAsync(It.IsAny<CancellationToken>()),
+            Times.Once,
+            "an unrefreshable session IS a sign-out, so the snapshots belong to the session that ended");
     }
 
     // ==================== Logout ====================

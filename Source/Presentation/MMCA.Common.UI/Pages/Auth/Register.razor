@@ -1,13 +1,15 @@
-@page "/register"
+﻿@page "/register"
 @using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.Shared.Auth.Requests
 @using MMCA.Common.Shared.ValueObjects.Contact
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
+@using Microsoft.AspNetCore.Authorization
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> L
+@attribute [AllowAnonymous]
 
 <PageTitle>@L["Auth.Register.PageTitle"]</PageTitle>
 

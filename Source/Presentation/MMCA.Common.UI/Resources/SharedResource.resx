@@ -223,6 +223,9 @@
   <data name="Auth.OAuth.MissingCode" xml:space="preserve">
     <value>Authentication failed: missing exchange code.</value>
   </data>
+  <data name="Auth.OAuth.UnexpectedCompletion" xml:space="preserve">
+    <value>This sign-in link did not come from a sign-in started on this device. Please sign in again.</value>
+  </data>
   <data name="Delete.Entity.Item" xml:space="preserve">
     <value>item</value>
   </data>

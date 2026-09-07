@@ -1,4 +1,4 @@
-using AwesomeAssertions;
+﻿using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.FileProviders;
@@ -29,6 +29,46 @@ public sealed class SecurityHeadersMiddlewareTests
 
         await middleware.InvokeAsync(context);
         return context.Response.Headers;
+    }
+
+    private static async Task<IHeaderDictionary> RunForPathAsync(string path)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = path;
+
+        var middleware = new SecurityHeadersMiddleware(
+            _ => Task.CompletedTask,
+            Options.Create(new SecurityHeadersSettings()),
+            new StubCspProvider(null),
+            new StubWebHostEnvironment(Environments.Production));
+
+        await middleware.InvokeAsync(context);
+        return context.Response.Headers;
+    }
+
+    // ── Credential pages (SEC-Store-22) ──
+    [Theory]
+    [InlineData("/reset-password")]
+    [InlineData("/auth/oauth-complete")]
+    public async Task InvokeAsync_OnACredentialPath_SuppressesTheRefererAndForbidsCaching(string path)
+    {
+        var headers = await RunForPathAsync(path);
+
+        headers["Referrer-Policy"].ToString().Should().Be(
+            "no-referrer",
+            "a URL that carries a live single-use credential must not travel onward in a Referer header");
+        headers.CacheControl.ToString().Should().Contain(
+            "no-store",
+            "the page must not sit in a browser or proxy cache after the token has been spent");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_OnAnOrdinaryPath_KeepsTheDefaultReferrerPolicyAndNoCacheDirective()
+    {
+        var headers = await RunForPathAsync("/products");
+
+        headers["Referrer-Policy"].ToString().Should().Be("strict-origin-when-cross-origin");
+        headers.CacheControl.ToString().Should().BeEmpty("ordinary pages keep whatever caching they had");
     }
 
     [Fact]

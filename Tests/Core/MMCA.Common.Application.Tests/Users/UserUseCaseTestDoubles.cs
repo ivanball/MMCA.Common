@@ -1,4 +1,4 @@
-using MMCA.Common.Application.Users;
+﻿using MMCA.Common.Application.Users;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.Abstractions;
@@ -31,6 +31,13 @@ public class TestIdentityUser : AuditableAggregateRootEntity<UserIdentifierType>
 
     /// <summary>Forces the next <c>ChangePassword</c>/<c>UpdatePreferences</c>/<c>Anonymize</c> to fail.</summary>
     public Error? ForcedFailure { get; set; }
+
+    /// <summary>Seeds stored credential material (an external account carries empty arrays).</summary>
+    public void SeedCredential(byte[] hash, byte[] salt)
+    {
+        PasswordHash = hash;
+        PasswordSalt = salt;
+    }
 
     public void SeedPreferences(string? culture, string? theme)
     {

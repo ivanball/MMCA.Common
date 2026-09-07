@@ -1,6 +1,8 @@
-@page "/not-found"
+﻿@page "/not-found"
+@using Microsoft.AspNetCore.Authorization
 @layout MainLayout
 @inject IStringLocalizer<SharedResource> L
+@attribute [AllowAnonymous]
 
 <PageTitle>@L["Page.NotFound.Title"]</PageTitle>
 

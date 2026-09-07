@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 MMCA.Common.Aspire.Gateway.DownstreamProbeVersion
 MMCA.Common.Aspire.Gateway.DownstreamProbeVersion.Auto = 0 -> MMCA.Common.Aspire.Gateway.DownstreamProbeVersion
 MMCA.Common.Aspire.Gateway.DownstreamProbeVersion.Http11 = 2 -> MMCA.Common.Aspire.Gateway.DownstreamProbeVersion
@@ -41,3 +41,4 @@ MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor
 MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.ProbeTelemetryFilterProcessor() -> void
 override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnEnd(System.Diagnostics.Activity! data) -> void
 override MMCA.Common.Aspire.Telemetry.ProbeTelemetryFilterProcessor.OnStart(System.Diagnostics.Activity! data) -> void
+MMCA.Common.Aspire.Security.SecurityHeadersSettings.CredentialPathPrefixes.get -> System.Collections.Generic.IList<string!>!

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AwesomeAssertions;
 using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
@@ -103,8 +103,36 @@ public sealed class OfflineFirstPageSnapshotTests
         (await speakers.TryReadAsync(page: 1, Xunit.TestContext.Current.CancellationToken)).Should().BeNull();
     }
 
-    private static OfflineFirstPageSnapshot<string> Build(ILocalCacheStore store, bool online) =>
-        new(store, new FakeConnectivity(online), CacheKey);
+    // ── Per-user scoping (SEC-Common-86) ──
+    [Fact]
+    public async Task ASnapshotWrittenForOneUser_IsNotServedToAnother()
+    {
+        var store = new FakeLocalCacheStore();
+        var first = Build(store, online: false, userScope: "7");
+        await first.RememberAsync((Page, 7), page: 1, Xunit.TestContext.Current.CancellationToken);
+
+        var second = Build(store, online: false, userScope: "8");
+        var cached = await second.TryReadAsync(page: 1, Xunit.TestContext.Current.CancellationToken);
+
+        cached.Should().BeNull(
+            "a shared device must not serve the previous account's rows to the next one while offline");
+    }
+
+    [Fact]
+    public async Task ASnapshotWrittenForAUser_IsServedBackToThatSameUser()
+    {
+        var store = new FakeLocalCacheStore();
+        var snapshot = Build(store, online: false, userScope: "7");
+
+        await snapshot.RememberAsync((Page, 7), page: 1, Xunit.TestContext.Current.CancellationToken);
+        var cached = await Build(store, online: false, userScope: "7")
+            .TryReadAsync(page: 1, Xunit.TestContext.Current.CancellationToken);
+
+        cached.Should().NotBeNull("scoping must not break the offline path it protects");
+    }
+
+    private static OfflineFirstPageSnapshot<string> Build(ILocalCacheStore store, bool online, string? userScope = null) =>
+        new(store, new FakeConnectivity(online), CacheKey, userScope);
 
     /// <summary>
     /// In-memory <see cref="ILocalCacheStore"/> that JSON round-trips every value, so the snapshot's
@@ -128,6 +156,12 @@ public sealed class OfflineFirstPageSnapshotTests
         public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
         {
             Entries.Remove(key);
+            return Task.CompletedTask;
+        }
+
+        public Task ClearAsync(CancellationToken cancellationToken = default)
+        {
+            Entries.Clear();
             return Task.CompletedTask;
         }
     }

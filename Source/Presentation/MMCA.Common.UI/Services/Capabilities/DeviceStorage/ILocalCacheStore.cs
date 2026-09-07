@@ -21,4 +21,17 @@ public interface ILocalCacheStore
 
     /// <summary>Removes the entry under <paramref name="key"/>; unknown keys are ignored.</summary>
     Task RemoveAsync(string key, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes every entry this store holds.
+    /// <para>
+    /// SECURITY: this is what sign-out calls. Snapshots are written in plaintext and survive process
+    /// restarts, and their keys identify a surface rather than a user, so leaving them in place
+    /// hands the next account on the device the previous account's rows the first time the network
+    /// is unavailable. The default implementation is a no-op so an existing custom store still
+    /// compiles; every store that actually persists anything must override it.
+    /// </para>
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task ClearAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

@@ -1,7 +1,9 @@
+﻿using System.Security.Claims;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Notifications;
 using MMCA.Common.Infrastructure.Notifications.Push;
 using Moq;
@@ -12,7 +14,9 @@ public sealed class NotificationHubTests
 {
     private const string ConnectionId = "connection-1";
 
-    private static (NotificationHub Hub, Mock<IGroupManager> Groups) CreateHub(string? channelKeyPattern = null)
+    private static (NotificationHub Hub, Mock<IGroupManager> Groups) CreateHub(
+        string? channelKeyPattern = null,
+        IChannelJoinAuthorizer? joinAuthorizer = null)
     {
         PushNotificationSettings settings = channelKeyPattern is null
             ? new PushNotificationSettings()
@@ -21,14 +25,73 @@ public sealed class NotificationHubTests
         var groups = new Mock<IGroupManager>();
         var context = new Mock<HubCallerContext>();
         context.SetupGet(c => c.ConnectionId).Returns(ConnectionId);
+        context.SetupGet(c => c.User).Returns(new ClaimsPrincipal(
+            new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "7")], authenticationType: "TestAuth")));
 
-        var hub = new NotificationHub(Options.Create(settings))
+        var hub = new NotificationHub(Options.Create(settings), joinAuthorizer)
         {
             Groups = groups.Object,
             Context = context.Object,
         };
 
         return (hub, groups);
+    }
+
+    // ── Channel entitlement (SEC-Common-18) ──
+    [Fact]
+    public async Task JoinChannelAsync_WhenTheAuthorizerRefuses_DoesNotJoinTheGroup()
+    {
+        var authorizer = new StubChannelJoinAuthorizer(allow: false);
+        var (hub, groups) = CreateHub(joinAuthorizer: authorizer);
+
+        Func<Task> join = () => hub.JoinChannelAsync("event:42");
+
+        await join.Should().ThrowAsync<HubException>(
+            "a well-formed key is a shape, not an entitlement: a caller who is not on the event must "
+            + "not receive everything published to it");
+        groups.Verify(
+            g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        authorizer.SeenChannelKey.Should().Be("event:42");
+    }
+
+    [Fact]
+    public async Task JoinChannelAsync_WhenTheAuthorizerAllows_JoinsTheGroup()
+    {
+        var (hub, groups) = CreateHub(joinAuthorizer: new StubChannelJoinAuthorizer(allow: true));
+
+        await hub.JoinChannelAsync("event:42");
+
+        groups.Verify(
+            g => g.AddToGroupAsync(ConnectionId, "event:42", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task JoinChannelAsync_WithNoAuthorizerRegistered_KeepsTheHistoricalBehaviour()
+    {
+        var (hub, groups) = CreateHub();
+
+        await hub.JoinChannelAsync("event:42");
+
+        groups.Verify(
+            g => g.AddToGroupAsync(ConnectionId, "event:42", It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the hook is opt-in so an existing host is not broken by adopting this version");
+    }
+
+    private sealed class StubChannelJoinAuthorizer(bool allow) : IChannelJoinAuthorizer
+    {
+        public string? SeenChannelKey { get; private set; }
+
+        public ValueTask<bool> CanJoinAsync(
+            ClaimsPrincipal? user,
+            string channelKey,
+            CancellationToken cancellationToken = default)
+        {
+            SeenChannelKey = channelKey;
+            return ValueTask.FromResult(allow);
+        }
     }
 
     // ── Method-name constants ──

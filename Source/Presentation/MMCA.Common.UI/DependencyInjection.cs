@@ -111,6 +111,10 @@ public static class DependencyInjection
 
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
+
+            // Binds an OAuth completion to the flow this client started, so a deep-linked completion
+            // code from someone else's provider round trip is dropped instead of exchanged.
+            services.TryAddScoped<OAuthFlowStateStore>();
             services.TryAddScoped<ListPageStateService>();
             services.TryAddScoped<ListPageQueryStateService>();
             services.TryAddScoped<NavigationHistoryService>();

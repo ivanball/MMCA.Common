@@ -1,10 +1,15 @@
+﻿@using Microsoft.Extensions.Logging
 @using MMCA.Common.UI.Services.Auth.Tokens
 @using MMCA.Common.UI.Services.Capabilities.Auth
+@using MMCA.Common.UI.Services.Capabilities.DeviceStatus
 @using MMCA.Common.UI.Services.Capabilities.DeviceStorage
 @inject IBiometricAuthenticator Biometrics
 @inject IDevicePreferences Preferences
 @inject ITokenStorageService TokenStorage
 @inject NavigationManager Navigation
+@inject IAppLifecycleNotifier AppLifecycle
+@inject ILogger<BiometricGate> Logger
+@implements IDisposable
 @inject IStringLocalizer<BiometricGate> L
 
 @* App-lock overlay (ADR-042 Wave 4). Rendered once per app start through the IUIModule
@@ -29,7 +34,16 @@
 }
 
 @code {
+    /// <summary>
+    /// How long the app may sit in the background before the gate re-arms. Short by design: a
+    /// device handed to someone else is usually away from the owner for longer than a glance at a
+    /// notification, and re-prompting costs one biometric touch.
+    /// </summary>
+    [Parameter]
+    public TimeSpan ReLockAfter { get; set; } = TimeSpan.FromSeconds(30);
+
     private bool _locked;
+    private bool _subscribed;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -38,14 +52,12 @@
             return;
         }
 
-        var appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
-        if (!appLockEnabled)
-        {
-            return;
-        }
+        // Subscribed regardless of the current preference: app lock can be switched on later in the
+        // same session, and the handler re-reads the preference every time it fires.
+        AppLifecycle.Resumed += OnResumed;
+        _subscribed = true;
 
-        // Nothing to protect without a stored session.
-        if (await TokenStorage.GetRefreshTokenAsync() is null)
+        if (!await ShouldLockAsync())
         {
             return;
         }
@@ -53,6 +65,67 @@
         _locked = true;
         StateHasChanged();
         await UnlockAsync();
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed)
+        {
+            AppLifecycle.Resumed -= OnResumed;
+            _subscribed = false;
+        }
+    }
+
+    // SECURITY: the render tree survives a background/foreground cycle on a hybrid head, so without
+    // this the gate would engage once at app start and never again: anyone handed the unlocked
+    // device reopens the app straight into the signed-in session.
+    private async void OnResumed(object? sender, AppResumedEventArgs args)
+    {
+        try
+        {
+            if (_locked || args.BackgroundDuration < ReLockAfter)
+            {
+                return;
+            }
+
+            await InvokeAsync(async () =>
+            {
+                if (!await ShouldLockAsync())
+                {
+                    return;
+                }
+
+                _locked = true;
+                StateHasChanged();
+                await UnlockAsync();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // Renderer torn down between the native event and the dispatch.
+        }
+        catch (InvalidOperationException)
+        {
+            // Component no longer attached; same disposition.
+        }
+        catch (Exception ex)
+        {
+            // Exhaustive by necessity: this is an async void event handler, so anything escaping
+            // here has no caller to observe it, and on a native head that terminates the process.
+            Logger.LogError(ex, "Re-locking the app after resume failed.");
+        }
+    }
+
+    private async Task<bool> ShouldLockAsync()
+    {
+        var appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
+        if (!appLockEnabled)
+        {
+            return false;
+        }
+
+        // Nothing to protect without a stored session.
+        return await TokenStorage.GetRefreshTokenAsync() is not null;
     }
 
     private async Task UnlockAsync()

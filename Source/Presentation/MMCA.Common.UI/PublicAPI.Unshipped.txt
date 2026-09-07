@@ -214,7 +214,6 @@ MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.Toast.set -> void
 MMCA.Common.UI.Pages.Common.ListPageActions
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.CanServe(int page) -> bool
-MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.OfflineFirstPageSnapshot(MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore! store, MMCA.Common.UI.Services.Capabilities.DeviceStatus.IConnectivityStatusService! connectivity, string! cacheKey) -> void
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.RememberAsync((System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems) fetched, int page, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.TryReadAsync(int page, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<TItem>! Items, int TotalItems)?>!
 MMCA.Common.UI.Pages.Notifications.NotificationInbox.Id.get -> int?
@@ -225,7 +224,6 @@ MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Body.set -> void
 MMCA.Common.UI.Pages.Notifications.NotificationSendModel.NotificationSendModel() -> void
 MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.get -> string!
 MMCA.Common.UI.Pages.Notifications.NotificationSendModel.Title.set -> void
-MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null) -> void
 MMCA.Common.UI.Services.Auth.AuthUIService.ChangePasswordAsync(string! currentPassword, string! newPassword, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.ExchangeOAuthCodeAsync(string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.UI.Services.Auth.AuthUIService.GetSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
@@ -359,3 +357,33 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.Sessions.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose() -> void
+MMCA.Common.UI.Components.Capabilities.BiometricGate.ReLockAfter.get -> System.TimeSpan
+MMCA.Common.UI.Components.Capabilities.BiometricGate.ReLockAfter.set -> void
+MMCA.Common.UI.Pages.Auth.OAuthComplete.State.get -> string?
+MMCA.Common.UI.Pages.Auth.OAuthComplete.State.set -> void
+MMCA.Common.UI.Pages.Common.OfflineFirstPageSnapshot<TItem>.OfflineFirstPageSnapshot(MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore! store, MMCA.Common.UI.Services.Capabilities.DeviceStatus.IConnectivityStatusService! connectivity, string! cacheKey, string? userScope = null) -> void
+MMCA.Common.UI.Services.Auth.AuthUIService.AuthUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService, MMCA.Common.UI.Services.Auth.Tokens.ITokenRefresher! tokenRefresher, Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider! authStateProvider, MMCA.Common.UI.Services.Capabilities.Notifications.IPushRegistrationService! pushRegistration, MMCA.Common.UI.Services.Caching.IUiReadCache? readCache = null, MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore? localCache = null) -> void
+MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore
+MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.BeginAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.IsEnforced.get -> bool
+MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.OAuthFlowStateStore(MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore! store, System.TimeProvider? timeProvider = null) -> void
+MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.TryCompleteAsync(string? returnedState, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppLifecycleNotifier
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppLifecycleNotifier.AppLifecycleNotifier(System.TimeProvider? timeProvider = null) -> void
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppLifecycleNotifier.NotifyEnteredBackground() -> void
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppLifecycleNotifier.NotifyResumed() -> void
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppLifecycleNotifier.Resumed -> System.EventHandler<MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppResumedEventArgs!>?
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppResumedEventArgs
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppResumedEventArgs.AppResumedEventArgs(System.TimeSpan backgroundDuration) -> void
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppResumedEventArgs.BackgroundDuration.get -> System.TimeSpan
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.IAppLifecycleNotifier
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.IAppLifecycleNotifier.NotifyEnteredBackground() -> void
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.IAppLifecycleNotifier.NotifyResumed() -> void
+MMCA.Common.UI.Services.Capabilities.DeviceStatus.IAppLifecycleNotifier.Resumed -> System.EventHandler<MMCA.Common.UI.Services.Capabilities.DeviceStatus.AppResumedEventArgs!>?
+MMCA.Common.UI.Services.Capabilities.DeviceStorage.BrowserLocalCacheStore.ClearAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore.ClearAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.DeviceStorage.NullLocalCacheStore.ClearAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+const MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.StorageKey = "auth.oauth-flow" -> string!
+override MMCA.Common.UI.Pages.Auth.Login.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!

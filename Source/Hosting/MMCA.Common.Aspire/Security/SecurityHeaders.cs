@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -32,6 +32,18 @@ public sealed class SecurityHeadersSettings
 
     /// <summary>When <see langword="true"/>, emit HSTS outside Development. Default <see langword="true"/>.</summary>
     public bool EnableHsts { get; set; } = true;
+
+    /// <summary>
+    /// Request path prefixes whose responses additionally carry <c>Referrer-Policy: no-referrer</c>
+    /// and <c>Cache-Control: no-store</c>.
+    /// <para>
+    /// SECURITY: these are the pages a credential arrives on. A reset or completion URL that a user
+    /// opens must not travel onward in a <c>Referer</c> header to whatever the page loads next, and
+    /// must not sit in the browser's or a proxy's cache after the token has been spent. Matching is
+    /// segment-based and case-insensitive.
+    /// </para>
+    /// </summary>
+    public IList<string> CredentialPathPrefixes { get; } = ["/reset-password", "/auth/oauth-complete"];
 
     /// <summary>Value of the <c>Strict-Transport-Security</c> header when <see cref="EnableHsts"/> applies.</summary>
     public string HstsValue { get; set; } = "max-age=31536000; includeSubDomains";
@@ -158,6 +170,12 @@ public sealed class SecurityHeadersMiddleware
         _enableHsts = options.Value.EnableHsts && !environment.IsDevelopment();
     }
 
+    // Segment-based so "/reset-password" covers "/reset-password/anything" but never "/reset-passwords".
+    private bool IsCredentialPath(PathString path) =>
+        _settings.CredentialPathPrefixes
+            .Where(prefix => !string.IsNullOrEmpty(prefix))
+            .Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Sets the security headers, then invokes the rest of the pipeline.</summary>
     public async Task InvokeAsync(HttpContext context)
     {
@@ -166,8 +184,16 @@ public sealed class SecurityHeadersMiddleware
         var headers = context.Response.Headers;
         headers.XContentTypeOptions = "nosniff";
         headers.XFrameOptions = _settings.FrameOptions;
-        headers["Referrer-Policy"] = _settings.ReferrerPolicy;
+        headers["Referrer-Policy"] = IsCredentialPath(context.Request.Path)
+            ? "no-referrer"
+            : _settings.ReferrerPolicy;
         headers["Permissions-Policy"] = _settings.PermissionsPolicy;
+
+        if (IsCredentialPath(context.Request.Path))
+        {
+            headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+            headers.Pragma = "no-cache";
+        }
 
         if (_enableHsts)
         {

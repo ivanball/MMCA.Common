@@ -6,6 +6,63 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Security
+
+- **SEC-Common-01 (Critical): an empty stored password hash no longer verifies against any password.**
+  `PasswordHasher.VerifyPassword` rejects credential material it never produced (anything other than a
+  64-byte hash over a 32-byte salt), `AuthenticationServiceBase.LoginAsync` refuses password login for
+  an account with no stored credential, and `ChangePasswordHandlerBase` refuses to treat such an
+  account's current password as provable.
+- **SEC-Common-02: changing or resetting a password evicts every live refresh session.**
+  `ChangePasswordHandlerBase` and `ResetPasswordHandlerBase` take an optional `IRefreshSessionStore`
+  (and `TimeProvider`) and revoke the account's un-revoked sessions after a successful save, so a
+  stolen refresh chain dies with the old credential.
+- **SEC-Common-05: the login account-state gate runs after the password check.** A caller who cannot
+  prove the password gets the generic `Auth.InvalidCredentials` answer whatever the account's state
+  is, and a wrong password against a gated account now counts toward the lockout.
+- **SEC-Common-16: an endpoint that declares no authorization requires an authenticated caller.**
+  `AddAuthorizationPolicies()` registers a fallback authorization policy; framework and static
+  surfaces (Blazor framework files and circuit, static asset roots, health probes, well-known
+  documents) are exempt by path prefix, and the documented opt-out is
+  `AddAuthorizationPolicies(options => options.Enabled = false)`. The framework's own anonymous
+  endpoints (`OAuthControllerBase` challenge and completion actions, the credential and landing pages
+  in `MMCA.Common.UI`, the Aspire health endpoints) declare `[AllowAnonymous]`.
+  **Adopting this is a behaviour change for hosts:** a YARP gateway's public routes need
+  `"AuthorizationPolicy": "anonymous"` in route config (proxied routes carry no metadata of their
+  own), and any controller or minimal-API endpoint meant to stay public needs `[AllowAnonymous]` /
+  `.AllowAnonymous()`. A Blazor page is unaffected at the component level: `AuthorizeRouteView` reads
+  attributes and ignores the fallback policy.
+- **SEC-Common-17: the output-cache bypass reads roles the way the permission handler does.**
+  `ClaimsPrincipalExtensions.GetRoleValues`/`HasRole` is the one role read (`ClaimTypes.Role`,
+  `role`, `roles`, case-insensitive), so a privileged caller under an unmapped claim type can no
+  longer have an elevated response stored under the shared public cache key.
+- **SEC-Common-18: live-channel subscription can be gated.** `NotificationHub` consults an optional
+  `IChannelJoinAuthorizer` after the channel-key shape check; a host publishing anything that is not
+  public to every signed-in user registers one.
+- **SEC-Common-46: the public output-cache key varies by the resolved tenant**, so a multi-tenant host
+  cannot serve one tenant's rows to another from a shared entry.
+- **SEC-Common-78: login pays the same key-derivation cost whether or not the address has an account**,
+  closing the response-time membership oracle.
+- **SEC-Common-85: an OAuth completion is bound to the flow this client started.**
+  `OAuthFlowStateStore` mints a per-attempt value before the challenge, the challenge and completion
+  endpoints round-trip it, and `OAuthComplete` drops a code that arrives without a matching local
+  attempt, so a deep-linked completion cannot force sign-in as the attacker's account.
+- **SEC-Common-86: offline snapshots do not survive sign-out.** `ILocalCacheStore.ClearAsync()` wipes
+  the device-local document cache and `AuthUIService` calls it at logout and when a session can no
+  longer be refreshed; `OfflineFirstPageSnapshot` takes an optional user scope folded into its key.
+- **SEC-ADC-03: the anonymous-endpoint fitness gate can see undecorated endpoints.**
+  `AnonymousEndpointTestsBase` enumerates every concrete controller and routable page that carries no
+  authorization attribute at all and asserts it against an allow-list, opt-in per repo via
+  `RequireExplicitAuthorizationDecision` (MMCA.Common holds itself to it).
+- **SEC-ADC-67: the biometric app lock re-arms on resume.** `IAppLifecycleNotifier` reports the
+  background interval and `BiometricGate` re-locks when the app was away longer than `ReLockAfter`
+  (30 seconds by default); MAUI heads wire it with `window.AttachMmcaAppLifecycle(services)`.
+- **SEC-Store-22: the password-reset link carries its token in the URL fragment**, which browsers never
+  send to a server, so a live single-use token stays out of ingress access logs, request telemetry and
+  the `Referer` header. `ResetPassword` reads it from `location.hash` and scrubs it, and
+  `/reset-password` and `/auth/oauth-complete` answer with `Referrer-Policy: no-referrer` and
+  `Cache-Control: no-store`.
+
 ## [1.187.0] - 2026-09-06
 
 ### Fixed
