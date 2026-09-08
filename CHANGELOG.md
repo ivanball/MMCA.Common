@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.189.0] - 2026-09-08
+
 ### Changed
 
 - Dependency sweep (2026-09-08 NuGet audit): AngleSharp 1.8.0, bunit 2.10.3, Google.Protobuf 3.36.1,
