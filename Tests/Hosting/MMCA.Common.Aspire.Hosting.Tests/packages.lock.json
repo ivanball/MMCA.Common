@@ -16,9 +16,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.200, )",
-        "resolved": "3.0.200",
-        "contentHash": "xDYQDG/pBdvC3r1PcqQw9d8/9dRYxh9xxljjgVydBezpxOUSABjuRjVWNoUmqNByrtWqwJ+nRdAwUuWPbU8uXQ=="
+        "requested": "[3.0.228, )",
+        "resolved": "3.0.228",
+        "contentHash": "YqzQrn2kokjvvZzYPM90b95CJyKONv60iZ6H0SuPy+6fWz3c8Fnqnd4rp+f7KxUc00r+FmLgGtQXeAPZxkZmGA=="
       },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
@@ -1193,7 +1193,7 @@
       },
       "Google.Protobuf": {
         "type": "CentralTransitive",
-        "requested": "[3.35.1, )",
+        "requested": "[3.36.1, )",
         "resolved": "3.34.1",
         "contentHash": "212vdYxRuVopGE5bess6Jg5oXWyizA6hcLPTI7G+qA4PthQEvfeof3njT+7VSY5v/+O0P22xTydiP5fSJJpGEA=="
       },
@@ -1219,7 +1219,7 @@
       },
       "Grpc.Tools": {
         "type": "CentralTransitive",
-        "requested": "[2.82.0, )",
+        "requested": "[2.83.0, )",
         "resolved": "2.80.0",
         "contentHash": "NS1AxwVZnrdbBoMf5L5ruGjBjoLBej9avhqxWNsgfu2GU6FhpxEVJOwLJsdljlDCjvquJiAH2zf/WodIWMvf2w=="
       },
@@ -1262,7 +1262,7 @@
       },
       "Microsoft.Extensions.Caching.StackExchangeRedis": {
         "type": "CentralTransitive",
-        "requested": "[10.0.10, )",
+        "requested": "[10.0.11, )",
         "resolved": "10.0.11",
         "contentHash": "0SCQuU1m+BcLMjyh6q1X9j0hongN9EZx9KhgDyPgHxVa5RJ5xuHBkvcgnX95KSa5bQlkYupeQFu8IAI3NgPIUQ==",
         "dependencies": {

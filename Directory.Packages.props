@@ -39,7 +39,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.2" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.3" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -130,11 +130,11 @@
          Key Vault Secrets User role on the vault (samples/deployment/DEPLOYMENT.md, bootstrap step 3). -->
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
     <!-- gRPC -->
-    <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
+    <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.83.0" />
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
-    <PackageVersion Include="Grpc.Tools" Version="2.82.0" />
+    <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
     <!-- Common.UI -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
@@ -159,7 +159,7 @@
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.100" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.101" />
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
     <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
@@ -184,14 +184,14 @@
     <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.100" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.101" />
     <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
          Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
          -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.200" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.228" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -203,11 +203,11 @@
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
-    <PackageVersion Include="bunit" Version="2.9.0" />
+    <PackageVersion Include="bunit" Version="2.10.3" />
     <!-- Pin the transitive AngleSharp (pulled by bUnit) to the patched 1.5.2: bUnit 2.7.2 floors it at
          1.4.0, which carries CVE-2026-54570 / GHSA-pgww-w46g-26qg (mXSS via MathML annotation-xml). CPM
          does not pin transitives, so the two bUnit-referencing projects add a direct PackageReference. -->
-    <PackageVersion Include="AngleSharp" Version="1.7.2" />
+    <PackageVersion Include="AngleSharp" Version="1.8.0" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -218,15 +218,15 @@
          writes, which a Mock<IDistributedCache> answers for and therefore cannot get wrong.
          Microsoft.Extensions.Caching.StackExchangeRedis supplies the concrete RedisCache the shipped
          code only sees as IDistributedCache. -->
-    <PackageVersion Include="Testcontainers.Redis" Version="4.8.0" />
+    <PackageVersion Include="Testcontainers.Redis" Version="4.15.0" />
     <!-- Multi-host cross-service fixture base in MMCA.Common.Testing (Wave 5.8): SQL Server +
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
-    <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
-    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.15.0" />
     <!-- Service Bus emulator fixture base in MMCA.Common.Testing: same Testcontainers family version.
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
          tiers need a Docker daemon (nightly/dispatch jobs only, never a merge gate). -->
-    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.ServiceBus" Version="4.15.0" />
     <!-- Pinned directly to force transitive resolution to the patched version: every Testcontainers
          package floors SSH.NET at 2025.1.0, which carries GHSA-q939-rpr3-3284 (high, published
          2026-08-12: ScpClient recursive download lets a malicious server write arbitrary files via
@@ -235,7 +235,7 @@
          MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
          MMCA.Common.Testing package through the published package graph. -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.11" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
@@ -314,6 +314,6 @@
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
     <!-- Versioning -->
-    <PackageVersion Include="MinVer" Version="7.0.0" />
+    <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
-</Project>
+</Project>

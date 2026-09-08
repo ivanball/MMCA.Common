@@ -4,9 +4,9 @@
     "net10.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.7.2, )",
-        "resolved": "1.7.2",
-        "contentHash": "r1rb5Qo/0KPzmP0nbSiXPDVfh4Ctu0B+y1RyyUq73g4sgAmEW7q10RDyTq2ZsILwtO9O2LAvMrUles7eD4zz1g=="
+        "requested": "[1.8.0, )",
+        "resolved": "1.8.0",
+        "contentHash": "vRW/0M11Jlfd7WkT5Kr0tXXmnWNVdxyII2S2b6AsgZCJEBGaXCUnti6nKIJTvAjmnmKcQbvn+SJ3lpt8dqoLIA=="
       },
       "AwesomeAssertions": {
         "type": "Direct",
@@ -16,12 +16,12 @@
       },
       "bunit": {
         "type": "Direct",
-        "requested": "[2.9.0, )",
-        "resolved": "2.9.0",
-        "contentHash": "Jz9ywwpjjYHppFDw4bIMkk5cNOy0vN74p3PzJFVIlCZicK8vpAovM5LsuNDLKE4bpwISNKrjwSrsw4SIVzT+0g==",
+        "requested": "[2.10.3, )",
+        "resolved": "2.10.3",
+        "contentHash": "5PF4ATzf/o9T/8nNe1dkGRg24zFRweWLPegZeNOjsKgLzOTX88tzK7xc6ZopUgVTB0JVUxlog7E/g8VVzzZCKw==",
         "dependencies": {
-          "AngleSharp": "1.7.0",
-          "AngleSharp.Css": "1.0.1",
+          "AngleSharp": "1.8.0",
+          "AngleSharp.Css": "1.1.0",
           "AngleSharp.Diffing": "1.1.1",
           "Microsoft.AspNetCore.Components": "10.0.10",
           "Microsoft.AspNetCore.Components.Authorization": "10.0.10",
@@ -42,9 +42,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.200, )",
-        "resolved": "3.0.200",
-        "contentHash": "xDYQDG/pBdvC3r1PcqQw9d8/9dRYxh9xxljjgVydBezpxOUSABjuRjVWNoUmqNByrtWqwJ+nRdAwUuWPbU8uXQ=="
+        "requested": "[3.0.228, )",
+        "resolved": "3.0.228",
+        "contentHash": "YqzQrn2kokjvvZzYPM90b95CJyKONv60iZ6H0SuPy+6fWz3c8Fnqnd4rp+f7KxUc00r+FmLgGtQXeAPZxkZmGA=="
       },
       "Microsoft.Extensions.TimeProvider.Testing": {
         "type": "Direct",
@@ -99,8 +99,8 @@
       },
       "AngleSharp.Css": {
         "type": "Transitive",
-        "resolved": "1.0.1",
-        "contentHash": "6S13xNHH+SUGPZd6EO1MhkuDbpEnFroUM6A8DZpLJHQnLRTvtBJb3Ydu65s618E4gWF9FSWmM5jhKk4RIfwT2A==",
+        "resolved": "1.1.0",
+        "contentHash": "ZnqL8SGy3rXjnJsoKY4kJ6hq4XPLFh0qtq76YAlEBx3qG/bwBnAwf6i+TzexIrLNjBsHLBVbogsl7OQie7FanQ==",
         "dependencies": {
           "AngleSharp": "[1.5.0, 2.0.0)"
         }
@@ -753,11 +753,11 @@
       "mmca.common.testing.ui": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "[1.7.2, )",
+          "AngleSharp": "[1.8.0, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "Moq": "[4.20.72, )",
           "MudBlazor": "[9.9.0, )",
-          "bunit": "[2.9.0, )"
+          "bunit": "[2.10.3, )"
         }
       },
       "mmca.common.ui": {
