@@ -153,30 +153,30 @@
       },
       "Testcontainers.MsSql": {
         "type": "Direct",
-        "requested": "[4.14.0, )",
-        "resolved": "4.14.0",
-        "contentHash": "RNKuun0TUJahHUdxClEp4t4vUrZETHfgpXoicDMS5Wf04oaAYkjz2xCSvo0tzWFpcyGyB1obNusI9P4A4zVDyQ==",
+        "requested": "[4.15.0, )",
+        "resolved": "4.15.0",
+        "contentHash": "lpRFX62aTuf91WT+WxqTIRHI/HO+xgxxZ6lNtXP6SYTt/5KmoY2Qdt3vZj41IDx4MwSlupDMlofjW9yoQPmpyQ==",
         "dependencies": {
-          "Testcontainers": "4.14.0"
+          "Testcontainers": "4.15.0"
         }
       },
       "Testcontainers.RabbitMq": {
         "type": "Direct",
-        "requested": "[4.14.0, )",
-        "resolved": "4.14.0",
-        "contentHash": "NUUrGSZEW3XpDDY7OSAjeJdl9fNLd8f29CdQ7s8AiBODl035mawyTAu+JicWfGGXaGsLqdcUUlEFTc0b1WtmQA==",
+        "requested": "[4.15.0, )",
+        "resolved": "4.15.0",
+        "contentHash": "bJ1B5afbVvHRHDQx6Wz6dP/STbmM+4IcH5qro7dUQj5PS7on893xgumRPPgG/nQKHBEWprb/nc3jXQFFYdfa+Q==",
         "dependencies": {
-          "Testcontainers": "4.14.0"
+          "Testcontainers": "4.15.0"
         }
       },
       "Testcontainers.ServiceBus": {
         "type": "Direct",
-        "requested": "[4.14.0, )",
-        "resolved": "4.14.0",
-        "contentHash": "lZ81zuaOoUDt/FchYstI0KGzW9Y21aHMcGx0Kwqq8OkfkBmYUDCkDh8u9VQVOY9tt2nEodPH9xGPyCI3kCBJ0Q==",
+        "requested": "[4.15.0, )",
+        "resolved": "4.15.0",
+        "contentHash": "DrOkXWqOI+9VsobeYXShS6ELmDWhzpnQ+lUQ/0uH1aPJo22jcPnZibmYILnnI4RMuBmD8laDJqhOdTrfOOHz1A==",
         "dependencies": {
-          "Testcontainers": "4.14.0",
-          "Testcontainers.MsSql": "4.14.0"
+          "Testcontainers": "4.15.0",
+          "Testcontainers.MsSql": "4.15.0"
         }
       },
       "xunit.v3.extensibility.core": {
@@ -676,8 +676,8 @@
       },
       "Testcontainers": {
         "type": "Transitive",
-        "resolved": "4.14.0",
-        "contentHash": "ojuBi91xcMsR6vnFuNsQDWU9tlZlrtmqy95VPNWVVnh24GiwFL/WMnVmb6bRv8LqovtnKPJN9cpmH1k02Z4ZoA==",
+        "resolved": "4.15.0",
+        "contentHash": "8tCZKMm++C/9dHIr8lsE1iDBIBmthbo2XlGFDr4gorT1vgZrJwU36fNkCGuX7h7V39rpQoTK/aG+FhJz3jhY3A==",
         "dependencies": {
           "Docker.DotNet.Enhanced": "4.3.3",
           "Docker.DotNet.Enhanced.X509": "4.3.3",
