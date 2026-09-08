@@ -26,7 +26,7 @@ namespace MMCA.Common.Infrastructure.Redis.Tests;
 /// </summary>
 public sealed class DistributedCacheServiceRedisTests : IAsyncLifetime
 {
-    private readonly RedisContainer _redis = new RedisBuilder().WithImage("redis:7-alpine").Build();
+    private readonly RedisContainer _redis = new RedisBuilder("redis:7-alpine").Build();
 
     private ConnectionMultiplexer _multiplexer = null!;
     private IDistributedCache _distributedCache = null!;

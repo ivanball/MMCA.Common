@@ -34,7 +34,7 @@ namespace MMCA.Common.Infrastructure.Redis.Tests;
 /// </summary>
 public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
 {
-    private readonly RedisContainer _redis = new RedisBuilder().WithImage("redis:7-alpine").Build();
+    private readonly RedisContainer _redis = new RedisBuilder("redis:7-alpine").Build();
     private readonly List<ServiceProvider> _providers = [];
 
     private ConnectionMultiplexer _multiplexer = null!;

@@ -6,6 +6,15 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Changed
+
+- Dependency sweep (2026-09-08 NuGet audit): AngleSharp 1.8.0, bunit 2.10.3, Google.Protobuf 3.36.1,
+  Grpc.Tools 2.83.0, Meziantou.Analyzer 3.0.228, MAUI 10.0.101, Microsoft.Extensions.Caching.StackExchangeRedis
+  10.0.11, MinVer 8.0.0, Scalar.AspNetCore 2.17.3, Testcontainers 4.15.0. Held on purpose: MassTransit 8 (v9 is
+  commercial), SixLabors.ImageSharp 3 (v4 keeps the Six Labors Split License), Microsoft.OpenApi 2 (ASP.NET Core
+  10 OpenAPI caps it below 3), Xamarin.Firebase.Messaging 124 and Xamarin.AndroidX.Biometric 1.1.0.30 (newer
+  bindings lift AndroidX Core past what MAUI 10.0.101 allows, NU1608).
+
 ## [1.188.0] - 2026-09-07
 
 ### Changed
