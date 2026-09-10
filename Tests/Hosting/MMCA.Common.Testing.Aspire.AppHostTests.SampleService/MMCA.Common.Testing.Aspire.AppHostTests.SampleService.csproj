@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    The smallest host that exercises every wiring contract MMCA.Common.Testing.Aspire asserts:
+    AddServiceDefaults + MapDefaultEndpoints for the three probe paths, MapJwksEndpoint for the key
+    set, and a cleartext listener whose protocol profile comes from configuration so the sample
+    AppHost can run this one project twice, once on Http1 for the ordinary probes and once on
+    Http2-only for the h2c assertion. It takes a SQLite data source, which is a file rather than a
+    container, so the whole sample AppHost boots with no container runtime at all.
+
+    DELIBERATELY OUTSIDE MMCA.Common.slnx, together with the sample AppHost and the AppHost-backed
+    test project beside it. An Aspire AppHost's committed lock file carries a RID-specific
+    Aspire.Dashboard.Sdk entry, so a lock committed from Windows fails the solution's locked-mode
+    restore on the ubuntu runners; and the fast solution-wide unit loop must not start an
+    orchestrator. The apphost-testing CI job restores, builds and runs these three by path.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
+    <!-- MapJwksEndpoint lives in the API package; RsaJwksProvider, which it resolves, comes with it
+         transitively from Infrastructure. -->
+    <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.API\MMCA.Common.API.csproj" />
+  </ItemGroup>
+</Project>

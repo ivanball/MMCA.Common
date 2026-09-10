@@ -74,6 +74,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Aspire` | Service defaults, OpenTelemetry, health checks, Polly resilience |
 | `MMCA.Common.Aspire.Hosting` | Aspire AppHost extensions: RabbitMQ broker, JWKS service discovery, gRPC project wiring |
 | `MMCA.Common.Testing` | Integration test base, JWT generator, fixtures |
+| `MMCA.Common.Testing.Aspire` | AppHost integration testing on `Aspire.Hosting.Testing`: collection fixture with per-resource readiness waits, a precondition gate, and typed health/JWKS/h2c/data-source assertions |
 | `MMCA.Common.Testing.E2E` | Playwright E2E infrastructure: browser fixtures, Blazor nav helpers, Identity page objects |
 | `MMCA.Common.Testing.UI` | bUnit component-test base, MudBlazor provider harness, interaction helpers |
 | `MMCA.Common.Testing.Architecture` | `IArchitectureMap` + reusable NetArchTest rule library + abstract test bases (consumed by each repo's `*.Architecture.Tests`) |

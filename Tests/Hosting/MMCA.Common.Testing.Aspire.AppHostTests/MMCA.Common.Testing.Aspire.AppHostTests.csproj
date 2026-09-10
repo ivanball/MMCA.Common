@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <!--
+    The AppHost-backed tier: it boots the sample AppHost through the shipped fixture and asserts
+    every Assert* helper against it. Gated at RUNTIME by MMCA_APPHOST_TESTS (AppHostEnvironmentGate),
+    so on a machine without the opt-in the whole collection skips with a named reason instead of
+    starting an orchestrator, and gated at BUILD time by living outside MMCA.Common.slnx, so the
+    solution-wide unit loop neither builds nor discovers it. The apphost-testing CI job restores,
+    builds and runs it by path with the opt-in set.
+  -->
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="coverlet.collector">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing.Aspire\MMCA.Common.Testing.Aspire.csproj" />
+    <!-- A plain reference to the AppHost, NOT an Aspire project resource: the Aspire.Hosting.AppHost
+         targets generate a public Projects marker class into the AppHost assembly, and
+         DistributedApplicationTestingBuilder.CreateAsync uses that type to find the host to boot. -->
+    <ProjectReference Include="..\MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost\MMCA.Common.Testing.Aspire.AppHostTests.SampleAppHost.csproj" />
+  </ItemGroup>
+</Project>

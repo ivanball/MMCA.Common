@@ -47,8 +47,10 @@ Source/
   Build/         MMCA.Common.LayerEnforcement.targets (compile-time layer guard)
   Core/          MMCA.Common.{Shared,Domain,Application,Infrastructure}
   Presentation/  MMCA.Common.{API,Grpc,UI,UI.Web} (+ UI.Maui, outside the slnx)
-  Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,Testing,Testing.E2E,Testing.UI,Testing.Architecture}
+  Hosting/       MMCA.Common.{Aspire,Aspire.Hosting,Gateway,Testing,Testing.Aspire,Testing.E2E,Testing.UI,Testing.Architecture}
 Tests/           mirrors Source/ folder for folder, plus Architecture/ (NetArchTest) and Performance/
+                 (+ the AppHost tier: MMCA.Common.Testing.Aspire.AppHostTests and its sample AppHost
+                  and sample service, all three outside the slnx)
 build/           facts (FACTS.md generator, CI drift gate) and perfgate (benchmark baseline gate)
 ```
 
@@ -157,7 +159,7 @@ A module can be lifted out of the monolith without rewriting application code. T
 - **Push notifications**: SignalR pipeline in Infrastructure (`NotificationHub`, `SignalRPushNotificationSender`, `NullPushNotificationSender` fallback).
 - **Idempotency**: `[Idempotent]` attribute; `Idempotency-Key` header; first response cached 24h; duplicates return `X-Idempotent-Replay: true`. The cache key is **not** the bare client key: `BuildCacheKey` (`:317-331`) joins subject, request method, route and the client key and hashes them with SHA-256, so two callers cannot collide or replay across each other. Mutual exclusion is an `IDistributedLock` resolved from DI (`AddCaching` registers the SET-NX-PX plus Lua compare-and-delete `RedisDistributedLock` whenever an `IConnectionMultiplexer` is present, else a warn-once `InProcessDistributedLock`); the striped `KeyedSemaphoreStripe` double-check path is only the fallback for a host that registers no lock (ADR-017). A duplicate that cannot take the lock within `LockWait` (5s) gets **409 Conflict**, not a replay. Cached results are 2xx `ObjectResult` **or** body-less 2xx `StatusCodeResult` (a `NoContent()` 204 replays as a bare status code); non-2xx is never cached.
 - **Aspire package**: `AddServiceDefaults()` configures OpenTelemetry, service discovery, Polly resilience (30s attempt / 60s breaker window / 90s total); `MapDefaultEndpoints()` adds `/health` + `/alive`. The tracing pipeline registers `OutboxPollFilterProcessor`.
-- **Testing package**: `IntegrationTestBase<TFixture>` (HTTP client + bearer token + typed helpers + per-test DB reset), `JwtTokenGenerator`. `MMCA.Common.Testing.E2E` is a shipped Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects); its Login/Register/Profile workflow bases assert WCAG 2.1 AA via axe-core, and `PlaywrightFixture` selects the engine from `E2E_BROWSER`.
+- **Testing package**: `IntegrationTestBase<TFixture>` (HTTP client + bearer token + typed helpers + per-test DB reset), `JwtTokenGenerator`. `MMCA.Common.Testing.E2E` is a shipped Playwright fixture package (browser fixtures, Blazor nav helpers, Identity page objects); its Login/Register/Profile workflow bases assert WCAG 2.1 AA via axe-core, and `PlaywrightFixture` selects the engine from `E2E_BROWSER`. `MMCA.Common.Testing.Aspire` (ADR-117) is the AppHost tier: `AppHostFixtureBase<TAppHost>` boots a real AppHost through `DistributedApplicationTestingBuilder` and waits for readiness **per resource** (healthy where a health check exists, `Running` where none does), and `AppHostTestBase<TFixture>` carries the wiring assertions (`AssertHealthyAsync`/`AssertAliveAsync`/`AssertReadyAsync`/`AssertJwksAsync`/`AssertH2cAsync`/`AssertDataSourceAsync`). Preconditions are a skip with a reason, not a wedge: `AppHostEnvironmentGate` needs `MMCA_APPHOST_TESTS=1` (plus Docker and the dev certificate when a fixture declares them), and `EphemeralRsaKeyPair` mints the `E2E_JWT_*` keypair `WithE2eRsaKeys()` forwards. Never gate a startup wait on readiness; `/alive` is the startup signal.
 
 ## Testing
 

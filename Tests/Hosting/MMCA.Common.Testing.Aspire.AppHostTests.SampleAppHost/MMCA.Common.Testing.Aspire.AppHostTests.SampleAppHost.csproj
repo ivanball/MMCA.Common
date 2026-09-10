@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.5.3" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <IsPackable>false</IsPackable>
+    <!-- This AppHost is booted in-process by DistributedApplicationTestingBuilder, never by the
+         Aspire CLI bundle that ASPIRE010 nudges toward. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    DELIBERATELY OUTSIDE MMCA.Common.slnx: an AppHost's committed lock file carries a RID-specific
+    Aspire.Dashboard.Sdk RID-specific entry, so a lock committed from Windows fails the solution's
+    locked-mode restore on ubuntu, and the fast solution-wide unit loop must not build an
+    orchestrator. The apphost-testing CI job restores and builds this by path.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MMCA.Common.Testing.Aspire.AppHostTests.SampleService\MMCA.Common.Testing.Aspire.AppHostTests.SampleService.csproj" />
+    <!-- A library, not a project resource: without this the Aspire SDK would generate a Projects
+         marker for it and offer it as something to AddProject. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire.Hosting\MMCA.Common.Aspire.Hosting.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,95 @@
+#nullable enable
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.AppHostFixtureBase() -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.Application.get -> Aspire.Hosting.DistributedApplication!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.E2eRsaKeys.get -> MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair?
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.IsAvailable.get -> bool
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.SetEnvironmentVariable(string! key, string? value) -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.SkipReason.get -> string?
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase<TAppHost>
+MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase<TAppHost>.AppHostFixtureBase() -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.<Clone>$() -> MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.AppHostReadinessBudget(System.TimeSpan Startup, System.TimeSpan Readiness) -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Deconstruct(out System.TimeSpan Startup, out System.TimeSpan Readiness) -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Equals(MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? other) -> bool
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Readiness.get -> System.TimeSpan
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Readiness.init -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Remaining(System.TimeSpan elapsed) -> System.TimeSpan
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Startup.get -> System.TimeSpan
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Startup.init -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Validate() -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AppHostTestBase(TFixture! fixture) -> void
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.Application.get -> Aspire.Hosting.DistributedApplication!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AssertAliveAsync(string! resourceName, string? endpointName = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AssertDataSourceAsync(string! resourceName, string! logicalName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AssertH2cAsync(string! resourceName, string! path = "/alive", string! endpointName = "http", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AssertHealthyAsync(string! resourceName, string? endpointName = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AssertJwksAsync(string! resourceName, string? endpointName = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.AssertReadyAsync(string! resourceName, string? endpointName = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.CreateBearerToken(string! audience, int userId, string! role, System.Collections.Generic.IEnumerable<System.Security.Claims.Claim!>? additionalClaims = null, string! issuer = "https://localhost:6001", string! keyId = "mmca-test-key") -> string!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.CreateHttpClient(string! resourceName, string? endpointName = null) -> System.Net.Http.HttpClient!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.Fixture.get -> TFixture!
+MMCA.Common.Testing.Aspire.Fixtures.AppHostTestBase<TFixture>.GetConnectionStringAsync(string! resourceName, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentGate
+MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
+MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement.DeveloperCertificate = 4 -> MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
+MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement.Docker = 2 -> MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
+MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement.None = 0 -> MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
+MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement.OptIn = 1 -> MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
+MMCA.Common.Testing.Aspire.Preconditions.DeveloperCertificateAvailability
+MMCA.Common.Testing.Aspire.Preconditions.DockerAvailability
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.<Clone>$() -> MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair!
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.Deconstruct(out string! PrivateKeyPem, out string! PublicKeyPem) -> void
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.EphemeralRsaKeyPair(string! PrivateKeyPem, string! PublicKeyPem) -> void
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.Equals(MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair? other) -> bool
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.PrivateKeyPem.get -> string!
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.PrivateKeyPem.init -> void
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.PublicKeyPem.get -> string!
+MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.PublicKeyPem.init -> void
+MMCA.Common.Testing.Aspire.Probes.AppHostProbePaths
+MMCA.Common.Testing.Aspire.Probes.H2cProbe
+abstract MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.CreateBuilderAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Aspire.Hosting.Testing.IDistributedApplicationTestingBuilder!>!
+const MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentGate.OptInVariable = "MMCA_APPHOST_TESTS" -> string!
+const MMCA.Common.Testing.Aspire.Preconditions.DeveloperCertificateAvailability.AspNetCoreHttpsDevelopmentCertificateOid = "1.3.6.1.4.1.311.84.1.1" -> string!
+const MMCA.Common.Testing.Aspire.Preconditions.DockerAvailability.DockerHostVariable = "DOCKER_HOST" -> string!
+const MMCA.Common.Testing.Aspire.Preconditions.DockerAvailability.UnixSocketPath = "/var/run/docker.sock" -> string!
+const MMCA.Common.Testing.Aspire.Preconditions.DockerAvailability.WindowsEnginePipeName = "docker_engine" -> string!
+const MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.KeySizeInBits = 2048 -> int
+const MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.PrivateKeyVariable = "E2E_JWT_PRIVATE_KEY_PEM" -> string!
+const MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.PublicKeyVariable = "E2E_JWT_PUBLIC_KEY_PEM" -> string!
+const MMCA.Common.Testing.Aspire.Probes.AppHostProbePaths.Alive = "/alive" -> string!
+const MMCA.Common.Testing.Aspire.Probes.AppHostProbePaths.CleartextEndpointName = "http" -> string!
+const MMCA.Common.Testing.Aspire.Probes.AppHostProbePaths.Health = "/health" -> string!
+const MMCA.Common.Testing.Aspire.Probes.AppHostProbePaths.Jwks = "/.well-known/jwks.json" -> string!
+const MMCA.Common.Testing.Aspire.Probes.AppHostProbePaths.Ready = "/health/ready" -> string!
+override MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase<TAppHost>.CreateBuilderAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Aspire.Hosting.Testing.IDistributedApplicationTestingBuilder!>!
+override MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.GetHashCode() -> int
+override MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.ToString() -> string!
+override MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.Equals(object? obj) -> bool
+override MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.GetHashCode() -> int
+override MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.ToString() -> string!
+static MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.Default.get -> MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget!
+static MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.operator !=(MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? left, MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? right) -> bool
+static MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget.operator ==(MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? left, MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget? right) -> bool
+static MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentGate.Evaluate(MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement requirements) -> string?
+static MMCA.Common.Testing.Aspire.Preconditions.DeveloperCertificateAvailability.IsPresent() -> bool
+static MMCA.Common.Testing.Aspire.Preconditions.DockerAvailability.IsAvailable() -> bool
+static MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.Create() -> MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair!
+static MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.operator !=(MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair? left, MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair? right) -> bool
+static MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair.operator ==(MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair? left, MMCA.Common.Testing.Aspire.Preconditions.EphemeralRsaKeyPair? right) -> bool
+static MMCA.Common.Testing.Aspire.Probes.H2cProbe.CreateRequest(System.Uri! requestUri) -> System.Net.Http.HttpRequestMessage!
+static MMCA.Common.Testing.Aspire.Probes.H2cProbe.SendAsync(System.Uri! requestUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+static readonly MMCA.Common.Testing.Aspire.Probes.H2cProbe.DefaultTimeout -> System.TimeSpan
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.Budget.get -> MMCA.Common.Testing.Aspire.Fixtures.AppHostReadinessBudget!
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.ConfigureBuilder(Aspire.Hosting.Testing.IDistributedApplicationTestingBuilder! builder) -> void
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.ConfigureOptions(Aspire.Hosting.DistributedApplicationOptions! options, Microsoft.Extensions.Hosting.HostApplicationBuilderSettings! settings) -> void
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.RequiredEnvironment.get -> MMCA.Common.Testing.Aspire.Preconditions.AppHostEnvironmentRequirement
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.ResourcesToAwait.get -> System.Collections.Generic.IReadOnlyCollection<string!>?
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase.SuppliesE2eRsaKeys.get -> bool
+virtual MMCA.Common.Testing.Aspire.Fixtures.AppHostFixtureBase<TAppHost>.AppHostArguments.get -> System.Collections.Generic.IReadOnlyList<string!>!

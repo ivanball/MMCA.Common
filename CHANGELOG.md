@@ -110,6 +110,35 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   `IRoleAdministrationService`, which `AddStoredPermissionGrants` fills in with a shipped
   implementation. Both are gated on the new `AdministrationPermissions.ManageUsers` /
   `AdministrationPermissions.ManageRoles` constants.
+- **New package `MMCA.Common.Testing.Aspire`: AppHost integration testing** (ADR-117). It closes the
+  one layer nothing else executes. A solution build never runs an AppHost, and every in-process test
+  tier boots hosts directly through `WebApplicationFactory`, bypassing the orchestration, so a
+  renamed resource, an unresolvable reference or a `WaitFor` cycle is invisible to the compiler and
+  to every other tier.
+- `AppHostFixtureBase<TAppHost>` is an xUnit v3 collection fixture that builds the AppHost through
+  `DistributedApplicationTestingBuilder`, starts it, and waits for readiness PER RESOURCE inside one
+  shared budget: healthy where the resource carries a health check, `Running` where it carries none,
+  and a `TimeoutException` naming the resource when the budget runs out. Virtual hooks are
+  `ConfigureBuilder`, `ConfigureOptions` (dashboard off, unsecured transport allowed),
+  `ResourcesToAwait` (default: every project resource), `Budget` (`AppHostReadinessBudget`, five
+  minutes each), `RequiredEnvironment`, and `SuppliesE2eRsaKeys`.
+- `AppHostTestBase<TFixture>` adds `CreateHttpClient`, `GetConnectionStringAsync`,
+  `CreateBearerToken` (signed with the collection's ephemeral key, reusing `JwtTokenGenerator`), and
+  typed assertions for the framework's wiring contracts: `AssertHealthyAsync`, `AssertAliveAsync`,
+  `AssertReadyAsync`, `AssertJwksAsync` (at least one RSA key), `AssertH2cAsync` (exact HTTP/2 with
+  prior knowledge on the cleartext endpoint) and `AssertDataSourceAsync` (the
+  `DataSources__<name>__<Engine>ConnectionString` routing key is present and parses).
+- Preconditions are a SKIP with a reason, never a wedge: `AppHostEnvironmentGate` evaluates an opt-in
+  variable (`MMCA_APPHOST_TESTS`), `DockerAvailability` and `DeveloperCertificateAvailability`, and
+  the fixture reports `IsAvailable` / `SkipReason` for the test class to skip on.
+  `EphemeralRsaKeyPair` mints an RS256 keypair into `E2E_JWT_PRIVATE_KEY_PEM` /
+  `E2E_JWT_PUBLIC_KEY_PEM` when they are absent, which is the channel `WithE2eRsaKeys()` forwards to
+  an Identity resource: without key material such a host answers every request, liveness probe
+  included, with a 500 and never turns healthy.
+- CI gains an advisory `apphost-testing` job (ubuntu, code-guarded, `continue-on-error`) that runs
+  the tier against an in-repo sample AppHost with `MMCA_APPHOST_TESTS=1`. The sample AppHost, its
+  sample service and the AppHost-backed test project sit outside `MMCA.Common.slnx`, so the
+  solution-wide unit loop neither builds nor discovers them.
 
 ## [1.189.0] - 2026-09-08
 
