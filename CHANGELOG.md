@@ -51,6 +51,40 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   migration). Run `dotnet ef migrations add AddInternalCommands` per source and apply it before upgrading
   a deployed host. Optional `[InternalCommandName("...")]` gives a command a stable stored identity that
   survives a rename, namespace move, or assembly move.
+- **Two-factor authentication (TOTP), opt-in.** `AddTwoFactorAuthentication(config)` registers
+  `ITwoFactorService` (RFC 6238 secrets, codes, provisioning URIs and hashed single-use recovery
+  codes, over `Otp.NET` in Infrastructure only) and `ITwoFactorAuthenticator`, bound from
+  `Authentication:TwoFactor` (`Issuer`, `Digits`, `PeriodSeconds`, `VerificationWindowSteps`,
+  `RecoveryCodeCount`). The consumer supplies `ITwoFactorStore` over its own `User`, which exposes
+  `ITwoFactorUserState`. `AuthenticationServiceBase` takes the authenticator as an OPTIONAL
+  constructor argument, answers `Authentication.TwoFactorRequired` when an enrolled account sends no
+  code, and stamps the `amr`-style `AuthClaimTypes.MultiFactor` (`mfa`) claim when one verifies;
+  `LoginRequest.TwoFactorCode` carries the code. Handler bases:
+  `BeginTwoFactorEnrollmentHandlerBase`, `ConfirmTwoFactorEnrollmentHandlerBase`,
+  `DisableTwoFactorHandlerBase`, `RegenerateRecoveryCodesHandlerBase`.
+- **`IRequiresMfa` marker.** Commands and queries carrying it are denied with
+  `Authorization.MultiFactorRequired` unless the principal holds the `mfa` claim, enforced by the
+  existing authorization decorators through the new shared `AuthorizationGate`.
+- **Email confirmation, opt-in.** `AddEmailConfirmation(config)` registers
+  `IEmailConfirmationTokenService` on the password-reset design (hashed at rest, single use, attempt
+  cap, per-address throttle), bound from `Authentication:EmailConfirmation` (`ConfirmationUrl`,
+  `TokenLifetimeMinutes`, `RequireConfirmedEmail`, default false). Handler bases
+  `SendEmailConfirmationHandlerBase` and `ConfirmEmailHandlerBase`; a `User` implementing
+  `IEmailConfirmableUser` is refused at sign-in with `Authentication.EmailNotConfirmed` once the flag
+  is on. The existing `IEmailSender` is reused; no new mail abstraction ships.
+- **Stored permission grants, opt-in.** `AddStoredPermissionGrants(config)` layers a
+  `PermissionGrant` table (mapped by `ApplyPermissionGrantConfiguration`) over the compiled
+  `IPermissionRegistry` through the `LayeredPermissionRegistry` decorator, with a per-role
+  `IMemoryCache` snapshot, explicit `IPermissionGrantCacheInvalidator` invalidation and an interval
+  refresh (`Authentication:PermissionGrants:CacheSeconds`, `DataSourceName`, `KnownRoles`). Stored
+  grants union with the compiled layer and never deny, so no data edit can remove a compiled-in
+  capability. The authorization decorators' contract is unchanged.
+- **Administration controller bases, opt-in.** `UsersAdminControllerBase<TUserDto>` (paged list, get,
+  lock, unlock, set roles) over a consumer-supplied `IUserAdministrationService<TUserDto>`, and
+  `RolesAdminControllerBase` (list roles, get role, set stored permissions) over
+  `IRoleAdministrationService`, which `AddStoredPermissionGrants` fills in with a shipped
+  implementation. Both are gated on the new `AdministrationPermissions.ManageUsers` /
+  `AdministrationPermissions.ManageRoles` constants.
 
 ## [1.189.0] - 2026-09-08
 

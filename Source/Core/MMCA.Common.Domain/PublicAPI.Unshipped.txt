@@ -66,3 +66,25 @@ static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureStringLengthIsWithin
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureTimeZoneIsValid(string? timeZone, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureUrlIsWellFormed(string? url, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Domain.Invariants.CommonInvariants.EnsureValuesAreUnique<T>(System.Collections.Generic.IEnumerable<T>? values, System.Collections.Generic.IEqualityComparer<T>? comparer, string! code, string! message, string! source, string! target) -> MMCA.Common.Shared.Abstractions.Result!
+const MMCA.Common.Domain.Auth.PermissionGrant.PermissionMaxLength = 128 -> int
+const MMCA.Common.Domain.Auth.PermissionGrant.RoleMaxLength = 64 -> int
+MMCA.Common.Domain.Auth.IEmailConfirmableUser
+MMCA.Common.Domain.Auth.IEmailConfirmableUser.ConfirmEmail() -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Domain.Auth.IEmailConfirmableUser.IsEmailConfirmed.get -> bool
+MMCA.Common.Domain.Auth.ITwoFactorUserState
+MMCA.Common.Domain.Auth.ITwoFactorUserState.IsTwoFactorEnabled.get -> bool
+MMCA.Common.Domain.Auth.ITwoFactorUserState.TwoFactorRecoveryCodeHashes.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+MMCA.Common.Domain.Auth.ITwoFactorUserState.TwoFactorSecret.get -> string?
+MMCA.Common.Domain.Auth.PermissionGrant
+MMCA.Common.Domain.Auth.PermissionGrant.GrantedAt.get -> System.DateTime
+MMCA.Common.Domain.Auth.PermissionGrant.GrantedAt.init -> void
+MMCA.Common.Domain.Auth.PermissionGrant.GrantedBy.get -> string?
+MMCA.Common.Domain.Auth.PermissionGrant.GrantedBy.init -> void
+MMCA.Common.Domain.Auth.PermissionGrant.Id.get -> System.Guid
+MMCA.Common.Domain.Auth.PermissionGrant.Id.init -> void
+MMCA.Common.Domain.Auth.PermissionGrant.Permission.get -> string!
+MMCA.Common.Domain.Auth.PermissionGrant.Permission.init -> void
+MMCA.Common.Domain.Auth.PermissionGrant.PermissionGrant() -> void
+MMCA.Common.Domain.Auth.PermissionGrant.Role.get -> string!
+MMCA.Common.Domain.Auth.PermissionGrant.Role.init -> void
+static MMCA.Common.Domain.Auth.PermissionGrant.Create(string! role, string! permission, System.DateTime grantedAt, string? grantedBy = null) -> MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Domain.Auth.PermissionGrant!>!

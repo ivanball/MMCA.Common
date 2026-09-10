@@ -51,5 +51,11 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // the IP and user-agent of a device. Flagging it instead of erasing it would keep a growing
         // record of a data subject's devices past any use for it (ADR-005).
         "MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService",
+
+        // Stored permission grants. A grant row is a set membership, not an aggregate: revoking a
+        // capability means the row is not there, and a soft-deleted grant would have to be filtered
+        // out of every authorization read forever, with a missed filter failing OPEN. It carries no
+        // audit or erasure obligation either: its whole content is a role name and a permission name.
+        "MMCA.Common.Infrastructure.Persistence.Auth.EFPermissionGrantStore",
     ];
 }

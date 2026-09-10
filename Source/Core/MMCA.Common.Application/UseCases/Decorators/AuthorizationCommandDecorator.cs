@@ -7,9 +7,11 @@ using MMCA.Common.Shared.Auth.Permissions;
 namespace MMCA.Common.Application.UseCases.Decorators;
 
 /// <summary>
-/// Decorator that checks the command's required permission before executing the inner handler.
-/// Commands that do not implement <see cref="IRequiresPermission"/> pass through unchanged. When
-/// none of the caller's roles grants the permission, returns a failure result with
+/// Decorator that checks the command's required permission, and then its required second
+/// authentication factor, before executing the inner handler. Commands that implement neither
+/// <see cref="IRequiresPermission"/> nor <see cref="IRequiresMfa"/> pass through unchanged. When none
+/// of the caller's roles grants the permission, or when an <see cref="IRequiresMfa"/> command is
+/// reached by a principal carrying no <c>mfa</c> claim, returns a failure result with
 /// <see cref="ErrorType.Forbidden"/> without invoking the handler.
 /// <para>
 /// Registered directly inside the feature gate and outside logging, so a denied command never
@@ -57,19 +59,11 @@ public sealed class AuthorizationCommandDecorator<TCommand, TResult>(
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
-        if (command is not IRequiresPermission requiresPermission)
+        var denial = AuthorizationGate.Evaluate(command, currentUser, permissionRegistry, typeof(TCommand).Name);
+        if (denial is null)
             return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
-
-        if (permissionRegistry.HasPermission(currentUser.Roles, requiresPermission.Permission))
-            return await inner.HandleAsync(command, cancellationToken).ConfigureAwait(false);
-
-        var commandName = typeof(TCommand).Name;
-        CqrsMetrics.RecordAuthorizationDenied(commandName);
 
         var createFailure = CreateFailure();
-        return createFailure([Error.Forbidden(
-            "Authorization.PermissionDenied",
-            $"The current user does not hold the '{requiresPermission.Permission}' permission.",
-            source: commandName)]);
+        return createFailure([denial]);
     }
 }

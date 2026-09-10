@@ -89,6 +89,13 @@
          idiom, the DI scope-per-execution pattern, the OpenTelemetry meters). The only piece the
          framework lacked was the cron grammar, so that is the only piece taken as a dependency. -->
     <PackageVersion Include="Cronos" Version="0.13.0" />
+    <!-- RFC 6238 TOTP grammar behind the opt-in two-factor second factor (MMCA.Common.Infrastructure).
+         MIT and zero-dependency (netstandard2.0), and it does exactly one thing the BCL has no
+         primitive for: derive and verify a time-stepped one-time code, plus the Base32 alphabet the
+         authenticator apps key from. The rest of the feature (secret storage, recovery codes, the
+         claim) is framework code, so this is the only piece taken as a dependency, and it is
+         referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
+    <PackageVersion Include="Otp.NET" Version="1.4.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
