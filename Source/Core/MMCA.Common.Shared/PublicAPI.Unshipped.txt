@@ -150,3 +150,117 @@ static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToI
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableIdentifier(TValue? value) -> TSelf?
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableValue(TSelf? identifier) -> TValue?
 static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToValue(TSelf identifier) -> TValue
+~override MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.ToString() -> string
+~override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.Equals(object obj) -> bool
+~override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.ToString() -> string
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactor = "mfa" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodRecoveryCode = "recovery" -> string!
+const MMCA.Common.Shared.Auth.AuthClaimTypes.MultiFactorMethodTotp = "otp" -> string!
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageRoles = "roles:manage" -> string!
+const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageUsers = "users:manage" -> string!
+MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.ConfirmEmailRequest() -> void
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.ConfirmEmailRequest(string! Email, string! Token) -> void
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Deconstruct(out string! Email, out string! Token) -> void
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Equals(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Token.get -> string!
+MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.Token.init -> void
+MMCA.Common.Shared.Auth.Requests.LoginRequest.TwoFactorCode.get -> string?
+MMCA.Common.Shared.Auth.Requests.LoginRequest.TwoFactorCode.init -> void
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Deconstruct(out string! Email) -> void
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Email.get -> string!
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Email.init -> void
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.Equals(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.SendEmailConfirmationRequest() -> void
+MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.SendEmailConfirmationRequest(string! Email) -> void
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest!
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Equals(MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? other) -> bool
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Permissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Permissions.init -> void
+MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.SetRolePermissionsRequest(System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.<Clone>$() -> MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest!
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! Roles) -> void
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Equals(MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? other) -> bool
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Roles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Roles.init -> void
+MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.SetUserRolesRequest(System.Collections.Generic.IReadOnlyList<string!>! Roles) -> void
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Code.get -> string!
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Code.init -> void
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Deconstruct(out string! Code) -> void
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.Equals(MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest other) -> bool
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.TwoFactorCodeRequest() -> void
+MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.TwoFactorCodeRequest(string! Code) -> void
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Deconstruct(out string! Role, out System.Collections.Generic.IReadOnlyList<string!>! RegisteredPermissions, out System.Collections.Generic.IReadOnlyList<string!>! StoredPermissions) -> void
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Equals(MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.RegisteredPermissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.RegisteredPermissions.init -> void
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Role.get -> string!
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Role.init -> void
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.RolePermissionsResponse(string! Role, System.Collections.Generic.IReadOnlyList<string!>! RegisteredPermissions, System.Collections.Generic.IReadOnlyList<string!>! StoredPermissions) -> void
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.StoredPermissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.StoredPermissions.init -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! RecoveryCodes) -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.Equals(MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.RecoveryCodes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.RecoveryCodes.init -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.TwoFactorRecoveryCodesResponse(System.Collections.Generic.IReadOnlyList<string!>! RecoveryCodes) -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.Deconstruct(out string! SharedKey, out string! ProvisioningUri) -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.Equals(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse other) -> bool
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.ProvisioningUri.get -> string!
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.ProvisioningUri.init -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.SharedKey.get -> string!
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.SharedKey.init -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.TwoFactorSetupResponse() -> void
+MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.TwoFactorSetupResponse(string! SharedKey, string! ProvisioningUri) -> void
+override MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.ToString() -> string!
+override MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.ToString() -> string!
+override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.GetHashCode() -> int
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindMultiFactorMethod(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
+static MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest left, MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest left, MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest left, MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest left, MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? left, MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? left, MMCA.Common.Shared.Auth.Requests.SetRolePermissionsRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? left, MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest.operator ==(MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? left, MMCA.Common.Shared.Auth.Requests.SetUserRolesRequest? right) -> bool
+static MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.operator !=(MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest left, MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest right) -> bool
+static MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest.operator ==(MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest left, MMCA.Common.Shared.Auth.Requests.TwoFactorCodeRequest right) -> bool
+static MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.operator !=(MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? left, MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse.operator ==(MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? left, MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.operator !=(MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? left, MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.operator ==(MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? left, MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.operator !=(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse left, MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse right) -> bool
+static MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.operator ==(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse left, MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse right) -> bool

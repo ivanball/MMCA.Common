@@ -7,9 +7,11 @@ using MMCA.Common.Shared.Auth.Permissions;
 namespace MMCA.Common.Application.UseCases.Decorators;
 
 /// <summary>
-/// Decorator that checks the query's required permission before executing the inner handler.
-/// Queries that do not implement <see cref="IRequiresPermission"/> pass through unchanged. When
-/// none of the caller's roles grants the permission, returns a failure result with
+/// Decorator that checks the query's required permission, and then its required second
+/// authentication factor, before executing the inner handler. Queries that implement neither
+/// <see cref="IRequiresPermission"/> nor <see cref="IRequiresMfa"/> pass through unchanged. When none
+/// of the caller's roles grants the permission, or when an <see cref="IRequiresMfa"/> query is
+/// reached by a principal carrying no <c>mfa</c> claim, returns a failure result with
 /// <see cref="ErrorType.Forbidden"/> without invoking the handler.
 /// <para>
 /// Registered directly inside the feature gate and outside logging and caching, so a denied query
@@ -52,19 +54,11 @@ public sealed class AuthorizationQueryDecorator<TQuery, TResult>(
     /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)
     {
-        if (query is not IRequiresPermission requiresPermission)
+        var denial = AuthorizationGate.Evaluate(query, currentUser, permissionRegistry, typeof(TQuery).Name);
+        if (denial is null)
             return await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
-
-        if (permissionRegistry.HasPermission(currentUser.Roles, requiresPermission.Permission))
-            return await inner.HandleAsync(query, cancellationToken).ConfigureAwait(false);
-
-        var queryName = typeof(TQuery).Name;
-        CqrsMetrics.RecordAuthorizationDenied(queryName);
 
         var createFailure = CreateFailure();
-        return createFailure([Error.Forbidden(
-            "Authorization.PermissionDenied",
-            $"The current user does not hold the '{requiresPermission.Permission}' permission.",
-            source: queryName)]);
+        return createFailure([denial]);
     }
 }

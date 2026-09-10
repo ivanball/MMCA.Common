@@ -38,4 +38,25 @@ public static class AuthClaimTypes
     /// </para>
     /// </summary>
     public const string SessionId = "sid";
+
+    /// <summary>
+    /// The claim asserting that the access token was minted after a second authentication factor was
+    /// presented. It is an <c>amr</c>-style claim (RFC 8176, "authentication methods references"):
+    /// the VALUE names the method that satisfied the challenge, one of
+    /// <see cref="MultiFactorMethodTotp"/> or <see cref="MultiFactorMethodRecoveryCode"/>.
+    /// <para>
+    /// <b>Presence is the assertion, not the value.</b> Readers ask whether the claim is there
+    /// (<see cref="ClaimsPrincipalExtensions.HasMultiFactor"/>); the value exists for audit and for a
+    /// UI that wants to say "you signed in with a recovery code". A token issued for an account that
+    /// has no second factor carries no <c>mfa</c> claim at all, which is why a request marked
+    /// <c>IRequiresMfa</c> denies such a caller rather than degrading to a role check.
+    /// </para>
+    /// </summary>
+    public const string MultiFactor = "mfa";
+
+    /// <summary>Value of <see cref="MultiFactor"/> when a time-based one-time code satisfied the challenge.</summary>
+    public const string MultiFactorMethodTotp = "otp";
+
+    /// <summary>Value of <see cref="MultiFactor"/> when a single-use recovery code satisfied the challenge.</summary>
+    public const string MultiFactorMethodRecoveryCode = "recovery";
 }

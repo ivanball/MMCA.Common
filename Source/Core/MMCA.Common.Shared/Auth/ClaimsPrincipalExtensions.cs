@@ -91,4 +91,29 @@ public static class ClaimsPrincipalExtensions
         var value = principal?.FindFirst(AuthClaimTypes.SessionId)?.Value;
         return Guid.TryParse(value, CultureInfo.InvariantCulture, out var sessionId) ? sessionId : null;
     }
+
+    /// <summary>
+    /// Whether the token behind this principal was minted after a second authentication factor was
+    /// presented, that is whether it carries an <see cref="AuthClaimTypes.MultiFactor"/> claim.
+    /// </summary>
+    /// <remarks>
+    /// SECURITY: presence is the whole test, and absence denies rather than falling back to a role
+    /// check. Only the framework's sign-in flow stamps the claim, and only after a code verified, so
+    /// a caller cannot reach a multi-factor-gated use case with a token minted before the account
+    /// turned two-factor on.
+    /// </remarks>
+    /// <param name="principal">The principal to read; a null principal has no second factor.</param>
+    /// <returns><see langword="true"/> when the principal carries the claim.</returns>
+    public static bool HasMultiFactor(this ClaimsPrincipal? principal) =>
+        principal?.FindFirst(AuthClaimTypes.MultiFactor) is not null;
+
+    /// <summary>
+    /// Returns the method that satisfied the second-factor challenge (the value of the
+    /// <see cref="AuthClaimTypes.MultiFactor"/> claim), or <see langword="null"/> when the principal
+    /// carries no such claim.
+    /// </summary>
+    /// <param name="principal">The principal to read; a null principal yields null.</param>
+    /// <returns>The method name, or <see langword="null"/>.</returns>
+    public static string? FindMultiFactorMethod(this ClaimsPrincipal? principal) =>
+        principal?.FindFirst(AuthClaimTypes.MultiFactor)?.Value;
 }

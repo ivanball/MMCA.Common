@@ -1,6 +1,8 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth.EmailConfirmation;
+using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Extensions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -50,6 +52,25 @@ namespace MMCA.Common.Application.Auth;
 /// </para>
 /// </summary>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
+/// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
+/// <param name="tokenService">Mints access and refresh tokens.</param>
+/// <param name="passwordHasher">Verifies and derives credential material.</param>
+/// <param name="loginProtection">The ADR-029 lockout and registration rate limiter.</param>
+/// <param name="timeProvider">The clock every session instant is stamped from.</param>
+/// <param name="validators">The request validators for login, registration and refresh.</param>
+/// <param name="refreshSessions">The multi-device refresh-session store.</param>
+/// <param name="refreshSessionSettings">Refresh-session options, including the per-user cap.</param>
+/// <param name="twoFactor">
+/// Optional second-factor challenge. Supplied only by an app that has adopted two-factor
+/// authentication; while it is null the sign-in flow has no second-factor step at all and behaves
+/// exactly as it did before the feature shipped. Optional and defaulted so every existing subclass
+/// keeps compiling untouched (the <c>ChangePasswordHandlerBase</c> precedent).
+/// </param>
+/// <param name="emailConfirmationSettings">
+/// Optional email-confirmation options. Supplied only by an app that has adopted confirmation, and
+/// even then the sign-in gate stays off until <c>RequireConfirmedEmail</c> is set AND the app's
+/// <c>User</c> implements <see cref="IEmailConfirmableUser"/>.
+/// </param>
 public abstract class AuthenticationServiceBase<TUser>(
     IUnitOfWork unitOfWork,
     ITokenService tokenService,
@@ -58,7 +79,9 @@ public abstract class AuthenticationServiceBase<TUser>(
     TimeProvider timeProvider,
     AuthenticationValidators validators,
     IRefreshSessionStore refreshSessions,
-    IOptions<RefreshSessionSettings> refreshSessionSettings) : IAuthenticationService
+    IOptions<RefreshSessionSettings> refreshSessionSettings,
+    ITwoFactorAuthenticator? twoFactor = null,
+    IOptions<EmailConfirmationSettings>? emailConfirmationSettings = null) : IAuthenticationService
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IAuthUser
 {
     /// <summary>
@@ -68,6 +91,18 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// point rather than a changed hook signature.
     /// </summary>
     private readonly SessionStampingTokenService _sessionStampingTokenService = new(tokenService);
+
+    /// <summary>
+    /// The second-factor method that satisfied THIS request's challenge, or null. Armed by
+    /// <see cref="LoginAsync"/> before the token is minted and carried over by
+    /// <see cref="RefreshTokenAsync"/> from the presented token, so a rotation does not silently drop
+    /// a step-up the user already performed.
+    /// </summary>
+    /// <remarks>
+    /// A plain field for the same reason the session arming is one: this service is scoped, resolved
+    /// per request, and one request issues one token pair.
+    /// </remarks>
+    private string? _multiFactorMethod;
 
     /// <summary>The unit of work (exposed for app-level workflows such as external login).</summary>
     protected IUnitOfWork UnitOfWork => unitOfWork;
@@ -173,6 +208,23 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure<AuthenticationResponse>(candidateResult.Errors);
         }
 
+        // Both gates below run AFTER the password check, for the same reason the app gate does: they
+        // return distinct, actionable errors ("confirm your address", "send a code"), and reaching
+        // them proves the caller owns the account, so neither is readable by anyone sweeping
+        // addresses.
+        var confirmationResult = CheckEmailConfirmed(untracked);
+        if (confirmationResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(confirmationResult.Errors);
+        }
+
+        var secondFactor = await ChallengeSecondFactorAsync(untracked.Id, request.TwoFactorCode, cancellationToken)
+            .ConfigureAwait(false);
+        if (secondFactor.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(secondFactor.Errors);
+        }
+
         // Step 2: Tracked re-fetch. Refresh tokens live in their own session rows, so this fetch is
         // purely about the instance the app's CreateAccessToken hook mints from (apps reach linked
         // aggregates and navigations through it), and the second lookup is what turns a race that
@@ -187,7 +239,15 @@ public abstract class AuthenticationServiceBase<TUser>(
         // Reset failed attempts and lockout on successful login.
         await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
-        return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        _multiFactorMethod = MultiFactorMethodFor(secondFactor.Value);
+        try
+        {
+            return await IssueTokensAsync(user, ipAddress, userAgent, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _multiFactorMethod = null;
+        }
     }
 
     /// <inheritdoc />
@@ -330,13 +390,26 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure<AuthenticationResponse>(rotated.Errors);
         }
 
-        // The successor session is a NEW row with a new id, so the access token handed back carries a
-        // new `sid` too: a client's current-device marker follows the rotation instead of pointing at
-        // the session the rotation just revoked.
-        return Result.Success(new AuthenticationResponse(
-            CreateAccessTokenForSession(user, rotated.Value!.SessionId),
-            rotated.Value.RefreshToken,
-            now.Add(AccessTokenLifetime)));
+        // The step-up the user already performed is carried across the rotation. The claim is read off
+        // the presented access token, whose SIGNATURE was validated above (only its lifetime was
+        // skipped), so this is the framework's own assertion coming back rather than caller input.
+        // Dropping it instead would quietly demote a signed-in session every fifteen minutes and make
+        // every IRequiresMfa use case unreachable without a fresh sign-in.
+        _multiFactorMethod = principal.FindMultiFactorMethod();
+        try
+        {
+            // The successor session is a NEW row with a new id, so the access token handed back carries a
+            // new `sid` too: a client's current-device marker follows the rotation instead of pointing at
+            // the session the rotation just revoked.
+            return Result.Success(new AuthenticationResponse(
+                CreateAccessTokenForSession(user, rotated.Value!.SessionId),
+                rotated.Value.RefreshToken,
+                now.Add(AccessTokenLifetime)));
+        }
+        finally
+        {
+            _multiFactorMethod = null;
+        }
     }
 
     /// <inheritdoc />
@@ -545,6 +618,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     protected virtual string CreateAccessTokenForSession(TUser user, Guid sessionId)
     {
         _sessionStampingTokenService.CurrentSessionId = sessionId;
+        _sessionStampingTokenService.CurrentMultiFactorMethod = _multiFactorMethod;
         try
         {
             return CreateAccessToken(user);
@@ -552,8 +626,66 @@ public abstract class AuthenticationServiceBase<TUser>(
         finally
         {
             _sessionStampingTokenService.CurrentSessionId = null;
+            _sessionStampingTokenService.CurrentMultiFactorMethod = null;
         }
     }
+
+    /// <summary>
+    /// The email-confirmation sign-in gate. Off unless the host both supplied
+    /// <see cref="EmailConfirmationSettings"/> with <c>RequireConfirmedEmail</c> set AND the app's
+    /// <c>User</c> implements <see cref="IEmailConfirmableUser"/>, so adopting the token workflow
+    /// without flipping the flag changes nothing about who can sign in.
+    /// </summary>
+    /// <param name="untrackedUser">The candidate whose password has just been proved.</param>
+    /// <returns>A success result, or the <c>Authentication.EmailNotConfirmed</c> failure.</returns>
+    protected virtual Result CheckEmailConfirmed(TUser untrackedUser)
+    {
+        if (emailConfirmationSettings?.Value.RequireConfirmedEmail != true)
+        {
+            return Result.Success();
+        }
+
+        return untrackedUser is IEmailConfirmableUser { IsEmailConfirmed: false }
+            ? Result.Failure(EmailConfirmationErrors.EmailNotConfirmed(nameof(LoginAsync)))
+            : Result.Success();
+    }
+
+    /// <summary>
+    /// Runs the second-factor challenge for a candidate whose password has just been proved.
+    /// </summary>
+    /// <remarks>
+    /// With no <see cref="ITwoFactorAuthenticator"/> injected there is no challenge and no extra
+    /// query: the method answers <see cref="TwoFactorOutcome.NotEnrolled"/> outright, which is what
+    /// keeps the feature free for an app that has not adopted it.
+    /// </remarks>
+    /// <param name="userId">The candidate account.</param>
+    /// <param name="code">The second-factor code the caller supplied, if any.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>How the challenge was satisfied, or the two-factor failure.</returns>
+    protected virtual Task<Result<TwoFactorOutcome>> ChallengeSecondFactorAsync(
+        UserIdentifierType userId,
+        string? code,
+        CancellationToken cancellationToken) =>
+        twoFactor is null
+            ? Task.FromResult(Result.Success(TwoFactorOutcome.NotEnrolled))
+            : twoFactor.ChallengeAsync(userId, code, cancellationToken);
+
+    /// <summary>
+    /// Maps a challenge outcome onto the value the <c>mfa</c> claim carries, or null when nothing was
+    /// challenged and the token should carry no claim at all.
+    /// </summary>
+    /// <param name="outcome">How the challenge was satisfied.</param>
+    /// <returns>The claim value, or <see langword="null"/>.</returns>
+    private static string? MultiFactorMethodFor(TwoFactorOutcome outcome) => outcome switch
+    {
+        TwoFactorOutcome.VerifiedTotp => AuthClaimTypes.MultiFactorMethodTotp,
+        TwoFactorOutcome.VerifiedRecoveryCode => AuthClaimTypes.MultiFactorMethodRecoveryCode,
+        TwoFactorOutcome.NotEnrolled => null,
+
+        // An outcome this method has not been taught about must not silently mint an mfa claim: an
+        // unknown value means the enum grew and this map did not.
+        _ => null,
+    };
 
     /// <summary>Extra login gate on the untracked candidate (default: none). Failures are returned as-is.</summary>
     protected virtual Task<Result> ValidateLoginCandidateAsync(TUser untrackedUser, CancellationToken cancellationToken) =>
@@ -806,6 +938,12 @@ public abstract class AuthenticationServiceBase<TUser>(
         /// <summary>The session whose id is stamped on the next token, or null to mint unchanged.</summary>
         public Guid? CurrentSessionId { get; set; }
 
+        /// <summary>
+        /// The <c>mfa</c> claim value stamped on the next token, or null to mint no such claim. Set
+        /// only when a second factor really verified for this request.
+        /// </summary>
+        public string? CurrentMultiFactorMethod { get; set; }
+
         /// <inheritdoc />
         public TimeSpan AccessTokenLifetime => inner.AccessTokenLifetime;
 
@@ -820,15 +958,24 @@ public abstract class AuthenticationServiceBase<TUser>(
             string fullName,
             IEnumerable<Claim>? additionalClaims = null)
         {
-            if (CurrentSessionId is not { } sessionId)
+            if (CurrentSessionId is null && CurrentMultiFactorMethod is null)
             {
                 return inner.GenerateAccessToken(userId, email, role, fullName, additionalClaims);
             }
 
-            // "D" (lower-case, hyphenated) is the canonical Guid text form, and the one
-            // ClaimsPrincipalExtensions.FindSessionId parses back.
             List<Claim> claims = additionalClaims is null ? [] : [.. additionalClaims];
-            claims.Add(new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D", CultureInfo.InvariantCulture)));
+
+            if (CurrentSessionId is { } sessionId)
+            {
+                // "D" (lower-case, hyphenated) is the canonical Guid text form, and the one
+                // ClaimsPrincipalExtensions.FindSessionId parses back.
+                claims.Add(new Claim(AuthClaimTypes.SessionId, sessionId.ToString("D", CultureInfo.InvariantCulture)));
+            }
+
+            if (CurrentMultiFactorMethod is { } method)
+            {
+                claims.Add(new Claim(AuthClaimTypes.MultiFactor, method));
+            }
 
             return inner.GenerateAccessToken(userId, email, role, fullName, claims);
         }

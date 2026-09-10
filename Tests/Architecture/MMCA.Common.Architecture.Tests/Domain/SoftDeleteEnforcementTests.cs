@@ -35,6 +35,13 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // soft-deleting them would grow the table the job exists to bound.
         "MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService",
 
+        // Internal-command queue retention: the outbox precedent applied to deferred work. A queue
+        // row is execution plumbing with a bounded lifetime whose payload can carry personal data,
+        // so the sweep IS the retention policy. The operator-facing purge sits beside it and erases
+        // only rows that already completed.
+        "MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandCleanupService",
+        "MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration",
+
         // Audit-trail retention. Erasing past the retention window IS the requirement (keeping an
         // audit row forever is the privacy defect, not the safeguard).
         "MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailCleanupJob",
@@ -44,5 +51,11 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // the IP and user-agent of a device. Flagging it instead of erasing it would keep a growing
         // record of a data subject's devices past any use for it (ADR-005).
         "MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService",
+
+        // Stored permission grants. A grant row is a set membership, not an aggregate: revoking a
+        // capability means the row is not there, and a soft-deleted grant would have to be filtered
+        // out of every authorization read forever, with a missed filter failing OPEN. It carries no
+        // audit or erasure obligation either: its whole content is a role name and a permission name.
+        "MMCA.Common.Infrastructure.Persistence.Auth.EFPermissionGrantStore",
     ];
 }

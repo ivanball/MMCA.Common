@@ -12,6 +12,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Auth.Administration;
+using MMCA.Common.Application.Auth.EmailConfirmation;
+using MMCA.Common.Application.Auth.Permissions;
+using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -21,6 +25,8 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Auth;
+using MMCA.Common.Infrastructure.Auth.Administration;
+using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Infrastructure.Concurrency;
 using MMCA.Common.Infrastructure.Configuration;
@@ -43,6 +49,7 @@ using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Scheduling;
 using MMCA.Common.Infrastructure.Storage;
+using MMCA.Common.Shared.Auth.Permissions;
 using MMCA.Common.Shared.Identifiers;
 using StackExchange.Redis;
 
@@ -223,7 +230,18 @@ public static class DependencyInjection
             services.TryAddScoped<Application.Interfaces.Infrastructure.Persistence.IOutboxAdministration,
                 Persistence.Outbox.Administration.OutboxAdministration>();
 
+            AddInternalCommands(services, configuration);
+
             services.AddServices();
+
+            // The impersonation decorator must wrap whatever ICurrentUserService is registered, so it
+            // goes on AFTER AddServices() has run its TryAddScoped. Guarded so a host whose modules
+            // each call AddInfrastructure does not stack one wrapper per call.
+            if (!services.Any(d => d.ServiceType == typeof(Context.ScopedUserOverride)))
+            {
+                services.AddScoped<Context.ScopedUserOverride>();
+                services.TryDecorate<ICurrentUserService, Context.ImpersonatingCurrentUserService>();
+            }
 
             return services;
         }
@@ -421,6 +439,126 @@ public static class DependencyInjection
             // would race for the same job rows.
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHostedService, Scheduling.ScheduledJobRunner>());
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the opt-in time-based second factor: the TOTP service, the sign-in challenge, and
+        /// the <c>Authentication:TwoFactor</c> settings.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the settings section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// It deliberately registers no <c>ITwoFactorStore</c>: the account's secret and recovery
+        /// hashes belong to the app's own <c>User</c> aggregate, so the consumer supplies that one
+        /// implementation. Everything else (code generation, verification, recovery codes, the
+        /// challenge that spends one) ships here.
+        /// </para>
+        /// <para>
+        /// Calling this alone changes nothing about sign-in. The challenge only runs once the app's
+        /// <c>AuthenticationService</c> passes the resolved <c>ITwoFactorAuthenticator</c> to its base
+        /// constructor, which is the second, explicit half of adopting the feature.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddTwoFactorAuthentication(IConfiguration configuration)
+        {
+            services.AddOptions<TwoFactorSettings>()
+                .Bind(configuration.GetSection(TwoFactorSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // Singleton: the service holds only bound settings and is pure over its arguments.
+            services.TryAddSingleton<ITwoFactorService, TotpTwoFactorService>();
+
+            // Scoped, because the store it challenges through shares the request's unit of work.
+            services.TryAddScoped<ITwoFactorAuthenticator, TwoFactorAuthenticator>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the opt-in email-confirmation token service and its
+        /// <c>Authentication:EmailConfirmation</c> settings.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the settings section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// Registering it does not gate sign-in. Tokens are issued and redeemed as soon as the app
+        /// wires the handler bases, and an unconfirmed account is only refused once
+        /// <c>Authentication:EmailConfirmation:RequireConfirmedEmail</c> is set AND the app's
+        /// <c>User</c> implements <c>IEmailConfirmableUser</c>.
+        /// </remarks>
+        public IServiceCollection AddEmailConfirmation(IConfiguration configuration)
+        {
+            services.AddOptions<EmailConfirmationSettings>()
+                .Bind(configuration.GetSection(EmailConfirmationSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            // Scoped, matching the password-reset token service it shares a cache and a shape with.
+            services.TryAddScoped<IEmailConfirmationTokenService, EmailConfirmationTokenService>();
+
+            return services;
+        }
+
+        /// <summary>
+        /// Registers the opt-in stored permission grants: the EF grant store, the cached snapshot and
+        /// its refresh service, the role-administration service, and the
+        /// <see cref="LayeredPermissionRegistry"/> decorator over whatever
+        /// <see cref="IPermissionRegistry"/> the host already registered.
+        /// </summary>
+        /// <param name="configuration">Application configuration for binding the settings section.</param>
+        /// <returns>The service collection for chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// <b>Call it AFTER <c>AddAuthorizationPolicies()</c> (or <c>AddPermissions(...)</c>)</b>. It
+        /// decorates the registered registry, so a host that calls it first has nothing to decorate;
+        /// in that case an empty compiled registry is registered here so the stored layer still works
+        /// on its own rather than failing at resolve time.
+        /// </para>
+        /// <para>
+        /// The consumer's Identity context still has to map the table with
+        /// <c>ApplyPermissionGrantConfiguration</c>. Nothing here maps it, for the reason the refresh
+        /// sessions are not mapped everywhere: one database owns the rows.
+        /// </para>
+        /// </remarks>
+        public IServiceCollection AddStoredPermissionGrants(IConfiguration configuration)
+        {
+            services.AddOptions<PermissionGrantSettings>()
+                .Bind(configuration.GetSection(PermissionGrantSettings.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.TryAddScoped<IPermissionGrantStore, Persistence.Auth.EFPermissionGrantStore>();
+
+            // One instance is both the read model and the invalidator, so an edit and the reads that
+            // follow it cannot end up looking at two different snapshots.
+            services.TryAddSingleton<Persistence.Auth.PermissionGrantCache>();
+            services.TryAddSingleton<IPermissionGrantCache>(sp =>
+                sp.GetRequiredService<Persistence.Auth.PermissionGrantCache>());
+            services.TryAddSingleton<IPermissionGrantCacheInvalidator>(sp =>
+                sp.GetRequiredService<Persistence.Auth.PermissionGrantCache>());
+
+            services.TryAddScoped<IRoleAdministrationService, StoredPermissionRoleAdministrationService>();
+
+            // TryAddEnumerable, not AddHostedService: two modules calling this must not start two
+            // refresh loops in one process.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, Persistence.Auth.PermissionGrantRefreshService>());
+
+            // TryDecorate returns false when nothing registered IPermissionRegistry yet. Registering an
+            // empty compiled layer and decorating that keeps the call order-tolerant: the host's own
+            // registry, added later with TryAdd, would simply lose to this one, so the fallback is
+            // reported rather than silently swallowing the host's grants.
+            if (!services.TryDecorate<IPermissionRegistry, LayeredPermissionRegistry>())
+            {
+                services.AddSingleton<IPermissionRegistry>(
+                    sp => new LayeredPermissionRegistry(
+                        new PermissionRegistry(new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase)),
+                        sp.GetRequiredService<IPermissionGrantCache>()));
+            }
 
             return services;
         }
@@ -905,6 +1043,61 @@ public static class DependencyInjection
 
             builder.AddStandardResilienceHandler();
             return builder;
+        }
+    }
+
+    /// <summary>
+    /// Registers the internal-command job queue: settings, the scheduler, the operator surface,
+    /// and (when <c>InternalCommands:Enabled</c>) the processor and its retention sweep.
+    /// </summary>
+    /// <remarks>
+    /// The posture mirrors the outbox deliberately. The <c>InternalCommands</c> table is mapped
+    /// into every relational source unconditionally, so the flag never implies a migration; it
+    /// only decides whether THIS host drains the queue. A host with the flag off still writes
+    /// rows through <c>IInternalCommandScheduler</c>, and a startup notice says so once.
+    /// </remarks>
+    /// <param name="services">The collection being configured.</param>
+    /// <param name="configuration">Application configuration for binding the section.</param>
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AddInfrastructure inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static void AddInternalCommands(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<Persistence.InternalCommands.Administration.InternalCommandsSettings>()
+            .Bind(configuration.GetSection(
+                Persistence.InternalCommands.Administration.InternalCommandsSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.TryAddSingleton<
+            Persistence.InternalCommands.Processing.IInternalCommandSignal,
+            Persistence.InternalCommands.Processing.InternalCommandSignal>();
+
+        // Scoped: the row is written on the SAME context factory the calling handler's
+        // repositories use, which is what makes scheduling atomic with the aggregate change.
+        services.TryAddScoped<Application.InternalCommands.IInternalCommandScheduler,
+            Persistence.InternalCommands.InternalCommandScheduler>();
+
+        // Operator surface over the same queue tables: count, list, requeue and purge. Scoped,
+        // because it creates one child scope per data source it visits and holds no state.
+        services.TryAddScoped<Application.InternalCommands.IInternalCommandAdministration,
+            Persistence.InternalCommands.Administration.InternalCommandAdministration>();
+
+        var internalCommandSettings = configuration
+            .GetSection(Persistence.InternalCommands.Administration.InternalCommandsSettings.SectionName)
+            .Get<Persistence.InternalCommands.Administration.InternalCommandsSettings>()
+            ?? new Persistence.InternalCommands.Administration.InternalCommandsSettings();
+
+        if (internalCommandSettings.Enabled)
+        {
+            services.AddHostedService<Persistence.InternalCommands.Processing.InternalCommandProcessor>();
+            services.AddHostedService<Persistence.InternalCommands.Administration.InternalCommandCleanupService>();
+        }
+        else
+        {
+            services.AddHostedService<
+                Persistence.InternalCommands.Administration.InternalCommandsDisabledNoticeService>();
         }
     }
 
