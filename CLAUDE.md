@@ -120,6 +120,8 @@ An optional `Profiling` decorator pair is registered by a separate opt-in `AddAp
 
 Identifier aliases: `GlobalUsings.IdentifierType.cs` (Domain) and `GlobalUsings.NotificationIdentifierType.cs` (Shared) are linked into all projects via `Directory.Build.props`; to add a solution-wide alias, create the `GlobalUsings.*.cs` file and a matching `<Compile Include ... Link=... />` block there.
 
+Strongly typed identifiers are the opt-in alternative to those aliases (ADR-115), on the same footing smart enumerations sit on: a wrapper is two lines (`public readonly record struct OrderId(int Value) : IStronglyTypedId<OrderId, int>` plus its `From` factory), and `services.AddStronglyTypedIds(typeof(OrderId).Assembly)` is the whole opt-in, wiring JSON, MVC route/query binding, filtering, OpenAPI and EF in one call. The EF half is a **pre-convention type mapping registered once on `ApplicationDbContext.ConfigureConventions`**, so every wrapped property maps to its primitive on all four engines and a wrapped `int` key keeps its store-generated strategy. The aliases remain the default and nothing in `Source/` adopts a wrapper.
+
 ### Multi-Database Strategy (database per microservice)
 
 Every entity resolves to a physical data source: a `DataSourceKey(Engine, Name)` pair. Engine comes from the configuration base class (`EntityTypeConfigurationSQLServer/PostgreSQL/Cosmos/Sqlite`); the database name resolves `[UseDatabase("X")]` -> module name from the entity namespace -> `"Default"`.

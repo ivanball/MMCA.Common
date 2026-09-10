@@ -52,6 +52,9 @@ internal static class TestPhysicalDataSources
     public static PhysicalDataSource SqlServer(string connectionString = "Server=test;Database=test") =>
         new(DataSourceKey.Default(DataSource.SQLServer), connectionString, null, "AtlDevCon");
 
+    public static PhysicalDataSource Postgres(string connectionString = "Host=localhost;Database=test;Username=app") =>
+        new(DataSourceKey.Default(DataSource.PostgreSQL), connectionString, null, "AtlDevCon");
+
     public static PhysicalDataSource Cosmos(string connectionString = "AccountEndpoint=https://test;AccountKey=dGVzdA==") =>
         new(DataSourceKey.Default(DataSource.CosmosDB), connectionString, null, "AtlDevCon");
 }

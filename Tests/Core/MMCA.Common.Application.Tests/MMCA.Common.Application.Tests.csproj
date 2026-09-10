@@ -10,6 +10,10 @@
     <PackageReference Include="Moq" />
     <!-- FakeTimeProvider pins the generated-on stamp in the data-subject export tests. -->
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <!-- Source generator only (PrivateAssets), for the test mapper that proves a strongly typed
+         identifier maps in both directions (ADR-115): wrapper-to-wrapper, which needs no help, and
+         wrapper-to-primitive through StronglyTypedIdMappings. -->
+    <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
     <PackageReference Include="coverlet.collector">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
