@@ -1,5 +1,9 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
+using MMCA.Common.Aspire.Gateway;
 using MMCA.Common.Aspire.Security;
+using MMCA.Common.UI.Common.Settings;
 using MMCA.Common.UI.Services;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Web.Security;
@@ -46,5 +50,68 @@ public static class DependencyInjection
         /// </summary>
         public IServiceCollection AddCommonWebFormFactor() =>
             services.AddSingleton<IFormFactor, WebFormFactor>();
+
+        /// <summary>
+        /// Presents the deployment's trusted-internal-caller secret on this host's server-to-server
+        /// calls to the gateway, so they take the gateway's no-limiter partition instead of
+        /// collapsing every visitor into one client-IP window. Composes
+        /// <see cref="TrustedCallerHandler"/> onto every <c>HttpClient</c> the host creates; the
+        /// handler stamps only requests whose origin is the gateway.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <b>Opt in.</b> The whole feature is off unless
+        /// <c>GatewayRateLimiting:TrustedCallerSecret</c> is set: with no secret (the local and CI
+        /// default) this registers nothing at all and every call stays rate limited exactly as it is
+        /// today. The gateway must be configured from the SAME
+        /// <c>GatewayRateLimiting</c> section, so one section configures both ends
+        /// (<see cref="GatewayRateLimitingSettings"/>).
+        /// </para>
+        /// <para>
+        /// <b>Server only.</b> The secret exempts a component this deployment ships, never a
+        /// visitor's browser, so it must never reach client-side code: supply it from a secret store
+        /// or the environment (<c>GatewayRateLimiting__TrustedCallerSecret</c>) to the SSR host
+        /// alone, never to the WebAssembly client or a rendered page.
+        /// </para>
+        /// <para>
+        /// <b>Why every client.</b> The call that suffers most from the per-IP collapse is the
+        /// cookie-session token refresh, whose client the framework creates under a name a host has
+        /// no supported way to reach, so there is no single name to configure. The gateway origin
+        /// comes from <c>Api:ApiEndpoint</c> (<see cref="ApiSettings"/>), the endpoint this host's
+        /// server-side calls already target; a host whose endpoint is missing or not an absolute URI
+        /// registers nothing.
+        /// </para>
+        /// </remarks>
+        /// <param name="configuration">The host's configuration.</param>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddTrustedCallerHeader(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            var settings = configuration.GetSection(GatewayRateLimitingSettings.SectionName)
+                .Get<GatewayRateLimitingSettings>() ?? new GatewayRateLimitingSettings();
+
+            // ApiEndpoint, not WasmApiEndpoint: this stamps SERVER-side calls, and the browser-facing
+            // endpoint the CSP pins is a different question.
+            var apiEndpoint = configuration.GetSection(ApiSettings.SectionName)
+                .Get<ApiSettings>()?.ApiEndpoint;
+
+            if (string.IsNullOrWhiteSpace(settings.TrustedCallerSecret)
+                || string.IsNullOrWhiteSpace(settings.TrustedCallerHeaderName)
+                || !Uri.TryCreate(apiEndpoint, UriKind.Absolute, out var gatewayOrigin))
+            {
+                return services;
+            }
+
+            var headerName = settings.TrustedCallerHeaderName;
+            var secret = settings.TrustedCallerSecret;
+
+            services.ConfigureAll<HttpClientFactoryOptions>(options =>
+                options.HttpMessageHandlerBuilderActions.Add(builder =>
+                    builder.AdditionalHandlers.Add(
+                        new TrustedCallerHandler(headerName, secret, gatewayOrigin))));
+
+            return services;
+        }
     }
 }
