@@ -35,6 +35,13 @@ public sealed class SoftDeleteEnforcementTests : SoftDeleteEnforcementTestsBase
         // soft-deleting them would grow the table the job exists to bound.
         "MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxCleanupService",
 
+        // Internal-command queue retention: the outbox precedent applied to deferred work. A queue
+        // row is execution plumbing with a bounded lifetime whose payload can carry personal data,
+        // so the sweep IS the retention policy. The operator-facing purge sits beside it and erases
+        // only rows that already completed.
+        "MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandCleanupService",
+        "MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration",
+
         // Audit-trail retention. Erasing past the retention window IS the requirement (keeping an
         // audit row forever is the privacy defect, not the safeguard).
         "MMCA.Common.Infrastructure.Persistence.AuditTrail.AuditTrailCleanupJob",

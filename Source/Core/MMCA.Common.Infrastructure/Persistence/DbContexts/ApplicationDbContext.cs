@@ -16,6 +16,7 @@ using MMCA.Common.Infrastructure.Persistence.Conventions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Scheduling;
 using StackExchange.Profiling;
@@ -348,6 +349,9 @@ public abstract class ApplicationDbContext(
         // Configure the inbox table for consumer-side idempotency (used when MessageBus:EnableInbox).
         ConfigureInbox(modelBuilder);
 
+        // Configure the internal-command job queue (one table per relational source, like the outbox).
+        ConfigureInternalCommands(modelBuilder, physicalDataSource.Key.Engine);
+
         // Configure the recurring job table (used when Scheduler:Enabled, Default source only).
         ConfigureScheduler(modelBuilder);
 
@@ -640,6 +644,63 @@ public abstract class ApplicationDbContext(
             // so the age-based purge had nothing to seek and scanned the table.
             entity.HasIndex(e => e.ProcessedOn)
                   .HasDatabaseName("IX_InboxMessages_ProcessedOn");
+        });
+
+    /// <summary>
+    /// Configures the <see cref="InternalCommandMessage"/> entity (the deferred-work job queue).
+    /// Mapped into EVERY relational source, exactly like the outbox and for the same reason: a
+    /// scheduled row must commit in the same transaction as the aggregate change that asked for it,
+    /// and a transaction does not span databases. Ungated, so flipping
+    /// <c>InternalCommands:Enabled</c> is never a migration. Cosmos DB never reaches this method (it
+    /// overrides <see cref="OnModelCreating"/>).
+    /// </summary>
+    /// <param name="modelBuilder">The model builder to configure.</param>
+    /// <param name="engine">
+    /// The engine of the model being built. Only the three partial-index predicates below depend on
+    /// it, and only for identifier quoting; the columns, indexes and index names are the same on
+    /// every relational engine (the outbox's treatment, ADR-113).
+    /// </param>
+    private static void ConfigureInternalCommands(ModelBuilder modelBuilder, DataSource engine) =>
+        modelBuilder.Entity<InternalCommandMessage>(entity =>
+        {
+            var processedOn = QuoteColumn(engine, nameof(InternalCommandMessage.ProcessedOn));
+            var deadLetteredOn = QuoteColumn(engine, nameof(InternalCommandMessage.DeadLetteredOn));
+
+            entity.ToTable("InternalCommands", "dbo");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CommandType).IsRequired().HasMaxLength(500).IsUnicode(false);
+            entity.Property(e => e.Payload).IsRequired();
+            entity.Property(e => e.LastError).HasMaxLength(4000);
+            entity.Property(e => e.CorrelationId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
+            entity.Property(e => e.UserRoles).HasMaxLength(512).IsUnicode(false);
+            entity.Property(e => e.TenantId).HasMaxLength(TenantIdMaxLength).IsUnicode(false);
+
+            // Claim path (InternalCommandProcessor): runnable rows, earliest scheduled first. The
+            // poll also filters on Attempts and ClaimedUntil, so both ride along as included columns;
+            // without them every candidate row the index returns costs a key lookup back into the
+            // table. Filtered to rows that are neither completed nor abandoned, which is the only
+            // partition the poll ever reads.
+            IncludeColumns(
+                    engine,
+                    entity.HasIndex(e => e.ScheduledOn),
+                    nameof(InternalCommandMessage.Attempts),
+                    nameof(InternalCommandMessage.ClaimedUntil))
+                  .HasFilter($"{processedOn} IS NULL AND {deadLetteredOn} IS NULL")
+                  .HasDatabaseName("IX_InternalCommands_Pending");
+
+            // Retention path (InternalCommandCleanupService): completed rows older than the cutoff.
+            // The pending index above deliberately excludes exactly these rows, so without this one
+            // the six-hourly sweep scans the largest partition of the table.
+            entity.HasIndex(e => e.ProcessedOn)
+                  .HasFilter($"{processedOn} IS NOT NULL")
+                  .HasDatabaseName("IX_InternalCommands_Processed");
+
+            // Operator path (InternalCommandAdministration) plus the dead-letter retention sweep.
+            entity.HasIndex(e => e.DeadLetteredOn)
+                  .HasFilter($"{deadLetteredOn} IS NOT NULL")
+                  .HasDatabaseName("IX_InternalCommands_DeadLettered");
         });
 
     /// <summary>

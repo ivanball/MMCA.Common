@@ -103,6 +103,89 @@ MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PostgreSQL
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PostgreSQLMigrationsAssembly.init -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext
 MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext.PostgreSQLDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration.CountPendingAsync(string? dataSource, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<long>!>!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration.InternalCommandAdministration(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings!>! options, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.IInternalCommandSignal! signal, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration.ListDeadLettersAsync(string? dataSource, int skip, int take, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter!>!>!>!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration.PurgeProcessedAsync(string? dataSource, System.TimeSpan olderThan, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandAdministration.RequeueAsync(string? dataSource, System.Collections.Generic.IReadOnlyCollection<System.Guid>? ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandCleanupService
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandCleanupService.InternalCommandCleanupService(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandCleanupService!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings!>! options, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.BatchSize.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.BatchSize.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.CleanupIntervalHours.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.CleanupIntervalHours.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.DatabaseName.get -> string!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.DatabaseName.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.DataSource.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.DataSource.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.DeadLetterRetentionDays.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.DeadLetterRetentionDays.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.Enabled.get -> bool
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.Enabled.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.InternalCommandsSettings() -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.LeaseSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.LeaseSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.MaxAttempts.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.MaxAttempts.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.MaxRetryBackoffSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.MaxRetryBackoffSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.PollingIntervalSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.PollingIntervalSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.ProcessingDelaySeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.ProcessingDelaySeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.RetentionDays.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.RetentionDays.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.RetryBackoffBaseSeconds.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.RetryBackoffBaseSeconds.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.Attempts.get -> int
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.Attempts.set -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ClaimedBy.get -> System.Guid?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ClaimedBy.set -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ClaimedUntil.get -> System.DateTime?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ClaimedUntil.set -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.CommandType.get -> string!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.CommandType.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.CorrelationId.get -> string?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.CorrelationId.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.CreatedOn.get -> System.DateTime
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.CreatedOn.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.DeadLetteredOn.get -> System.DateTime?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.DeadLetteredOn.set -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.Id.get -> System.Guid
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.Id.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.InternalCommandMessage() -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.LastError.get -> string?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.LastError.set -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.Payload.get -> string!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.Payload.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ProcessedOn.get -> System.DateTime?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ProcessedOn.set -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ScheduledOn.get -> System.DateTime
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.ScheduledOn.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.SpanId.get -> string?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.SpanId.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TenantId.get -> string?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TenantId.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceId.get -> string?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.TraceId.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserId.get -> int?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserId.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserRoles.get -> string?
+MMCA.Common.Infrastructure.Persistence.InternalCommands.InternalCommandMessage.UserRoles.init -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.IInternalCommandSignal
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.IInternalCommandSignal.Signal() -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.IInternalCommandSignal.WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandProcessor
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandProcessor.InternalCommandProcessor(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory! scopeFactory, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandProcessor!>! logger, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings!>! options, MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.IInternalCommandSignal! signal, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>? tenancyOptions = null) -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandSignal
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandSignal.Dispose() -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandSignal.InternalCommandSignal() -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandSignal.Signal() -> void
+MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing.InternalCommandSignal.WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.Tenancy.TenantDataSourceOverrideSettings.PostgreSQLConnectionString.get -> string?
 MMCA.Common.Infrastructure.Persistence.Tenancy.TenantDataSourceOverrideSettings.PostgreSQLConnectionString.init -> void
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreatePostgreSQL(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!
+static readonly MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.SectionName -> string!
