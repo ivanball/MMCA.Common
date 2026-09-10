@@ -878,3 +878,62 @@ jobs:
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
         run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release
+
+  apphost-testing:
+    name: AppHost integration (Aspire.Hosting.Testing)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # ADVISORY, hence continue-on-error: this is the only tier that starts a real orchestrator, it is
+    # the slowest thing in the repo per assertion, and its failure modes on a shared runner are not
+    # yet proven. It reds the job for visibility without failing the run. Promote it out of
+    # continue-on-error once it has a green streak; delete it if it proves to be a flake generator.
+    #
+    # It closes the one layer nothing else executes: the AppHost wiring itself. The solution build
+    # never runs an AppHost, and every in-process test tier boots hosts directly through
+    # WebApplicationFactory, bypassing the orchestration, so a renamed resource, an unresolvable
+    # reference or a WaitFor cycle is invisible everywhere else.
+    #
+    # The sample AppHost declares ONE project resource and a SQLite file, so this needs no container
+    # runtime; the dev-certificate step below is here because a consumer stack with an https launch
+    # profile does, and this job is the template those consumers copy.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+          # Same cache posture and the same reasons as the redis-integration job above.
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Trust the ASP.NET Core HTTPS development certificate
+        # A documented precondition rather than a fix for this sample: a resource that launches with
+        # the https profile answers its health probe over TLS terminated by this certificate, and on
+        # a fresh runner every probe fails with UntrustedRoot, so the resource never turns healthy and
+        # every WaitFor edge into it waits out the budget. DeveloperCertificateAvailability detects
+        # that state and skips with a named reason; nothing in the framework installs a certificate on
+        # its own, which is why this is an explicit job step.
+        if: needs.changes.outputs.code == 'true'
+        run: dotnet dev-certs https --trust || dotnet dev-certs https
+
+      - name: Run AppHost integration tests
+        # Code-guarded like every other heavy job: a docs-only PR must not start an orchestrator. The
+        # JOB still runs (and posts its context) so the guard stays safe on docs-only PRs.
+        #
+        # MMCA_APPHOST_TESTS is the opt-in AppHostEnvironmentGate reads. Without it the whole
+        # collection skips with a named reason, which is exactly what happens on a developer machine
+        # and is why the unit loop never pays for an orchestrator. --minimum-expected-tests makes a
+        # silently skipped tier visible here rather than passing as a no-op.
+        if: needs.changes.outputs.code == 'true'
+        env:
+          MMCA_APPHOST_TESTS: '1'
+        # The three projects (test, sample AppHost, sample service) sit outside MMCA.Common.slnx, so
+        # this builds and runs by path, like redis-integration and postgresql-integration.
+        run: dotnet test Tests/Hosting/MMCA.Common.Testing.Aspire.AppHostTests/MMCA.Common.Testing.Aspire.AppHostTests.csproj -c Release --minimum-expected-tests 1

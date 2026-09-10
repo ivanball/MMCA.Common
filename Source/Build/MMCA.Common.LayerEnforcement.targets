@@ -122,4 +122,39 @@
            Text="Layer violation: MMCA.Common.UI.Web must not reference %(_ForbiddenUIWebRefs.Filename) directly. UI.Web bridges UI, API and Aspire only." />
   </Target>
 
+  <!-- Testing.Aspire: AppHost integration test infrastructure. It is allowed the Aspire hosting
+       PACKAGES (Aspire.Hosting + Aspire.Hosting.Testing, which is the AppHost-side application model
+       it reads) and MMCA.Common.Testing, whose JWT generator and polling helper it reuses instead of
+       restating. That one project reference is also its ceiling into Core: it may reach Application
+       and API only transitively, through what MMCA.Common.Testing already pulls. A DIRECT reference
+       to any core layer would let a test-infrastructure package become a backdoor around the layer
+       rules, so each one is named here.
+
+       MMCA.Common.Aspire (service defaults) is forbidden too, and that is deliberate rather than
+       incidental: the probe paths this package asserts are MIRRORED constants cross-asserted by a
+       unit test, precisely so an AppHost-tier package never drags the whole service-defaults graph
+       (Azure Monitor, OpenTelemetry, Key Vault) into a consumer's test project. -->
+  <Target Name="EnforceTestingAspireLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.Testing.Aspire'">
+    <ItemGroup>
+      <!-- DefiningProjectName pins this to references THIS csproj declares. By the time
+           ResolveProjectReferences runs, the SDK has folded the transitive closure into
+           @(ProjectReference) as well, and MMCA.Common.Testing legitimately brings API and
+           Application along that path. Judging the closure would forbid the very reference the rule
+           allows; judging the declaration is the rule as written. -->
+      <_ForbiddenTestingAspireRefs Include="@(ProjectReference)"
+        Condition="'%(ProjectReference.DefiningProjectName)' == '$(MSBuildProjectName)'
+               AND ($([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Grpc'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.UI'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Aspire')))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenTestingAspireRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.Testing.Aspire must not reference %(_ForbiddenTestingAspireRefs.Filename) directly. It depends on MMCA.Common.Testing plus the Aspire hosting packages only." />
+  </Target>
+
 </Project>

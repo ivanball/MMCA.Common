@@ -330,6 +330,15 @@
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
+    <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
+         boots a real AppHost in-process. Held at the SAME 13.5.3 as every other Aspire entry on
+         purpose: the testing host builds the application model the AppHost package produces, so a
+         version split between the two is a model mismatch rather than an upgrade. -->
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.3" />
+    <!-- Sample AppHost + sample service behind the apphost-testing CI tier only (the three projects
+         under Tests/Hosting that sit OUTSIDE MMCA.Common.slnx). Aspire.Hosting.AppHost brings the DCP
+         orchestrator the testing builder starts. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>

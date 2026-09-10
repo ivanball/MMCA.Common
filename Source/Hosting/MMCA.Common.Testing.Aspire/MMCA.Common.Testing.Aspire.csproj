@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.Testing.Aspire</PackageId>
+    <Description>MMCA framework AppHost integration test infrastructure: a collection fixture that boots a real Aspire AppHost, waits for per-resource health, and typed assertions for the framework wiring contracts (health, liveness, JWKS, h2c, data sources)</Description>
+    <!-- Relax the documentation analyzers for test infrastructure (same as Tests/**/*.cs in
+         .editorconfig), plus only the rules the code still triggers (kept minimal on purpose). -->
+    <NoWarn>$(NoWarn);SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;CA1054;CA2234</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MMCA.Common.Testing.Aspire.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" />
+    <!-- The AppHost-side application model (DistributedApplicationModel, ProjectResource,
+         ResourceNotificationService, HealthCheckAnnotation) the fixture reads to decide what to wait
+         for. Same 13.5.3 as every other Aspire pin. -->
+    <PackageReference Include="Aspire.Hosting" />
+    <!-- DistributedApplicationTestingBuilder, app.CreateHttpClient and app.GetConnectionStringAsync:
+         the whole reason this package exists. -->
+    <PackageReference Include="Aspire.Hosting.Testing" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- AppHostTestBase mints bearer tokens with MMCA.Common.Testing's JwtTokenGenerator and polls
+         with its TestPolling, rather than restating either here. That reference is also the layer
+         ceiling for this package: it reaches Core only through what MMCA.Common.Testing already
+         pulls, and adds no Core reference of its own. -->
+    <ProjectReference Include="..\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
