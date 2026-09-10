@@ -12,6 +12,9 @@
     <!-- WithDataSource wires a service to its own SqlServerDatabaseResource (database per
          microservice). This pulls in Aspire.Hosting.SqlServer for the resource type. -->
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <!-- WithPostgreSQLDataSource wires a service to its own PostgresDatabaseResource (ADR-113).
+         Pulls in Aspire.Hosting.PostgreSQL for the resource type. -->
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <!-- WithCosmosDataSource wires a service to an Azure Cosmos DB database resource (polyglot
          persistence). Pulls in Aspire.Hosting.Azure.CosmosDB for the resource type. -->
     <PackageReference Include="Aspire.Hosting.Azure.CosmosDB" />

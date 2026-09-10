@@ -24,6 +24,9 @@ public sealed class PhysicalDbContextFactory(
     private static readonly DbContextOptions<SQLServerDbContext> SqlServerOptions =
         new DbContextOptionsBuilder<SQLServerDbContext>().Options;
 
+    private static readonly DbContextOptions<PostgreSQLDbContext> PostgreSqlOptions =
+        new DbContextOptionsBuilder<PostgreSQLDbContext>().Options;
+
     private static readonly DbContextOptions<SqliteDbContext> SqliteOptions =
         new DbContextOptionsBuilder<SqliteDbContext>().Options;
 
@@ -41,6 +44,7 @@ public sealed class PhysicalDbContextFactory(
         return key.Engine switch
         {
             DataSource.SQLServer => new SQLServerDbContext(SqlServerOptions, serviceProvider, assemblyProvider, physical),
+            DataSource.PostgreSQL => new PostgreSQLDbContext(PostgreSqlOptions, serviceProvider, assemblyProvider, physical),
             DataSource.Sqlite => new SqliteDbContext(SqliteOptions, serviceProvider, assemblyProvider, physical),
             DataSource.CosmosDB => new CosmosDbContext(CosmosOptions, serviceProvider, assemblyProvider, physical),
             _ => throw new InvalidOperationException($"Invalid DataSource \"{key.Engine}\""),

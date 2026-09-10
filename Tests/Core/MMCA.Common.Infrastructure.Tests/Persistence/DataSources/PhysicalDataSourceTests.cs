@@ -77,6 +77,55 @@ public sealed class PhysicalDataSourceTests
         source.UsesMigrations.Should().BeFalse();
     }
 
+    // PostgreSQL follows the SQLite rule, not the SQL Server one: it ships with no host that already
+    // depends on being migrated, so a source that names no migrations assembly has nothing to apply
+    // and must be created outright rather than migrated into an empty schema.
+    [Fact]
+    public void UsesMigrations_PostgreSQLWithAMigrationsAssembly_IsTrue()
+    {
+        var source = new PhysicalDataSource(
+            new DataSourceKey(DataSource.PostgreSQL, "Tickets"),
+            "Host=localhost;Database=tickets;Username=app",
+            null,
+            string.Empty)
+        {
+            PostgreSQLMigrationsAssembly = "Tickets.Migrations.PostgreSQL",
+        };
+
+        source.UsesMigrations.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void UsesMigrations_PostgreSQLWithoutAMigrationsAssembly_IsFalse(string? migrationsAssembly)
+    {
+        var source = new PhysicalDataSource(
+            new DataSourceKey(DataSource.PostgreSQL, "Tickets"),
+            "Host=localhost;Database=tickets;Username=app",
+            null,
+            string.Empty)
+        {
+            PostgreSQLMigrationsAssembly = migrationsAssembly,
+        };
+
+        source.UsesMigrations.Should().BeFalse();
+    }
+
+    // The three migrations-assembly slots are kept apart precisely so a mixed-engine host cannot hand
+    // one engine's snapshot to another.
+    [Fact]
+    public void UsesMigrations_PostgreSQLCarryingOnlyTheSqlServerAssembly_IsFalse()
+    {
+        var source = new PhysicalDataSource(
+            new DataSourceKey(DataSource.PostgreSQL, "Tickets"),
+            "Host=localhost;Database=tickets;Username=app",
+            "Main.Migrations",
+            string.Empty);
+
+        source.UsesMigrations.Should().BeFalse();
+    }
+
     [Fact]
     public void UsesMigrations_Cosmos_IsFalse()
     {

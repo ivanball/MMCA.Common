@@ -12,7 +12,14 @@ public enum DataSource
     Sqlite,
 
     /// <summary>SQL Server (full relational JOIN support).</summary>
-    SQLServer
+    SQLServer,
+
+    /// <summary>
+    /// PostgreSQL (full relational JOIN support). Appended rather than inserted alphabetically:
+    /// the three members above are shipped public API with fixed ordinal values, and renumbering
+    /// them would break every consumer that persisted or serialized one.
+    /// </summary>
+    PostgreSQL
 }
 
 /// <summary>

@@ -14,15 +14,20 @@ namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 /// </summary>
 public sealed partial class DataSourceResolver : IDataSourceResolver
 {
-    private static readonly DataSource[] AllEngines = [DataSource.CosmosDB, DataSource.Sqlite, DataSource.SQLServer];
+    private static readonly DataSource[] AllEngines =
+        [DataSource.CosmosDB, DataSource.PostgreSQL, DataSource.Sqlite, DataSource.SQLServer];
 
     /// <summary>
     /// Engine preference used to pick the substitute engine for a request naming an engine the host
     /// does not configure. Relational first, because every table the framework owns (outbox, inbox,
-    /// scheduled jobs, audit trail, refresh sessions) is relational, and SQL Server ahead of SQLite
-    /// so a host that configures SQL Server at all keeps exactly the routing it had before.
+    /// scheduled jobs, audit trail, refresh sessions) is relational, and SQL Server ahead of the
+    /// others so a host that configures SQL Server at all keeps exactly the routing it had before.
+    /// PostgreSQL sits ahead of SQLite for the same reason SQL Server sits ahead of both: a host that
+    /// configures a server engine means it to serve the framework's own tables, and SQLite is the
+    /// lightweight fallback rather than the intended target.
     /// </summary>
-    private static readonly DataSource[] EnginePreference = [DataSource.SQLServer, DataSource.Sqlite, DataSource.CosmosDB];
+    private static readonly DataSource[] EnginePreference =
+        [DataSource.SQLServer, DataSource.PostgreSQL, DataSource.Sqlite, DataSource.CosmosDB];
 
     /// <summary>Per-engine map of logical name → physical key (collapse already applied).</summary>
     private readonly Dictionary<(DataSource Engine, string LogicalName), DataSourceKey> _logicalToPhysical = [];
@@ -204,10 +209,10 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         {
             return new DefaultSeed(
                 topLevel,
-                // The top-level migrations assembly is SQL Server's alone: ConnectionStrings carries
-                // no SQLite equivalent, and handing a SQLite Default source the SQL Server value in a
-                // mixed-engine host would scaffold the wrong schema.
-                engine == DataSource.SQLServer ? connectionStrings.SQLServerMigrationsAssembly : string.Empty,
+                // Each engine reads its OWN top-level migrations assembly: ConnectionStrings carries
+                // no SQLite equivalent, and handing a SQLite or PostgreSQL Default source the SQL
+                // Server value in a mixed-engine host would scaffold the wrong schema.
+                TopLevelMigrationsAssembly(engine, connectionStrings),
                 connectionStrings.CosmosDatabaseName);
         }
 
@@ -230,6 +235,23 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
                 CosmosDatabaseNameOf(candidates[0], connectionStrings))
             : new DefaultSeed(string.Empty, string.Empty, connectionStrings.CosmosDatabaseName);
     }
+
+    /// <summary>
+    /// The top-level migrations assembly that belongs to one engine. Only the two engines whose
+    /// <c>ConnectionStrings</c> section declares one have a value; SQLite and Cosmos have none, so a
+    /// mixed-engine host can never scaffold one engine's schema from another's snapshot.
+    /// </summary>
+    /// <param name="engine">The engine whose top-level value is being read.</param>
+    /// <param name="connectionStrings">The top-level connection strings.</param>
+    /// <returns>The declared assembly name, or an empty string.</returns>
+    private static string TopLevelMigrationsAssembly(DataSource engine, ConnectionStringSettings connectionStrings) => engine switch
+    {
+        DataSource.SQLServer => connectionStrings.SQLServerMigrationsAssembly,
+        DataSource.PostgreSQL => connectionStrings.PostgreSQLMigrationsAssembly,
+        DataSource.Sqlite => string.Empty,
+        DataSource.CosmosDB => string.Empty,
+        _ => string.Empty,
+    };
 
     /// <summary>The Cosmos database an entry uses: its own name, or the top-level one.</summary>
     private static string CosmosDatabaseNameOf(DataSourceEntrySettings entry, ConnectionStringSettings connectionStrings) =>
@@ -380,8 +402,9 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
 
     /// <summary>
     /// Places the resolved migrations assembly in the slot of the engine it belongs to. A physical
-    /// source is per-engine, so at most one of the two properties is ever populated; keeping them
-    /// apart is what stops a SQL Server assembly from being handed to <c>UseSqlite</c>.
+    /// source is per-engine, so at most one of the three properties is ever populated; keeping them
+    /// apart is what stops a SQL Server assembly from being handed to <c>UseSqlite</c> or
+    /// <c>UseNpgsql</c>.
     /// </summary>
     private static PhysicalDataSource BuildPhysicalSource(
         DataSource engine,
@@ -396,6 +419,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
             cosmosDatabaseName)
         {
             SqliteMigrationsAssembly = engine == DataSource.Sqlite ? migrationsAssembly : null,
+            PostgreSQLMigrationsAssembly = engine == DataSource.PostgreSQL ? migrationsAssembly : null,
         };
 
     /// <summary>
@@ -405,6 +429,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     private static string GetMigrationsAssembly(DataSource engine, DataSourceEntrySettings entry) => engine switch
     {
         DataSource.CosmosDB => string.Empty,
+        DataSource.PostgreSQL => entry.PostgreSQLMigrationsAssembly,
         DataSource.Sqlite => entry.SqliteMigrationsAssembly,
         DataSource.SQLServer => entry.SQLServerMigrationsAssembly,
         _ => string.Empty,
@@ -427,7 +452,14 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         var distinct = explicitValues.Select(v => v.Assembly).Distinct(StringComparer.Ordinal).ToList();
         if (distinct.Count > 1)
         {
-            var settingName = engine == DataSource.Sqlite ? "SqliteMigrationsAssembly" : "SQLServerMigrationsAssembly";
+            var settingName = engine switch
+            {
+                DataSource.Sqlite => "SqliteMigrationsAssembly",
+                DataSource.PostgreSQL => "PostgreSQLMigrationsAssembly",
+                DataSource.SQLServer => "SQLServerMigrationsAssembly",
+                DataSource.CosmosDB => "SQLServerMigrationsAssembly",
+                _ => "SQLServerMigrationsAssembly",
+            };
             var declarations = string.Join("; ", explicitValues.Select(v => $"\"{v.LogicalName}\" → \"{v.Assembly}\""));
             throw new InvalidOperationException(
                 $"Data sources collapsing to the same physical database \"{key}\" declare conflicting " +
@@ -451,6 +483,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     private static string GetConnectionString(DataSource engine, ConnectionStringSettings settings) => engine switch
     {
         DataSource.CosmosDB => settings.CosmosConnectionString,
+        DataSource.PostgreSQL => settings.PostgreSQLConnectionString,
         DataSource.Sqlite => settings.SqliteConnectionString,
         DataSource.SQLServer => settings.SQLServerConnectionString,
         _ => throw new InvalidOperationException($"DataSource \"{engine}\" not implemented."),
@@ -459,6 +492,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     private static string GetConnectionString(DataSource engine, DataSourceEntrySettings entry) => engine switch
     {
         DataSource.CosmosDB => entry.CosmosConnectionString,
+        DataSource.PostgreSQL => entry.PostgreSQLConnectionString,
         DataSource.Sqlite => entry.SqliteConnectionString,
         DataSource.SQLServer => entry.SQLServerConnectionString,
         _ => throw new InvalidOperationException($"DataSource \"{engine}\" not implemented."),

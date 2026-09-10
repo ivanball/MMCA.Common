@@ -8,6 +8,10 @@
     <!-- Docker-gated Redis tier (outside the .slnx): asserts the storage format against a real
          server, which the mocked-IDistributedCache unit tier cannot see. -->
     <InternalsVisibleTo Include="MMCA.Common.Infrastructure.Redis.Tests" />
+    <!-- Docker-gated PostgreSQL tier (outside the .slnx): asserts the DDL and the predicates the
+         Npgsql provider actually emits against a real server, which no in-memory or SQLite
+         substitute can reject. -->
+    <InternalsVisibleTo Include="MMCA.Common.Infrastructure.PostgreSQL.Tests" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -27,6 +31,10 @@
          SQLitePCLRaw.bundle_e_sqlite3 note in Directory.Packages.props. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <!-- PostgreSQL provider behind PostgreSQLDbContext (ADR-113). Referenced unconditionally like
+         every other engine: a host that configures no PostgreSQL connection string never builds the
+         context, so the only cost is one entry in the consumer's lock file. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

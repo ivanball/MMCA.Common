@@ -294,14 +294,16 @@ public static class Extensions
         }
 
         /// <summary>
-        /// Conditionally registers health checks for infrastructure dependencies (SQL Server, SQLite,
+        /// Conditionally registers health checks for infrastructure dependencies (SQL Server,
+        /// PostgreSQL, SQLite,
         /// Redis, RabbitMQ) when their connection strings are configured. These are tagged as readiness
         /// checks only — they appear in <c>/health</c> but not <c>/alive</c>, so a transient
         /// infrastructure outage does not kill the process.
         /// </summary>
         /// <param name="requireDatabase">
         /// When <see langword="true"/>, the host must have SOME relational database configured
-        /// (a <c>SQLServerConnectionString</c> or <c>SqliteConnectionString</c>, at the top level or
+        /// (a <c>SQLServerConnectionString</c>, <c>PostgreSQLConnectionString</c> or
+        /// <c>SqliteConnectionString</c>, at the top level or
         /// on a named <c>DataSources</c> entry) or startup throws.
         /// <para>
         /// This asymmetry with the Redis/RabbitMQ branches is DELIBERATE, not an oversight. Redis and
@@ -538,9 +540,10 @@ public static class Extensions
 
     /// <summary>
     /// Registers the relational database checks and enforces the "the database must be there" rule
-    /// when the caller asks for it. Both engines are checked because a host picks one from
-    /// configuration: SQL Server for a deployed service, SQLite for a small single-node application.
-    /// Neither check is tagged optional, so both gate readiness (see the tagging note on the Redis
+    /// when the caller asks for it. Every relational engine is checked because a host picks one from
+    /// configuration: SQL Server or PostgreSQL for a deployed service, SQLite for a small
+    /// single-node application.
+    /// No check is tagged optional, so they all gate readiness (see the tagging note on the Redis
     /// branch for why that distinction matters). A host that owns several databases gets one check
     /// per database: readiness means every database it serves from is reachable.
     /// </summary>
@@ -554,18 +557,25 @@ public static class Extensions
         bool requireDatabase)
     {
         var sqlSources = RelationalSources(configuration, "SQLServerConnectionString");
+        var postgresSources = RelationalSources(configuration, "PostgreSQLConnectionString");
         var sqliteSources = RelationalSources(configuration, "SqliteConnectionString");
 
-        if (requireDatabase && sqlSources.Count == 0 && sqliteSources.Count == 0)
+        if (requireDatabase && sqlSources.Count == 0 && postgresSources.Count == 0 && sqliteSources.Count == 0)
         {
             throw new InvalidOperationException(
-                "No database connection string is configured: set a SQLServerConnectionString or SqliteConnectionString, "
+                "No database connection string is configured: set a SQLServerConnectionString, "
+                + "PostgreSQLConnectionString or SqliteConnectionString, "
                 + "either at the top level under ConnectionStrings or on a named DataSources entry.");
         }
 
         foreach (var (name, connectionString) in sqlSources)
         {
             healthChecks.AddSqlServer(connectionString, name: name);
+        }
+
+        foreach (var (name, connectionString) in postgresSources)
+        {
+            healthChecks.AddNpgSql(connectionString, name: name);
         }
 
         foreach (var (name, connectionString) in sqliteSources)
@@ -586,14 +596,19 @@ public static class Extensions
     /// <returns>The databases to check, deduplicated by connection string.</returns>
     /// <remarks>
     /// The FIRST database keeps the historical check name for its engine (<c>sqlserver</c> /
-    /// <c>sqlite</c>), and only a host that genuinely has a second, different database gets the
+    /// <c>postgresql</c> / <c>sqlite</c>), and only a host that genuinely has a second, different database gets the
     /// <c>{engine}:{source}</c> form. Deduplication is by connection string, so the entries that
     /// collapse onto one physical database (the resolver's single-database collapse) contribute one
     /// check, not one per logical name.
     /// </remarks>
     private static List<(string Name, string ConnectionString)> RelationalSources(IConfiguration configuration, string key)
     {
-        var engineName = string.Equals(key, "SqliteConnectionString", StringComparison.Ordinal) ? "sqlite" : "sqlserver";
+        var engineName = key switch
+        {
+            "SqliteConnectionString" => "sqlite",
+            "PostgreSQLConnectionString" => "postgresql",
+            _ => "sqlserver",
+        };
 
         var declared = new List<(string Source, string ConnectionString)>();
 

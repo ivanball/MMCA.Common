@@ -43,7 +43,7 @@ public sealed class EntityDataSourceRegistry(
             ? key
             : throw new InvalidOperationException(
                 $"DataSource not defined for {entityFullName}. " +
-                "Ensure an entity type configuration (EntityTypeConfigurationSQLServer/Cosmos/Sqlite) exists " +
+                "Ensure an entity type configuration (EntityTypeConfigurationSQLServer/PostgreSQL/Cosmos/Sqlite) exists " +
                 "for the entity in a discovered configuration assembly.");
 
     /// <inheritdoc />

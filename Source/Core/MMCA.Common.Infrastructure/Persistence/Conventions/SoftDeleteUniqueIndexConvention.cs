@@ -25,8 +25,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Conventions;
 /// <c>HasSoftDeleteFilter</c>) is left exactly as it is.
 /// </para>
 /// <para>
-/// The convention covers SQL Server and SQLite (both support partial/filtered indexes); it is a
-/// no-op for Cosmos.
+/// The convention covers SQL Server, PostgreSQL and SQLite (all three support partial/filtered
+/// indexes); it is a no-op for Cosmos.
 /// </para>
 /// </summary>
 /// <param name="engine">The engine of the context whose model is being built (filter syntax differs per provider).</param>

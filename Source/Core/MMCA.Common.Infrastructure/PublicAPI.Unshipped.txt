@@ -99,7 +99,24 @@ MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.De
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddStoredPermissionGrants(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTwoFactorAuthentication(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions
+MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>
+MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>.EntityTypeConfigurationPostgreSQL() -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLConnectionString.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLConnectionString.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLMigrationsAssembly.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLConnectionString.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLConnectionString.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLMigrationsAssembly.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PostgreSQLMigrationsAssembly.get -> string?
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PostgreSQLMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext
+MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext.PostgreSQLDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.Tenancy.TenantDataSourceOverrideSettings.PostgreSQLConnectionString.get -> string?
+MMCA.Common.Infrastructure.Persistence.Tenancy.TenantDataSourceOverrideSettings.PostgreSQLConnectionString.init -> void
 static MMCA.Common.Infrastructure.DependencyInjection.AddEmailConfirmation(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddStoredPermissionGrants(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.DependencyInjection.AddTwoFactorAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.ApplyPermissionGrantConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
+static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreatePostgreSQL(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!

@@ -487,6 +487,133 @@ public sealed class DataSourceResolverTests
             .Should().Be(DataSourceKey.Default(DataSource.Sqlite));
     }
 
+    // ── PostgreSQL ──
+    private const string DefaultPostgres = "Host=localhost;Database=Main;Username=app";
+    private const string OtherPostgres = "Host=localhost;Database=Other;Username=app";
+
+    [Fact]
+    public void GetPhysical_PostgreSQLTopLevelConnection_BecomesTheDefaultSource()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            PostgreSQLConnectionString = DefaultPostgres,
+            PostgreSQLMigrationsAssembly = "App.Migrations.PostgreSQL",
+        });
+
+        var physical = sut.GetPhysical(DataSourceKey.Default(DataSource.PostgreSQL));
+
+        physical.ConnectionString.Should().Be(DefaultPostgres);
+        physical.PostgreSQLMigrationsAssembly.Should().Be("App.Migrations.PostgreSQL");
+        physical.SqlServerMigrationsAssembly.Should().BeNull("the slots are per engine, never shared");
+        physical.SqliteMigrationsAssembly.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetPhysical_NamedPostgreSQLEntry_CarriesItsOwnMigrationsAssembly()
+    {
+        var sut = CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Tickets"] = new()
+                {
+                    PostgreSQLConnectionString = OtherPostgres,
+                    PostgreSQLMigrationsAssembly = "Tickets.Migrations.PostgreSQL",
+                },
+            },
+            new ConnectionStringSettings { PostgreSQLConnectionString = DefaultPostgres });
+
+        var key = sut.ResolveLogical(DataSource.PostgreSQL, "Tickets");
+
+        key.Should().Be(new DataSourceKey(DataSource.PostgreSQL, "Tickets"));
+        sut.GetPhysical(key).PostgreSQLMigrationsAssembly.Should().Be("Tickets.Migrations.PostgreSQL");
+    }
+
+    // The top-level migrations assembly is read per engine, so a mixed host cannot scaffold its
+    // PostgreSQL Default source from the SQL Server snapshot.
+    [Fact]
+    public void GetPhysical_MixedHost_KeepsEachEnginesTopLevelMigrationsAssemblyToItself()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            SQLServerConnectionString = DefaultSql,
+            SQLServerMigrationsAssembly = "App.Migrations.SqlServer",
+            PostgreSQLConnectionString = DefaultPostgres,
+            PostgreSQLMigrationsAssembly = "App.Migrations.PostgreSQL",
+        });
+
+        sut.GetPhysical(DataSourceKey.Default(DataSource.SQLServer))
+            .SqlServerMigrationsAssembly.Should().Be("App.Migrations.SqlServer");
+        sut.GetPhysical(DataSourceKey.Default(DataSource.PostgreSQL))
+            .PostgreSQLMigrationsAssembly.Should().Be("App.Migrations.PostgreSQL");
+    }
+
+    [Fact]
+    public void ResolveLogical_PostgreSQLOnlyHost_ServesTheFrameworksSqlServerDefaultFromPostgreSQL()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            PostgreSQLConnectionString = DefaultPostgres,
+        });
+
+        // Outbox:DataSource, Scheduler:DataSource and AuditTrail:DataSource all default to SQL
+        // Server; on a host that configures only PostgreSQL they must be served from it, or the
+        // framework's own tables resolve to a source with an empty connection string.
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.PostgreSQL));
+    }
+
+    [Fact]
+    public void ResolveLogical_SqlServerHost_IsUnaffectedByPostgreSQLBeingConfigured()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            SQLServerConnectionString = DefaultSql,
+            PostgreSQLConnectionString = DefaultPostgres,
+        });
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.SQLServer));
+        sut.ResolveLogical(DataSource.PostgreSQL, DataSourceKey.DefaultName)
+            .Should().Be(DataSourceKey.Default(DataSource.PostgreSQL));
+    }
+
+    [Fact]
+    public void ResolveLogical_PostgreSQLIsPreferredOverSqliteAsTheSubstitute()
+    {
+        var sut = CreateSut(connectionStrings: new ConnectionStringSettings
+        {
+            PostgreSQLConnectionString = DefaultPostgres,
+            SqliteConnectionString = DefaultSqlite,
+        });
+
+        sut.ResolveLogical(DataSource.SQLServer, DataSourceKey.DefaultName)
+            .Should().Be(
+                DataSourceKey.Default(DataSource.PostgreSQL),
+                "a host that configures a server engine means it to carry the framework's own tables");
+    }
+
+    [Fact]
+    public void BuildingTheResolver_ConflictingPostgreSQLMigrationsAssemblies_Throws()
+    {
+        var act = () => CreateSut(
+            new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Alpha"] = new()
+                {
+                    PostgreSQLConnectionString = OtherPostgres,
+                    PostgreSQLMigrationsAssembly = "Alpha.Migrations",
+                },
+                ["Beta"] = new()
+                {
+                    PostgreSQLConnectionString = OtherPostgres,
+                    PostgreSQLMigrationsAssembly = "Beta.Migrations",
+                },
+            },
+            new ConnectionStringSettings { PostgreSQLConnectionString = DefaultPostgres });
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*PostgreSQLMigrationsAssembly*");
+    }
+
     private static DataSourceResolver CreateSut(
         Dictionary<string, DataSourceEntrySettings>? sources = null,
         ConnectionStringSettings? connectionStrings = null) =>

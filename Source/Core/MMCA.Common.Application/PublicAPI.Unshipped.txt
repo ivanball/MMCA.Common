@@ -520,6 +520,7 @@ MMCA.Common.Application.Auth.Validation.SetUserRolesRequestValidator
 MMCA.Common.Application.Auth.Validation.SetUserRolesRequestValidator.SetUserRolesRequestValidator() -> void
 MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator
 MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator.TwoFactorCodeRequestValidator() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource.PostgreSQL = 3 -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
 MMCA.Common.Application.UseCases.Markers.IRequiresMfa
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.ConfirmEmailHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService! tokenService, Microsoft.Extensions.Logging.ILogger! logger) -> void
