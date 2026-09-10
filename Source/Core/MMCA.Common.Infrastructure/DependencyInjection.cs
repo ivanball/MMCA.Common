@@ -43,6 +43,7 @@ using MMCA.Common.Infrastructure.Persistence.Repositories.Factory;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Scheduling;
 using MMCA.Common.Infrastructure.Storage;
+using MMCA.Common.Shared.Identifiers;
 using StackExchange.Redis;
 
 namespace MMCA.Common.Infrastructure;
@@ -609,6 +610,36 @@ public static class DependencyInjection
                     o.AdditionalAssemblies.Add(assembly);
                 }
             });
+            return services;
+        }
+
+        /// <summary>
+        /// Opts this host into strongly typed identifiers (ADR-115). Scans
+        /// <paramref name="identifierAssemblies"/> for every
+        /// <c>IStronglyTypedId&lt;TSelf, TValue&gt;</c> implementation and does two things with the
+        /// result: registers a <see cref="StronglyTypedIdRegistry"/> singleton, which
+        /// <c>ApplicationDbContext.ConfigureConventions</c> turns into a pre-convention EF mapping so
+        /// every wrapped property persists as its primitive on every engine, and registers a
+        /// <see cref="System.ComponentModel.TypeConverter"/> per identifier so MVC binds
+        /// <c>GET /orders/42</c> and <c>?filters[Id].value=42</c> against a wrapped column.
+        /// <para>
+        /// Calling it is the whole opt-in. A host that does not call it keeps the primitive
+        /// identifier aliases (ADR-048/ADR-085) and nothing in the framework changes shape.
+        /// </para>
+        /// </summary>
+        /// <param name="identifierAssemblies">The assemblies declaring the wrapper structs (typically each module's Shared assembly).</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddStronglyTypedIds(params Assembly[] identifierAssemblies)
+        {
+            ArgumentNullException.ThrowIfNull(identifierAssemblies);
+
+            var registry = new StronglyTypedIdRegistry(identifierAssemblies);
+
+            foreach (var identifierType in registry.IdentifierTypes)
+                StronglyTypedIdTypeConverters.Register(identifierType);
+
+            services.TryAddSingleton(registry);
+
             return services;
         }
 

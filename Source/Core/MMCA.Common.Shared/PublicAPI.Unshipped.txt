@@ -116,3 +116,37 @@ MMCA.Common.Shared.Notifications.NotificationPermissions
 const MMCA.Common.Shared.Notifications.NotificationPermissions.Manage = "notifications:manage" -> string!
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetRoleValues(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Collections.Generic.IEnumerable<string!>!
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasRole(this System.Security.Claims.ClaimsPrincipal? principal, string! role) -> bool
+MMCA.Common.Shared.Identifiers.IStronglyTypedId<TSelf, TValue>
+MMCA.Common.Shared.Identifiers.IStronglyTypedId<TSelf, TValue>.From(TValue value) -> TSelf
+MMCA.Common.Shared.Identifiers.IStronglyTypedId<TSelf, TValue>.Value.get -> TValue
+MMCA.Common.Shared.Identifiers.StronglyTypedId
+MMCA.Common.Shared.Identifiers.StronglyTypedIdJsonConverterFactory
+MMCA.Common.Shared.Identifiers.StronglyTypedIdJsonConverterFactory.StronglyTypedIdJsonConverterFactory() -> void
+MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>
+MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.StronglyTypedIdTypeConverter() -> void
+MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters
+override MMCA.Common.Shared.Identifiers.StronglyTypedIdJsonConverterFactory.CanConvert(System.Type! typeToConvert) -> bool
+override MMCA.Common.Shared.Identifiers.StronglyTypedIdJsonConverterFactory.CreateConverter(System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> System.Text.Json.Serialization.JsonConverter?
+override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.CanConvertFrom(System.ComponentModel.ITypeDescriptorContext? context, System.Type! sourceType) -> bool
+override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.CanConvertTo(System.ComponentModel.ITypeDescriptorContext? context, System.Type? destinationType) -> bool
+override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.ConvertFrom(System.ComponentModel.ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value) -> object?
+override MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverter<TSelf, TValue>.ConvertTo(System.ComponentModel.ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value, System.Type? destinationType) -> object?
+static MMCA.Common.Shared.Identifiers.StronglyTypedId.CanParseValues<TValue>() -> bool
+static MMCA.Common.Shared.Identifiers.StronglyTypedId.GetValueType(System.Type! type) -> System.Type?
+static MMCA.Common.Shared.Identifiers.StronglyTypedId.IsStronglyTypedId(System.Type! type) -> bool
+static MMCA.Common.Shared.Identifiers.StronglyTypedId.Parse<TSelf, TValue>(string! s, System.IFormatProvider? provider) -> TSelf
+static MMCA.Common.Shared.Identifiers.StronglyTypedId.TryDescribe(System.Type! type, out System.Type? identifierType, out System.Type? valueType) -> bool
+static MMCA.Common.Shared.Identifiers.StronglyTypedId.TryParse<TSelf, TValue>(string? s, System.IFormatProvider? provider, out TSelf result) -> bool
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.GetIdentifierTypes(System.Reflection.Assembly! assembly) -> System.Collections.Generic.IEnumerable<System.Type!>!
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.Register(System.Type! identifierType) -> void
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdTypeConverters.RegisterAll(params System.Reflection.Assembly![]! assemblies) -> int
+MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry
+MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry.Describe() -> System.Collections.Generic.IEnumerable<(System.Type! IdentifierType, System.Type! ValueType)>!
+MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry.IdentifierTypes.get -> System.Collections.Generic.IReadOnlyList<System.Type!>!
+MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry.StronglyTypedIdRegistry(params System.Reflection.Assembly![]! assemblies) -> void
+MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry.StronglyTypedIdRegistry(System.Collections.Generic.IEnumerable<System.Type!>! identifierTypes) -> void
+MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToIdentifier(TValue value) -> TSelf
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableIdentifier(TValue? value) -> TSelf?
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToNullableValue(TSelf? identifier) -> TValue?
+static MMCA.Common.Shared.Identifiers.StronglyTypedIdMappings<TSelf, TValue>.ToValue(TSelf identifier) -> TValue

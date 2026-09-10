@@ -386,10 +386,25 @@ public static class QueryFilterService
         return current;
     }
 
-    private static IFilterStrategy? ResolveStrategy(Type propertyType) =>
-        propertyType == typeof(string)
-            ? StringStrategy
-            : Strategies.GetValueOrDefault(propertyType);
+    /// <summary>
+    /// Resolves the strategy for a filter value type: the dedicated string instance, an explicitly
+    /// registered strategy, or, for a strongly typed identifier column (ADR-115), a strategy built
+    /// on first use and memoized beside the built-ins. The identifier fallback is what lets a
+    /// consumer adopt a wrapper without calling <see cref="RegisterStrategy"/> once per identifier;
+    /// it is bounded by the number of CLR types the model declares, not by client input.
+    /// </summary>
+    private static IFilterStrategy? ResolveStrategy(Type propertyType)
+    {
+        if (propertyType == typeof(string))
+            return StringStrategy;
+
+        if (Strategies.TryGetValue(propertyType, out var registered))
+            return registered;
+
+        return StronglyTypedIdFilterStrategy.TryCreate(propertyType, out var identifierStrategy)
+            ? Strategies.GetOrAdd(propertyType, identifierStrategy)
+            : null;
+    }
 
     private static void ValidateOperatorSupported(
         IFilterStrategy strategy,

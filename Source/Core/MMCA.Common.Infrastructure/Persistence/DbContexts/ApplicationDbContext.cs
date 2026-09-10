@@ -18,6 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Shared.Identifiers;
 using StackExchange.Profiling;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -323,6 +324,15 @@ public abstract class ApplicationDbContext(
         // after module configurations have declared their indexes), so a soft-deleted row does
         // not block re-creating the "same" record. Hand-authored index filters are respected.
         configurationBuilder.Conventions.Add(_ => new SoftDeleteUniqueIndexConvention(DataSourceKey.Engine));
+
+        // Strongly typed identifiers (ADR-115), opt in. A host that calls AddStronglyTypedIds
+        // registers the registry, and every wrapper it declares maps to the primitive it wraps, on
+        // every engine, because this runs on the one base context. Absent the service this is a
+        // no-op, which is the default posture: the primitive identifier aliases stay the identifier
+        // model and no existing entity changes.
+        var identifiers = serviceProvider.GetService<StronglyTypedIdRegistry>();
+        if (identifiers is not null)
+            StronglyTypedIdModelConfiguration.Apply(configurationBuilder, identifiers);
     }
 
     public override DbSet<TEntity> Set<TEntity>()

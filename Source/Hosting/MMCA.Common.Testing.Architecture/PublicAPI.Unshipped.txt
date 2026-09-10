@@ -103,3 +103,8 @@ MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.UndecoratedAllowList
 MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.UndecoratedEndpoints() -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.EndpointsWithoutAuthorizationAttribute.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.AnonymousEndpointTestsBase.RequireExplicitAuthorizationDecision.get -> bool
+abstract MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase
+MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIds_ShouldBe_ReadonlyRecordStructs() -> void
+MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIdTestsBase() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.StronglyTypedIdsAreReadonlyRecordStructs(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
