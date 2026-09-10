@@ -38,4 +38,30 @@ internal static partial class UserUseCaseLog
     // address exists, and the log must not become the enumeration oracle the responses are not.
     [LoggerMessage(Level = LogLevel.Information, Message = "Password reset request not actioned ({Reason})")]
     internal static partial void PasswordResetRejected(ILogger logger, string reason);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email confirmation requested for user {UserId}; confirmation email sent")]
+    internal static partial void EmailConfirmationRequested(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Email confirmation could not be sent for user {UserId}; the issued token stays valid")]
+    internal static partial void EmailConfirmationEmailFailed(ILogger logger, Exception exception, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email address confirmed for user {UserId}")]
+    internal static partial void EmailConfirmed(ILogger logger, UserIdentifierType userId);
+
+    // No address and no account id, for the reason the password-reset rejection carries neither: the
+    // confirmation endpoints answer identically whether or not the address exists.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email confirmation request not actioned ({Reason})")]
+    internal static partial void EmailConfirmationRejected(ILogger logger, string reason);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor enrollment started for user {UserId}")]
+    internal static partial void TwoFactorEnrollmentStarted(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor authentication enabled for user {UserId}")]
+    internal static partial void TwoFactorEnabled(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor authentication disabled for user {UserId}")]
+    internal static partial void TwoFactorDisabled(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor recovery codes regenerated for user {UserId}")]
+    internal static partial void TwoFactorRecoveryCodesRegenerated(ILogger logger, UserIdentifierType userId);
 }
