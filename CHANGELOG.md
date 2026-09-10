@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.190.0] - 2026-09-10
+
 ### Added
 
 - **Strongly typed identifiers, opt in** (ADR-115). `IStronglyTypedId<TSelf, TValue>` in
@@ -139,6 +141,9 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   the tier against an in-repo sample AppHost with `MMCA_APPHOST_TESTS=1`. The sample AppHost, its
   sample service and the AppHost-backed test project sit outside `MMCA.Common.slnx`, so the
   solution-wide unit loop neither builds nor discovers them.
+- Consumer step for the stored permission grants: `EFPermissionGrantStore` hard-deletes a revoked grant, so a
+  consumer that runs the shared `SoftDeleteEnforcementTests` adds that type to its `AllowedHardDeleteTypes`
+  when it takes this release (Common's own allowlist already carries it).
 
 ## [1.189.0] - 2026-09-08
 
