@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 *REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.AuthenticationValidators! validators) -> void
 *REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.IssueTokensAsync(TUser! user, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 *REMOVED*MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
@@ -388,6 +388,7 @@ virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO,
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector.IsConcurrencyConflict(System.Exception! exception) -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.TouchConcurrencyToken(TEntity! entity) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource.PostgreSQL = 3 -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
 MMCA.Common.Application.InternalCommands.IInternalCommand
 MMCA.Common.Application.InternalCommands.IInternalCommandAdministration
 MMCA.Common.Application.InternalCommands.IInternalCommandAdministration.CountPendingAsync(string? dataSource, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<long>!>!

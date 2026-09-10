@@ -843,3 +843,38 @@ jobs:
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like ui-e2e does.
         run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release
+
+  postgresql-integration:
+    name: PostgreSQL integration (Testcontainers)
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The PostgreSQL provider is the one place where the SQL the framework EMITS matters, and a model
+    # assertion cannot express it: a partial-index predicate written the SQL Server way
+    # ([ProcessedOn] IS NULL), a soft-delete predicate comparing a boolean to 0, and a DateTime whose
+    # Kind is not UTC all build a perfectly valid EF model and are rejected by the server. This tier
+    # runs the shipped PostgreSQLDbContext against a real PostgreSQL. Ubuntu runners ship a Docker
+    # daemon, so Testcontainers works with no extra setup.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+          # Same cache posture and the same reasons as the redis-integration job above.
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Run PostgreSQL integration tests
+        # Code-guarded like every other heavy job: a docs-only PR must not pull a PostgreSQL image and
+        # start a container. The JOB still runs (and posts its context green) so adding this check to
+        # branch protection stays safe on docs-only PRs, matching the pattern the other jobs use.
+        if: needs.changes.outputs.code == 'true'
+        # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
+        # loop must not require), so build/run this project directly by path, like redis-integration.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release

@@ -56,6 +56,31 @@ public sealed class InternalCommandModelTests
             context.Model.FindEntityType(typeof(OutboxMessage))!.GetSchema());
     }
 
+    // PostgreSQL rejects [Bracketed] identifiers outright, so a partial-index filter that kept the
+    // SQL Server spelling would fail at CREATE INDEX rather than at model build. The queue table
+    // goes through the same QuoteColumn helper the outbox uses (ADR-113).
+    [Fact]
+    public void PostgreSQLModel_QuotesTheQueueIndexPredicatesForPostgreSQL()
+    {
+        using var context = ModelTestContext.Create("QueueModel", DataSource.PostgreSQL);
+
+        QueueFilters(context).Should().BeEquivalentTo(
+            "\"ProcessedOn\" IS NULL AND \"DeadLetteredOn\" IS NULL",
+            "\"ProcessedOn\" IS NOT NULL",
+            "\"DeadLetteredOn\" IS NOT NULL");
+    }
+
+    [Fact]
+    public void SqlServerModel_KeepsTheBracketedQueueIndexPredicates()
+    {
+        using var context = ModelTestContext.Create("QueueModel", DataSource.SQLServer);
+
+        QueueFilters(context).Should().BeEquivalentTo(
+            "[ProcessedOn] IS NULL AND [DeadLetteredOn] IS NULL",
+            "[ProcessedOn] IS NOT NULL",
+            "[DeadLetteredOn] IS NOT NULL");
+    }
+
     [Fact]
     public void Model_CarriesThePollRetentionAndDeadLetterIndexes()
     {
@@ -82,10 +107,24 @@ public sealed class InternalCommandModelTests
             .Should().BeEmpty("framework bookkeeping rows are neither soft-deletable nor tenant-owned");
     }
 
+    /// <summary>The partial-index predicates the queue table declares, in declaration order.</summary>
+    private static List<string?> QueueFilters(ApplicationDbContext context) =>
+        [.. context.Model.FindEntityType(typeof(InternalCommandMessage))!
+            .GetIndexes()
+            .Select(index => index.GetFilter())
+            .Where(filter => filter is not null)];
+
     /// <summary>
     /// A context that runs the real <see cref="ApplicationDbContext.OnModelCreating"/> against a
-    /// configurable source name, so the assertions above are about the production mapping.
+    /// configurable source name and engine, so the assertions above are about the production mapping.
     /// </summary>
+    /// <remarks>
+    /// The engine comes from the <see cref="DataSourceKey"/>, which is exactly what
+    /// <c>ConfigureInternalCommands</c> branches on, while the provider stays SQLite so no server is
+    /// needed. Index-include annotations are provider-prefixed and ignored by other providers, so
+    /// carrying a PostgreSQL one on a SQLite-built model changes nothing about what is asserted. The
+    /// DDL those predicates produce against a real server is proven by the Testcontainers tier.
+    /// </remarks>
     private sealed class ModelTestContext : ApplicationDbContext
     {
         private ModelTestContext(
@@ -96,7 +135,7 @@ public sealed class InternalCommandModelTests
         {
         }
 
-        public static ModelTestContext Create(string sourceName)
+        public static ModelTestContext Create(string sourceName, DataSource engine = DataSource.Sqlite)
         {
             var services = new ServiceCollection();
             services.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
@@ -112,7 +151,7 @@ public sealed class InternalCommandModelTests
                 .Options;
 
             var physical = new PhysicalDataSource(
-                new DataSourceKey(DataSource.Sqlite, sourceName), "DataSource=:memory:", null, "Test");
+                new DataSourceKey(engine, sourceName), "DataSource=:memory:", null, "Test");
 
             return new ModelTestContext(options, services.BuildServiceProvider(), physical);
         }

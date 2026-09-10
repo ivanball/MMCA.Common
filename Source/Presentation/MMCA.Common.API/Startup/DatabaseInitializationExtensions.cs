@@ -57,18 +57,18 @@ public static class DatabaseInitializationExtensions
 
             var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
 
-            // Cosmos and SQLite sources are optional: integration tests may omit their connection
-            // strings. A Cosmos source has no EF Core migrations pipeline at all, and neither does a
-            // SQLite source with no migrations assembly configured, so both are created via
-            // EnsureCreated up front, independent of the migration-oriented DatabaseInitStrategy
-            // below. This is the ONLY path that creates them; without it such a source in use is
-            // never created and the first repository call fails.
+            // Cosmos, PostgreSQL and SQLite sources are optional: integration tests may omit their
+            // connection strings. A Cosmos source has no EF Core migrations pipeline at all, and
+            // neither does a PostgreSQL or SQLite source with no migrations assembly configured, so
+            // all three are created via EnsureCreated up front, independent of the migration-oriented
+            // DatabaseInitStrategy below. This is the ONLY path that creates them; without it such a
+            // source in use is never created and the first repository call fails.
             //
-            // A SQLite source WITH a migrations assembly is deliberately excluded here: EnsureCreated
-            // writes the tables without an __EFMigrationsHistory row, after which every migration is
-            // both pending and un-appliable (its CREATE TABLE hits an existing table).
+            // A PostgreSQL or SQLite source WITH a migrations assembly is deliberately excluded here:
+            // EnsureCreated writes the tables without an __EFMigrationsHistory row, after which every
+            // migration is both pending and un-appliable (its CREATE TABLE hits an existing table).
             foreach (var migrationlessKey in sourcesInUse
-                .Where(k => k.Engine is DataSource.CosmosDB or DataSource.Sqlite))
+                .Where(k => k.Engine is DataSource.CosmosDB or DataSource.PostgreSQL or DataSource.Sqlite))
             {
                 var physical = resolver.GetPhysical(migrationlessKey);
 

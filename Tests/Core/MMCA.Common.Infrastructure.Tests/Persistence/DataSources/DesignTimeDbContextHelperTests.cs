@@ -166,6 +166,57 @@ public sealed class DesignTimeDbContextHelperTests
         context.DataSourceKey.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
     }
 
+    // ── PostgreSQL design time ──
+    // The entry point a PostgreSQL-backed application scaffolds through; without it such an app has
+    // no way to run `dotnet ef` against the framework's context at all.
+    [Fact]
+    public void CreatePostgreSQL_NamedSource_BuildsThePostgreSQLContextForThatSource()
+    {
+        using var context = DesignTimeDbContextHelper.CreatePostgreSQL(
+            ["--datasource", "DesignPostgres"],
+            ConfigurePostgreSQLOptions);
+
+        context.DataSourceKey.Should().Be(new DataSourceKey(DataSource.PostgreSQL, "DesignPostgres"));
+        context.Model.FindEntityType(typeof(DesignPostgreSQLEntity)).Should().NotBeNull();
+        context.Model.FindEntityType(typeof(DesignSqliteEntity)).Should().BeNull(
+            "each engine's model contains only the entities that route to it");
+    }
+
+    [Fact]
+    public void CreatePostgreSQL_MigrationsAssembly_ReachesTheEfOptions()
+    {
+        using var context = DesignTimeDbContextHelper.CreatePostgreSQL(
+            ["--datasource", "DesignPostgres"],
+            ConfigurePostgreSQLOptions);
+
+        RelationalOptionsExtension.Extract(context.GetService<IDbContextOptions>())
+            .MigrationsAssembly.Should().Be(
+                "Design.PostgreSQL.Migrations",
+                "a setting that never reaches UseNpgsql leaves EF looking for migrations next to the framework context");
+    }
+
+    [Fact]
+    public void CreatePostgreSQL_NoArgument_TargetsDefaultSource()
+    {
+        using var context = DesignTimeDbContextHelper.CreatePostgreSQL([], ConfigurePostgreSQLOptions);
+
+        context.DataSourceKey.Should().Be(DataSourceKey.Default(DataSource.PostgreSQL));
+    }
+
+    private static void ConfigurePostgreSQLOptions(DesignTimeDbContextOptions options)
+    {
+        options.ConnectionStrings = new ConnectionStringSettings
+        {
+            PostgreSQLConnectionString = "Host=design;Database=main;Username=app",
+        };
+        options.DataSources["DesignPostgres"] = new DataSourceEntrySettings
+        {
+            PostgreSQLConnectionString = "Host=design;Database=postgres;Username=app",
+            PostgreSQLMigrationsAssembly = "Design.PostgreSQL.Migrations",
+        };
+        options.AddConfigurationAssembly(typeof(DesignTimeDbContextHelperTests).Assembly);
+    }
+
     private static void ConfigureSqliteOptions(DesignTimeDbContextOptions options)
     {
         options.ConnectionStrings = new ConnectionStringSettings
@@ -246,6 +297,12 @@ public sealed class DesignTimeDbContextHelperTests
         public string Name { get; set; } = string.Empty;
     }
 
+    /// <summary>The PostgreSQL-engine counterpart, mapped only into the PostgreSQL design-time context.</summary>
+    public sealed class DesignPostgreSQLEntity : AuditableAggregateRootEntity<int>
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
     [UseDatabase("DesignAlpha")]
     private sealed class DesignAlphaEntityConfiguration : EntityTypeConfigurationSQLServer<DesignAlphaEntity, int>;
 
@@ -254,4 +311,7 @@ public sealed class DesignTimeDbContextHelperTests
 
     [UseDatabase("DesignSqlite")]
     private sealed class DesignSqliteEntityConfiguration : EntityTypeConfigurationSqlite<DesignSqliteEntity, int>;
+
+    [UseDatabase("DesignPostgres")]
+    private sealed class DesignPostgreSQLEntityConfiguration : EntityTypeConfigurationPostgreSQL<DesignPostgreSQLEntity, int>;
 }

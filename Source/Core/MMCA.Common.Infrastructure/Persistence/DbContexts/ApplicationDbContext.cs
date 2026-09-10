@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
@@ -23,7 +24,7 @@ using StackExchange.Profiling;
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 /// <summary>
-/// Base DbContext shared by all data-source-specific contexts (SQL Server, Cosmos, SQLite).
+/// Base DbContext shared by all data-source-specific contexts (SQL Server, PostgreSQL, Cosmos, SQLite).
 /// Cross-cutting concerns (audit stamping, domain event capture/dispatch) are handled by
 /// <see cref="AuditSaveChangesInterceptor"/> and <see cref="DomainEventSaveChangesInterceptor"/>.
 /// This class provides the global named query filters (<c>SoftDelete</c> and <c>Tenant</c>) and
@@ -132,7 +133,8 @@ public abstract class ApplicationDbContext(
     /// <summary>
     /// Indicates whether this context supports the transactional outbox pattern.
     /// Cosmos DB does not support relational tables, so outbox is only used with
-    /// SQL Server and SQLite contexts. Read by <see cref="DomainEventSaveChangesInterceptor"/>.
+    /// the relational contexts (SQL Server, PostgreSQL, SQLite). Read by
+    /// <see cref="DomainEventSaveChangesInterceptor"/>.
     /// </summary>
     internal virtual bool SupportsOutbox => true;
 
@@ -342,13 +344,13 @@ public abstract class ApplicationDbContext(
         modelBuilder.Entity<ValReturn<string>>().HasNoKey().ToView(null);
 
         // Configure the outbox table for transactional domain event persistence.
-        ConfigureOutbox(modelBuilder);
+        ConfigureOutbox(modelBuilder, physicalDataSource.Key.Engine);
 
         // Configure the inbox table for consumer-side idempotency (used when MessageBus:EnableInbox).
         ConfigureInbox(modelBuilder);
 
         // Configure the internal-command job queue (one table per relational source, like the outbox).
-        ConfigureInternalCommands(modelBuilder);
+        ConfigureInternalCommands(modelBuilder, physicalDataSource.Key.Engine);
 
         // Configure the recurring job table (used when Scheduler:Enabled, Default source only).
         ConfigureScheduler(modelBuilder);
@@ -495,7 +497,7 @@ public abstract class ApplicationDbContext(
     /// Configures the <c>RowVersion</c> property as an optimistic concurrency token on every
     /// non-owned entity type that inherits from <see cref="AuditableBaseEntity{TId}"/>.
     /// SQL Server maps this to <c>rowversion</c> (auto-incremented by the database, so the
-    /// property is database-generated); other relational providers (SQLite) have no equivalent
+    /// property is database-generated); the other relational providers (PostgreSQL, SQLite) have no equivalent
     /// server-generated type — the property is mapped as a plain application-managed concurrency
     /// token there, so EF includes the entity's value in INSERTs instead of expecting the
     /// database to generate one.
@@ -525,13 +527,65 @@ public abstract class ApplicationDbContext(
     }
 
     /// <summary>
+    /// Quotes one column name the way <paramref name="engine"/> expects inside a filtered-index
+    /// predicate. SQL Server and SQLite both accept the bracketed form, so they keep the literal
+    /// they have always produced; PostgreSQL rejects brackets and takes the SQL-standard
+    /// double-quoted form.
+    /// </summary>
+    /// <param name="engine">The engine of the model being built.</param>
+    /// <param name="column">The column name to quote.</param>
+    /// <returns>The quoted identifier.</returns>
+    private static string QuoteColumn(DataSource engine, string column) =>
+        engine == DataSource.PostgreSQL ? $"\"{column}\"" : $"[{column}]";
+
+    /// <summary>
+    /// Declares the non-key columns an index carries along (SQL Server <c>INCLUDE</c>, PostgreSQL
+    /// <c>INCLUDE</c>). Both providers expose an <c>IncludeProperties</c> extension with the same
+    /// signature, so calling it unqualified is ambiguous once both are referenced; this picks the
+    /// one that belongs to the model being built.
+    /// </summary>
+    /// <param name="engine">The engine of the model being built.</param>
+    /// <param name="index">The index being configured.</param>
+    /// <param name="propertyNames">The names of the columns to include.</param>
+    /// <returns>The same index builder, for chaining.</returns>
+    /// <remarks>
+    /// <para>
+    /// Every engine other than PostgreSQL keeps the SQL Server annotation it has always been given,
+    /// SQLite included: the SQLite provider ignores it, so the model it produces is unchanged.
+    /// </para>
+    /// <para>
+    /// Deliberately the NON-generic overload, taking property names rather than a selector: the
+    /// generic one would put the caller's entity type in this method's instantiation, and for the
+    /// scheduler table that reflects as a <c>Persistence -&gt; Scheduling</c> type reference,
+    /// widening the accepted namespace cycle the architecture fitness test guards. The annotation
+    /// both overloads write is the same list of column names.
+    /// </para>
+    /// </remarks>
+    private static IndexBuilder IncludeColumns(
+        DataSource engine,
+        IndexBuilder index,
+        params string[] propertyNames) =>
+        engine == DataSource.PostgreSQL
+            ? NpgsqlIndexBuilderExtensions.IncludeProperties(index, propertyNames)
+            : SqlServerIndexBuilderExtensions.IncludeProperties(index, propertyNames);
+
+    /// <summary>
     /// Configures the <see cref="OutboxMessage"/> entity in the model. Called from
     /// <see cref="OnModelCreating"/> so all relational providers include the outbox table.
     /// Cosmos DB overrides <see cref="OnModelCreating"/> and skips this configuration.
     /// </summary>
-    private static void ConfigureOutbox(ModelBuilder modelBuilder) =>
+    /// <param name="modelBuilder">The model builder to configure.</param>
+    /// <param name="engine">
+    /// The engine of the model being built. Only the three partial-index predicates below depend on
+    /// it, and only for identifier quoting; the columns, indexes and index names are the same on
+    /// every relational engine.
+    /// </param>
+    private static void ConfigureOutbox(ModelBuilder modelBuilder, DataSource engine) =>
         modelBuilder.Entity<OutboxMessage>(entity =>
         {
+            var processedOn = QuoteColumn(engine, nameof(OutboxMessage.ProcessedOn));
+            var orderingKey = QuoteColumn(engine, nameof(OutboxMessage.OrderingKey));
+
             entity.ToTable("OutboxMessages", "dbo");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.EventType).IsRequired().HasMaxLength(500).IsUnicode(false);
@@ -543,16 +597,19 @@ public abstract class ApplicationDbContext(
             // Poll path (OutboxProcessor): pending rows, oldest first. The processor also filters on
             // RetryCount and LockedUntil, so both ride along as included columns; without them every
             // candidate row the index returns costs a key lookup back into the table.
-            entity.HasIndex(e => new { e.ProcessedOn, e.OccurredOn })
-                  .IncludeProperties(e => new { e.RetryCount, e.LockedUntil })
-                  .HasFilter("[ProcessedOn] IS NULL")
+            IncludeColumns(
+                    engine,
+                    entity.HasIndex(e => new { e.ProcessedOn, e.OccurredOn }),
+                    nameof(OutboxMessage.RetryCount),
+                    nameof(OutboxMessage.LockedUntil))
+                  .HasFilter($"{processedOn} IS NULL")
                   .HasDatabaseName("IX_OutboxMessages_Pending");
 
             // Retention path (OutboxCleanupService): processed rows older than the cutoff. The pending
             // index above deliberately excludes exactly these rows, so without this one the six-hourly
             // sweep scans the largest partition of the table.
             entity.HasIndex(e => e.ProcessedOn)
-                  .HasFilter("[ProcessedOn] IS NOT NULL")
+                  .HasFilter($"{processedOn} IS NOT NULL")
                   .HasDatabaseName("IX_OutboxMessages_Processed");
 
             // Ordering path (OutboxProcessor's claim predicate): for every keyed row the claim asks
@@ -560,9 +617,11 @@ public abstract class ApplicationDbContext(
             // index seekable by (OrderingKey, OccurredOn) that question is a scan of the pending
             // partition per row. Filtered to keyed pending rows only, so hosts that never declare an
             // ordering key carry an empty index.
-            entity.HasIndex(e => new { e.OrderingKey, e.OccurredOn })
-                  .IncludeProperties(e => new { e.RetryCount })
-                  .HasFilter("[OrderingKey] IS NOT NULL AND [ProcessedOn] IS NULL")
+            IncludeColumns(
+                    engine,
+                    entity.HasIndex(e => new { e.OrderingKey, e.OccurredOn }),
+                    nameof(OutboxMessage.RetryCount))
+                  .HasFilter($"{orderingKey} IS NOT NULL AND {processedOn} IS NULL")
                   .HasDatabaseName("IX_OutboxMessages_Ordering");
         });
 
@@ -595,9 +654,18 @@ public abstract class ApplicationDbContext(
     /// <c>InternalCommands:Enabled</c> is never a migration. Cosmos DB never reaches this method (it
     /// overrides <see cref="OnModelCreating"/>).
     /// </summary>
-    private static void ConfigureInternalCommands(ModelBuilder modelBuilder) =>
+    /// <param name="modelBuilder">The model builder to configure.</param>
+    /// <param name="engine">
+    /// The engine of the model being built. Only the three partial-index predicates below depend on
+    /// it, and only for identifier quoting; the columns, indexes and index names are the same on
+    /// every relational engine (the outbox's treatment, ADR-113).
+    /// </param>
+    private static void ConfigureInternalCommands(ModelBuilder modelBuilder, DataSource engine) =>
         modelBuilder.Entity<InternalCommandMessage>(entity =>
         {
+            var processedOn = QuoteColumn(engine, nameof(InternalCommandMessage.ProcessedOn));
+            var deadLetteredOn = QuoteColumn(engine, nameof(InternalCommandMessage.DeadLetteredOn));
+
             entity.ToTable("InternalCommands", "dbo");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.CommandType).IsRequired().HasMaxLength(500).IsUnicode(false);
@@ -614,21 +682,24 @@ public abstract class ApplicationDbContext(
             // without them every candidate row the index returns costs a key lookup back into the
             // table. Filtered to rows that are neither completed nor abandoned, which is the only
             // partition the poll ever reads.
-            entity.HasIndex(e => e.ScheduledOn)
-                  .IncludeProperties(e => new { e.Attempts, e.ClaimedUntil })
-                  .HasFilter("[ProcessedOn] IS NULL AND [DeadLetteredOn] IS NULL")
+            IncludeColumns(
+                    engine,
+                    entity.HasIndex(e => e.ScheduledOn),
+                    nameof(InternalCommandMessage.Attempts),
+                    nameof(InternalCommandMessage.ClaimedUntil))
+                  .HasFilter($"{processedOn} IS NULL AND {deadLetteredOn} IS NULL")
                   .HasDatabaseName("IX_InternalCommands_Pending");
 
             // Retention path (InternalCommandCleanupService): completed rows older than the cutoff.
             // The pending index above deliberately excludes exactly these rows, so without this one
             // the six-hourly sweep scans the largest partition of the table.
             entity.HasIndex(e => e.ProcessedOn)
-                  .HasFilter("[ProcessedOn] IS NOT NULL")
+                  .HasFilter($"{processedOn} IS NOT NULL")
                   .HasDatabaseName("IX_InternalCommands_Processed");
 
             // Operator path (InternalCommandAdministration) plus the dead-letter retention sweep.
             entity.HasIndex(e => e.DeadLetteredOn)
-                  .HasFilter("[DeadLetteredOn] IS NOT NULL")
+                  .HasFilter($"{deadLetteredOn} IS NOT NULL")
                   .HasDatabaseName("IX_InternalCommands_DeadLettered");
         });
 
@@ -647,6 +718,14 @@ public abstract class ApplicationDbContext(
             return;
         }
 
+        // Read into a local BEFORE the lambda rather than through this context inside it. A lambda
+        // that captures only `this` is emitted as a method ON this class, and that method's
+        // EntityTypeBuilder<ScheduledJobEntry> parameter reflects as a Persistence -> Scheduling type
+        // reference, widening the accepted namespace cycle the architecture fitness test guards. A
+        // captured local moves the lambda onto a compiler-generated closure instead, which the rule
+        // skips.
+        var engine = physicalDataSource.Key.Engine;
+
         modelBuilder.Entity<ScheduledJobEntry>(entity =>
         {
             entity.ToTable("ScheduledJobs", "dbo");
@@ -661,8 +740,11 @@ public abstract class ApplicationDbContext(
             // replica's work is reclaimed), and "LockedUntil IS NULL" would hide exactly those. The
             // lease columns ride along as included columns instead, so the predicate is answered from
             // the index without a key lookup per candidate row.
-            entity.HasIndex(e => e.NextRunOn)
-                  .IncludeProperties(e => new { e.LockedUntil, e.LockToken })
+            IncludeColumns(
+                    engine,
+                    entity.HasIndex(e => e.NextRunOn),
+                    nameof(ScheduledJobEntry.LockedUntil),
+                    nameof(ScheduledJobEntry.LockToken))
                   .HasDatabaseName("IX_ScheduledJobs_NextRunOn");
         });
     }
@@ -741,6 +823,7 @@ public abstract class ApplicationDbContext(
         var configType = dataSource switch
         {
             DataSource.CosmosDB => typeof(IEntityTypeConfigurationCosmos<,>),
+            DataSource.PostgreSQL => typeof(IEntityTypeConfigurationPostgreSQL<,>),
             DataSource.Sqlite => typeof(IEntityTypeConfigurationSqlite<,>),
             DataSource.SQLServer => typeof(IEntityTypeConfigurationSQLServer<,>),
             _ => throw new InvalidOperationException($"DataSource \"{dataSource}\" not implemented."),

@@ -36,9 +36,11 @@ public static class IndexBuilderExtensions
         /// </summary>
         /// <param name="engine">
         /// The engine of the model being built. Defaults to <see cref="DataSource.SQLServer"/>,
-        /// matching <c>EntityTypeConfigurationSQLServer</c>; pass <see cref="DataSource.Sqlite"/>
-        /// from a SQLite configuration. For <see cref="DataSource.CosmosDB"/> the call is a no-op,
-        /// exactly as the convention skips Cosmos.
+        /// matching <c>EntityTypeConfigurationSQLServer</c>; pass <see cref="DataSource.Sqlite"/> or
+        /// <see cref="DataSource.PostgreSQL"/> from a SQLite or PostgreSQL configuration (PostgreSQL
+        /// needs it: its soft-delete flag is a real boolean, so the predicate is
+        /// <c>"IsDeleted" = false</c> rather than <c>= 0</c>). For <see cref="DataSource.CosmosDB"/>
+        /// the call is a no-op, exactly as the convention skips Cosmos.
         /// </param>
         /// <param name="additionalFilter">
         /// Optional predicate to combine with the soft-delete predicate using <c>AND</c>, for an

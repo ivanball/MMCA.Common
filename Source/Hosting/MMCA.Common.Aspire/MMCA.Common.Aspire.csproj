@@ -14,6 +14,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.Rabbitmq" />
+    <!-- Readiness probe for a PostgreSQL data source (ADR-113). Npgsql is referenced directly
+         alongside it so the driver this check opens a connection with is the same 10.x build
+         MMCA.Common.Infrastructure's EF provider uses, rather than the older floor the health-check
+         package carries (same direct-pin pattern as SQLitePCLRaw below). -->
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="AspNetCore.HealthChecks.Sqlite" />
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
     <!-- Redis wiring is owned by the framework (Caching/RedisCachingExtensions): the raw Aspire

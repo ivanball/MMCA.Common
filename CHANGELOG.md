@@ -8,6 +8,27 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Added
 
+- **PostgreSQL is a first-class engine** (ADR-113). `DataSource.PostgreSQL` joins the engine enum,
+  `PostgreSQLDbContext` is its sealed per-engine context (ADR-006), and
+  `EntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>` is the configuration base an entity
+  derives from. A host opts in with `ConnectionStrings:PostgreSQLConnectionString` (or
+  `DataSources:<Name>:PostgreSQLConnectionString`) plus the optional `PostgreSQLMigrationsAssembly`
+  in either section; a PostgreSQL source that names no migrations assembly is created via
+  `EnsureCreated` instead of migrated, which is the SQLite rule rather than the SQL Server one.
+  `DesignTimeDbContextHelper.CreatePostgreSQL(args, configure)` scaffolds migrations for it, and
+  per-tenant routing takes `Tenancy:Tenants:<id>:DataSources:<source>:PostgreSQLConnectionString`.
+- **PostgreSQL keeps the SQL Server mapping**: a table per entity inside the module schema and the
+  framework's PascalCase identifiers, so moving an entity between the two engines is a
+  configuration-base change with no body edits. No `snake_case` convention is imposed; a consumer
+  that wants one adds a naming plugin in its own host.
+- **Timestamps are UTC by construction.** Every `DateTime` in a PostgreSQL model maps to
+  `timestamp with time zone` through `UtcDateTimeConverter`, so an unzoned or local value cannot
+  reach Npgsql and throw at save time. The process-wide `Npgsql.EnableLegacyTimestampBehavior`
+  switch is deliberately not used.
+- **Readiness and AppHost wiring**: `AddInfrastructureHealthChecks()` registers a `postgresql` check
+  for every declared PostgreSQL database, and `WithPostgreSQLDataSource(database, logicalName)` in
+  `MMCA.Common.Aspire.Hosting` wires a service project to its own `PostgresDatabaseResource`,
+  injecting `DataSources__{logicalName}__PostgreSQLConnectionString`.
 - **Internal commands: durable deferred work on the outbox's machinery.**
   `IInternalCommandScheduler.ScheduleAsync(command, runAt)` (and a `TimeSpan delay` overload) writes an
   `InternalCommandMessage` row through the caller's own unit of work, so scheduling inside an

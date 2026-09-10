@@ -109,9 +109,9 @@ public sealed class InternalCommandsSettings
 
     /// <summary>
     /// Gets the engine of the data source whose <c>InternalCommands</c> table
-    /// <c>IInternalCommandScheduler</c> writes to. Must be a relational provider (SQL Server or
-    /// SQLite); Cosmos has no such table. The <em>processor</em> is not limited to this source: it
-    /// drains the table of every relational physical source in use.
+    /// <c>IInternalCommandScheduler</c> writes to. Must be a relational provider (SQL Server,
+    /// PostgreSQL or SQLite); Cosmos has no such table. The <em>processor</em> is not limited to
+    /// this source: it drains the table of every relational physical source in use.
     /// </summary>
     public DataSource DataSource { get; init; } = DataSource.SQLServer;
 

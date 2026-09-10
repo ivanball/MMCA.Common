@@ -140,6 +140,9 @@ public sealed class TenantDataSourceOverrideSettings
     /// <summary>Gets the SQL Server connection string for this tenant's copy of the source.</summary>
     public string? SQLServerConnectionString { get; init; }
 
+    /// <summary>Gets the PostgreSQL connection string for this tenant's copy of the source.</summary>
+    public string? PostgreSQLConnectionString { get; init; }
+
     /// <summary>Gets the SQLite connection string for this tenant's copy of the source.</summary>
     public string? SqliteConnectionString { get; init; }
 
