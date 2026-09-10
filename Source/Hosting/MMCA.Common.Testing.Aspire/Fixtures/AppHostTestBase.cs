@@ -187,6 +187,13 @@ public abstract class AppHostTestBase<TFixture>(TFixture fixture)
     /// <c>WithH2cHealthCheck()</c> rather than Aspire's stock HTTP probe, which speaks HTTP/1.1 and
     /// would never turn it healthy.
     /// </para>
+    /// <para>
+    /// <b>Scope of the claim.</b> Aspire fronts a resource endpoint with its own proxy, so this
+    /// asserts that the endpoint CHAIN answers over HTTP/2 with prior knowledge. It is not evidence
+    /// that the service would refuse an HTTP/1.1 caller, because the proxy serves those itself. The
+    /// service-side half is a property of the host's Kestrel configuration, and the place to assert
+    /// it is a test that owns the listener.
+    /// </para>
     /// </summary>
     /// <param name="resourceName">The Aspire resource name.</param>
     /// <param name="path">The path to GET. Defaults to the liveness probe, which every framework host serves on every listener.</param>

@@ -1,5 +1,3 @@
-using System.Net;
-using Aspire.Hosting.Testing;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -86,6 +84,18 @@ public sealed class SampleAppHostTests(SampleAppHostFixture fixture)
             "the key set must be a real JWKS document rather than an empty placeholder");
     }
 
+    /// <summary>
+    /// Proves the h2c assertion end to end against a resource whose service runs
+    /// <c>HttpProtocols.Http2</c> alone and is gated by the framework's <c>WithH2cHealthCheck()</c>:
+    /// the stock HTTP probe speaks HTTP/1.1, so nothing else could have turned it healthy.
+    /// <para>
+    /// What it does NOT prove, and what no AppHost-tier test can: that the SERVICE refuses HTTP/1.1.
+    /// Aspire fronts a project resource with its own endpoint proxy, so the protocol a client
+    /// observes here is the proxy's, and the proxy serves HTTP/1.1 happily. That half of the contract
+    /// is proven in <c>H2cProbeServerTests</c>, against a listener the test owns.
+    /// </para>
+    /// </summary>
+    /// <returns>A task that completes when the assertion holds.</returns>
     [Fact]
     public async Task Http2OnlyService_NegotiatesH2cOnItsCleartextEndpoint()
     {
@@ -95,37 +105,6 @@ public sealed class SampleAppHostTests(SampleAppHostFixture fixture)
             SampleAppHostFixture.H2cServiceResourceName,
             AppHostProbePaths.Alive,
             cancellationToken: TestContext.Current.CancellationToken);
-    }
-
-    [Fact]
-    public async Task Http2OnlyService_RefusesAnOrdinaryHttp11Client()
-    {
-        SkipIfUnavailable();
-
-        // The negative control that makes the assertion above load-bearing: AssertH2cAsync would be
-        // vacuous if the endpoint also served HTTP/1.1.
-        //
-        // The client is built here rather than taken from CreateHttpClient on purpose. Aspire's
-        // testing client is not pinned to a version, so it happily speaks HTTP/2 to this endpoint and
-        // would prove nothing about the endpoint at all (the first run of this test asserted exactly
-        // that and was wrong). RequestVersionExact on 1.1 forbids the upgrade, so the request really
-        // is an HTTP/1.1 one, which an Http2-only cleartext listener refuses. That refusal is why the
-        // framework ships WithH2cHealthCheck instead of letting Aspire's stock HTTP probe, which does
-        // send HTTP/1.1, gate such a resource.
-        var endpoint = Application.GetEndpoint(SampleAppHostFixture.H2cServiceResourceName, "http");
-
-        using var handler = new SocketsHttpHandler { UseProxy = false };
-        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
-        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(endpoint, AppHostProbePaths.Alive))
-        {
-            Version = HttpVersion.Version11,
-            VersionPolicy = HttpVersionPolicy.RequestVersionExact,
-        };
-
-        var act = async () => await client.SendAsync(request, TestContext.Current.CancellationToken);
-
-        await act.Should().ThrowAsync<HttpRequestException>(
-            "an Http2-only cleartext endpoint must reject a real HTTP/1.1 request");
     }
 
     [Fact]
