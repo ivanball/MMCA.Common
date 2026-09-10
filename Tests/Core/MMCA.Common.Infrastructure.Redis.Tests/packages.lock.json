@@ -936,6 +936,7 @@
           "Microsoft.Extensions.Caching.Hybrid": "[10.9.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.9.0, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
+          "Otp.NET": "[1.4.1, )",
           "Polly.Core": "[8.7.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
@@ -1207,6 +1208,12 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
         }
+      },
+      "Otp.NET": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
       },
       "Polly.Core": {
         "type": "CentralTransitive",

@@ -22,7 +22,6 @@
 *REMOVED*MMCA.Common.Application.Validation.PositiveIntRules<T>.PositiveIntRules(System.Linq.Expressions.Expression<System.Func<T, int>!>! selector, string! fieldName) -> void
 *REMOVED*MMCA.Common.Application.Validation.RequiredStringRules<T>.RequiredStringRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector, string! fieldName, int maxLength) -> void
 *REMOVED*MMCA.Common.Application.Validation.StrongPasswordRules<T>.StrongPasswordRules(System.Linq.Expressions.Expression<System.Func<T, string!>!>! selector) -> void
-MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.AuthenticationValidators! validators, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings) -> void
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.GetSessionsAsync(int userId, System.Guid? currentSessionId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RefreshSessionSummaryResponse!>!>!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.IssueTokensAsync(TUser! user, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
 MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.LoginAsync(MMCA.Common.Shared.Auth.Requests.LoginRequest request, string? ipAddress = null, string? userAgent = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.AuthenticationResponse>!>!
@@ -388,3 +387,183 @@ virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO,
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector.IsConcurrencyConflict(System.Exception! exception) -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.TouchConcurrencyToken(TEntity! entity) -> void
+~override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Equals(object obj) -> bool
+~override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.ToString() -> string
+abstract MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.FindUntrackedByEmailAsync(MMCA.Common.Shared.ValueObjects.Contact.Email! email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<TUser?>!
+abstract MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.ResolveAccountNameAsync(int userId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string?>!
+const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmedCode = "Authentication.EmailNotConfirmed" -> string!
+const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidTokenCode = "Authentication.InvalidConfirmationToken" -> string!
+const MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.SectionName = "Authentication:EmailConfirmation" -> string!
+const MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.SectionName = "Authentication:PermissionGrants" -> string!
+const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmentMissingCode = "Authentication.TwoFactorEnrollmentMissing" -> string!
+const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorInvalidCode = "Authentication.TwoFactorInvalid" -> string!
+const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorNotEnrolledCode = "Authentication.TwoFactorNotEnrolled" -> string!
+const MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorRequiredCode = "Authentication.TwoFactorRequired" -> string!
+const MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.SectionName = "Authentication:TwoFactor" -> string!
+const MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator.MaxCodeLength = 64 -> int
+MMCA.Common.Application.Auth.Administration.IRoleAdministrationService
+MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.GetRoleAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
+MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.ListRolesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!>!
+MMCA.Common.Application.Auth.Administration.IRoleAdministrationService.SetStoredPermissionsAsync(string! role, System.Collections.Generic.IReadOnlyList<string!>! permissions, string? changedBy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
+MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>
+MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
+MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.ListAsync(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<TUserDto>!>!>!
+MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.SetLockedAsync(int userId, bool locked, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.Administration.IUserAdministrationService<TUserDto>.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Deconstruct(out int PageNumber, out int PageSize, out string? SearchTerm, out string? Role) -> void
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Equals(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery other) -> bool
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageNumber.get -> int
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageNumber.init -> void
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageSize.get -> int
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.PageSize.init -> void
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Role.get -> string?
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Role.init -> void
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.SearchTerm.get -> string?
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.SearchTerm.init -> void
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.UserAdministrationQuery() -> void
+MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.UserAdministrationQuery(int PageNumber, int PageSize, string? SearchTerm = null, string? Role = null) -> void
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.AuthenticationServiceBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ITokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.Auth.IPasswordHasher! passwordHasher, MMCA.Common.Application.Auth.ILoginProtectionService! loginProtection, System.TimeProvider! timeProvider, MMCA.Common.Application.Auth.AuthenticationValidators! validators, MMCA.Common.Application.Auth.IRefreshSessionStore! refreshSessions, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.RefreshSessionSettings!>! refreshSessionSettings, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator? twoFactor = null, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings!>? emailConfirmationSettings = null) -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.ConfirmationUrl.get -> string!
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.ConfirmationUrl.init -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.EmailConfirmationSettings() -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.MaxRequestsPerEmail.get -> int
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.MaxRequestsPerEmail.init -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.MaxValidationAttempts.get -> int
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.MaxValidationAttempts.init -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.RequestWindowMinutes.get -> int
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.RequestWindowMinutes.init -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.RequireConfirmedEmail.get -> bool
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.RequireConfirmedEmail.init -> void
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.TokenLifetimeMinutes.get -> int
+MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings.TokenLifetimeMinutes.init -> void
+MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService
+MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService.IssueAsync(string! email, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<string!>!>!
+MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantCache
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantCache.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantCache.RefreshAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantCacheInvalidator
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantCacheInvalidator.InvalidateAsync(string? role = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantStore
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantStore.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.PermissionGrant!>!>!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantStore.GetPermissionsAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantStore.GrantAsync(string! role, string! permission, string? grantedBy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.Permissions.IPermissionGrantStore.RevokeAsync(string! role, string! permission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.Permissions.LayeredPermissionRegistry
+MMCA.Common.Application.Auth.Permissions.LayeredPermissionRegistry.GetPermissions(string! role) -> System.Collections.Generic.IReadOnlySet<string!>!
+MMCA.Common.Application.Auth.Permissions.LayeredPermissionRegistry.HasPermission(System.Collections.Generic.IEnumerable<string!>! roles, string! permission) -> bool
+MMCA.Common.Application.Auth.Permissions.LayeredPermissionRegistry.LayeredPermissionRegistry(MMCA.Common.Shared.Auth.Permissions.IPermissionRegistry! inner, MMCA.Common.Application.Auth.Permissions.IPermissionGrantCache! grants) -> void
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.CacheSeconds.get -> int
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.CacheSeconds.init -> void
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.DataSourceName.get -> string!
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.DataSourceName.init -> void
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.KnownRoles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.KnownRoles.init -> void
+MMCA.Common.Application.Auth.Permissions.PermissionGrantSettings.PermissionGrantSettings() -> void
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator.ChallengeAsync(int userId, string? code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome>!>!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService.BuildProvisioningUri(string! secret, string! accountName) -> string!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService.GenerateRecoveryCodes() -> MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService.GenerateSecret() -> string!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService.HashRecoveryCode(string! code) -> string!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService.TryMatchRecoveryCode(string? code, System.Collections.Generic.IReadOnlyCollection<string!>! storedHashes, out string? matchedHash) -> bool
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService.VerifyCode(string! secret, string? code) -> bool
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore.CompleteEnrollmentAsync(int userId, System.Collections.Generic.IReadOnlyCollection<string!>! recoveryCodeHashes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore.ConsumeRecoveryCodeAsync(int userId, string! recoveryCodeHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore.DisableAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.ITwoFactorUserState?>!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore.ReplaceRecoveryCodesAsync(int userId, System.Collections.Generic.IReadOnlyCollection<string!>! recoveryCodeHashes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore.StartEnrollmentAsync(int userId, string! secret, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.<Clone>$() -> MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet!
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Codes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Codes.init -> void
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! Codes, out System.Collections.Generic.IReadOnlyList<string!>! Hashes) -> void
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Equals(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? other) -> bool
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Hashes.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Hashes.init -> void
+MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.RecoveryCodeSet(System.Collections.Generic.IReadOnlyList<string!>! Codes, System.Collections.Generic.IReadOnlyList<string!>! Hashes) -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome.NotEnrolled = 0 -> MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome.VerifiedRecoveryCode = 2 -> MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome.VerifiedTotp = 1 -> MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.Digits.get -> int
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.Digits.init -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.Issuer.get -> string!
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.Issuer.init -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.PeriodSeconds.get -> int
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.PeriodSeconds.init -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.RecoveryCodeByteLength.get -> int
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.RecoveryCodeByteLength.init -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.RecoveryCodeCount.get -> int
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.RecoveryCodeCount.init -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.SecretByteLength.get -> int
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.SecretByteLength.init -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.TwoFactorSettings() -> void
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.VerificationWindowSteps.get -> int
+MMCA.Common.Application.Auth.TwoFactor.TwoFactorSettings.VerificationWindowSteps.init -> void
+MMCA.Common.Application.Auth.Validation.ConfirmEmailRequestValidator
+MMCA.Common.Application.Auth.Validation.ConfirmEmailRequestValidator.ConfirmEmailRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.SendEmailConfirmationRequestValidator
+MMCA.Common.Application.Auth.Validation.SendEmailConfirmationRequestValidator.SendEmailConfirmationRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.SetRolePermissionsRequestValidator
+MMCA.Common.Application.Auth.Validation.SetRolePermissionsRequestValidator.SetRolePermissionsRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.SetUserRolesRequestValidator
+MMCA.Common.Application.Auth.Validation.SetUserRolesRequestValidator.SetUserRolesRequestValidator() -> void
+MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator
+MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator.TwoFactorCodeRequestValidator() -> void
+MMCA.Common.Application.UseCases.Markers.IRequiresMfa
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.ConfirmEmailHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService! tokenService, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.SendEmailConfirmationHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService! tokenService, MMCA.Common.Application.Interfaces.Infrastructure.Mail.IEmailSender! emailSender, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings!>! settings, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.Settings.get -> MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationSettings!
+MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.UnitOfWork.get -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork!
+MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>
+MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.BeginTwoFactorEnrollmentHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService! twoFactorService, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse>!>!
+MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>
+MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>.ConfirmTwoFactorEnrollmentHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService! twoFactorService, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>!>!
+MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>
+MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.DisableTwoFactorHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator! authenticator, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodesHandlerBase<TCommand>
+MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodesHandlerBase<TCommand>.HandleAsync(TCommand command, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse!>!>!
+MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodesHandlerBase<TCommand>.RegenerateRecoveryCodesHandlerBase(MMCA.Common.Application.Auth.TwoFactor.ITwoFactorAuthenticator! authenticator, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorService! twoFactorService, MMCA.Common.Application.Auth.TwoFactor.ITwoFactorStore! store, Microsoft.Extensions.Logging.ILogger! logger) -> void
+override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.GetHashCode() -> int
+override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Equals(object? obj) -> bool
+override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.GetHashCode() -> int
+override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.ToString() -> string!
+static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator !=(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
+static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator ==(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
+static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.InvalidToken(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.operator !=(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? left, MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? right) -> bool
+static MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.operator ==(MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? left, MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet? right) -> bool
+static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmentMissing(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorInvalid(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorNotEnrolled(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ChallengeSecondFactorAsync(int userId, string? code, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome>!>!
+virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CheckEmailConfirmed(TUser! untrackedUser) -> MMCA.Common.Shared.Abstractions.Result!
+virtual MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.ComposeBody(string? confirmationLink, string! token) -> string!
+virtual MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.ComposeConfirmationLink(string! email, string! token) -> string?
+virtual MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.ComposeSubject() -> string!
+virtual MMCA.Common.Application.Users.UseCases.EmailConfirmation.SendEmailConfirmationHandlerBase<TUser, TCommand>.IsAlreadyConfirmed(TUser! user) -> bool
+virtual MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.HandlerName.get -> string!
+virtual MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodesHandlerBase<TCommand>.HandlerName.get -> string!
