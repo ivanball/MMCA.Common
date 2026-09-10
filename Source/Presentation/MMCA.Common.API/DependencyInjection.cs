@@ -15,6 +15,7 @@ using MMCA.Common.API.Resources;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
+using MMCA.Common.Shared.Identifiers;
 using EnumerationJsonConverterFactory = MMCA.Common.Shared.ValueObjects.EnumerationJsonConverterFactory;
 
 namespace MMCA.Common.API;
@@ -56,6 +57,12 @@ public static class DependencyInjection
                     // (System.Text.Json resolves it with inherit: false), so the factory is registered
                     // here once and every Enumeration<T> serializes by Name across the API surface.
                     options.JsonSerializerOptions.Converters.Add(new EnumerationJsonConverterFactory());
+
+                    // Strongly typed identifiers serialize as the bare primitive they wrap
+                    // (ADR-115), registered here for the same reason: the attribute would otherwise
+                    // have to be repeated on every wrapper a consumer declares. In a host that
+                    // declares no wrappers the factory converts nothing.
+                    options.JsonSerializerOptions.Converters.Add(new StronglyTypedIdJsonConverterFactory());
                 })
                 .AddXmlDataContractSerializerFormatters();
 

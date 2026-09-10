@@ -202,4 +202,14 @@ static MMCA.Common.Infrastructure.DependencyInjection.AddStoredPermissionGrants(
 static MMCA.Common.Infrastructure.DependencyInjection.AddTwoFactorAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.ApplyPermissionGrantConfiguration(this Microsoft.EntityFrameworkCore.ModelBuilder! modelBuilder, string? schema = "dbo") -> Microsoft.EntityFrameworkCore.ModelBuilder!
 static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreatePostgreSQL(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!
+MMCA.Common.Infrastructure.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddStronglyTypedIds(params System.Reflection.Assembly![]! identifierAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.Infrastructure.Persistence.Conventions.StronglyTypedIdModelConfiguration
+MMCA.Common.Infrastructure.Persistence.Conversions.NullableStronglyTypedIdValueConverter<TSelf, TValue>
+MMCA.Common.Infrastructure.Persistence.Conversions.NullableStronglyTypedIdValueConverter<TSelf, TValue>.NullableStronglyTypedIdValueConverter() -> void
+MMCA.Common.Infrastructure.Persistence.Conversions.StronglyTypedIdValueComparer<TSelf>
+MMCA.Common.Infrastructure.Persistence.Conversions.StronglyTypedIdValueComparer<TSelf>.StronglyTypedIdValueComparer() -> void
+MMCA.Common.Infrastructure.Persistence.Conversions.StronglyTypedIdValueConverter<TSelf, TValue>
+MMCA.Common.Infrastructure.Persistence.Conversions.StronglyTypedIdValueConverter<TSelf, TValue>.StronglyTypedIdValueConverter() -> void
+static MMCA.Common.Infrastructure.DependencyInjection.AddStronglyTypedIds(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, params System.Reflection.Assembly![]! identifierAssemblies) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Infrastructure.Persistence.Conventions.StronglyTypedIdModelConfiguration.Apply(Microsoft.EntityFrameworkCore.ModelConfigurationBuilder! configurationBuilder, MMCA.Common.Shared.Identifiers.StronglyTypedIdRegistry! registry) -> int
 static readonly MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration.InternalCommandsSettings.SectionName -> string!

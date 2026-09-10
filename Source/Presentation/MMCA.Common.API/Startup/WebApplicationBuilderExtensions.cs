@@ -495,6 +495,16 @@ public static class WebApplicationBuilderExtensions
             services.AddApiVersioning().AddOpenApi();
             services.AddApiParameterDescriptorBackfill();
 
+            // Strongly typed identifiers document as the primitive they wrap (ADR-115). ConfigureAll
+            // rather than a named document, because AddOpenApi above creates one OpenApiOptions per
+            // discovered API version and the wire shape is identical in all of them. Inert in a host
+            // that declares no wrappers.
+            services.ConfigureAll<Microsoft.AspNetCore.OpenApi.OpenApiOptions>(options =>
+            {
+                options.AddSchemaTransformer(new StronglyTypedIdSchemaTransformer());
+                options.AddOperationTransformer(new StronglyTypedIdParameterTransformer());
+            });
+
             return services;
         }
 

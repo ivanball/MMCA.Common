@@ -112,6 +112,12 @@ MMCA.Common.API.RateLimiting.RateLimitingSettings.AnonymousHubPermitLimit.init -
 MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.get -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.API.RateLimiting.RateLimitingSettings.HubPathPrefixes.init -> void
 static MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder.IsCleartextHttp2(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> bool
+MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer
+MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer.StronglyTypedIdSchemaTransformer() -> void
+MMCA.Common.API.OpenApi.StronglyTypedIdSchemaTransformer.TransformAsync(Microsoft.OpenApi.OpenApiSchema! schema, Microsoft.AspNetCore.OpenApi.OpenApiSchemaTransformerContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+MMCA.Common.API.OpenApi.StronglyTypedIdParameterTransformer
+MMCA.Common.API.OpenApi.StronglyTypedIdParameterTransformer.StronglyTypedIdParameterTransformer() -> void
+MMCA.Common.API.OpenApi.StronglyTypedIdParameterTransformer.TransformAsync(Microsoft.OpenApi.OpenApiOperation! operation, Microsoft.AspNetCore.OpenApi.OpenApiOperationTransformerContext! context, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 const MMCA.Common.API.Controllers.Administration.UsersAdminControllerBase<TUserDto>.MaxPageSize = 100 -> int
 MMCA.Common.API.Controllers.Administration.RolesAdminControllerBase
 MMCA.Common.API.Controllers.Administration.RolesAdminControllerBase.Administration.get -> MMCA.Common.Application.Auth.Administration.IRoleAdministrationService!

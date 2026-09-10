@@ -8,6 +8,31 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Added
 
+- **Strongly typed identifiers, opt in** (ADR-115). `IStronglyTypedId<TSelf, TValue>` in
+  `MMCA.Common.Shared.Identifiers` makes a wrapper struct a two-line declaration
+  (`public readonly record struct OrderId(int Value) : IStronglyTypedId<OrderId, int>` with
+  `public static OrderId From(int value) => new(value);`): the interface supplies
+  `IParsable<TSelf>` through default implementations and `StronglyTypedId` carries the parse and
+  reflection helpers. `int`, `long`, `Guid` and `string` are supported end to end. The primitive
+  identifier aliases stay the default (ADR-048/ADR-085), and no framework or consumer type adopts a
+  wrapper.
+- **One call is the whole opt-in**: `services.AddStronglyTypedIds(typeof(OrderId).Assembly)` scans
+  for declared wrappers, registers a `StronglyTypedIdRegistry`, and registers a
+  `StronglyTypedIdTypeConverter<TSelf, TValue>` per wrapper so MVC binds `GET /orders/42` and
+  `filters[Id].value=42`. `ApplicationDbContext.ConfigureConventions` turns that registry into a
+  pre-convention EF type mapping, so every wrapped property persists as its primitive on SQL Server,
+  PostgreSQL, SQLite and Cosmos, and a wrapped `int` key keeps its store-generated strategy.
+- **Every boundary is covered**: `StronglyTypedIdJsonConverterFactory` (registered by `AddAPI`)
+  serializes a wrapper as the bare primitive; `StronglyTypedIdValueConverter<TSelf, TValue>` plus
+  `StronglyTypedIdValueComparer<TSelf>` map it in EF Core; `StronglyTypedIdSchemaTransformer` and
+  `StronglyTypedIdParameterTransformer` (registered by `AddCommonOpenApi`) document it as the
+  primitive; `QueryFilterService` resolves a filter strategy for a wrapped column with no
+  registration call; and `StronglyTypedIdMappings<TSelf, TValue>` gives Mapperly the two conversions
+  a primitive-carrying DTO needs, through `[UseStaticMapper]`. Adopting a wrapper is therefore
+  neither a wire change nor a migration.
+- **A fitness rule holds the shape**: `StronglyTypedIdsAreReadonlyRecordStructs`, exposed by
+  `StronglyTypedIdTestsBase`, fails a wrapper that is not a readonly record struct or that carries
+  instance state beyond the wrapped value. It passes vacuously in every repo today, by design.
 - **PostgreSQL is a first-class engine** (ADR-113). `DataSource.PostgreSQL` joins the engine enum,
   `PostgreSQLDbContext` is its sealed per-engine context (ADR-006), and
   `EntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>` is the configuration base an entity
