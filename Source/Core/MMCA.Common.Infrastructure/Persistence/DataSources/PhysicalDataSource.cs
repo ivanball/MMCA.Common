@@ -34,6 +34,18 @@ public sealed record PhysicalDataSource(
     public string? SqliteMigrationsAssembly { get; init; }
 
     /// <summary>
+    /// Gets the EF Core migrations assembly for PostgreSQL sources; <see langword="null"/> when the
+    /// source is created outright instead of migrated. Ignored for non-PostgreSQL engines.
+    /// <para>
+    /// Declared in the record body for the same reason as
+    /// <see cref="SqliteMigrationsAssembly"/>: the positional shape of this shipped record must not
+    /// change. At most one of the three migrations-assembly properties is ever populated, since a
+    /// physical source belongs to exactly one engine.
+    /// </para>
+    /// </summary>
+    public string? PostgreSQLMigrationsAssembly { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether this source participates in EF Core migrations, which is what
     /// decides between <c>Migrate</c> and <c>EnsureCreated</c> at startup for this one database.
     /// <para>
@@ -42,12 +54,16 @@ public sealed record PhysicalDataSource(
     /// assembly at all and lets EF look next to the context. SQLite does only once a
     /// <c>SqliteMigrationsAssembly</c> is configured for it, because a SQLite source wired by hand
     /// before that setting existed has no migrations to apply and must keep being created outright.
+    /// PostgreSQL follows the SQLite rule rather than the SQL Server one: it ships with no host that
+    /// already depends on being migrated, so a source that names no migrations assembly has nothing
+    /// to apply and is created outright instead of migrated into an empty schema.
     /// Cosmos never does: the provider has no migrations pipeline.
     /// </para>
     /// </summary>
     public bool UsesMigrations => Key.Engine switch
     {
         DataSource.SQLServer => true,
+        DataSource.PostgreSQL => !string.IsNullOrEmpty(PostgreSQLMigrationsAssembly),
         DataSource.Sqlite => !string.IsNullOrEmpty(SqliteMigrationsAssembly),
         DataSource.CosmosDB => false,
         _ => false,

@@ -31,9 +31,23 @@ internal static class SoftDeleteFilterSql
 
         var isDeletedColumn = ColumnName(entityType);
 
-        return engine == DataSource.SQLServer
-            ? $"[{isDeletedColumn}] = 0"
-            : $"\"{isDeletedColumn}\" = 0";
+        return engine switch
+        {
+            DataSource.SQLServer => $"[{isDeletedColumn}] = 0",
+
+            // PostgreSQL maps the flag to a real boolean column and refuses to compare one with an
+            // integer, so the predicate that works everywhere else ("... = 0") is a type error
+            // there. This is the only place the soft-delete filter differs by engine beyond quoting.
+            DataSource.PostgreSQL => $"\"{isDeletedColumn}\" = false",
+
+            DataSource.Sqlite => $"\"{isDeletedColumn}\" = 0",
+
+            // Unreachable: the Cosmos early-return above answers null before the switch is entered.
+            // Listed anyway because the switch must name every engine (IDE0072).
+            DataSource.CosmosDB => null,
+
+            _ => $"\"{isDeletedColumn}\" = 0",
+        };
     }
 
     /// <summary>
@@ -45,14 +59,20 @@ internal static class SoftDeleteFilterSql
     /// <returns><see langword="true"/> when the filter already carries the soft-delete predicate.</returns>
     /// <remarks>
     /// The comparison is made on a normalized form (whitespace and identifier quoting removed), so a
-    /// literal <c>[IsDeleted] = 0</c>, a <c>"IsDeleted"=0</c> and the predicate this class produces
-    /// all count as the same clause. That matters because the two ways in (a hand-authored
-    /// <c>HasFilter</c> literal and <c>HasSoftDeleteFilter</c>) do not agree on quoting.
+    /// literal <c>[IsDeleted] = 0</c>, a <c>"IsDeleted"=0</c>, the PostgreSQL
+    /// <c>"IsDeleted" = false</c> and the predicate this class produces all count as the same
+    /// clause. That matters because the two ways in (a hand-authored <c>HasFilter</c> literal and
+    /// <c>HasSoftDeleteFilter</c>) do not agree on quoting, and because the boolean and integer
+    /// spellings of the same predicate must not be appended to one another.
     /// </remarks>
-    internal static bool ContainsPredicate(string existingFilter, IReadOnlyEntityType entityType) =>
-        Normalize(existingFilter).Contains(
-            Normalize($"{ColumnName(entityType)} = 0"),
-            StringComparison.OrdinalIgnoreCase);
+    internal static bool ContainsPredicate(string existingFilter, IReadOnlyEntityType entityType)
+    {
+        var normalized = Normalize(existingFilter);
+        var column = ColumnName(entityType);
+
+        return normalized.Contains(Normalize($"{column} = 0"), StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains(Normalize($"{column} = false"), StringComparison.OrdinalIgnoreCase);
+    }
 
     private static string ColumnName(IReadOnlyEntityType entityType) =>
         entityType.FindProperty(nameof(IAuditableEntity.IsDeleted))?.GetColumnName()

@@ -388,3 +388,4 @@ virtual MMCA.Common.Application.Services.EntityQueryService<TEntity, TEntityDTO,
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IConcurrencyConflictDetector.IsConcurrencyConflict(System.Exception! exception) -> bool
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IWriteRepository<TEntity, TIdentifierType>.TouchConcurrencyToken(TEntity! entity) -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource.PostgreSQL = 3 -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource

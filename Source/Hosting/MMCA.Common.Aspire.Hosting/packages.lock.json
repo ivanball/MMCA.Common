@@ -90,6 +90,46 @@
           "YamlDotNet": "16.3.0"
         }
       },
+      "Aspire.Hosting.PostgreSQL": {
+        "type": "Direct",
+        "requested": "[13.5.3, )",
+        "resolved": "13.5.3",
+        "contentHash": "hZQZCKLztVivEFNXYcYTmGklZIsU/SxhoJq414npBn5OXvTpO3NA8p7eNZx+GIBE6AhXTV5Kfacd+iWVsweT8Q==",
+        "dependencies": {
+          "AspNetCore.HealthChecks.NpgSql": "9.0.0",
+          "AspNetCore.HealthChecks.Uris": "9.0.0",
+          "Aspire.Hosting": "13.5.3",
+          "Google.Protobuf": "3.34.1",
+          "Grpc.AspNetCore": "2.80.0",
+          "Grpc.Net.ClientFactory": "2.80.0",
+          "Grpc.Tools": "2.80.0",
+          "Humanizer.Core": "3.0.10",
+          "JsonPatch.Net": "5.0.2",
+          "KubernetesClient": "19.0.2",
+          "Microsoft.Extensions.Configuration.Abstractions": "10.0.11",
+          "Microsoft.Extensions.Configuration.Binder": "10.0.11",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.11",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.11",
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.30",
+          "Microsoft.Extensions.FileSystemGlobbing": "10.0.11",
+          "Microsoft.Extensions.Hosting": "10.0.11",
+          "Microsoft.Extensions.Hosting.Abstractions": "10.0.11",
+          "Microsoft.Extensions.Http": "10.0.11",
+          "Microsoft.Extensions.Logging": "10.0.11",
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.11",
+          "Microsoft.Extensions.Options": "10.0.11",
+          "Microsoft.Extensions.Primitives": "10.0.11",
+          "ModelContextProtocol": "1.3.0",
+          "Newtonsoft.Json": "13.0.4",
+          "OpenTelemetry.Exporter.OpenTelemetryProtocol": "1.15.3",
+          "OpenTelemetry.Extensions.Hosting": "1.15.3",
+          "Polly.Core": "8.6.6",
+          "Semver": "3.0.0",
+          "StreamJsonRpc": "2.25.29",
+          "System.IO.Hashing": "10.0.8",
+          "YamlDotNet": "16.3.0"
+        }
+      },
       "Aspire.Hosting.RabbitMQ": {
         "type": "Direct",
         "requested": "[13.5.3, )",
@@ -1128,6 +1168,16 @@
         "resolved": "16.3.0",
         "contentHash": "SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA=="
       },
+      "AspNetCore.HealthChecks.NpgSql": {
+        "type": "CentralTransitive",
+        "requested": "[9.0.0, )",
+        "resolved": "9.0.0",
+        "contentHash": "npc58/AD5zuVxERdhCl2Kb7WnL37mwX42SJcXIwvmEig0/dugOLg3SIwtfvvh3TnvTwR/sk5LYNkkPaBdks61A==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "8.0.11",
+          "Npgsql": "8.0.3"
+        }
+      },
       "AspNetCore.HealthChecks.Rabbitmq": {
         "type": "CentralTransitive",
         "requested": "[9.0.0, )",
@@ -1241,6 +1291,15 @@
           "Microsoft.Extensions.Logging": "10.0.11",
           "Microsoft.Extensions.Logging.Abstractions": "10.0.11",
           "Microsoft.Extensions.Options": "10.0.11"
+        }
+      },
+      "Npgsql": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "8.0.3",
+        "contentHash": "6WEmzsQJCZAlUG1pThKg/RmeF6V+I0DmBBBE/8YzpRtEzhyZzKcK7ulMANDm5CkxrALBEC8H+5plxHWtIL7xnA==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.0"
         }
       },
       "Polly.Core": {

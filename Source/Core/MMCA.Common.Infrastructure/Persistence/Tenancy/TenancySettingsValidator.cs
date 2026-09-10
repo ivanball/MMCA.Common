@@ -25,7 +25,7 @@ internal sealed class TenancySettingsValidator(IDataSourceResolver? resolver = n
 {
     /// <summary>The engines an override can carry a connection string for.</summary>
     private static readonly DataSource[] Engines =
-        [DataSource.SQLServer, DataSource.Sqlite, DataSource.CosmosDB];
+        [DataSource.SQLServer, DataSource.PostgreSQL, DataSource.Sqlite, DataSource.CosmosDB];
 
     /// <inheritdoc />
     public ValidateOptionsResult Validate(string? name, TenancySettings options)
@@ -78,8 +78,8 @@ internal sealed class TenancySettingsValidator(IDataSourceResolver? resolver = n
                 failures.Add(string.Format(
                     CultureInfo.InvariantCulture,
                     "Tenancy:Tenants:{0}:DataSources:{1} declares no connection string. "
-                    + "A per-tenant override must set SQLServerConnectionString, SqliteConnectionString "
-                    + "or CosmosConnectionString; remove the entry to keep the source shared.",
+                    + "A per-tenant override must set SQLServerConnectionString, PostgreSQLConnectionString, "
+                    + "SqliteConnectionString or CosmosConnectionString; remove the entry to keep the source shared.",
                     tenantId,
                     sourceName));
                 continue;
@@ -123,6 +123,7 @@ internal sealed class TenancySettingsValidator(IDataSourceResolver? resolver = n
         engine switch
         {
             DataSource.SQLServer => over.SQLServerConnectionString,
+            DataSource.PostgreSQL => over.PostgreSQLConnectionString,
             DataSource.Sqlite => over.SqliteConnectionString,
             DataSource.CosmosDB => over.CosmosConnectionString,
             _ => null,

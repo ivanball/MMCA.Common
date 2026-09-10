@@ -37,7 +37,8 @@ internal sealed class ConnectionStringSettingsValidator(DataSourcesSettings? dat
     /// </summary>
     internal const string NoDatabaseConfiguredMessage =
         "No database connection is configured. Set a top-level connection string "
-        + "(ConnectionStrings:SQLServerConnectionString, ConnectionStrings:SqliteConnectionString or "
+        + "(ConnectionStrings:SQLServerConnectionString, ConnectionStrings:PostgreSQLConnectionString, "
+        + "ConnectionStrings:SqliteConnectionString or "
         + "ConnectionStrings:CosmosConnectionString), or declare one on a named entry under the "
         + "DataSources section (for example DataSources:Tickets:SqliteConnectionString). A host with "
         + "no database at all cannot serve a request, so it fails here rather than on its first query.";
@@ -55,6 +56,7 @@ internal sealed class ConnectionStringSettingsValidator(DataSourcesSettings? dat
     /// <summary>Whether the top-level section names a database on any supported engine.</summary>
     private static bool HasTopLevelConnection(ConnectionStringSettings options) =>
         !string.IsNullOrWhiteSpace(options.SQLServerConnectionString)
+        || !string.IsNullOrWhiteSpace(options.PostgreSQLConnectionString)
         || !string.IsNullOrWhiteSpace(options.SqliteConnectionString)
         || !string.IsNullOrWhiteSpace(options.CosmosConnectionString);
 
@@ -67,6 +69,7 @@ internal sealed class ConnectionStringSettingsValidator(DataSourcesSettings? dat
         dataSources is not null
         && dataSources.Sources.Values.Any(entry =>
             !string.IsNullOrWhiteSpace(entry.SQLServerConnectionString)
+            || !string.IsNullOrWhiteSpace(entry.PostgreSQLConnectionString)
             || !string.IsNullOrWhiteSpace(entry.SqliteConnectionString)
             || !string.IsNullOrWhiteSpace(entry.CosmosConnectionString));
 }

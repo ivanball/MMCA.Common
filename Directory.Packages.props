@@ -61,6 +61,10 @@
          (same pattern as the MessagePack pin above). -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
+    <!-- PostgreSQL provider (ADR-113). Npgsql ships on its own cadence, so its version tracks the EF
+         Core MAJOR (10.x) rather than the exact 10.0.11 patch the Microsoft-owned providers share;
+         10.0.3 is the current stable build for EF Core 10. -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.11" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
     <PackageVersion Include="StackExchange.Redis" Version="3.1.31" />
@@ -222,6 +226,12 @@
     <!-- Multi-host cross-service fixture base in MMCA.Common.Testing (Wave 5.8): SQL Server +
          RabbitMQ containers for consumer cross-service integration tiers. Test-tier only. -->
     <PackageVersion Include="Testcontainers.MsSql" Version="4.15.0" />
+    <!-- PostgreSQL integration tier only (Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests,
+         outside the .slnx, own CI job): the SQL a provider actually emits (partial-index predicates,
+         boolean comparisons, timestamp kinds) is the class of thing only a real server can reject,
+         and no in-memory or SQLite substitute reproduces it. Same Testcontainers family version as
+         the Redis and MsSql pins. -->
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <PackageVersion Include="Testcontainers.RabbitMq" Version="4.15.0" />
     <!-- Service Bus emulator fixture base in MMCA.Common.Testing: same Testcontainers family version.
          The module starts the emulator plus its companion SQL container, so consumer broker-parity
@@ -272,6 +282,12 @@
          registration (Caching/RedisCachingExtensions) and this repo does not enable central
          transitive pinning, so no PackageVersion entry is required to keep the restore graph valid. -->
     <PackageVersion Include="AspNetCore.HealthChecks.Rabbitmq" Version="9.0.0" />
+    <!-- Readiness probe for a PostgreSQL source (ADR-113), the peer of the SqlServer and Sqlite
+         checks below. Npgsql is pinned directly alongside it in MMCA.Common.Aspire so the ADO driver
+         the check opens a connection with is the same 10.x build the EF provider uses, rather than
+         the older floor this health-check package carries. -->
+    <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="AspNetCore.HealthChecks.Sqlite" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
     <!-- Gateway (MMCA.Common.Gateway and MMCA.Common.Testing) — the YARP reverse proxy the shared
@@ -311,6 +327,7 @@
     <!-- Aspire AppHost -->
     <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
     <!-- Versioning -->

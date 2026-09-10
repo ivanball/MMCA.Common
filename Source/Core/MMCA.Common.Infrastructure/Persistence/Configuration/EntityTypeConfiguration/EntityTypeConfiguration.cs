@@ -12,12 +12,13 @@ namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigu
 /// Engine-aware entity type configuration base. The target engine is declared once via a
 /// <see cref="UseDataSourceAttribute"/> on the concrete configuration (or an inherited shim base);
 /// this base reads that attribute and applies the matching mapping conventions (table + schema for
-/// SQL Server, table for SQLite, container + partition key for Cosmos) plus key generation. Moving an
+/// SQL Server and PostgreSQL, table for SQLite, container + partition key for Cosmos) plus key
+/// generation. Moving an
 /// entity between engines is therefore a single attribute change with no configuration-body edits —
 /// the framework also strips relational-only constructs (Cosmos indexes) and degrades cross-source
 /// relationships automatically, so the same body is portable across engines.
 /// <para>
-/// It implements all three provider marker interfaces so it is discovered for every engine's model
+/// It implements all four provider marker interfaces so it is discovered for every engine's model
 /// pass; <see cref="DbContexts.ApplicationDbContext.ApplyConfigurationsForEntitiesInContext"/> then
 /// applies it only to the model whose physical data source the entity actually routes to (driven by
 /// the same <see cref="UseDataSourceAttribute"/>), so discovery and routing agree by construction.
@@ -28,6 +29,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfigu
 public abstract class EntityTypeConfiguration<TEntity, TIdentifierType>
     : EntityTypeConfigurationBase<TEntity, TIdentifierType>,
       IEntityTypeConfigurationSQLServer<TEntity, TIdentifierType>,
+      IEntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>,
       IEntityTypeConfigurationSqlite<TEntity, TIdentifierType>,
       IEntityTypeConfigurationCosmos<TEntity, TIdentifierType>
     where TEntity : AuditableBaseEntity<TIdentifierType>
@@ -62,7 +64,13 @@ public abstract class EntityTypeConfiguration<TEntity, TIdentifierType>
 
         switch (engine)
         {
+            // One branch for both server engines, deliberately: PostgreSQL takes the SQL Server
+            // mapping unchanged, module schema and PascalCase identifiers included, so an entity
+            // moves between the two by changing its configuration base class and nothing else.
+            // PostgreSQL house style (snake_case, the public schema) is a consumer's
+            // naming-convention plugin, not a framework decision (ADR-113).
             case DataSource.SQLServer:
+            case DataSource.PostgreSQL:
                 builder.ToTable(typeof(TEntity).Name, NamespaceConventions.GetModuleName(typeof(TEntity)) ?? "dbo");
                 builder.HasKey(p => p.Id);
                 if (isIdValueGenerated)

@@ -1080,6 +1080,7 @@
           "Microsoft.Extensions.Caching.Hybrid": "[10.9.0, )",
           "Microsoft.Extensions.Http.Resilience": "[10.9.0, )",
           "MiniProfiler.EntityFrameworkCore": "[4.5.4, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
           "Polly.Core": "[8.7.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
@@ -1474,6 +1475,26 @@
         "contentHash": "f8ckFm/xTS8C2Bn4BdVc94dNvg+tRfk0e4XFaETOqRi6r0PUOyn3Z9jTQCVpB3R1pP5WiRsEIrqqxux95BVpTA==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "2.0.0"
+        }
+      },
+      "Npgsql": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "7nb5YzXuvWWJxB0J8DiyL3we+X4FOctZrt0fIBnucOIaIevFEEwGQVZKtiu9olXdlNAK1eNgqSral6r/jlhI4w==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "10.0.0"
+        }
+      },
+      "Npgsql.EntityFrameworkCore.PostgreSQL": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "IPGrrZnRkuW7OlHDhUESZz4G5DLkW7Nej/O3Cx+0iTsgyU5XJxBgpsvTHLloo3WWuAKKbDHXBvWPVkX1deRh1Q==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "[10.0.4, 11.0.0)",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.4, 11.0.0)",
+          "Npgsql": "10.0.3"
         }
       },
       "Polly.Core": {

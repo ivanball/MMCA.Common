@@ -26,6 +26,21 @@ public sealed class ConnectionStringSettingsValidatorTests
             .Failed.Should().BeFalse();
 
     [Fact]
+    public void Validate_AcceptsATopLevelPostgreSQLConnection() =>
+        Validate(new ConnectionStringSettings { PostgreSQLConnectionString = "Host=localhost;Database=app;Username=app" })
+            .Failed.Should().BeFalse("a PostgreSQL-only host reaches a database like any other single-engine host");
+
+    [Fact]
+    public void Validate_AcceptsANamedPostgreSQLSourceWithNoTopLevelConnection() =>
+        Validate(
+            new ConnectionStringSettings(),
+            new DataSourcesSettings(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["Tickets"] = new() { PostgreSQLConnectionString = "Host=localhost;Database=tickets;Username=app" },
+            }))
+            .Failed.Should().BeFalse("the resolver registers that entry as its own physical source");
+
+    [Fact]
     public void Validate_AcceptsATopLevelCosmosConnection() =>
         Validate(new ConnectionStringSettings { CosmosConnectionString = "AccountEndpoint=https://test;AccountKey=dGVzdA==" })
             .Failed.Should().BeFalse();
