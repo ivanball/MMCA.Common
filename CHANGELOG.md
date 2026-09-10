@@ -6,6 +6,38 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.191.0] - 2026-09-10
+
+### Added
+
+- **The client half of the gateway trusted-caller exemption.**
+  `services.AddTrustedCallerHeader(configuration)` (MMCA.Common.UI.Web) presents the deployment's
+  trusted-internal-caller secret on a server-rendered host's server-to-server calls, so they take
+  the gateway's no-limiter partition instead of collapsing every visitor into one client-IP window.
+  The gateway edge limiter already read `GatewayRateLimiting:TrustedCallerHeaderName` and
+  `GatewayRateLimiting:TrustedCallerSecret`; the same section now configures both ends, and each
+  host stopped needing its own copy of the client side.
+- **Narrow by construction.** The public `TrustedCallerHandler` (a `DelegatingHandler` in
+  `MMCA.Common.UI.Web.Security`) is composed onto every `HttpClient` the host creates, because the
+  call that suffers most from the per-IP collapse is the cookie-session token refresh, whose client
+  the framework creates under a name a host has no supported way to reach. Breadth costs nothing
+  because the handler stamps only a request whose scheme, host and port match the gateway origin
+  (`Api:ApiEndpoint`), as exactly one header value: a client later pointed at a third party cannot
+  be handed the bypass by accident.
+- **Opt in, and server side only.** With no secret configured (the local and CI default) the call
+  registers nothing at all and every request stays rate limited exactly as it is today; the same is
+  true when the header name is blank or the API endpoint is not an absolute URI. The secret exempts
+  a component the deployment ships, never a visitor's browser, so it must reach the SSR host alone,
+  from a secret store or the environment (`GatewayRateLimiting__TrustedCallerSecret`), never a
+  checked-in `appsettings` file and never client-side code.
+- **Consumer note.** A host that hand-rolled this can delete its local copy and call
+  `AddTrustedCallerHeader(builder.Configuration)` instead. MMCA.Store's settings move from its own
+  `TrustedCaller:*` section to `GatewayRateLimiting:*` (`TrustedCaller:Secret` becomes
+  `GatewayRateLimiting:TrustedCallerSecret`, `TrustedCaller:HeaderName` becomes
+  `GatewayRateLimiting:TrustedCallerHeaderName`), which is a deployment-configuration rename:
+  the environment variable `TrustedCaller__Secret` becomes
+  `GatewayRateLimiting__TrustedCallerSecret`.
+
 ## [1.190.0] - 2026-09-10
 
 ### Added

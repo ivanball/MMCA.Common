@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.UI.Web.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddTrustedCallerHeader(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Web.Security.TrustedCallerHandler
+MMCA.Common.UI.Web.Security.TrustedCallerHandler.TrustedCallerHandler(string! headerName, string! secret, System.Uri! gatewayOrigin) -> void
+static MMCA.Common.UI.Web.DependencyInjection.AddTrustedCallerHeader(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
