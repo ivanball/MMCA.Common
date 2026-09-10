@@ -33,4 +33,17 @@ builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleServic
     .WithE2eRsaKeys()
     .WithHttpHealthCheck("/alive");
 
+// The same project on the OTHER cleartext profile: HttpProtocols.Http2 alone, which is what h2c
+// prior knowledge requires and what every extracted MMCA service runs. It is a second resource
+// rather than a second endpoint because a cleartext Kestrel endpoint serves one profile or the
+// other: Http1AndHttp2 without TLS has no ALPN to negotiate with and answers HTTP/1.1 only.
+//
+// Its gate is WithH2cHealthCheck rather than the stock WithHttpHealthCheck above, for exactly the
+// reason that helper exists: Aspire's stock probe sends HTTP/1.1, which an Http2-only endpoint
+// answers with GOAWAY HTTP_1_1_REQUIRED, so the resource could never turn healthy and the fixture's
+// wait would time out. Same /alive path, same liveness-not-readiness rule.
+builder.AddProject<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleService>("sample-h2c")
+    .WithEnvironment("SampleService__Http2Only", "true")
+    .WithH2cHealthCheck();
+
 await builder.Build().RunAsync().ConfigureAwait(false);

@@ -13,8 +13,14 @@ namespace MMCA.Common.Testing.Aspire.AppHostTests;
 public sealed class SampleAppHostFixture
     : AppHostFixtureBase<Projects.MMCA_Common_Testing_Aspire_AppHostTests_SampleAppHost>
 {
-    /// <summary>The sample service's resource name in the AppHost.</summary>
+    /// <summary>The sample service's resource name in the AppHost, on the HTTP/1.1 cleartext profile.</summary>
     public const string ServiceResourceName = "sample";
+
+    /// <summary>
+    /// The same service on the Http2-only cleartext profile, which is the only one that serves h2c:
+    /// with no TLS there is no ALPN, so an Http1AndHttp2 endpoint answers HTTP/1.1 and nothing else.
+    /// </summary>
+    public const string H2cServiceResourceName = "sample-h2c";
 
     /// <summary>The logical data source name the AppHost routes the SQLite file to.</summary>
     public const string LogicalDataSourceName = "Sample";

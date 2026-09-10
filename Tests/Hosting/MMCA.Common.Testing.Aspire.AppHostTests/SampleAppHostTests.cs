@@ -85,14 +85,34 @@ public sealed class SampleAppHostTests(SampleAppHostFixture fixture)
     }
 
     [Fact]
-    public async Task Service_NegotiatesH2cOnItsCleartextEndpoint()
+    public async Task Http2OnlyService_NegotiatesH2cOnItsCleartextEndpoint()
     {
         SkipIfUnavailable();
 
         await AssertH2cAsync(
-            SampleAppHostFixture.ServiceResourceName,
+            SampleAppHostFixture.H2cServiceResourceName,
             AppHostProbePaths.Alive,
             cancellationToken: TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Http2OnlyService_RefusesAnOrdinaryHttp11Client()
+    {
+        SkipIfUnavailable();
+
+        // The negative control that makes the assertion above load-bearing. An Http2-only cleartext
+        // endpoint answers a default HttpClient's HTTP/1.1 request with GOAWAY HTTP_1_1_REQUIRED, so
+        // this must throw. Two things ride on it: AssertH2cAsync would be vacuous if the endpoint
+        // also served HTTP/1.1, and this is exactly why the framework ships WithH2cHealthCheck
+        // instead of letting Aspire's stock HTTP probe gate such a resource.
+        using var client = CreateHttpClient(SampleAppHostFixture.H2cServiceResourceName);
+
+        var act = async () => await client.GetAsync(
+            new Uri(AppHostProbePaths.Alive, UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<HttpRequestException>(
+            "an Http2-only cleartext endpoint must reject HTTP/1.1, which is what makes the h2c assertion mean something");
     }
 
     [Fact]

@@ -6,9 +6,10 @@
   <!--
     The smallest host that exercises every wiring contract MMCA.Common.Testing.Aspire asserts:
     AddServiceDefaults + MapDefaultEndpoints for the three probe paths, MapJwksEndpoint for the key
-    set, and an Http1AndHttp2 cleartext listener so the h2c assertion has something real to prove.
-    It takes a SQLite data source, which is a file rather than a container, so the whole sample
-    AppHost boots with no container runtime at all.
+    set, and a cleartext listener whose protocol profile comes from configuration so the sample
+    AppHost can run this one project twice, once on Http1 for the ordinary probes and once on
+    Http2-only for the h2c assertion. It takes a SQLite data source, which is a file rather than a
+    container, so the whole sample AppHost boots with no container runtime at all.
 
     DELIBERATELY OUTSIDE MMCA.Common.slnx, together with the sample AppHost and the AppHost-backed
     test project beside it. An Aspire AppHost's committed lock file carries a RID-specific

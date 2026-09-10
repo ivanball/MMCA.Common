@@ -177,6 +177,16 @@ public abstract class AppHostTestBase<TFixture>(TFixture fixture)
     /// assertion cannot express: a client that is allowed to downgrade proves nothing, because a
     /// listener speaking only HTTP/1.1 answers it perfectly well.
     /// </para>
+    /// <para>
+    /// <b>The target endpoint must be configured <c>HttpProtocols.Http2</c> ALONE.</b> A cleartext
+    /// endpoint set to <c>Http1AndHttp2</c> does NOT serve h2c: with no TLS there is no ALPN to
+    /// negotiate with, so Kestrel logs "HTTP/2 is not enabled for &lt;address&gt; ... Connections to
+    /// this endpoint will use HTTP/1.1" and this assertion fails on the version check. Http2-only is
+    /// the profile an extracted service runs (<c>ConfigureEndpointsWithHealthProbe</c> with
+    /// <c>HttpProtocols.Http2</c>), and such a resource must be gated with the framework's
+    /// <c>WithH2cHealthCheck()</c> rather than Aspire's stock HTTP probe, which speaks HTTP/1.1 and
+    /// would never turn it healthy.
+    /// </para>
     /// </summary>
     /// <param name="resourceName">The Aspire resource name.</param>
     /// <param name="path">The path to GET. Defaults to the liveness probe, which every framework host serves on every listener.</param>
