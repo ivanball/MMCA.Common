@@ -1,3 +1,5 @@
+using System.Net;
+using Aspire.Hosting.Testing;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,19 +102,30 @@ public sealed class SampleAppHostTests(SampleAppHostFixture fixture)
     {
         SkipIfUnavailable();
 
-        // The negative control that makes the assertion above load-bearing. An Http2-only cleartext
-        // endpoint answers a default HttpClient's HTTP/1.1 request with GOAWAY HTTP_1_1_REQUIRED, so
-        // this must throw. Two things ride on it: AssertH2cAsync would be vacuous if the endpoint
-        // also served HTTP/1.1, and this is exactly why the framework ships WithH2cHealthCheck
-        // instead of letting Aspire's stock HTTP probe gate such a resource.
-        using var client = CreateHttpClient(SampleAppHostFixture.H2cServiceResourceName);
+        // The negative control that makes the assertion above load-bearing: AssertH2cAsync would be
+        // vacuous if the endpoint also served HTTP/1.1.
+        //
+        // The client is built here rather than taken from CreateHttpClient on purpose. Aspire's
+        // testing client is not pinned to a version, so it happily speaks HTTP/2 to this endpoint and
+        // would prove nothing about the endpoint at all (the first run of this test asserted exactly
+        // that and was wrong). RequestVersionExact on 1.1 forbids the upgrade, so the request really
+        // is an HTTP/1.1 one, which an Http2-only cleartext listener refuses. That refusal is why the
+        // framework ships WithH2cHealthCheck instead of letting Aspire's stock HTTP probe, which does
+        // send HTTP/1.1, gate such a resource.
+        var endpoint = Application.GetEndpoint(SampleAppHostFixture.H2cServiceResourceName, "http");
 
-        var act = async () => await client.GetAsync(
-            new Uri(AppHostProbePaths.Alive, UriKind.Relative),
-            TestContext.Current.CancellationToken);
+        using var handler = new SocketsHttpHandler { UseProxy = false };
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(endpoint, AppHostProbePaths.Alive))
+        {
+            Version = HttpVersion.Version11,
+            VersionPolicy = HttpVersionPolicy.RequestVersionExact,
+        };
+
+        var act = async () => await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<HttpRequestException>(
-            "an Http2-only cleartext endpoint must reject HTTP/1.1, which is what makes the h2c assertion mean something");
+            "an Http2-only cleartext endpoint must reject a real HTTP/1.1 request");
     }
 
     [Fact]
