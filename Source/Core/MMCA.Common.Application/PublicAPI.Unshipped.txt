@@ -521,6 +521,39 @@ MMCA.Common.Application.Auth.Validation.SetUserRolesRequestValidator.SetUserRole
 MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator
 MMCA.Common.Application.Auth.Validation.TwoFactorCodeRequestValidator.TwoFactorCodeRequestValidator() -> void
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource.PostgreSQL = 3 -> MMCA.Common.Application.Interfaces.Infrastructure.Persistence.DataSource
+MMCA.Common.Application.InternalCommands.IInternalCommand
+MMCA.Common.Application.InternalCommands.IInternalCommandAdministration
+MMCA.Common.Application.InternalCommands.IInternalCommandAdministration.CountPendingAsync(string? dataSource, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<long>!>!
+MMCA.Common.Application.InternalCommands.IInternalCommandAdministration.ListDeadLettersAsync(string? dataSource, int skip, int take, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter!>!>!>!
+MMCA.Common.Application.InternalCommands.IInternalCommandAdministration.PurgeProcessedAsync(string? dataSource, System.TimeSpan olderThan, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.InternalCommands.IInternalCommandAdministration.RequeueAsync(string? dataSource, System.Collections.Generic.IReadOnlyCollection<System.Guid>? ids, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
+MMCA.Common.Application.InternalCommands.IInternalCommandScheduler
+MMCA.Common.Application.InternalCommands.IInternalCommandScheduler.ScheduleAsync(MMCA.Common.Application.InternalCommands.IInternalCommand! command, System.DateTimeOffset? runAt = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Guid>!>!
+MMCA.Common.Application.InternalCommands.IInternalCommandScheduler.ScheduleAsync(MMCA.Common.Application.InternalCommands.IInternalCommand! command, System.TimeSpan delay, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Guid>!>!
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.<Clone>$() -> MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter!
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Attempts.get -> int
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Attempts.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.CommandType.get -> string!
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.CommandType.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.CreatedOn.get -> System.DateTime
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.CreatedOn.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.DataSource.get -> string!
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.DataSource.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.DeadLetteredOn.get -> System.DateTime?
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.DeadLetteredOn.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Deconstruct(out System.Guid Id, out string! DataSource, out string! CommandType, out System.DateTime ScheduledOn, out System.DateTime CreatedOn, out int Attempts, out string? LastError, out System.DateTime? DeadLetteredOn) -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Equals(MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? other) -> bool
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Id.get -> System.Guid
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Id.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.InternalCommandDeadLetter(System.Guid Id, string! DataSource, string! CommandType, System.DateTime ScheduledOn, System.DateTime CreatedOn, int Attempts, string? LastError, System.DateTime? DeadLetteredOn) -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.LastError.get -> string?
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.LastError.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.ScheduledOn.get -> System.DateTime
+MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.ScheduledOn.init -> void
+MMCA.Common.Application.InternalCommands.InternalCommandNameAttribute
+MMCA.Common.Application.InternalCommands.InternalCommandNameAttribute.InternalCommandNameAttribute(string! name) -> void
+MMCA.Common.Application.InternalCommands.InternalCommandNameAttribute.Name.get -> string!
 MMCA.Common.Application.UseCases.Markers.IRequiresMfa
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>
 MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.ConfirmEmailHandlerBase(MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork! unitOfWork, MMCA.Common.Application.Auth.EmailConfirmation.IEmailConfirmationTokenService! tokenService, Microsoft.Extensions.Logging.ILogger! logger) -> void
@@ -547,6 +580,9 @@ override MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.Get
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.Equals(object? obj) -> bool
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.GetHashCode() -> int
 override MMCA.Common.Application.Auth.TwoFactor.RecoveryCodeSet.ToString() -> string!
+override MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.Equals(object? obj) -> bool
+override MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.GetHashCode() -> int
+override MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.ToString() -> string!
 static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator !=(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
 static MMCA.Common.Application.Auth.Administration.UserAdministrationQuery.operator ==(MMCA.Common.Application.Auth.Administration.UserAdministrationQuery left, MMCA.Common.Application.Auth.Administration.UserAdministrationQuery right) -> bool
 static MMCA.Common.Application.Auth.EmailConfirmation.EmailConfirmationErrors.EmailNotConfirmed(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
@@ -557,6 +593,8 @@ static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorEnrollmen
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorInvalid(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorNotEnrolled(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Application.Auth.TwoFactor.TwoFactorErrors.TwoFactorRequired(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.operator !=(MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? left, MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? right) -> bool
+static MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter.operator ==(MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? left, MMCA.Common.Application.InternalCommands.InternalCommandDeadLetter? right) -> bool
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.ChallengeSecondFactorAsync(int userId, string? code, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Application.Auth.TwoFactor.TwoFactorOutcome>!>!
 virtual MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CheckEmailConfirmed(TUser! untrackedUser) -> MMCA.Common.Shared.Abstractions.Result!
 virtual MMCA.Common.Application.Users.UseCases.EmailConfirmation.ConfirmEmailHandlerBase<TUser, TCommand>.HandlerName.get -> string!

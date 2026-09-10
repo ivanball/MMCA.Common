@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -75,6 +76,9 @@ public sealed class CosmosDbContext(
 
         // Cosmos does not support the outbox table (relational-only).
         modelBuilder.Ignore<OutboxMessage>();
+
+        // Nor the internal-command job queue, for the same reason.
+        modelBuilder.Ignore<InternalCommandMessage>();
 
         // Strip relational-specific indexes (e.g. HasIndex / HasFilter) that the
         // Cosmos provider does not support. This allows entity configurations to

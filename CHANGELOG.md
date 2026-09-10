@@ -29,6 +29,28 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   for every declared PostgreSQL database, and `WithPostgreSQLDataSource(database, logicalName)` in
   `MMCA.Common.Aspire.Hosting` wires a service project to its own `PostgresDatabaseResource`,
   injecting `DataSources__{logicalName}__PostgreSQLConnectionString`.
+- **Internal commands: durable deferred work on the outbox's machinery.**
+  `IInternalCommandScheduler.ScheduleAsync(command, runAt)` (and a `TimeSpan delay` overload) writes an
+  `InternalCommandMessage` row through the caller's own unit of work, so scheduling inside an
+  `ITransactional` command commits with the aggregate change and a rollback schedules nothing. Mark a
+  command with `IInternalCommand`; it keeps its ordinary `ICommandHandler<TCommand, Result>`.
+- `InternalCommandProcessor` (hosted) claims due rows with a lease, executes each in a fresh DI scope by
+  resolving the DECORATED handler registration, and applies exponential backoff with jitter before
+  dead-lettering. The scheduling user, tenant and correlation id are captured on the row and restored for
+  the execution, so an `IRequiresPermission` command runs deferred with the same authorization answer and
+  the same audit stamps it would have had inline. `InternalCommandCleanupService` purges on retention.
+- `IInternalCommandAdministration` (`CountPendingAsync`, `ListDeadLettersAsync`, `RequeueAsync`,
+  `PurgeProcessedAsync`) is the operator surface, mirroring `IOutboxAdministration`.
+- Configuration section `InternalCommands`: `Enabled` (default `true`), `BatchSize`, `MaxAttempts`,
+  `PollingIntervalSeconds`, `ProcessingDelaySeconds`, `LeaseSeconds`, `RetryBackoffBaseSeconds`,
+  `MaxRetryBackoffSeconds`, `RetentionDays`, `DeadLetterRetentionDays`, `CleanupIntervalHours`,
+  `DataSource`, `DatabaseName`. Metrics land on the `MMCA.Common.InternalCommands` meter, and the
+  `InternalCommandPoll` span is suppressed from telemetry export like the outbox poll.
+- **Consumer action: one migration per relational data source.** The `InternalCommands` table is mapped
+  into every relational source unconditionally (the outbox's posture, so the `Enabled` flag is never a
+  migration). Run `dotnet ef migrations add AddInternalCommands` per source and apply it before upgrading
+  a deployed host. Optional `[InternalCommandName("...")]` gives a command a stable stored identity that
+  survives a rename, namespace move, or assembly move.
 - **Two-factor authentication (TOTP), opt-in.** `AddTwoFactorAuthentication(config)` registers
   `ITwoFactorService` (RFC 6238 secrets, codes, provisioning URIs and hashed single-use recovery
   codes, over `Otp.NET` in Infrastructure only) and `ITwoFactorAuthenticator`, bound from
