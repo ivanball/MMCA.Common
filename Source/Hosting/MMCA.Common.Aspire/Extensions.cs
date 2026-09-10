@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -204,12 +204,14 @@ public static class Extensions
                         .AddMeter("MMCA.Common.Scheduler")
                         .AddMeter("MMCA.Common.Broker")
                         .AddMeter("MMCA.Common.OutputCache")
-                        .AddMeter("MMCA.Common.BestEffort");
+                        .AddMeter("MMCA.Common.BestEffort")
+                        .AddMeter("MMCA.Common.InternalCommands");
                 })
                 .WithTracing(tracing =>
                 {
                     tracing.AddSource(builder.Environment.ApplicationName)
-                        .AddSource("MMCA.Common.Outbox");
+                        .AddSource("MMCA.Common.Outbox")
+                        .AddSource("MMCA.Common.InternalCommands");
 
                     // Cost control (rubric §31): health-probe traces. Container Apps liveness and
                     // readiness probes, the gateway's downstream aggregate probes, YARP active

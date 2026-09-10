@@ -222,7 +222,18 @@ public static class DependencyInjection
             services.TryAddScoped<Application.Interfaces.Infrastructure.Persistence.IOutboxAdministration,
                 Persistence.Outbox.Administration.OutboxAdministration>();
 
+            AddInternalCommands(services, configuration);
+
             services.AddServices();
+
+            // The impersonation decorator must wrap whatever ICurrentUserService is registered, so it
+            // goes on AFTER AddServices() has run its TryAddScoped. Guarded so a host whose modules
+            // each call AddInfrastructure does not stack one wrapper per call.
+            if (!services.Any(d => d.ServiceType == typeof(Context.ScopedUserOverride)))
+            {
+                services.AddScoped<Context.ScopedUserOverride>();
+                services.TryDecorate<ICurrentUserService, Context.ImpersonatingCurrentUserService>();
+            }
 
             return services;
         }
@@ -874,6 +885,61 @@ public static class DependencyInjection
 
             builder.AddStandardResilienceHandler();
             return builder;
+        }
+    }
+
+    /// <summary>
+    /// Registers the internal-command job queue: settings, the scheduler, the operator surface,
+    /// and (when <c>InternalCommands:Enabled</c>) the processor and its retention sweep.
+    /// </summary>
+    /// <remarks>
+    /// The posture mirrors the outbox deliberately. The <c>InternalCommands</c> table is mapped
+    /// into every relational source unconditionally, so the flag never implies a migration; it
+    /// only decides whether THIS host drains the queue. A host with the flag off still writes
+    /// rows through <c>IInternalCommandScheduler</c>, and a startup notice says so once.
+    /// </remarks>
+    /// <param name="services">The collection being configured.</param>
+    /// <param name="configuration">Application configuration for binding the section.</param>
+    [SuppressMessage(
+        "Style",
+        "IDE0051:Remove unused private members",
+        Justification = "Called from AddInfrastructure inside the extension(IServiceCollection services) block above. The IDE0051 analyzer in .NET SDK 10.0.201+ does not see references that cross the boundary between a C# preview extension type block and outer-scope private members of the same containing class, so it reports a false positive. Remove this suppression once Roslyn fixes the cross-block reference tracking.")]
+    private static void AddInternalCommands(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<Persistence.InternalCommands.Administration.InternalCommandsSettings>()
+            .Bind(configuration.GetSection(
+                Persistence.InternalCommands.Administration.InternalCommandsSettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.TryAddSingleton<
+            Persistence.InternalCommands.Processing.IInternalCommandSignal,
+            Persistence.InternalCommands.Processing.InternalCommandSignal>();
+
+        // Scoped: the row is written on the SAME context factory the calling handler's
+        // repositories use, which is what makes scheduling atomic with the aggregate change.
+        services.TryAddScoped<Application.InternalCommands.IInternalCommandScheduler,
+            Persistence.InternalCommands.InternalCommandScheduler>();
+
+        // Operator surface over the same queue tables: count, list, requeue and purge. Scoped,
+        // because it creates one child scope per data source it visits and holds no state.
+        services.TryAddScoped<Application.InternalCommands.IInternalCommandAdministration,
+            Persistence.InternalCommands.Administration.InternalCommandAdministration>();
+
+        var internalCommandSettings = configuration
+            .GetSection(Persistence.InternalCommands.Administration.InternalCommandsSettings.SectionName)
+            .Get<Persistence.InternalCommands.Administration.InternalCommandsSettings>()
+            ?? new Persistence.InternalCommands.Administration.InternalCommandsSettings();
+
+        if (internalCommandSettings.Enabled)
+        {
+            services.AddHostedService<Persistence.InternalCommands.Processing.InternalCommandProcessor>();
+            services.AddHostedService<Persistence.InternalCommands.Administration.InternalCommandCleanupService>();
+        }
+        else
+        {
+            services.AddHostedService<
+                Persistence.InternalCommands.Administration.InternalCommandsDisabledNoticeService>();
         }
     }
 
