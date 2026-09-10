@@ -89,3 +89,20 @@ MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.MaxConnec
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.MaxConnectionsPerUser.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.get -> bool
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.init -> void
+MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>
+MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationPostgreSQL<TEntity, TIdentifierType>.EntityTypeConfigurationPostgreSQL() -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLConnectionString.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLConnectionString.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLMigrationsAssembly.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.ConnectionStringSettings.PostgreSQLMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLConnectionString.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLConnectionString.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLMigrationsAssembly.get -> string!
+MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.PostgreSQLMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PostgreSQLMigrationsAssembly.get -> string?
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.PostgreSQLMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext
+MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext.PostgreSQLDbContext(Microsoft.EntityFrameworkCore.DbContextOptions<MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!>! options, System.IServiceProvider! serviceProvider, MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IEntityConfigurationAssemblyProvider! assemblyProvider, MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource! physicalDataSource) -> void
+MMCA.Common.Infrastructure.Persistence.Tenancy.TenantDataSourceOverrideSettings.PostgreSQLConnectionString.get -> string?
+MMCA.Common.Infrastructure.Persistence.Tenancy.TenantDataSourceOverrideSettings.PostgreSQLConnectionString.init -> void
+static MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextHelper.CreatePostgreSQL(string![]! args, System.Action<MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions!>! configure) -> MMCA.Common.Infrastructure.Persistence.DbContexts.PostgreSQLDbContext!

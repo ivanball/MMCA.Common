@@ -24,6 +24,16 @@ public sealed class DataSourceEntrySettings
     /// <summary>Gets the Cosmos DB database name for this source. Falls back to the top-level name.</summary>
     public string CosmosDatabaseName { get; init; } = string.Empty;
 
+    /// <summary>Gets the PostgreSQL connection string for this source.</summary>
+    public string PostgreSQLConnectionString { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the assembly containing EF Core migrations for this source's PostgreSQL database.
+    /// Falls back to the top-level <c>PostgreSQLMigrationsAssembly</c> when empty, exactly as
+    /// <see cref="SQLServerMigrationsAssembly"/> falls back to its top-level value.
+    /// </summary>
+    public string PostgreSQLMigrationsAssembly { get; init; } = string.Empty;
+
     /// <summary>Gets the SQLite connection string for this source.</summary>
     public string SqliteConnectionString { get; init; } = string.Empty;
 

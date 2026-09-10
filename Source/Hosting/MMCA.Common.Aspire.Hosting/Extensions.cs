@@ -494,6 +494,36 @@ public static class Extensions
         }
 
         /// <summary>
+        /// Wires a service project to its own PostgreSQL database ("database per microservice",
+        /// ADR-006), the PostgreSQL peer of <see cref="WithSQLServerDataSource"/>. References the
+        /// given database and injects its connection string as
+        /// <c>DataSources__{logicalName}__PostgreSQLConnectionString</c>, which feeds the MMCA.Common
+        /// multi-database routing (entities whose logical source matches <paramref name="logicalName"/>
+        /// resolve to this database).
+        /// <para>
+        /// That one entry is the whole configuration, exactly as it is for SQL Server: with no
+        /// top-level connection string, the single database a host declares this way also becomes its
+        /// <c>Default</c> source, so the framework's own tables and the readiness health check both
+        /// land on it, and the logical name collapses onto Default.
+        /// </para>
+        /// </summary>
+        /// <param name="database">The service's own database resource.</param>
+        /// <param name="logicalName">The module's logical data source name (e.g. <c>"Catalog"</c>).</param>
+        /// <returns>The service resource builder for chaining.</returns>
+        public IResourceBuilder<ProjectResource> WithPostgreSQLDataSource(
+            IResourceBuilder<PostgresDatabaseResource> database,
+            string logicalName)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(database);
+
+            return service
+                .WithReference(database)
+                .WaitFor(database)
+                .WithEnvironment($"DataSources__{logicalName}__PostgreSQLConnectionString", database.Resource.ConnectionStringExpression);
+        }
+
+        /// <summary>
         /// Wires a service project to an Azure Cosmos DB database for a given logical data source
         /// (polyglot persistence — entities whose configuration inherits <c>EntityTypeConfigurationCosmos</c>
         /// and resolve to <paramref name="logicalName"/> are stored here). Injects:

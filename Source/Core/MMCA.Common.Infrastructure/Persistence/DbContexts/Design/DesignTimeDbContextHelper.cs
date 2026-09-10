@@ -34,9 +34,10 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Design;
 /// Invoked as <c>dotnet ef migrations add X --project ... -- --datasource Conference</c>
 /// (EF forwards the arguments after <c>--</c> to the factory).
 /// <para>
-/// <see cref="CreateSqlite"/> is the symmetric entry point for a SQLite-backed application, which is
-/// the same code path with <c>SqliteConnectionString</c> / <c>SqliteMigrationsAssembly</c> in place
-/// of their SQL Server equivalents.
+/// <see cref="CreatePostgreSQL"/> and <see cref="CreateSqlite"/> are the symmetric entry points for a
+/// PostgreSQL- or SQLite-backed application: the same code path with
+/// <c>PostgreSQLConnectionString</c> / <c>PostgreSQLMigrationsAssembly</c> (or their SQLite
+/// equivalents) in place of the SQL Server settings.
 /// </para>
 /// </summary>
 public static class DesignTimeDbContextHelper
@@ -54,6 +55,28 @@ public static class DesignTimeDbContextHelper
 
         return new SQLServerDbContext(
             new DbContextOptionsBuilder<SQLServerDbContext>().Options,
+            services.BuildServiceProvider(),
+            assemblyProvider,
+            physical);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="PostgreSQLDbContext"/> for the data source selected by
+    /// <see cref="DesignTimeDbContextOptions.DataSourceName"/> or the <c>--datasource</c> argument,
+    /// the PostgreSQL counterpart of <see cref="CreateSqlServer"/>. A migrations project declares
+    /// its connection through <c>PostgreSQLConnectionString</c> and its own assembly through
+    /// <c>PostgreSQLMigrationsAssembly</c>, on the top-level <c>ConnectionStrings</c> section or on
+    /// the matching <c>DataSources</c> entry.
+    /// </summary>
+    /// <param name="args">The design-time arguments forwarded by <c>dotnet ef</c> (after <c>--</c>).</param>
+    /// <param name="configure">Callback configuring connection settings and configuration assemblies.</param>
+    /// <returns>A context whose model contains only the selected data source's entities.</returns>
+    public static PostgreSQLDbContext CreatePostgreSQL(string[] args, Action<DesignTimeDbContextOptions> configure)
+    {
+        var (services, assemblyProvider, physical) = BuildDesignTimeServices(DataSource.PostgreSQL, args, configure);
+
+        return new PostgreSQLDbContext(
+            new DbContextOptionsBuilder<PostgreSQLDbContext>().Options,
             services.BuildServiceProvider(),
             assemblyProvider,
             physical);

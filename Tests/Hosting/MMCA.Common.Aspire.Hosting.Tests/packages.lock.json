@@ -905,6 +905,7 @@
       "mmca.common.aspire": {
         "type": "Project",
         "dependencies": {
+          "AspNetCore.HealthChecks.NpgSql": "[9.0.0, )",
           "AspNetCore.HealthChecks.Rabbitmq": "[9.0.0, )",
           "AspNetCore.HealthChecks.SqlServer": "[9.0.0, )",
           "AspNetCore.HealthChecks.Sqlite": "[9.0.0, )",
@@ -920,6 +921,7 @@
           "Microsoft.AspNetCore.OutputCaching.StackExchangeRedis": "[10.0.11, )",
           "Microsoft.Extensions.Http.Resilience": "[10.9.0, )",
           "Microsoft.Extensions.ServiceDiscovery": "[10.9.0, )",
+          "Npgsql": "[10.0.3, )",
           "OpenTelemetry.Api": "[1.18.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.18.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.18.0, )",
@@ -938,6 +940,7 @@
         "dependencies": {
           "Aspire.Hosting": "[13.5.3, )",
           "Aspire.Hosting.Azure.CosmosDB": "[13.5.3, )",
+          "Aspire.Hosting.PostgreSQL": "[13.5.3, )",
           "Aspire.Hosting.RabbitMQ": "[13.5.3, )",
           "Aspire.Hosting.SqlServer": "[13.5.3, )",
           "MessagePack": "[3.1.8, )",
@@ -1006,6 +1009,33 @@
           "JsonPatch.Net": "5.0.2",
           "KubernetesClient": "19.0.2",
           "Microsoft.Azure.Cosmos": "3.61.0",
+          "ModelContextProtocol": "1.3.0",
+          "Newtonsoft.Json": "13.0.4",
+          "OpenTelemetry.Exporter.OpenTelemetryProtocol": "1.15.3",
+          "OpenTelemetry.Extensions.Hosting": "1.15.3",
+          "Polly.Core": "8.6.6",
+          "Semver": "3.0.0",
+          "StreamJsonRpc": "2.25.29",
+          "System.IO.Hashing": "10.0.8",
+          "YamlDotNet": "16.3.0"
+        }
+      },
+      "Aspire.Hosting.PostgreSQL": {
+        "type": "CentralTransitive",
+        "requested": "[13.5.3, )",
+        "resolved": "13.5.3",
+        "contentHash": "hZQZCKLztVivEFNXYcYTmGklZIsU/SxhoJq414npBn5OXvTpO3NA8p7eNZx+GIBE6AhXTV5Kfacd+iWVsweT8Q==",
+        "dependencies": {
+          "AspNetCore.HealthChecks.NpgSql": "9.0.0",
+          "AspNetCore.HealthChecks.Uris": "9.0.0",
+          "Aspire.Hosting": "13.5.3",
+          "Google.Protobuf": "3.34.1",
+          "Grpc.AspNetCore": "2.80.0",
+          "Grpc.Net.ClientFactory": "2.80.0",
+          "Grpc.Tools": "2.80.0",
+          "Humanizer.Core": "3.0.10",
+          "JsonPatch.Net": "5.0.2",
+          "KubernetesClient": "19.0.2",
           "ModelContextProtocol": "1.3.0",
           "Newtonsoft.Json": "13.0.4",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "1.15.3",
@@ -1100,6 +1130,15 @@
           "OpenTelemetry.Extensions.Hosting": "1.15.3",
           "StackExchange.Redis": "2.13.1",
           "System.IO.Hashing": "10.0.8"
+        }
+      },
+      "AspNetCore.HealthChecks.NpgSql": {
+        "type": "CentralTransitive",
+        "requested": "[9.0.0, )",
+        "resolved": "9.0.0",
+        "contentHash": "npc58/AD5zuVxERdhCl2Kb7WnL37mwX42SJcXIwvmEig0/dugOLg3SIwtfvvh3TnvTwR/sk5LYNkkPaBdks61A==",
+        "dependencies": {
+          "Npgsql": "8.0.3"
         }
       },
       "AspNetCore.HealthChecks.Rabbitmq": {
@@ -1287,6 +1326,12 @@
         "dependencies": {
           "Microsoft.Extensions.ServiceDiscovery.Abstractions": "10.9.0"
         }
+      },
+      "Npgsql": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "7nb5YzXuvWWJxB0J8DiyL3we+X4FOctZrt0fIBnucOIaIevFEEwGQVZKtiu9olXdlNAK1eNgqSral6r/jlhI4w=="
       },
       "OpenTelemetry.Api": {
         "type": "CentralTransitive",
