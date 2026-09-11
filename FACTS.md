@@ -16,27 +16,28 @@ _As of: 2026-09-11 (framework v1.191.0) — **generated from source by `build/fa
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **18**
+## Published packages — **19**
 Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
-1. `MMCA.Common.Application`
-2. `MMCA.Common.Domain`
-3. `MMCA.Common.Infrastructure`
-4. `MMCA.Common.Shared`
-5. `MMCA.Common.API`
-6. `MMCA.Common.Grpc`
-7. `MMCA.Common.UI`
-8. `MMCA.Common.UI.Maui`
-9. `MMCA.Common.UI.Web`
-10. `MMCA.Common.Aspire`
-11. `MMCA.Common.Aspire.Hosting`
-12. `MMCA.Common.Gateway`
-13. `MMCA.Common.Testing`
-14. `MMCA.Common.Testing.Architecture`
-15. `MMCA.Common.Testing.Aspire`
-16. `MMCA.Common.Testing.E2E`
-17. `MMCA.Common.Testing.UI`
-18. `MMCA.Common`
+1. `MMCA.Common.AI`
+2. `MMCA.Common.Application`
+3. `MMCA.Common.Domain`
+4. `MMCA.Common.Infrastructure`
+5. `MMCA.Common.Shared`
+6. `MMCA.Common.API`
+7. `MMCA.Common.Grpc`
+8. `MMCA.Common.UI`
+9. `MMCA.Common.UI.Maui`
+10. `MMCA.Common.UI.Web`
+11. `MMCA.Common.Aspire`
+12. `MMCA.Common.Aspire.Hosting`
+13. `MMCA.Common.Gateway`
+14. `MMCA.Common.Testing`
+15. `MMCA.Common.Testing.Architecture`
+16. `MMCA.Common.Testing.Aspire`
+17. `MMCA.Common.Testing.E2E`
+18. `MMCA.Common.Testing.UI`
+19. `MMCA.Common`
 
 ## Architecture Decision Records
 The ADRs live in the Website repo (`docs-src/adr/`), published at
@@ -44,10 +45,10 @@ The ADRs live in the Website repo (`docs-src/adr/`), published at
 it owns the range/count and the one-line summaries. Do not restate the `(001-NNN)` range elsewhere.
 
 ## Architecture fitness functions
-- **132 test methods across 51 abstract `*TestsBase` classes**, shipped once in the
+- **134 test methods across 52 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **249** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **251** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

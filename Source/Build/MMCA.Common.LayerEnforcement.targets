@@ -27,6 +27,7 @@
         Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.AI'))
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenSharedRefs->Count()) &gt; 0"
@@ -41,6 +42,7 @@
       <_ForbiddenDomainRefs Include="@(ProjectReference)"
         Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.AI'))
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenDomainRefs->Count()) &gt; 0"
@@ -54,10 +56,11 @@
     <ItemGroup>
       <_ForbiddenAppRefs Include="@(ProjectReference)"
         Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.AI'))
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenAppRefs->Count()) &gt; 0"
-           Text="Layer violation: MMCA.Common.Application must not reference %(_ForbiddenAppRefs.Filename). Application depends only on Domain and Shared." />
+           Text="Layer violation: MMCA.Common.Application must not reference %(_ForbiddenAppRefs.Filename). Application depends only on Domain and Shared (a language model is an Infrastructure-tier dependency: MMCA.Common.AI belongs behind Infrastructure)." />
   </Target>
 
   <!-- Infrastructure: depends on Application + Domain + Shared -->
@@ -70,6 +73,30 @@
     </ItemGroup>
     <Error Condition="@(_ForbiddenInfraRefs->Count()) &gt; 0"
            Text="Layer violation: MMCA.Common.Infrastructure must not reference %(_ForbiddenInfraRefs.Filename). Infrastructure must not depend on API/Presentation." />
+  </Target>
+
+  <!-- AI: the language-model boundary. It is an Infrastructure-TIER concern (it owns an external
+       SDK and a provider credential) but it takes no core-layer reference at all: everything it
+       governs is expressed in Microsoft.Extensions.AI primitives, so a host can install it without
+       taking Domain, Application or Infrastructure. Naming each forbidden layer here is what keeps
+       that true: the day this package reaches into Application for a convenience type, the model
+       SDK stops being isolated behind one package and starts being load-bearing in the core.
+       The runtime half is AiDependencyIsolationTestsBase (the other direction: no core layer may
+       reference MMCA.Common.AI). -->
+  <Target Name="EnforceAiLayerBoundary"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.AI'">
+    <ItemGroup>
+      <_ForbiddenAiRefs Include="@(ProjectReference)"
+        Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Application'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Infrastructure'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.API'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.Grpc'))
+                OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.UI'))" />
+    </ItemGroup>
+    <Error Condition="@(_ForbiddenAiRefs->Count()) &gt; 0"
+           Text="Layer violation: MMCA.Common.AI must not reference %(_ForbiddenAiRefs.Filename). The language-model boundary depends on Microsoft.Extensions.AI and its provider SDK only." />
   </Target>
 
   <!-- UI: depends only on Shared -->

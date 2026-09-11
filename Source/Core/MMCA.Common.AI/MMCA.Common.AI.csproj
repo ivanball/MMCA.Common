@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.AI</PackageId>
+    <Description>MMCA framework: a governed Microsoft.Extensions.AI IChatClient. Versioned prompt contracts with a stable hash, per-call output-token and timeout bounds, a tool-use gate, token-usage metrics, and one configuration section that keeps the model dependency isolated, evaluated and observable</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- IHostEnvironment (the Development-only sensitive-data gate), IDistributedCache (the opt-in
+         response cache), the configuration binder and the options validation pipeline all arrive on
+         the shared framework rather than as standalone packages, exactly as they do in
+         MMCA.Common.Infrastructure and MMCA.Common.Gateway. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <InternalsVisibleTo Include="MMCA.Common.AI.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The only two runtime dependencies, and deliberately NO MMCA.Common project reference.
+         This package is the language-model boundary: everything it governs (a prompt contract, a
+         bounded delegating client, a usage meter) is expressed in Microsoft.Extensions.AI
+         primitives, so it needs nothing from Domain, Application or Infrastructure and must stay
+         installable by a host that has taken none of them. Same reasoning as MMCA.Common.Gateway's
+         single YARP dependency. The direction is enforced the other way instead: no MMCA layer may
+         reference this package outside Infrastructure (EnforceAiLayerBoundary in
+         MMCA.Common.LayerEnforcement.targets, plus AiDependencyIsolationTestsBase at runtime).
+
+         Microsoft.Extensions.AI brings Microsoft.Extensions.AI.Abstractions (IChatClient,
+         ChatOptions, UsageDetails) plus the pipeline pieces this package composes: UseLogging,
+         UseOpenTelemetry and UseDistributedCache. Anthropic is the official Anthropic .NET SDK and
+         carries its own Microsoft.Extensions.AI adapter (AsIChatClient), so the provider half is a
+         one-line construction rather than a hand-rolled HttpClient. -->
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Anthropic" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

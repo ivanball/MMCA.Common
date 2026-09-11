@@ -34,7 +34,14 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## Unreleased
 
-Two model-level changes. Nothing is renamed, so no `using` moves; both are felt as migrations.
+**`MMCA.Common.AI` is a new optional package: no action unless you adopt it.** Nothing in the
+framework references it, so it arrives only if you add its `PackageReference` and an `Ai`
+configuration section. Adopting it means one `AddMmcaChatClient(configuration)` call and a section
+whose `Enabled` defaults to `false`; leaving it out changes nothing. Note that the package count in
+[FACTS.md](FACTS.md) moves, so a consumer that pins every `MMCA.Common.*` entry in lockstep simply
+has one more id available, not one more to add.
+
+Two model-level changes follow. Nothing is renamed, so no `using` moves; both are felt as migrations.
 
 1. **Relationships restrict by default.** `RestrictDeleteByDefaultConvention` sets
    `DeleteBehavior.Restrict` on every foreign key no entity configuration configured, on every

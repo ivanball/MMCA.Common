@@ -128,3 +128,12 @@ MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.RawSqlConventionTests
 abstract MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
 virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.ScannedSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.AiDependencyIsolationTestsBase() -> void
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.GovernedAiPackage_ShouldStayBehind_Infrastructure() -> void
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.LanguageModelSdks_ShouldStayAt_TheModelBoundary() -> void
+abstract MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackagePrefix = "MMCA.Common.AI." -> string!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageStaysBehindInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelSdksStayAtTheModelBoundary(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static readonly MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelDependencies -> System.Collections.Generic.IReadOnlyList<string!>!

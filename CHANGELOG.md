@@ -8,6 +8,52 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Added
 
+- **`MMCA.Common.AI` (NEW package): a governed `IChatClient`.** One optional package holding
+  everything a language-model dependency needs before it is allowed into an application, built on
+  Microsoft.Extensions.AI so the model behind it stays swappable:
+  - **`AiSettings`** (section `Ai`): `Enabled` (default `false`), `Provider`, `Model`, `ApiKey`
+    (production binds it from Key Vault), `MaxOutputTokens` (default 1024), `Timeout` (default 30s),
+    `AllowTools` (default `false`), `EnableCache` (default `false`) and an optional
+    `PerCallInputTokenBudget`. Validated on start: `Model` and `ApiKey` are required once `Enabled`
+    is true, so a half-configured host fails at boot instead of on a user's request.
+  - **`PromptContract`**: a sealed record of `Name`, `Version`, `Model` and `SystemPrompt` with a
+    computed SHA-256 `Hash` that normalizes line endings first, so a prompt hashes identically on
+    every platform and any change to any component moves the hash. `ToChatOptions()` / `Apply(...)`
+    stamp `mmca.prompt.name`, `mmca.prompt.version` and `mmca.prompt.hash` onto the request so
+    telemetry can tag by prompt, and a golden-replay evaluation gate can key its recorded answers on
+    the hash.
+  - **`BoundedChatClient`**: clamps `MaxOutputTokens` down to the configured ceiling, runs the call
+    under a token linked to the caller's and cancelled after `Timeout`, strips tools and the tool
+    mode while `AllowTools` is false, and refuses a request whose ESTIMATED input exceeds
+    `PerCallInputTokenBudget` before it reaches the provider. All four apply to the buffered and the
+    streaming path, and the caller's own `ChatOptions` are never mutated. The input estimate uses an
+    `IAiTokenEstimator` when the pipeline offers one and one token per four characters otherwise:
+    a runaway-input guardrail, never a billing figure.
+  - **`AiUsageMeter` + `UsageRecordingChatClient`**: the counters `mmca.ai.input_tokens` and
+    `mmca.ai.output_tokens` on the meter `MMCA.Common.AI`, tagged `model`, `prompt_name`,
+    `prompt_version` and `provider`, read from the provider-reported `ChatResponse.Usage` (and from
+    the `UsageContent` item on the streaming path). The meter is created through `IMeterFactory` and
+    never disposed by its holder.
+  - **`services.AddMmcaChatClient(configuration)`**: binds and validates the section and, when
+    enabled, registers one `IChatClient` built outermost-first as
+    `Bounded -> UsageRecording -> [DistributedCache] -> OpenTelemetry -> Logging -> provider`. The
+    provider client is Anthropic's official .NET SDK adapted with its own
+    `Microsoft.Extensions.AI.AnthropicClientExtensions.AsIChatClient`. Caching is added only when
+    `EnableCache` is set AND the host registered an `IDistributedCache`; OpenTelemetry publishes
+    under the source `MMCA.Common.AI` and enables sensitive data only in Development (the same gate
+    `Persistence:EnableSensitiveDataLogging` uses, failing closed). When `Enabled` is false it
+    registers no `IChatClient` at all, so consuming code gates on `GetService<IChatClient>()` rather
+    than on a flag. A second overload,
+    `AddMmcaChatClient(configuration, Func<IServiceProvider, IChatClient>)`, supplies the innermost
+    client for a test or a future provider and is what the Anthropic overload calls.
+  - The package takes **no MMCA.Common project reference** (Microsoft.Extensions.AI and Anthropic
+    only), and nothing in the framework references it: adopting it is one `PackageReference` and one
+    configuration section, and a host that does neither is unaffected.
+- **`AiDependencyIsolationTestsBase`** (MMCA.Common.Testing.Architecture): two fitness functions
+  holding the model boundary in both directions. No layer outside Infrastructure may name a
+  language-model SDK type (`Anthropic.*`, `Microsoft.Extensions.AI*`, `OpenAI.*`, `Azure.AI.*`), and
+  no layer outside Infrastructure may reference `MMCA.Common.AI`. `MMCA.Common.LayerEnforcement
+  .targets` carries the compile-time half.
 - **Automatic EF query tags.** Every statement the repositories generate now names the code path that
   issued it: `spec:<SpecificationName>` from `SpecificationEvaluator`, `keyset:<SortKey>` from the
   seek-paging path, and the ambient use case from the new `QueryTagScope` (an `AsyncLocal` scope the
