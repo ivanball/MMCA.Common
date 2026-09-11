@@ -32,6 +32,29 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.194.0] - 2026-09-11
+
+**`MudToastService` no longer takes an `IAccessibilityAnnouncer`: nothing to do unless you construct
+it yourself.** The optional second constructor parameter added in 1.193.0 is removed together with
+the toast-text mirroring it drove. Toasts are now announced because `MmcaThemeProviders` hosts
+`MudSnackbarProvider` inside a `role="status" aria-live="polite"` element, so the rendered toast is
+the live-region content and a second copy of the text is neither needed nor wanted (it announced
+every message twice and made `GetByText("...")` match two elements in Playwright).
+
+The type is `internal` and is resolved through `IToastService`, so a host that registers it the
+normal way (`AddUIShared`, or the `AddCommonUiFacades` bUnit base) is unaffected. Only code that
+newed it up explicitly, inside this framework's own test assemblies or through `InternalsVisibleTo`,
+sees a compile error, and the fix is one argument:
+
+| Old | New |
+| --- | --- |
+| `new MudToastService(snackbar, announcer)` | `new MudToastService(snackbar)` |
+
+`IAccessibilityAnnouncer` itself is unchanged and stays registered (`NullAccessibilityAnnouncer` by
+default, `BrowserAccessibilityAnnouncer` once the device capabilities are added,
+`MauiAccessibilityAnnouncer` on MAUI). Inject it wherever you want to announce something of your
+own; just do not use it to repeat text that is already in the DOM.
+
 ## [1.192.0] - 2026-09-11
 
 **`MMCA.Common.AI` is a new optional package: no action unless you adopt it.** Nothing in the

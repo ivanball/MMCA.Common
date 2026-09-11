@@ -12,7 +12,18 @@
 <MudThemeProvider Theme="@Theme" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
-<MudSnackbarProvider />
+
+@* The snackbar HOST is the live region, so a toast is announced by the act of being rendered.
+   MudBlazor's provider emits no aria-live region of its own and renders its container inline here,
+   so every snackbar insertion lands inside this element and a screen reader picks the text up from
+   the rendered toast itself. Announcing by hosting rather than by mirroring the text through
+   IAccessibilityAnnouncer is deliberate: a mirror produces a SECOND node carrying identical text,
+   which breaks every consumer's Playwright strict-mode text locator and reads the message twice to
+   anyone using both a screen reader and the visible toast. The wrapper carries no styles; the
+   provider's own container is position:fixed, so it still positions against the viewport. *@
+<div role="status" aria-live="polite">
+    <MudSnackbarProvider />
+</div>
 
 @code {
     /// <summary>

@@ -111,10 +111,13 @@ public abstract class AuthorizationTestsBase : E2ETestBase
             // load would bounce to /login and never exercise the ROLE check this test exists for.
             await Page.GotoProtectedAsync(path).ConfigureAwait(false);
 
-            // Assert — the shared Forbidden page renders (its h1 carries role="alert" and the localized
-            // "Access Denied" title). Role denial is not a redirect: the URL stays on the requested
-            // path, so the page CONTENT is the only reliable denial signal.
-            await Expect(Page.Locator("h1[role='alert']"))
+            // Assert: the shared Forbidden page renders (its h1 carries the localized "Access
+            // Denied" title). Role denial is not a redirect: the URL stays on the requested path, so
+            // the page CONTENT is the only reliable denial signal. The heading is located as a plain
+            // h1: role="alert" used to sit ON the heading, where the explicit role replaced the
+            // implicit heading one and left the page with no level-1 heading at all; it now sits on
+            // the message beneath.
+            await Expect(Page.GetByRole(AriaRole.Heading, new() { Level = 1 }))
                 .ToContainTextAsync("Access Denied", new() { Timeout = 15_000 }).ConfigureAwait(false);
         }
     }
