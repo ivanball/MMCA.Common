@@ -609,3 +609,6 @@ virtual MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodes
 MMCA.Common.Application.Services.Query.QueryTagScope
 static MMCA.Common.Application.Services.Query.QueryTagScope.Begin(string? handlerName) -> System.IDisposable!
 static MMCA.Common.Application.Services.Query.QueryTagScope.Current.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRawSqlQueryExecutor
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRawSqlQueryExecutor.QueryAsync<T>(System.FormattableString! sql, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>!>!
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRawSqlQueryExecutor.QuerySingleOrDefaultAsync<T>(System.FormattableString! sql, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!

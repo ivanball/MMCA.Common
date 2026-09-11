@@ -28,6 +28,25 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   events are not the public API. Every concrete integration event must ship from a `*.Shared`
   assembly, and no property on its wire shape may reach a type declared in a `*.Domain` assembly,
   including through a nested payload record.
+- **`IRawSqlQueryExecutor`** (MMCA.Common.Application), the sibling of `IQueryableExecutor` for the
+  reads LINQ cannot express (window functions, recursive CTEs, vendor-specific operators). Both entry
+  points, `QueryAsync<T>` and `QuerySingleOrDefaultAsync<T>`, take a `FormattableString` and nothing
+  else, so a concatenated statement does not compile against them and every interpolation hole reaches
+  the server as a command parameter: injection is a compile error rather than a review item, and the
+  statement text stays stable so the server keeps its cached plan. `T` may be a scalar or an unmapped
+  DTO. The EF implementation is registered scoped beside `IQueryableExecutor` and runs the statement on
+  the host's default physical source through the scope's own `IDbContextFactory` context, so it shares
+  the caller's connection and any transaction an `ITransactional` command opened. A host whose default
+  source is Cosmos DB gets a `NotSupportedException` naming the engine.
+- **`RawSqlConventionTestsBase`** (MMCA.Common.Testing.Architecture): bans `FromSqlRaw`,
+  `SqlQueryRaw`, `ExecuteSqlRaw` and `ExecuteSqlRawAsync` in module code (the interpolated siblings
+  stay allowed), by the same source scan `RawQueryableConventionTestsBase` uses, with the same
+  `AllowedFiles` ratchet.
+- **`DeleteBehaviorConventionTestsBase`** (MMCA.Common.Testing.Architecture): two fitness functions
+  over a finalized EF model. Every foreign key that cascades must carry
+  `MMCA:DeleteBehaviorSource = Explicit` (somebody chose it), and every foreign key the convention
+  stamped `Convention` must restrict. Subclass it with `dbContext.Model` and point it at a relational
+  model.
 - **Generated-SQL learning tests for keyset paging** (`KeysetQueryBuilderSqlTests`), pinning the
   `ORDER BY` shape with its identifier tie-break, the forward and backward seek predicates, and the
   parameterization; plus `SpecificationEvaluatorTests` coverage that the collection-include split
@@ -35,6 +54,32 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ### Changed
 
+- **Breaking (schema): relationships restrict by default.** `RestrictDeleteByDefaultConvention` runs
+  at model finalization on every relational engine and sets `DeleteBehavior.Restrict` on every foreign
+  key no entity configuration configured, then stamps each foreign key with
+  `MMCA:DeleteBehaviorSource` (`Explicit`, `Convention` or `Ownership`) so a finished model can be
+  audited. EF's own default is the opposite posture: a required relationship cascades, so deleting a
+  parent deletes its children in the database, below the aggregate's invariants, below the soft-delete
+  filter and below the domain events the framework raises, without anybody writing that down. Optional
+  relationships move too, from `ClientSetNull` (which blanks the column of whichever children happen to
+  be loaded and leaves the rest untouched) to `Restrict`. Ownership foreign keys keep their cascade
+  untouched, and a behavior anybody configured (fluent `OnDelete` or `[DeleteBehavior]`) is kept
+  exactly as configured: the convention supplies a default, it never overrides a decision. **Consumer
+  action:** every relational database in every consumer needs one migration (the generated
+  `DropForeignKey`/`AddForeignKey` pair per changed relationship, plus the annotation in the model
+  snapshot); review each dropped cascade first and opt back into the ones the business wants with
+  `.OnDelete(DeleteBehavior.Cascade)` and a one-line reason beside it. Nothing MMCA.Common itself maps
+  changes: the framework's own tables (outbox, inbox, internal commands, scheduler, audit trail,
+  refresh sessions, permission grants, notifications) declare no relationships between each other, so
+  the framework contributes no migration of its own. A no-op for Cosmos DB, which has no foreign key
+  constraints to restrict. See [UPGRADING.md](UPGRADING.md).
+- **Breaking (model): the internal `ValReturn<T>` keyless entity is gone.** `ApplicationDbContext`
+  registered four keyless `ValReturn<bool|int|DateTime|string>` types mapped to no table or view, as
+  the landing shape for raw scalar SQL. Nothing in the framework or in any consumer ever queried one,
+  and `IRawSqlQueryExecutor` (above) is the supported replacement, so the type and its four
+  registrations are removed. **Consumer action:** none at runtime, but the next migration a consumer
+  scaffolds will drop the four keyless entity entries from its model snapshot. That is a snapshot-only
+  diff with no schema operations: no table, view, column or index existed for them.
 - **Keyset cursor boundaries are now query parameters, not inlined literals.** The seek predicate
   built the boundary values with `Expression.Constant`, which every provider translates as a literal,
   so each page of each cursor produced its own statement text: no plan reuse, and a miss in EF's

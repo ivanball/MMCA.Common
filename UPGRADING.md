@@ -32,6 +32,46 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## Unreleased
+
+Two model-level changes. Nothing is renamed, so no `using` moves; both are felt as migrations.
+
+1. **Relationships restrict by default.** `RestrictDeleteByDefaultConvention` sets
+   `DeleteBehavior.Restrict` on every foreign key no entity configuration configured, on every
+   relational engine. What moves, per relationship:
+
+   | Before (EF's default) | After | Why |
+   |---|---|---|
+   | Required relationship: `Cascade` | `Restrict` | A cascade deletes children in the database, below the aggregate's invariants, below the soft-delete filter and below the domain events the framework raises |
+   | Optional relationship: `ClientSetNull` | `Restrict` | A client-side null-out blanks the column of whichever children happen to be loaded and leaves the rest untouched |
+   | Configured with `OnDelete(...)` | unchanged | The convention supplies a default, it never overrides a decision |
+   | Ownership (owned types) | unchanged (`Cascade`) | An owned type has no identity apart from its owner; EF requires the cascade |
+
+   The mechanical fix, per consumer:
+
+   1. Build, then scaffold one migration per relational database (`dotnet ef migrations add
+      RestrictDeletesByDefault -- --datasource <Name>`). Expect a `DropForeignKey`/`AddForeignKey`
+      pair per changed relationship plus the new `MMCA:DeleteBehaviorSource` annotation in the model
+      snapshot; no columns or data move.
+   2. Read the generated pairs before applying them. Where the business really does want the children
+      to go with the parent, opt back in **in the entity configuration**, with the reason beside it:
+      `builder.HasOne(x => x.Parent).WithMany(p => p.Children).HasForeignKey(x => x.ParentId)
+      .OnDelete(DeleteBehavior.Cascade); // order lines have no life without their order`, then
+      re-scaffold. SQL Server's multiple-cascade-path limit applies only to the cascades you opt back
+      into; restricting can never create a new path.
+   3. Subclass `DeleteBehaviorConventionTestsBase` in the repo's architecture tests so the next
+      accidental cascade fails a test instead of shipping.
+
+   A host that deletes parents while children exist now gets a failed save where it used to get a
+   silent child delete. That is the point, but it is a behavior change: check the delete paths the
+   app actually exercises.
+
+2. **The internal `ValReturn<T>` keyless entity is removed.** No code referenced it. The next
+   migration a consumer scaffolds drops the four keyless entity entries
+   (`ValReturn<bool|int|DateTime|string>`) from its model snapshot; that is a snapshot-only diff with
+   no schema operations, because no table, view, column or index ever existed for them. Use
+   `IRawSqlQueryExecutor` for raw scalar or DTO reads.
+
 ## 1.188.0
 
 Security hardening release (the 2026-09-07 review). Nothing is removed or renamed; every change is

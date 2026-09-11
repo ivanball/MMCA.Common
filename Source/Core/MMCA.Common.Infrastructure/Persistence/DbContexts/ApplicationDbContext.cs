@@ -123,16 +123,6 @@ public abstract class ApplicationDbContext(
     public string? CurrentTenantId => TenantIdAccessor?.Invoke();
 
     /// <summary>
-    /// Keyless entity used to map scalar SQL results (e.g. from raw queries) without a backing table.
-    /// </summary>
-    /// <typeparam name="T">The scalar return type.</typeparam>
-    internal sealed class ValReturn<T>
-    {
-        /// <summary>Gets or sets the scalar value returned by the query.</summary>
-        public T Value { get; set; } = default!;
-    }
-
-    /// <summary>
     /// Indicates whether this context supports the transactional outbox pattern.
     /// Cosmos DB does not support relational tables, so outbox is only used with
     /// the relational contexts (SQL Server, PostgreSQL, SQLite). Read by
@@ -351,6 +341,13 @@ public abstract class ApplicationDbContext(
         // not block re-creating the "same" record. Hand-authored index filters are respected.
         configurationBuilder.Conventions.Add(_ => new SoftDeleteUniqueIndexConvention(DataSourceKey.Engine));
 
+        // Restrict-by-default delete behavior (runs last of the three finalizing conventions, so it
+        // never stamps a relationship the cross-source convention has already removed). A required
+        // relationship nobody configured cascades under EF's own default, which deletes children in
+        // the database below the aggregate's invariants and below soft delete; this inverts that and
+        // records on every foreign key whether its behavior was chosen or inherited.
+        configurationBuilder.Conventions.Add(_ => new RestrictDeleteByDefaultConvention(DataSourceKey.Engine));
+
         // Strongly typed identifiers (ADR-115), opt in. A host that calls AddStronglyTypedIds
         // registers the registry, and every wrapper it declares maps to the primitive it wraps, on
         // every engine, because this runs on the one base context. Absent the service this is a
@@ -371,12 +368,6 @@ public abstract class ApplicationDbContext(
         ApplySoftDeleteFilters(modelBuilder);
         ApplyTenantFilters(modelBuilder);
         ConfigureConcurrencyTokens(modelBuilder);
-
-        // Register keyless ValReturn<T> types mapped to no table/view — used for raw SQL scalar queries.
-        modelBuilder.Entity<ValReturn<bool>>().HasNoKey().ToView(null);
-        modelBuilder.Entity<ValReturn<int>>().HasNoKey().ToView(null);
-        modelBuilder.Entity<ValReturn<DateTime>>().HasNoKey().ToView(null);
-        modelBuilder.Entity<ValReturn<string>>().HasNoKey().ToView(null);
 
         // Configure the outbox table for transactional domain event persistence.
         ConfigureOutbox(modelBuilder, physicalDataSource.Key.Engine);
