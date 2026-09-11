@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -301,12 +302,36 @@ public abstract class ApplicationDbContext(
             refreshSessionSettings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, refreshSessionSettings.DataSourceName, StringComparison.Ordinal);
 
+        ConfigureSensitiveDataLogging(optionsBuilder);
+
         // Key EF's model cache by (context type, physical source name): the same context class is
         // instantiated once per database, each with a different model. Without this, the first
         // built model would silently be reused for every database.
         optionsBuilder.ReplaceService<IModelCacheKeyFactory, DataSourceModelCacheKeyFactory>();
 
         base.OnConfiguring(optionsBuilder);
+    }
+
+    /// <summary>
+    /// Lets EF render parameter VALUES into its logs and exception messages, but only when the host
+    /// asked for it AND reports the Development environment (see
+    /// <see cref="SensitiveDataLoggingGate"/>).
+    /// <para>
+    /// It sits on the shared base rather than in each engine's context class so the guarantee cannot
+    /// hold for SQL Server while a fourth engine quietly leaks. GetService, not GetRequiredService,
+    /// for the reason every other resolution here uses it: a design-time or directly-constructed
+    /// context registers neither the options nor the environment, and both absences read as "off".
+    /// </para>
+    /// </summary>
+    /// <param name="optionsBuilder">The options builder being configured.</param>
+    private void ConfigureSensitiveDataLogging(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (SensitiveDataLoggingGate.IsEnabled(
+                serviceProvider.GetService<IOptions<PersistenceSettings>>()?.Value,
+                serviceProvider.GetService<IHostEnvironment>()))
+        {
+            optionsBuilder.EnableSensitiveDataLogging();
+        }
     }
 
     /// <inheritdoc />

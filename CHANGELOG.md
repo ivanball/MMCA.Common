@@ -6,6 +6,48 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Automatic EF query tags.** Every statement the repositories generate now names the code path that
+  issued it: `spec:<SpecificationName>` from `SpecificationEvaluator`, `keyset:<SortKey>` from the
+  seek-paging path, and the ambient use case from the new `QueryTagScope` (an `AsyncLocal` scope the
+  logging decorators open), so a statement captured in a query store reads
+  `handler:GetActiveSpeakersQuery spec:ActiveSpeakersSpec` instead of being one more anonymous SELECT.
+- **Development-only sensitive-data logging.** `Persistence:EnableSensitiveDataLogging` (default
+  `false`) asks EF to render parameter values into logs and exception messages, and is honored only
+  when `IHostEnvironment.IsDevelopment()` is also true (an unregistered environment counts as not
+  Development). Pair it with `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command` set to
+  `Information` in `appsettings.Development.json`.
+- **`builder.OwnsAddress(...)`** beside `OwnsMoney` in `EntityTypeBuilderExtensions`: maps an
+  `Address` value object to the six columns every existing configuration declares by hand
+  (`AddressLine1`, `AddressLine2`, `AddressCity`, `AddressState`, `AddressZipCode`,
+  `AddressCountry`), with an optional column prefix for a second address on the same owner. Adopting
+  it is a zero-diff model change, so no consumer needs a migration.
+- **`IntegrationEventPayloadPurityTestsBase`** (MMCA.Common.Testing.Architecture): two fitness
+  functions holding the ADR-010 line that integration events are the public contract and domain
+  events are not the public API. Every concrete integration event must ship from a `*.Shared`
+  assembly, and no property on its wire shape may reach a type declared in a `*.Domain` assembly,
+  including through a nested payload record.
+- **Generated-SQL learning tests for keyset paging** (`KeysetQueryBuilderSqlTests`), pinning the
+  `ORDER BY` shape with its identifier tie-break, the forward and backward seek predicates, and the
+  parameterization; plus `SpecificationEvaluatorTests` coverage that the collection-include split
+  query is applied when a collection navigation is included and not otherwise.
+
+### Changed
+
+- **Keyset cursor boundaries are now query parameters, not inlined literals.** The seek predicate
+  built the boundary values with `Expression.Constant`, which every provider translates as a literal,
+  so each page of each cursor produced its own statement text: no plan reuse, and a miss in EF's
+  compiled-query cache on every page. Values are now lifted the way a captured local is, leaving the
+  statement identical across pages.
+- **`AddTrustedCallerHeader` composes its handler outermost.** It appended the handler, which put the
+  origin gate inside whatever `AddServiceDefaults` had registered. Aspire's service-discovery handler
+  rewrites the request authority mid-pipeline, so a host whose `Api:ApiEndpoint` is a discovery name
+  (`https+http://gateway`) presented the resolved authority to a gate configured with the unresolved
+  one and silently lost the gateway rate-limit exemption. The gate now always judges the authority the
+  host configured, independently of registration order. No deployment configures a discovery name
+  today, so nothing regressed in practice.
+
 ## [1.191.0] - 2026-09-10
 
 ### Added

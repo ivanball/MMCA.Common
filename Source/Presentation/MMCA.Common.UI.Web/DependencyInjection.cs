@@ -106,9 +106,19 @@ public static class DependencyInjection
             var headerName = settings.TrustedCallerHeaderName;
             var secret = settings.TrustedCallerSecret;
 
+            // Insert(0), not Add: index 0 is the OUTERMOST handler, so the origin gate judges the
+            // authority the caller wrote, which is the authority this host configured. Appending
+            // would put the gate inside whatever AddServiceDefaults registered, and Aspire's
+            // service-discovery handler REWRITES the authority mid-pipeline: a host whose
+            // Api:ApiEndpoint is a discovery name (https+http://gateway) would present the resolved
+            // authority (https://gateway.local) to a gate configured with the unresolved one, never
+            // match, and silently lose the rate-limit exemption. Inserting at the front also makes
+            // the answer independent of whether a host calls AddServiceDefaults before or after
+            // this, which is not something a host should have to know.
             services.ConfigureAll<HttpClientFactoryOptions>(options =>
                 options.HttpMessageHandlerBuilderActions.Add(builder =>
-                    builder.AdditionalHandlers.Add(
+                    builder.AdditionalHandlers.Insert(
+                        0,
                         new TrustedCallerHandler(headerName, secret, gatewayOrigin))));
 
             return services;

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Conventions;
 
@@ -23,6 +24,10 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
         var queryName = typeof(TQuery).Name;
         var correlationId = correlationContext.CorrelationId;
 
+        // The same name the log scope carries is published as the ambient query tag, so the SQL the
+        // handler generates several awaits below names this use case in a query store. The query
+        // type, not inner.GetType(): "inner" is the next decorator in the chain, never the handler.
+        using (QueryTagScope.Begin(queryName))
         using (BeginQueryScope(logger, queryName, ModuleName, correlationId))
         {
             // Timestamp rather than a Stopwatch instance: same resolution, one fewer allocation per

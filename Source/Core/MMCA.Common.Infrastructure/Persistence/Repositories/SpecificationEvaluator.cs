@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Specifications;
 
@@ -32,7 +33,10 @@ internal static class SpecificationEvaluator
     /// pass <see langword="false"/>: joining in includes to count rows costs a join per navigation,
     /// and counting "page 3 of the matches" is never what a caller means.
     /// </param>
-    /// <returns>The composed queryable.</returns>
+    /// <returns>
+    /// The composed queryable, tagged (<c>TagWith</c>) with the specification's type name and, when
+    /// a <see cref="QueryTagScope"/> is open, the use case that asked for it.
+    /// </returns>
     internal static IQueryable<TEntity> Apply<TEntity, TIdentifierType>(
         IQueryable<TEntity> source,
         ISpecification<TEntity, TIdentifierType> specification,
@@ -43,7 +47,11 @@ internal static class SpecificationEvaluator
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(specification);
 
-        var query = source.Where(specification.Criteria);
+        // Tag first, so the comment survives whatever the shape below composes on top: EF carries
+        // tags on the query, not on the operator they were attached to.
+        var query = QueryTags.Tag(
+            source.Where(specification.Criteria),
+            QueryTags.SpecificationPrefix + specification.GetType().Name);
 
         if (!applyShape || specification is not QuerySpecification<TEntity, TIdentifierType> querySpecification)
             return query;

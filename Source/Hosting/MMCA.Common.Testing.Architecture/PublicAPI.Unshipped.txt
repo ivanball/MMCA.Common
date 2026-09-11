@@ -108,3 +108,10 @@ MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIds_ShouldBe_ReadonlyRecordStructs() -> void
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIdTestsBase() -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.StronglyTypedIdsAreReadonlyRecordStructs(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.IntegrationEventPayloadPurityTestsBase() -> void
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.IntegrationEventPayloads_ShouldNotExpose_DomainTypes() -> void
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.IntegrationEvents_ShouldShipFrom_SharedAssemblies() -> void
+abstract MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventPayloadsAreDomainFree(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsLiveInSharedAssemblies(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void

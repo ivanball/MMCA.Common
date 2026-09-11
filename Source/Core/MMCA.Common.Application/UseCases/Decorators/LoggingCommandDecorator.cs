@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces;
+using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Shared.Conventions;
 
@@ -24,6 +25,10 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
         var commandName = typeof(TCommand).Name;
         var correlationId = correlationContext.CorrelationId;
 
+        // The same name the log scope carries is published as the ambient query tag, so the SQL the
+        // handler generates several awaits below names this use case in a query store. The command
+        // type, not inner.GetType(): "inner" is the next decorator in the chain, never the handler.
+        using (QueryTagScope.Begin(commandName))
         using (BeginCommandScope(logger, commandName, ModuleName, correlationId))
         {
             LogCommandStarted(logger, commandName, correlationId);

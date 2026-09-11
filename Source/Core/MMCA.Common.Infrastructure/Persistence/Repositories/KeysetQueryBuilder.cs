@@ -55,7 +55,10 @@ internal static class KeysetQueryBuilder
     /// <param name="query">The queryable to order.</param>
     /// <param name="sortProperty">The sort property, or <see langword="null"/> for id-only ordering.</param>
     /// <param name="descending">Whether the sort key (or the id, when there is no sort key) descends.</param>
-    /// <returns>The ordered queryable.</returns>
+    /// <returns>
+    /// The ordered queryable, tagged (<c>TagWith</c>) as a keyset page so the seek plan is
+    /// recognizable in a query store even when no specification named the call site.
+    /// </returns>
     internal static IQueryable<TEntity> ApplyOrdering<TEntity, TIdentifierType>(
         IQueryable<TEntity> query,
         PropertyInfo? sortProperty,
@@ -63,6 +66,10 @@ internal static class KeysetQueryBuilder
         where TEntity : class, IBaseEntity<TIdentifierType>
         where TIdentifierType : notnull
     {
+        // Every keyset page runs through here, with or without a specification, so this is the one
+        // place the seek path can name itself in the generated SQL.
+        query = QueryTags.Tag(query, QueryTags.KeysetPrefix + (sortProperty?.Name ?? nameof(IBaseEntity<>.Id)));
+
         var parameter = Expression.Parameter(typeof(TEntity), "e");
         var idSelector = Expression.Lambda(Expression.Property(parameter, nameof(IBaseEntity<>.Id)), parameter);
 
@@ -109,7 +116,7 @@ internal static class KeysetQueryBuilder
     {
         var parameter = Expression.Parameter(typeof(TEntity), "e");
         var idAccess = Expression.Property(parameter, nameof(IBaseEntity<>.Id));
-        var idConstant = Expression.Constant(lastId, typeof(TIdentifierType));
+        var idConstant = Capture(lastId, typeof(TIdentifierType));
 
         if (sortProperty is null)
         {
@@ -142,7 +149,7 @@ internal static class KeysetQueryBuilder
             return Expression.Lambda<Func<TEntity, bool>>(nullBoundary, parameter);
         }
 
-        var sortConstant = Expression.Constant(sortValue, sortProperty.PropertyType);
+        var sortConstant = Capture(sortValue, sortProperty.PropertyType);
         Expression body = Expression.OrElse(
             Compare(sortAccess, sortConstant, greaterThan: !descending),
             Expression.AndAlso(Expression.Equal(sortAccess, sortConstant), idTieBreak));
@@ -208,6 +215,44 @@ internal static class KeysetQueryBuilder
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Lifts a cursor boundary value into the expression tree as a query PARAMETER rather than a
+    /// literal.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A bare <see cref="Expression.Constant(object, Type)"/> is translated by every provider as an
+    /// inlined literal, which is exactly wrong here: the boundary changes on every page of every
+    /// cursor, so each page would get its own statement text. That misses EF's compiled-query cache
+    /// and fills the server's plan cache with thousands of single-use plans for one query.
+    /// </para>
+    /// <para>
+    /// Reading the value off a member of a constant holder is the same shape the C# compiler emits
+    /// for a captured local, so EF's parameter extraction evaluates the subtree once and binds the
+    /// result as a parameter, leaving the statement text identical across pages. The null-boundary
+    /// comparisons deliberately keep real constants: <c>IS NULL</c> is a shape, not a value.
+    /// </para>
+    /// </remarks>
+    /// <param name="value">The boundary value.</param>
+    /// <param name="type">The declared type to bind it as.</param>
+    /// <returns>An expression EF parameterizes.</returns>
+    private static MemberExpression Capture(object? value, Type type)
+    {
+        var holderType = typeof(ValueHolder<>).MakeGenericType(type);
+        return Expression.Property(
+            Expression.Constant(Activator.CreateInstance(holderType, value), holderType),
+            nameof(ValueHolder<>.Value));
+    }
+
+    /// <summary>Single-field carrier that makes a boundary value look like a captured local to EF.</summary>
+    /// <typeparam name="T">The value's declared type.</typeparam>
+    /// <param name="value">The carried value.</param>
+    private sealed class ValueHolder<T>(T value)
+    {
+        /// <summary>Gets the carried value.</summary>
+        public T Value { get; } = value;
     }
 
     /// <summary>

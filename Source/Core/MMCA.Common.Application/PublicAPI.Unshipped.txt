@@ -606,3 +606,6 @@ virtual MMCA.Common.Application.Users.UseCases.TwoFactor.BeginTwoFactorEnrollmen
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.ConfirmTwoFactorEnrollmentHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.DisableTwoFactorHandlerBase<TCommand>.HandlerName.get -> string!
 virtual MMCA.Common.Application.Users.UseCases.TwoFactor.RegenerateRecoveryCodesHandlerBase<TCommand>.HandlerName.get -> string!
+MMCA.Common.Application.Services.Query.QueryTagScope
+static MMCA.Common.Application.Services.Query.QueryTagScope.Begin(string? handlerName) -> System.IDisposable!
+static MMCA.Common.Application.Services.Query.QueryTagScope.Current.get -> string?
