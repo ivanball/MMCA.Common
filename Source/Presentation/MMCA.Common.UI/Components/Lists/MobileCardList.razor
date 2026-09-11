@@ -1,10 +1,17 @@
 @using MMCA.Common.UI.Components.PageState
+@inject IStringLocalizer<SharedResource> L
 
 @typeparam TItem
 
 @if (IsLoading)
 {
-    <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-2" />
+    @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
+       may not take aria-label) and the bar itself carries the accessible name, so the progressbar is
+       never anonymous. *@
+    <div role="status" aria-live="polite" aria-busy="true">
+        <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-2"
+                           aria-label="@L["Loading.Label"]" />
+    </div>
 }
 
 @if (!IsLoading && Items.Count == 0)
@@ -16,11 +23,9 @@ else
     <MudStack Spacing="2">
         @foreach (var item in Items)
         {
-            <MudCard @key="item" Elevation="1" Class="mobile-list-card" @onclick="() => OnCardClick.InvokeAsync(item)">
-                <MudCardContent Class="pa-3">
-                    @CardTemplate(item)
-                </MudCardContent>
-            </MudCard>
+            <ClickableCard @key="item" OnActivate="@CardCallback(item)">
+                @CardTemplate(item)
+            </ClickableCard>
         }
     </MudStack>
 }
@@ -48,4 +53,16 @@ else
     [Parameter] public string EmptyIcon { get; set; } = Icons.Material.Outlined.SearchOff;
 
     private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)TotalItems / PageSize));
+
+    /// <summary>
+    /// Binds one row to the click callback. Returns <see langword="default"/> when the consumer wired none,
+    /// which is what tells <see cref="ClickableCard"/> to render a plain, non-focusable card instead
+    /// of a keyboard control that does nothing. Deliberately NOT
+    /// <see cref="EventCallback.Empty"/>: that value wraps a no-op <c>Action</c>, so its
+    /// <c>HasDelegate</c> is true and every card would claim to be interactive.
+    /// </summary>
+    private EventCallback CardCallback(TItem item) =>
+        OnCardClick.HasDelegate
+            ? EventCallback.Factory.Create(this, () => OnCardClick.InvokeAsync(item))
+            : default;
 }

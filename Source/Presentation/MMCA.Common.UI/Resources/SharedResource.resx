@@ -607,4 +607,31 @@
   <data name="Auth.Sessions.RevokeAll.Hint" xml:space="preserve">
     <value>This also signs you out on this device.</value>
   </data>
+  <data name="Layout.Sidebar.Aria" xml:space="preserve">
+    <value>Main navigation</value>
+  </data>
+  <data name="Layout.AppBar.Aria" xml:space="preserve">
+    <value>Top navigation bar</value>
+  </data>
+  <data name="Layout.Dismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="Routes.CheckingAuthorization" xml:space="preserve">
+    <value>Checking authorization</value>
+  </data>
+  <data name="Reconnect.DialogLabel" xml:space="preserve">
+    <value>Connection status</value>
+  </data>
+  <data name="Auth.Sessions.TableLabel" xml:space="preserve">
+    <value>Signed-in devices</value>
+  </data>
+  <data name="Notif.List.TableLabel" xml:space="preserve">
+    <value>Notification history</value>
+  </data>
+  <data name="Notif.Read.Aria" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="Grid.LoadingMore" xml:space="preserve">
+    <value>Loading more items</value>
+  </data>
 </root>

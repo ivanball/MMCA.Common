@@ -15,7 +15,10 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center justify-center" Style="min-height: 60vh;">
         <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Large" Color="Color.Primary" Class="mb-4" />
-        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">@L["Page.Home.Welcome"]</MudText>
+        @* HtmlTag="h1" keeps the h4 scale while giving the page its required level-one heading, the
+           same pattern PageHeader uses. Routes.razor's FocusOnNavigate Selector="h1" has nothing to
+           focus without it. *@
+        <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2">@L["Page.Home.Welcome"]</MudText>
         <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary">
             @L["Page.Home.Configure"]
         </MudText>

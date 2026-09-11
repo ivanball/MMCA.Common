@@ -1,0 +1,70 @@
+@* The card body shared by MobileCardList and MobileInfiniteScrollList. A card that carries a click
+   callback is an interactive control, so it is announced as one (role="button"), reachable by
+   keyboard (tabindex="0") and operable by keyboard (Enter and Space), which is what a bare @onclick
+   on a <div> is not (WCAG 2.1.1 / 4.1.2). A card with no callback renders as plain content with no
+   tabindex and no role, so a read-only list does not fill the tab order with non-actions.
+
+   Enter/Space do not preventDefault: a keydown handler that cancelled the default would also cancel
+   Tab, which would trap the keyboard inside the list. The cost is that Space still scrolls the page
+   as well as activating the card; the requirement is operability, and that is met. *@
+@if (IsInteractive)
+{
+    <MudCard Elevation="@Elevation" Class="@Class" tabindex="0" role="button"
+             aria-label="@AriaLabel"
+             @onclick="ActivateAsync" @onkeydown="OnKeyDownAsync">
+        <MudCardContent Class="pa-3">
+            @ChildContent
+        </MudCardContent>
+    </MudCard>
+}
+else
+{
+    <MudCard Elevation="@Elevation" Class="@Class">
+        <MudCardContent Class="pa-3">
+            @ChildContent
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    /// <summary>The card body.</summary>
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Raised when the card is activated by click, Enter or Space. Leave it unset to render a
+    /// non-interactive card.
+    /// </summary>
+    [Parameter] public EventCallback OnActivate { get; set; }
+
+    /// <summary>
+    /// Optional accessible name. When null the card is named by its own content, which is the right
+    /// answer whenever the template already leads with the row's title.
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>Card elevation; matches the list components' own default.</summary>
+    [Parameter] public int Elevation { get; set; } = 1;
+
+    /// <summary>CSS classes applied to the card.</summary>
+    [Parameter] public string Class { get; set; } = "mobile-list-card";
+
+    /// <summary>
+    /// Whether this card behaves as a control. Driven by <see cref="EventCallback.HasDelegate"/>, so
+    /// a list that never wired a click callback stays out of the tab order entirely.
+    /// </summary>
+    private bool IsInteractive => OnActivate.HasDelegate;
+
+    private Task ActivateAsync() => OnActivate.InvokeAsync();
+
+    private Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        // " " is the modern key value for Space; "Spacebar" is the legacy one still emitted by some
+        // assistive-technology virtual cursors.
+        if (args.Key is "Enter" or " " or "Spacebar")
+        {
+            return OnActivate.InvokeAsync();
+        }
+
+        return Task.CompletedTask;
+    }
+}

@@ -22,6 +22,10 @@
 
 #components-reconnect-modal {
     background-color: white;
+    /* Stated outright, never inherited: the dialog paints a fixed white ground, so in dark mode the
+       inherited --mud-palette-text-primary (#ECEFF1) would land on it at 1.15:1. #212121 on white is
+       16.1:1 and matches the light palette's TextPrimary. */
+    color: #212121;
     width: 20rem;
     margin: 20vh auto;
     padding: 2rem;
@@ -90,18 +94,20 @@
 
 #components-reconnect-modal button {
     border: 0;
-    background-color: #6b9ed2;
+    /* Blue 800 rather than the stock #6b9ed2, which gives its white label only 2.82:1. #1565C0 is
+       5.75:1, and the hover/active shades stay darker still so the state change never drops below it. */
+    background-color: #1565C0;
     color: white;
     padding: 4px 24px;
     border-radius: 4px;
 }
 
     #components-reconnect-modal button:hover {
-        background-color: #3b6ea2;
+        background-color: #0D47A1;
     }
 
     #components-reconnect-modal button:active {
-        background-color: #6b9ed2;
+        background-color: #0D47A1;
     }
 
 .components-rejoining-animation {

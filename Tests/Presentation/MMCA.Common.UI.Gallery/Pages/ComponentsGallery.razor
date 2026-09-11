@@ -13,22 +13,22 @@
         </MudButton>
     </PageHeader>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Empty state</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Empty state</MudText>
     <MudPaper Outlined="true" Class="pa-2">
         <EmptyState Message="No records found." />
     </MudPaper>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Loading state</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Loading state</MudText>
     <MudPaper Outlined="true" Class="pa-2">
         <PageLoadingState Label="Loading sample data" />
     </MudPaper>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Error state</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Error state</MudText>
     <MudPaper Outlined="true" Class="pa-2">
         <PageErrorState Message="Could not load the sample data." />
     </MudPaper>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile card list</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Mobile card list</MudText>
     <MobileCardList TItem="SampleItem" Items="_items" TotalItems="_items.Count" PageSize="10">
         <CardTemplate>
             <MudText Typo="Typo.subtitle2">@context.Name</MudText>
@@ -36,7 +36,7 @@
         </CardTemplate>
     </MobileCardList>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile card list (empty)</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Mobile card list (empty)</MudText>
     <MobileCardList TItem="SampleItem" Items="_empty" TotalItems="0" PageSize="10"
                     EmptyMessage="Nothing to show yet.">
         <CardTemplate>
@@ -44,7 +44,7 @@
         </CardTemplate>
     </MobileCardList>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Unsaved-changes guard</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Unsaved-changes guard</MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
         Dirty state: @(_isDirty ? "unsaved changes" : "clean")
     </MudText>
@@ -53,7 +53,7 @@
     </MudButton>
     <UnsavedChangesGuard IsDirty="_isDirty" />
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Mobile infinite-scroll list</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Mobile infinite-scroll list</MudText>
     <MobileInfiniteScrollList TItem="SampleItem" FetchPageResult="FetchSamplePageAsync" PageSize="3"
                               EmptyMessage="No items to show.">
         <CardTemplate>
@@ -62,7 +62,7 @@
         </CardTemplate>
     </MobileInfiniteScrollList>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-2">Touch target affordance</MudText>
+    <MudText Typo="Typo.h5" HtmlTag="h2" Class="mt-6 mb-2">Touch target affordance</MudText>
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
         Icon buttons carrying the shared <c>mmca-touch-target</c> class meet the WCAG 2.5.5/2.5.8
         48px minimum hit area on mobile viewports.

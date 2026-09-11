@@ -25,13 +25,21 @@ public static class MMCATheme
             Tertiary = "#7B1FA2",
             Info = "#1976D2",
             Success = "#2E7D32",
-            Warning = "#F57F17",
-            // MudBlazor's default warning contrast text is white, which is ~2.65:1 on #F57F17 and
-            // fails the WCAG 2.1 AA 4.5:1 floor on every filled Warning chip/button (caught by the
-            // gated admin-order-list axe scan on a "Pending Payment" chip). Dark text is ~7.9:1 and
-            // is the standard Material treatment on amber. Info/Success/Error pass with white.
-            WarningContrastText = "#212121",
+            // Amber 900 rather than the Material amber (#F57F17): the palette colour is used as TEXT
+            // and as a border as often as it is used as a fill (Color.Warning on MudText/MudLink/
+            // MudIcon and on outlined chips/buttons), and #F57F17 is only ~2.65:1 on Surface #FFFFFF,
+            // failing the WCAG 2.1 AA 4.5:1 floor in every one of those places. #A85D00 is 4.96:1 on
+            // Surface and 4.79:1 on Background #FAFBFC, and it is dark enough that white becomes the
+            // correct on-colour label: 4.96:1 (dark text would be only ~3.2:1 on it, so the two values
+            // must move together). Info/Success/Error already pass with white.
+            Warning = "#A85D00",
+            WarningContrastText = "#FFFFFF",
             Error = "#C62828",
+            // Outlined-field borders are non-text UI, so they answer to the 3:1 floor (WCAG 1.4.11).
+            // MudBlazor's default rgba(0,0,0,0.42) is 3.03:1 on Surface and 3.01:1 on Background: it
+            // passes with no margin at all, and any host that nudges Background darker drops it below.
+            // rgba(0,0,0,0.45) is 3.36:1 / 3.33:1 and keeps the same hairline weight.
+            LinesInputs = "rgba(0,0,0,0.45)",
             AppbarBackground = "#1A2035",
             AppbarText = "#FFFFFF",
             Background = "#FAFBFC",
@@ -59,16 +67,35 @@ public static class MMCATheme
             Secondary = BrandColors.SecondaryLight,
             SecondaryDarken = "#00897B",
             SecondaryLighten = "#80CBC4",
+            // Every lightened dark-mode accent takes the same Material treatment as Primary above:
+            // white on it is far below the 4.5:1 floor once it is used as a FILL (2.44:1 on Secondary
+            // #4DB6AC, 2.39:1 on Tertiary #CE93D8, 2.65:1 on Info #42A5F5, 2.36:1 on Success #66BB6A),
+            // while rgba(0,0,0,0.87) lands at 7.45 / 7.60 / 6.96 / 7.70:1. Each accent stays legible
+            // as TEXT on Surface #27303A too (5.48 / 5.60 / 5.05 / 5.66:1), so only the on-colour
+            // label needed fixing.
+            SecondaryContrastText = "rgba(0,0,0,0.87)",
             Tertiary = "#CE93D8",
+            TertiaryContrastText = "rgba(0,0,0,0.87)",
             Info = "#42A5F5",
+            InfoContrastText = "rgba(0,0,0,0.87)",
             Success = "#66BB6A",
+            SuccessContrastText = "rgba(0,0,0,0.87)",
             Warning = "#FFA726",
             // Same fix as the light palette: white on #FFA726 is ~2.0:1; dark text is ~10.8:1.
             WarningContrastText = "rgba(0,0,0,0.87)",
-            Error = "#EF5350",
-            // Same treatment as Primary: white on the lightened dark-mode error #EF5350 is ~3.5:1 and
-            // fails AA on the filled error alert's message text; dark text is ~5.5:1.
+            // Red 200 rather than Red 400 (#EF5350): as TEXT on Surface #27303A the darker red is only
+            // 3.84:1, below the 4.5:1 floor wherever Color.Error is a label rather than a fill (inline
+            // validation copy, outlined error chips, the mobile load-failure line). #FF8A80 reads
+            // 5.86:1 on Surface and 7.19:1 on Background #1A2027.
+            Error = "#FF8A80",
+            // Same treatment as Primary: white on a lightened dark-mode error fails AA on the filled
+            // error alert's message text; rgba(0,0,0,0.87) on #FF8A80 is 7.94:1.
             ErrorContrastText = "rgba(0,0,0,0.87)",
+            // Non-text UI answers to the 3:1 floor (WCAG 1.4.11). MudBlazor's dark default
+            // rgba(255,255,255,0.3) is only 2.6:1 on Surface #27303A, so outlined text-field borders
+            // are effectively invisible to a low-vision user; rgba(255,255,255,0.5) is 4.59:1 on
+            // Surface and 5.10:1 on Background without turning the hairline into a hard outline.
+            LinesInputs = "rgba(255,255,255,0.5)",
             AppbarBackground = "#1A2035",
             AppbarText = "#FFFFFF",
             Background = "#1A2027",

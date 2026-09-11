@@ -33,7 +33,9 @@
        renders below 1024px, which is exactly where .nav-auth-section shows the name above Logout in
        the hamburger menu, so a copy on the top row was pure duplication competing for the narrowest
        row in the layout. *@
-    <div class="toprow-actions" aria-label="@L["Nav.QuickActions.Aria"]">
+    @* role="group": aria-label is prohibited on a generic div (WCAG 4.1.2 / axe aria-prohibited-attr),
+       and the row is a labelled set of related controls, which is exactly what group means. *@
+    <div class="toprow-actions" role="group" aria-label="@L["Nav.QuickActions.Aria"]">
         <CultureSwitcher />
         <ThemeToggle />
         <AuthorizeView>
@@ -47,7 +49,13 @@
     </div>
 </div>
 
+@* The hamburger is a CSS-only checkbox, but it behaves as a disclosure button, so it is announced as
+   one: role="button" is allowed on an input[type=checkbox] that carries no aria-checked, and it stops
+   a screen reader reading "checkbox, not checked" for a menu toggle. aria-expanded is kept in step
+   with the checked state (and re-synced after enhanced navigation) by wwwroot/navmenu.js, which also
+   drives Enter, closes the menu on Escape, and returns focus here. *@
 <input type="checkbox" title="@L["Nav.ToggleMenu.Aria"]" class="navbar-toggler"
+       role="button"
        aria-label="@L["Nav.ToggleMenu.Aria"]" aria-expanded="false"
        aria-controls="nav-menu" />
 

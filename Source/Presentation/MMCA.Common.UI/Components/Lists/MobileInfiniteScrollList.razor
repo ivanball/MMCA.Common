@@ -4,7 +4,13 @@
 
 @if (_isInitialLoad)
 {
-    <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-2" />
+    @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
+       may not take aria-label) and the bar itself carries the accessible name, so the progressbar is
+       never anonymous. *@
+    <div role="status" aria-live="polite" aria-busy="true">
+        <MudProgressLinear Indeterminate Color="Color.Primary" Class="mb-2"
+                           aria-label="@L["Loading.Label"]" />
+    </div>
 }
 else if (_items.Count == 0)
 {
@@ -15,11 +21,9 @@ else
     <MudStack Spacing="2">
         @foreach (var item in _items)
         {
-            <MudCard @key="item" Elevation="1" Class="mobile-list-card" @onclick="() => OnCardClick.InvokeAsync(item)">
-                <MudCardContent Class="pa-3">
-                    @CardTemplate(item)
-                </MudCardContent>
-            </MudCard>
+            <ClickableCard @key="item" OnActivate="@CardCallback(item)">
+                @CardTemplate(item)
+            </ClickableCard>
         }
     </MudStack>
 
@@ -28,8 +32,11 @@ else
         <div @ref="_sentinelRef" class="infinite-scroll-sentinel">
             @if (_isLoadingMore)
             {
-                <div class="infinite-scroll-loading">
-                    <MudProgressCircular Indeterminate Size="Size.Small" Color="Color.Primary" />
+                @* Same live region InfiniteScrollSentinel uses: a screen reader hears that more items
+                   are loading, politely, and the spinner is not an anonymous progressbar. *@
+                <div class="infinite-scroll-loading" role="status" aria-live="polite" aria-busy="true">
+                    <MudProgressCircular Indeterminate Size="Size.Small" Color="Color.Primary"
+                                         aria-label="@L["Grid.LoadingMore"]" />
                 </div>
             }
         </div>
@@ -37,7 +44,10 @@ else
 
     @if (_loadError && _hasMore)
     {
-        <div class="d-flex flex-column align-center pa-4 gap-2">
+        @* role="alert": the failure arrives without the user having done anything, so it has to be
+           announced rather than waited for (the same treatment ListNoRecordsContent's error branch
+           gets). *@
+        <div class="d-flex flex-column align-center pa-4 gap-2" role="alert">
             <MudText Typo="Typo.body2" Color="Color.Error">@(_loadErrorMessage ?? L["Grid.LoadMoreFailed"].Value)</MudText>
             <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">@L["Common.Button.Retry"]</MudButton>
         </div>

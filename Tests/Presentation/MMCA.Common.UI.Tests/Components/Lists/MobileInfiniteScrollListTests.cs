@@ -73,6 +73,58 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
     }
 
     [Fact]
+    public void PressingEnterOnACard_InvokesOnCardClickWithItem()
+    {
+        // The same row, reached without a mouse: the cards used to be click-only divs (WCAG 2.1.1).
+        string? activated = null;
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.FetchPageResult, Fetch(["Alpha", "Bravo"], 2))
+            .Add(c => c.OnCardClick, EventCallback.Factory.Create<string>(this, s => activated = s)));
+
+        var card = cut.FindAll(".mobile-list-card")[1];
+        card.GetAttribute("tabindex").Should().Be("0");
+        card.GetAttribute("role").Should().Be("button");
+        card.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        activated.Should().Be("Bravo");
+    }
+
+    [Fact]
+    public void WithoutAClickCallback_CardsStayOutOfTheTabOrder()
+    {
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.FetchPageResult, Fetch(["Alpha"], 1)));
+
+        var card = cut.Find(".mobile-list-card");
+        card.HasAttribute("tabindex").Should().BeFalse();
+        card.HasAttribute("role").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task WhenLoadMoreFails_TheInlineFailureIsALiveAlert()
+    {
+        // The failure arrives from a scroll the user did not treat as a request, so nothing draws
+        // attention to it unless it is announced (WCAG 4.1.3).
+        static Task<Result<(IReadOnlyList<string> Items, int TotalItems)>> Fetch(int page, int pageSize, CancellationToken ct)
+            => page == 1
+                ? Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((["Alpha"], 5)))
+                : Task.FromResult(Result.Failure<(IReadOnlyList<string>, int)>(
+                    Error.NotFoundError("Catalog.Unavailable", "The catalog is unavailable.")));
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 1)
+            .Add(c => c.FetchPageResult, Fetch));
+
+        await cut.InvokeAsync(() => cut.Instance.OnSentinelVisible());
+
+        cut.Find("[role=alert]").TextContent.Should().Contain("The catalog is unavailable.");
+    }
+
+    [Fact]
     public void SupplyingNoFetcher_Throws()
     {
         var render = () => RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
