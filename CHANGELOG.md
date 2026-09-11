@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.192.0] - 2026-09-11
+
 ### Added
 
 - **`MMCA.Common.AI` (NEW package): a governed `IChatClient`.** One optional package holding

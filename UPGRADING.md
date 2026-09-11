@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## Unreleased
+## [1.192.0] - 2026-09-11
 
 **`MMCA.Common.AI` is a new optional package: no action unless you adopt it.** Nothing in the
 framework references it, so it arrives only if you add its `PackageReference` and an `Ai`
