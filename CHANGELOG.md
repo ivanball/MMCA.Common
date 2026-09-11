@@ -6,6 +6,55 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`ClickableCard`** (`MMCA.Common.UI.Components.Lists`): the card body shared by `MobileCardList`
+  and `MobileInfiniteScrollList`. A card wired to a click callback now renders as a real control
+  (`tabindex="0"`, `role="button"`, Enter/Space activation); a card with no callback renders exactly
+  as before, with no `tabindex` and no `role`, so a read-only list does not fill the tab order.
+- **Toasts are announced to screen readers.** `MudToastService` takes an optional
+  `IAccessibilityAnnouncer` and pushes every toast's text into the visually hidden `aria-live`
+  region alongside the snackbar. MudBlazor's snackbar host emits no live region of its own, so
+  toasts (push notifications included) previously reached sighted users only. The dependency is
+  optional: a host that never registered the device capabilities is unaffected.
+- **E2E gates**: axe WCAG 2.1 AA scans of the home, 404 and 403 pages and of the mobile hamburger
+  menu in its OPEN state (every previous scan ran at 1280px), plus the suite's first
+  keyboard-navigation test (Tab reaches the hamburger, Enter opens it, Escape closes it and returns
+  focus, and no collapsed nav link is focusable).
+
+### Changed
+
+- **Palette (consumers inherit this).** `PaletteLight.Warning` moves from `#F57F17` to `#A85D00`
+  with `WarningContrastText` white: the old amber was 2.65:1 as text or border on the light surface
+  and failed AA everywhere `Color.Warning` is a label rather than a fill. The new pair is 4.96:1 on
+  Surface, 4.79:1 on Background, and 4.96:1 for its white on-colour text. `PaletteDark` gains
+  `SecondaryContrastText` / `TertiaryContrastText` / `InfoContrastText` / `SuccessContrastText` =
+  `rgba(0,0,0,0.87)` (white on those lightened accents was 2.36-2.65:1; dark text is 6.96-7.70:1),
+  and `PaletteDark.Error` moves from `#EF5350` to `#FF8A80` (3.84:1 to 5.86:1 as text on Surface).
+  Both palettes now override `LinesInputs` so outlined field borders clear the 3:1 non-text floor
+  with margin: `rgba(0,0,0,0.45)` (3.36:1) light and `rgba(255,255,255,0.5)` (4.59:1) dark.
+
+### Fixed
+
+- **Keyboard**: the collapsed mobile nav menu is `visibility: hidden`, so its links leave the tab
+  order below 1024px; Escape closes the menu and returns focus to the hamburger; the hamburger is
+  announced as `role="button"` with `aria-expanded` kept in step after enhanced navigation; the
+  `#blazor-error-ui` dismiss is a real labelled `<button>`; the app-lock overlay traps focus
+  (`MudFocusTrap`) and focuses Unlock; the reconnect dialog focuses Retry/Resume when it offers
+  them; and the `h1` focus ring suppressed by the Blazor template default is restored for
+  `:focus-visible`.
+- **Screen reader**: every framework page carries an `h1` (which is also what
+  `FocusOnNavigate Selector="h1"` needs); conditional error alerts on Login, Register,
+  ResetPassword, OAuthComplete, `ErrorSummary`, `PageErrorState` and the mobile load-failure row are
+  `role="alert"`; `OfflineBanner` is `role="status"`; silent `MudProgressLinear` instances sit in
+  labelled `role="status"` live regions; tables and the nav quick-action row carry allowed roles
+  with accessible names; and the remaining hardcoded English `aria-label`s are localized through
+  `SharedResource`.
+- **Contrast**: the reconnect dialog and `#blazor-error-ui` state their text colour instead of
+  inheriting a dark-mode one onto a fixed pale ground (1.13-1.15:1 before), the reconnect action
+  button moves to `#1565C0` (2.82:1 to 5.75:1), and the valid-field outline moves to `#2E7D32`
+  (2.83:1 to 5.13:1).
+
 ## [1.192.0] - 2026-09-11
 
 ### Added

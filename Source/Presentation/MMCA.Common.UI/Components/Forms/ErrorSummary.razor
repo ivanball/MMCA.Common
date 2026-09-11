@@ -7,7 +7,9 @@
    Renders nothing at all when there is nothing to say, so it can sit unconditionally in markup. *@
 @if (_messages.Count > 0)
 {
-    <MudAlert Severity="@Severity" Variant="@Variant" Dense="@Dense" Class="@Class">
+    @* role="alert": the summary is rendered conditionally, so it enters the DOM only once there is a
+       failure to report, and a screen reader hears it only if it arrives as a live region. *@
+    <MudAlert Severity="@Severity" Variant="@Variant" Dense="@Dense" Class="@Class" role="alert">
         @if (!string.IsNullOrWhiteSpace(Title))
         {
             <MudText Typo="Typo.subtitle2" Class="mmca-error-summary-title">@Title</MudText>

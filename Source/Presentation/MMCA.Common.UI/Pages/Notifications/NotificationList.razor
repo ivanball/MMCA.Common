@@ -7,7 +7,8 @@
 <PageTitle>@Title</PageTitle>
 
 <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
-<MudText Typo="Typo.h4" Class="mb-4">@Title</MudText>
+@* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+<MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">@Title</MudText>
 
 <MudButton Color="Color.Primary"
            Variant="Variant.Filled"
@@ -19,7 +20,12 @@
 
 @if (IsLoading)
 {
-    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+    @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
+       may not take aria-label) and the bar itself carries the accessible name. *@
+    <div role="status" aria-live="polite" aria-busy="true">
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4"
+                           aria-label="@L["Loading.Label"]" />
+    </div>
 }
 else if (_notifications.Count == 0)
 {
@@ -27,11 +33,14 @@ else if (_notifications.Count == 0)
 }
 else
 {
+    @* MudTable splats unmatched attributes onto its wrapper div, not onto the <table>, and a bare div
+       may not carry aria-label. role="region" is the W3C pattern for a labelled table container. *@
     <MudTable T="PushNotificationDTO"
               Items="_notifications"
               Dense="true"
               Hover="true"
-              Elevation="1">
+              Elevation="1"
+              role="region" aria-label="@L["Notif.List.TableLabel"]">
         <HeaderContent>
             <MudTh>@L["Notif.List.Col.Title"]</MudTh>
             <MudTh>@L["Notif.List.Col.Recipients"]</MudTh>

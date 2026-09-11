@@ -19,128 +19,23 @@
 
 @if (_locked)
 {
+    @* MudFocusTrap makes the overlay a real boundary rather than a picture of one: without it Tab
+       walks straight out of the panel and onto the page underneath, which is still fully focusable
+       behind the dark backdrop (WCAG 2.4.3, and a genuine app-lock defect rather than a cosmetic
+       one). DefaultFocus.FirstChild lands on Unlock, the only action this panel exists to offer;
+       the explicit focus below restores it after a declined platform prompt. *@
     <MudOverlay Visible="true" DarkBackground="true" Style="z-index: 2000;">
-        <MudPaper Class="pa-6 d-flex flex-column align-center gap-3" Elevation="4">
-            <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Large" Color="Color.Primary" />
-            <MudText Typo="Typo.h6">@L["Title"]</MudText>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAsync">
-                @L["Button.Unlock"]
-            </MudButton>
-            <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="SignOutAsync">
-                @L["Button.SignOut"]
-            </MudButton>
-        </MudPaper>
+        <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">
+            <MudPaper Class="pa-6 d-flex flex-column align-center gap-3" Elevation="4">
+                <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">@L["Title"]</MudText>
+                <MudButton @ref="_unlockButton" Variant="Variant.Filled" Color="Color.Primary" OnClick="UnlockAsync">
+                    @L["Button.Unlock"]
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="SignOutAsync">
+                    @L["Button.SignOut"]
+                </MudButton>
+            </MudPaper>
+        </MudFocusTrap>
     </MudOverlay>
-}
-
-@code {
-    /// <summary>
-    /// How long the app may sit in the background before the gate re-arms. Short by design: a
-    /// device handed to someone else is usually away from the owner for longer than a glance at a
-    /// notification, and re-prompting costs one biometric touch.
-    /// </summary>
-    [Parameter]
-    public TimeSpan ReLockAfter { get; set; } = TimeSpan.FromSeconds(30);
-
-    private bool _locked;
-    private bool _subscribed;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        // Subscribed regardless of the current preference: app lock can be switched on later in the
-        // same session, and the handler re-reads the preference every time it fires.
-        AppLifecycle.Resumed += OnResumed;
-        _subscribed = true;
-
-        if (!await ShouldLockAsync())
-        {
-            return;
-        }
-
-        _locked = true;
-        StateHasChanged();
-        await UnlockAsync();
-    }
-
-    public void Dispose()
-    {
-        if (_subscribed)
-        {
-            AppLifecycle.Resumed -= OnResumed;
-            _subscribed = false;
-        }
-    }
-
-    // SECURITY: the render tree survives a background/foreground cycle on a hybrid head, so without
-    // this the gate would engage once at app start and never again: anyone handed the unlocked
-    // device reopens the app straight into the signed-in session.
-    private async void OnResumed(object? sender, AppResumedEventArgs args)
-    {
-        try
-        {
-            if (_locked || args.BackgroundDuration < ReLockAfter)
-            {
-                return;
-            }
-
-            await InvokeAsync(async () =>
-            {
-                if (!await ShouldLockAsync())
-                {
-                    return;
-                }
-
-                _locked = true;
-                StateHasChanged();
-                await UnlockAsync();
-            });
-        }
-        catch (ObjectDisposedException)
-        {
-            // Renderer torn down between the native event and the dispatch.
-        }
-        catch (InvalidOperationException)
-        {
-            // Component no longer attached; same disposition.
-        }
-        catch (Exception ex)
-        {
-            // Exhaustive by necessity: this is an async void event handler, so anything escaping
-            // here has no caller to observe it, and on a native head that terminates the process.
-            Logger.LogError(ex, "Re-locking the app after resume failed.");
-        }
-    }
-
-    private async Task<bool> ShouldLockAsync()
-    {
-        var appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
-        if (!appLockEnabled)
-        {
-            return false;
-        }
-
-        // Nothing to protect without a stored session.
-        return await TokenStorage.GetRefreshTokenAsync() is not null;
-    }
-
-    private async Task UnlockAsync()
-    {
-        if (await Biometrics.AuthenticateAsync(L["Prompt.Reason"].Value))
-        {
-            _locked = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task SignOutAsync()
-    {
-        await TokenStorage.ClearTokensAsync();
-        _locked = false;
-        Navigation.NavigateTo("/login");
-    }
 }

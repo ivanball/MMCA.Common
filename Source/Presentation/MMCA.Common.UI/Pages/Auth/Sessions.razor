@@ -8,7 +8,8 @@
 <PageTitle>@Title</PageTitle>
 
 <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
-<MudText Typo="Typo.h4" Class="mb-2">@Title</MudText>
+@* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+<MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-2">@Title</MudText>
 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@L["Auth.Sessions.Description"]</MudText>
 
 @* The load failure is rendered inline rather than as a snackbar: an empty table and a failed load
@@ -33,8 +34,13 @@ else if (_sessions.Count == 0)
 }
 else
 {
+    @* MudTable splats unmatched attributes onto its wrapper div, not onto the <table>, and a bare div
+       may not carry aria-label. role="region" is the W3C pattern for a labelled table container: it
+       gives the table a name a screen reader can find it by without inventing a role the element
+       cannot take. *@
     <MudTable Items="_sessions" T="RefreshSessionSummaryResponse" Hover="true" Elevation="1"
-              Breakpoint="Breakpoint.Sm" Class="mb-4">
+              Breakpoint="Breakpoint.Sm" Class="mb-4"
+              role="region" aria-label="@L["Auth.Sessions.TableLabel"]">
         <HeaderContent>
             <MudTh>@L["Auth.Sessions.Column.Device"]</MudTh>
             <MudTh>@L["Auth.Sessions.Column.IpAddress"]</MudTh>
@@ -73,6 +79,7 @@ else
                                StartIcon="@Icons.Material.Filled.Logout"
                                Disabled="@IsBusy"
                                OnClick="@(() => RevokeSessionAsync(context))"
+                               aria-busy="@(_revokingSessionId == context.SessionId ? "true" : "false")"
                                aria-label="@L["Auth.Sessions.Revoke.Aria", DescribeDevice(context)]">
                         @if (_revokingSessionId == context.SessionId)
                         {
@@ -89,6 +96,7 @@ else
                StartIcon="@Icons.Material.Filled.PowerSettingsNew"
                Disabled="@IsBusy"
                OnClick="RevokeAllAsync"
+               aria-busy="@(IsRevokingAll ? "true" : "false")"
                aria-label="@L["Auth.Sessions.RevokeAll.Aria"]">
         @if (IsRevokingAll)
         {

@@ -138,6 +138,18 @@ MMCA.Common.UI.Components.Forms.ErrorSummary.Title.get -> string?
 MMCA.Common.UI.Components.Forms.ErrorSummary.Title.set -> void
 MMCA.Common.UI.Components.Forms.ErrorSummary.Variant.get -> MudBlazor.Variant
 MMCA.Common.UI.Components.Forms.ErrorSummary.Variant.set -> void
+MMCA.Common.UI.Components.Lists.ClickableCard
+MMCA.Common.UI.Components.Lists.ClickableCard.AriaLabel.get -> string?
+MMCA.Common.UI.Components.Lists.ClickableCard.AriaLabel.set -> void
+MMCA.Common.UI.Components.Lists.ClickableCard.ChildContent.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Components.Lists.ClickableCard.ChildContent.set -> void
+MMCA.Common.UI.Components.Lists.ClickableCard.Class.get -> string!
+MMCA.Common.UI.Components.Lists.ClickableCard.Class.set -> void
+MMCA.Common.UI.Components.Lists.ClickableCard.ClickableCard() -> void
+MMCA.Common.UI.Components.Lists.ClickableCard.Elevation.get -> int
+MMCA.Common.UI.Components.Lists.ClickableCard.Elevation.set -> void
+MMCA.Common.UI.Components.Lists.ClickableCard.OnActivate.get -> Microsoft.AspNetCore.Components.EventCallback
+MMCA.Common.UI.Components.Lists.ClickableCard.OnActivate.set -> void
 MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel
 MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.InfiniteScrollSentinel() -> void
@@ -337,6 +349,7 @@ static MMCA.Common.UI.Validation.ModelValidation.IsRequired(object! model, strin
 static readonly MMCA.Common.UI.Common.RoutePaths.Sessions -> string!
 static readonly MMCA.Common.UI.Common.Settings.NotificationBellOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
+virtual MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Auth.Sessions.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizeGrid.get -> bool
 virtual MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.VirtualizedGridHeight.get -> string!
@@ -350,6 +363,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierType>.UpdateAsync(TEntityDTO entity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 ~override MMCA.Common.UI.Components.Forms.ApiFileDownloadButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.ErrorSummary.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Lists.ClickableCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.PageState.ListNoRecordsContent.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Sharing.QrCodeButton.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

@@ -17,7 +17,9 @@
     <div class="d-flex flex-column align-center">
         @if (!string.IsNullOrEmpty(_error))
         {
-            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+            @* role="alert": this page runs unattended, so the failure replaces a spinner with no user
+               action to associate it with; only a live region announces it. *@
+            <MudAlert Severity="Severity.Error" Class="mb-4" role="alert">@_error</MudAlert>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login">
                 @L["Auth.OAuth.BackToLogin"]
             </MudButton>

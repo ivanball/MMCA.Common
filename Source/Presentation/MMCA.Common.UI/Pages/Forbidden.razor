@@ -9,8 +9,11 @@
 <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center mt-16">
     <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Large"
              Color="Color.Error" Style="font-size: 5rem;" Class="mb-4" />
-    <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2" role="alert">@L["Page.Forbidden.Title"]</MudText>
-    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6">
+    @* role="alert" belongs on the message, not on the heading: an explicit role REPLACES the implicit
+       one, so the h1 was announcing as an alert and the page lost its level-one heading in the
+       accessibility tree. *@
+    <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center" Class="mb-2">@L["Page.Forbidden.Title"]</MudText>
+    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Secondary" Class="mb-6" role="alert">
         @L["Page.Forbidden.Message"]
     </MudText>
     <MudButton Variant="Variant.Filled" Color="Color.Primary"

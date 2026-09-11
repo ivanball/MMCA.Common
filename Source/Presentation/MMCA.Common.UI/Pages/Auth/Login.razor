@@ -27,7 +27,8 @@
     <div class="d-flex flex-column align-center mb-6">
         <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large"
                  Color="Color.Primary" Class="mb-2" />
-        <MudText Typo="Typo.h4" Align="Align.Center">@L["Auth.Login.WelcomeBack"]</MudText>
+        @* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+        <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center">@L["Auth.Login.WelcomeBack"]</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
             @L["Auth.Login.Subtitle"]
         </MudText>
@@ -39,7 +40,9 @@
             <MudCardContent Class="pa-6">
                 @if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_errorMessage</MudAlert>
+                    @* role="alert": the alert only enters the DOM after a failed submit, so nothing
+                       announces it unless it arrives as a live region. *@
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert">@_errorMessage</MudAlert>
                 }
                 <MudTextField @bind-Value="_model.Email" For="@(() => _model.Email)" Label="@L["Auth.Field.Email"]" InputType="InputType.Email"
                               Immediate="true"
@@ -55,8 +58,13 @@
                               autocomplete="current-password" />
             </MudCardContent>
             <MudCardActions Class="d-flex flex-column pa-6 pt-0" Style="gap: 0.75rem;">
+                @* aria-busy is spelled out as a string, never a bool: Blazor renders a false bool
+                   attribute away entirely and a true one as aria-busy="", and the empty value is not
+                   one of the two this attribute accepts. Same treatment on every submit button in
+                   the shared auth pages. *@
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                            Disabled="@_isLoading" ButtonType="ButtonType.Submit" Size="Size.Large"
+                           aria-busy="@(_isLoading ? "true" : "false")"
                            aria-label="@L["Auth.Login.SignIn.Aria"]">
                     @if (_isLoading)
                     {

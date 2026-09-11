@@ -117,12 +117,24 @@ a, .btn-link {
     padding-top: 1.1rem;
 }
 
-h1:focus {
+/* Routes.razor's <FocusOnNavigate Selector="h1" /> moves focus to the page heading on every
+   navigation, so h1 really does receive focus. Suppressing the ring outright (the Blazor template
+   default) left a keyboard user with no visible focus indicator at all, which is WCAG 2.4.7. Keep
+   the ring for keyboard focus and drop it only for the programmatic/pointer case. */
+h1:focus-visible {
+    outline: 2px solid var(--mud-palette-primary, #258cfb);
+    outline-offset: 2px;
+}
+
+h1:focus:not(:focus-visible) {
     outline: none;
 }
 
+/* Green 800, not #26b050: the valid-field outline is non-text UI and answers to the 3:1 floor
+   (WCAG 1.4.11), where #26b050 was 2.83:1 on white. #2E7D32 is 5.13:1 on Surface and 4.95:1 on
+   Background #FAFBFC. */
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid #2E7D32;
 }
 
 .invalid {

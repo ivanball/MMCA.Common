@@ -1,4 +1,6 @@
+using Microsoft.JSInterop;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Services.Capabilities.Accessibility;
 using MudBlazor;
 
 namespace MMCA.Common.UI.Services;
@@ -8,27 +10,51 @@ namespace MMCA.Common.UI.Services;
 /// name a component-library service (its sibling is <see cref="MudAppDialogService"/>). Registered
 /// by <c>AddUIShared</c>, so every host that calls it gets toasts without any page having to know
 /// which library renders them.
+/// <para>
+/// Every toast is ALSO pushed through <see cref="IAccessibilityAnnouncer"/>. MudBlazor's snackbar
+/// host emits no <c>aria-live</c> region of any kind, so a toast is invisible to a screen reader:
+/// the one channel the framework uses to tell the user that something happened (a save succeeded, a
+/// push notification arrived) reached sighted users only. The announcer writes into the visually
+/// hidden live region owned by <c>capabilities-interop.js</c>, which every screen reader monitors.
+/// </para>
 /// </summary>
-internal sealed class MudToastService(ISnackbar snackbar) : IToastService
+internal sealed class MudToastService : IToastService
 {
-    /// <inheritdoc />
-    public void Success(string message) => snackbar.Add(message, Severity.Success);
+    private readonly ISnackbar _snackbar;
+    private readonly IAccessibilityAnnouncer? _announcer;
+
+    /// <summary>
+    /// Initializes the service. The announcer is OPTIONAL on purpose: <c>AddCommonUiFacades</c> is
+    /// called on its own by the shipped bUnit base and by hosts that never register the device
+    /// capabilities, and a toast facade must not become the reason a container fails to resolve.
+    /// When it is absent, toasts behave exactly as they did before, so the announcement is a pure
+    /// addition rather than a new requirement on the host DI sequence.
+    /// </summary>
+    public MudToastService(ISnackbar snackbar, IAccessibilityAnnouncer? announcer = null)
+    {
+        _snackbar = snackbar;
+        _announcer = announcer;
+    }
 
     /// <inheritdoc />
-    public void Info(string message) => snackbar.Add(message, Severity.Info);
+    public void Success(string message) => Raise(message, Severity.Success);
 
     /// <inheritdoc />
-    public void Warning(string message) => snackbar.Add(message, Severity.Warning);
+    public void Info(string message) => Raise(message, Severity.Info);
 
     /// <inheritdoc />
-    public void Error(string message) => snackbar.Add(message, Severity.Error);
+    public void Warning(string message) => Raise(message, Severity.Warning);
 
     /// <inheritdoc />
-    public void Show(string message, ToastSeverity severity) => snackbar.Add(message, Map(severity));
+    public void Error(string message) => Raise(message, Severity.Error);
 
     /// <inheritdoc />
-    public void ShowPersistent(string title, string body, ToastSeverity severity = ToastSeverity.Info) =>
-        snackbar.Add(
+    public void Show(string message, ToastSeverity severity) => Raise(message, Map(severity));
+
+    /// <inheritdoc />
+    public void ShowPersistent(string title, string body, ToastSeverity severity = ToastSeverity.Info)
+    {
+        _snackbar.Add(
             builder =>
             {
                 builder.OpenElement(0, "strong");
@@ -47,14 +73,20 @@ internal sealed class MudToastService(ISnackbar snackbar) : IToastService
                 options.SnackbarVariant = Variant.Filled;
             });
 
+        // The rendered toast is two elements; the announcement is one sentence, which is how a
+        // screen reader would read the title and body anyway.
+        Announce($"{title}. {body}");
+    }
+
     /// <inheritdoc />
     public void ShowAction(
         string message,
         string actionText,
         Func<Task> onAction,
         ToastSeverity severity = ToastSeverity.Info,
-        bool requireInteraction = false) =>
-        snackbar.Add(
+        bool requireInteraction = false)
+    {
+        _snackbar.Add(
             message,
             Map(severity),
             options =>
@@ -76,6 +108,54 @@ internal sealed class MudToastService(ISnackbar snackbar) : IToastService
                     options.SnackbarVariant = Variant.Filled;
                 }
             });
+
+        // The action label is part of what was offered, so it is part of what is announced.
+        Announce($"{message}. {actionText}");
+    }
+
+    private void Raise(string message, Severity severity)
+    {
+        _snackbar.Add(message, severity);
+        Announce(message);
+    }
+
+    /// <summary>
+    /// Pushes the toast text into the screen-reader live region without making the caller wait:
+    /// <see cref="IToastService"/> is deliberately synchronous (a page raises a toast and carries
+    /// on), so the announcement is fire-and-forget. Every failure is swallowed by design: the
+    /// browser announcer is a JS-interop call, which throws during prerendering and while a circuit
+    /// is tearing down, and a toast must never fail because the announcement could not be delivered.
+    /// </summary>
+    private void Announce(string message)
+    {
+        if (_announcer is null || string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        _ = AnnounceCoreAsync(message);
+    }
+
+    private async Task AnnounceCoreAsync(string message)
+    {
+        try
+        {
+            await _announcer!.AnnounceAsync(message).ConfigureAwait(false);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit already gone; there is no live region left to write into.
+        }
+        catch (JSException)
+        {
+            // The browser rejected the call (no DOM yet, a head with no live region).
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop unavailable (SSR prerender, before hydration), and, through its derived
+            // ObjectDisposedException, a scope torn down between the toast and the announcement.
+        }
+    }
 
     /// <summary>
     /// Projects the vendor-neutral level onto MudBlazor's own. Written out rather than cast: the

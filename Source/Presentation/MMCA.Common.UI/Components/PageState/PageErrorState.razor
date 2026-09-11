@@ -2,7 +2,9 @@
 
 @* Elevation 1 lifts the alert off the page surface; the filled error variant and its icon (and so
    the contrast fixes in the dark palette) are unchanged. *@
-<MudAlert Severity="Severity.Error" Variant="Variant.Filled" Elevation="1" Class="my-6 mmca-error-alert">@(Message ?? L["Common.ErrorState.Generic"])</MudAlert>
+@* role="alert": the state replaces the page body once a load fails, with no user action to associate
+   it with, so it has to announce itself. *@
+<MudAlert Severity="Severity.Error" Variant="Variant.Filled" Elevation="1" Class="my-6 mmca-error-alert" role="alert">@(Message ?? L["Common.ErrorState.Generic"])</MudAlert>
 
 @code {
     /// <summary>Error text; defaults to the localized "An error occurred." (ADR-027).</summary>

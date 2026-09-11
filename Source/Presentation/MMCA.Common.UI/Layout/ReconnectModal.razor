@@ -4,7 +4,10 @@
 @inject IStringLocalizer<SharedResource> L
 <script type="module" src="@Assets["_content/MMCA.Common.UI/Layout/ReconnectModal.razor.js"]"></script>
 
-<dialog id="components-reconnect-modal" data-nosnippet>
+@* aria-label rather than aria-labelledby: which paragraph is visible changes with the reconnect
+   state, so a label pointing at one of them would be wrong in every other state, while a dialog
+   still needs one stable accessible name (WCAG 4.1.2). *@
+<dialog id="components-reconnect-modal" data-nosnippet aria-label="@L["Reconnect.DialogLabel"]">
     <div class="components-reconnect-container">
         <div class="components-rejoining-animation" aria-hidden="true">
             <div></div>

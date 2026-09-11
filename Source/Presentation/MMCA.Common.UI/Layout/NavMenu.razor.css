@@ -113,7 +113,13 @@
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
+    /* visibility, not just max-height/opacity: a zero-height clipped box still keeps its links in the
+       tab order, so a keyboard user tabbing past the hamburger on a phone used to walk the entire
+       collapsed menu with nothing visible on screen. visibility:hidden takes them out of the tab
+       order and out of the accessibility tree; it is delayed by the collapse duration so the slide
+       animation still plays on close. */
+    visibility: hidden;
+    transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, visibility 0s linear 0.3s;
     position: relative;
     z-index: var(--mmca-z-nav-menu, 200);
     background-color: var(--mmca-sidebar-bg, #1A2035);
@@ -124,6 +130,8 @@
     max-height: calc(100dvh - 3.5rem);
     overflow-y: auto;
     opacity: 1;
+    visibility: visible;
+    transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, visibility 0s linear 0s;
 }
 
 /* ── Mobile Nav Backdrop ── */
@@ -304,6 +312,9 @@
         max-height: none;
         overflow-y: auto;
         opacity: 1;
+        /* The sidebar is permanent above the breakpoint, so the collapsed-menu visibility rule must
+           not follow it there: without this the desktop nav links would never be focusable. */
+        visibility: visible;
         transition: none;
         /* Never collapse the sidebar for wide screens */
         height: calc(100vh - 3.5rem);

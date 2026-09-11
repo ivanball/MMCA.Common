@@ -17,7 +17,7 @@
 <a href="#main-content" class="skip-nav">@L["Layout.SkipToMainContent"]</a>
 
 <div class="page">
-    <aside class="sidebar" aria-label="Main navigation">
+    <aside class="sidebar" aria-label="@L["Layout.Sidebar.Aria"]">
         @* Complementary landmark wraps the whole sidebar so ALL of it — including NavMenu's brand top-row
            that sits above the inner <nav> — is contained by a landmark (axe region, best-practice). No
            role="navigation" on the <aside>: the inner NavMenu already renders the <nav>, and an <aside>
@@ -27,7 +27,7 @@
 
     <main role="main">
         <div class="appbar-container">
-            <MudAppBar Elevation="1" Dense="true" Fixed="false" aria-label="Top navigation bar">
+            <MudAppBar Elevation="1" Dense="true" Fixed="false" aria-label="@L["Layout.AppBar.Aria"]">
                 <div class="appbar-spacer"></div>
                 @* Culture + theme controls are available to everyone, authenticated or not. *@
                 <span class="appbar-icon-actions">
@@ -86,7 +86,10 @@
 <div id="blazor-error-ui" data-nosnippet role="alert">
     @L["Layout.UnhandledError"]
     <a href="." class="reload">@L["Layout.Reload"]</a>
-    <span class="dismiss">X</span>
+    @* A real button, not a bare span: the dismiss has to be reachable by keyboard and carry an
+       accessible name (WCAG 2.1.1 / 4.1.2). Blazor's own error-UI script binds the click by the
+       .dismiss class, not by tag, so the behaviour is unchanged and no handler is needed here. *@
+    <button type="button" class="dismiss" aria-label="@L["Layout.Dismiss"]">X</button>
 </div>
 
 @code {

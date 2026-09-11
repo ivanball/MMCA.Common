@@ -267,6 +267,18 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Binds one row to the click callback. Returns <see langword="default"/> when the consumer wired none,
+    /// which is what tells <see cref="ClickableCard"/> to render a plain, non-focusable card instead
+    /// of a keyboard control that does nothing. Deliberately NOT
+    /// <see cref="EventCallback.Empty"/>: that value wraps a no-op <c>Action</c>, so its
+    /// <c>HasDelegate</c> is true and every card would claim to be interactive.
+    /// </summary>
+    private EventCallback CardCallback(TItem item) =>
+        OnCardClick.HasDelegate
+            ? EventCallback.Factory.Create(this, () => OnCardClick.InvokeAsync(item))
+            : default;
+
     private async Task RetryAsync()
     {
         await LoadNextPageAsync(isInitial: false);

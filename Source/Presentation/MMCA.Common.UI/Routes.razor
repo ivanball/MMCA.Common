@@ -2,6 +2,7 @@
 @using MMCA.Common.UI.Common.Interfaces
 @using MMCA.Common.UI.Pages
 @inject IEnumerable<IUIModule> UIModules
+@inject IStringLocalizer<SharedResource> L
 
 <CascadingAuthenticationState>
     <Router AppAssembly="typeof(Layout.MainLayout).Assembly"
@@ -11,7 +12,12 @@
             <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
                 <Authorizing>
                     <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center mt-16">
-                        <MudProgressCircular Indeterminate="true" aria-label="Checking authorization" />
+                        @* Same live-region shape as PageLoadingState: role="status" carries the
+                           announcement (a bare div may not take aria-label) and the spinner carries
+                           the accessible name, so the progressbar is never anonymous. *@
+                        <div role="status" aria-live="polite" aria-busy="true">
+                            <MudProgressCircular Indeterminate="true" aria-label="@L["Routes.CheckingAuthorization"]" />
+                        </div>
                     </MudContainer>
                 </Authorizing>
                 <NotAuthorized>

@@ -11,7 +11,9 @@
 
 @if (!Connectivity.IsOnline)
 {
-    <MudAlert Severity="Severity.Warning" Dense="true" Class="mmca-offline-banner">
+    @* role="status", not role="alert": losing the network is worth announcing but is not an error the
+       user must act on this instant, so it waits for a pause in speech (WCAG 4.1.3). *@
+    <MudAlert Severity="Severity.Warning" Dense="true" Class="mmca-offline-banner" role="status">
         @Localizer["Capabilities.Offline.Banner"]
     </MudAlert>
 }

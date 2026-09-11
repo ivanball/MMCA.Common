@@ -33,6 +33,14 @@ internal sealed class StubPushNotificationUIService : IPushNotificationUIService
                 Id = 2, Title = "Scheduled maintenance", Body = "Sunday 02:00 UTC.", SentByUserId = 1,
                 RecipientCount = 128, Status = "Failed", CreatedOn = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
             },
+            // Third row on purpose: NotificationList renders the Warning-coloured chip for every
+            // status that is neither Sent nor Failed, so without a pending row the axe scan never
+            // saw the one chip whose palette colour was failing contrast.
+            new()
+            {
+                Id = 3, Title = "Release notes", Body = "Queued for the next window.", SentByUserId = 1,
+                RecipientCount = 64, Status = "Pending", CreatedOn = new DateTime(2026, 1, 3, 8, 0, 0, DateTimeKind.Utc),
+            },
         ];
         return Task.FromResult(Result.Success(
             new PagedCollectionResult<PushNotificationDTO>(items, new PaginationMetadata(items.Length, pageSize, pageNumber))));

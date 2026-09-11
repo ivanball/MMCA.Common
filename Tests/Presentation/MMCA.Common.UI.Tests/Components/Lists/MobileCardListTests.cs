@@ -1,5 +1,7 @@
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using MMCA.Common.UI.Components.Lists;
 using MudBlazor;
 
@@ -43,6 +45,58 @@ public sealed class MobileCardListTests : BunitTestBase
             .Add(c => c.CardTemplate, item => item));
 
         cut.FindComponents<MudPagination>().Count.Should().Be(1);
+    }
+
+    [Fact]
+    public void LoadingBar_SitsInsideAPoliteLiveRegion()
+    {
+        // MudProgressLinear on its own is an anonymous progressbar nobody is told about; the
+        // role="status" wrapper plus the bar's own name is the shape PageLoadingState established.
+        var cut = RenderUnderTest<MobileCardList<string>>(p => p
+            .Add(c => c.Items, Array.Empty<string>())
+            .Add(c => c.IsLoading, true)
+            .Add(c => c.CardTemplate, item => item));
+
+        var region = cut.Find("[role=status]");
+        region.GetAttribute("aria-live").Should().Be("polite");
+        region.GetAttribute("aria-busy").Should().Be("true");
+        cut.Find("[role=status] .mud-progress-linear").HasAttribute("aria-label").Should().BeTrue();
+    }
+
+    [Fact]
+    public void CardsAreKeyboardOperable_WhenAClickCallbackIsWired()
+    {
+        // WCAG 2.1.1: the row used to be reachable by pointer only.
+        string? activated = null;
+        var items = new List<string> { "Alpha", "Bravo" };
+
+        var cut = RenderUnderTest<MobileCardList<string>>(p => p
+            .Add(c => c.Items, items)
+            .Add(c => c.TotalItems, items.Count)
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.OnCardClick, EventCallback.Factory.Create<string>(this, s => activated = s)));
+
+        var card = cut.FindAll(".mobile-list-card")[1];
+        card.GetAttribute("tabindex").Should().Be("0");
+        card.GetAttribute("role").Should().Be("button");
+        card.KeyDown(new KeyboardEventArgs { Key = " " });
+
+        activated.Should().Be("Bravo");
+    }
+
+    [Fact]
+    public void WithoutAClickCallback_CardsStayOutOfTheTabOrder()
+    {
+        var items = new List<string> { "Alpha" };
+
+        var cut = RenderUnderTest<MobileCardList<string>>(p => p
+            .Add(c => c.Items, items)
+            .Add(c => c.TotalItems, items.Count)
+            .Add(c => c.CardTemplate, item => item));
+
+        var card = cut.Find(".mobile-list-card");
+        card.HasAttribute("tabindex").Should().BeFalse();
+        card.HasAttribute("role").Should().BeFalse();
     }
 
     [Fact]

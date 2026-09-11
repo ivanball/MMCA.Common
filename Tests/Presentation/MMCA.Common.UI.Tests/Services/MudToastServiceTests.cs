@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Capabilities.Accessibility;
 using Moq;
 using MudBlazor;
 
@@ -16,8 +17,14 @@ namespace MMCA.Common.UI.Tests.Services;
 public sealed class MudToastServiceTests
 {
     private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly Mock<IAccessibilityAnnouncer> _announcer = new();
 
-    private MudToastService Toast => new(_snackbar.Object);
+    public MudToastServiceTests() =>
+        _announcer
+            .Setup(a => a.AnnounceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+    private MudToastService Toast => new(_snackbar.Object, _announcer.Object);
 
     [Fact]
     public void ShowAction_RendersALabelledActionButtonOnThePrimaryColour()
@@ -103,6 +110,107 @@ public sealed class MudToastServiceTests
 
         _snackbar.Verify(
             s => s.Add("Item deleted", Severity.Info, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// The screen-reader half of the contract. MudBlazor's snackbar host emits no aria-live region,
+    /// so a toast that is only rendered is a toast only sighted users receive; every entry point
+    /// therefore pushes its text through <see cref="IAccessibilityAnnouncer"/> as well.
+    /// </summary>
+    [Theory]
+    [InlineData(ToastSeverity.Normal)]
+    [InlineData(ToastSeverity.Info)]
+    [InlineData(ToastSeverity.Success)]
+    [InlineData(ToastSeverity.Warning)]
+    [InlineData(ToastSeverity.Error)]
+    public void Show_AnnouncesTheMessageToTheScreenReader(ToastSeverity severity)
+    {
+        Toast.Show("Saved", severity);
+
+        _announcer.Verify(a => a.AnnounceAsync("Saved", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void SeverityShorthands_EachAnnounceTheirMessage()
+    {
+        var toast = Toast;
+
+        toast.Success("Created");
+        toast.Info("Heads up");
+        toast.Warning("Careful");
+        toast.Error("Broken");
+
+        _announcer.Verify(a => a.AnnounceAsync("Created", It.IsAny<CancellationToken>()), Times.Once);
+        _announcer.Verify(a => a.AnnounceAsync("Heads up", It.IsAny<CancellationToken>()), Times.Once);
+        _announcer.Verify(a => a.AnnounceAsync("Careful", It.IsAny<CancellationToken>()), Times.Once);
+        _announcer.Verify(a => a.AnnounceAsync("Broken", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void Success_StillRaisesTheSnackbar_AsWellAsAnnouncing()
+    {
+        // "Alongside", not "instead of": the announcement is additive, so the visible toast must be
+        // unchanged.
+        Toast.Success("Saved");
+
+        _snackbar.Verify(
+            s => s.Add("Saved", Severity.Success, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once);
+        _announcer.Verify(a => a.AnnounceAsync("Saved", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void ShowPersistent_AnnouncesTheTitleAndBodyAsOneSentence()
+    {
+        // The rendered push toast is a bold title and a body on two lines; a screen reader would read
+        // them as one utterance either way, and the live region takes text, not a render fragment.
+        Toast.ShowPersistent("New message", "Ada replied to your comment.");
+
+        _announcer.Verify(
+            a => a.AnnounceAsync("New message. Ada replied to your comment.", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void ShowAction_AnnouncesTheMessageAndTheActionLabel()
+    {
+        // The action is part of what was offered, so a non-sighted user has to hear that it exists.
+        Toast.ShowAction("Item deleted", "Undo", () => Task.CompletedTask);
+
+        _announcer.Verify(
+            a => a.AnnounceAsync("Item deleted. Undo", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Toast_StillWorks_WhenNoAnnouncerIsRegistered()
+    {
+        // AddCommonUiFacades is called on its own by the shipped bUnit base and by hosts that never
+        // register the device capabilities, so the dependency is optional by design.
+        var withoutAnnouncer = new MudToastService(_snackbar.Object);
+
+        withoutAnnouncer.Success("Saved");
+
+        _snackbar.Verify(
+            s => s.Add("Saved", Severity.Success, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Toast_IsNotAffected_WhenTheAnnouncementFails()
+    {
+        // A prerender pass has no JS runtime, so the browser announcer throws. A toast must never
+        // fail because the announcement could not be delivered.
+        _announcer
+            .Setup(a => a.AnnounceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("JS interop unavailable during prerendering"));
+
+        var act = () => Toast.Error("Broken");
+
+        act.Should().NotThrow();
+        _snackbar.Verify(
+            s => s.Add("Broken", Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
             Times.Once);
     }
 
