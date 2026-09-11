@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.193.0] - 2026-09-11
+
 ### Added
 
 - **`ClickableCard`** (`MMCA.Common.UI.Components.Lists`): the card body shared by `MobileCardList`
