@@ -6,6 +6,41 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.194.0] - 2026-09-11
+
+Two regressions from the 1.193.0 accessibility sweep.
+
+### Changed
+
+- **Breaking (direct callers only): `MudToastService` no longer takes an `IAccessibilityAnnouncer`.**
+  The optional second constructor parameter introduced in 1.193.0 is gone, along with the text
+  mirroring it drove. The type is `internal` and is resolved through `IToastService`, so a host that
+  registers it the normal way (`AddUIShared`) needs no change at all. The mechanical fix for anyone
+  who constructed it explicitly is to drop the second argument:
+  `new MudToastService(snackbar, announcer)` becomes `new MudToastService(snackbar)`. See
+  [UPGRADING.md](UPGRADING.md). `IAccessibilityAnnouncer` is unchanged and stays registered
+  (`NullAccessibilityAnnouncer` by default, `BrowserAccessibilityAnnouncer` with the device
+  capabilities, `MauiAccessibilityAnnouncer` on MAUI): it remains available to any caller that wants
+  to announce something of its own.
+
+### Fixed
+
+- **Toasts are announced by their HOST rather than by a copy of their text.** `MmcaThemeProviders`
+  now renders `MudSnackbarProvider` inside a `role="status" aria-live="polite"` element, so a
+  snackbar is announced by the act of being inserted into the live region. Mirroring the text
+  through `IAccessibilityAnnouncer` (1.193.0) put the same sentence in the DOM twice: the visible
+  `.mud-snackbar-content-message` and the visually hidden live region. That read the message twice
+  to anyone using a screen reader alongside the visible toast, and it made every Playwright text
+  locator in a consumer's E2E suite ambiguous, so an assertion as ordinary as
+  `GetByText("Item added to cart!")` failed with a strict-mode violation on two matching elements.
+  The wrapper carries no styles and the provider's own container is `position: fixed`, so nothing
+  about where a toast appears changes.
+- **`AuthorizationTestsBase` locates the Forbidden page heading as a heading.** The shared
+  Playwright base looked the denial up with `h1[role='alert']`, which the same sweep had made
+  unmatchable: `role="alert"` moved OFF the `h1` in `Forbidden.razor` (an explicit role replaces the
+  implicit one, so the page had announced an alert and offered no level-1 heading). The locator is
+  now `GetByRole(AriaRole.Heading, Level = 1)`.
+
 ## [1.193.0] - 2026-09-11
 
 ### Added
@@ -14,11 +49,14 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   and `MobileInfiniteScrollList`. A card wired to a click callback now renders as a real control
   (`tabindex="0"`, `role="button"`, Enter/Space activation); a card with no callback renders exactly
   as before, with no `tabindex` and no `role`, so a read-only list does not fill the tab order.
-- **Toasts are announced to screen readers.** `MudToastService` takes an optional
-  `IAccessibilityAnnouncer` and pushes every toast's text into the visually hidden `aria-live`
-  region alongside the snackbar. MudBlazor's snackbar host emits no live region of its own, so
-  toasts (push notifications included) previously reached sighted users only. The dependency is
-  optional: a host that never registered the device capabilities is unaffected.
+- **Toasts are announced to screen readers.** MudBlazor's snackbar host emits no `aria-live` region
+  of its own, so toasts (push notifications included) previously reached sighted users only. The
+  framework now makes the snackbar host itself the live region: `MmcaThemeProviders` renders
+  `MudSnackbarProvider` inside a `role="status" aria-live="polite"` element, so an inserted toast is
+  announced by being rendered. Nothing is required of the host beyond the provider block it already
+  renders. (This release delivered the announcement by mirroring the text through
+  `IAccessibilityAnnouncer` instead; that produced a duplicate DOM node and was replaced by the
+  live-region host in 1.194.0, described above. The live-region host is the mechanism to build on.)
 - **E2E gates**: axe WCAG 2.1 AA scans of the home, 404 and 403 pages and of the mobile hamburger
   menu in its OPEN state (every previous scan ran at 1280px), plus the suite's first
   keyboard-navigation test (Tab reaches the hamburger, Enter opens it, Escape closes it and returns

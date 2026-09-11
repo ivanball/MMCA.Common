@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Services;
-using MMCA.Common.UI.Services.Capabilities.Accessibility;
 using Moq;
 using MudBlazor;
 
@@ -17,14 +16,8 @@ namespace MMCA.Common.UI.Tests.Services;
 public sealed class MudToastServiceTests
 {
     private readonly Mock<ISnackbar> _snackbar = new();
-    private readonly Mock<IAccessibilityAnnouncer> _announcer = new();
 
-    public MudToastServiceTests() =>
-        _announcer
-            .Setup(a => a.AnnounceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-    private MudToastService Toast => new(_snackbar.Object, _announcer.Object);
+    private MudToastService Toast => new(_snackbar.Object);
 
     [Fact]
     public void ShowAction_RendersALabelledActionButtonOnThePrimaryColour()
@@ -114,25 +107,31 @@ public sealed class MudToastServiceTests
     }
 
     /// <summary>
-    /// The screen-reader half of the contract. MudBlazor's snackbar host emits no aria-live region,
-    /// so a toast that is only rendered is a toast only sighted users receive; every entry point
-    /// therefore pushes its text through <see cref="IAccessibilityAnnouncer"/> as well.
+    /// The screen-reader half of the contract is NOT this service's: the toast text reaches a screen
+    /// reader because <c>MmcaThemeProviders</c> hosts the snackbar provider inside a
+    /// <c>role="status" aria-live="polite"</c> element (asserted by
+    /// <c>MmcaThemeProvidersTests.Render_HostsTheSnackbarProviderInsideAPoliteLiveRegion</c>). This
+    /// service must therefore raise the snackbar and nothing else: a second copy of the text would
+    /// be announced twice and would make every text locator ambiguous.
     /// </summary>
     [Theory]
-    [InlineData(ToastSeverity.Normal)]
-    [InlineData(ToastSeverity.Info)]
-    [InlineData(ToastSeverity.Success)]
-    [InlineData(ToastSeverity.Warning)]
-    [InlineData(ToastSeverity.Error)]
-    public void Show_AnnouncesTheMessageToTheScreenReader(ToastSeverity severity)
+    [InlineData(ToastSeverity.Normal, Severity.Normal)]
+    [InlineData(ToastSeverity.Info, Severity.Info)]
+    [InlineData(ToastSeverity.Success, Severity.Success)]
+    [InlineData(ToastSeverity.Warning, Severity.Warning)]
+    [InlineData(ToastSeverity.Error, Severity.Error)]
+    public void Show_RaisesExactlyOneSnackbarAndNothingElse(ToastSeverity severity, Severity expected)
     {
         Toast.Show("Saved", severity);
 
-        _announcer.Verify(a => a.AnnounceAsync("Saved", It.IsAny<CancellationToken>()), Times.Once);
+        _snackbar.Verify(
+            s => s.Add("Saved", expected, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once);
+        _snackbar.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public void SeverityShorthands_EachAnnounceTheirMessage()
+    public void SeverityShorthands_EachRaiseTheirOwnLevel()
     {
         var toast = Toast;
 
@@ -141,77 +140,19 @@ public sealed class MudToastServiceTests
         toast.Warning("Careful");
         toast.Error("Broken");
 
-        _announcer.Verify(a => a.AnnounceAsync("Created", It.IsAny<CancellationToken>()), Times.Once);
-        _announcer.Verify(a => a.AnnounceAsync("Heads up", It.IsAny<CancellationToken>()), Times.Once);
-        _announcer.Verify(a => a.AnnounceAsync("Careful", It.IsAny<CancellationToken>()), Times.Once);
-        _announcer.Verify(a => a.AnnounceAsync("Broken", It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public void Success_StillRaisesTheSnackbar_AsWellAsAnnouncing()
-    {
-        // "Alongside", not "instead of": the announcement is additive, so the visible toast must be
-        // unchanged.
-        Toast.Success("Saved");
-
         _snackbar.Verify(
-            s => s.Add("Saved", Severity.Success, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            s => s.Add("Created", Severity.Success, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
             Times.Once);
-        _announcer.Verify(a => a.AnnounceAsync("Saved", It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public void ShowPersistent_AnnouncesTheTitleAndBodyAsOneSentence()
-    {
-        // The rendered push toast is a bold title and a body on two lines; a screen reader would read
-        // them as one utterance either way, and the live region takes text, not a render fragment.
-        Toast.ShowPersistent("New message", "Ada replied to your comment.");
-
-        _announcer.Verify(
-            a => a.AnnounceAsync("New message. Ada replied to your comment.", It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public void ShowAction_AnnouncesTheMessageAndTheActionLabel()
-    {
-        // The action is part of what was offered, so a non-sighted user has to hear that it exists.
-        Toast.ShowAction("Item deleted", "Undo", () => Task.CompletedTask);
-
-        _announcer.Verify(
-            a => a.AnnounceAsync("Item deleted. Undo", It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public void Toast_StillWorks_WhenNoAnnouncerIsRegistered()
-    {
-        // AddCommonUiFacades is called on its own by the shipped bUnit base and by hosts that never
-        // register the device capabilities, so the dependency is optional by design.
-        var withoutAnnouncer = new MudToastService(_snackbar.Object);
-
-        withoutAnnouncer.Success("Saved");
-
         _snackbar.Verify(
-            s => s.Add("Saved", Severity.Success, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            s => s.Add("Heads up", Severity.Info, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
             Times.Once);
-    }
-
-    [Fact]
-    public void Toast_IsNotAffected_WhenTheAnnouncementFails()
-    {
-        // A prerender pass has no JS runtime, so the browser announcer throws. A toast must never
-        // fail because the announcement could not be delivered.
-        _announcer
-            .Setup(a => a.AnnounceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("JS interop unavailable during prerendering"));
-
-        var act = () => Toast.Error("Broken");
-
-        act.Should().NotThrow();
+        _snackbar.Verify(
+            s => s.Add("Careful", Severity.Warning, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
+            Times.Once);
         _snackbar.Verify(
             s => s.Add("Broken", Severity.Error, It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()),
             Times.Once);
+        _snackbar.VerifyNoOtherCalls();
     }
 
     /// <summary>

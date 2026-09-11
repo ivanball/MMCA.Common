@@ -49,6 +49,24 @@ public sealed class MmcaThemeProvidersTests : BunitTestBase
     }
 
     [Fact]
+    public void Render_HostsTheSnackbarProviderInsideAPoliteLiveRegion()
+    {
+        // How a toast reaches a screen reader: the snackbar HOST is the live region, so an inserted
+        // toast is announced by being rendered. Mirroring the text through IAccessibilityAnnouncer
+        // instead put the same sentence in the DOM twice, which read it twice and made every
+        // Playwright text locator in the consumers ambiguous (strict-mode violation). MudBlazor's
+        // provider renders its container inline here, so insertions land inside this element.
+        var cut = RenderUnderTest<MmcaThemeProviders>(_ => { });
+
+        var liveRegion = cut.Find("div[role='status'][aria-live='polite']");
+
+        var providerMarkup = cut.FindComponent<MudSnackbarProvider>().Markup;
+        liveRegion.InnerHtml.Should().Contain(
+            providerMarkup,
+            "the snackbar provider's own container must sit INSIDE the live region, not beside it");
+    }
+
+    [Fact]
     public void Render_HonoursAnAppSuppliedThemeOverride()
     {
         // The Theme parameter is the extension point for a downstream brand: an app passes its own
