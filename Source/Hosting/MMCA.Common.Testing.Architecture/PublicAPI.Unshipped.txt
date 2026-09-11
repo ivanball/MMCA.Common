@@ -108,3 +108,32 @@ MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIds_ShouldBe_ReadonlyRecordStructs() -> void
 MMCA.Common.Testing.Architecture.StronglyTypedIdTestsBase.StronglyTypedIdTestsBase() -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.StronglyTypedIdsAreReadonlyRecordStructs(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.IntegrationEventPayloadPurityTestsBase() -> void
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.IntegrationEventPayloads_ShouldNotExpose_DomainTypes() -> void
+MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.IntegrationEvents_ShouldShipFrom_SharedAssemblies() -> void
+abstract MMCA.Common.Testing.Architecture.IntegrationEventPayloadPurityTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventPayloadsAreDomainFree(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.IntegrationEventsLiveInSharedAssemblies(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase
+MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.CascadingDeletes_AreExplicitlyOptedIn() -> void
+MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.ConventionDeletes_AreRestricted() -> void
+MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.DeleteBehaviorConventionTestsBase() -> void
+abstract MMCA.Common.Testing.Architecture.DeleteBehaviorConventionTestsBase.Model.get -> object!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.CascadingForeignKeysAreExplicitlyOptedIn(object! model) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.ConventionForeignKeysRestrictDeletes(object! model) -> void
+MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase
+MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.ModuleCode_UsesParameterizedSqlOnly() -> void
+MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.RawSqlConventionTestsBase() -> void
+abstract MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.AllowedFiles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Architecture.RawSqlConventionTestsBase.ScannedSourceDirectories() -> System.Collections.Generic.IEnumerable<string!>!
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.AiDependencyIsolationTestsBase() -> void
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.GovernedAiPackage_ShouldStayBehind_Infrastructure() -> void
+MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.LanguageModelSdks_ShouldStayAt_TheModelBoundary() -> void
+abstract MMCA.Common.Testing.Architecture.AiDependencyIsolationTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackagePrefix = "MMCA.Common.AI." -> string!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageStaysBehindInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelSdksStayAtTheModelBoundary(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static readonly MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelDependencies -> System.Collections.Generic.IReadOnlyList<string!>!

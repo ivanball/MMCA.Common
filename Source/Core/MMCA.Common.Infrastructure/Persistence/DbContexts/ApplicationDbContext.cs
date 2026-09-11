@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -120,16 +121,6 @@ public abstract class ApplicationDbContext(
     /// <c>Tenant</c> query filter is inert and every tenant's rows are visible.
     /// </summary>
     public string? CurrentTenantId => TenantIdAccessor?.Invoke();
-
-    /// <summary>
-    /// Keyless entity used to map scalar SQL results (e.g. from raw queries) without a backing table.
-    /// </summary>
-    /// <typeparam name="T">The scalar return type.</typeparam>
-    internal sealed class ValReturn<T>
-    {
-        /// <summary>Gets or sets the scalar value returned by the query.</summary>
-        public T Value { get; set; } = default!;
-    }
 
     /// <summary>
     /// Indicates whether this context supports the transactional outbox pattern.
@@ -301,12 +292,36 @@ public abstract class ApplicationDbContext(
             refreshSessionSettings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, refreshSessionSettings.DataSourceName, StringComparison.Ordinal);
 
+        ConfigureSensitiveDataLogging(optionsBuilder);
+
         // Key EF's model cache by (context type, physical source name): the same context class is
         // instantiated once per database, each with a different model. Without this, the first
         // built model would silently be reused for every database.
         optionsBuilder.ReplaceService<IModelCacheKeyFactory, DataSourceModelCacheKeyFactory>();
 
         base.OnConfiguring(optionsBuilder);
+    }
+
+    /// <summary>
+    /// Lets EF render parameter VALUES into its logs and exception messages, but only when the host
+    /// asked for it AND reports the Development environment (see
+    /// <see cref="SensitiveDataLoggingGate"/>).
+    /// <para>
+    /// It sits on the shared base rather than in each engine's context class so the guarantee cannot
+    /// hold for SQL Server while a fourth engine quietly leaks. GetService, not GetRequiredService,
+    /// for the reason every other resolution here uses it: a design-time or directly-constructed
+    /// context registers neither the options nor the environment, and both absences read as "off".
+    /// </para>
+    /// </summary>
+    /// <param name="optionsBuilder">The options builder being configured.</param>
+    private void ConfigureSensitiveDataLogging(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (SensitiveDataLoggingGate.IsEnabled(
+                serviceProvider.GetService<IOptions<PersistenceSettings>>()?.Value,
+                serviceProvider.GetService<IHostEnvironment>()))
+        {
+            optionsBuilder.EnableSensitiveDataLogging();
+        }
     }
 
     /// <inheritdoc />
@@ -325,6 +340,13 @@ public abstract class ApplicationDbContext(
         // after module configurations have declared their indexes), so a soft-deleted row does
         // not block re-creating the "same" record. Hand-authored index filters are respected.
         configurationBuilder.Conventions.Add(_ => new SoftDeleteUniqueIndexConvention(DataSourceKey.Engine));
+
+        // Restrict-by-default delete behavior (runs last of the three finalizing conventions, so it
+        // never stamps a relationship the cross-source convention has already removed). A required
+        // relationship nobody configured cascades under EF's own default, which deletes children in
+        // the database below the aggregate's invariants and below soft delete; this inverts that and
+        // records on every foreign key whether its behavior was chosen or inherited.
+        configurationBuilder.Conventions.Add(_ => new RestrictDeleteByDefaultConvention(DataSourceKey.Engine));
 
         // Strongly typed identifiers (ADR-115), opt in. A host that calls AddStronglyTypedIds
         // registers the registry, and every wrapper it declares maps to the primitive it wraps, on
@@ -346,12 +368,6 @@ public abstract class ApplicationDbContext(
         ApplySoftDeleteFilters(modelBuilder);
         ApplyTenantFilters(modelBuilder);
         ConfigureConcurrencyTokens(modelBuilder);
-
-        // Register keyless ValReturn<T> types mapped to no table/view — used for raw SQL scalar queries.
-        modelBuilder.Entity<ValReturn<bool>>().HasNoKey().ToView(null);
-        modelBuilder.Entity<ValReturn<int>>().HasNoKey().ToView(null);
-        modelBuilder.Entity<ValReturn<DateTime>>().HasNoKey().ToView(null);
-        modelBuilder.Entity<ValReturn<string>>().HasNoKey().ToView(null);
 
         // Configure the outbox table for transactional domain event persistence.
         ConfigureOutbox(modelBuilder, physicalDataSource.Key.Engine);

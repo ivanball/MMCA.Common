@@ -19,5 +19,12 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Presentation\MMCA.Common.UI.Web\MMCA.Common.UI.Web.csproj" />
+    <!-- AddServiceDefaults, so the trusted-caller handler can be tested COMPOSED with the
+         service-discovery and resilience handlers a real host also registers. MMCA.Common.UI.Web
+         declares this same reference, but it sets DisableTransitiveProjectReferences to keep its
+         own layer guard honest, so a consumer does not inherit it. The layer rules gate Source/
+         projects by exact name (EnforceUIWebLayerBoundary); a TEST project composing two shipped
+         host extensions is exactly the integration this reference exists for. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Aspire\MMCA.Common.Aspire.csproj" />
   </ItemGroup>
 </Project>

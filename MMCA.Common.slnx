@@ -8,6 +8,7 @@
     <Project Path="Source/MMCA.Common/MMCA.Common.csproj" />
   </Folder>
   <Folder Name="/Source/Core/">
+    <Project Path="Source/Core/MMCA.Common.AI/MMCA.Common.AI.csproj" />
     <Project Path="Source/Core/MMCA.Common.Shared/MMCA.Common.Shared.csproj" />
     <Project Path="Source/Core/MMCA.Common.Domain/MMCA.Common.Domain.csproj" />
     <Project Path="Source/Core/MMCA.Common.Application/MMCA.Common.Application.csproj" />
@@ -31,6 +32,7 @@
   </Folder>
   <Folder Name="/Tests/" />
   <Folder Name="/Tests/Core/">
+    <Project Path="Tests/Core/MMCA.Common.AI.Tests/MMCA.Common.AI.Tests.csproj" />
     <Project Path="Tests/Core/MMCA.Common.Shared.Tests/MMCA.Common.Shared.Tests.csproj" />
     <Project Path="Tests/Core/MMCA.Common.Domain.Tests/MMCA.Common.Domain.Tests.csproj" />
     <Project Path="Tests/Core/MMCA.Common.Application.Tests/MMCA.Common.Application.Tests.csproj" />

@@ -66,6 +66,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Domain` | DDD base entities, aggregate roots, domain events, specifications |
 | `MMCA.Common.Application` | CQRS handlers, decorator pipeline, module system, query service, `IMessageBus` |
 | `MMCA.Common.Infrastructure` | EF Core multi-DB, repositories, UoW, caching, JWT, JWKS, outbox, message bus, SignalR |
+| `MMCA.Common.AI` | Governed `IChatClient` (Microsoft.Extensions.AI): versioned prompt contracts with a stable hash, per-call output-token / timeout / tool-use bounds, and token-usage metrics. Optional; nothing else references it |
 | `MMCA.Common.API` | Base controllers, middleware, idempotency, error-to-HTTP mapping, JWKS endpoint |
 | `MMCA.Common.Grpc` | gRPC server defaults, Result to RpcException mapping, JWT-forwarding client interceptor, typed gRPC clients behind an Anti-Corruption Layer adapter |
 | `MMCA.Common.UI` | Blazor shared components, auth state, MudBlazor theme |

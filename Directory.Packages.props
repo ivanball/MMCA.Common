@@ -97,6 +97,22 @@
          referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
     <PackageVersion Include="Otp.NET" Version="1.4.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
+    <!-- AI (MMCA.Common.AI) -->
+    <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against
+         (IChatClient, ChatOptions, UsageDetails) plus the pipeline pieces it composes (UseLogging,
+         UseOpenTelemetry, UseDistributedCache). It carries Microsoft.Extensions.AI.Abstractions, so
+         there is no second entry for it. The 10.x line floors the shared Microsoft.Extensions
+         transitives (Caching/DependencyInjection/Logging Abstractions) at 10.0.12, one servicing
+         patch above the 10.0.11 the rest of this file sits on; that lift is confined to
+         MMCA.Common.AI's own lock file because no other project references this package. -->
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0" />
+    <!-- The OFFICIAL Anthropic .NET SDK (MIT, by Anthropic), taken for one reason: it ships its own
+         Microsoft.Extensions.AI adapter (Microsoft.Extensions.AI.AnthropicClientExtensions
+         .AsIChatClient), so the provider half of the governed client is a construction rather than a
+         hand-rolled HttpClient against the Messages API, and the request/response shapes track the
+         API from the vendor instead of from this repo. Its only non-BCL dependency is
+         Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
+    <PackageVersion Include="Anthropic" Version="12.47.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
          license check at startup ("License must be specified with SetLicense/SetLicenseLocation

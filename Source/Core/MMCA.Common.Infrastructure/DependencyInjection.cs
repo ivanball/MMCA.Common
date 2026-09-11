@@ -120,6 +120,11 @@ public static class DependencyInjection
 
             services.TryAddSingleton<IQueryableExecutor, EFQueryableExecutor>();
 
+            // Sibling of the queryable executor for the reads LINQ cannot express. Scoped, not
+            // singleton: it reaches the scope's own context through IDbContextFactory, so a statement
+            // shares the caller's connection and any transaction an ITransactional command opened.
+            services.TryAddScoped<IRawSqlQueryExecutor, EFRawSqlQueryExecutor>();
+
             // Stateless classifier for a save rejected by a unique index, so a handler that lost an
             // insert race can answer with its own conflict instead of a raw 500. TryAdd, so a host
             // on another engine can register its own implementation first and keep it.

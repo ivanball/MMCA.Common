@@ -6,6 +6,141 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.192.0] - 2026-09-11
+
+### Added
+
+- **`MMCA.Common.AI` (NEW package): a governed `IChatClient`.** One optional package holding
+  everything a language-model dependency needs before it is allowed into an application, built on
+  Microsoft.Extensions.AI so the model behind it stays swappable:
+  - **`AiSettings`** (section `Ai`): `Enabled` (default `false`), `Provider`, `Model`, `ApiKey`
+    (production binds it from Key Vault), `MaxOutputTokens` (default 1024), `Timeout` (default 30s),
+    `AllowTools` (default `false`), `EnableCache` (default `false`) and an optional
+    `PerCallInputTokenBudget`. Validated on start: `Model` and `ApiKey` are required once `Enabled`
+    is true, so a half-configured host fails at boot instead of on a user's request.
+  - **`PromptContract`**: a sealed record of `Name`, `Version`, `Model` and `SystemPrompt` with a
+    computed SHA-256 `Hash` that normalizes line endings first, so a prompt hashes identically on
+    every platform and any change to any component moves the hash. `ToChatOptions()` / `Apply(...)`
+    stamp `mmca.prompt.name`, `mmca.prompt.version` and `mmca.prompt.hash` onto the request so
+    telemetry can tag by prompt, and a golden-replay evaluation gate can key its recorded answers on
+    the hash.
+  - **`BoundedChatClient`**: clamps `MaxOutputTokens` down to the configured ceiling, runs the call
+    under a token linked to the caller's and cancelled after `Timeout`, strips tools and the tool
+    mode while `AllowTools` is false, and refuses a request whose ESTIMATED input exceeds
+    `PerCallInputTokenBudget` before it reaches the provider. All four apply to the buffered and the
+    streaming path, and the caller's own `ChatOptions` are never mutated. The input estimate uses an
+    `IAiTokenEstimator` when the pipeline offers one and one token per four characters otherwise:
+    a runaway-input guardrail, never a billing figure.
+  - **`AiUsageMeter` + `UsageRecordingChatClient`**: the counters `mmca.ai.input_tokens` and
+    `mmca.ai.output_tokens` on the meter `MMCA.Common.AI`, tagged `model`, `prompt_name`,
+    `prompt_version` and `provider`, read from the provider-reported `ChatResponse.Usage` (and from
+    the `UsageContent` item on the streaming path). The meter is created through `IMeterFactory` and
+    never disposed by its holder.
+  - **`services.AddMmcaChatClient(configuration)`**: binds and validates the section and, when
+    enabled, registers one `IChatClient` built outermost-first as
+    `Bounded -> UsageRecording -> [DistributedCache] -> OpenTelemetry -> Logging -> provider`. The
+    provider client is Anthropic's official .NET SDK adapted with its own
+    `Microsoft.Extensions.AI.AnthropicClientExtensions.AsIChatClient`. Caching is added only when
+    `EnableCache` is set AND the host registered an `IDistributedCache`; OpenTelemetry publishes
+    under the source `MMCA.Common.AI` and enables sensitive data only in Development (the same gate
+    `Persistence:EnableSensitiveDataLogging` uses, failing closed). When `Enabled` is false it
+    registers no `IChatClient` at all, so consuming code gates on `GetService<IChatClient>()` rather
+    than on a flag. A second overload,
+    `AddMmcaChatClient(configuration, Func<IServiceProvider, IChatClient>)`, supplies the innermost
+    client for a test or a future provider and is what the Anthropic overload calls.
+  - The package takes **no MMCA.Common project reference** (Microsoft.Extensions.AI and Anthropic
+    only), and nothing in the framework references it: adopting it is one `PackageReference` and one
+    configuration section, and a host that does neither is unaffected.
+- **`AiDependencyIsolationTestsBase`** (MMCA.Common.Testing.Architecture): two fitness functions
+  holding the model boundary in both directions. No layer outside Infrastructure may name a
+  language-model SDK type (`Anthropic.*`, `Microsoft.Extensions.AI*`, `OpenAI.*`, `Azure.AI.*`), and
+  no layer outside Infrastructure may reference `MMCA.Common.AI`. `MMCA.Common.LayerEnforcement
+  .targets` carries the compile-time half.
+- **Automatic EF query tags.** Every statement the repositories generate now names the code path that
+  issued it: `spec:<SpecificationName>` from `SpecificationEvaluator`, `keyset:<SortKey>` from the
+  seek-paging path, and the ambient use case from the new `QueryTagScope` (an `AsyncLocal` scope the
+  logging decorators open), so a statement captured in a query store reads
+  `handler:GetActiveSpeakersQuery spec:ActiveSpeakersSpec` instead of being one more anonymous SELECT.
+- **Development-only sensitive-data logging.** `Persistence:EnableSensitiveDataLogging` (default
+  `false`) asks EF to render parameter values into logs and exception messages, and is honored only
+  when `IHostEnvironment.IsDevelopment()` is also true (an unregistered environment counts as not
+  Development). Pair it with `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command` set to
+  `Information` in `appsettings.Development.json`.
+- **`builder.OwnsAddress(...)`** beside `OwnsMoney` in `EntityTypeBuilderExtensions`: maps an
+  `Address` value object to the six columns every existing configuration declares by hand
+  (`AddressLine1`, `AddressLine2`, `AddressCity`, `AddressState`, `AddressZipCode`,
+  `AddressCountry`), with an optional column prefix for a second address on the same owner. Adopting
+  it is a zero-diff model change, so no consumer needs a migration.
+- **`IntegrationEventPayloadPurityTestsBase`** (MMCA.Common.Testing.Architecture): two fitness
+  functions holding the ADR-010 line that integration events are the public contract and domain
+  events are not the public API. Every concrete integration event must ship from a `*.Shared`
+  assembly, and no property on its wire shape may reach a type declared in a `*.Domain` assembly,
+  including through a nested payload record.
+- **`IRawSqlQueryExecutor`** (MMCA.Common.Application), the sibling of `IQueryableExecutor` for the
+  reads LINQ cannot express (window functions, recursive CTEs, vendor-specific operators). Both entry
+  points, `QueryAsync<T>` and `QuerySingleOrDefaultAsync<T>`, take a `FormattableString` and nothing
+  else, so a concatenated statement does not compile against them and every interpolation hole reaches
+  the server as a command parameter: injection is a compile error rather than a review item, and the
+  statement text stays stable so the server keeps its cached plan. `T` may be a scalar or an unmapped
+  DTO. The EF implementation is registered scoped beside `IQueryableExecutor` and runs the statement on
+  the host's default physical source through the scope's own `IDbContextFactory` context, so it shares
+  the caller's connection and any transaction an `ITransactional` command opened. A host whose default
+  source is Cosmos DB gets a `NotSupportedException` naming the engine.
+- **`RawSqlConventionTestsBase`** (MMCA.Common.Testing.Architecture): bans `FromSqlRaw`,
+  `SqlQueryRaw`, `ExecuteSqlRaw` and `ExecuteSqlRawAsync` in module code (the interpolated siblings
+  stay allowed), by the same source scan `RawQueryableConventionTestsBase` uses, with the same
+  `AllowedFiles` ratchet.
+- **`DeleteBehaviorConventionTestsBase`** (MMCA.Common.Testing.Architecture): two fitness functions
+  over a finalized EF model. Every foreign key that cascades must carry
+  `MMCA:DeleteBehaviorSource = Explicit` (somebody chose it), and every foreign key the convention
+  stamped `Convention` must restrict. Subclass it with `dbContext.Model` and point it at a relational
+  model.
+- **Generated-SQL learning tests for keyset paging** (`KeysetQueryBuilderSqlTests`), pinning the
+  `ORDER BY` shape with its identifier tie-break, the forward and backward seek predicates, and the
+  parameterization; plus `SpecificationEvaluatorTests` coverage that the collection-include split
+  query is applied when a collection navigation is included and not otherwise.
+
+### Changed
+
+- **Breaking (schema): relationships restrict by default.** `RestrictDeleteByDefaultConvention` runs
+  at model finalization on every relational engine and sets `DeleteBehavior.Restrict` on every foreign
+  key no entity configuration configured, then stamps each foreign key with
+  `MMCA:DeleteBehaviorSource` (`Explicit`, `Convention` or `Ownership`) so a finished model can be
+  audited. EF's own default is the opposite posture: a required relationship cascades, so deleting a
+  parent deletes its children in the database, below the aggregate's invariants, below the soft-delete
+  filter and below the domain events the framework raises, without anybody writing that down. Optional
+  relationships move too, from `ClientSetNull` (which blanks the column of whichever children happen to
+  be loaded and leaves the rest untouched) to `Restrict`. Ownership foreign keys keep their cascade
+  untouched, and a behavior anybody configured (fluent `OnDelete` or `[DeleteBehavior]`) is kept
+  exactly as configured: the convention supplies a default, it never overrides a decision. **Consumer
+  action:** every relational database in every consumer needs one migration (the generated
+  `DropForeignKey`/`AddForeignKey` pair per changed relationship, plus the annotation in the model
+  snapshot); review each dropped cascade first and opt back into the ones the business wants with
+  `.OnDelete(DeleteBehavior.Cascade)` and a one-line reason beside it. Nothing MMCA.Common itself maps
+  changes: the framework's own tables (outbox, inbox, internal commands, scheduler, audit trail,
+  refresh sessions, permission grants, notifications) declare no relationships between each other, so
+  the framework contributes no migration of its own. A no-op for Cosmos DB, which has no foreign key
+  constraints to restrict. See [UPGRADING.md](UPGRADING.md).
+- **Breaking (model): the internal `ValReturn<T>` keyless entity is gone.** `ApplicationDbContext`
+  registered four keyless `ValReturn<bool|int|DateTime|string>` types mapped to no table or view, as
+  the landing shape for raw scalar SQL. Nothing in the framework or in any consumer ever queried one,
+  and `IRawSqlQueryExecutor` (above) is the supported replacement, so the type and its four
+  registrations are removed. **Consumer action:** none at runtime, but the next migration a consumer
+  scaffolds will drop the four keyless entity entries from its model snapshot. That is a snapshot-only
+  diff with no schema operations: no table, view, column or index existed for them.
+- **Keyset cursor boundaries are now query parameters, not inlined literals.** The seek predicate
+  built the boundary values with `Expression.Constant`, which every provider translates as a literal,
+  so each page of each cursor produced its own statement text: no plan reuse, and a miss in EF's
+  compiled-query cache on every page. Values are now lifted the way a captured local is, leaving the
+  statement identical across pages.
+- **`AddTrustedCallerHeader` composes its handler outermost.** It appended the handler, which put the
+  origin gate inside whatever `AddServiceDefaults` had registered. Aspire's service-discovery handler
+  rewrites the request authority mid-pipeline, so a host whose `Api:ApiEndpoint` is a discovery name
+  (`https+http://gateway`) presented the resolved authority to a gate configured with the unresolved
+  one and silently lost the gateway rate-limit exemption. The gate now always judges the authority the
+  host configured, independently of registration order. No deployment configures a discovery name
+  today, so nothing regressed in practice.
+
 ## [1.191.0] - 2026-09-10
 
 ### Added

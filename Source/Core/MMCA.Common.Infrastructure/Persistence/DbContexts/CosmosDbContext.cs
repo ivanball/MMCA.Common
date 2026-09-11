@@ -90,9 +90,9 @@ public sealed class CosmosDbContext(
                 entityType.RemoveIndex(index);
         }
 
-        // Does NOT call base.OnModelCreating because the base also registers
-        // ValReturn<T> keyless types mapped to views (a relational-only construct that
-        // the Cosmos provider does not support). Soft-delete and tenant filters are applied
+        // Does NOT call base.OnModelCreating because every table the base maps (outbox, inbox,
+        // internal commands, scheduler, audit trail, refresh sessions) is a relational-only
+        // construct the Cosmos provider cannot express. Soft-delete and tenant filters are applied
         // independently via the extracted helper methods; the tenant helper skips its index for
         // Cosmos, which indexes every property itself.
         ApplySoftDeleteFilters(modelBuilder);

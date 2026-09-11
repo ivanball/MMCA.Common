@@ -51,9 +51,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         bool ignoreQueryFilters = false,
         CancellationToken cancellationToken = default)
     {
-        var query = asTracking
-            ? Table
-            : TableNoTracking;
+        var query = BaseQuery(asTracking);
 
         if (ignoreQueryFilters)
             query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
@@ -82,7 +80,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(select);
 
-        var query = asTracking ? Table : TableNoTracking;
+        var query = BaseQuery(asTracking);
 
         if (ignoreQueryFilters)
             query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
@@ -103,7 +101,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(where);
 
-        var query = asTracking ? Table : TableNoTracking;
+        var query = BaseQuery(asTracking);
 
         if (ignoreQueryFilters)
             query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
@@ -139,7 +137,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     {
         ArgumentNullException.ThrowIfNull(keySelector);
 
-        var query = TableNoTracking;
+        var query = BaseQuery(asTracking: false);
 
         if (where is not null)
             query = query.Where(where);
@@ -164,7 +162,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(keySelector);
         ArgumentNullException.ThrowIfNull(sumSelector);
 
-        var query = TableNoTracking;
+        var query = BaseQuery(asTracking: false);
 
         if (where is not null)
             query = query.Where(where);
@@ -202,7 +200,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 
         // One round trip with the soft-delete filter dropped, split afterwards: two queries would
         // let a concurrent delete land between them and report the same row in neither half.
-        var query = (asTracking ? Table : TableNoTracking).IgnoreQueryFilters(SoftDeleteFilterOnly);
+        var query = BaseQuery(asTracking).IgnoreQueryFilters(SoftDeleteFilterOnly);
 
         if (includes is not null)
             query = ApplyIncludes(query, includes);
@@ -227,7 +225,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         bool asTracking = false,
         CancellationToken cancellationToken = default)
     {
-        var query = asTracking ? Table : TableNoTracking;
+        var query = BaseQuery(asTracking);
 
         if (where is not null)
             query = query.Where(where);
@@ -323,7 +321,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         if (idList.Count == 0)
             return [];
 
-        var query = asTracking ? Table : TableNoTracking;
+        var query = BaseQuery(asTracking);
 
         if (ignoreQueryFilters)
             query = query.IgnoreQueryFilters(SoftDeleteFilterOnly);
@@ -359,7 +357,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         ArgumentNullException.ThrowIfNull(id);
         ArgumentNullException.ThrowIfNull(includes);
 
-        var query = asTracking ? Table : TableNoTracking;
+        var query = BaseQuery(asTracking);
         query = ApplyIncludes(query, includes);
 
         return await query.FirstOrDefaultAsync(e => e.Id.Equals(id), cancellationToken).ConfigureAwait(false);
@@ -454,6 +452,22 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 
     /// <summary>Gets a no-tracking queryable that loads includes via separate SQL queries to avoid cartesian explosion.</summary>
     public virtual IQueryable<TEntity> TableNoTrackingSplitQuery => TableNoTracking.AsSplitQuery();
+
+    /// <summary>
+    /// The base queryable every specification-less read starts from, carrying the ambient use-case
+    /// query tag (<see cref="QueryTagScope"/>). The specification path is tagged inside
+    /// <see cref="SpecificationEvaluator"/> instead, where the specification's own name is known, so
+    /// no query is tagged twice for the same reason.
+    /// <para>
+    /// <c>Table</c> and <c>TableNoTracking</c> deliberately stay untagged: they are the public,
+    /// overridable extension point a consumer composes its own queries on, and a tag belongs to the
+    /// statement a repository method actually issues.
+    /// </para>
+    /// </summary>
+    /// <param name="asTracking">Whether the caller asked for a tracked query.</param>
+    /// <returns>The tagged base queryable.</returns>
+    private IQueryable<TEntity> BaseQuery(bool asTracking)
+        => QueryTags.Tag(asTracking ? Table : TableNoTracking, detail: null);
 
     /// <summary>
     /// Applies string-based eager loading includes to the query, including the collection-navigation
@@ -553,7 +567,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         }
 
         var query = specification is null
-            ? TableNoTracking
+            ? BaseQuery(asTracking: false)
             : SpecificationEvaluator.Apply<TEntity, TIdentifierType>(BaseQueryFor(specification), specification, applyShape: false);
 
         if (request.Cursor is not null)
