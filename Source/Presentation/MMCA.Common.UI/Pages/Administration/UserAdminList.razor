@@ -1,0 +1,194 @@
+@using MMCA.Common.Shared.Auth.Administration
+@using MMCA.Common.UI.Components.PageState
+@typeparam TUser where TUser : IUserAdminDTO
+@inherits MMCA.Common.UI.Pages.Common.DataGridListPageBase<TUser>
+
+<PageTitle>@Title</PageTitle>
+
+<PageHeader Title="@Title">
+    @if (IsLoading)
+    {
+        <MudButton Color="Color.Error" OnClick="CancelLoading" StartIcon="@Icons.Material.Filled.Cancel"
+                   aria-label="@T("Aria.CancelLoading")">
+            @T("Button.Cancel")
+        </MudButton>
+    }
+</PageHeader>
+
+@if (ShowSearch)
+{
+    <MudTextField T="string" Value="_searchString" ValueChanged="OnSearchChanged"
+                  Placeholder="@T("Placeholder.Search")"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true" DebounceInterval="300" Clearable="true"
+                  Variant="Variant.Outlined" Class="mb-2" Style="max-width: min(400px, 100%);" />
+}
+
+@if (IsMobile)
+{
+    <MobileInfiniteScrollList TItem="TUser"
+                              @ref="_infiniteList"
+                              FetchPageResult="FetchMobilePage"
+                              EmptyMessage="@T("Empty.NoUsers")">
+        <CardTemplate Context="item">
+            @* The card itself binds no OnCardClick, so it renders as plain content: a card carrying
+               role="button" with these controls inside it would be axe nested-interactive. That
+               leaves the affordances to be explicit, which is why the details link below is a
+               labelled button of its own rather than a whole-card tap an operator has to guess at. *@
+            <div style="min-width: 0;">
+                <MudLink Href="@DetailHref(item)">
+                    <MudText Typo="Typo.subtitle2">@item.Email</MudText>
+                </MudLink>
+                @CardContent?.Invoke(item)
+                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Outlined">@RoleText(item.Role)</MudChip>
+                @if (item.IsLocked)
+                {
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">@T("Status.Locked")</MudChip>
+                }
+            </div>
+            <div class="d-flex flex-wrap align-center justify-end gap-1 mt-2">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.OpenInNew"
+                           Href="@DetailHref(item)"
+                           aria-label="@T("Aria.ViewDetails", item.Email)">
+                    @T("Action.ViewDetails")
+                </MudButton>
+                @if (CanAdminister(item))
+                {
+                    @* Label + EndIcon, not a bare kebab: the built-in activator IS the button (custom
+                       ActivatorContent would wrap it in a div carrying role="button", the axe
+                       nested-interactive violation), and on a phone a labelled "Actions" button is
+                       the only thing that reads as one. AriaLabel still names it per account. *@
+                    <MudMenu Dense="true"
+                             Label="@T("Menu.Actions")"
+                             EndIcon="@Icons.Material.Filled.ArrowDropDown"
+                             Variant="Variant.Text"
+                             Size="Size.Small"
+                             AriaLabel="@T("Aria.Actions", item.Email)">
+                        <MudMenuItem OnClick="@(() => ToggleLockAsync(item))" data-testid="toggle-lock">
+                            @(item.IsLocked ? T("Action.Unlock") : T("Action.Lock"))
+                        </MudMenuItem>
+                        @foreach (var role in AssignableRoles)
+                        {
+                            <MudMenuItem Disabled="@(string.Equals(role, item.Role, StringComparison.Ordinal))"
+                                         OnClick="@(() => ChangeRoleAsync(item, role))"
+                                         data-testid="set-role">
+                                @T("Action.SetRole", RoleText(role))
+                            </MudMenuItem>
+                        }
+                    </MudMenu>
+                }
+                @if (OnDelete is not null)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                   OnClick="@(() => DeleteUserAsync(item))"
+                                   aria-label="@T("Aria.Delete", item.Email)" />
+                }
+            </div>
+        </CardTemplate>
+    </MobileInfiniteScrollList>
+}
+else
+{
+    <MudDataGrid T="TUser"
+                 @ref="_dataGrid"
+                 @bind-CurrentPage="CurrentPageState"
+                 ServerData="LoadServerData"
+                 Loading="IsLoading"
+                 AllowUnsorted="false"
+                 Dense="true"
+                 Elevation="1"
+                 Filterable="true"
+                 FilterCaseSensitivity="DataGridFilterCaseSensitivity.CaseInsensitive"
+                 HorizontalScrollbar="true"
+                 Hover="true"
+                 RowsPerPage="@RowsPerPageState"
+                 Striped="true">
+        <Columns>
+            @* The email cell carries a real link, and it is the ONLY path to the account: the grid
+               binds no RowClick. A whole-row click is mouse-only, and it also forces the row's action
+               menu to be built out of an activator wrapper that stops propagation, which is the
+               nested-interactive violation axe reports. Keyboard, pointer and screen-reader users all
+               take the link. *@
+            <PropertyColumn Property="x => x.Email" Title="@T("Column.Email")" Sortable="@Sortable" Filterable="true"
+                            InitialDirection="@(Sortable ? SortDirection.Ascending : SortDirection.None)">
+                <CellTemplate>
+                    <MudLink Href="@DetailHref(context.Item)"
+                             Color="Color.Inherit" Underline="Underline.None">
+                        @context.Item.Email
+                    </MudLink>
+                </CellTemplate>
+            </PropertyColumn>
+            @Columns
+            <PropertyColumn Property="x => x.Role" Title="@T("Column.Role")" Sortable="@Sortable" Filterable="true">
+                <CellTemplate>
+                    @RoleText(context.Item.Role)
+                </CellTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="@T("Column.Status")" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    @if (context.Item.IsLocked)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">@T("Status.Locked")</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">@T("Status.Active")</MudChip>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            @TrailingColumns
+            @* The cell's context is named so the row actions read as row.Item rather than the bare
+               "context" the nested MudMenu templates also bind. *@
+            <TemplateColumn Sortable="false" Filterable="false" CellStyle="width: 110px; text-align: center;">
+                <CellTemplate Context="row">
+                    @if (CanAdminister(row.Item))
+                    {
+                        @* Icon + AriaLabel, not ActivatorContent: MudBlazor wraps custom activator
+                           content in its own div carrying role="button" and tabindex="0", so an icon
+                           button placed inside it is a control nested in a control (axe
+                           nested-interactive). The built-in icon activator IS the button, and
+                           AriaLabel names it per account. *@
+                        <MudMenu Dense="true"
+                                 Icon="@Icons.Material.Filled.MoreVert"
+                                 Size="Size.Small"
+                                 AriaLabel="@T("Aria.Actions", row.Item.Email)">
+                            <MudMenuItem OnClick="@(() => ToggleLockAsync(row.Item))" data-testid="toggle-lock">
+                                @(row.Item.IsLocked ? T("Action.Unlock") : T("Action.Lock"))
+                            </MudMenuItem>
+                            @foreach (var role in AssignableRoles)
+                            {
+                                <MudMenuItem Disabled="@(string.Equals(role, row.Item.Role, StringComparison.Ordinal))"
+                                             OnClick="@(() => ChangeRoleAsync(row.Item, role))"
+                                             data-testid="set-role">
+                                    @T("Action.SetRole", RoleText(role))
+                                </MudMenuItem>
+                            }
+                        </MudMenu>
+                    }
+                    @if (OnDelete is not null)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                       Color="Color.Error"
+                                       Size="Size.Small"
+                                       OnClick="@(() => DeleteUserAsync(row.Item))"
+                                       aria-label="@T("Aria.Delete", row.Item.Email)" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <NoRecordsContent>
+            <ListNoRecordsContent LoadFailed="LoadFailed" EmptyMessage="@T("Empty.NoUsers")" OnRetry="RetryLoadAsync" />
+        </NoRecordsContent>
+        <PagerContent>
+            <MudStack Row AlignItems="AlignItems.Center">
+                <MudDataGridPager T="TUser" PageSizeOptions=@(new int[] { 5, 10, 25, 50, 100 }) />
+            </MudStack>
+        </PagerContent>
+    </MudDataGrid>
+}
+
+@if (OnDelete is not null)
+{
+    <DeleteConfirmation @ref="_deleteConfirm" EntityType="@T("EntityName")" />
+}

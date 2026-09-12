@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Usuarios</value>
+  </data>
+  <data name="EntityName" xml:space="preserve">
+    <value>usuario</value>
+  </data>
+  <data name="Placeholder.Search" xml:space="preserve">
+    <value>Buscar por correo electronico...</value>
+  </data>
+  <data name="Aria.CancelLoading" xml:space="preserve">
+    <value>Cancelar la carga de usuarios</value>
+  </data>
+  <data name="Button.Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="Empty.NoUsers" xml:space="preserve">
+    <value>No se encontraron usuarios.</value>
+  </data>
+  <data name="Column.Email" xml:space="preserve">
+    <value>Correo electronico</value>
+  </data>
+  <data name="Column.Role" xml:space="preserve">
+    <value>Rol</value>
+  </data>
+  <data name="Column.Status" xml:space="preserve">
+    <value>Estado</value>
+  </data>
+  <data name="Status.Active" xml:space="preserve">
+    <value>Activa</value>
+  </data>
+  <data name="Status.Locked" xml:space="preserve">
+    <value>Bloqueada</value>
+  </data>
+  <data name="Action.ViewDetails" xml:space="preserve">
+    <value>Ver detalles</value>
+  </data>
+  <data name="Aria.ViewDetails" xml:space="preserve">
+    <value>Ver detalles de {0}</value>
+  </data>
+  <data name="Menu.Actions" xml:space="preserve">
+    <value>Acciones</value>
+  </data>
+  <data name="Aria.Actions" xml:space="preserve">
+    <value>Acciones de administracion para {0}</value>
+  </data>
+  <data name="Action.Lock" xml:space="preserve">
+    <value>Bloquear cuenta</value>
+  </data>
+  <data name="Action.Unlock" xml:space="preserve">
+    <value>Desbloquear cuenta</value>
+  </data>
+  <data name="Action.SetRole" xml:space="preserve">
+    <value>Asignar el rol {0}</value>
+  </data>
+  <data name="Aria.Delete" xml:space="preserve">
+    <value>Eliminar {0}</value>
+  </data>
+  <data name="Confirm.Lock.Title" xml:space="preserve">
+    <value>Bloquear cuenta</value>
+  </data>
+  <data name="Confirm.Lock.Message" xml:space="preserve">
+    <value>Bloquear a {0}? Se cerrara su sesion y no podra iniciar sesion hasta que la cuenta se desbloquee.</value>
+  </data>
+  <data name="Confirm.Unlock.Title" xml:space="preserve">
+    <value>Desbloquear cuenta</value>
+  </data>
+  <data name="Confirm.Unlock.Message" xml:space="preserve">
+    <value>Desbloquear a {0}? Podra iniciar sesion de nuevo.</value>
+  </data>
+  <data name="Confirm.Role.Title" xml:space="preserve">
+    <value>Cambiar rol</value>
+  </data>
+  <data name="Confirm.Role.Message" xml:space="preserve">
+    <value>Cambiar el rol de {0} a {1}? Se cerrara su sesion y volvera a entrar con los nuevos permisos.</value>
+  </data>
+  <data name="Confirm.Role.Confirm" xml:space="preserve">
+    <value>Cambiar rol</value>
+  </data>
+  <data name="Snackbar.Locked" xml:space="preserve">
+    <value>Cuenta bloqueada.</value>
+  </data>
+  <data name="Snackbar.Unlocked" xml:space="preserve">
+    <value>Cuenta desbloqueada.</value>
+  </data>
+  <data name="Snackbar.LockFailed" xml:space="preserve">
+    <value>No se pudo bloquear la cuenta.</value>
+  </data>
+  <data name="Snackbar.UnlockFailed" xml:space="preserve">
+    <value>No se pudo desbloquear la cuenta.</value>
+  </data>
+  <data name="Snackbar.RoleChanged" xml:space="preserve">
+    <value>Rol cambiado a {0}.</value>
+  </data>
+  <data name="Snackbar.RoleChangeFailed" xml:space="preserve">
+    <value>No se pudo cambiar el rol.</value>
+  </data>
+  <data name="Snackbar.UserDeleted" xml:space="preserve">
+    <value>El usuario se elimino correctamente.</value>
+  </data>
+  <data name="Snackbar.DeleteUserFailed" xml:space="preserve">
+    <value>No se pudo eliminar el usuario.</value>
+  </data>
+</root>
