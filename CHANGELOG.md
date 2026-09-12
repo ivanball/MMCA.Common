@@ -4,6 +4,19 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.198.0] - 2026-09-12
+
+### Fixed
+
+- **The shipped duplicate-email registration E2E test follows the v1.196.0 Register page**
+  (`MMCA.Common.Testing.E2E`). `UserRegistrationTestsBase.Register_WithDuplicateEmail_ShouldShowError`
+  still waited for the generic `.mud-alert-text-error` alert, which the Register page no longer
+  renders for an address that already has an account (v1.196.0 made that case a warning alert with
+  the sign-in and reset-password links). Every consumer's e2e gate went red on it, which skips
+  their deploy. `RegisterPage` gains `EmailAlreadyRegisteredAlert` (the `email-already-registered`
+  test id) and the base test asserts that alert, that it names the typed address, and that the
+  user stays on `/register`. `ErrorAlert` is unchanged for the other failures.
+
 ## [1.197.0] - 2026-09-12
 
 ### Added
