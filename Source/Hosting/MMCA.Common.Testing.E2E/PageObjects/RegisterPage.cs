@@ -17,6 +17,13 @@ public sealed class RegisterPage
     public ILocator RegisterButton => _page.GetByRole(AriaRole.Button, new() { Name = "Create your account" });
     public ILocator ErrorAlert => _page.Locator(".mud-alert-text-error");
 
+    /// <summary>
+    /// The warning alert the page shows when the typed address already has an account (with the
+    /// sign-in and reset-password links). It is NOT <see cref="ErrorAlert"/>: since v1.196.0 the
+    /// duplicate-address conflict renders as a warning, not the generic red error alert.
+    /// </summary>
+    public ILocator EmailAlreadyRegisteredAlert => _page.GetByTestId("email-already-registered");
+
     // "Sign In" link is inside "Already have an account?" text
     public ILocator AlreadyHaveAccountLink => _page.GetByRole(AriaRole.Link, new() { Name = "Sign In" });
 

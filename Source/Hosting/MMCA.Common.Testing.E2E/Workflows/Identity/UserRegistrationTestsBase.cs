@@ -73,9 +73,13 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         await registerPage.GotoAsync().ConfigureAwait(false);
         await registerPage.RegisterAsync("Dup", "User", email, "TestPass123!").ConfigureAwait(false);
 
-        // Assert — should show error about email already in use
+        // Assert — the duplicate address is a WARNING alert naming the way out (sign in / reset the
+        // password), not the generic red error alert the other server-side failures use, and the
+        // user stays on /register.
         await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
-        await Expect(registerPage.ErrorAlert).ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Expect(registerPage.EmailAlreadyRegisteredAlert).ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
+        await Expect(registerPage.EmailAlreadyRegisteredAlert).ToContainTextAsync(email).ConfigureAwait(false);
+        await Expect(Page).ToHaveURLAsync(new Regex("/register$")).ConfigureAwait(false);
     }
 
     [Fact]
