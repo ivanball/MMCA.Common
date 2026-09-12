@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.195.0] - 2026-09-11
+
 **The outbox table gains four nullable columns: add one migration per relational outbox source.**
 `OutboxMessage` now carries the ambient context of the request that raised the event, so the
 delivery can restore it. The columns are:

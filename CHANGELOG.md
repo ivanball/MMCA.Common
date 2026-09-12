@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.195.0] - 2026-09-11
+
 ### Added
 
 - **The outbox and the broker carry the request context across the hop.** An event delivered by the
