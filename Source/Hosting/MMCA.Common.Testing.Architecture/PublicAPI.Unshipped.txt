@@ -137,3 +137,11 @@ const MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackagePrefix
 static MMCA.Common.Testing.Architecture.ArchitectureRules.GovernedAiPackageStaysBehindInfrastructure(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelSdksStayAtTheModelBoundary(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
 static readonly MMCA.Common.Testing.Architecture.ArchitectureRules.LanguageModelDependencies -> System.Collections.Generic.IReadOnlyList<string!>!
+abstract MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase
+MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase.FeatureFlagLifecycleTestsBase() -> void
+MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase.FeatureFlags_ShouldDeclare_Lifetime() -> void
+MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase.TemporaryFeatureFlags_ShouldNotBe_PastRemoveBy() -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.FeatureFlagsDeclareLifetime(MMCA.Common.Testing.Architecture.IArchitectureMap! map) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.TemporaryFeatureFlagsAreNotPastRemoveBy(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.DateOnly today) -> void
+virtual MMCA.Common.Testing.Architecture.FeatureFlagLifecycleTestsBase.Today.get -> System.DateOnly

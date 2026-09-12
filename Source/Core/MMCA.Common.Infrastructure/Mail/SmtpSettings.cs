@@ -43,4 +43,18 @@ public sealed class SmtpSettings
 
     /// <summary>Gets the default recipient email address (used by the no-argument <c>SendAsync</c> overload).</summary>
     public string To { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets how long a single send may take before it is abandoned, in seconds (1-600, default 30).
+    /// <para>
+    /// The .NET default is 100 seconds, which is longer than most callers' own budget: a relay that
+    /// accepts the TCP connection and then stops answering (SEC-Common: a hung or throttling
+    /// provider) parks the request thread for the full 100s, and a notification burst parks one per
+    /// message. 30 seconds keeps a stalled relay inside the caller's timeout instead of outliving
+    /// it. The range is validated at startup (ADR-070 fail-fast configuration), so a zero or a typo
+    /// is a startup failure rather than either an instant abort or an unbounded wait.
+    /// </para>
+    /// </summary>
+    [Range(1, 600)]
+    public int TimeoutSeconds { get; init; } = 30;
 }

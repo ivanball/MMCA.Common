@@ -284,4 +284,44 @@ public sealed class OutboxMessageTests
 
         message.LastError.Should().Be("Connection timeout");
     }
+
+    // ── Ambient context: nothing captured is the default, so the single-argument call a caller
+    //    with no scope makes keeps working and reads back exactly like a pre-upgrade row ──
+    [Fact]
+    public void FromDomainEvent_CapturesNothing_WhenNoOriginIsSupplied()
+    {
+        var message = OutboxMessage.FromDomainEvent(new TestDomainEvent());
+
+        message.UserId.Should().BeNull();
+        message.UserRoles.Should().BeNull();
+        message.TenantId.Should().BeNull();
+        message.CorrelationId.Should().BeNull();
+    }
+
+    [Fact]
+    public void FromDomainEvent_StampsEveryValueOfTheSuppliedOrigin()
+    {
+        var origin = new OutboxOrigin(42, "Admin,Organizer", "tenant-a", "correlation-1");
+
+        var message = OutboxMessage.FromDomainEvent(new TestDomainEvent(), origin);
+
+        message.UserId.Should().Be(42);
+        message.UserRoles.Should().Be("Admin,Organizer");
+        message.TenantId.Should().Be("tenant-a");
+        message.CorrelationId.Should().Be("correlation-1");
+    }
+
+    // ── The origin is additive: everything the row already carried is unaffected by it ──
+    [Fact]
+    public void FromDomainEvent_WithAnOrigin_StillStoresTheEventIdentityAndPayload()
+    {
+        var origin = new OutboxOrigin(7, null, null, "correlation-2");
+
+        var message = OutboxMessage.FromDomainEvent(new NamedDomainEvent("Hello"), origin);
+
+        message.EventType.Should().Be(NamedEventIdentity);
+        message.DeserializeEvent().Should().BeOfType<NamedDomainEvent>()
+            .Which.Name.Should().Be("Hello");
+        message.UserRoles.Should().BeNull("a user holding no roles stores nothing rather than an empty string");
+    }
 }

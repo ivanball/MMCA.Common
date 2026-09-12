@@ -15,10 +15,11 @@ namespace MMCA.Common.Infrastructure.Context;
 /// </para>
 /// </summary>
 /// <remarks>
-/// Scoped and set once per scope. Nothing in the request pipeline ever writes to it, so an HTTP
-/// request resolves an empty carrier and reads straight through to the HTTP principal. It is
-/// deliberately not an ambient (<c>AsyncLocal</c>) value: an ambient override would leak across a
-/// scope boundary the moment a handler started work on another thread.
+/// Scoped, and written only by a background hop restoring a captured identity. Nothing in the
+/// request pipeline ever writes to it, so an HTTP request resolves an empty carrier and reads
+/// straight through to the HTTP principal. It is deliberately not an ambient (<c>AsyncLocal</c>)
+/// value: an ambient override would leak across a scope boundary the moment a handler started work
+/// on another thread.
 /// </remarks>
 internal sealed class ScopedUserOverride
 {
@@ -26,7 +27,7 @@ internal sealed class ScopedUserOverride
     public ClaimsPrincipal? Principal { get; private set; }
 
     /// <summary>
-    /// Sets the principal this scope acts as. Called once, before any handler is resolved.
+    /// Sets the principal this scope acts as. Called before any handler is resolved.
     /// </summary>
     /// <param name="principal">The principal to act as.</param>
     public void Set(ClaimsPrincipal principal)
@@ -34,4 +35,14 @@ internal sealed class ScopedUserOverride
         ArgumentNullException.ThrowIfNull(principal);
         Principal = principal;
     }
+
+    /// <summary>
+    /// Drops any principal previously set, so the scope reads back through to its ambient identity.
+    /// <para>
+    /// Needed by the outbox processor, which restores one captured identity per row on a scope it
+    /// keeps for the whole batch: without an explicit clear, a row raised by a user would answer for
+    /// every later row raised by the system.
+    /// </para>
+    /// </summary>
+    public void Clear() => Principal = null;
 }

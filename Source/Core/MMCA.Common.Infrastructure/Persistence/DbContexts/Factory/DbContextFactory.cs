@@ -7,8 +7,10 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
 
@@ -36,13 +38,19 @@ namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 /// <param name="tenancySettings">
 /// Bound tenancy configuration, consulted only for per-tenant connection overrides.
 /// </param>
+/// <param name="correlationContext">
+/// The scope's correlation id, captured onto every outbox row written through a context this
+/// factory creates. Defaulted, so a container that never registered one (a bare test provider) keeps
+/// the previous constructor shape and simply stores no correlation id.
+/// </param>
 public sealed class DbContextFactory(
     IPhysicalDbContextFactory physicalDbContextFactory,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
     ICurrentUserService currentUserService,
     ITenantContext tenantContext,
-    IOptions<TenancySettings> tenancySettings
+    IOptions<TenancySettings> tenancySettings,
+    ICorrelationContext? correlationContext = null
 ) : IDbContextFactory
 {
     /// <summary>
@@ -101,7 +109,7 @@ public sealed class DbContextFactory(
             if (tenantOverride is not null)
                 _routedContextTenants[dataSourceKey] = tenantContext.TenantId;
 
-            AttachTenantAccessor(context);
+            AttachScopeAccessors(context);
 
             // Enlist late-created contexts in the active transaction so that all
             // persistence within a transactional command shares the same boundary.
@@ -118,21 +126,31 @@ public sealed class DbContextFactory(
     }
 
     /// <summary>
-    /// Gives a freshly created context a live view of the scope's tenant. An accessor, not a copied
-    /// value: the context can be created before the request's tenant is resolved, and the query
-    /// filter must read the answer that holds at query time rather than at construction time.
+    /// Gives a freshly created context a live view of the scope it belongs to: the tenant it runs
+    /// as, and the ambient context its outbox rows must carry. Accessors, not copied values: the
+    /// context can be created before the request's tenant or principal is resolved, and both the
+    /// query filter and the outbox capture must read the answer that holds at query and save time
+    /// rather than at construction time.
     /// </summary>
     /// <remarks>
     /// Written as a method taking a non-nullable parameter, and null-guarding inside, so the null
     /// tolerance a test double needs (a mocked physical factory can hand back no context at all)
     /// does not leak a maybe-null flow state back into the caller.
     /// </remarks>
-    private void AttachTenantAccessor(ApplicationDbContext context)
+    private void AttachScopeAccessors(ApplicationDbContext context)
     {
         if (context is null)
             return;
 
         context.TenantIdAccessor = () => tenantContext.TenantId;
+
+        // Invoked once per save that writes outbox rows, not once per row: the interceptor reads it
+        // before its capture loop, so flattening the role claims costs one pass per save.
+        context.OutboxOriginAccessor = () => new OutboxOrigin(
+            _currentUserService.UserId,
+            AmbientOrigin.FlattenRoles(_currentUserService.Roles),
+            tenantContext.TenantId,
+            correlationContext?.CorrelationId);
     }
 
     /// <summary>

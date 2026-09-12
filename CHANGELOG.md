@@ -6,6 +6,108 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **The outbox and the broker carry the request context across the hop.** An event delivered by the
+  outbox used to arrive one poll cycle later as an anonymous, tenant-less, uncorrelated system call:
+  a handler reading `ICurrentUserService` saw nobody, its writes were stamped with the audit
+  sentinel, a shared-database host read across tenants, and nothing in the logs joined the delivery
+  back to the request that produced it. The deferred-command queue had solved exactly this on its
+  own row; the outbox now does it the same way, through the same helper, so the two cannot drift.
+  - `OutboxMessage` gains four nullable columns, `TenantId`, `UserId`, `UserRoles` and
+    `CorrelationId`, captured when the row is written (the domain-event save interceptor,
+    `InProcessEventBus` and `BrokerEventBus`) and restored around its delivery. `FromDomainEvent`
+    takes an optional `OutboxOrigin`; the single-argument call is unchanged and stores nulls, which
+    is exactly how every row written before this release reads back.
+  - `OutboxProcessor` restores each row's context onto the cycle's scope before the row is published
+    or dispatched, and overwrites it again for the next row, so one row's identity can never answer
+    for another's.
+  - `BrokerMessageBus` stamps the ambient context as the `MMCA-Tenant-Id`, `MMCA-User-Id`,
+    `MMCA-User-Roles` and `MMCA-Correlation-Id` headers (names in the new public
+    `MMCA.Common.Shared.Messaging.MessageHeaders`), and both `IntegrationEventConsumer` and
+    `UpcastingIntegrationEventConsumer` restore them onto the consumer scope before they touch the
+    inbox, because under database-per-tenant the inbox store's routing is decided by that tenant.
+    Only values that are present are written, and an absent header leaves the consumer's defaults
+    alone, so an older publisher keeps working.
+  - Expand-only schema change (ADR-057): consumers with relational outbox sources need one migration
+    adding the four nullable columns. See [UPGRADING.md](UPGRADING.md).
+
+- **The Polly resilience meter is exported.** `AddServiceDefaults()` puts the standard resilience
+  handler on every HttpClient and every gRPC typed client (ADR-009), so Polly is the component that
+  decides whether an inter-service call is retried, timed out, or refused by an open circuit. None of
+  that left the process: `ConfigureOpenTelemetry` subscribed the eight `MMCA.Common.*` meters and
+  never the one named `Polly`, so a backend brownout looked, from a dashboard, exactly like latency.
+  - `resilience.polly.strategy.events` (tagged `pipeline.name`, `strategy.name`, `event.name`
+    (`OnRetry` / `OnCircuitOpened` / `OnCircuitClosed` / `OnTimeout`), `event.severity` and
+    `exception.type`) is now always exported. It is the only production signal that a client is
+    retrying or that a circuit opened, and it is low volume and low cardinality.
+  - Polly's two duration histograms (`resilience.polly.strategy.attempt.duration` and
+    `resilience.polly.pipeline.duration`) are dropped by a metrics View unless a host sets
+    `Telemetry:EnablePollyDurationMetrics=true` (rubric §31, the same cost-knob shape as
+    `Telemetry:DisableHttpClientMetrics`). They are per-bucket streams on a pipeline that runs on
+    every outbound call and they re-measure what `http.client.request.duration` already reports, so
+    they stay off until someone is actually debugging a retry storm. Anything other than a parseable
+    boolean `true` leaves them off.
+  - Nothing is required of a consumer: the meter arrives with the next `AddServiceDefaults()` call.
+
+- **Feature flags declare their lifecycle, and a stale toggle fails the build.** ADR-031 recorded
+  "the framework provides no expiry or staleness check" as an open trade-off. It is closed.
+  `MMCA.Common.Shared.FeatureFlags` adds `[FeatureFlag(FeatureFlagLifetime.Permanent | Temporary)]`
+  with `RemoveBy` (ISO `yyyy-MM-dd`, required on a temporary flag and forbidden on a permanent one)
+  and `Owner`, plus a public `FeatureFlagRegistry` that reports a host's own flag inventory at
+  runtime (field name, flag name, lifetime, removal date, owner) so an administration endpoint does
+  not have to re-derive the `*Features` convention.
+  - Two fitness rules ship in `MMCA.Common.Testing.Architecture` behind the new
+    `FeatureFlagLifecycleTestsBase`: every `public const string` on a static `*Features` class
+    declares a lifetime, and no temporary flag is past its `RemoveBy`. The second one IS the
+    dead-toggle detector: the red build is what tells you the rollout finished and the losing branch
+    is now unreachable code. `Today` is a `protected virtual` property, so a repo can freeze the date
+    rather than let the build's clock decide.
+  - `NotificationFeatures.PushNotifications` and `PrivacyFeatures.DataExport` are annotated
+    `Permanent`. Nothing breaks for a consumer that adopts none of it; see
+    [UPGRADING.md](UPGRADING.md) for the two-step opt-in.
+
+### Changed
+
+- **An unhandled exception is logged once, at the boundary.** `LoggingCommandDecorator` and
+  `LoggingQueryDecorator` still record the outcome (name, elapsed ms, correlation id, and the
+  unchanged `outcome=exception` metric tag), but at **Warning** and without the exception object.
+  The boundary that actually handles the exception (`GlobalExceptionHandler` and
+  `DbUpdateExceptionHandler`, or `InternalCommandProcessor` for a deferred command) keeps its single
+  Error row with the full stack. Every unhandled exception previously produced two Error rows and
+  two stacks, which doubled the ingestion cost of the noisiest events in the system and made an
+  operator counting Errors count each failure twice. The two lines carry the same correlation id, so
+  they still join. Anything alerting on the decorator's Error level should alert on the boundary's
+  instead.
+
+- **Breaking (direct callers only): three shipped signatures gained an optional parameter.** The
+  context propagation above is source-compatible (every existing call site still compiles unchanged
+  and behaves exactly as it did), but the old overloads no longer exist, so a binary compiled against
+  1.194.0 and dropped onto these assemblies without recompiling will not bind them. Recompile against
+  the new version; there is no code change to make. The three are:
+  - `BrokerMessageBus(IPublishEndpoint publishEndpoint)` becomes
+    `BrokerMessageBus(IPublishEndpoint publishEndpoint, ICurrentUserService? currentUserService = null,
+    ITenantContext? tenantContext = null, ICorrelationContext? correlationContext = null)`. Omitting
+    the three stamps no `MMCA-*` headers, which is the old behaviour exactly.
+  - `IntegrationEventConsumer<TEvent>(IEnumerable<IIntegrationEventHandler<TEvent>> handlers,
+    IInboxStore inbox, ILogger<IntegrationEventConsumer<TEvent>> logger)` becomes the same plus
+    `IServiceProvider? serviceProvider = null`. The provider is taken rather than the three services
+    because one of them is internal and this consumer is public; omitting it restores nothing, again
+    the old behaviour. `UpcastingIntegrationEventConsumer<TEvent>` follows its base.
+  - `OutboxMessage.FromDomainEvent(IDomainEvent domainEvent)` becomes
+    `FromDomainEvent(IDomainEvent domainEvent, OutboxOrigin origin = default)`. The one-argument call
+    stores four nulls, which is exactly how every row written before this release reads back.
+  See [UPGRADING.md](UPGRADING.md).
+
+- **SMTP sends are bounded.** `SmtpSettings` gains `TimeoutSeconds` (`[Range(1, 600)]`, default 30),
+  applied to the per-send `SmtpClient`. `SmtpEmailSender` had been leaving `SmtpClient.Timeout` at
+  the .NET default of 100 seconds, which is longer than any caller in front of it is willing to wait:
+  a relay that accepts the TCP connection and then stops answering (a throttling or hung provider)
+  held a request thread for the full 100 seconds, one per message in a notification burst. The
+  setting is validated with the rest of the `Smtp` section at startup (ADR-070), so a zero or a typo
+  is a startup failure rather than either an instant abort or an unbounded wait. A host that
+  configures nothing gets 30 seconds; a host that genuinely needs longer sets the key.
+
 ## [1.194.0] - 2026-09-11
 
 Two regressions from the 1.193.0 accessibility sweep.

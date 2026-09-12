@@ -123,6 +123,29 @@ public abstract class ApplicationDbContext(
     public string? CurrentTenantId => TenantIdAccessor?.Invoke();
 
     /// <summary>
+    /// Live accessor for the ambient context the owning scope runs as (user, roles, tenant,
+    /// correlation id), assigned by the scoped <see cref="Factory.DbContextFactory"/> at context
+    /// creation and read once per save by
+    /// <see cref="Interceptors.DomainEventSaveChangesInterceptor"/> when it writes outbox rows.
+    /// </summary>
+    /// <remarks>
+    /// An accessor rather than an injected service, for the same reason
+    /// <see cref="TenantIdAccessor"/> is one. The only provider a context carries is the ROOT
+    /// provider (contexts are built by the singleton <c>PhysicalDbContextFactory</c>), and the
+    /// interceptor that needs these values is itself a singleton, so neither can reach a scoped
+    /// service. The scoped factory is the one component that sits in both worlds, so it is the one
+    /// that hands the context a live view. Left null for a context created outside a scope (design
+    /// time, a directly-constructed test context), which reads as "nothing captured".
+    /// </remarks>
+    internal Func<Outbox.OutboxOrigin>? OutboxOriginAccessor { get; set; }
+
+    /// <summary>
+    /// Gets the ambient context to stamp on outbox rows written through this context, or the empty
+    /// origin when no scope supplied one.
+    /// </summary>
+    internal Outbox.OutboxOrigin CurrentOutboxOrigin => OutboxOriginAccessor?.Invoke() ?? default;
+
+    /// <summary>
     /// Indicates whether this context supports the transactional outbox pattern.
     /// Cosmos DB does not support relational tables, so outbox is only used with
     /// the relational contexts (SQL Server, PostgreSQL, SQLite). Read by
@@ -620,6 +643,16 @@ public abstract class ApplicationDbContext(
             entity.Property(e => e.TraceId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.SpanId).HasMaxLength(64).IsUnicode(false);
             entity.Property(e => e.OrderingKey).HasMaxLength(200).IsUnicode(false);
+
+            // The captured ambient context, restored around delivery. Same widths and unicode
+            // settings as the InternalCommands columns below: the two hops carry the same four
+            // values, and a shape that differed between them would be a migration hazard rather
+            // than a design choice. Every column is nullable, so adding them is expand-only
+            // (ADR-057) and rows written before they existed keep reading back as "nothing captured".
+            entity.Property(e => e.TenantId).HasMaxLength(TenantIdMaxLength).IsUnicode(false);
+            entity.Property(e => e.UserRoles).HasMaxLength(512).IsUnicode(false);
+            entity.Property(e => e.CorrelationId).HasMaxLength(64).IsUnicode(false);
+
             // Poll path (OutboxProcessor): pending rows, oldest first. The processor also filters on
             // RetryCount and LockedUntil, so both ride along as included columns; without them every
             // candidate row the index returns costs a key lookup back into the table.

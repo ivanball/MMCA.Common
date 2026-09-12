@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.InternalCommands;
+using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
@@ -46,8 +47,12 @@ internal sealed partial class InternalCommandScheduler(
     ILogger<InternalCommandScheduler> logger,
     TimeProvider? timeProvider = null) : IInternalCommandScheduler
 {
-    /// <summary>Column width of <c>UserRoles</c>; a longer list is truncated to fit.</summary>
-    internal const int MaxRolesLength = 512;
+    /// <summary>
+    /// Column width of <c>UserRoles</c>; a longer list is truncated to fit. Shared with the outbox's
+    /// column of the same name through <see cref="AmbientOrigin.MaxRolesLength"/>, so the two hops
+    /// cannot disagree about what fits.
+    /// </summary>
+    internal const int MaxRolesLength = AmbientOrigin.MaxRolesLength;
 
     private static readonly Error NullCommandError =
         Error.Validation("InternalCommands.NullCommand", "A null command cannot be scheduled.");
@@ -127,18 +132,16 @@ internal sealed partial class InternalCommandScheduler(
 
     /// <summary>
     /// Snapshots the principal, tenant and correlation identifiers to restore around the deferred
-    /// execution. Roles are flattened to a comma-separated list: the row is read back by a processor
-    /// that rebuilds them as claims, and a delimited column keeps the schema free of a child table
-    /// for what is almost always one value.
+    /// execution. Roles are flattened through the shared <see cref="AmbientOrigin"/> helper, which
+    /// the outbox capture uses too, so the two hops store the same shape.
     /// </summary>
     private InternalCommandOrigin CaptureOrigin()
     {
         var activity = Activity.Current;
-        string[] roles = [.. currentUserService.Roles];
 
         return new InternalCommandOrigin(
             currentUserService.UserId,
-            roles.Length == 0 ? null : Truncate(string.Join(',', roles), MaxRolesLength),
+            AmbientOrigin.FlattenRoles(currentUserService.Roles),
             tenantContext.TenantId,
             correlationContext.CorrelationId,
             activity?.TraceId.ToString(),
@@ -149,10 +152,6 @@ internal sealed partial class InternalCommandScheduler(
         Error.Failure(
             "InternalCommands.NotSerializable",
             $"The command '{commandType}' could not be serialized to JSON and was not scheduled.");
-
-    /// <summary>Truncates a value to a column width, preserving null.</summary>
-    private static string? Truncate(string? value, int maxLength) =>
-        value is null || value.Length <= maxLength ? value : value[..maxLength];
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Internal command {CommandId} ({CommandType}) enrolled in the caller's transaction for {ScheduledOn:O}")]
     private static partial void LogEnrolled(ILogger logger, Guid commandId, string commandType, DateTime scheduledOn);

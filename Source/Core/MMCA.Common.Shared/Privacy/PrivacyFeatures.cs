@@ -1,3 +1,5 @@
+using MMCA.Common.Shared.FeatureFlags;
+
 namespace MMCA.Common.Shared.Privacy;
 
 /// <summary>
@@ -6,5 +8,6 @@ namespace MMCA.Common.Shared.Privacy;
 public static class PrivacyFeatures
 {
     /// <summary>Feature flag controlling the data-subject export (DSAR) endpoint.</summary>
+    [FeatureFlag(FeatureFlagLifetime.Permanent, Owner = "MMCA.Common")]
     public const string DataExport = "Privacy.DataExport";
 }

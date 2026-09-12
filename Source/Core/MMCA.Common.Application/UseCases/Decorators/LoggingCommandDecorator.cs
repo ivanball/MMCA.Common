@@ -59,7 +59,20 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
             catch (Exception ex)
             {
                 var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
-                LogCommandException(logger, commandName, (long)elapsed.TotalMilliseconds, correlationId, ex);
+
+                // The outcome line only, WITHOUT the exception object: the exception is rethrown
+                // untouched and the boundary that finally handles it (GlobalExceptionHandler, or the
+                // internal-command processor for a deferred command) logs it once at Error with its
+                // full stack. Logging it here too produced two Error rows and two stacks for every
+                // unhandled exception, which doubled the ingestion cost of the noisiest events in the
+                // system and made an operator counting Errors count each failure twice. The
+                // correlation id is what joins this line to that stack.
+                LogCommandException(
+                    logger,
+                    commandName,
+                    (long)elapsed.TotalMilliseconds,
+                    correlationId,
+                    ex.GetType().Name);
                 RecordDuration(commandName, elapsed, "exception");
                 throw;
             }
@@ -98,6 +111,9 @@ public sealed partial class LoggingCommandDecorator<TCommand, TResult>(
     [LoggerMessage(Level = LogLevel.Warning, Message = "Command {CommandName} failed after {ElapsedMs}ms [CorrelationId: {CorrelationId}] — {ErrorSummary}")]
     private static partial void LogCommandFailed(ILogger logger, string commandName, long elapsedMs, string correlationId, string errorSummary);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Command {CommandName} threw after {ElapsedMs}ms [CorrelationId: {CorrelationId}]")]
-    private static partial void LogCommandException(ILogger logger, string commandName, long elapsedMs, string correlationId, Exception exception);
+    // Warning, and without the exception object: the boundary owns the single Error row and the
+    // single stack (ADR-014). This line is the pipeline's own outcome record, and it carries the
+    // correlation id the boundary's row carries too, so the two join.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Command {CommandName} threw {ExceptionType} after {ElapsedMs}ms [CorrelationId: {CorrelationId}]; the exception propagates to the boundary, which logs it with its stack")]
+    private static partial void LogCommandException(ILogger logger, string commandName, long elapsedMs, string correlationId, string exceptionType);
 }

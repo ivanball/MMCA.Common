@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Globalization;
-using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,7 +14,6 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
-using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 
@@ -67,6 +64,12 @@ public sealed partial class InternalCommandProcessor(
 
     /// <summary>Column width of <c>LastError</c>; a longer message is truncated to fit.</summary>
     internal const int MaxErrorLength = 4000;
+
+    /// <summary>
+    /// Authentication type stamped on the identity rebuilt from a row. It is what makes
+    /// <c>IsAuthenticated</c> true, and it names the hop the identity came back from.
+    /// </summary>
+    internal const string PrincipalAuthenticationType = "InternalCommand";
 
     /// <summary>Floor for the computed wait so an overdue row cannot hot-loop the processor.</summary>
     private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
@@ -521,22 +524,16 @@ public sealed partial class InternalCommandProcessor(
     {
         using var executionScope = scopeFactory.CreateScope();
 
-        // Tenant first: it routes the scoped context factory to the right database, and every
-        // repository the handler resolves reads its query filter from it.
-        if (row.TenantId is { } tenantId)
-        {
-            executionScope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-        }
-
-        if (BuildPrincipal(row) is { } principal)
-        {
-            executionScope.ServiceProvider.GetRequiredService<ScopedUserOverride>().Set(principal);
-        }
-
-        if (row.CorrelationId is { Length: > 0 } correlationId)
-        {
-            executionScope.ServiceProvider.GetRequiredService<ICorrelationContext>().SetCorrelationId(correlationId);
-        }
+        // One shared restore for every background hop (see AmbientOrigin): tenant first, because it
+        // routes the scoped context factory to the right database and every repository the handler
+        // resolves reads its query filter from it, then the principal, then the correlation id.
+        AmbientOrigin.Restore(
+            executionScope.ServiceProvider,
+            row.UserId,
+            row.UserRoles,
+            row.TenantId,
+            row.CorrelationId,
+            PrincipalAuthenticationType);
 
         try
         {
@@ -557,36 +554,6 @@ public sealed partial class InternalCommandProcessor(
         {
             return (null, ex);
         }
-    }
-
-    /// <summary>
-    /// Rebuilds the scheduling principal from the row: the user id as the standard <c>sub</c> claim
-    /// and each stored role as a role claim, which is exactly what <c>ClaimsPrincipalExtensions</c>
-    /// and the authorization decorator read. Returns null for a row scheduled with no user, so that
-    /// execution stays anonymous rather than inventing an identity.
-    /// </summary>
-    private static ClaimsPrincipal? BuildPrincipal(InternalCommandMessage row)
-    {
-        if (row.UserId is not { } userId)
-        {
-            return null;
-        }
-
-        List<Claim> claims =
-        [
-            new Claim(AuthClaimTypes.Subject, userId.ToString(CultureInfo.InvariantCulture)),
-        ];
-
-        if (row.UserRoles is { Length: > 0 } roles)
-        {
-            claims.AddRange(roles
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(role => new Claim(ClaimTypes.Role, role)));
-        }
-
-        // An authentication type is what makes IsAuthenticated true on the identity; without one the
-        // principal reads as anonymous no matter how many claims it carries.
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "InternalCommand"));
     }
 
     /// <summary>Stamps a completed row, guarded by this replica's claim token.</summary>

@@ -24,18 +24,45 @@ namespace MMCA.Common.Infrastructure.Messaging.Consumers;
 /// </para>
 /// </summary>
 /// <typeparam name="TEvent">The integration event type. Must implement <see cref="IIntegrationEvent"/>.</typeparam>
+/// <param name="handlers">The handlers registered for this event in this process.</param>
+/// <param name="inbox">Consumer-side idempotency store.</param>
+/// <param name="logger">Logger for consume diagnostics.</param>
+/// <param name="serviceProvider">
+/// The per-message scope, onto which the publisher's context is restored before anything reads it
+/// (see <see cref="ConsumerOriginRestore"/>). Taken as the provider rather than as the three
+/// services themselves because one of them (<c>ScopedUserOverride</c>) is internal, and this
+/// consumer is public: an internal type cannot appear in a public constructor's signature.
+/// Defaulted, so a test constructing the consumer with the original three arguments still compiles
+/// and simply restores nothing.
+/// </param>
 public sealed partial class IntegrationEventConsumer<TEvent>(
     IEnumerable<IIntegrationEventHandler<TEvent>> handlers,
     IInboxStore inbox,
-    ILogger<IntegrationEventConsumer<TEvent>> logger) : IConsumer<TEvent>
+    ILogger<IntegrationEventConsumer<TEvent>> logger,
+    IServiceProvider? serviceProvider = null) : IConsumer<TEvent>
     where TEvent : class, IIntegrationEvent
 {
+    /// <summary>
+    /// Authentication type stamped on the identity rebuilt from the message headers. It is what
+    /// makes <c>IsAuthenticated</c> true, and it names the hop the identity came back from.
+    /// </summary>
+    internal const string PrincipalAuthenticationType = "IntegrationEvent";
+
     /// <inheritdoc />
     public async Task Consume(ConsumeContext<TEvent> context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var integrationEvent = context.Message;
+
+        // BEFORE the inbox is touched, not after: the inbox store resolves its context through the
+        // scoped factory, and under database-per-tenant that routing is decided by the tenant this
+        // restores. A message published by an older service carries no headers, and then nothing is
+        // restored and this scope keeps the defaults it already had.
+        if (serviceProvider is not null)
+        {
+            ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType);
+        }
 
         // The inbox key is the event's [EventName] identity when it declares one, and its short type
         // name otherwise, which is what every row written so far holds. An unannotated event

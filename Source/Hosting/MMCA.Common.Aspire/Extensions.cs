@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
@@ -35,6 +35,32 @@ public static class Extensions
     /// <see cref="IsProbeTelemetryFilterEnabled"/>.
     /// </summary>
     internal const string FilterProbeTelemetryConfigKey = "Telemetry:FilterProbeTelemetry";
+
+    /// <summary>
+    /// Configuration key of the Polly duration-histogram cost knob. Defaults to <see langword="false"/>
+    /// (the two histograms are dropped); see <see cref="IsInstrumentationEnabled"/>.
+    /// </summary>
+    internal const string EnablePollyDurationMetricsConfigKey = "Telemetry:EnablePollyDurationMetrics";
+
+    /// <summary>
+    /// The meter Polly v8 emits through (<c>Polly.Extensions</c>' telemetry listener). Named as a
+    /// literal because Aspire holds no reference to Polly's own assemblies.
+    /// </summary>
+    internal const string PollyMeterName = "Polly";
+
+    /// <summary>
+    /// Polly's resilience-event counter: one increment per strategy event, tagged with
+    /// <c>pipeline.name</c>, <c>strategy.name</c>, <c>event.name</c> (OnRetry / OnCircuitOpened /
+    /// OnCircuitClosed / OnTimeout / ...), <c>event.severity</c> and <c>exception.type</c>. Always
+    /// exported: it is the only production signal that a client is retrying or that a circuit opened.
+    /// </summary>
+    internal const string PollyStrategyEventsInstrument = "resilience.polly.strategy.events";
+
+    /// <summary>Polly's per-attempt duration histogram; dropped unless a host opts in (rubric §31).</summary>
+    internal const string PollyAttemptDurationInstrument = "resilience.polly.strategy.attempt.duration";
+
+    /// <summary>Polly's whole-pipeline duration histogram; dropped unless a host opts in (rubric §31).</summary>
+    internal const string PollyPipelineDurationInstrument = "resilience.polly.pipeline.duration";
 
     extension<TBuilder>(TBuilder builder)
         where TBuilder : IHostApplicationBuilder
@@ -121,8 +147,9 @@ public static class Extensions
         }
 
         /// <summary>
-        /// Configures OpenTelemetry logging, metrics (ASP.NET Core, HttpClient, .NET runtime),
-        /// and distributed tracing. Exports are sent to the OTLP endpoint when the
+        /// Configures OpenTelemetry logging, metrics (ASP.NET Core, HttpClient, .NET runtime, the
+        /// MMCA.Common meters and Polly's resilience meter), and distributed tracing. Exports are
+        /// sent to the OTLP endpoint when the
         /// <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> environment variable is set (automatically
         /// provided by the Aspire dashboard).
         /// </summary>
@@ -136,77 +163,7 @@ public static class Extensions
             });
 
             builder.Services.AddOpenTelemetry()
-                .WithMetrics(metrics =>
-                {
-                    metrics.AddAspNetCoreInstrumentation();
-
-                    // Cost control (rubric §31): HttpClient connection/request metrics
-                    // (http.client.open_connections / active_requests / request.duration) are the single
-                    // highest-volume AppMetrics contributor on a low-traffic multi-service deployment — the
-                    // pooled gRPC / service-discovery channels emit a high-frequency connection-gauge stream.
-                    // A deployed host sets Telemetry:DisableHttpClientMetrics=true to drop them; outbound
-                    // dependency latency is still captured as AppDependencies traces. Unset (default) keeps
-                    // them, so no behavior change for a host that does not opt in.
-                    if (IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableHttpClientMetrics"))
-                    {
-                        // Skipping AddHttpClientInstrumentation is NOT enough on its own. A deployed
-                        // host also calls UseAzureMonitor() (see AddOpenTelemetryExporters below), and
-                        // the Azure Monitor distro adds the System.Net.Http meter itself, so
-                        // http.client.open_connections kept flowing and stayed the single largest
-                        // AppMetrics stream in both production workspaces despite the toggle being on.
-                        // A View applies to the whole MeterProvider regardless of which component added
-                        // the meter, so dropping every instrument on those two meters makes the toggle
-                        // authoritative instead of advisory. System.Net.NameResolution rides along
-                        // because DNS-lookup metrics are part of the same HttpClient family and carry
-                        // no signal without it.
-                        metrics.AddView(instrument =>
-                            string.Equals(instrument.Meter.Name, "System.Net.Http", StringComparison.Ordinal)
-                            || string.Equals(instrument.Meter.Name, "System.Net.NameResolution", StringComparison.Ordinal)
-                                ? MetricStreamConfiguration.Drop
-                                : null);
-                    }
-                    else
-                    {
-                        metrics.AddHttpClientInstrumentation();
-                    }
-
-                    // Cost control (rubric §31): .NET runtime metrics (dotnet.gc.* / jit.* / thread_pool.* —
-                    // ~17 instruments emitted every collection interval regardless of traffic) are the second
-                    // highest-volume contributor and are rarely consulted operationally for these apps. A
-                    // deployed host sets Telemetry:DisableRuntimeMetrics=true to drop them. Unset keeps them.
-                    if (IsInstrumentationDisabled(builder.Configuration, "Telemetry:DisableRuntimeMetrics"))
-                    {
-                        // Same reasoning as the HttpClient branch above: the Azure Monitor distro adds
-                        // the System.Runtime meter on its own, so the toggle only becomes authoritative
-                        // once a View drops the whole meter.
-                        metrics.AddView(instrument =>
-                            string.Equals(instrument.Meter.Name, "System.Runtime", StringComparison.Ordinal)
-                                ? MetricStreamConfiguration.Drop
-                                : null);
-                    }
-                    else
-                    {
-                        metrics.AddRuntimeInstrumentation();
-                    }
-
-                    // MMCA.Common meters (literal names, because Aspire has no reference to the
-                    // defining assemblies): outbox counters and dispatch lag, CQRS RED histograms
-                    // plus query cache hit/miss, the idempotency filter's replay, conflict and
-                    // degraded counters, the recurring scheduler's run outcomes, duration and
-                    // schedule lag (inert in a host that never enables Scheduler:Enabled), the
-                    // broker transport's consumer faults plus outbox circuit-breaker openings
-                    // (inert in a host that stays on the in-process bus), the output-cache
-                    // eviction consumer's failed tag evictions, and the swallowed failures of
-                    // best-effort side effects (both inert until a host opts into them).
-                    metrics.AddMeter("MMCA.Common.Outbox")
-                        .AddMeter("MMCA.Common.Cqrs")
-                        .AddMeter("MMCA.Common.Idempotency")
-                        .AddMeter("MMCA.Common.Scheduler")
-                        .AddMeter("MMCA.Common.Broker")
-                        .AddMeter("MMCA.Common.OutputCache")
-                        .AddMeter("MMCA.Common.BestEffort")
-                        .AddMeter("MMCA.Common.InternalCommands");
-                })
+                .WithMetrics(metrics => ConfigureMetrics(metrics, builder.Configuration))
                 .WithTracing(tracing =>
                 {
                     tracing.AddSource(builder.Environment.ApplicationName)
@@ -529,6 +486,19 @@ public static class Extensions
         => bool.TryParse(configuration[configKey], out var disabled) && disabled;
 
     /// <summary>
+    /// Reads an optional boolean opt-IN metrics knob (rubric §31), e.g.
+    /// <c>Telemetry:EnablePollyDurationMetrics</c>. The mirror image of
+    /// <see cref="IsInstrumentationDisabled"/>: the instrumentation is off by default and only a
+    /// parseable boolean <see langword="true"/> turns it on, so absent, blank or unparseable all mean
+    /// "stay off" and a typo can never silently add a high-volume stream to a host's bill.
+    /// </summary>
+    /// <param name="configuration">Configuration carrying the knob.</param>
+    /// <param name="configKey">The knob's configuration key.</param>
+    /// <returns><see langword="true"/> when the host opted the instrumentation in.</returns>
+    internal static bool IsInstrumentationEnabled(IConfiguration configuration, string configKey)
+        => bool.TryParse(configuration[configKey], out var enabled) && enabled;
+
+    /// <summary>
     /// Reads the <c>Telemetry:FilterProbeTelemetry</c> cost knob (rubric §31), which keeps health-probe
     /// requests and their dependency children out of trace export. Unlike the metrics knobs this one
     /// defaults to <see langword="true"/>: probe chatter is ingestion no host wants billed, so absent,
@@ -539,6 +509,110 @@ public static class Extensions
     /// <returns><see langword="true"/> when probe telemetry must be filtered.</returns>
     internal static bool IsProbeTelemetryFilterEnabled(IConfiguration configuration)
         => !bool.TryParse(configuration[FilterProbeTelemetryConfigKey], out var enabled) || enabled;
+
+    /// <summary>
+    /// The metrics half of <c>ConfigureOpenTelemetry</c>: instrumentation, the MMCA.Common meters,
+    /// Polly's resilience meter, and the rubric §31 cost knobs that decide which of those streams
+    /// actually reach an exporter. A method rather than an inline lambda so each knob stays readable.
+    /// </summary>
+    /// <param name="metrics">The meter provider being configured.</param>
+    /// <param name="configuration">Configuration carrying the cost knobs.</param>
+    private static void ConfigureMetrics(MeterProviderBuilder metrics, IConfiguration configuration)
+    {
+        metrics.AddAspNetCoreInstrumentation();
+
+        // Cost control (rubric §31): HttpClient connection/request metrics
+        // (http.client.open_connections / active_requests / request.duration) are the single
+        // highest-volume AppMetrics contributor on a low-traffic multi-service deployment — the
+        // pooled gRPC / service-discovery channels emit a high-frequency connection-gauge stream.
+        // A deployed host sets Telemetry:DisableHttpClientMetrics=true to drop them; outbound
+        // dependency latency is still captured as AppDependencies traces. Unset (default) keeps
+        // them, so no behavior change for a host that does not opt in.
+        if (IsInstrumentationDisabled(configuration, "Telemetry:DisableHttpClientMetrics"))
+        {
+            // Skipping AddHttpClientInstrumentation is NOT enough on its own. A deployed
+            // host also calls UseAzureMonitor() (see AddOpenTelemetryExporters below), and
+            // the Azure Monitor distro adds the System.Net.Http meter itself, so
+            // http.client.open_connections kept flowing and stayed the single largest
+            // AppMetrics stream in both production workspaces despite the toggle being on.
+            // A View applies to the whole MeterProvider regardless of which component added
+            // the meter, so dropping every instrument on those two meters makes the toggle
+            // authoritative instead of advisory. System.Net.NameResolution rides along
+            // because DNS-lookup metrics are part of the same HttpClient family and carry
+            // no signal without it.
+            metrics.AddView(instrument =>
+                string.Equals(instrument.Meter.Name, "System.Net.Http", StringComparison.Ordinal)
+                || string.Equals(instrument.Meter.Name, "System.Net.NameResolution", StringComparison.Ordinal)
+                    ? MetricStreamConfiguration.Drop
+                    : null);
+        }
+        else
+        {
+            metrics.AddHttpClientInstrumentation();
+        }
+
+        // Cost control (rubric §31): .NET runtime metrics (dotnet.gc.* / jit.* / thread_pool.* —
+        // ~17 instruments emitted every collection interval regardless of traffic) are the second
+        // highest-volume contributor and are rarely consulted operationally for these apps. A
+        // deployed host sets Telemetry:DisableRuntimeMetrics=true to drop them. Unset keeps them.
+        if (IsInstrumentationDisabled(configuration, "Telemetry:DisableRuntimeMetrics"))
+        {
+            // Same reasoning as the HttpClient branch above: the Azure Monitor distro adds
+            // the System.Runtime meter on its own, so the toggle only becomes authoritative
+            // once a View drops the whole meter.
+            metrics.AddView(instrument =>
+                string.Equals(instrument.Meter.Name, "System.Runtime", StringComparison.Ordinal)
+                    ? MetricStreamConfiguration.Drop
+                    : null);
+        }
+        else
+        {
+            metrics.AddRuntimeInstrumentation();
+        }
+
+        // MMCA.Common meters (literal names, because Aspire has no reference to the
+        // defining assemblies): outbox counters and dispatch lag, CQRS RED histograms
+        // plus query cache hit/miss, the idempotency filter's replay, conflict and
+        // degraded counters, the recurring scheduler's run outcomes, duration and
+        // schedule lag (inert in a host that never enables Scheduler:Enabled), the
+        // broker transport's consumer faults plus outbox circuit-breaker openings
+        // (inert in a host that stays on the in-process bus), the output-cache
+        // eviction consumer's failed tag evictions, and the swallowed failures of
+        // best-effort side effects (both inert until a host opts into them).
+        metrics.AddMeter("MMCA.Common.Outbox")
+            .AddMeter("MMCA.Common.Cqrs")
+            .AddMeter("MMCA.Common.Idempotency")
+            .AddMeter("MMCA.Common.Scheduler")
+            .AddMeter("MMCA.Common.Broker")
+            .AddMeter("MMCA.Common.OutputCache")
+            .AddMeter("MMCA.Common.BestEffort")
+            .AddMeter("MMCA.Common.InternalCommands");
+
+        // Polly's own meter (ADR-009). The standard resilience handler above is on every
+        // HttpClient and every gRPC typed client, so it is the component that decides
+        // whether an inter-service call is retried, timed out or refused by an open
+        // circuit, and until this meter was subscribed none of that left the process.
+        // A brownout looked, from the outside, exactly like latency.
+        metrics.AddMeter(PollyMeterName);
+
+        // Cost control (rubric §31): Polly's two duration HISTOGRAMS
+        // (resilience.polly.strategy.attempt.duration, resilience.polly.pipeline.duration)
+        // are per-bucket streams on a pipeline that runs on every outbound call, and they
+        // re-measure what http.client.request.duration and the dependency traces already
+        // report. They stay off unless a host sets Telemetry:EnablePollyDurationMetrics=true
+        // (while debugging a retry storm, say). The resilience.polly.strategy.events COUNTER
+        // is never dropped: OnRetry / OnCircuitOpened / OnCircuitClosed / OnTimeout is the
+        // signal the whole meter exists for, and it is low cardinality and low volume.
+        if (!IsInstrumentationEnabled(configuration, EnablePollyDurationMetricsConfigKey))
+        {
+            metrics.AddView(instrument =>
+                string.Equals(instrument.Meter.Name, PollyMeterName, StringComparison.Ordinal)
+                && (string.Equals(instrument.Name, PollyAttemptDurationInstrument, StringComparison.Ordinal)
+                    || string.Equals(instrument.Name, PollyPipelineDurationInstrument, StringComparison.Ordinal))
+                    ? MetricStreamConfiguration.Drop
+                    : null);
+        }
+    }
 
     /// <summary>
     /// Registers the relational database checks and enforces the "the database must be there" rule

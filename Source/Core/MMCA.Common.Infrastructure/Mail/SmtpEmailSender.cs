@@ -64,13 +64,7 @@ public sealed class SmtpEmailSender : IEmailSender
         ArgumentException.ThrowIfNullOrEmpty(subject);
         ArgumentException.ThrowIfNullOrEmpty(body);
 
-#pragma warning disable S5332 // TLS is resolved by SmtpTransportSecurity: on outside Development, off only when the host set Smtp:EnableSsl=false (local dev targets MailDev, which offers no TLS)
-        using var smtpClient = new SmtpClient(_smtpSettings.Host, _smtpSettings.Port)
-        {
-            Credentials = new NetworkCredential(_smtpSettings.Username, _smtpSettings.Password),
-            EnableSsl = _enableSsl
-        };
-#pragma warning restore S5332
+        using var smtpClient = CreateClient(_smtpSettings, _enableSsl);
 
         using var message = new MailMessage(_smtpSettings.From, to, subject, body)
         {
@@ -90,4 +84,27 @@ public sealed class SmtpEmailSender : IEmailSender
     /// <returns>A task representing the asynchronous send operation.</returns>
     public Task SendAsync(string subject, string body, bool isHtml = false, CancellationToken cancellationToken = default)
         => SendAsync(_smtpSettings.To, subject, body, isHtml, cancellationToken);
+
+    /// <summary>
+    /// Builds the per-send client. Factored out so the bounded timeout is assertable without a live
+    /// relay: the framework's own guarantee here is that <see cref="SmtpSettings.TimeoutSeconds"/>
+    /// reaches <see cref="SmtpClient.Timeout"/>, and an end-to-end test of that would have to stall a
+    /// real socket for the duration.
+    /// </summary>
+    /// <param name="settings">The bound SMTP settings.</param>
+    /// <param name="enableSsl">The resolved TLS decision (see <see cref="SmtpTransportSecurity"/>).</param>
+    /// <returns>A configured client the caller owns and disposes.</returns>
+    internal static SmtpClient CreateClient(SmtpSettings settings, bool enableSsl) =>
+#pragma warning disable S5332 // TLS is resolved by SmtpTransportSecurity: on outside Development, off only when the host set Smtp:EnableSsl=false (local dev targets MailDev, which offers no TLS)
+        new(settings.Host, settings.Port)
+        {
+            Credentials = new NetworkCredential(settings.Username, settings.Password),
+            EnableSsl = enableSsl,
+
+            // SmtpClient's own default is 100 seconds, longer than the callers that sit in front of
+            // it: a relay that accepts the connection and never answers would hold the request for
+            // the whole of it. Bounded explicitly, and validated at startup (ADR-070).
+            Timeout = (int)TimeSpan.FromSeconds(settings.TimeoutSeconds).TotalMilliseconds,
+        };
+#pragma warning restore S5332
 }
