@@ -15,12 +15,19 @@ public sealed class NullFileStorageService : IFileStorageService
 
     /// <inheritdoc />
     public Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result.Failure<Uri>(Error.Failure(
-            code: "FileStorage.NotConfigured",
-            message: "No file storage is configured for this host.",
-            source: nameof(NullFileStorageService))));
+        Task.FromResult(NotConfigured());
+
+    /// <inheritdoc />
+    public Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, FileUploadOptions options, CancellationToken cancellationToken = default) =>
+        Task.FromResult(NotConfigured());
 
     /// <inheritdoc />
     public Task<Result> DeleteAsync(string blobName, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result.Success());
+
+    private static Result<Uri> NotConfigured() =>
+        Result.Failure<Uri>(Error.Failure(
+            code: "FileStorage.NotConfigured",
+            message: "No file storage is configured for this host.",
+            source: nameof(NullFileStorageService)));
 }

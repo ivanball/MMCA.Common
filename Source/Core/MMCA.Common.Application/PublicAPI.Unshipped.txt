@@ -612,3 +612,40 @@ static MMCA.Common.Application.Services.Query.QueryTagScope.Current.get -> strin
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRawSqlQueryExecutor
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRawSqlQueryExecutor.QueryAsync<T>(System.FormattableString! sql, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<T>!>!
 MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IRawSqlQueryExecutor.QuerySingleOrDefaultAsync<T>(System.FormattableString! sql, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T?>!
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.BlobNames
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Markdown = 64 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.None = 0 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.OfficeOpenXml = MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Presentation | MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.WordDocument | MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Spreadsheet -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Pdf = 1 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.PlainText = 32 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Presentation = 2 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Spreadsheet = 8 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.WordDocument = 4 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Zip = 16 -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.CacheControl.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.CacheControl.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.ContentDisposition.get -> string?
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.ContentDisposition.init -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.FileUploadOptions() -> void
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.IFileStorageService.UploadAsync(string! blobName, System.IO.Stream! content, string! contentType, MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions! options, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Uri!>!>!
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.BlobNames.SanitizeFileName(string! fileName, int maxLength = 100) -> string!
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer.Detect(System.ReadOnlyMemory<byte> content, string! fileName, MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats allowed) -> string?
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer.Detect(System.ReadOnlySpan<byte> content, string! fileName, MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats allowed) -> string?
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer.IsOfficeOpenXml(System.ReadOnlyMemory<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer.IsPdf(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer.IsPlainUtf8Text(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentContentSniffer.IsZip(System.ReadOnlySpan<byte> content) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.Attachment(string! fileName, string? cacheControl = null) -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions!
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.Inline(string! fileName, string? cacheControl = null) -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions!
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.None.get -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions!
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.All = MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Pdf | MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.OfficeOpenXml | MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Zip | MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.PlainText | MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats.Markdown -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.DocumentFormats
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.<Clone>$() -> MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions!
+MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.Equals(MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions? other) -> bool
+override MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.Equals(object? obj) -> bool
+override MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.GetHashCode() -> int
+override MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.ToString() -> string!
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.operator !=(MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions? left, MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions? right) -> bool
+static MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions.operator ==(MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions? left, MMCA.Common.Application.Interfaces.Infrastructure.Storage.FileUploadOptions? right) -> bool

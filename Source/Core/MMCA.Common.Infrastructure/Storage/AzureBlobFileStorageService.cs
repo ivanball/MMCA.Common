@@ -20,14 +20,28 @@ public sealed class AzureBlobFileStorageService(
     public bool IsConfigured => true;
 
     /// <inheritdoc />
-    public async Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, CancellationToken cancellationToken = default)
+    public Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, CancellationToken cancellationToken = default) =>
+        UploadAsync(blobName, content, contentType, FileUploadOptions.None, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, FileUploadOptions options, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         try
         {
             var blobClient = containerClient.GetBlobClient(blobName);
             await blobClient.UploadAsync(
                 content,
-                new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } },
+                new BlobUploadOptions
+                {
+                    HttpHeaders = new BlobHttpHeaders
+                    {
+                        ContentType = contentType,
+                        ContentDisposition = options.ContentDisposition,
+                        CacheControl = options.CacheControl,
+                    },
+                },
                 cancellationToken).ConfigureAwait(false);
 
             return Result.Success(blobClient.Uri);
