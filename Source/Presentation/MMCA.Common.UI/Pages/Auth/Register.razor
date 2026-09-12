@@ -1,5 +1,6 @@
 ﻿@page "/register"
 @using MMCA.Common.Shared.Abstractions
+@using MMCA.Common.Shared.Auth
 @using MMCA.Common.Shared.Auth.Requests
 @using MMCA.Common.Shared.ValueObjects.Contact
 @using MMCA.Common.UI.Common
@@ -30,7 +31,24 @@
         <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
             <DataAnnotationsValidator />
             <MudCardContent Class="pa-6">
-                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                @if (_emailAlreadyRegistered)
+                {
+                    @* The address already has an account, so the way forward is signing in rather than
+                       resubmitting the form: Severity.Warning plus the two routes out of the dead end.
+                       role="alert": the alert only enters the DOM after a failed submit, so nothing
+                       announces it unless it arrives as a live region. *@
+                    <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" role="alert"
+                              data-testid="email-already-registered">
+                        @L["Auth.Register.EmailAlreadyRegistered", _model.Email]
+                        @* Underline.Always: an in-text link must be distinguishable without relying on
+                           colour alone (WCAG 2.1 AA / axe link-in-text-block). *@
+                        <div class="d-flex flex-wrap mt-1" style="gap: 1rem;">
+                            <MudLink Href="/login" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.SignIn"]</MudLink>
+                            <MudLink Href="/forgot-password" Typo="Typo.body2" Underline="Underline.Always">@L["Auth.Register.ResetPassword"]</MudLink>
+                        </div>
+                    </MudAlert>
+                }
+                else if (!string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     @* role="alert": the alert only enters the DOM after a failed submit, so nothing
                        announces it unless it arrives as a live region. *@
@@ -128,6 +146,7 @@
 @code {
     private readonly RegisterModel _model = new();
     private string? _errorMessage;
+    private bool _emailAlreadyRegistered;
     private bool _isLoading;
 
     // Null means "no address entered", which is legitimate: the address block is optional. Anything
@@ -152,6 +171,7 @@
         // EditForm + DataAnnotations before OnValidSubmit fires; this method only handles the call and
         // any server-side failure, surfaced in the form-level MudAlert.
         _errorMessage = null;
+        _emailAlreadyRegistered = false;
 
         var addressResult = BuildAddressResult();
         if (addressResult is { IsFailure: true } failedAddress)
@@ -168,6 +188,15 @@
                 new RegisterRequest(_model.Email, _model.Password, _model.FirstName, _model.LastName, addressResult?.Value));
             if (result.IsFailure)
             {
+                // The duplicate-address conflict is the one failure with a next step of its own: the
+                // account exists, so the user is pointed at sign-in or password reset rather than at a
+                // red alert that invites a retry. Matched on the code, never on the wording.
+                if (result.Errors.Any(e => string.Equals(e.Code, AuthErrorCodes.EmailAlreadyExists, StringComparison.Ordinal)))
+                {
+                    _emailAlreadyRegistered = true;
+                    return;
+                }
+
                 _errorMessage = result.LocalizedErrorMessage(L) ?? L["Auth.Register.Failed"];
                 return;
             }

@@ -346,6 +346,12 @@
   <data name="Auth.Register.SignIn" xml:space="preserve">
     <value>Sign In</value>
   </data>
+  <data name="Auth.Register.ResetPassword" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="Auth.Register.EmailAlreadyRegistered" xml:space="preserve">
+    <value>An account for {0} is already registered. Sign in with it instead, or reset your password if you have forgotten it.</value>
+  </data>
   <data name="Notif.List.Col.Title" xml:space="preserve">
     <value>Title</value>
   </data>

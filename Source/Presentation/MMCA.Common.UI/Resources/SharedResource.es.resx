@@ -346,6 +346,12 @@
   <data name="Auth.Register.SignIn" xml:space="preserve">
     <value>Iniciar sesión</value>
   </data>
+  <data name="Auth.Register.ResetPassword" xml:space="preserve">
+    <value>Restablecer contraseña</value>
+  </data>
+  <data name="Auth.Register.EmailAlreadyRegistered" xml:space="preserve">
+    <value>Ya existe una cuenta registrada para {0}. Inicie sesión con ella o restablezca su contraseña si la olvidó.</value>
+  </data>
   <data name="Notif.List.Col.Title" xml:space="preserve">
     <value>Título</value>
   </data>

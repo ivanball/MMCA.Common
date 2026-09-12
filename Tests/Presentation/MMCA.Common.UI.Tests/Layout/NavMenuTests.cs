@@ -80,6 +80,26 @@ public sealed class NavMenuTests : BunitTestBase
     }
 
     [Fact]
+    public void TheAccountSectionLeadsTheMenu_AheadOfTheNavigationList()
+    {
+        // The auth section renders below 1024px only, where the menu is a scrolling column: an
+        // organizer or admin menu is long enough to push a trailing Logout under the browser chrome,
+        // so the account row and the way out come first.
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(name: "Ada Lovelace"), _ => { });
+
+        var blocks = cut.Find("#nav-menu").Children.ToList();
+        var authIndex = blocks.FindIndex(e => e.ClassList.Contains("nav-auth-section"));
+        var navListIndex = blocks.FindIndex(e => e.ClassList.Contains("mud-navmenu"));
+
+        authIndex.Should().BeGreaterThanOrEqualTo(0);
+        navListIndex.Should().BeGreaterThanOrEqualTo(0, "the module navigation list is still rendered");
+        authIndex.Should().BeLessThan(
+            navListIndex,
+            "the account section is the first thing visible when the hamburger opens");
+    }
+
+    [Fact]
     public void WhenAnonymous_HidesTheSignedInDevicesLink()
     {
         RenderMudProviders();

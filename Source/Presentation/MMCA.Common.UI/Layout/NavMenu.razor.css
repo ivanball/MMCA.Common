@@ -132,6 +132,11 @@
     opacity: 1;
     visibility: visible;
     transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out, visibility 0s linear 0s;
+    /* Bottom clearance for the last nav item in the open mobile menu. Without it the final row sits
+       flush on the container edge, and on phones with a bottom browser bar or home indicator it
+       lands under the chrome; env() adds the device inset where one exists (0 elsewhere), the
+       0.75rem is the breathing room on every phone. */
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Mobile Nav Backdrop ── */
@@ -223,15 +228,13 @@
         padding-top: 0.875rem;
     }
 
+/* This section only renders below 1024px, and it is the FIRST block of the mobile menu: the account
+   row and Logout are in reach the moment the hamburger opens, however long the module navigation
+   below them runs. The separator therefore closes the block rather than opening it. */
 .nav-auth-section {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding-top: 0.5rem;
-    margin-top: auto;
-    /* This section only renders below 1024px, where Logout is the last row of the mobile menu.
-       Without bottom clearance it sits flush on the container edge, and on phones with a bottom
-       browser bar or home indicator it lands under the chrome; env() adds the device inset where
-       one exists (0 elsewhere), the 0.75rem is the breathing room on every phone. */
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: 0.5rem;
 }
 
 .nav-user-identity {
@@ -256,9 +259,9 @@
        the absolutely positioned .navbar-toggler, but a shrinkable actions box (the previous
        min-width: 0 plus the default flex-shrink: 1) gets squeezed by the width:100% brand
        container and spills its nowrap, overflow-visible contents right into that reserve,
-       painting the theme icon over the hamburger. The row now holds only fixed-width icon buttons
-       in every auth state (the ellipsizing user name that used to absorb the squeeze when signed
-       in has moved to the hamburger menu's .nav-auth-section), so nothing here can give way and
+       painting the theme icon over the hamburger. The row holds only fixed-width icon buttons in
+       every auth state (the signed-in user name lives in the hamburger menu's .nav-auth-section,
+       so no ellipsizing text is here to absorb the squeeze), so nothing here can give way and
        this must stay. The brand is the element meant to give way instead: .top-row
        .container-fluid is min-width: 0 and .navbar-brand already ellipsizes. */
     flex: 0 0 auto;
