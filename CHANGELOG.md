@@ -4,6 +4,25 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.197.0] - 2026-09-12
+
+### Added
+
+- **A shared user-administration list, the UI half of ADR-116** (`MMCA.Common.UI`,
+  `MMCA.Common.Shared`). `Pages.Administration.UserAdminList<TUser>` is a routeless component an
+  app page wraps with its own `@page` and `[Authorize]`: it renders the account roster (search box,
+  desktop grid, mobile cards, status chip) with the operator actions the framework's `Admin/Users`
+  endpoints expose (lock, unlock, change role, each confirmed) and an optional delete, hides the
+  actions on the signed-in operator's own row, and takes the app's extra columns, card lines, role
+  vocabulary, detail route and, when the roster lives on the app's own endpoint, a `FetchPage`
+  delegate. Any of its strings is overridden by passing the page's own localizer, so an app keeps
+  its vocabulary ("Deactivate" rather than "Lock") by resx key alone; English and Spanish ship.
+- `MMCA.Common.Shared.Auth.Administration.IUserAdminDTO`, the four-value projection (`UserId`,
+  `Email`, `Role`, `IsLocked`) the list reads from an app-owned user DTO.
+- `IUserAdminActionsUIService` (lock, unlock, set roles) and `IUserAdminUIService<TUserDto>`
+  (paged list, get one) over a sealed `UserAdminService<TUserDto>` HTTP client for `Admin/Users`,
+  registered together by `AddUserAdministrationUI<TUserDto>()`.
+
 ## [1.196.0] - 2026-09-12
 
 ### Added
