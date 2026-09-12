@@ -43,6 +43,11 @@ public sealed class UpcastingIntegrationEventConsumerTests
     {
         var context = new Mock<ConsumeContext<RetiredOrderPlaced>>();
         context.SetupGet(c => c.Message).Returns(evt);
+
+        // Empty but present, as a real delivery always is: the consumer reads the publisher's
+        // context off the headers before it touches the inbox, and an empty set means "the publisher
+        // had nothing to say" rather than a missing collection.
+        context.SetupGet(c => c.Headers).Returns(Mock.Of<Headers>());
         return context;
     }
 

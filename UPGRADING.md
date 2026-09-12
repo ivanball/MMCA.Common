@@ -32,6 +32,38 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [Unreleased]
+
+**The outbox table gains four nullable columns: add one migration per relational outbox source.**
+`OutboxMessage` now carries the ambient context of the request that raised the event, so the
+delivery can restore it. The columns are:
+
+| Column | Type | Nullable |
+| --- | --- | --- |
+| `TenantId` | `varchar(64)` (the tenant column width the framework uses everywhere) | yes |
+| `UserId` | the identifier type your host uses for users (`int` by default) | yes |
+| `UserRoles` | `varchar(512)` | yes |
+| `CorrelationId` | `varchar(64)` | yes |
+
+This is expand-only (ADR-057): every column is nullable, nothing is renamed or dropped, and rows
+written before the upgrade read back as "nothing was captured", which is exactly what they are. A
+host can therefore deploy the migration and the new package in either order.
+
+Generate the migration the way you generate every other per-source migration:
+
+```sh
+dotnet ef migrations add AddOutboxOriginColumns \
+  --project <YourMigrationsProject> --startup-project <YourApiProject> \
+  -- --datasource <Name>
+```
+
+Repeat it for each relational data source that owns an `OutboxMessages` table (every source in use,
+under database-per-service). Cosmos sources need nothing: `CosmosDbContext` does not map the outbox.
+A host with no `DataSources` section has exactly one source and therefore one migration.
+
+Nothing else is required. `OutboxMessage.FromDomainEvent(domainEvent)` still compiles and still
+stores nulls; the framework's own three call sites pass the captured origin for you.
+
 ## [1.194.0] - 2026-09-11
 
 **`MudToastService` no longer takes an `IAccessibilityAnnouncer`: nothing to do unless you construct

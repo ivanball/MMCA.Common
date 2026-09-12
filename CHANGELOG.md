@@ -6,6 +6,45 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **The outbox and the broker carry the request context across the hop.** An event delivered by the
+  outbox used to arrive one poll cycle later as an anonymous, tenant-less, uncorrelated system call:
+  a handler reading `ICurrentUserService` saw nobody, its writes were stamped with the audit
+  sentinel, a shared-database host read across tenants, and nothing in the logs joined the delivery
+  back to the request that produced it. The deferred-command queue had solved exactly this on its
+  own row; the outbox now does it the same way, through the same helper, so the two cannot drift.
+  - `OutboxMessage` gains four nullable columns, `TenantId`, `UserId`, `UserRoles` and
+    `CorrelationId`, captured when the row is written (the domain-event save interceptor,
+    `InProcessEventBus` and `BrokerEventBus`) and restored around its delivery. `FromDomainEvent`
+    takes an optional `OutboxOrigin`; the single-argument call is unchanged and stores nulls, which
+    is exactly how every row written before this release reads back.
+  - `OutboxProcessor` restores each row's context onto the cycle's scope before the row is published
+    or dispatched, and overwrites it again for the next row, so one row's identity can never answer
+    for another's.
+  - `BrokerMessageBus` stamps the ambient context as the `MMCA-Tenant-Id`, `MMCA-User-Id`,
+    `MMCA-User-Roles` and `MMCA-Correlation-Id` headers (names in the new public
+    `MMCA.Common.Shared.Messaging.MessageHeaders`), and both `IntegrationEventConsumer` and
+    `UpcastingIntegrationEventConsumer` restore them onto the consumer scope before they touch the
+    inbox, because under database-per-tenant the inbox store's routing is decided by that tenant.
+    Only values that are present are written, and an absent header leaves the consumer's defaults
+    alone, so an older publisher keeps working.
+  - Expand-only schema change (ADR-057): consumers with relational outbox sources need one migration
+    adding the four nullable columns. See [UPGRADING.md](UPGRADING.md).
+
+### Changed
+
+- **An unhandled exception is logged once, at the boundary.** `LoggingCommandDecorator` and
+  `LoggingQueryDecorator` still record the outcome (name, elapsed ms, correlation id, and the
+  unchanged `outcome=exception` metric tag), but at **Warning** and without the exception object.
+  The boundary that actually handles the exception (`GlobalExceptionHandler` and
+  `DbUpdateExceptionHandler`, or `InternalCommandProcessor` for a deferred command) keeps its single
+  Error row with the full stack. Every unhandled exception previously produced two Error rows and
+  two stacks, which doubled the ingestion cost of the noisiest events in the system and made an
+  operator counting Errors count each failure twice. The two lines carry the same correlation id, so
+  they still join. Anything alerting on the decorator's Error level should alert on the boundary's
+  instead.
+
 ## [1.194.0] - 2026-09-11
 
 Two regressions from the 1.193.0 accessibility sweep.

@@ -46,12 +46,25 @@ public sealed partial class UpcastingIntegrationEventConsumer<TEvent>(
         Type,
         (Type ClosedHandlerType, Func<object, object, CancellationToken, Task> Invoker)> DispatchCache = new();
 
+    /// <summary>
+    /// Authentication type stamped on the identity rebuilt from the message headers. The same value
+    /// <see cref="IntegrationEventConsumer{TEvent}"/> uses: an upcast changes the contract, never the
+    /// hop the identity came back from.
+    /// </summary>
+    internal const string PrincipalAuthenticationType = IntegrationEventConsumer<TEvent>.PrincipalAuthenticationType;
+
     /// <inheritdoc />
     public async Task Consume(ConsumeContext<TEvent> context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var integrationEvent = context.Message;
+
+        // BEFORE the inbox is touched, exactly as IntegrationEventConsumer does it and for the same
+        // reason: under database-per-tenant the inbox store's routing is decided by the tenant this
+        // restores. A retired contract is delivered with the same headers as a current one, so a
+        // consumer that skipped this would run its handlers anonymous while its sibling did not.
+        ConsumerOriginRestore.Apply(context.Headers, serviceProvider, PrincipalAuthenticationType);
 
         // Dedup on the ORIGINAL message id, before any upcasting: the envelope survives every hop, so
         // this is the same id a plain IntegrationEventConsumer<TEvent> would have recorded.

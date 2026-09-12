@@ -16,7 +16,7 @@ MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqliteMigr
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.UsesMigrations.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableRefreshSessions.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableRefreshSessions.set -> void
-MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.DbContextFactory(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory! physicalDbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, MMCA.Common.Application.Interfaces.ITenantContext! tenantContext, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>! tenancySettings) -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.DbContextFactory(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory! physicalDbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, MMCA.Common.Application.Interfaces.ITenantContext! tenantContext, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>! tenancySettings, MMCA.Common.Application.Interfaces.ICorrelationContext? correlationContext = null) -> void
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.Abandon(System.Guid messageId) -> bool
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.CompleteAsync(System.Guid messageId, string! eventType, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.TryBeginAsync(System.Guid messageId, string! eventType, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
@@ -226,3 +226,35 @@ const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefault
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.DeleteBehaviorSourceAnnotation = "MMCA:DeleteBehaviorSource" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.ExplicitSource = "Explicit" -> string!
 const MMCA.Common.Infrastructure.Persistence.Conventions.RestrictDeleteByDefaultConvention.OwnershipSource = "Ownership" -> string!
+*REMOVED*MMCA.Common.Infrastructure.Messaging.BrokerMessageBus.BrokerMessageBus(MassTransit.IPublishEndpoint! publishEndpoint) -> void
+*REMOVED*MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.IntegrationEventConsumer(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler<TEvent!>!>! handlers, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent!>!>! logger) -> void
+*REMOVED*static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.FromDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent) -> MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage!
+MMCA.Common.Infrastructure.Messaging.BrokerMessageBus.BrokerMessageBus(MassTransit.IPublishEndpoint! publishEndpoint, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService? currentUserService = null, MMCA.Common.Application.Interfaces.ITenantContext? tenantContext = null, MMCA.Common.Application.Interfaces.ICorrelationContext? correlationContext = null) -> void
+MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent>.IntegrationEventConsumer(System.Collections.Generic.IEnumerable<MMCA.Common.Application.Interfaces.Events.IIntegrationEventHandler<TEvent!>!>! handlers, MMCA.Common.Infrastructure.Persistence.Inbox.IInboxStore! inbox, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Messaging.Consumers.IntegrationEventConsumer<TEvent!>!>! logger, System.IServiceProvider? serviceProvider = null) -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.CorrelationId.get -> string?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.CorrelationId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TenantId.get -> string?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.TenantId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserId.get -> int?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserRoles.get -> string?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.UserRoles.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.CorrelationId.get -> string?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.CorrelationId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.Deconstruct(out int? UserId, out string? UserRoles, out string? TenantId, out string? CorrelationId) -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.Equals(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin other) -> bool
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.OutboxOrigin() -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.OutboxOrigin(int? UserId, string? UserRoles, string? TenantId, string? CorrelationId) -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.TenantId.get -> string?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.TenantId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.UserId.get -> int?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.UserId.init -> void
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.UserRoles.get -> string?
+MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.UserRoles.init -> void
+override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.GetHashCode() -> int
+~override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.Equals(object obj) -> bool
+~override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.ToString() -> string
+static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.FromDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin origin = default(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin)) -> MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage!
+static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.operator !=(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin left, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin right) -> bool
+static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.operator ==(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin left, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin right) -> bool

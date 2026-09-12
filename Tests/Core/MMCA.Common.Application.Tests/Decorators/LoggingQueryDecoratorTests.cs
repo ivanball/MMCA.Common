@@ -111,13 +111,46 @@ public sealed class LoggingQueryDecoratorTests
                 "an unresolvable module must still produce the key, so the scope shape never varies between handlers");
     }
 
+    // ── HandleAsync: the exception outcome line is the pipeline's own record, not a second
+    //    full-stack Error. The boundary logs the exception once, with its stack. ──
+    [Fact]
+    public async Task HandleAsync_WhenInnerThrows_LogsTheOutcomeAtWarningWithoutTheException()
+    {
+        var (sut, logger) = CreateSutWithCapturingLogger<TestLoggingQuery>(
+            new InvalidOperationException("test error"));
+
+        var act = async () => await sut.HandleAsync(new TestLoggingQuery());
+        await act.Should().ThrowAsync<InvalidOperationException>();
+
+        logger.Entries.Should().NotContain(
+            entry => entry.Level == LogLevel.Error,
+            "the boundary owns the single Error row for an unhandled exception");
+
+        var outcome = logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Warning).Subject;
+        outcome.Exception.Should().BeNull("a second stack for the same failure doubles ingestion cost for no diagnostic gain");
+        outcome.Message.Should().Contain(nameof(TestLoggingQuery))
+            .And.Contain(nameof(InvalidOperationException))
+            .And.Contain("test-correlation-id")
+            .And.Contain("propagates to the boundary");
+    }
+
     // ── Factory: real (capturing) logger, so the scope payload can be inspected ──
-    private static (LoggingQueryDecorator<TQuery, Result<string>> Sut, ScopeCapturingLogger<LoggingQueryDecorator<TQuery, Result<string>>> Logger) CreateSutWithCapturingLogger<TQuery>()
+    private static (LoggingQueryDecorator<TQuery, Result<string>> Sut, ScopeCapturingLogger<LoggingQueryDecorator<TQuery, Result<string>>> Logger) CreateSutWithCapturingLogger<TQuery>(
+        Exception? innerFailure = null)
         where TQuery : class
     {
         var inner = new Mock<IQueryHandler<TQuery, Result<string>>>();
-        inner.Setup(x => x.HandleAsync(It.IsAny<TQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success("data"));
+        if (innerFailure is null)
+        {
+            inner.Setup(x => x.HandleAsync(It.IsAny<TQuery>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result.Success("data"));
+        }
+        else
+        {
+            inner.Setup(x => x.HandleAsync(It.IsAny<TQuery>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(innerFailure);
+        }
+
         var correlationContext = new Mock<ICorrelationContext>();
         correlationContext.Setup(x => x.CorrelationId).Returns("test-correlation-id");
         var logger = new ScopeCapturingLogger<LoggingQueryDecorator<TQuery, Result<string>>>();
@@ -135,6 +168,9 @@ public sealed class LoggingQueryDecoratorTests
         public List<IReadOnlyList<KeyValuePair<string, object?>>> Scopes { get; } = [];
 
         public List<string> Messages { get; } = [];
+
+        /// <summary>Every line with the level and exception it was logged at, for the outcome assertions.</summary>
+        public List<LogEntry> Entries { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull
@@ -157,9 +193,14 @@ public sealed class LoggingQueryDecoratorTests
             Func<TState, Exception?, string> formatter)
         {
             ArgumentNullException.ThrowIfNull(formatter);
-            Messages.Add(formatter(state, exception));
+            var message = formatter(state, exception);
+            Messages.Add(message);
+            Entries.Add(new LogEntry(logLevel, exception, message));
         }
     }
+
+    /// <summary>One captured log line: the level it was written at, the exception it carried, its text.</summary>
+    public sealed record LogEntry(LogLevel Level, Exception? Exception, string Message);
 }
 
 // ── Test type (must be public for Moq DynamicProxy) ──

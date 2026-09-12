@@ -238,10 +238,17 @@ public sealed partial class DomainEventSaveChangesInterceptor(
             // Integration events get outbox rows but no in-process dispatch: the rows stay
             // unprocessed and the OutboxProcessor publishes them via IMessageBus. Local events
             // get rows AND fast-path in-process dispatch (rows marked processed on success).
+            //
+            // The ambient context is read ONCE per save, through the live accessor the scoped
+            // context factory assigned: this interceptor is a singleton and the only provider the
+            // context carries is the root one, so a scoped service is not reachable from here. Every
+            // row of the save carries the same origin, which is correct by construction (one save is
+            // one scope's work).
+            var origin = context.CurrentOutboxOrigin;
             var locals = new List<IDomainEvent>(domainEvents.Length);
             foreach (var domainEvent in domainEvents)
             {
-                var entry = OutboxMessage.FromDomainEvent(domainEvent);
+                var entry = OutboxMessage.FromDomainEvent(domainEvent, origin);
 #pragma warning disable VSTHRD103 // EF DbSet.Add is intentionally synchronous (in-memory); AddAsync is only for special value generators (EF guidance).
                 context.Set<OutboxMessage>().Add(entry);
 #pragma warning restore VSTHRD103

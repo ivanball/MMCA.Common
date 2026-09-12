@@ -264,3 +264,8 @@ static MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.operator
 static MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.operator ==(MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? left, MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse? right) -> bool
 static MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.operator !=(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse left, MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse right) -> bool
 static MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.operator ==(MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse left, MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse right) -> bool
+MMCA.Common.Shared.Messaging.MessageHeaders
+const MMCA.Common.Shared.Messaging.MessageHeaders.CorrelationId = "MMCA-Correlation-Id" -> string!
+const MMCA.Common.Shared.Messaging.MessageHeaders.TenantId = "MMCA-Tenant-Id" -> string!
+const MMCA.Common.Shared.Messaging.MessageHeaders.UserId = "MMCA-User-Id" -> string!
+const MMCA.Common.Shared.Messaging.MessageHeaders.UserRoles = "MMCA-User-Roles" -> string!

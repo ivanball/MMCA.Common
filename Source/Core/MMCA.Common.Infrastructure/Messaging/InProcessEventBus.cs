@@ -84,9 +84,13 @@ public sealed class InProcessEventBus(
             return;
         }
 
+        // One read of the scope's ambient context for the whole batch, through the live accessor the
+        // scoped context factory attached: the batch is one caller's work, so one origin describes it.
+        var origin = context.CurrentOutboxOrigin;
+
         var outboxEntries = new List<OutboxMessage>(events.Length);
         foreach (var integrationEvent in events)
-            outboxEntries.Add(OutboxMessage.FromDomainEvent(integrationEvent));
+            outboxEntries.Add(OutboxMessage.FromDomainEvent(integrationEvent, origin));
 
 #pragma warning disable VSTHRD103 // EF DbSet.AddRange is intentionally synchronous (in-memory); AddRangeAsync is only for special value generators (EF guidance).
         context.Set<OutboxMessage>().AddRange(outboxEntries);

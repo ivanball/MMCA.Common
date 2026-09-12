@@ -86,6 +86,33 @@ public sealed class OutboxMessage
     public string? OrderingKey { get; init; }
 
     /// <summary>
+    /// Gets the tenant the raising scope was resolved to, restored around delivery so a handler
+    /// reads and writes the same tenant's rows the raising request did. Null for a tenant-less host
+    /// and for every row written before this column existed.
+    /// </summary>
+    public string? TenantId { get; init; }
+
+    /// <summary>
+    /// Gets the id of the user who raised the event, restored onto the delivery scope's
+    /// <c>ICurrentUserService</c> so an authorization check and the audit stamps see the same
+    /// principal a synchronous dispatch would have seen. Null for system-raised events.
+    /// </summary>
+    public UserIdentifierType? UserId { get; init; }
+
+    /// <summary>
+    /// Gets the raising user's roles, stored as a comma-separated list and restored as role claims
+    /// at delivery time. Empty or null means the delivery runs unauthenticated.
+    /// </summary>
+    public string? UserRoles { get; init; }
+
+    /// <summary>
+    /// Gets the correlation id of the request that raised the event, so the delivery (a poll cycle
+    /// later, on another thread and possibly in another process) can be tied back to the interaction
+    /// that produced it.
+    /// </summary>
+    public string? CorrelationId { get; init; }
+
+    /// <summary>
     /// Creates an <see cref="OutboxMessage"/> from a domain event, serializing it as JSON.
     /// </summary>
     /// <remarks>
@@ -95,8 +122,13 @@ public sealed class OutboxMessage
     /// <see cref="EventNameResolver"/>, so annotating an event costs nothing per message.
     /// </remarks>
     /// <param name="domainEvent">The domain event to persist.</param>
+    /// <param name="origin">
+    /// The ambient context to capture on the row. Defaulted, so a caller with nothing to capture
+    /// keeps the single-argument call and stores nulls, exactly as every row written before these
+    /// columns existed reads back.
+    /// </param>
     /// <returns>A new outbox message ready for persistence.</returns>
-    public static OutboxMessage FromDomainEvent(IDomainEvent domainEvent)
+    public static OutboxMessage FromDomainEvent(IDomainEvent domainEvent, OutboxOrigin origin = default)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
@@ -109,6 +141,10 @@ public sealed class OutboxMessage
             OccurredOn = domainEvent.DateOccurred,
             TraceId = activity?.TraceId.ToString(),
             SpanId = activity?.SpanId.ToString(),
+            TenantId = origin.TenantId,
+            UserId = origin.UserId,
+            UserRoles = origin.UserRoles,
+            CorrelationId = origin.CorrelationId,
 
             // Opt-in: an event that does not implement the contract keeps a null key and the
             // unordered behavior. A null returned by an implementing event opts that one instance

@@ -74,6 +74,12 @@ public sealed partial class OutboxProcessor(
     /// </summary>
     internal const string PollActivityName = "OutboxPoll";
 
+    /// <summary>
+    /// Authentication type stamped on the identity rebuilt from a row before delivery. It is what
+    /// makes <c>IsAuthenticated</c> true, and it names the hop the identity came back from.
+    /// </summary>
+    internal const string OutboxPrincipalAuthenticationType = "Outbox";
+
     /// <summary>Floor for the computed wait so an overdue pending message cannot hot-loop the processor.</summary>
     private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
 
@@ -314,7 +320,8 @@ public sealed partial class OutboxProcessor(
         try
         {
             processedAny = await DispatchMessagesAsync(
-                toProcess, source, dispatcher, messageBus, cancellationToken).ConfigureAwait(false);
+                toProcess, source, scope.ServiceProvider, dispatcher, messageBus, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -560,9 +567,25 @@ public sealed partial class OutboxProcessor(
     /// incrementing retry counts on failure. Returns whether any message made progress
     /// (dispatched or dead-lettered) this cycle.
     /// </summary>
+    /// <remarks>
+    /// Each row's captured context (user, roles, tenant, correlation id) is restored onto the
+    /// cycle's scope BEFORE the row is published or dispatched, and overwritten again for the next
+    /// row, so one row's identity can never answer for another's. That is what carries the original
+    /// request's identity across the hop: <c>BrokerMessageBus</c> reads the restored values through
+    /// the same scoped services when it stamps its headers, and the in-process path
+    /// (<c>InProcessMessageBus</c> to <see cref="IDomainEventDispatcher"/>) gets the right ambient
+    /// context for free.
+    /// </remarks>
+    /// <param name="messages">The claimed rows to deliver.</param>
+    /// <param name="source">The physical source the batch was claimed from.</param>
+    /// <param name="scopeServices">The cycle's scope, onto which each row's context is restored.</param>
+    /// <param name="dispatcher">In-process dispatcher for pure domain events.</param>
+    /// <param name="messageBus">Transport for integration events.</param>
+    /// <param name="cancellationToken">Cancels the batch.</param>
     private async Task<bool> DispatchMessagesAsync(
         IEnumerable<OutboxMessage> messages,
         DataSourceKey source,
+        IServiceProvider scopeServices,
         IDomainEventDispatcher dispatcher,
         IMessageBus messageBus,
         CancellationToken cancellationToken)
@@ -579,6 +602,16 @@ public sealed partial class OutboxProcessor(
             using var activity = StartOutboxActivity(message, source);
             try
             {
+                // Before anything reads the scope: the publish path stamps headers from these
+                // services and the in-process path hands them to the handlers.
+                Context.AmbientOrigin.Restore(
+                    scopeServices,
+                    message.UserId,
+                    message.UserRoles,
+                    message.TenantId,
+                    message.CorrelationId,
+                    OutboxPrincipalAuthenticationType);
+
                 var domainEvent = message.DeserializeEvent();
                 if (domainEvent is null)
                 {

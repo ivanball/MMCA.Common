@@ -56,7 +56,16 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
             catch (Exception ex)
             {
                 var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
-                LogQueryException(logger, queryName, (long)elapsed.TotalMilliseconds, correlationId, ex);
+
+                // The outcome line only, WITHOUT the exception object, exactly as the command
+                // decorator does: the exception is rethrown untouched and the boundary that finally
+                // handles it logs it once at Error with its full stack. See LogQueryException.
+                LogQueryException(
+                    logger,
+                    queryName,
+                    (long)elapsed.TotalMilliseconds,
+                    correlationId,
+                    ex.GetType().Name);
                 RecordDuration(queryName, elapsed, "exception");
                 throw;
             }
@@ -91,6 +100,9 @@ public sealed partial class LoggingQueryDecorator<TQuery, TResult>(
     [LoggerMessage(Level = LogLevel.Warning, Message = "Query {QueryName} failed after {ElapsedMs}ms [CorrelationId: {CorrelationId}]: {ErrorSummary}")]
     private static partial void LogQueryFailed(ILogger logger, string queryName, long elapsedMs, string correlationId, string errorSummary);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Query {QueryName} threw after {ElapsedMs}ms [CorrelationId: {CorrelationId}]")]
-    private static partial void LogQueryException(ILogger logger, string queryName, long elapsedMs, string correlationId, Exception exception);
+    // Warning, and without the exception object: the boundary owns the single Error row and the
+    // single stack (ADR-014). This line is the pipeline's own outcome record, and it carries the
+    // correlation id the boundary's row carries too, so the two join.
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Query {QueryName} threw {ExceptionType} after {ElapsedMs}ms [CorrelationId: {CorrelationId}]; the exception propagates to the boundary, which logs it with its stack")]
+    private static partial void LogQueryException(ILogger logger, string queryName, long elapsedMs, string correlationId, string exceptionType);
 }
