@@ -9,6 +9,11 @@ MMCA.Common.Shared.Abstractions.Result<T>.Ensure(System.Func<T, bool>! predicate
 MMCA.Common.Shared.Abstractions.Result<T>.MatchAsync<TResult>(System.Func<T, System.Threading.Tasks.Task<TResult>!>! onSuccess, System.Func<System.Collections.Generic.IEnumerable<MMCA.Common.Shared.Abstractions.Error!>!, System.Threading.Tasks.Task<TResult>!>! onFailure) -> System.Threading.Tasks.Task<TResult>!
 MMCA.Common.Shared.Abstractions.Result<T>.Tap(System.Action<T>! action) -> MMCA.Common.Shared.Abstractions.Result<T>!
 MMCA.Common.Shared.Abstractions.ResultExtensions
+MMCA.Common.Shared.Auth.Administration.IUserAdminDTO
+MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.Email.get -> string!
+MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.IsLocked.get -> bool
+MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.Role.get -> string!
+MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.UserId.get -> int
 MMCA.Common.Shared.Auth.AuthErrorCodes
 MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions
 MMCA.Common.Shared.Auth.Requests.ForgotPasswordRequest

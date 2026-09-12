@@ -371,6 +371,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Pages.Auth.ForgotPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.ResetPassword.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Pages.Auth.Sessions.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose() -> void
 MMCA.Common.UI.Components.Capabilities.BiometricGate.ReLockAfter.get -> System.TimeSpan
 MMCA.Common.UI.Components.Capabilities.BiometricGate.ReLockAfter.set -> void
@@ -398,7 +399,59 @@ MMCA.Common.UI.Services.Capabilities.DeviceStatus.IAppLifecycleNotifier.Resumed 
 MMCA.Common.UI.Services.Capabilities.DeviceStorage.BrowserLocalCacheStore.ClearAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.DeviceStorage.ILocalCacheStore.ClearAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Capabilities.DeviceStorage.NullLocalCacheStore.ClearAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.AssignableRoles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.AssignableRoles.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.CardContent.get -> Microsoft.AspNetCore.Components.RenderFragment<TUser>?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.CardContent.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Columns.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Columns.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.DetailHref.get -> System.Func<TUser, string!>!
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.DetailHref.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.FetchPage.get -> System.Func<System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>!, int, int, string?, string?, System.Threading.CancellationToken, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUser>! Items, int TotalItems)>!>!>?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.FetchPage.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnDelete.get -> System.Func<TUser, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!>?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnDelete.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RoleLabel.get -> System.Func<string!, string!>?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RoleLabel.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.ShowSearch.get -> bool
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.ShowSearch.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Sortable.get -> bool
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Sortable.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.TrailingColumns.get -> Microsoft.AspNetCore.Components.RenderFragment?
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.TrailingColumns.set -> void
+MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.UserAdminList() -> void
+MMCA.Common.UI.Pages.Administration.UserAdminListResources
+MMCA.Common.UI.Pages.Administration.UserAdminListResources.UserAdminListResources() -> void
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUserAdministrationUI<TUserDto>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Services.Administration.IUserAdminActionsUIService
+MMCA.Common.UI.Services.Administration.IUserAdminActionsUIService.LockAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.IUserAdminActionsUIService.SetRoleAsync(int userId, string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.IUserAdminActionsUIService.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.IUserAdminActionsUIService.UnlockAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
+MMCA.Common.UI.Services.Administration.IUserAdminUIService<TUserDto>.GetPagedAsync(int pageNumber, int pageSize, string? searchTerm, string? role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUserDto>! Items, int TotalItems)>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<TUserDto>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.GetPagedAsync(int pageNumber, int pageSize, string? searchTerm, string? role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<(System.Collections.Generic.IReadOnlyList<TUserDto>! Items, int TotalItems)>!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.LockAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.SetRoleAsync(int userId, string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.SetRolesAsync(int userId, System.Collections.Generic.IReadOnlyList<string!>! roles, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.UnlockAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Administration.UserAdminService<TUserDto>.UserAdminService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 const MMCA.Common.UI.Services.Auth.OAuth.OAuthFlowStateStore.StorageKey = "auth.oauth-flow" -> string!
+const MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SearchFilterKey = "Search" -> string!
 override MMCA.Common.UI.Pages.Auth.Login.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.GridRef.get -> MudBlazor.MudDataGrid<TUser>?
+override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.OnInitializedAsync() -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.RestoreFilters(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! filters) -> void
+override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SaveFilters(System.Collections.Generic.Dictionary<string!, string!>! filters) -> void
+override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Title.get -> string!
 static MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.IsAppRelativeRoute(string? route) -> bool
+static MMCA.Common.UI.DependencyInjection.AddUserAdministrationUI<TUserDto>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
