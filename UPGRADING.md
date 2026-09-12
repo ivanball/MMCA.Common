@@ -64,6 +64,56 @@ A host with no `DataSources` section has exactly one source and therefore one mi
 Nothing else is required. `OutboxMessage.FromDomainEvent(domainEvent)` still compiles and still
 stores nulls; the framework's own three call sites pass the captured origin for you.
 
+**Three shipped signatures gained an optional parameter: recompile, change nothing.** Every existing
+call site still compiles and still behaves as it did, because each added parameter is optional and
+its default reproduces the old behaviour. What changed is the binary signature, so an assembly
+compiled against 1.194.0 must be rebuilt rather than dropped in beside the new packages.
+
+| Old | New | Effect of omitting the new argument |
+| --- | --- | --- |
+| `BrokerMessageBus(publishEndpoint)` | `BrokerMessageBus(publishEndpoint, currentUserService = null, tenantContext = null, correlationContext = null)` | No `MMCA-*` headers are stamped |
+| `IntegrationEventConsumer<TEvent>(handlers, inbox, logger)` | `IntegrationEventConsumer<TEvent>(handlers, inbox, logger, serviceProvider = null)` | No publisher context is restored on the consumer scope |
+| `OutboxMessage.FromDomainEvent(domainEvent)` | `OutboxMessage.FromDomainEvent(domainEvent, origin = default)` | The four context columns are stored as nulls |
+
+The container resolves all three, so a host that registers them the normal way
+(`AddInfrastructure`, the MassTransit consumer registration, the framework's own outbox write sites)
+gets the new arguments filled in and needs no edit at all.
+
+**Feature-flag lifecycle: a two-step opt-in, and nothing breaks if you skip it.** The new
+`[FeatureFlag]` attribute and the `FeatureFlagLifecycleTestsBase` fitness pair are additive: a
+consumer that changes nothing keeps building exactly as before. To adopt the gate (ADR-031):
+
+1. Subclass the base in your architecture-test project, beside the other governance subclasses:
+
+   ```csharp
+   public sealed class FeatureFlagLifecycleTests : FeatureFlagLifecycleTestsBase
+   {
+       protected override IArchitectureMap Map { get; } = new StoreArchitectureMap();
+   }
+   ```
+
+   Override `protected virtual DateOnly Today` if you would rather pin the judgement date than let
+   the build's clock decide when a toggle goes red.
+
+2. Annotate every `public const string` on every `*Features` class the map's Shared assemblies carry
+   (`CatalogFeatures`, `SalesFeatures`, `ConferenceFeatures`, `EngagementFeatures`, ...). A flag that
+   is a capability switch is `Permanent` and must NOT set `RemoveBy`; a flag that covers a rollout is
+   `Temporary` and MUST set a parseable ISO `yyyy-MM-dd` one:
+
+   ```csharp
+   [FeatureFlag(FeatureFlagLifetime.Permanent, Owner = "Catalog")]
+   public const string Recommendations = "Catalog.Recommendations";
+
+   [FeatureFlag(FeatureFlagLifetime.Temporary, RemoveBy = "2026-12-31", Owner = "Catalog")]
+   public const string NewPricingEngine = "Catalog.NewPricingEngine";
+   ```
+
+   Do step 2 first if you want a green build at every commit: subclassing the base before the
+   constants are annotated is a deliberate red that names each unannotated flag.
+
+A temporary flag going past its date fails the build on purpose. The fix is to delete the flag and
+the branch it no longer chooses between, not to push the date out.
+
 ## [1.194.0] - 2026-09-11
 
 **`MudToastService` no longer takes an `IAccessibilityAnnouncer`: nothing to do unless you construct

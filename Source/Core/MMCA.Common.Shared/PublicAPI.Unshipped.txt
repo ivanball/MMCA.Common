@@ -269,3 +269,41 @@ const MMCA.Common.Shared.Messaging.MessageHeaders.CorrelationId = "MMCA-Correlat
 const MMCA.Common.Shared.Messaging.MessageHeaders.TenantId = "MMCA-Tenant-Id" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.UserId = "MMCA-User-Id" -> string!
 const MMCA.Common.Shared.Messaging.MessageHeaders.UserRoles = "MMCA-User-Roles" -> string!
+const MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.RemoveByFormat = "yyyy-MM-dd" -> string!
+const MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.FeatureClassSuffix = "Features" -> string!
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.FeatureFlagAttribute(MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime lifetime) -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.Lifetime.get -> MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.Owner.get -> string?
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.Owner.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.RemoveBy.get -> string?
+MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.RemoveBy.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.<Clone>$() -> MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor!
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Deconstruct(out string! FieldName, out string! FlagName, out MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime? Lifetime, out string? RemoveBy, out string? Owner) -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Equals(MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor? other) -> bool
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.FeatureFlagDescriptor(string! FieldName, string! FlagName, MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime? Lifetime, string? RemoveBy, string? Owner) -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.FieldName.get -> string!
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.FieldName.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.FlagName.get -> string!
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.FlagName.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Lifetime.get -> MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime?
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Lifetime.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Owner.get -> string?
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Owner.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.RemoveBy.get -> string?
+MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.RemoveBy.init -> void
+MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime
+MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime.Permanent = 0 -> MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime
+MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime.Temporary = 1 -> MMCA.Common.Shared.FeatureFlags.FeatureFlagLifetime
+MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry
+override MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.Equals(object? obj) -> bool
+override MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.GetHashCode() -> int
+override MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.ToString() -> string!
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagAttribute.TryParseRemoveBy(string? removeBy, out System.DateOnly date) -> bool
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.operator !=(MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor? left, MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor? right) -> bool
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor.operator ==(MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor? left, MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor? right) -> bool
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.Describe(System.Collections.Generic.IEnumerable<System.Reflection.Assembly!>! assemblies) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor!>!
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.Describe(System.Reflection.Assembly! assembly) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor!>!
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.FlagFields(System.Type! type) -> System.Collections.Generic.IEnumerable<System.Reflection.FieldInfo!>!
+static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.IsFeatureClass(System.Type! type) -> bool

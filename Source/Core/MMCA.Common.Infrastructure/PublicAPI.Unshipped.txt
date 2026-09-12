@@ -258,3 +258,5 @@ override MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.GetHashCode(
 static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage.FromDomainEvent(MMCA.Common.Domain.Interfaces.IDomainEvent! domainEvent, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin origin = default(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin)) -> MMCA.Common.Infrastructure.Persistence.Outbox.OutboxMessage!
 static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.operator !=(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin left, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin right) -> bool
 static MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin.operator ==(MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin left, MMCA.Common.Infrastructure.Persistence.Outbox.OutboxOrigin right) -> bool
+MMCA.Common.Infrastructure.Mail.SmtpSettings.TimeoutSeconds.get -> int
+MMCA.Common.Infrastructure.Mail.SmtpSettings.TimeoutSeconds.init -> void
