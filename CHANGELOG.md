@@ -4,6 +4,22 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.199.0] - 2026-09-12
+
+### Added
+
+- **Document uploads and download headers for the managed file storage layer** (ADR-045
+  extension; `MMCA.Common.Application`, `MMCA.Common.Infrastructure`). `DocumentContentSniffer`
+  accepts pdf / pptx / docx / xlsx / zip / txt / md only when the bytes AND the file extension agree
+  on an allowed `DocumentFormats` flag, never trusting a declared content type; the Office Open XML
+  check enumerates zip entry names only and bails out past 4096 entries. `BlobNames.SanitizeFileName`
+  reduces a user-supplied name to a blob-safe segment with the extension preserved.
+  `FileUploadOptions` (`Attachment` / `Inline` RFC 6266 disposition with an RFC 5987 `filename*`,
+  plus `Cache-Control`) rides a new `IFileStorageService.UploadAsync` overload shipped as a default
+  interface member, so every existing implementation and test fake keeps compiling;
+  `AzureBlobFileStorageService` stores the headers on the blob and `NullFileStorageService` keeps
+  failing with `FileStorage.NotConfigured`. First consumer: MMCA.ADC speaker session assets.
+
 ## [1.198.0] - 2026-09-12
 
 ### Fixed
