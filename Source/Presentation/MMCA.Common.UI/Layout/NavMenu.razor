@@ -30,9 +30,9 @@
        app bar itself is hidden below 1024px). Culture + theme must be available to everyone here,
        authenticated or not (ADR-027/028); only the module app-bar components are gated on
        authentication. The signed-in user name deliberately does NOT repeat here: this row only ever
-       renders below 1024px, which is exactly where .nav-auth-section shows the name above Logout in
-       the hamburger menu, so a copy on the top row was pure duplication competing for the narrowest
-       row in the layout. *@
+       renders below 1024px, which is exactly where .nav-auth-section opens the hamburger menu with
+       the name above Logout, so a copy on the top row is pure duplication competing for the
+       narrowest row in the layout. *@
     @* role="group": aria-label is prohibited on a generic div (WCAG 4.1.2 / axe aria-prohibited-attr),
        and the row is a labelled set of related controls, which is exactly what group means. *@
     <div class="toprow-actions" role="group" aria-label="@L["Nav.QuickActions.Aria"]">
@@ -62,6 +62,33 @@
 <div class="nav-backdrop" aria-hidden="true"></div>
 
 <nav id="nav-menu" class="nav-scrollable" aria-label="@L["Nav.SiteNavigation.Aria"]">
+    @* The account block leads the menu (CSS renders it below 1024px only, where the MudAppBar that
+       carries Logout on desktop is hidden). It sits above the navigation list because the menu is a
+       scrolling column on a phone and an organizer or admin menu is long: at the top, the signed-in
+       name and the way out are both reachable the moment the hamburger opens, with no scroll. *@
+    <div class="nav-auth-section">
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-user-identity">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+                </div>
+                <MudNavMenu Color="Color.Default">
+                    @* Framework-owned account page: every host that renders this menu gets the
+                       signed-in devices list without wiring a NavItem of its own. *@
+                    <MudNavLink Href="@RoutePaths.Sessions" Icon="@Icons.Material.Filled.Devices">@L["Auth.Sessions.NavLabel"]</MudNavLink>
+                    <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">@L["Common.Button.Logout"]</MudNavLink>
+                </MudNavMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudNavMenu Color="Color.Default">
+                    <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">@L["Common.Button.Login"]</MudNavLink>
+                    <MudNavLink Href="/register" Icon="@Icons.Material.Filled.PersonAdd">@L["Common.Button.Register"]</MudNavLink>
+                </MudNavMenu>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+
     <MudNavMenu Color="Color.Default">
         <MudNavLink Href="@RoutePaths.Home" Icon="@Icons.Material.Filled.Home" Match="NavLinkMatch.All">@L["Nav.Home"]</MudNavLink>
 
@@ -136,29 +163,6 @@
             }
         }
     </MudNavMenu>
-
-    <div class="nav-auth-section">
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-user-identity">
-                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Small" />
-                    <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
-                </div>
-                <MudNavMenu Color="Color.Default">
-                    @* Framework-owned account page: every host that renders this menu gets the
-                       signed-in devices list without wiring a NavItem of its own. *@
-                    <MudNavLink Href="@RoutePaths.Sessions" Icon="@Icons.Material.Filled.Devices">@L["Auth.Sessions.NavLabel"]</MudNavLink>
-                    <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">@L["Common.Button.Logout"]</MudNavLink>
-                </MudNavMenu>
-            </Authorized>
-            <NotAuthorized>
-                <MudNavMenu Color="Color.Default">
-                    <MudNavLink Href="/login" Icon="@Icons.Material.Filled.Login">@L["Common.Button.Login"]</MudNavLink>
-                    <MudNavLink Href="/register" Icon="@Icons.Material.Filled.PersonAdd">@L["Common.Button.Register"]</MudNavLink>
-                </MudNavMenu>
-            </NotAuthorized>
-        </AuthorizeView>
-    </div>
 </nav>
 
 @code {

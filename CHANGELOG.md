@@ -6,6 +6,29 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- `MMCA.Common.Shared.Auth.AuthErrorCodes`, one place to name the authentication error codes a
+  caller reacts to rather than only displays. It carries `EmailAlreadyExists`, the code
+  `AuthenticationServiceBase` returns from both the up-front registration check and the
+  unique-index race recovery, so the UI matches a constant instead of a repeated literal. The code
+  and its message are unchanged.
+
+### Fixed
+
+- **Registering with an address that already has an account says so, and offers the way out**
+  (`MMCA.Common.UI`). The duplicate-address conflict rendered as a generic red alert carrying the
+  server's sentence, which invited the user to retry the form. The Register page now recognises the
+  `Auth.EmailAlreadyExists` code and shows a warning alert naming the typed address, with links to
+  sign in and to reset the password (`Auth.Register.EmailAlreadyRegistered` /
+  `Auth.Register.ResetPassword`, English and Spanish). Every other failure keeps the generic alert.
+- **The account section leads the mobile nav menu** (`MMCA.Common.UI`). `NavMenu` renders
+  `.nav-auth-section` (the signed-in identity, Signed-in devices and Logout, or Login and Register
+  when anonymous) above the module navigation list instead of below it. The section exists below
+  1024px only, where the menu is a scrolling column: on a phone a long organizer or admin menu put
+  Logout under the browser chrome. The safe-area bottom clearance moves with it, onto the expanded
+  `.nav-scrollable`, so the last nav item keeps the same breathing room.
+
 ## [1.195.0] - 2026-09-11
 
 ### Added

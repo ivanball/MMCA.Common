@@ -914,7 +914,7 @@ public abstract class AuthenticationServiceBase<TUser>(
     /// </summary>
     private static Result<AuthenticationResponse> EmailAlreadyExistsFailure() =>
         Result.Failure<AuthenticationResponse>(
-            Error.Conflict("Auth.EmailAlreadyExists", "An account with this email already exists.", nameof(RegisterAsync)));
+            Error.Conflict(AuthErrorCodes.EmailAlreadyExists, "An account with this email already exists.", nameof(RegisterAsync)));
 
     /// <summary>
     /// What opening or rotating a session produces: the plaintext token the client is handed (which

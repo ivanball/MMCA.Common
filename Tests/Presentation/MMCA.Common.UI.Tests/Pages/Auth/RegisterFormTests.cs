@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Testing.UI;
@@ -135,6 +136,55 @@ public sealed class RegisterFormTests : BunitTestBase
 
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("Registration failed. Please try again."));
         cut.Markup.Should().NotContain("Auth.Register.Failed");
+    }
+
+    [Fact]
+    public void WhenTheEmailIsAlreadyRegistered_PointsTheUserAtSignInAndPasswordReset()
+    {
+        // The duplicate-address conflict is the one registration failure with a next step of its own,
+        // and it is recognised by its CODE, never by the server's wording.
+        RegistrationReturns(Result.Failure<AuthenticationResponse>(
+            Error.Conflict(AuthErrorCodes.EmailAlreadyExists, "An account with this email already exists.")));
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid='email-already-registered']").Should().ContainSingle());
+
+        var alert = cut.Find("[data-testid='email-already-registered']");
+        alert.GetAttribute("role").Should().Be("alert", "the block only enters the DOM after a failed submit");
+        alert.ClassList.Should().Contain(
+            c => c.Contains("warning", StringComparison.Ordinal),
+            "an existing account is guidance, not an error to retry past");
+        alert.TextContent.Should().Contain("ada@example.com", "the user must see WHICH address is taken");
+        alert.TextContent.Should().Contain("is already registered");
+
+        var hrefs = alert.QuerySelectorAll("a").Select(a => a.GetAttribute("href")).ToList();
+        hrefs.Should().Contain("/login").And.Contain("/forgot-password");
+
+        cut.FindAll(".mud-alert").Should().ContainSingle(
+            "the generic error alert is replaced by this one, not shown beside it");
+        cut.Markup.Should().NotContain("An account with this email already exists.",
+            "the server's generic wording gives the user nowhere to go");
+    }
+
+    [Fact]
+    public void WhenTheFailureIsNotADuplicateEmail_ShowsOnlyTheGenericAlert()
+    {
+        RegistrationReturns(Result.Failure<AuthenticationResponse>(
+            Error.Failure("Auth.Register.Unavailable", "Registration is temporarily unavailable.")));
+        var cut = RenderUnderTest<Register>(_ => { });
+        FillRequiredFields(cut);
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() =>
+            cut.Markup.Should().Contain("Registration is temporarily unavailable."));
+        cut.FindAll("[data-testid='email-already-registered']").Should().BeEmpty(
+            "only the duplicate-address code earns the sign-in guidance");
+        cut.FindAll(".mud-alert").Should().ContainSingle();
     }
 
     private static void FillRequiredFields(IRenderedComponent<Register> cut)
