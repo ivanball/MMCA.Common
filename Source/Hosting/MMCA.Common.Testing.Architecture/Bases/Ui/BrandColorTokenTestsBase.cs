@@ -17,7 +17,7 @@ public abstract class BrandColorTokenTestsBase
 
     /// <summary>
     /// The logical manifest-resource names of the landing-page scoped stylesheets embedded in the
-    /// subclass's test assembly (e.g. <c>["StoreHome.Server.razor.css", "StoreHome.Client.razor.css"]</c>).
+    /// subclass's test assembly (e.g. <c>["Home.Server.razor.css", "Home.Client.razor.css"]</c>).
     /// </summary>
     protected abstract IReadOnlyList<string> EmbeddedCssLogicalNames { get; }
 

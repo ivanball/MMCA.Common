@@ -27,7 +27,7 @@ namespace MMCA.Common.Application.UseCases.Crud;
 /// <para>
 /// <b>The record is not sealed, on purpose.</b> A real update often carries state beside the request:
 /// an id taken from the route rather than the body (the child row a PATCH addresses), a flag the
-/// server decided rather than the caller (whether the caller holds an organizer role), a second
+/// server decided rather than the caller (whether the caller holds a privileged role), a second
 /// concurrency token for a child. Deriving a positional record from this one adds those properties
 /// while inheriting <c>Id</c>, <c>Request</c>, <c>RowVersion</c>, the
 /// <see cref="ICommandWithRequest{TRequest}"/> validator bridge and the cache prefix, and

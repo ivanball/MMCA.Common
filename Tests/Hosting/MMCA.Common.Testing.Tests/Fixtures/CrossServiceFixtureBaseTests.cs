@@ -111,7 +111,7 @@ public class CrossServiceFixtureBaseTests
         protected override IReadOnlyList<CrossServiceDataSource> DataSources =>
             [new CrossServiceDataSource("Catalog", "Store_Catalog")];
 
-        protected override string MigrationsAssemblyPrefix => "MMCA.Store.Migrations.SqlServer";
+        protected override string MigrationsAssemblyPrefix => "MMCA.Demo.Migrations.SqlServer";
 
         public void Push(string key, string? value) => SetEnvironmentVariable(key, value);
 

@@ -12,15 +12,15 @@ public sealed class PermissionAuthorizationHandlerTests
     private const string Permission = "sessions:manage";
 
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
-    private const string Organizer = "Organizer";
-    private const string Attendee = "Attendee";
+    private const string Manager = "Manager";
+    private const string Member = "Member";
     private const string Admin = "Admin";
 
     [Fact]
     public async Task HandleAsync_WhenRoleGrantsPermission_Succeeds()
     {
-        var context = CreateContext(roles: [Organizer]);
-        var handler = CreateHandler(grantTo: Organizer);
+        var context = CreateContext(roles: [Manager]);
+        var handler = CreateHandler(grantTo: Manager);
 
         await handler.HandleAsync(context);
 
@@ -44,8 +44,8 @@ public sealed class PermissionAuthorizationHandlerTests
     [Fact]
     public async Task HandleAsync_WhenRoleDoesNotGrantPermission_DoesNotSucceed()
     {
-        var context = CreateContext(roles: [Attendee]);
-        var handler = CreateHandler(grantTo: Organizer);
+        var context = CreateContext(roles: [Member]);
+        var handler = CreateHandler(grantTo: Manager);
 
         await handler.HandleAsync(context);
 
@@ -55,8 +55,8 @@ public sealed class PermissionAuthorizationHandlerTests
     [Fact]
     public async Task HandleAsync_WhenNotAuthenticated_DoesNotSucceed()
     {
-        var context = CreateContext(roles: [Organizer], authenticated: false);
-        var handler = CreateHandler(grantTo: Organizer);
+        var context = CreateContext(roles: [Manager], authenticated: false);
+        var handler = CreateHandler(grantTo: Manager);
 
         await handler.HandleAsync(context);
 

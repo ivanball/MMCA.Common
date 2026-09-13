@@ -220,7 +220,7 @@ public sealed class DataSourceResolverTests
         var physical = sut.GetPhysical(DataSourceKey.Default(DataSource.SQLServer));
 
         physical.ConnectionString.Should().Be(DefaultSql);
-        physical.CosmosDatabaseName.Should().Be("AtlDevCon");
+        physical.CosmosDatabaseName.Should().Be("MMCA");
     }
 
     [Fact]

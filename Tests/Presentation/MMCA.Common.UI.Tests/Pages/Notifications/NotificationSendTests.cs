@@ -126,11 +126,11 @@ public sealed class NotificationSendTests : BunitTestBase
     {
         // The send is scoped automatically by the notification service; without this caption the
         // operator composes a broadcast with no statement of who receives it.
-        Services.AddSingleton<INotificationScopeProvider>(new NamedScopeProvider("ADC 2026"));
+        Services.AddSingleton<INotificationScopeProvider>(new NamedScopeProvider("Spring Summit 2026"));
 
         var cut = RenderUnderTest<NotificationSend>(_ => { });
 
-        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Targeting: ADC 2026"));
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Targeting: Spring Summit 2026"));
     }
 
     [Fact]

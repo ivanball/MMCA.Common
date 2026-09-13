@@ -45,7 +45,7 @@ public static class IndexBuilderExtensions
         /// <param name="additionalFilter">
         /// Optional predicate to combine with the soft-delete predicate using <c>AND</c>, for an
         /// index that is also filtered on something else (for example
-        /// <c>"[StripeSessionId] IS NOT NULL"</c>). The two are joined in that order, so the
+        /// <c>"[ExternalSessionId] IS NOT NULL"</c>). The two are joined in that order, so the
         /// produced SQL matches the hand-authored literal it replaces.
         /// </param>
         /// <returns>The same builder instance for chaining.</returns>

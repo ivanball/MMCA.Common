@@ -14,8 +14,8 @@ namespace MMCA.Common.Application.Users;
 /// the identical error shape.
 /// <para>
 /// The role test is passed in already evaluated: each app owns its own role vocabulary
-/// (<c>UserRole.IsOrganizer</c> vs <c>UserRole.IsAdmin</c>), and both are case-insensitive because a
-/// role claim may carry any casing.
+/// (<c>UserRole.IsAdmin</c>, or whatever the app's privileged role is), and every such test is
+/// case-insensitive because a role claim may carry any casing.
 /// </para>
 /// </remarks>
 public static class UserOwnershipRule
@@ -26,7 +26,7 @@ public static class UserOwnershipRule
     /// <param name="request">The user-scoped request carrying the target and the caller.</param>
     /// <param name="callerHasPrivilegedRole">
     /// Whether the caller's role bypasses the ownership requirement (evaluated by the app, e.g.
-    /// <c>UserRole.IsOrganizer(request.CurrentUserRole)</c>).
+    /// <c>UserRole.IsAdmin(request.CurrentUserRole)</c>).
     /// </param>
     /// <param name="code">The error code to report when the rule rejects (e.g. "User.DeleteForbidden").</param>
     /// <param name="message">The message to report when the rule rejects.</param>

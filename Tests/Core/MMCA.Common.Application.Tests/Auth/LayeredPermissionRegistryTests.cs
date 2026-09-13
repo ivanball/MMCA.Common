@@ -12,8 +12,8 @@ namespace MMCA.Common.Application.Tests.Auth;
 public sealed class LayeredPermissionRegistryTests
 {
     private static readonly string[] AdminRole = ["Admin"];
-    private static readonly string[] CustomerRole = ["Customer"];
-    private static readonly string[] BothRoles = ["Customer", "Admin"];
+    private static readonly string[] MemberRole = ["Member"];
+    private static readonly string[] BothRoles = ["Member", "Admin"];
     private static readonly string[] CompiledAndStored = ["orders:write", "reports:read"];
     private static readonly string[] CompiledOnly = ["orders:write"];
 
@@ -32,10 +32,10 @@ public sealed class LayeredPermissionRegistryTests
     public void HasPermission_WhenOnlyAStoredGrantCoversIt_IsAllowed()
     {
         var cache = new FakeGrantCache();
-        cache.Grant("Customer", "orders:read");
+        cache.Grant("Member", "orders:read");
         var sut = new LayeredPermissionRegistry(Compiled(("Admin", "orders:write")), cache);
 
-        sut.HasPermission(CustomerRole, "orders:read").Should().BeTrue();
+        sut.HasPermission(MemberRole, "orders:read").Should().BeTrue();
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class LayeredPermissionRegistryTests
     {
         var sut = new LayeredPermissionRegistry(Compiled(("Admin", "orders:write")), new FakeGrantCache());
 
-        sut.HasPermission(CustomerRole, "orders:write").Should().BeFalse();
+        sut.HasPermission(MemberRole, "orders:write").Should().BeFalse();
     }
 
     [Fact]
@@ -103,13 +103,13 @@ public sealed class LayeredPermissionRegistryTests
     public void HasPermission_AfterTheCachedGrantIsInvalidated_IsDeniedOnTheNextCall()
     {
         var cache = new FakeGrantCache();
-        cache.Grant("Customer", "orders:read");
+        cache.Grant("Member", "orders:read");
         var sut = new LayeredPermissionRegistry(Compiled(), cache);
 
-        sut.HasPermission(CustomerRole, "orders:read").Should().BeTrue();
+        sut.HasPermission(MemberRole, "orders:read").Should().BeTrue();
         cache.Clear();
 
-        sut.HasPermission(CustomerRole, "orders:read").Should()
+        sut.HasPermission(MemberRole, "orders:read").Should()
             .BeFalse("the registry holds no snapshot of its own, so a revoke takes effect on the next check");
     }
 

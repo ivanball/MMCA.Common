@@ -16,15 +16,15 @@ public sealed class RoleValueTests
 
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
     private const string Admin = "Admin";
-    private const string Customer = "Customer";
-    private const string Organizer = "Organizer";
-    private const string Attendee = "Attendee";
+    private const string Guest = "Guest";
+    private const string Manager = "Manager";
+    private const string Member = "Member";
 
     [Fact]
     public void Validate_WithDefaultComparerSet_MatchesRoleCaseInsensitively()
     {
         // A default-comparer set: ordinal, so "admin" is not "Admin" to the set's own lookup.
-        var knownRoles = new HashSet<string> { Admin, Customer };
+        var knownRoles = new HashSet<string> { Admin, Guest };
 
         var result = RoleValue.Validate("admin", knownRoles, Source);
 
@@ -43,9 +43,9 @@ public sealed class RoleValueTests
     [Fact]
     public void Validate_WithExactRole_Succeeds()
     {
-        var knownRoles = new HashSet<string> { Organizer, Attendee };
+        var knownRoles = new HashSet<string> { Manager, Member };
 
-        RoleValue.Validate(Organizer, knownRoles, Source).IsSuccess.Should().BeTrue();
+        RoleValue.Validate(Manager, knownRoles, Source).IsSuccess.Should().BeTrue();
     }
 
     [Fact]

@@ -27,7 +27,7 @@ namespace MMCA.Common.API.Caching;
 /// <para>
 /// SECURITY: apply this policy ONLY to endpoints whose response does not depend on the
 /// caller's identity — a cached response is served verbatim to every subsequent caller.
-/// When an endpoint returns an elevated payload for a privileged role (e.g. organizers see
+/// When an endpoint returns an elevated payload for a privileged role (e.g. administrators see
 /// unpublished rows), pass that role via <c>bypassRoles</c>: callers in a bypass
 /// role skip the cache entirely (no lookup, no storage), so their elevated responses are
 /// never cached and they always read fresh, while every other caller's identical payload

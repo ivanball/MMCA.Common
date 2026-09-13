@@ -20,15 +20,15 @@ public sealed class CurrentUserTargetingContextAccessorTests
         var sut = CreateAccessor(new ClaimsPrincipal(new ClaimsIdentity(
             [
                 new Claim(AuthClaimTypes.Subject, "42"),
-                new Claim(ClaimTypes.Role, "Organizer"),
-                new Claim(ClaimTypes.Role, "Attendee"),
+                new Claim(ClaimTypes.Role, "Manager"),
+                new Claim(ClaimTypes.Role, "Member"),
             ],
             authenticationType: "TestAuth")));
 
         var context = await sut.GetContextAsync();
 
         context.UserId.Should().Be("42");
-        context.Groups.Should().BeEquivalentTo("Organizer", "Attendee");
+        context.Groups.Should().BeEquivalentTo("Manager", "Member");
     }
 
     // Inbound claim mapping can be off, in which case the middleware leaves the raw JWT claim names
@@ -40,12 +40,12 @@ public sealed class CurrentUserTargetingContextAccessorTests
     public async Task GetContextAsync_ReadsUnmappedRoleClaimTypesToo(string roleClaimType)
     {
         var sut = CreateAccessor(new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(AuthClaimTypes.Subject, "42"), new Claim(roleClaimType, "Organizer")],
+            [new Claim(AuthClaimTypes.Subject, "42"), new Claim(roleClaimType, "Manager")],
             authenticationType: "TestAuth")));
 
         var context = await sut.GetContextAsync();
 
-        context.Groups.Should().BeEquivalentTo("Organizer");
+        context.Groups.Should().BeEquivalentTo("Manager");
     }
 
     // A token predating the user_id claim still has to target something stable, or every such

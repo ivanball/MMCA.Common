@@ -189,7 +189,7 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
     /// </para>
     /// <para>
     /// Only the "not soft-deleted" rule lives here. Ownership checks (does this child belong to this
-    /// aggregate) and re-validation of organizer-entered fields are aggregate-specific and stay in
+    /// aggregate) and re-validation of operator-entered fields are aggregate-specific and stay in
     /// the calling method, which runs them BEFORE calling this helper so a rejected restore leaves
     /// the child untouched and still deleted.
     /// </para>

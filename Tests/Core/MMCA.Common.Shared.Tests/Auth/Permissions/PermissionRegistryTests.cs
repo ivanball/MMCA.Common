@@ -9,38 +9,38 @@ public sealed class PermissionRegistryTests
     private const string Read = "sessions:read";
 
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
-    private const string Organizer = "Organizer";
-    private const string Attendee = "Attendee";
-    private const string Customer = "Customer";
+    private const string Manager = "Manager";
+    private const string Member = "Member";
+    private const string Guest = "Guest";
 
     [Fact]
     public void HasPermission_WhenRoleGrantsPermission_ReturnsTrue()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage, Read)
+            .Grant(Manager, Manage, Read)
             .Build();
 
-        registry.HasPermission([Organizer], Manage).Should().BeTrue();
+        registry.HasPermission([Manager], Manage).Should().BeTrue();
     }
 
     [Fact]
     public void HasPermission_WhenRoleDoesNotGrantPermission_ReturnsFalse()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant(Attendee, Read)
+            .Grant(Member, Read)
             .Build();
 
-        registry.HasPermission([Attendee], Manage).Should().BeFalse();
+        registry.HasPermission([Member], Manage).Should().BeFalse();
     }
 
     [Fact]
     public void HasPermission_IsCaseInsensitiveOnRole()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage)
+            .Grant(Manager, Manage)
             .Build();
 
-        registry.HasPermission(["organizer"], Manage).Should().BeTrue();
+        registry.HasPermission(["manager"], Manage).Should().BeTrue();
     }
 
     [Fact]
@@ -48,12 +48,12 @@ public sealed class PermissionRegistryTests
     {
         // Simulates two modules each contributing grants for the same role.
         var registry = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage)
-            .Grant(Organizer, Read)
+            .Grant(Manager, Manage)
+            .Grant(Manager, Read)
             .Build();
 
-        registry.HasPermission([Organizer], Manage).Should().BeTrue();
-        registry.HasPermission([Organizer], Read).Should().BeTrue();
+        registry.HasPermission([Manager], Manage).Should().BeTrue();
+        registry.HasPermission([Manager], Read).Should().BeTrue();
     }
 
     [Fact]
@@ -68,9 +68,9 @@ public sealed class PermissionRegistryTests
     public void HasPermission_WithNoMatchingRole_ReturnsFalse()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage)
+            .Grant(Manager, Manage)
             .Build();
 
-        registry.HasPermission([Attendee, Customer], Manage).Should().BeFalse();
+        registry.HasPermission([Member, Guest], Manage).Should().BeFalse();
     }
 }

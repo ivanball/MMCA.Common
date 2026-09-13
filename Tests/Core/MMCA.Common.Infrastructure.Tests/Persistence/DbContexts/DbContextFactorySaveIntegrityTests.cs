@@ -172,7 +172,7 @@ public sealed class DbContextFactorySaveIntegrityTests : IDisposable
             var context = new IntegrityTestDbContext(
                 options,
                 sp,
-                new PhysicalDataSource(key, connection.ConnectionString, null, "AtlDevCon"));
+                new PhysicalDataSource(key, connection.ConnectionString, null, "MMCA"));
             context.Database.EnsureCreated();
             return context;
         }

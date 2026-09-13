@@ -4,7 +4,7 @@ public static partial class ArchitectureRules
 {
     /// <summary>
     /// Frameworks that must never leak into a Domain (or Shared) layer. Repos may extend this via the
-    /// <c>extra</c> parameter (e.g. Store adds "Stripe", ADC adds "RabbitMQ").
+    /// <c>extra</c> parameter (e.g. a payment SDK or a broker client).
     /// </summary>
     public static readonly IReadOnlyList<string> ForbiddenDomainDependencies =
     [
@@ -17,7 +17,6 @@ public static partial class ArchitectureRules
         "Scrutor",
         "MudBlazor",
         "Polly",
-        "Stripe",
         "StackExchange.Redis",
     ];
 

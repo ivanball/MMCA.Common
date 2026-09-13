@@ -458,5 +458,5 @@ public sealed class SessionAwareAuthenticationService(
 
     /// <inheritdoc />
     protected override string CreateAccessToken(TestAuthUser user) =>
-        TokenService.GenerateAccessToken(user.Id, "user@example.com", "Attendee", "Test User", AdditionalClaims);
+        TokenService.GenerateAccessToken(user.Id, "user@example.com", "Member", "Test User", AdditionalClaims);
 }

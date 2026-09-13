@@ -25,7 +25,7 @@ public sealed class RoleAdminListTests : BunitTestBase
 
         SetupRoles(
             new RolePermissionsResponse("Admin", ["orders:write", "reports:read"], ["exports:run"]),
-            new RolePermissionsResponse("Customer", ["orders:read"], []));
+            new RolePermissionsResponse("Member", ["orders:read"], []));
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class RoleAdminListTests : BunitTestBase
 
         await cut.WaitForAssertionAsync(() => cut.FindAll("tbody tr").Should().HaveCount(2));
         cut.Markup.Should().Contain("Admin");
-        cut.Markup.Should().Contain("Customer");
+        cut.Markup.Should().Contain("Member");
 
         cut.FindAll("[data-testid=\"compiled-count\"]").Select(cell => cell.TextContent.Trim())
             .Should().Equal("2", "1");

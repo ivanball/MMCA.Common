@@ -114,7 +114,7 @@ public sealed class DataExportControllerBaseTests
     public async Task ExportAsync_BuildsTheQueryFromTheRouteAndTheAuthenticatedCaller()
     {
         _currentUserServiceMock.Setup(s => s.UserId).Returns(2);
-        _currentUserServiceMock.Setup(s => s.Role).Returns("Organizer");
+        _currentUserServiceMock.Setup(s => s.Role).Returns("Manager");
         TestExportQuery? capturedQuery = null;
         _handlerMock
             .Setup(h => h.HandleAsync(It.IsAny<TestExportQuery>(), It.IsAny<CancellationToken>()))
@@ -127,7 +127,7 @@ public sealed class DataExportControllerBaseTests
         capturedQuery.Should().NotBeNull();
         capturedQuery!.UserId.Should().Be(7);
         capturedQuery.CurrentUserId.Should().Be(2);
-        capturedQuery.CurrentUserRole.Should().Be("Organizer");
+        capturedQuery.CurrentUserRole.Should().Be("Manager");
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class DataExportControllerBaseTests
             FormatVersion = "1.0",
             GeneratedOn = GeneratedOn,
             UserId = 7,
-            Subject = new SubjectSnapshot("jane@example.com", "Attendee"),
+            Subject = new SubjectSnapshot("jane@example.com", "Member"),
             Sections =
             [
                 new UserDataExportSectionDTO

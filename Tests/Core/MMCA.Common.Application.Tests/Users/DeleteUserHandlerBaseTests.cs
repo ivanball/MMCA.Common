@@ -16,14 +16,14 @@ namespace MMCA.Common.Application.Tests.Users;
 /// </summary>
 public sealed class DeleteUserHandlerBaseTests
 {
-    private const string PrivilegedRole = "Organizer";
+    private const string PrivilegedRole = "Manager";
 
     [Fact]
     public async Task HandleAsync_WhenCallerIsNeitherOwnerNorPrivileged_ReturnsForbiddenWithoutFetching()
     {
         var (sut, mocks) = CreateSut();
 
-        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 2, "Attendee"));
+        Result result = await sut.HandleAsync(new TestDeleteUserCommand(UserId: 1, CurrentUserId: 2, "Member"));
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e =>
@@ -338,7 +338,7 @@ public sealed class TestDeleteUserHandler(IUnitOfWork unitOfWork, ICacheService 
     public IReadOnlyList<Func<CancellationToken, Task>> PostCommitActions { get; set; } = [];
 
     protected override bool HasDeletePrivilege(string? currentUserRole) =>
-        string.Equals(currentUserRole, "Organizer", StringComparison.OrdinalIgnoreCase);
+        string.Equals(currentUserRole, "Manager", StringComparison.OrdinalIgnoreCase);
 
     protected override Task<Result> OnAfterSoftDeleteAsync(
         TestHidingDeleteUser user,

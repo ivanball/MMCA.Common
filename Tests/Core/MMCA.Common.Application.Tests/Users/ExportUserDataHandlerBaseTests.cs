@@ -16,7 +16,7 @@ namespace MMCA.Common.Application.Tests.Users;
 /// </summary>
 public sealed class ExportUserDataHandlerBaseTests
 {
-    private const string PrivilegedRole = "Organizer";
+    private const string PrivilegedRole = "Manager";
 
     private static readonly DateTimeOffset FixedNow = new(2026, 8, 13, 17, 42, 9, TimeSpan.Zero);
 
@@ -27,7 +27,7 @@ public sealed class ExportUserDataHandlerBaseTests
         var (sut, mocks) = CreateSut(section);
 
         Result<UserDataExportDTO> result = await sut.HandleAsync(
-            new TestExportUserDataQuery(UserId: 1, CurrentUserId: 2, "Attendee"));
+            new TestExportUserDataQuery(UserId: 1, CurrentUserId: 2, "Member"));
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e =>
@@ -261,7 +261,7 @@ public sealed class TestExportUserDataHandler(
     public UserDataExportDTO? CompletedExport { get; private set; }
 
     protected override bool HasExportPrivilege(string? currentUserRole) =>
-        string.Equals(currentUserRole, "Organizer", StringComparison.OrdinalIgnoreCase);
+        string.Equals(currentUserRole, "Manager", StringComparison.OrdinalIgnoreCase);
 
     protected override Task<object?> BuildSubjectSnapshotAsync(
         TestIdentityUser user,

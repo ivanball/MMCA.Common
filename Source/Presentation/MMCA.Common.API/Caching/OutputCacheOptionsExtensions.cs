@@ -25,7 +25,7 @@ public static class OutputCacheOptionsExtensions
         /// with cache-bypassing roles: callers in a bypass role skip the cache entirely
         /// (no lookup, no storage) and always read fresh. Use for endpoints whose payload is
         /// identical for every caller EXCEPT a privileged role that receives an elevated
-        /// payload (e.g. organizers see unpublished rows); see the policy's security remarks.
+        /// payload (e.g. administrators see unpublished rows); see the policy's security remarks.
         /// </summary>
         /// <param name="name">The policy name referenced by <c>[OutputCache(PolicyName = ...)]</c>.</param>
         /// <param name="expiration">How long a cached response stays valid.</param>

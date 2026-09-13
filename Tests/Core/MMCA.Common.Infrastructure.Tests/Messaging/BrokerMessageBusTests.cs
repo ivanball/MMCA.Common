@@ -183,7 +183,7 @@ public sealed class BrokerMessageBusTests
     {
         var currentUser = new Mock<ICurrentUserService>();
         currentUser.SetupGet(u => u.UserId).Returns(userId);
-        currentUser.SetupGet(u => u.Roles).Returns(roles ?? ["Admin", "Organizer"]);
+        currentUser.SetupGet(u => u.Roles).Returns(roles ?? ["Admin", "Manager"]);
 
         var tenantContext = new Mock<ITenantContext>();
         tenantContext.SetupGet(t => t.TenantId).Returns(tenantId);
@@ -243,7 +243,7 @@ public sealed class BrokerMessageBusTests
         {
             [MessageHeaders.TenantId] = "tenant-a",
             [MessageHeaders.UserId] = "42",
-            [MessageHeaders.UserRoles] = "Admin,Organizer",
+            [MessageHeaders.UserRoles] = "Admin,Manager",
             [MessageHeaders.CorrelationId] = "correlation-1",
         });
     }

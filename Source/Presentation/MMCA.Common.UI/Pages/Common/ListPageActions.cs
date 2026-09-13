@@ -8,7 +8,7 @@ namespace MMCA.Common.UI.Pages.Common;
 
 /// <summary>
 /// Shared actions for list pages built on <see cref="DataGridListPageBase{TDto}"/>: the
-/// mobile/desktop reload dispatch and the confirm-delete-reload flow that every organizer list
+/// mobile/desktop reload dispatch and the confirm-delete-reload flow that every admin list
 /// page repeats. Kept as plain statics rather than members on the base so a page that composes
 /// its own layout (or holds several grids) can reuse them without inheriting anything.
 /// </summary>

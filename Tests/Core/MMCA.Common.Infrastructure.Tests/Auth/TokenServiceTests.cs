@@ -38,7 +38,7 @@ public sealed class TokenServiceTests : IDisposable
     [Fact]
     public void GenerateAccessToken_ReturnsValidJwt()
     {
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var handler = new JwtSecurityTokenHandler();
         handler.CanReadToken(token).Should().BeTrue();
@@ -47,7 +47,7 @@ public sealed class TokenServiceTests : IDisposable
         jwt.Issuer.Should().Be(Settings.Issuer);
         jwt.Audiences.Should().Contain(Settings.Audience);
         jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.Email && c.Value == "user@test.com");
-        jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == "Organizer");
+        jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.Role && c.Value == "Manager");
         jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Sub && c.Value == "1");
         jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Jti);
         jwt.Claims.Should().Contain(c => c.Type == JwtRegisteredClaimNames.Iat);
@@ -57,7 +57,7 @@ public sealed class TokenServiceTests : IDisposable
     public void GenerateAccessToken_SetsCorrectExpiration()
     {
         var before = DateTime.UtcNow;
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
         var after = DateTime.UtcNow;
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
@@ -70,7 +70,7 @@ public sealed class TokenServiceTests : IDisposable
     {
         var speakerId = Guid.NewGuid();
         var additionalClaims = new[] { new Claim("speaker_id", speakerId.ToString()) };
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User", additionalClaims);
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User", additionalClaims);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().Contain(c => c.Type == "speaker_id" && c.Value == speakerId.ToString());
@@ -82,11 +82,11 @@ public sealed class TokenServiceTests : IDisposable
     public void GenerateAccessToken_EmitsOnePermissionClaimPerGrantedPermission_Ordered()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant("Organizer", "sessions:manage", "notifications:manage")
+            .Grant("Manager", "sessions:manage", "notifications:manage")
             .Build();
         using var sut = new TokenService(Options.Create(Settings), registry);
 
-        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Where(c => c.Type == AuthClaimTypes.Permission).Select(c => c.Value)
@@ -96,7 +96,7 @@ public sealed class TokenServiceTests : IDisposable
     [Fact]
     public void GenerateAccessToken_WithUnconfiguredRegistry_EmitsNoPermissionClaims()
     {
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().NotContain(c => c.Type == AuthClaimTypes.Permission);
@@ -106,11 +106,11 @@ public sealed class TokenServiceTests : IDisposable
     public void GenerateAccessToken_ForARoleTheRegistryDoesNotKnow_EmitsNoPermissionClaims()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant("Organizer", "sessions:manage")
+            .Grant("Manager", "sessions:manage")
             .Build();
         using var sut = new TokenService(Options.Create(Settings), registry);
 
-        var token = sut.GenerateAccessToken(1, "user@test.com", "Attendee", "Test User");
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Member", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().NotContain(c => c.Type == AuthClaimTypes.Permission);
@@ -120,12 +120,12 @@ public sealed class TokenServiceTests : IDisposable
     public void GenerateAccessToken_WhenAdditionalClaimsRepeatAPermission_DoesNotDuplicateIt()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant("Organizer", "sessions:manage")
+            .Grant("Manager", "sessions:manage")
             .Build();
         using var sut = new TokenService(Options.Create(Settings), registry);
         var additionalClaims = new[] { new Claim(AuthClaimTypes.Permission, "sessions:manage") };
 
-        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User", additionalClaims);
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User", additionalClaims);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Where(c => c.Type == AuthClaimTypes.Permission).Select(c => c.Value)
@@ -135,7 +135,7 @@ public sealed class TokenServiceTests : IDisposable
     [Fact]
     public void GenerateAccessToken_WithoutAdditionalClaims_OmitsExtraClaims()
     {
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().NotContain(c => c.Type == "speaker_id");
@@ -184,7 +184,7 @@ public sealed class TokenServiceTests : IDisposable
     [Fact]
     public void GetPrincipalFromExpiredToken_ValidToken_ReturnsPrincipal()
     {
-        var token = _sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+        var token = _sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
 
         var principal = _sut.GetPrincipalFromExpiredToken(token);
 
@@ -214,7 +214,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30
         };
         using var wrongService = new TokenService(Options.Create(wrongSettings), NoPermissions);
-        var token = wrongService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = wrongService.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
 
@@ -234,7 +234,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30
         };
         using var wrongService = new TokenService(Options.Create(wrongSettings), NoPermissions);
-        var token = wrongService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = wrongService.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
 
@@ -299,7 +299,7 @@ public sealed class TokenServiceTests : IDisposable
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions);
 
-        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Header.Alg.Should().Be(SecurityAlgorithms.RsaSha256);
@@ -313,7 +313,7 @@ public sealed class TokenServiceTests : IDisposable
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions);
 
-        var token = sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+        var token = sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
         var principal = sut.GetPrincipalFromExpiredToken(token);
 
         principal.Should().NotBeNull();
@@ -340,7 +340,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30,
         };
         using var hmacService = new TokenService(Options.Create(hmacSettings), NoPermissions);
-        var hmacToken = hmacService.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var hmacToken = hmacService.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var principal = rsaService.GetPrincipalFromExpiredToken(hmacToken);
 
@@ -351,7 +351,7 @@ public sealed class TokenServiceTests : IDisposable
     [Fact]
     public void GenerateAccessToken_EmitsNoDuplicateUserIdClaim()
     {
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().NotContain(
@@ -368,7 +368,7 @@ public sealed class TokenServiceTests : IDisposable
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
         using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
 
-        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Header.Kid.Should().Be("identity-2026-07");
@@ -385,7 +385,7 @@ public sealed class TokenServiceTests : IDisposable
         var provider = new RsaJwksProvider(Options.Create(jwks));
 
         var jwt = new JwtSecurityTokenHandler()
-            .ReadJwtToken(sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User"));
+            .ReadJwtToken(sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User"));
 
         var published = provider.GetJsonWebKeySet().Keys.Should().ContainSingle().Subject;
         jwt.Header.Kid.Should().Be(published.Kid);
@@ -394,7 +394,7 @@ public sealed class TokenServiceTests : IDisposable
     [Fact]
     public void GenerateAccessToken_Hs256_EmitsNoKeyId()
     {
-        var token = _sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = _sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Header.Kid.Should().BeNull("a symmetric deployment publishes no key set to select from");
@@ -407,7 +407,7 @@ public sealed class TokenServiceTests : IDisposable
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
         using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
 
-        var token = sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+        var token = sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
 
         sut.GetPrincipalFromExpiredToken(token).Should().NotBeNull("the refresh flow is one of the validation paths");
     }
@@ -421,7 +421,7 @@ public sealed class TokenServiceTests : IDisposable
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
         using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
-        var token = sut.GenerateAccessToken(42, "user@test.com", "Attendee", "Test Attendee");
+        var token = sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
 
         using var validationRsa = RSA.Create();
         validationRsa.ImportFromPem(publicPem);
@@ -449,7 +449,7 @@ public sealed class TokenServiceTests : IDisposable
         var (privatePem, _) = GenerateRsaKeyPair();
         using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem: null), NoPermissions);
 
-        var token = sut.GenerateAccessToken(1, "user@test.com", "Organizer", "Test User");
+        var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
         var principal = sut.GetPrincipalFromExpiredToken(token);
 
         principal.Should().NotBeNull();

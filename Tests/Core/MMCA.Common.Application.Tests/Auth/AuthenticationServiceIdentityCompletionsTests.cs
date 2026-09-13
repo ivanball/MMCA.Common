@@ -358,7 +358,7 @@ public sealed class ConfirmableAuthenticationService(
         Result.Success(new ConfirmableAuthUser { Id = 1 });
 
     protected override string CreateAccessToken(ConfirmableAuthUser user) =>
-        TokenService.GenerateAccessToken(user.Id, "user@example.com", "Attendee", "Test User");
+        TokenService.GenerateAccessToken(user.Id, "user@example.com", "Member", "Test User");
 }
 
 /// <summary>Canned <see cref="ITwoFactorAuthenticator"/> answers for the sign-in gate tests.</summary>

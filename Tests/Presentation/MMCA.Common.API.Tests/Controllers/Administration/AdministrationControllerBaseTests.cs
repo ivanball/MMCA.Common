@@ -128,7 +128,7 @@ public sealed class AdministrationControllerBaseTests
     [Fact]
     public async Task SetRolesAsync_ReplacesTheWholeRoleSet()
     {
-        string[] roles = ["Admin", "Customer"];
+        string[] roles = ["Admin", "Member"];
         _users.Setup(x => x.SetRolesAsync(TargetUserId, It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
         var sut = CreateUsersController();
@@ -160,13 +160,13 @@ public sealed class AdministrationControllerBaseTests
     {
         _roles.Setup(x => x.GetCatalogAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(
-                new PermissionCatalogResponse(["Admin", "Customer"], ["orders:write", "reports:read"])));
+                new PermissionCatalogResponse(["Admin", "Member"], ["orders:write", "reports:read"])));
         var sut = CreateRolesController();
 
         var result = await sut.GetCatalogAsync();
 
         var catalog = (result.Result as OkObjectResult)!.Value as PermissionCatalogResponse;
-        catalog!.Roles.Should().Equal("Admin", "Customer");
+        catalog!.Roles.Should().Equal("Admin", "Member");
         catalog.Permissions.Should().Equal("orders:write", "reports:read");
     }
 

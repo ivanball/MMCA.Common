@@ -25,7 +25,7 @@ public sealed class NavMenuTests : BunitTestBase
 {
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
     private const string AdminRole = "Admin";
-    private const string OrganizerRole = "Organizer";
+    private const string ManagerRole = "Manager";
 
     private readonly Mock<IAuthUIService> _auth = new();
 
@@ -89,7 +89,7 @@ public sealed class NavMenuTests : BunitTestBase
     public void TheAccountSectionLeadsTheMenu_AheadOfTheNavigationList()
     {
         // The auth section renders below 1024px only, where the menu is a scrolling column: an
-        // organizer or admin menu is long enough to push a trailing Logout under the browser chrome,
+        // admin menu is long enough to push a trailing Logout under the browser chrome,
         // so the account row and the way out come first.
         RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(name: "Ada Lovelace"), _ => { });
@@ -169,13 +169,13 @@ public sealed class NavMenuTests : BunitTestBase
     {
         RegisterModule(
             new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
-            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), RequiredRole: "Organizer", Section: NavSection.Admin));
+            new NavItem("Manage Items", "/items", "icon", typeof(SharedResource), RequiredRole: "Manager", Section: NavSection.Admin));
 
         RenderMudProviders();
         var cut = RenderUnderTest<NavMenu>(_ => { });
 
         cut.Markup.Should().Contain("Browse Catalog");
-        cut.Markup.Should().NotContain("Manage Events");
+        cut.Markup.Should().NotContain("Manage Items");
     }
 
     [Fact]
@@ -183,13 +183,13 @@ public sealed class NavMenuTests : BunitTestBase
     {
         RegisterModule(
             new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
-            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), RequiredRole: OrganizerRole, Section: NavSection.Admin));
+            new NavItem("Manage Items", "/items", "icon", typeof(SharedResource), RequiredRole: ManagerRole, Section: NavSection.Admin));
 
         RenderMudProviders();
-        var cut = RenderAs<NavMenu>(TestPrincipal.InRole(OrganizerRole), _ => { });
+        var cut = RenderAs<NavMenu>(TestPrincipal.InRole(ManagerRole), _ => { });
 
         cut.Markup.Should().Contain("Browse Catalog");
-        cut.Markup.Should().Contain("Manage Events");
+        cut.Markup.Should().Contain("Manage Items");
     }
 
     // RequiredPermission is the role-free gate: the item names the capability it needs and the
@@ -234,13 +234,13 @@ public sealed class NavMenuTests : BunitTestBase
     {
         RegisterModule(
             new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
-            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), Section: NavSection.Admin));
+            new NavItem("Manage Items", "/items", "icon", typeof(SharedResource), Section: NavSection.Admin));
 
         RenderMudProviders();
         var cut = RenderUnderTest<NavMenu>(_ => { });
 
         cut.Markup.Should().Contain("Browse Catalog");
-        cut.Markup.Should().NotContain("Manage Events", "an admin URL is not for anonymous visitors");
+        cut.Markup.Should().NotContain("Manage Items", "an admin URL is not for anonymous visitors");
         cut.Markup.Should().NotContain("Administration");
     }
 
@@ -248,12 +248,12 @@ public sealed class NavMenuTests : BunitTestBase
     public void WhenAuthenticated_ShowsAdminItemsWithoutARequiredRole()
     {
         RegisterModule(
-            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), Section: NavSection.Admin));
+            new NavItem("Manage Items", "/items", "icon", typeof(SharedResource), Section: NavSection.Admin));
 
         RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
 
-        cut.Markup.Should().Contain("Manage Events", "the guard is authentication, not a role the item never declared");
+        cut.Markup.Should().Contain("Manage Items", "the guard is authentication, not a role the item never declared");
     }
 
     [Fact]

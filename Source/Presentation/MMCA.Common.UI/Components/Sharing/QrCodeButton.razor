@@ -2,7 +2,7 @@
 @inject IStringLocalizer<QrCodeButton> L
 
 @* QR affordance for public detail pages (ADR-042): shows the page's PUBLIC web URL as a scannable
-   code (a printed door sheet or another attendee's screen). Scanning needs no in-app scanner: the
+   code (a printed door sheet or another person's screen). Scanning needs no in-app scanner: the
    OS camera opens the URL, and App Links / Universal Links (ADR-043) route it into the installed
    app. Rendering goes through the shared QrCodeImage component, which encodes the payload locally,
    so there is still no network round trip. *@

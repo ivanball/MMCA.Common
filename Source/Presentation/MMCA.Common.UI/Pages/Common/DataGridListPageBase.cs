@@ -493,7 +493,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// <param name="additionalFilters">
     /// Optional action to inject extra filters (e.g., search string, status dropdown) before the fetch.
     /// </param>
-    /// <param name="showCancelSnackbar">Whether to show a snackbar on cancellation (organizer pages do, public pages don't).</param>
+    /// <param name="showCancelSnackbar">Whether to show a snackbar on cancellation (admin pages do, public pages don't).</param>
     /// <remarks>
     /// The delegate's shape mirrors <c>IEntityService.GetPagedAsync</c> exactly, so a page still
     /// passes the method group. A failed <see cref="Result"/> is handled here the same way an

@@ -60,8 +60,8 @@ public class PublicEndpointOutputCachePolicyTests
     [InlineData("roles")]
     public async Task CacheRequest_BypassRoleUnderAnUnmappedClaimType_StillBypasses(string claimType)
     {
-        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration, ["Organizer"], []);
-        var context = CreateContextWithRoleClaimType(claimType, "Organizer");
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration, ["Manager"], []);
+        var context = CreateContextWithRoleClaimType(claimType, "Manager");
 
         await sut.CacheRequestAsync(context, CancellationToken.None);
 
@@ -74,8 +74,8 @@ public class PublicEndpointOutputCachePolicyTests
     [Fact]
     public async Task CacheRequest_BypassRoleDifferingOnlyInCase_StillBypasses()
     {
-        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration, ["Organizer"], []);
-        var context = CreateContextWithRoleClaimType("roles", "organizer");
+        IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(Expiration, ["Manager"], []);
+        var context = CreateContextWithRoleClaimType("roles", "manager");
 
         await sut.CacheRequestAsync(context, CancellationToken.None);
 
@@ -166,8 +166,8 @@ public class PublicEndpointOutputCachePolicyTests
     public async Task CacheRequest_CallerInBypassRole_DisallowsLookupAndStorage()
     {
         IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(
-            Expiration, bypassRoles: ["Organizer"], tags: ["conference:events"]);
-        var context = CreateContext(HttpMethods.Get, withBearer: true, role: "Organizer");
+            Expiration, bypassRoles: ["Manager"], tags: ["conference:events"]);
+        var context = CreateContext(HttpMethods.Get, withBearer: true, role: "Manager");
 
         await sut.CacheRequestAsync(context, CancellationToken.None);
 
@@ -179,8 +179,8 @@ public class PublicEndpointOutputCachePolicyTests
     public async Task CacheRequest_AuthenticatedCallerNotInBypassRole_AllowsLookupAndStorage()
     {
         IOutputCachePolicy sut = new PublicEndpointOutputCachePolicy(
-            Expiration, bypassRoles: ["Organizer"], tags: ["conference:events"]);
-        var context = CreateContext(HttpMethods.Get, withBearer: true, role: "Attendee");
+            Expiration, bypassRoles: ["Manager"], tags: ["conference:events"]);
+        var context = CreateContext(HttpMethods.Get, withBearer: true, role: "Member");
 
         await sut.CacheRequestAsync(context, CancellationToken.None);
 

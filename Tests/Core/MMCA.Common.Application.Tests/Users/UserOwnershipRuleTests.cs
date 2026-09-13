@@ -52,7 +52,7 @@ public sealed class UserOwnershipRuleTests
         UserIdentifierType currentUserId,
         bool callerHasPrivilegedRole) =>
         UserOwnershipRule.CheckOwnership(
-            new TestDeleteUserCommand(userId, currentUserId, "Attendee"),
+            new TestDeleteUserCommand(userId, currentUserId, "Member"),
             callerHasPrivilegedRole,
             code: "User.ExportForbidden",
             message: "You can only export your own account data.",

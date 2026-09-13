@@ -131,7 +131,7 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
     [Fact]
     public async Task DispatchMessages_RestoresTheRowsCapturedContextBeforePublishing()
     {
-        Seed(Row(new OutboxOrigin(42, "Admin,Organizer", "tenant-a", "correlation-1")));
+        Seed(Row(new OutboxOrigin(42, "Admin,Manager", "tenant-a", "correlation-1")));
 
         await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
 
@@ -139,7 +139,7 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         observed.TenantId.Should().Be("tenant-a");
         observed.CorrelationId.Should().Be("correlation-1");
         observed.UserId.Should().Be(42);
-        observed.Roles.Should().BeEquivalentTo("Admin", "Organizer");
+        observed.Roles.Should().BeEquivalentTo("Admin", "Manager");
     }
 
     [Fact]

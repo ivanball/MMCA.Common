@@ -3,7 +3,7 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 /// <summary>
 /// Provides the set of user IDs that should receive a push notification.
 /// Consuming apps implement this to resolve recipients based on their domain model
-/// (e.g., all attendees, users in a role, subscribers to a topic).
+/// (e.g., all users, users in a role, subscribers to a topic).
 /// </summary>
 public interface INotificationRecipientProvider
 {
