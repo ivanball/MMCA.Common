@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.202.0] - 2026-09-13
+
 ### Changed
 
 - **`ConnectionStringSettings.CosmosDatabaseName` defaults to `"MMCA"`** instead of the
