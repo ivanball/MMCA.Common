@@ -17,7 +17,7 @@ namespace MMCA.Common.Application.Users.UseCases.ExportUserData;
 /// <para>
 /// Everything genuinely app-specific stays in the subclass:
 /// <list type="bullet">
-///   <item><see cref="HasExportPrivilege"/> - the role that bypasses ownership (Organizer vs Admin),
+///   <item><see cref="HasExportPrivilege"/> - the app's own privileged role that bypasses ownership,
 ///     evaluated app-side because the role vocabulary stays app-owned.</item>
 ///   <item><see cref="BuildSubjectSnapshotAsync"/> - which of the account's own fields are portable
 ///     personal data. It is asynchronous, and receives the query, because an app may need to read a
@@ -123,7 +123,7 @@ public abstract class ExportUserDataHandlerBase<TUser, TQuery>(
 
     /// <summary>
     /// Whether the caller's role bypasses the ownership requirement (e.g.
-    /// <c>UserRole.IsOrganizer(currentUserRole)</c> for ADC, <c>UserRole.IsAdmin(...)</c> for Store).
+    /// <c>UserRole.IsAdmin(currentUserRole)</c>, or whatever the app's privileged role is).
     /// </summary>
     /// <param name="currentUserRole">The caller's role claim; may be <see langword="null"/>.</param>
     /// <returns><see langword="true"/> when the caller may export any account.</returns>

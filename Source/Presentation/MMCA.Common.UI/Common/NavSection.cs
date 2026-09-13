@@ -12,6 +12,6 @@ public enum NavSection
     /// <summary>Items for authenticated non-admin users, e.g., "My Orders", "My Profile".</summary>
     User,
 
-    /// <summary>Items for administrators/organizers, e.g., "Products", "Categories".</summary>
+    /// <summary>Items for administrators, e.g., "Products", "Categories".</summary>
     Admin
 }

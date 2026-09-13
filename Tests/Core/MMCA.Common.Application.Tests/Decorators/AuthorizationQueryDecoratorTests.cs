@@ -17,7 +17,7 @@ public sealed class AuthorizationQueryDecoratorTests
     private readonly Mock<IPermissionRegistry> _permissionRegistry = new();
 
     public AuthorizationQueryDecoratorTests() =>
-        _currentUser.Setup(x => x.Roles).Returns(["Attendee"]);
+        _currentUser.Setup(x => x.Roles).Returns(["Member"]);
 
     // ── A query without the marker is never checked at all ──
     [Fact]

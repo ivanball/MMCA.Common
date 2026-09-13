@@ -157,14 +157,14 @@ public sealed class InternalCommandSchedulerTests : IDisposable
     [Fact]
     public async Task ScheduleAsync_CapturesTheSchedulingPrincipal()
     {
-        var sut = CreateScheduler(new StubCurrentUserService(42, ["Admin", "Organizer"]));
+        var sut = CreateScheduler(new StubCurrentUserService(42, ["Admin", "Manager"]));
 
         await sut.ScheduleAsync(new RecordingCommand("work"), runAt: null, TestContext.Current.CancellationToken);
 
         _context.ChangeTracker.Clear();
         var row = await _context.Set<InternalCommandMessage>().SingleAsync(TestContext.Current.CancellationToken);
         row.UserId.Should().Be(42);
-        row.UserRoles.Should().Be("Admin,Organizer");
+        row.UserRoles.Should().Be("Admin,Manager");
     }
 
     private InternalCommandScheduler CreateScheduler(

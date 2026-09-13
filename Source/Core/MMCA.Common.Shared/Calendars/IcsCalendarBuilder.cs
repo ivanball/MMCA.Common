@@ -16,7 +16,7 @@ public static class IcsCalendarBuilder
     /// <summary>
     /// Builds a complete <c>VCALENDAR</c> document.
     /// </summary>
-    /// <param name="productId">RFC 5545 PRODID (e.g. <c>-//MMCA//AtlDevCon//EN</c>).</param>
+    /// <param name="productId">RFC 5545 PRODID (e.g. <c>-//MMCA//MyApp//EN</c>).</param>
     /// <param name="events">The entries to include, in output order.</param>
     /// <param name="dtStamp">The DTSTAMP instant recorded on every entry (pass the current time).</param>
     public static string Build(string productId, IReadOnlyCollection<IcsEvent> events, DateTimeOffset dtStamp)

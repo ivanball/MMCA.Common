@@ -23,7 +23,7 @@ public sealed class ServiceBusEmulatorSupportTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("Endpoint=sb://adc-prod.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=redacted")]
+    [InlineData("Endpoint=sb://demo-prod.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=redacted")]
     // The whole safety argument for the emulator branch is that a production connection string never
     // carries the marker, so the branch cannot be entered by a misconfigured environment name or a
     // stray flag.

@@ -34,7 +34,7 @@ public sealed class PushNotificationSettings
     /// </summary>
     /// <remarks>
     /// SEC-ADC-25. The hub is <c>[Authorize]</c> but had no <c>OnConnectedAsync</c> override, so a
-    /// single valid attendee token could open unbounded WebSockets and exhaust the replica: live
+    /// single valid user token could open unbounded WebSockets and exhaust the replica: live
     /// notifications then stop for everyone. The default is high enough for a person with several
     /// tabs and devices, and low enough that one token cannot exhaust a replica.
     /// </remarks>

@@ -85,7 +85,7 @@ public sealed class IntegrationEventConsumerContextTests
 
         var sut = CreateSut(scope.ServiceProvider, InboxFor(evt).Object);
 
-        await sut.Consume(ContextFor(evt, "tenant-a", "42", "Admin,Organizer", "correlation-1").Object);
+        await sut.Consume(ContextFor(evt, "tenant-a", "42", "Admin,Manager", "correlation-1").Object);
 
         scope.ServiceProvider.GetRequiredService<ITenantContext>().TenantId.Should().Be("tenant-a");
         scope.ServiceProvider.GetRequiredService<ICorrelationContext>().CorrelationId.Should().Be("correlation-1");
@@ -94,7 +94,7 @@ public sealed class IntegrationEventConsumerContextTests
         principal.Should().NotBeNull();
         principal!.Identity!.IsAuthenticated.Should().BeTrue("an unauthenticated principal would be denied every permission check");
         principal.IsInRole("Admin").Should().BeTrue();
-        principal.IsInRole("Organizer").Should().BeTrue();
+        principal.IsInRole("Manager").Should().BeTrue();
     }
 
     [Fact]

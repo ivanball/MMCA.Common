@@ -417,9 +417,9 @@ public sealed class OAuthControllerBaseTests
     [Fact]
     public async Task CompleteAsync_WithAllowListedSchemeReturnUrl_RedirectsToNativeCallbackWithCodeOnly()
     {
-        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["atldevcon"]);
+        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["myapp"]);
         SetupExternalAuthentication(mocks, SuccessfulAuthentication(
-            CreatePrincipal(), returnUrl: "atldevcon://oauth-complete"));
+            CreatePrincipal(), returnUrl: "myapp://oauth-complete"));
         mocks.AuthService
             .Setup(x => x.ExternalLoginAsync(
                 It.IsAny<string>(),
@@ -433,7 +433,7 @@ public sealed class OAuthControllerBaseTests
         var result = await sut.CompleteAsync();
 
         var url = result.Should().BeOfType<RedirectResult>().Which.Url;
-        url.Should().StartWith("atldevcon://oauth-complete?code=");
+        url.Should().StartWith("myapp://oauth-complete?code=");
         url.Should().NotContain("returnUrl=", "the native callback IS the destination")
             .And.NotContain("the-access-token")
             .And.NotContain("the-refresh-token");
@@ -445,9 +445,9 @@ public sealed class OAuthControllerBaseTests
     [Fact]
     public async Task CompleteAsync_SchemeMatchIsCaseInsensitive()
     {
-        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["AtlDevCon"]);
+        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["MyApp"]);
         SetupExternalAuthentication(mocks, SuccessfulAuthentication(
-            CreatePrincipal(), returnUrl: "atldevcon://oauth-complete"));
+            CreatePrincipal(), returnUrl: "myapp://oauth-complete"));
         mocks.AuthService
             .Setup(x => x.ExternalLoginAsync(
                 It.IsAny<string>(),
@@ -461,7 +461,7 @@ public sealed class OAuthControllerBaseTests
         var result = await sut.CompleteAsync();
 
         result.Should().BeOfType<RedirectResult>()
-            .Which.Url.Should().StartWith("atldevcon://oauth-complete?code=");
+            .Which.Url.Should().StartWith("myapp://oauth-complete?code=");
     }
 
     [Fact]
@@ -471,7 +471,7 @@ public sealed class OAuthControllerBaseTests
         // custom-scheme return URLs flow to the pinned web UI as an opaque returnUrl parameter.
         var (sut, mocks) = CreateSut();
         SetupExternalAuthentication(mocks, SuccessfulAuthentication(
-            CreatePrincipal(), returnUrl: "atldevcon://oauth-complete"));
+            CreatePrincipal(), returnUrl: "myapp://oauth-complete"));
         mocks.AuthService
             .Setup(x => x.ExternalLoginAsync(
                 It.IsAny<string>(),
@@ -515,9 +515,9 @@ public sealed class OAuthControllerBaseTests
     [Fact]
     public async Task CompleteAsync_WhenExternalLoginFailsWithAllowListedScheme_SendsErrorToNativeCallback()
     {
-        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["atldevcon"]);
+        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["myapp"]);
         SetupExternalAuthentication(mocks, SuccessfulAuthentication(
-            CreatePrincipal(), returnUrl: "atldevcon://oauth-complete"));
+            CreatePrincipal(), returnUrl: "myapp://oauth-complete"));
         mocks.AuthService
             .Setup(x => x.ExternalLoginAsync(
                 It.IsAny<string>(),
@@ -532,20 +532,20 @@ public sealed class OAuthControllerBaseTests
         var result = await sut.CompleteAsync();
 
         result.Should().BeOfType<RedirectResult>()
-            .Which.Url.Should().Be("atldevcon://oauth-complete?error=Auth.AccountLocked");
+            .Which.Url.Should().Be("myapp://oauth-complete?error=Auth.AccountLocked");
     }
 
     [Fact]
     public async Task CompleteAsync_WhenClaimsMissingWithAllowListedScheme_SendsErrorToNativeCallback()
     {
-        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["atldevcon"]);
+        var (sut, mocks) = CreateSut(allowedReturnUrlSchemes: ["myapp"]);
         SetupExternalAuthentication(mocks, SuccessfulAuthentication(
-            CreatePrincipal(providerKey: null), returnUrl: "atldevcon://oauth-complete"));
+            CreatePrincipal(providerKey: null), returnUrl: "myapp://oauth-complete"));
 
         var result = await sut.CompleteAsync();
 
         result.Should().BeOfType<RedirectResult>()
-            .Which.Url.Should().Be("atldevcon://oauth-complete?error=missing_claims");
+            .Which.Url.Should().Be("myapp://oauth-complete?error=missing_claims");
     }
 
     [Fact]
@@ -570,7 +570,7 @@ public sealed class OAuthControllerBaseTests
         };
         httpAuth
             .Setup(x => x.AuthenticateAsync(It.IsAny<HttpContext>(), ExternalAuthExtensions.ExternalLoginScheme))
-            .ReturnsAsync(SuccessfulAuthentication(CreatePrincipal(), returnUrl: "atldevcon://oauth-complete"));
+            .ReturnsAsync(SuccessfulAuthentication(CreatePrincipal(), returnUrl: "myapp://oauth-complete"));
         authService
             .Setup(x => x.ExternalLoginAsync(
                 It.IsAny<string>(),

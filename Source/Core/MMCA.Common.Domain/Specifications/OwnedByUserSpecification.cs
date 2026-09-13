@@ -6,7 +6,7 @@ namespace MMCA.Common.Domain.Specifications;
 /// <summary>
 /// Specification that restricts a query to the rows created by a single user, using the
 /// audit field <see cref="AuditableBaseEntity{TIdentifierType}.CreatedBy"/> as the ownership
-/// marker. Use it for "my own records" reads (an attendee sees only the answers they submitted);
+/// marker. Use it for "my own records" reads (a member sees only the answers they submitted);
 /// callers with a bypass role simply do not apply it.
 /// </summary>
 /// <remarks>

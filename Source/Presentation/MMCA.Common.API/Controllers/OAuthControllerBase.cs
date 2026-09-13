@@ -88,7 +88,7 @@ public abstract class OAuthControllerBase(
     /// user account, issues a JWT token pair, and redirects to the UI.
     /// <para>
     /// Native heads (ADR-043): when the stashed <c>returnUrl</c> uses a custom scheme listed in
-    /// <c>OAuth:AllowedReturnUrlSchemes</c> (e.g. <c>atldevcon://oauth-complete</c>), the redirect
+    /// <c>OAuth:AllowedReturnUrlSchemes</c> (e.g. <c>myapp://oauth-complete</c>), the redirect
     /// targets that URL instead of <c>OAuth:UIBaseUrl</c>, so the system-browser
     /// <c>WebAuthenticator</c> window captures the single-use code and closes. An empty allowlist
     /// (the default) preserves the web-only behavior exactly.
@@ -292,7 +292,7 @@ public abstract class OAuthControllerBase(
     private static string AppendQuery(Uri target, string queryFragment)
     {
         // OriginalString, not ToString(): Uri normalization appends a trailing slash to
-        // authority-only URIs (atldevcon://oauth-complete -> .../), and native authenticator
+        // authority-only URIs (myapp://oauth-complete -> .../), and native authenticator
         // callback matching can be exact — echo back precisely what the client registered.
         var separator = string.IsNullOrEmpty(target.Query) ? "?" : "&";
         return $"{target.OriginalString}{separator}{queryFragment}";

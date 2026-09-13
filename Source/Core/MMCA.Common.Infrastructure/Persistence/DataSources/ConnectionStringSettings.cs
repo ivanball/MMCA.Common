@@ -17,8 +17,12 @@ public sealed class ConnectionStringSettings
     /// <summary>Gets the Azure Cosmos DB connection string.</summary>
     public string CosmosConnectionString { get; init; } = string.Empty;
 
-    /// <summary>Gets the Cosmos DB database name for the default source.</summary>
-    public string CosmosDatabaseName { get; init; } = "AtlDevCon";
+    /// <summary>
+    /// Gets the Cosmos DB database name for the default source. A Cosmos host that needs a different
+    /// database sets <c>ConnectionStrings:CosmosDatabaseName</c> (or a per-source
+    /// <c>DataSources:&lt;Name&gt;:CosmosDatabaseName</c>) explicitly.
+    /// </summary>
+    public string CosmosDatabaseName { get; init; } = "MMCA";
 
     /// <summary>Gets the PostgreSQL connection string.</summary>
     public string PostgreSQLConnectionString { get; init; } = string.Empty;

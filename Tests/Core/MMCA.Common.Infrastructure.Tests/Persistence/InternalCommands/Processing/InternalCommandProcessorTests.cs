@@ -225,7 +225,7 @@ public sealed class InternalCommandProcessorTests : IDisposable
             InternalCommandTestHarness.Settings(),
             _clock,
             Mock.Of<IInternalCommandSignal>(),
-            new StubCurrentUserService(7, ["Admin", "Organizer"]));
+            new StubCurrentUserService(7, ["Admin", "Manager"]));
 
         await scheduler.ScheduleAsync(new RecordingCommand("as-user"), runAt: null, TestContext.Current.CancellationToken);
         _context.ChangeTracker.Clear();
@@ -236,7 +236,7 @@ public sealed class InternalCommandProcessorTests : IDisposable
 
         var execution = _log.Executions.Should().ContainSingle().Subject;
         execution.UserId.Should().Be(7);
-        execution.Roles.Should().Equal("Admin", "Organizer");
+        execution.Roles.Should().Equal("Admin", "Manager");
     }
 
     [Fact]

@@ -4,6 +4,20 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Changed
+
+- **`ConnectionStringSettings.CosmosDatabaseName` defaults to `"MMCA"`** instead of the
+  consumer-specific `"AtlDevCon"` (`MMCA.Common.Infrastructure`). No consumer sets the key, and no
+  consumer runs on Cosmos; a Cosmos host that relied on the old default sets
+  `ConnectionStrings:CosmosDatabaseName` (or a per-source
+  `DataSources:<Name>:CosmosDatabaseName`) explicitly.
+- **Framework XML docs, samples and tests use neutral role names** (`Admin`, `Manager`, `Member`)
+  wherever an example role was needed, replacing the borrowed consumer vocabulary
+  (`Organizer`, `Attendee`). The framework ships no role vocabulary of its own, so the examples no
+  longer read as one. No API change.
+
 ## [1.201.0] - 2026-09-13
 
 ### Added

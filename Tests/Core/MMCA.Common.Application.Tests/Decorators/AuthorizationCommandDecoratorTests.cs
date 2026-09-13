@@ -13,13 +13,13 @@ namespace MMCA.Common.Application.Tests.Decorators;
 
 public sealed class AuthorizationCommandDecoratorTests
 {
-    private static readonly string[] MultipleRoles = ["Organizer", "Attendee"];
+    private static readonly string[] MultipleRoles = ["Manager", "Member"];
 
     private readonly Mock<ICurrentUserService> _currentUser = new();
     private readonly Mock<IPermissionRegistry> _permissionRegistry = new();
 
     public AuthorizationCommandDecoratorTests() =>
-        _currentUser.Setup(x => x.Roles).Returns(["Attendee"]);
+        _currentUser.Setup(x => x.Roles).Returns(["Member"]);
 
     // ── A command without the marker is never checked at all ──
     [Fact]

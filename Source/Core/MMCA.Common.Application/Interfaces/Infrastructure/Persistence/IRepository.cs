@@ -426,7 +426,7 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// <see cref="SetOriginalRowVersion(TEntity, byte[])"/> only stamps the tracked entry's ORIGINAL
     /// value; it does not make the entry dirty. An applier that changes only child rows therefore
     /// leaves the root <c>Unchanged</c>, EF emits no root UPDATE, no <c>WHERE RowVersion = @token</c>
-    /// reaches the database, and the stale-token check silently does not happen: two organizers
+    /// reaches the database, and the stale-token check silently does not happen: two administrators
     /// editing different children of the same aggregate from the same ETag both get 200 and the
     /// second silently discards the first's edit. Touching the root turns that back into the 412
     /// ADR-035 promises.

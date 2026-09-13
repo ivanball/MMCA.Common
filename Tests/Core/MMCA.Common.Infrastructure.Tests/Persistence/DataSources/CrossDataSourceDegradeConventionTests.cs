@@ -149,7 +149,7 @@ public sealed class CrossDataSourceDegradeConventionTests
     private static DegradeTestContext CreateContext(IServiceProvider serviceProvider, string sourceName)
     {
         var physical = new PhysicalDataSource(
-            new DataSourceKey(DataSource.Sqlite, sourceName), "DataSource=:memory:", null, "AtlDevCon");
+            new DataSourceKey(DataSource.Sqlite, sourceName), "DataSource=:memory:", null, "MMCA");
 
         var options = new DbContextOptionsBuilder<DegradeTestContext>()
             .UseSqlite("DataSource=:memory:")

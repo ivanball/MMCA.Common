@@ -301,12 +301,12 @@ public sealed class OutboxMessageTests
     [Fact]
     public void FromDomainEvent_StampsEveryValueOfTheSuppliedOrigin()
     {
-        var origin = new OutboxOrigin(42, "Admin,Organizer", "tenant-a", "correlation-1");
+        var origin = new OutboxOrigin(42, "Admin,Manager", "tenant-a", "correlation-1");
 
         var message = OutboxMessage.FromDomainEvent(new TestDomainEvent(), origin);
 
         message.UserId.Should().Be(42);
-        message.UserRoles.Should().Be("Admin,Organizer");
+        message.UserRoles.Should().Be("Admin,Manager");
         message.TenantId.Should().Be("tenant-a");
         message.CorrelationId.Should().Be("correlation-1");
     }

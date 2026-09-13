@@ -9,7 +9,7 @@ namespace MMCA.Common.Testing.Support;
 
 /// <summary>
 /// Generates JWT tokens for integration tests. Each downstream project extends this with
-/// role-specific convenience methods (e.g., AdminToken, OrganizerToken).
+/// role-specific convenience methods (e.g., AdminToken, MemberToken).
 /// <para>
 /// Tokens are signed with <b>RS256</b> (RSA-SHA256) using the embedded dev keypair
 /// (<see cref="DefaultPublicKeyPem"/> / the paired private key). This matches the

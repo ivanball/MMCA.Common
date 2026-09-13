@@ -32,7 +32,7 @@ public sealed class ApplicationNamespaceTests
     {
         var resolved = ApplicationNamespace.Resolve(
             Config((ApplicationNamespace.ConfigurationKey, "shared-ns")),
-            Environment("MMCA.ADC.Gateway"));
+            Environment("MMCA.Demo.Gateway"));
 
         resolved.Should().Be("shared-ns");
     }
@@ -40,9 +40,9 @@ public sealed class ApplicationNamespaceTests
     [Fact]
     public void Resolve_FallsBackToTheApplicationName()
     {
-        var resolved = ApplicationNamespace.Resolve(Config(), Environment("MMCA.ADC.Gateway"));
+        var resolved = ApplicationNamespace.Resolve(Config(), Environment("MMCA.Demo.Gateway"));
 
-        resolved.Should().Be("MMCA-ADC-Gateway");
+        resolved.Should().Be("MMCA-Demo-Gateway");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class ApplicationNamespaceTests
     [Fact]
     public void Resolve_IsDistinctPerApplication()
     {
-        var gateway = ApplicationNamespace.Resolve(Config(), Environment("MMCA.ADC.Gateway"));
+        var gateway = ApplicationNamespace.Resolve(Config(), Environment("MMCA.Demo.Gateway"));
         var store = ApplicationNamespace.Resolve(Config(), Environment("MMCA.Store.Gateway"));
 
         gateway.Should().NotBe(store);
@@ -75,7 +75,7 @@ public sealed class ApplicationNamespaceTests
         var services = new ServiceCollection();
         services.AddOptions();
         services.AddSingleton(configuration);
-        services.AddSingleton(Environment("MMCA.ADC.Conference"));
+        services.AddSingleton(Environment("MMCA.Demo.Catalog"));
         services.Configure<CacheKeyPrefixOptions>(configuration.GetSection(CacheKeyPrefixOptions.SectionName));
         return services.BuildServiceProvider();
     }
@@ -87,7 +87,7 @@ public sealed class ApplicationNamespaceTests
 
         var keyNamespace = CacheKeyNamespace.From(provider);
 
-        keyNamespace.Qualify("products").Should().Be("MMCA-ADC-Conference:products");
+        keyNamespace.Qualify("products").Should().Be("MMCA-Demo-Catalog:products");
     }
 
     [Fact]

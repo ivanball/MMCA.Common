@@ -40,29 +40,29 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     {
         await _store.GrantAsync("Auditor", Read);
         var sut = CreateService(
-            compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage),
-            knownRoles: ["Attendee"]);
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Manage),
+            knownRoles: ["Member"]);
 
         var result = await sut.ListRolesAsync();
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Select(role => role.Role).Should().Equal("Attendee", "Auditor", "Organizer");
+        result.Value!.Select(role => role.Role).Should().Equal("Auditor", "Manager", "Member");
     }
 
     [Fact]
     public async Task ListRolesAsync_ReportsTheCompiledAndStoredListsApartAndDisjoint()
     {
-        await _store.GrantAsync("Organizer", Export);
-        _cache.Set("Organizer", Export);
+        await _store.GrantAsync("Manager", Export);
+        _cache.Set("Manager", Export);
         var sut = CreateService(
-            compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage, Export));
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Manage, Export));
 
         var result = await sut.ListRolesAsync();
 
-        var organizer = result.Value!.Single();
+        var manager = result.Value!.Single();
         // The stored half is subtracted, so the read-only list really is only what the code grants.
-        organizer.RegisteredPermissions.Should().Equal(Manage);
-        organizer.StoredPermissions.Should().Equal(Export);
+        manager.RegisteredPermissions.Should().Equal(Manage);
+        manager.StoredPermissions.Should().Equal(Export);
     }
 
     [Fact]
@@ -70,13 +70,13 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     {
         await _store.GrantAsync("Auditor", "legacy:permission");
         var sut = CreateService(
-            compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage, Read),
-            knownRoles: ["Attendee"]);
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Manage, Read),
+            knownRoles: ["Member"]);
 
         var result = await sut.GetCatalogAsync();
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Roles.Should().Equal("Attendee", "Auditor", "Organizer");
+        result.Value!.Roles.Should().Equal("Auditor", "Manager", "Member");
         // The catalog is the compiled universe: widening it with whatever happens to be stored
         // (here, "legacy:permission") would let one typo legitimize itself.
         result.Value.Permissions.Should().Equal(Manage, Read);
@@ -86,7 +86,7 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     [Fact]
     public async Task GetRoleAsync_ForARoleNobodyDeclaredOrGranted_IsNotFound()
     {
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage));
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
 
         var result = await sut.GetRoleAsync("Ghost");
 
@@ -97,9 +97,9 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     [Fact]
     public async Task GetRoleAsync_ForACatalogRoleWithNoStoredGrant_ReportsItsCompiledPermissions()
     {
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage));
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
 
-        var result = await sut.GetRoleAsync("Organizer");
+        var result = await sut.GetRoleAsync("Manager");
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.RegisteredPermissions.Should().Equal(Manage);
@@ -110,37 +110,37 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     [Fact]
     public async Task SetStoredPermissionsAsync_AddsWhatIsNewAndRemovesWhatIsGone()
     {
-        await _store.GrantAsync("Organizer", Read);
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage, Read, Export));
+        await _store.GrantAsync("Manager", Read);
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage, Read, Export));
 
-        var result = await sut.SetStoredPermissionsAsync("Organizer", [Export], changedBy: "operator");
+        var result = await sut.SetStoredPermissionsAsync("Manager", [Export], changedBy: "operator");
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.StoredPermissions.Should().Equal(Export);
-        (await _store.GetPermissionsAsync("Organizer")).Should().Equal(Export);
+        (await _store.GetPermissionsAsync("Manager")).Should().Equal(Export);
         _store.GrantedBy.Should().Contain("operator", "the caller is recorded on the rows a set creates");
     }
 
     [Fact]
     public async Task SetStoredPermissionsAsync_InvalidatesTheSnapshotOnceSoTheEditIsLiveNextRequest()
     {
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage));
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
 
-        await sut.SetStoredPermissionsAsync("Organizer", [Manage]);
+        await sut.SetStoredPermissionsAsync("Manager", [Manage]);
 
-        _invalidator.Verify(x => x.InvalidateAsync("Organizer", It.IsAny<CancellationToken>()), Times.Once);
+        _invalidator.Verify(x => x.InvalidateAsync("Manager", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task SetStoredPermissionsAsync_WithAnEmptySet_RemovesEveryStoredGrant()
     {
-        await _store.GrantAsync("Organizer", Read);
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Read));
+        await _store.GrantAsync("Manager", Read);
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Read));
 
-        var result = await sut.SetStoredPermissionsAsync("Organizer", []);
+        var result = await sut.SetStoredPermissionsAsync("Manager", []);
 
         result.IsSuccess.Should().BeTrue();
-        (await _store.GetPermissionsAsync("Organizer")).Should().BeEmpty();
+        (await _store.GetPermissionsAsync("Manager")).Should().BeEmpty();
     }
 
     // ── The two refusals ──
@@ -150,9 +150,9 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
         // Compiled in, so it is a legitimate catalog entry: the refusal is about what a stored ROW
         // may say, not about whether the permission exists.
         var sut = CreateService(
-            compiled: new PermissionRegistryBuilder().Grant("Organizer", AdministrationPermissions.ManageRoles));
+            compiled: new PermissionRegistryBuilder().Grant("Manager", AdministrationPermissions.ManageRoles));
 
-        var result = await sut.SetStoredPermissionsAsync("Organizer", [AdministrationPermissions.ManageRoles]);
+        var result = await sut.SetStoredPermissionsAsync("Manager", [AdministrationPermissions.ManageRoles]);
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Code.Should().Be("PermissionGrant.ManageRolesMustBeCompiled");
@@ -163,9 +163,9 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     [Fact]
     public async Task SetStoredPermissionsAsync_RefusesAPermissionTheCatalogDoesNotContain()
     {
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage));
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
 
-        var result = await sut.SetStoredPermissionsAsync("Organizer", [Manage, "sessions:manaeg"]);
+        var result = await sut.SetStoredPermissionsAsync("Manager", [Manage, "sessions:manaeg"]);
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Code.Should().Be("PermissionGrant.UnknownPermission");
@@ -176,7 +176,7 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
     [Fact]
     public async Task SetStoredPermissionsAsync_ForABlankRole_IsNotFoundRatherThanASilentWrite()
     {
-        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Organizer", Manage));
+        var sut = CreateService(compiled: new PermissionRegistryBuilder().Grant("Manager", Manage));
 
         var result = await sut.SetStoredPermissionsAsync("   ", [Manage]);
 

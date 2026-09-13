@@ -147,7 +147,7 @@ public sealed class DependencyInjectionBrokerMessagingTests
             {
                 ["MessageBus:Provider"] = "RabbitMq",
                 ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
-                ["Application:Namespace"] = "adc-conference",
+                ["Application:Namespace"] = "demo-orders",
             })
             .Build();
 
@@ -158,7 +158,7 @@ public sealed class DependencyInjectionBrokerMessagingTests
             .OfType<IEndpointNameFormatter>()
             .Should().ContainSingle().Subject;
 
-        formatter.Consumer<OrderPlacedConsumer>().Should().Be("adc-conference-order-placed");
+        formatter.Consumer<OrderPlacedConsumer>().Should().Be("demo-orders-order-placed");
     }
 
     /// <summary>A consumer that exists only to be named by the endpoint name formatter.</summary>

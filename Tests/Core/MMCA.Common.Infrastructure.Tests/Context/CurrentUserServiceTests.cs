@@ -109,10 +109,10 @@ public sealed class CurrentUserServiceTests
     [Fact]
     public void Role_WithRoleClaim_ShouldReturnRole()
     {
-        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Organizer"));
+        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Manager"));
         var sut = CreateSut(principal);
 
-        sut.Role.Should().Be("Organizer");
+        sut.Role.Should().Be("Manager");
     }
 
     [Fact]
@@ -147,11 +147,11 @@ public sealed class CurrentUserServiceTests
     {
         var principal = CreatePrincipal(
             new Claim(AuthClaimTypes.Subject, "10"),
-            new Claim(ClaimTypes.Role, "Attendee"));
+            new Claim(ClaimTypes.Role, "Member"));
         var sut = CreateSut(principal);
 
         sut.UserId.Should().Be(10);
-        sut.Role.Should().Be("Attendee");
+        sut.Role.Should().Be("Member");
     }
 
     // ── IsInRole must consider every role claim, not just the first ──
@@ -160,13 +160,13 @@ public sealed class CurrentUserServiceTests
     // carry one role, and it would have surfaced as a silent authorization denial. These tests hold
     // the SUT as ICurrentUserService because Roles and IsInRole are default interface members.
     [Theory]
-    [InlineData("Attendee")]
-    [InlineData("Organizer")]
+    [InlineData("Member")]
+    [InlineData("Manager")]
     public void IsInRole_WithMultipleRoleClaims_MatchesAnyOfThem(string roleName)
     {
         var principal = CreatePrincipal(
-            new Claim(ClaimTypes.Role, "Attendee"),
-            new Claim(ClaimTypes.Role, "Organizer"));
+            new Claim(ClaimTypes.Role, "Member"),
+            new Claim(ClaimTypes.Role, "Manager"));
         ICurrentUserService sut = CreateSut(principal);
 
         sut.IsInRole(roleName).Should().BeTrue();
@@ -176,19 +176,19 @@ public sealed class CurrentUserServiceTests
     public void IsInRole_RoleNotHeld_ReturnsFalse()
     {
         var principal = CreatePrincipal(
-            new Claim(ClaimTypes.Role, "Attendee"),
-            new Claim(ClaimTypes.Role, "Speaker"));
+            new Claim(ClaimTypes.Role, "Member"),
+            new Claim(ClaimTypes.Role, "Auditor"));
         ICurrentUserService sut = CreateSut(principal);
 
-        sut.IsInRole("Organizer").Should().BeFalse();
+        sut.IsInRole("Manager").Should().BeFalse();
     }
 
     [Theory]
-    [InlineData("organizer")]
-    [InlineData("ORGANIZER")]
+    [InlineData("manager")]
+    [InlineData("MANAGER")]
     public void IsInRole_IsCaseInsensitive(string roleName)
     {
-        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Organizer"));
+        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Manager"));
         ICurrentUserService sut = CreateSut(principal);
 
         sut.IsInRole(roleName).Should().BeTrue();
@@ -199,10 +199,10 @@ public sealed class CurrentUserServiceTests
     [InlineData("roles")]
     public void IsInRole_HonorsRawRoleClaimTypes_WhenInboundMappingIsDisabled(string claimType)
     {
-        var principal = CreatePrincipal(new Claim(claimType, "Organizer"));
+        var principal = CreatePrincipal(new Claim(claimType, "Manager"));
         ICurrentUserService sut = CreateSut(principal);
 
-        sut.IsInRole("Organizer").Should().BeTrue();
+        sut.IsInRole("Manager").Should().BeTrue();
     }
 
     [Fact]
@@ -210,18 +210,18 @@ public sealed class CurrentUserServiceTests
     {
         ICurrentUserService sut = CreateSut();
 
-        sut.IsInRole("Organizer").Should().BeFalse();
+        sut.IsInRole("Manager").Should().BeFalse();
     }
 
     [Fact]
     public void Roles_ReturnsEveryRoleClaim()
     {
         var principal = CreatePrincipal(
-            new Claim(ClaimTypes.Role, "Attendee"),
-            new Claim(ClaimTypes.Role, "Organizer"));
+            new Claim(ClaimTypes.Role, "Member"),
+            new Claim(ClaimTypes.Role, "Manager"));
         ICurrentUserService sut = CreateSut(principal);
 
-        sut.Roles.Should().BeEquivalentTo("Attendee", "Organizer");
+        sut.Roles.Should().BeEquivalentTo("Member", "Manager");
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public sealed class CurrentUserServiceTests
     {
         ICurrentUserService sut = new NullUserService();
 
-        var act = () => sut.IsInRole("Organizer");
+        var act = () => sut.IsInRole("Manager");
 
         act.Should().NotThrow().Which.Should().BeFalse();
     }
@@ -263,10 +263,10 @@ public sealed class CurrentUserServiceTests
     [Fact]
     public void Roles_WhenOnlyRoleIsPopulated_FallsBackToIt()
     {
-        ICurrentUserService sut = new RoleOnlyService("Organizer");
+        ICurrentUserService sut = new RoleOnlyService("Manager");
 
-        sut.Roles.Should().ContainSingle().Which.Should().Be("Organizer");
-        sut.IsInRole("Organizer").Should().BeTrue();
+        sut.Roles.Should().ContainSingle().Which.Should().Be("Manager");
+        sut.IsInRole("Manager").Should().BeTrue();
     }
 
     [Fact]
@@ -275,8 +275,8 @@ public sealed class CurrentUserServiceTests
         // Role carries only the first claim, so the claim set is the more complete answer and the
         // fallback must not shadow it.
         var principal = CreatePrincipal(
-            new Claim(ClaimTypes.Role, "Attendee"),
-            new Claim(ClaimTypes.Role, "Organizer"));
+            new Claim(ClaimTypes.Role, "Member"),
+            new Claim(ClaimTypes.Role, "Manager"));
         ICurrentUserService sut = CreateSut(principal);
 
         sut.Roles.Should().HaveCount(2).And.Contain(sut.Role!);

@@ -118,13 +118,13 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_ConfiguredBypassRole_PassesThrough()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Organizer");
+        _currentUserService.Setup(s => s.Role).Returns("Manager");
         var (context, _) = CreateContext(new RouteValueDictionary { ["userId"] = "99" });
         var nextCalled = false;
         var sut = CreateFilter(new OwnerOrAdminFilterOptions
         {
             OwnerClaimType = "UserId",
-            BypassRole = "Organizer",
+            BypassRole = "Manager",
             OwnerParameterName = "userId",
         });
 
@@ -143,12 +143,12 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_ConfiguredClaimAndRouteParameter_EnforcesOwnership()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Attendee");
+        _currentUserService.Setup(s => s.Role).Returns("Member");
         _currentUserService.Setup(s => s.GetClaimValue<int>("UserId")).Returns(42);
         var options = new OwnerOrAdminFilterOptions
         {
             OwnerClaimType = "UserId",
-            BypassRole = "Organizer",
+            BypassRole = "Manager",
             OwnerParameterName = "userId",
         };
 

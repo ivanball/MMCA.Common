@@ -133,7 +133,7 @@ public sealed class PhysicalDataSourceTests
             DataSourceKey.Default(DataSource.CosmosDB),
             "AccountEndpoint=https://test;AccountKey=dGVzdA==",
             null,
-            "AtlDevCon");
+            "MMCA");
 
         source.UsesMigrations.Should().BeFalse();
     }

@@ -12,7 +12,7 @@ namespace MMCA.Common.Shared.Auth;
 /// <remarks>
 /// Lives in <c>MMCA.Common.Shared</c> so it stays dependency-free and usable from Blazor WASM/UI as
 /// well as Domain. Each app derives a concrete role type (e.g. <c>UserRole</c>) that fixes its own
-/// role set (Store: Admin/Customer; ADC: Organizer/Attendee) and exposes app-specific factory
+/// role set (for example Admin and Member) and exposes app-specific factory
 /// members, while inheriting the equality, hashing, and validation behavior defined here.
 /// All role comparisons are case-insensitive, matching <c>ICurrentUserService.IsInRole</c>.
 /// <para>

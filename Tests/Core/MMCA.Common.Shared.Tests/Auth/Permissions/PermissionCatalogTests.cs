@@ -16,26 +16,26 @@ public sealed class PermissionCatalogTests
     private const string Export = "reports:export";
 
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
-    private const string Organizer = "Organizer";
-    private const string Attendee = "Attendee";
+    private const string Manager = "Manager";
+    private const string Member = "Member";
     private const string Admin = "Admin";
 
     [Fact]
     public void Roles_ReportsEveryRoleTheBuilderWasGiven_Ordered()
     {
         IPermissionCatalog catalog = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage)
+            .Grant(Manager, Manage)
             .Grant(Admin, Export)
             .Build();
 
-        catalog.Roles.Should().Equal(Admin, Organizer);
+        catalog.Roles.Should().Equal(Admin, Manager);
     }
 
     [Fact]
     public void Permissions_ReportsTheUnionAcrossRoles_OrderedAndDeduplicated()
     {
         IPermissionCatalog catalog = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage, Read)
+            .Grant(Manager, Manage, Read)
             .Grant(Admin, Read, Export)
             .Build();
 
@@ -46,11 +46,11 @@ public sealed class PermissionCatalogTests
     public void ARoleGrantedNothing_IsStillListed()
     {
         IPermissionCatalog catalog = new PermissionRegistryBuilder()
-            .Grant(Attendee)
+            .Grant(Member)
             .Build();
 
         // A role with no compiled permission is still a role an operator has to be able to widen.
-        catalog.Roles.Should().Equal(Attendee);
+        catalog.Roles.Should().Equal(Member);
         catalog.Permissions.Should().BeEmpty();
     }
 
@@ -62,8 +62,8 @@ public sealed class PermissionCatalogTests
     public void RolesDifferingOnlyInCase_AreOneEntry()
     {
         IPermissionCatalog catalog = new PermissionRegistryBuilder()
-            .Grant("Organizer", Manage)
-            .Grant("ORGANIZER", Read)
+            .Grant("Manager", Manage)
+            .Grant("MANAGER", Read)
             .Build();
 
         catalog.Roles.Should().ContainSingle();
@@ -87,11 +87,11 @@ public sealed class PermissionCatalogTests
     public void TheCatalogAndTheRegistry_AreTheSameObject()
     {
         var registry = new PermissionRegistryBuilder()
-            .Grant(Organizer, Manage)
+            .Grant(Manager, Manage)
             .Build();
 
         registry.Should().BeAssignableTo<IPermissionCatalog>();
         ((IPermissionCatalog)registry).Permissions.Should().Equal(Manage);
-        registry.HasPermission([Organizer], Manage).Should().BeTrue();
+        registry.HasPermission([Manager], Manage).Should().BeTrue();
     }
 }

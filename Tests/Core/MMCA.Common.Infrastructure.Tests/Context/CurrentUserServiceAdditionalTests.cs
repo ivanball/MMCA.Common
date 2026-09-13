@@ -98,14 +98,14 @@ public sealed class CurrentUserServiceAdditionalTests
     [Fact]
     public void Role_CalledMultipleTimes_ReturnsSameValue()
     {
-        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Speaker"));
+        var principal = CreatePrincipal(new Claim(ClaimTypes.Role, "Auditor"));
         var sut = CreateSut(principal);
 
         var first = sut.Role;
         var second = sut.Role;
 
-        first.Should().Be("Speaker");
-        second.Should().Be("Speaker");
+        first.Should().Be("Auditor");
+        second.Should().Be("Auditor");
     }
 
     // ── User property returns principal from HttpContext ──
