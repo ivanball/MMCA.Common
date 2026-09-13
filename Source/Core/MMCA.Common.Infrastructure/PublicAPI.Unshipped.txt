@@ -16,6 +16,8 @@ MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.SqliteMigr
 MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.UsesMigrations.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableRefreshSessions.get -> bool
 MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableRefreshSessions.set -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableStoredPermissionGrants.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Design.DesignTimeDbContextOptions.EnableStoredPermissionGrants.set -> void
 MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.DbContextFactory(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IPhysicalDbContextFactory! physicalDbContextFactory, MMCA.Common.Infrastructure.Persistence.DataSources.IEntityDataSourceRegistry! entityDataSourceRegistry, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, MMCA.Common.Application.Interfaces.ITenantContext! tenantContext, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings!>! tenancySettings, MMCA.Common.Application.Interfaces.ICorrelationContext? correlationContext = null) -> void
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.Abandon(System.Guid messageId) -> bool
 MMCA.Common.Infrastructure.Persistence.Inbox.EfInboxStore.CompleteAsync(System.Guid messageId, string! eventType, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!

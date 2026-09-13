@@ -1,4 +1,4 @@
-﻿using AwesomeAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
@@ -131,6 +131,49 @@ public sealed class DesignTimeDbContextHelperTests
             "the gate must be opened for the source the context actually targets, not the one asked for");
     }
 
+    // Same two-part gate for the stored permission-grants table (ADR-116): the flag registers the
+    // framework's marker, and the settings name the source THIS context resolved to.
+    [Fact]
+    public void CreateSqlServer_WithStoredPermissionGrantsEnabled_IncludesThePermissionGrantsTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignSessions"],
+            options =>
+            {
+                ConfigureOptions(options);
+                options.EnableStoredPermissionGrants = true;
+            });
+
+        context.DataSourceKey.Name.Should().Be("DesignSessions");
+        context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CreateSqlServer_ByDefault_ExcludesThePermissionGrantsTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignNoSessions"],
+            ConfigureOptions);
+
+        context.Model.FindEntityType(typeof(PermissionGrant)).Should().BeNull(
+            "a migrations project that never opts in must keep scaffolding exactly what it did before");
+    }
+
+    [Fact]
+    public void CreateSqlServer_WhenTheRequestedSourceCollapsesOntoAnother_StillIncludesThePermissionGrantsTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignSessionsZulu"],
+            options =>
+            {
+                ConfigureOptions(options);
+                options.EnableStoredPermissionGrants = true;
+            });
+
+        context.DataSourceKey.Name.Should().Be("DesignSessionsAlpha");
+        context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull(
+            "the gate must be opened for the source the context actually targets, not the one asked for");
+    }
     // ── SQLite design time ──
     // The symmetric entry point a SQLite-backed application scaffolds through. Without it such an app
     // has no way to run `dotnet ef` against the framework's context at all.

@@ -23,7 +23,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   that `ApplicationDbContext` reads, so the `PermissionGrants` table is applied to the model of the
   one context whose physical source is named by `Authentication:PermissionGrants:DataSourceName`
   (the refresh-session precedent). No consumer calls `ApplyPermissionGrantConfiguration` by hand,
-  and a host that never opts in keeps a byte-identical model.
+  and a host that never opts in keeps a byte-identical model. `DesignTimeDbContextOptions.EnableStoredPermissionGrants`
+  opens the same gate for `dotnet ef` in the Identity database's migrations project.
 - **Lockout guard on stored grants.** `SetStoredPermissionsAsync` refuses a set containing
   `AdministrationPermissions.ManageRoles` (`PermissionGrant.ManageRolesMustBeCompiled`) and any
   permission outside the catalog (`PermissionGrant.UnknownPermission`), both as validation failures
