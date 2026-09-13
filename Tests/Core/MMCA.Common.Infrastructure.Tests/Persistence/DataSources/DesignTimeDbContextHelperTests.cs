@@ -137,14 +137,14 @@ public sealed class DesignTimeDbContextHelperTests
     public void CreateSqlServer_WithStoredPermissionGrantsEnabled_IncludesThePermissionGrantsTable()
     {
         using var context = DesignTimeDbContextHelper.CreateSqlServer(
-            ["--datasource", "DesignSessions"],
+            ["--datasource", "DesignGrants"],
             options =>
             {
                 ConfigureOptions(options);
                 options.EnableStoredPermissionGrants = true;
             });
 
-        context.DataSourceKey.Name.Should().Be("DesignSessions");
+        context.DataSourceKey.Name.Should().Be("DesignGrants");
         context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull();
     }
 
@@ -152,7 +152,7 @@ public sealed class DesignTimeDbContextHelperTests
     public void CreateSqlServer_ByDefault_ExcludesThePermissionGrantsTable()
     {
         using var context = DesignTimeDbContextHelper.CreateSqlServer(
-            ["--datasource", "DesignNoSessions"],
+            ["--datasource", "DesignNoGrants"],
             ConfigureOptions);
 
         context.Model.FindEntityType(typeof(PermissionGrant)).Should().BeNull(
@@ -163,14 +163,14 @@ public sealed class DesignTimeDbContextHelperTests
     public void CreateSqlServer_WhenTheRequestedSourceCollapsesOntoAnother_StillIncludesThePermissionGrantsTable()
     {
         using var context = DesignTimeDbContextHelper.CreateSqlServer(
-            ["--datasource", "DesignSessionsZulu"],
+            ["--datasource", "DesignGrantsZulu"],
             options =>
             {
                 ConfigureOptions(options);
                 options.EnableStoredPermissionGrants = true;
             });
 
-        context.DataSourceKey.Name.Should().Be("DesignSessionsAlpha");
+        context.DataSourceKey.Name.Should().Be("DesignGrantsAlpha");
         context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull(
             "the gate must be opened for the source the context actually targets, not the one asked for");
     }
@@ -308,6 +308,28 @@ public sealed class DesignTimeDbContextHelperTests
 
         // A pair sharing one connection, which the resolver collapses onto the alphabetically-first
         // name: asking for Zulu yields a context whose physical source is Alpha.
+        // Sources used only by the stored permission-grant cases, for the same cache reason.
+        options.DataSources["DesignGrants"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=Grants;",
+            SQLServerMigrationsAssembly = "Design.Grants.Migrations",
+        };
+        options.DataSources["DesignNoGrants"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=NoGrants;",
+            SQLServerMigrationsAssembly = "Design.NoGrants.Migrations",
+        };
+        const string sharedGrantsConnection = "Server=design;Database=SharedGrants;";
+        options.DataSources["DesignGrantsAlpha"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = sharedGrantsConnection,
+            SQLServerMigrationsAssembly = "Design.SharedGrants.Migrations",
+        };
+        options.DataSources["DesignGrantsZulu"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = sharedGrantsConnection,
+            SQLServerMigrationsAssembly = "Design.SharedGrants.Migrations",
+        };
         const string sharedConnection = "Server=design;Database=SharedSessions;";
         options.DataSources["DesignSessionsAlpha"] = new DataSourceEntrySettings
         {
