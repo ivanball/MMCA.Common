@@ -1,5 +1,5 @@
 using System.Reflection;
-using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components.Notifications;
@@ -17,7 +17,7 @@ public sealed class NotificationUIModule : IUIModule
     public IReadOnlyList<NavItem> NavItems { get; } =
     [
         new("Nav.NotificationInbox", NotificationRoutePaths.NotificationInbox, Icons.Material.Filled.Inbox, typeof(SharedResource), Section: NavSection.User),
-        new("Nav.PushNotifications", NotificationRoutePaths.Notifications, Icons.Material.Filled.NotificationsActive, typeof(SharedResource), RoleNames.Organizer, Section: NavSection.Admin, Group: "Notifications"),
+        new("Nav.PushNotifications", NotificationRoutePaths.Notifications, Icons.Material.Filled.NotificationsActive, typeof(SharedResource), RequiredPermission: NotificationPermissions.Manage, Section: NavSection.Admin, Group: "Notifications"),
     ];
 
     public IReadOnlyList<Type> AppBarComponentTypes { get; } = [typeof(NotificationBell)];

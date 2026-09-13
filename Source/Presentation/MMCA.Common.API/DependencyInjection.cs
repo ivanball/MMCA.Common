@@ -84,6 +84,13 @@ public static class DependencyInjection
             services.AddScoped<IdempotencyFilter>();
             services.AddScoped<OwnerOrAdminFilter>();
 
+            // Validated, but deliberately NOT ValidateOnStart: OwnerOrAdminFilterOptions.BypassRole
+            // is required and has no default (the framework knows no role names), so validating at
+            // startup would fail every host that never applies the filter. Validating on first
+            // resolve puts the data-annotation message in front of the host that actually uses it.
+            services.AddOptions<OwnerOrAdminFilterOptions>()
+                .ValidateDataAnnotations();
+
             // Feature Management — registers IFeatureManager, IFeatureManagerSnapshot,
             // and built-in filters (Percentage, TimeWindow, Targeting).
             // Feature flags are read from the "FeatureManagement" configuration section.

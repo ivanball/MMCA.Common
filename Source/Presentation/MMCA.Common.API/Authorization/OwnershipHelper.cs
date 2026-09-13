@@ -10,11 +10,11 @@ namespace MMCA.Common.API.Authorization;
 public static class OwnershipHelper
 {
     /// <summary>
-    /// Returns <see langword="true"/> if the current user holds the privileged bypass role
-    /// (<c>"Admin"</c> by default; hosts with a different vocabulary pass their own, e.g.
-    /// <c>"Organizer"</c>).
+    /// Returns <see langword="true"/> if the current user holds the privileged bypass role. The role
+    /// is always supplied by the caller, normally from
+    /// <see cref="OwnerOrAdminFilterOptions.BypassRole"/>: the framework declares no role names.
     /// </summary>
-    public static bool IsAdmin(ICurrentUserService currentUserService, string bypassRole = "Admin")
+    public static bool IsAdmin(ICurrentUserService currentUserService, string bypassRole)
     {
         ArgumentNullException.ThrowIfNull(currentUserService);
         return string.Equals(currentUserService.Role, bypassRole, StringComparison.OrdinalIgnoreCase);
@@ -29,13 +29,13 @@ public static class OwnershipHelper
     /// <param name="currentUserService">The current user service to extract claims from.</param>
     /// <param name="claimType">The claim type name to look up (e.g., <c>"customer_id"</c>).</param>
     /// <param name="specFactory">Factory that creates the specification from an owner ID.</param>
-    /// <param name="bypassRole">The role exempt from scoping. Default: <c>"Admin"</c>.</param>
+    /// <param name="bypassRole">The role exempt from scoping, named by the host.</param>
     /// <returns>The specification instance, or <see langword="null"/> for privileged users.</returns>
     public static TSpec? GetOwnershipSpecification<TSpec, TId>(
         ICurrentUserService currentUserService,
         string claimType,
         Func<TId, TSpec> specFactory,
-        string bypassRole = "Admin")
+        string bypassRole)
         where TSpec : class
         where TId : struct, IParsable<TId>
     {
@@ -53,16 +53,18 @@ public static class OwnershipHelper
 
     /// <summary>
     /// Returns a specification that scopes queries to the current user's customer data,
-    /// or <see langword="null"/> if the user is an admin (no scoping needed).
-    /// Uses the <c>customer_id</c> claim by default.
+    /// or <see langword="null"/> if the user holds the bypass role (no scoping needed).
+    /// Uses the <c>customer_id</c> claim.
     /// </summary>
     /// <typeparam name="TSpec">The specification type, typically scoping by customer ID.</typeparam>
     /// <param name="currentUserService">The current user service to extract claims from.</param>
     /// <param name="specFactory">Factory that creates the specification from a customer ID.</param>
-    /// <returns>The specification instance, or <see langword="null"/> for admin users.</returns>
+    /// <param name="bypassRole">The role exempt from scoping, named by the host.</param>
+    /// <returns>The specification instance, or <see langword="null"/> for privileged users.</returns>
     public static TSpec? GetOwnershipSpecification<TSpec>(
         ICurrentUserService currentUserService,
-        Func<int, TSpec> specFactory)
+        Func<int, TSpec> specFactory,
+        string bypassRole)
         where TSpec : class
-        => GetOwnershipSpecification<TSpec, int>(currentUserService, "customer_id", specFactory);
+        => GetOwnershipSpecification<TSpec, int>(currentUserService, "customer_id", specFactory, bypassRole);
 }

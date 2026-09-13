@@ -1,6 +1,7 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.Options
+@using MMCA.Common.Shared.Auth
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Common.Interfaces
 @using MMCA.Common.UI.Common.Settings
@@ -219,6 +220,7 @@
             .SelectMany(m => m.NavItems)
             .Where(item => item.RequiredRole is null || _user?.IsInRole(item.RequiredRole) == true)
             .Where(item => item.RequiredClaim is null || _user?.HasClaim(c => c.Type == item.RequiredClaim) == true)
+            .Where(item => item.RequiredPermission is null || _user.HasPermissionClaim(item.RequiredPermission))
             .ToList();
 
         _generalItems = allItems.Where(i => i.Section is NavSection.General).ToList();

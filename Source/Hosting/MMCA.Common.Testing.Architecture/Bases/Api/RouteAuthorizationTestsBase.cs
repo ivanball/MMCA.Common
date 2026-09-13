@@ -5,8 +5,8 @@ namespace MMCA.Common.Testing.Architecture;
 /// as governed must keep its role gate (<c>[Authorize(Roles = "...")]</c>), so an admin route cannot
 /// silently regress to a bare <c>[Authorize]</c> reachable by any authenticated user. Authored once
 /// here and re-run as a thin subclass per module UI assembly: the subclass supplies its
-/// <see cref="TargetAssembly"/>, its <see cref="RequiredRole"/> (e.g. <c>"Organizer"</c> or
-/// <c>"Admin"</c>), and its <see cref="IsGovernedPage"/> strategy (exact page names, namespace
+/// <see cref="TargetAssembly"/>, its <see cref="RequiredRole"/> (one of the app's own role
+/// constants), and its <see cref="IsGovernedPage"/> strategy (exact page names, namespace
 /// suffixes, or a pinned page-name array), plus a <see cref="MinimumGovernedPages"/> non-vacuity
 /// floor. Reflection-based, so it covers every current and future page matching the strategy without
 /// enumerating them by hand. Deliberately anonymous pages (public browse surfaces) and bare
@@ -27,7 +27,7 @@ public abstract class RouteAuthorizationTestsBase
     /// <summary>The module UI assembly whose routable pages are scanned.</summary>
     protected abstract Assembly TargetAssembly { get; }
 
-    /// <summary>The exact role every governed page must require (e.g. <c>"Organizer"</c>, <c>"Admin"</c>).</summary>
+    /// <summary>The exact role every governed page must require, named by the app.</summary>
     protected abstract string RequiredRole { get; }
 
     /// <summary>

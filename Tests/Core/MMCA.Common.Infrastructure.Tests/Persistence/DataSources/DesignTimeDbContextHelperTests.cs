@@ -1,4 +1,4 @@
-﻿using AwesomeAssertions;
+using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
@@ -131,6 +131,49 @@ public sealed class DesignTimeDbContextHelperTests
             "the gate must be opened for the source the context actually targets, not the one asked for");
     }
 
+    // Same two-part gate for the stored permission-grants table (ADR-116): the flag registers the
+    // framework's marker, and the settings name the source THIS context resolved to.
+    [Fact]
+    public void CreateSqlServer_WithStoredPermissionGrantsEnabled_IncludesThePermissionGrantsTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignGrants"],
+            options =>
+            {
+                ConfigureOptions(options);
+                options.EnableStoredPermissionGrants = true;
+            });
+
+        context.DataSourceKey.Name.Should().Be("DesignGrants");
+        context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CreateSqlServer_ByDefault_ExcludesThePermissionGrantsTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignNoGrants"],
+            ConfigureOptions);
+
+        context.Model.FindEntityType(typeof(PermissionGrant)).Should().BeNull(
+            "a migrations project that never opts in must keep scaffolding exactly what it did before");
+    }
+
+    [Fact]
+    public void CreateSqlServer_WhenTheRequestedSourceCollapsesOntoAnother_StillIncludesThePermissionGrantsTable()
+    {
+        using var context = DesignTimeDbContextHelper.CreateSqlServer(
+            ["--datasource", "DesignGrantsZulu"],
+            options =>
+            {
+                ConfigureOptions(options);
+                options.EnableStoredPermissionGrants = true;
+            });
+
+        context.DataSourceKey.Name.Should().Be("DesignGrantsAlpha");
+        context.Model.FindEntityType(typeof(PermissionGrant)).Should().NotBeNull(
+            "the gate must be opened for the source the context actually targets, not the one asked for");
+    }
     // ── SQLite design time ──
     // The symmetric entry point a SQLite-backed application scaffolds through. Without it such an app
     // has no way to run `dotnet ef` against the framework's context at all.
@@ -265,6 +308,28 @@ public sealed class DesignTimeDbContextHelperTests
 
         // A pair sharing one connection, which the resolver collapses onto the alphabetically-first
         // name: asking for Zulu yields a context whose physical source is Alpha.
+        // Sources used only by the stored permission-grant cases, for the same cache reason.
+        options.DataSources["DesignGrants"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=Grants;",
+            SQLServerMigrationsAssembly = "Design.Grants.Migrations",
+        };
+        options.DataSources["DesignNoGrants"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = "Server=design;Database=NoGrants;",
+            SQLServerMigrationsAssembly = "Design.NoGrants.Migrations",
+        };
+        const string sharedGrantsConnection = "Server=design;Database=SharedGrants;";
+        options.DataSources["DesignGrantsAlpha"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = sharedGrantsConnection,
+            SQLServerMigrationsAssembly = "Design.SharedGrants.Migrations",
+        };
+        options.DataSources["DesignGrantsZulu"] = new DataSourceEntrySettings
+        {
+            SQLServerConnectionString = sharedGrantsConnection,
+            SQLServerMigrationsAssembly = "Design.SharedGrants.Migrations",
+        };
         const string sharedConnection = "Server=design;Database=SharedSessions;";
         options.DataSources["DesignSessionsAlpha"] = new DataSourceEntrySettings
         {

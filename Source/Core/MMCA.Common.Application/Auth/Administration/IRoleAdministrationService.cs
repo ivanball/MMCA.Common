@@ -19,6 +19,12 @@ namespace MMCA.Common.Application.Auth.Administration;
 /// the edit is live on the next request in this process. Compiled permissions are reported but are
 /// never touched by a set.
 /// </para>
+/// <para>
+/// Two refusals guard the set, both validation failures: <c>PermissionGrant.ManageRolesMustBeCompiled</c>
+/// when the submitted set names the permission that gates this very surface, and
+/// <c>PermissionGrant.UnknownPermission</c> when it names something outside
+/// <see cref="GetCatalogAsync"/>.
+/// </para>
 /// </remarks>
 public interface IRoleAdministrationService
 {
@@ -39,10 +45,27 @@ public interface IRoleAdministrationService
     Task<Result<RolePermissionsResponse>> GetRoleAsync(string role, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads the closed sets a role editor renders: the roles this surface lists, and the
+    /// permissions a stored grant may name.
+    /// </summary>
+    /// <remarks>
+    /// The permission list is the COMPILED catalog. A stored grant can only pick out of it, so an
+    /// editor built from this response can never submit something
+    /// <see cref="SetStoredPermissionsAsync"/> would refuse as unknown.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The catalog, both lists sorted ordinally.</returns>
+    Task<Result<PermissionCatalogResponse>> GetCatalogAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Replaces the stored permissions of one role and invalidates the cached snapshot.
     /// </summary>
     /// <param name="role">The role to edit.</param>
-    /// <param name="permissions">The complete set of stored permissions the role should grant.</param>
+    /// <param name="permissions">
+    /// The complete set of stored permissions the role should grant. Every entry must appear in
+    /// <see cref="GetCatalogAsync"/>, and none of them may be
+    /// <c>AdministrationPermissions.ManageRoles</c>.
+    /// </param>
     /// <param name="changedBy">Optional principal name recorded on the rows this creates.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The role's state after the edit, or a failure.</returns>

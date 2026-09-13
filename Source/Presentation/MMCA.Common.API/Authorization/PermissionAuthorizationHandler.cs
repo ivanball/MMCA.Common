@@ -26,7 +26,7 @@ public sealed class PermissionAuthorizationHandler(IPermissionRegistry permissio
             return Task.CompletedTask;
         }
 
-        if (context.User.HasClaim(AuthClaimTypes.Permission, requirement.Permission)
+        if (context.User.HasPermissionClaim(requirement.Permission)
             || permissionRegistry.HasPermission(context.User.GetRoleValues(), requirement.Permission))
         {
             context.Succeed(requirement);

@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Application.UseCases.Decorators;
 using MMCA.Common.Application.UseCases.Markers;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Permissions;
 using Moq;
 
@@ -103,6 +105,46 @@ public sealed class AuthorizationCommandDecoratorTests
             Times.Once);
     }
 
+    // ── A permission claim grants on its own, with no role behind it: that is how a grant stored in
+    // the minting host reaches a service that does not own the grant table ──
+    [Fact]
+    public async Task HandleAsync_WhenOnlyThePermissionClaimGrantsIt_DelegatesToInner()
+    {
+        var inner = new Mock<ICommandHandler<GuardedCommand, Result>>();
+        inner.Setup(x => x.HandleAsync(It.IsAny<GuardedCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+        _permissionRegistry.Setup(x => x.HasPermission(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
+            .Returns(false);
+        WithPermissionClaims("catalog.products.write");
+
+        var sut = new AuthorizationCommandDecorator<GuardedCommand, Result>(
+            inner.Object, _currentUser.Object, _permissionRegistry.Object);
+
+        var result = await sut.HandleAsync(new GuardedCommand());
+
+        result.IsSuccess.Should().BeTrue();
+        inner.Verify(x => x.HandleAsync(It.IsAny<GuardedCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── Neither source grants it: the claim is additive, never a way around the check ──
+    [Fact]
+    public async Task HandleAsync_WhenNeitherRoleNorClaimGrantsIt_ReturnsForbidden()
+    {
+        var inner = new Mock<ICommandHandler<GuardedCommand, Result>>();
+        _permissionRegistry.Setup(x => x.HasPermission(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()))
+            .Returns(false);
+        WithPermissionClaims("catalog.products.read");
+
+        var sut = new AuthorizationCommandDecorator<GuardedCommand, Result>(
+            inner.Object, _currentUser.Object, _permissionRegistry.Object);
+
+        var result = await sut.HandleAsync(new GuardedCommand());
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("Authorization.PermissionDenied");
+        inner.Verify(x => x.HandleAsync(It.IsAny<GuardedCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ── The failure factory also serves Result<T> ──
     [Fact]
     public async Task HandleAsync_WhenPermissionDenied_WithGenericResult_ReturnsFailure()
@@ -140,6 +182,12 @@ public sealed class AuthorizationCommandDecoratorTests
 
         result.Should().Be("handled");
     }
+
+    private void WithPermissionClaims(params string[] permissions) =>
+        _currentUser.Setup(x => x.User).Returns(
+            new ClaimsPrincipal(new ClaimsIdentity(
+                permissions.Select(permission => new Claim(AuthClaimTypes.Permission, permission)),
+                "TestAuth")));
 }
 
 // ── Test types ──

@@ -37,6 +37,23 @@ namespace MMCA.Common.API.Controllers.Administration;
 /// a set replaces the stored grants alone, so no request through this controller can take away a
 /// capability the host compiled into its registry.
 /// </para>
+/// <para>
+/// <b>Two refusals a client has to expect from a set</b>, both 400 Bad Request:
+/// </para>
+/// <list type="bullet">
+/// <item>
+/// <c>PermissionGrant.ManageRolesMustBeCompiled</c> when the submitted set names
+/// <see cref="AdministrationPermissions.ManageRoles"/>. That permission is the whole protection on
+/// this controller, so granting it from here would make access to role administration a matter of
+/// data, and deleting the row would lock every operator out of the screen that could restore it. A
+/// host that wants a role to administer roles grants it in code.
+/// </item>
+/// <item>
+/// <c>PermissionGrant.UnknownPermission</c> when the set names anything outside the catalog
+/// <see cref="GetCatalogAsync"/> reports. A stored row that no endpoint checks is a typo, not a
+/// grant, so it is refused rather than written and left silently inert.
+/// </item>
+/// </list>
 /// </remarks>
 /// <param name="administration">The role-administration service.</param>
 /// <param name="currentUserService">The caller, recorded on the grant rows a set creates.</param>
@@ -64,6 +81,28 @@ public abstract class RolesAdminControllerBase(
         CancellationToken cancellationToken = default)
     {
         var result = await Administration.ListRolesAsync(cancellationToken).ConfigureAwait(false);
+
+        return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Reads the closed sets a role editor renders: the roles this surface lists, and the
+    /// permissions a stored grant may name.
+    /// </summary>
+    /// <remarks>
+    /// Routed on the literal <c>catalog</c>, which takes precedence over the <c>{role}</c> template
+    /// below, so no role named "catalog" can shadow it.
+    /// </remarks>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The catalog, or a Problem Details failure.</returns>
+    [HttpGet("catalog")]
+    [ProducesResponseType(typeof(PermissionCatalogResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
+    public virtual async Task<ActionResult<PermissionCatalogResponse>> GetCatalogAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await Administration.GetCatalogAsync(cancellationToken).ConfigureAwait(false);
 
         return result.IsFailure ? HandleFailure(result.Errors) : Ok(result.Value);
     }

@@ -30,6 +30,13 @@ internal static class AuthorizationGate
     /// failure to short-circuit with. The denial metric is recorded here, so a caller only has to
     /// shape the failure.
     /// </returns>
+    /// <remarks>
+    /// The capability check grants on EITHER source, exactly as the HTTP policy handler does: a role
+    /// the host's registry maps to the permission, or an <see cref="AuthClaimTypes.Permission"/>
+    /// claim on the principal itself. The claim is what carries a stored grant across a service
+    /// boundary, since only the minting host reads the grant table, so checking the registry alone
+    /// would deny in one service what the endpoint policy allows in another.
+    /// </remarks>
     internal static Error? Evaluate(
         object? request,
         ICurrentUserService currentUser,
@@ -37,7 +44,8 @@ internal static class AuthorizationGate
         string requestTypeName)
     {
         if (request is IRequiresPermission requiresPermission
-            && !permissionRegistry.HasPermission(currentUser.Roles, requiresPermission.Permission))
+            && !permissionRegistry.HasPermission(currentUser.Roles, requiresPermission.Permission)
+            && !currentUser.User.HasPermissionClaim(requiresPermission.Permission))
         {
             CqrsMetrics.RecordAuthorizationDenied(requestTypeName);
 

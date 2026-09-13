@@ -11,11 +11,16 @@ public sealed class PermissionAuthorizationHandlerTests
 {
     private const string Permission = "sessions:manage";
 
+    // Role names are the app's vocabulary, not the framework's, so the test declares its own.
+    private const string Organizer = "Organizer";
+    private const string Attendee = "Attendee";
+    private const string Admin = "Admin";
+
     [Fact]
     public async Task HandleAsync_WhenRoleGrantsPermission_Succeeds()
     {
-        var context = CreateContext(roles: [RoleNames.Organizer]);
-        var handler = CreateHandler(grantTo: RoleNames.Organizer);
+        var context = CreateContext(roles: [Organizer]);
+        var handler = CreateHandler(grantTo: Organizer);
 
         await handler.HandleAsync(context);
 
@@ -29,7 +34,7 @@ public sealed class PermissionAuthorizationHandlerTests
         var context = CreateContext(
             roles: [],
             extraClaims: [new Claim(AuthClaimTypes.Permission, Permission)]);
-        var handler = CreateHandler(grantTo: RoleNames.Admin);
+        var handler = CreateHandler(grantTo: Admin);
 
         await handler.HandleAsync(context);
 
@@ -39,8 +44,8 @@ public sealed class PermissionAuthorizationHandlerTests
     [Fact]
     public async Task HandleAsync_WhenRoleDoesNotGrantPermission_DoesNotSucceed()
     {
-        var context = CreateContext(roles: [RoleNames.Attendee]);
-        var handler = CreateHandler(grantTo: RoleNames.Organizer);
+        var context = CreateContext(roles: [Attendee]);
+        var handler = CreateHandler(grantTo: Organizer);
 
         await handler.HandleAsync(context);
 
@@ -50,8 +55,8 @@ public sealed class PermissionAuthorizationHandlerTests
     [Fact]
     public async Task HandleAsync_WhenNotAuthenticated_DoesNotSucceed()
     {
-        var context = CreateContext(roles: [RoleNames.Organizer], authenticated: false);
-        var handler = CreateHandler(grantTo: RoleNames.Organizer);
+        var context = CreateContext(roles: [Organizer], authenticated: false);
+        var handler = CreateHandler(grantTo: Organizer);
 
         await handler.HandleAsync(context);
 

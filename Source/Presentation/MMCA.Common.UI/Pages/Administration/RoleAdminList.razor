@@ -1,0 +1,62 @@
+@using MMCA.Common.Shared.Auth.Responses
+
+<PageTitle>@Title</PageTitle>
+
+<PageHeader Title="@Title" />
+
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@T("Description")</MudText>
+
+@* The load failure is rendered inline rather than as a snackbar: an empty table and a failed load
+   look identical once a toast expires, and this one has a retry. *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+
+@if (IsLoading)
+{
+    <PageLoadingState Label="@T("Loading")" />
+}
+else if (_loadResult is { IsFailure: true })
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="LoadRolesAsync">
+        @T("Action.Retry")
+    </MudButton>
+}
+else if (_roles.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Groups" Message="@T("Empty.NoRoles")" />
+}
+else
+{
+    @* Breakpoint="Breakpoint.Sm" is what makes the table readable on a phone: below it MudTable
+       stacks each row into a card and renders the DataLabel as each cell's own heading, so no
+       horizontal scrolling is needed. role="region" is the W3C pattern for a labelled table
+       container: MudTable splats unmatched attributes onto its wrapper div, and a bare div may not
+       carry aria-label. *@
+    <MudTable Items="_roles" T="RolePermissionsResponse" Hover="true" Elevation="1"
+              Breakpoint="Breakpoint.Sm" Class="mb-4"
+              role="region" aria-label="@T("Aria.Table")">
+        <HeaderContent>
+            <MudTh>@T("Column.Role")</MudTh>
+            <MudTh>@T("Column.Compiled")</MudTh>
+            <MudTh>@T("Column.Stored")</MudTh>
+            <MudTh>@T("Column.Actions")</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="@T("Column.Role")">@context.Role</MudTd>
+            <MudTd DataLabel="@T("Column.Compiled")" data-testid="compiled-count">@context.RegisteredPermissions.Count</MudTd>
+            <MudTd DataLabel="@T("Column.Stored")" data-testid="stored-count">@context.StoredPermissions.Count</MudTd>
+            <MudTd DataLabel="@T("Column.Actions")">
+                @* A link, not a row click: a whole-row click is mouse-only, and the edit screen is
+                   the only destination this row has. *@
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Edit"
+                           Href="@EditHref(context.Role)"
+                           data-testid="edit-role"
+                           aria-label="@T("Aria.Edit", context.Role)">
+                    @T("Action.Edit")
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}

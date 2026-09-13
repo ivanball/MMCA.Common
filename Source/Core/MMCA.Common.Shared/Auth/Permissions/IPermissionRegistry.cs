@@ -7,8 +7,9 @@ namespace MMCA.Common.Shared.Auth.Permissions;
 /// or re-shaping who-can-do-what is a registry change, not an endpoint change.
 /// </summary>
 /// <remarks>
-/// Role lookups are case-insensitive (see <see cref="RoleNames"/>); permission values are
-/// compared ordinally. Implementations are expected to be immutable and thread-safe.
+/// Role names are the host's own vocabulary, not the framework's. Role lookups are
+/// case-insensitive; permission values are compared ordinally. Implementations are expected to be
+/// immutable and thread-safe.
 /// </remarks>
 public interface IPermissionRegistry
 {

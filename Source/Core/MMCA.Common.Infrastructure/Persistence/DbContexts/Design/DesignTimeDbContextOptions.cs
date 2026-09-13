@@ -73,6 +73,20 @@ public sealed class DesignTimeDbContextOptions
     public bool EnableRefreshSessions { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the design-time model maps the stored permission-grants
+    /// table (<c>PermissionGrants</c>, ADR-116). Defaults to <see langword="false"/>.
+    /// </summary>
+    /// <remarks>
+    /// Set it in the migrations project of the database that <c>AddStoredPermissionGrants</c> targets
+    /// (the Identity database, like <see cref="EnableRefreshSessions"/>). The helper registers the
+    /// framework's model gate and points <c>Authentication:PermissionGrants:DataSourceName</c> at the
+    /// source this context resolved to, so the flag opens the gate for exactly the context
+    /// <c>--datasource</c> selected. The flag must match whether the host calls
+    /// <c>AddStoredPermissionGrants</c>, or the scaffolded migrations and the running model disagree.
+    /// </remarks>
+    public bool EnableStoredPermissionGrants { get; set; }
+
+    /// <summary>
     /// Gets the assemblies containing the entity type configurations to include in the model.
     /// Must be listed explicitly — the AppDomain scan used at runtime sees nothing at design time.
     /// </summary>

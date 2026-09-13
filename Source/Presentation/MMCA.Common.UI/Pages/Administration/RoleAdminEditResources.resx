@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Permissions for {0}</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>Tick the permissions this role should be granted by stored rows. Permissions granted in code are already ticked and cannot be changed here.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Loading permissions</value>
+  </data>
+  <data name="Action.Retry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Action.Back" xml:space="preserve">
+    <value>Back to roles</value>
+  </data>
+  <data name="Action.Save" xml:space="preserve">
+    <value>Save permissions</value>
+  </data>
+  <data name="Aria.Save" xml:space="preserve">
+    <value>Save the stored permissions of {0}</value>
+  </data>
+  <data name="Empty.NoPermissions" xml:space="preserve">
+    <value>This application declares no permissions yet, so there is nothing to grant.</value>
+  </data>
+  <data name="Group.General" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Hint.Compiled" xml:space="preserve">
+    <value>Granted in code</value>
+  </data>
+  <data name="Hint.ManageRoles" xml:space="preserve">
+    <value>Can only be granted in code</value>
+  </data>
+  <data name="Save.FailedTitle" xml:space="preserve">
+    <value>The permissions were not saved</value>
+  </data>
+  <data name="Snackbar.Saved" xml:space="preserve">
+    <value>Stored permissions saved.</value>
+  </data>
+  <data name="Snackbar.SaveFailed" xml:space="preserve">
+    <value>Failed to save the stored permissions.</value>
+  </data>
+</root>

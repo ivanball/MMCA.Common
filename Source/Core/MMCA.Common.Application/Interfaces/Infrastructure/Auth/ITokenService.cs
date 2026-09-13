@@ -10,7 +10,7 @@ public interface ITokenService
     /// <summary>Generates a signed JWT access token containing user claims.</summary>
     /// <param name="userId">The user's identifier.</param>
     /// <param name="email">The user's email address.</param>
-    /// <param name="role">The user's role (e.g. "Organizer", "Attendee").</param>
+    /// <param name="role">The user's role, as the host names it.</param>
     /// <param name="fullName">The user's full display name.</param>
     /// <param name="additionalClaims">Optional module-specific claims to include in the token.</param>
     /// <returns>The signed JWT token string.</returns>

@@ -125,6 +125,12 @@ public static class DependencyInjection
             // its own registry, and a host with no permission model still resolves every handler.
             services.TryAddSingleton<IPermissionRegistry, UnconfiguredPermissionRegistry>();
 
+            // The catalog half of the same fallback, so an administration surface mounted on a host
+            // with no permission model renders an empty list instead of failing to activate. TryAdd
+            // again: AddAuthorizationPolicies / AddPermissions register the real catalog, which is
+            // the very registry they built.
+            services.TryAddSingleton<IPermissionCatalog, UnconfiguredPermissionRegistry>();
+
             // ── Command decorators ──────────────────────────────────────
             // Registered first = innermost (wraps the concrete handler directly).
             // Registered last  = outermost (wraps all other decorators).

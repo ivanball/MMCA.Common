@@ -124,7 +124,14 @@ public static class AuthorizationExtensions
 
         var builder = new PermissionRegistryBuilder();
         services.AddSingleton(builder);
-        services.AddSingleton<IPermissionRegistry>(_ => builder.Build());
+        services.AddSingleton(_ => builder.Build());
+
+        // Both contracts forward to the ONE built instance, so what an administration screen
+        // enumerates and what an authorization check answers from can never disagree. The concrete
+        // registration above is what makes them the same object; asking the builder twice would
+        // build two.
+        services.AddSingleton<IPermissionRegistry>(sp => sp.GetRequiredService<PermissionRegistry>());
+        services.AddSingleton<IPermissionCatalog>(sp => sp.GetRequiredService<PermissionRegistry>());
 
         return builder;
     }

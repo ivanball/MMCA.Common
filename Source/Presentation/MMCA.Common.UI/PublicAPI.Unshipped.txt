@@ -79,8 +79,10 @@ MMCA.Common.UI.Common.LatestLoadGuard.Begin() -> (System.Threading.CancellationT
 MMCA.Common.UI.Common.LatestLoadGuard.Dispose() -> void
 MMCA.Common.UI.Common.LatestLoadGuard.IsCurrent(int generation) -> bool
 MMCA.Common.UI.Common.LatestLoadGuard.LatestLoadGuard() -> void
-MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
-MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
+MMCA.Common.UI.Common.NavItem.Deconstruct(out string! Title, out string! Href, out string! Icon, out System.Type! TitleResource, out string? RequiredRole, out string? RequiredClaim, out string? RequiredPermission, out MMCA.Common.UI.Common.NavSection Section, out string? Group) -> void
+MMCA.Common.UI.Common.NavItem.NavItem(string! Title, string! Href, string! Icon, System.Type! TitleResource, string? RequiredRole = null, string? RequiredClaim = null, string? RequiredPermission = null, MMCA.Common.UI.Common.NavSection Section = MMCA.Common.UI.Common.NavSection.General, string? Group = null) -> void
+MMCA.Common.UI.Common.NavItem.RequiredPermission.get -> string?
+MMCA.Common.UI.Common.NavItem.RequiredPermission.init -> void
 MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type!
 MMCA.Common.UI.Common.ResultUiExtensions
 MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.get -> string!
@@ -457,3 +459,49 @@ override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.SaveFilters(Sy
 override MMCA.Common.UI.Pages.Administration.UserAdminList<TUser>.Title.get -> string!
 static MMCA.Common.UI.Services.Capabilities.Navigation.DeepLinkDispatcher.IsAppRelativeRoute(string? route) -> bool
 static MMCA.Common.UI.DependencyInjection.AddUserAdministrationUI<TUserDto>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.DependencyInjection.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddRoleAdministrationUI() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.DependencyInjection.AddRoleAdministrationUI(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.RoleAdminEdit() -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Role.get -> string!
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Role.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.ListHref.get -> string!
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.ListHref.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.IsSaving.get -> bool
+MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Dispose() -> void
+override MMCA.Common.UI.Pages.Administration.RoleAdminEdit.OnParametersSetAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Dispose(bool disposing) -> void
+~override MMCA.Common.UI.Pages.Administration.RoleAdminEdit.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminEditResources
+MMCA.Common.UI.Pages.Administration.RoleAdminEditResources.RoleAdminEditResources() -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminList
+MMCA.Common.UI.Pages.Administration.RoleAdminList.RoleAdminList() -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminList.Heading.get -> string?
+MMCA.Common.UI.Pages.Administration.RoleAdminList.Heading.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminList.EditHref.get -> System.Func<string!, string!>!
+MMCA.Common.UI.Pages.Administration.RoleAdminList.EditHref.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminList.Localizer.get -> Microsoft.Extensions.Localization.IStringLocalizer?
+MMCA.Common.UI.Pages.Administration.RoleAdminList.Localizer.set -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminList.IsLoading.get -> bool
+MMCA.Common.UI.Pages.Administration.RoleAdminList.Dispose() -> void
+override MMCA.Common.UI.Pages.Administration.RoleAdminList.OnInitializedAsync() -> System.Threading.Tasks.Task!
+virtual MMCA.Common.UI.Pages.Administration.RoleAdminList.Dispose(bool disposing) -> void
+~override MMCA.Common.UI.Pages.Administration.RoleAdminList.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Pages.Administration.RoleAdminListResources
+MMCA.Common.UI.Pages.Administration.RoleAdminListResources.RoleAdminListResources() -> void
+MMCA.Common.UI.Services.Administration.IRoleAdminUIService
+MMCA.Common.UI.Services.Administration.IRoleAdminUIService.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.IRoleAdminUIService.GetAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
+MMCA.Common.UI.Services.Administration.IRoleAdminUIService.GetCatalogAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse!>!>!
+MMCA.Common.UI.Services.Administration.IRoleAdminUIService.SetStoredPermissionsAsync(string! role, System.Collections.Generic.IReadOnlyList<string!>! permissions, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
+MMCA.Common.UI.Services.Administration.RoleAdminService
+MMCA.Common.UI.Services.Administration.RoleAdminService.RoleAdminService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
+MMCA.Common.UI.Services.Administration.RoleAdminService.GetAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!>!
+MMCA.Common.UI.Services.Administration.RoleAdminService.GetAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
+MMCA.Common.UI.Services.Administration.RoleAdminService.GetCatalogAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse!>!>!
+MMCA.Common.UI.Services.Administration.RoleAdminService.SetStoredPermissionsAsync(string! role, System.Collections.Generic.IReadOnlyList<string!>! permissions, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!

@@ -8,11 +8,29 @@ namespace MMCA.Common.Application.UseCases.Markers;
 /// <see cref="Permission"/>, and short-circuit with a
 /// <see cref="Common.Shared.Abstractions.ErrorType.Forbidden"/> failure when none does.
 /// <para>
+/// The gate honors registry grants and permission claims alike, exactly as the HTTP policy handler
+/// does: a caller passes on a role the registry maps to <see cref="Permission"/> OR on a
+/// <c>permission</c> claim carrying that value on the principal itself
+/// (<c>MMCA.Common.Shared.Auth.AuthClaimTypes.Permission</c>). The claim is how a grant stored in the
+/// minting host reaches a service that does not own the grant table, so a registry-only check would
+/// deny in the pipeline what the endpoint policy already allowed.
+/// </para>
+/// <para>
 /// Opting in is per request type: a command or query that does not implement this interface passes
 /// through the decorator untouched, so endpoint-level <c>[Authorize]</c> policies remain the only
 /// gate for everything that has not opted in.
 /// </para>
 /// </summary>
+/// <remarks>
+/// The gate evaluates the CURRENT principal, and for a command that does not run inline that is the
+/// principal restored from the scheduling request: an internal command carries the scheduling user
+/// and tenant on its row and <c>InternalCommandProcessor</c> puts them back before the handler runs,
+/// and an integration-event consumer restores the same context from the message headers. So never
+/// mark a command that can be scheduled without an operator principal behind it (work queued by a
+/// buyer, by an anonymous webhook, or by a system sweep with no user at all): the restored principal
+/// holds no roles, the registry grants nothing, and the gate denies the command instead of running
+/// it. Gate such work at the edge that accepts it, and leave the deferred command ungated.
+/// </remarks>
 public interface IRequiresPermission
 {
     /// <summary>
