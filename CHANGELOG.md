@@ -4,6 +4,17 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.200.0] - 2026-09-13
+
+### Added
+
+- **`Layout:SessionsNavRequiredRole`** (`MMCA.Common.UI`). New optional `LayoutSettings` key: when
+  set to a role name (for example `Admin`), the framework-owned "Signed-in devices" link in the
+  navigation menu renders only for signed-in users in that role; when unset (the default) every
+  signed-in user keeps seeing it, so existing hosts are unchanged. The setting gates the menu entry
+  only; the `/profile/sessions` page itself stays available to any signed-in account. First
+  consumer: MMCA.ADC, which shows the link to administrators only.
+
 ## [1.199.0] - 2026-09-12
 
 ### Added
