@@ -8,6 +8,14 @@ namespace MMCA.Common.Application.UseCases.Markers;
 /// <see cref="Permission"/>, and short-circuit with a
 /// <see cref="Common.Shared.Abstractions.ErrorType.Forbidden"/> failure when none does.
 /// <para>
+/// The gate honors registry grants and permission claims alike, exactly as the HTTP policy handler
+/// does: a caller passes on a role the registry maps to <see cref="Permission"/> OR on a
+/// <c>permission</c> claim carrying that value on the principal itself
+/// (<c>MMCA.Common.Shared.Auth.AuthClaimTypes.Permission</c>). The claim is how a grant stored in the
+/// minting host reaches a service that does not own the grant table, so a registry-only check would
+/// deny in the pipeline what the endpoint policy already allowed.
+/// </para>
+/// <para>
 /// Opting in is per request type: a command or query that does not implement this interface passes
 /// through the decorator untouched, so endpoint-level <c>[Authorize]</c> policies remain the only
 /// gate for everything that has not opted in.

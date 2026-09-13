@@ -48,6 +48,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   capability it needs instead of a role: `NavMenu` keeps the item when the value is null or the
   principal carries a matching `permission` claim (ordinal comparison), which is what the access
   token now supplies. `RequiredRole` and `RequiredClaim` are unchanged and still apply.
+- **The CQRS pipeline gate honors permission claims too** (`MMCA.Common.Application`,
+  `MMCA.Common.Shared`). `AuthorizationGate` grants an `IRequiresPermission` request when the
+  registry grants it for the caller's roles OR the principal carries a matching `permission` claim,
+  matching `PermissionAuthorizationHandler`. Both now read the claim through the one new
+  `ClaimsPrincipalExtensions.HasPermissionClaim(permission)`, so a stored grant that reaches another
+  service only as a token claim is no longer denied in the pipeline while the HTTP policy allows it.
 
 ### Changed
 

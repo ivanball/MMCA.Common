@@ -255,6 +255,7 @@ override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.ToStri
 override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.GetHashCode() -> int
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindMultiFactorMethod(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasPermissionClaim(this System.Security.Claims.ClaimsPrincipal? principal, string! permission) -> bool
 static MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest left, MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest left, MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest left, MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest right) -> bool
