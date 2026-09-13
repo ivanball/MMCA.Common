@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Auth.Permissions;
 
 namespace MMCA.Common.Infrastructure.Auth;
 
@@ -24,6 +26,7 @@ namespace MMCA.Common.Infrastructure.Auth;
 public sealed class TokenService : ITokenService, IDisposable
 {
     private readonly JwtSettings _jwtSettings;
+    private readonly IPermissionRegistry _permissionRegistry;
     private readonly TimeProvider _timeProvider;
     private readonly SigningCredentials _signingCredentials;
     private readonly SecurityKey _validationKey;
@@ -40,6 +43,13 @@ public sealed class TokenService : ITokenService, IDisposable
     /// configured key material.
     /// </summary>
     /// <param name="jwtOptions">The bound JWT settings.</param>
+    /// <param name="permissionRegistry">
+    /// The host's role to permission map. Every access token carries one
+    /// <see cref="AuthClaimTypes.Permission"/> claim per permission the registry grants the token's
+    /// role, so a client can gate its own surface on capabilities instead of role names. A host that
+    /// declared no grants resolves the unconfigured registry, which grants nothing, and its tokens
+    /// simply carry no permission claims.
+    /// </param>
     /// <param name="timeProvider">
     /// Clock used for token timestamps (<c>iat</c>, <c>nbf</c>, <c>exp</c>). Optional so the service
     /// can be constructed directly in tests; resolved from DI in production and defaults to
@@ -53,12 +63,15 @@ public sealed class TokenService : ITokenService, IDisposable
     /// </param>
     public TokenService(
         IOptions<JwtSettings> jwtOptions,
+        IPermissionRegistry permissionRegistry,
         TimeProvider? timeProvider = null,
         IOptions<JwksSettings>? jwksSettings = null)
     {
         ArgumentNullException.ThrowIfNull(jwtOptions);
+        ArgumentNullException.ThrowIfNull(permissionRegistry);
         var jwtSettings = jwtOptions.Value;
         _jwtSettings = jwtSettings;
+        _permissionRegistry = permissionRegistry;
         _timeProvider = timeProvider ?? TimeProvider.System;
 
         if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
@@ -102,6 +115,20 @@ public sealed class TokenService : ITokenService, IDisposable
         {
             claims.AddRange(additionalClaims);
         }
+
+        // Bake the role's permissions into the token so a client can gate its own surface on a
+        // capability rather than on a role name it would otherwise have to know. Ordinal ordering
+        // keeps the token deterministic for a given role, and a permission the caller already
+        // supplied through additionalClaims is not repeated.
+        var alreadyClaimed = claims
+            .Where(c => string.Equals(c.Type, AuthClaimTypes.Permission, StringComparison.Ordinal))
+            .Select(c => c.Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        claims.AddRange(_permissionRegistry.GetPermissions(role)
+            .Where(permission => !alreadyClaimed.Contains(permission))
+            .Order(StringComparer.Ordinal)
+            .Select(permission => new Claim(AuthClaimTypes.Permission, permission)));
 
         var token = new JwtSecurityToken(
             issuer: _jwtSettings.Issuer,

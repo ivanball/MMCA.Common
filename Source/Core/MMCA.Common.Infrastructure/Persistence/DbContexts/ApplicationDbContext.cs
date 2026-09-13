@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.Permissions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
@@ -96,6 +97,23 @@ public abstract class ApplicationDbContext(
     /// </para>
     /// </summary>
     private bool _refreshSessionTableEnabled;
+
+    /// <summary>
+    /// Whether the <c>PermissionGrants</c> table belongs in THIS context's model. Resolved once in
+    /// <see cref="OnConfiguring"/> from the root provider and read by
+    /// <see cref="ConfigurePermissionGrants"/>, for the same reason as
+    /// <see cref="_schedulerTableEnabled"/>.
+    /// <para>
+    /// Two conditions, shaped like the refresh sessions but gated on a REGISTRATION rather than a
+    /// configuration flag: <c>AddStoredPermissionGrants(configuration)</c> registers
+    /// <see cref="Auth.PermissionGrantModelGate"/>, which is the whole opt-in, and
+    /// <c>Authentication:PermissionGrants:DataSourceName</c> (default <c>Default</c>) names the one
+    /// database that carries the rows. Grants are Identity-module data, not per-source
+    /// infrastructure like the outbox, so a host that splits its modules across databases gets the
+    /// table in exactly one of them and every other model stays byte-identical.
+    /// </para>
+    /// </summary>
+    private bool _permissionGrantTableEnabled;
 
     /// <summary>Gets the resolved connection information for this context's physical data source.</summary>
     internal PhysicalDataSource PhysicalSource => physicalDataSource;
@@ -315,6 +333,10 @@ public abstract class ApplicationDbContext(
             refreshSessionSettings?.Enabled == true
             && string.Equals(physicalDataSource.Key.Name, refreshSessionSettings.DataSourceName, StringComparison.Ordinal);
 
+        // Same two-condition shape, with the opt-in being the AddStoredPermissionGrants registration
+        // rather than a configuration flag: see the field's remarks.
+        _permissionGrantTableEnabled = ResolvePermissionGrantGate();
+
         ConfigureSensitiveDataLogging(optionsBuilder);
 
         // Key EF's model cache by (context type, physical source name): the same context class is
@@ -410,6 +432,10 @@ public abstract class ApplicationDbContext(
         // Configure the refresh-session table (used when RefreshSessions:Enabled, on that setting's
         // data source only).
         ConfigureRefreshSessions(modelBuilder);
+
+        // Configure the stored permission-grant table (used when AddStoredPermissionGrants was
+        // called, on that setting's data source only).
+        ConfigurePermissionGrants(modelBuilder);
     }
 
     /// <summary>
@@ -868,6 +894,50 @@ public abstract class ApplicationDbContext(
         }
 
         modelBuilder.ApplyRefreshSessionConfiguration();
+    }
+
+    /// <summary>
+    /// Whether this context instance carries the <c>PermissionGrants</c> table: the host opted in
+    /// with <c>AddStoredPermissionGrants</c>, AND this instance targets the source that setting
+    /// names.
+    /// </summary>
+    /// <remarks>
+    /// Both resolutions use <c>GetService</c>: a directly-constructed test or design-time context
+    /// registers neither, and both absences have to read as "the table is not here" rather than fail
+    /// every context construction in the application.
+    /// </remarks>
+    /// <returns>Whether the table belongs in this model.</returns>
+    private bool ResolvePermissionGrantGate() =>
+        serviceProvider.GetService<PermissionGrantModelGate>() is not null
+        && string.Equals(
+            physicalDataSource.Key.Name,
+            serviceProvider.GetService<IOptions<PermissionGrantSettings>>()?.Value.DataSourceName,
+            StringComparison.Ordinal);
+
+    /// <summary>
+    /// Configures the <see cref="Domain.Auth.PermissionGrant"/> entity (the stored half of the
+    /// authorization model, ADR-116). Gated like the refresh sessions, on the
+    /// <c>AddStoredPermissionGrants</c> registration AND on this context targeting the source named
+    /// by <c>Authentication:PermissionGrants:DataSourceName</c>. Cosmos DB never reaches this method
+    /// (it overrides <see cref="OnModelCreating"/>).
+    /// <para>
+    /// This is the consumer path, for the reason the sessions have one: downstream apps run on the
+    /// sealed engine contexts and have no context class to override (ADR-006), and the grant entity
+    /// is not an <c>AuditableBaseEntity</c>, so the module entity-configuration mechanism never sees
+    /// it. A host with its own context class can still call
+    /// <see cref="Auth.PermissionGrantModelBuilderExtensions.ApplyPermissionGrantConfiguration"/>
+    /// directly, which is what this calls.
+    /// </para>
+    /// </summary>
+    /// <param name="modelBuilder">The model builder being configured.</param>
+    private void ConfigurePermissionGrants(ModelBuilder modelBuilder)
+    {
+        if (!_permissionGrantTableEnabled)
+        {
+            return;
+        }
+
+        modelBuilder.ApplyPermissionGrantConfiguration();
     }
 
     /// <summary>

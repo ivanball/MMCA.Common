@@ -4,6 +4,86 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.201.0] - 2026-09-13
+
+### Added
+
+- **Role administration is complete end to end** (ADR-116; `MMCA.Common.Shared`,
+  `MMCA.Common.Application`, `MMCA.Common.Infrastructure`, `MMCA.Common.API`, `MMCA.Common.UI`). The
+  opt-in stored permission grants now come with everything an operator screen needs. New
+  `IPermissionCatalog` (`Roles` + `Permissions`, sorted ordinally) is the compiled universe a stored
+  grant may pick from; `PermissionRegistry` implements it from the very map it authorizes against,
+  and `AddAuthorizationPolicies()` / `AddPermissions(...)` register both contracts from that one
+  built instance. `IRoleAdministrationService.GetCatalogAsync` and
+  `RolesAdminControllerBase.GetCatalogAsync` (`GET Admin/Roles/catalog`) serve it as the new
+  `PermissionCatalogResponse`, whose role list is the catalog's roles unioned with
+  `Authentication:PermissionGrants:KnownRoles` and every role that already carries a grant;
+  `ListRolesAsync` reports that same universe.
+- **`AddStoredPermissionGrants(configuration)` now maps the table too.** It registers a model gate
+  that `ApplicationDbContext` reads, so the `PermissionGrants` table is applied to the model of the
+  one context whose physical source is named by `Authentication:PermissionGrants:DataSourceName`
+  (the refresh-session precedent). No consumer calls `ApplyPermissionGrantConfiguration` by hand,
+  and a host that never opts in keeps a byte-identical model. `DesignTimeDbContextOptions.EnableStoredPermissionGrants`
+  opens the same gate for `dotnet ef` in the Identity database's migrations project.
+- **Lockout guard on stored grants.** `SetStoredPermissionsAsync` refuses a set containing
+  `AdministrationPermissions.ManageRoles` (`PermissionGrant.ManageRolesMustBeCompiled`) and any
+  permission outside the catalog (`PermissionGrant.UnknownPermission`), both as validation failures
+  the controller returns as 400. A data edit therefore cannot take over the screen that performs it,
+  and a typo cannot become a row no endpoint checks.
+- **Role administration UI** (`MMCA.Common.UI`). `AddRoleAdministrationUI()` registers
+  `IRoleAdminUIService` / `RoleAdminService` over the `Admin/Roles` endpoints, and two new route-less
+  components mirror `UserAdminList`: `RoleAdminList` (one row per role with its compiled and stored
+  counts plus an edit link the host builds through `EditHref`) and `RoleAdminEdit` (the catalog
+  grouped into `fieldset`/`legend` sections by permission area, compiled permissions ticked and
+  disabled, the whole stored set submitted on save). Both take the app's own `IStringLocalizer` as a
+  `Localizer` override, ship English and Spanish resources, and leave the route and the authorization
+  attribute to the app.
+- **Access tokens carry the role's permissions** (`MMCA.Common.Infrastructure`). `TokenService` takes
+  the host's `IPermissionRegistry` and emits one `permission` claim
+  (`AuthClaimTypes.Permission`) per permission the registry grants the token's role, sorted ordinally
+  so the same role always mints the same token shape, and never duplicating a permission the caller
+  already supplied through `additionalClaims`. `PermissionAuthorizationHandler` already honored such
+  claims; nothing emitted them. A host that declared no grants resolves the unconfigured registry and
+  its tokens carry no permission claims, exactly as before.
+- **`NavItem.RequiredPermission`** (`MMCA.Common.UI`). A navigation entry can now state the
+  capability it needs instead of a role: `NavMenu` keeps the item when the value is null or the
+  principal carries a matching `permission` claim (ordinal comparison), which is what the access
+  token now supplies. `RequiredRole` and `RequiredClaim` are unchanged and still apply.
+- **The CQRS pipeline gate honors permission claims too** (`MMCA.Common.Application`,
+  `MMCA.Common.Shared`). `AuthorizationGate` grants an `IRequiresPermission` request when the
+  registry grants it for the caller's roles OR the principal carries a matching `permission` claim,
+  matching `PermissionAuthorizationHandler`. Both now read the claim through the one new
+  `ClaimsPrincipalExtensions.HasPermissionClaim(permission)`, so a stored grant that reaches another
+  service only as a token claim is no longer denied in the pipeline while the HTTP policy allows it.
+
+### Changed
+
+- **The framework-owned push-notification nav entry gates on `notifications:manage`**
+  (`MMCA.Common.UI`). `NotificationUIModule` asked for a role before; it now asks for
+  `NotificationPermissions.Manage`, so which role sees the entry is the host's grant decision, made
+  once in its permission registry, rather than a name compiled into the framework.
+- **`OwnerOrAdminFilterOptions.BypassRole` is required.** It has no default and is marked
+  `[Required]`; `AddAPI` registers the options with `ValidateDataAnnotations()` (deliberately not
+  `ValidateOnStart`), so a host that never applies `OwnerOrAdminFilter` is unaffected while a host
+  that applies it without naming a bypass role fails on first resolve with the data-annotation
+  message instead of silently comparing against a role name the framework invented.
+
+**Breaking:** the framework stops owning application role vocabulary. Role names are the app's, and
+nothing in `MMCA.Common` names one any more. See [UPGRADING.md](UPGRADING.md) for the mechanical fix.
+
+- `MMCA.Common.Shared.Auth.RoleNames` is **removed** (with its `Organizer`, `Attendee`,
+  `ContentEditor`, `Admin` and `Customer` constants). Each app declares its own role constants in its
+  Identity Shared project.
+- `TestPrincipal.Organizer()` is replaced by `TestPrincipal.InRole(role)`
+  (`MMCA.Common.Testing.UI`): the role is now an argument, because the test package knows no role
+  names either.
+- `OwnerOrAdminFilterOptions.BypassRole` has no default and must be configured by any host that uses
+  `OwnerOrAdminFilter`; `OwnershipHelper.IsAdmin` and both `GetOwnershipSpecification` overloads lost
+  their `= "Admin"` parameter default, so every caller passes the configured role.
+- `TokenService`'s constructor gained a required `IPermissionRegistry` parameter. This affects only
+  code that constructs the service by hand (tests, custom composition); a host resolving
+  `ITokenService` from DI needs no change, because `IPermissionRegistry` always has a registration.
+
 ## [1.200.0] - 2026-09-13
 
 ### Added

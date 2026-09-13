@@ -218,6 +218,27 @@ public static class DependencyInjection
         }
 
         /// <summary>
+        /// The UI opt-in of ADR-116's role administration: registers the HTTP client for the app's
+        /// <c>Admin/Roles</c> endpoints, which is what
+        /// <c>MMCA.Common.UI.Pages.Administration.RoleAdminList</c> and
+        /// <c>MMCA.Common.UI.Pages.Administration.RoleAdminEdit</c> read and save through. Call it
+        /// once per app, after <c>AddUIShared</c>.
+        /// <para>
+        /// Non-generic, unlike <see cref="AddUserAdministrationUI{TUserDto}"/>: roles and
+        /// permissions are strings the framework already owns, so there is no app DTO to name.
+        /// Nothing else in the framework calls this: an app that serves no role-administration
+        /// endpoints registers nothing and the components are simply never rendered.
+        /// </para>
+        /// </summary>
+        /// <returns>The service collection, for chaining.</returns>
+        public IServiceCollection AddRoleAdministrationUI()
+        {
+            services.TryAddScoped<IRoleAdminUIService, RoleAdminService>();
+
+            return services;
+        }
+
+        /// <summary>
         /// Registers one UI module: the Scrutor scan that picks up every
         /// <see cref="IEntityService{TEntityDTO, TIdentifierType}"/> implementation in
         /// <typeparamref name="TModule"/>'s assembly, plus the module descriptor itself (nav items,

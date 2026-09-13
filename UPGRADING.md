@@ -34,6 +34,108 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.201.0] - 2026-09-13
+
+**The framework stops owning application role vocabulary.** `MMCA.Common` named five roles and used
+three of them in code. It names none now: a role is the app's word, and the framework talks about
+permissions instead. Four things move.
+
+### 1. `RoleNames` is removed: declare your own
+
+`MMCA.Common.Shared.Auth.RoleNames` is gone. Add the same constants to your own Identity Shared
+project and swap the `using`.
+
+| Removed | Replacement |
+| --- | --- |
+| `MMCA.Common.Shared.Auth.RoleNames` | `<YourApp>.Identity.Shared.Auth.RoleNames` (yours to declare) |
+| `RoleNames.Organizer` = `"Organizer"` | your own constant, same value |
+| `RoleNames.Attendee` = `"Attendee"` | your own constant, same value |
+| `RoleNames.ContentEditor` = `"ContentEditor"` | your own constant, same value |
+| `RoleNames.Admin` = `"Admin"` | your own constant, same value |
+| `RoleNames.Customer` = `"Customer"` | your own constant, same value |
+
+The values do not change, so no token, database row, or claim is affected. Declare the class with
+only the roles your app actually has:
+
+```csharp
+namespace YourApp.Identity.Shared.Auth;
+
+public static class RoleNames
+{
+    public const string Admin = "Admin";
+    public const string Customer = "Customer";
+}
+```
+
+Then, from a POSIX shell at the consumer's root:
+
+```sh
+grep -rl --include='*.cs' --include='*.razor' 'MMCA.Common.Shared.Auth' . \
+  | xargs grep -l 'RoleNames' \
+  | xargs sed -i 's/^\(\s*\)\(global \)\?@\?using MMCA.Common.Shared.Auth;/\1\2using MMCA.Common.Shared.Auth;\n\1\2using YourApp.Identity.Shared.Auth;/'
+```
+
+Rebuild; every remaining error is a file that reached `RoleNames` through some other `using`. Note
+that `MMCA.Common.Shared.Auth` still exists and still holds `AuthClaimTypes`, `RoleValue` and
+`ClaimsPrincipalExtensions`, so do not delete that line, add yours beside it.
+
+### 2. `TestPrincipal.Organizer()` becomes `TestPrincipal.InRole(role)`
+
+| Old | New |
+| --- | --- |
+| `TestPrincipal.Organizer()` | `TestPrincipal.InRole(RoleNames.Organizer)` |
+| `TestPrincipal.Organizer("7")` | `TestPrincipal.InRole(RoleNames.Organizer, "7")` |
+
+The identity's display name is `"Test User"` rather than `"Organizer User"`; assert on the role, not
+on that name. `TestPrincipal.AuthenticatedUser(...)` is unchanged.
+
+### 3. `OwnerOrAdminFilterOptions.BypassRole` must be configured
+
+`BypassRole` lost its `"Admin"` default and is `[Required]`. `AddAPI` registers the options with
+`ValidateDataAnnotations()` and deliberately NOT `ValidateOnStart()`, so a host that never applies
+`OwnerOrAdminFilter` needs no configuration at all, while a host that applies it without naming the
+role fails on the first resolve with the data-annotation message. If you use the filter, add:
+
+```csharp
+services.Configure<OwnerOrAdminFilterOptions>(options => options.BypassRole = RoleNames.Admin);
+```
+
+`OwnershipHelper` lost the matching parameter defaults, so every call passes the role:
+
+| Old | New |
+| --- | --- |
+| `OwnershipHelper.IsAdmin(currentUser)` | `OwnershipHelper.IsAdmin(currentUser, RoleNames.Admin)` |
+| `GetOwnershipSpecification<TSpec, TId>(u, claimType, factory)` | `GetOwnershipSpecification<TSpec, TId>(u, claimType, factory, RoleNames.Admin)` |
+| `GetOwnershipSpecification<TSpec>(u, factory)` | `GetOwnershipSpecification<TSpec>(u, factory, RoleNames.Admin)` |
+
+Prefer reading the value from `IOptions<OwnerOrAdminFilterOptions>` where one is available, so the
+role is stated once.
+
+### 4. `TokenService` takes the permission registry
+
+`TokenService`'s constructor gained a required `IPermissionRegistry` parameter (second position,
+before the optional `TimeProvider` and `IOptions<JwksSettings>`). Resolving `ITokenService` from DI
+needs no change: `IPermissionRegistry` always has a registration. Only code that constructs the
+service by hand is affected:
+
+| Old | New |
+| --- | --- |
+| `new TokenService(jwtOptions)` | `new TokenService(jwtOptions, permissionRegistry)` |
+| `new TokenService(jwtOptions, timeProvider, jwksOptions)` | `new TokenService(jwtOptions, permissionRegistry, timeProvider, jwksOptions)` |
+
+In a test, `new PermissionRegistryBuilder().Build()` is the grant-nothing registry.
+
+Every access token now carries one `permission` claim per permission the registry grants the token's
+role. That is additive: no existing claim changes, and a host that declared no grants mints exactly
+the token it minted before. It is what lets a navigation entry gate on
+`NavItem.RequiredPermission` instead of a role name, and the framework's own push-notification entry
+now does (`notifications:manage`). Grant that permission to whichever role used to see the entry:
+
+```csharp
+services.AddPermissions(permissions => permissions
+    .Grant(RoleNames.Organizer, NotificationPermissions.Manage));
+```
+
 ## [1.195.0] - 2026-09-11
 
 **The outbox table gains four nullable columns: add one migration per relational outbox source.**

@@ -32,7 +32,7 @@ public sealed class LayoutSettings
     /// <summary>
     /// Optional role name that gates the framework-owned "Signed-in devices" entry in the
     /// navigation menu. Null or whitespace (the default) shows the link to every signed-in user;
-    /// a role name (for example <c>RoleNames.Admin</c>) shows it only to users in that role.
+    /// one of the host's own role constants shows it only to users in that role.
     /// This gates the menu entry alone, not the <c>/profile/sessions</c> page itself, which stays
     /// available to any signed-in account.
     /// </summary>

@@ -11,8 +11,15 @@ public static class AuthClaimTypes
     /// <summary>
     /// Claim type carrying a single granted permission. A principal may carry zero or more
     /// permission claims; they are honored <b>in addition to</b> permissions derived from the
-    /// principal's roles via <see cref="IPermissionRegistry"/>. Baking permission claims into the
-    /// token is optional — role-derived permissions work without them.
+    /// principal's roles via <see cref="IPermissionRegistry"/>.
+    /// <para>
+    /// The framework's token service emits them: every access token it mints carries one claim of
+    /// this type per permission the registry grants the token's role, sorted ordinally so the same
+    /// role always produces the same token shape. That is what lets a client decide what to show
+    /// (a navigation entry gating on <c>NavItem.RequiredPermission</c>) without knowing any role
+    /// name. Server-side checks still go through the registry, so a host that mints tokens some
+    /// other way loses nothing.
+    /// </para>
     /// </summary>
     public const string Permission = "permission";
 

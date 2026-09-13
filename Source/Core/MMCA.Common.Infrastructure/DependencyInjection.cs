@@ -524,9 +524,12 @@ public static class DependencyInjection
         /// on its own rather than failing at resolve time.
         /// </para>
         /// <para>
-        /// The consumer's Identity context still has to map the table with
-        /// <c>ApplyPermissionGrantConfiguration</c>. Nothing here maps it, for the reason the refresh
-        /// sessions are not mapped everywhere: one database owns the rows.
+        /// This call is also what maps the table. Registering
+        /// <c>PermissionGrantModelGate</c> tells <c>ApplicationDbContext</c> to apply
+        /// <c>ApplyPermissionGrantConfiguration</c> to the model of the one context whose physical
+        /// source is named by <c>Authentication:PermissionGrants:DataSourceName</c>, so no consumer
+        /// calls that extension by hand and a host that never opts in keeps a byte-identical model
+        /// (the refresh-session precedent; one database owns the rows).
         /// </para>
         /// </remarks>
         public IServiceCollection AddStoredPermissionGrants(IConfiguration configuration)
@@ -535,6 +538,9 @@ public static class DependencyInjection
                 .Bind(configuration.GetSection(PermissionGrantSettings.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
+            // The model gate: its presence IS the opt-in the context reads (see the type's remarks).
+            services.TryAddSingleton<Persistence.Auth.PermissionGrantModelGate>();
 
             services.TryAddScoped<IPermissionGrantStore, Persistence.Auth.EFPermissionGrantStore>();
 
@@ -559,10 +565,15 @@ public static class DependencyInjection
             // reported rather than silently swallowing the host's grants.
             if (!services.TryDecorate<IPermissionRegistry, LayeredPermissionRegistry>())
             {
+                var compiled = new PermissionRegistry(
+                    new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase));
+
                 services.AddSingleton<IPermissionRegistry>(
-                    sp => new LayeredPermissionRegistry(
-                        new PermissionRegistry(new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase)),
-                        sp.GetRequiredService<IPermissionGrantCache>()));
+                    sp => new LayeredPermissionRegistry(compiled, sp.GetRequiredService<IPermissionGrantCache>()));
+
+                // The same empty instance answers as the catalog, so the administration surface has
+                // something to enumerate even on a host that declared no compiled grants at all.
+                services.TryAddSingleton<IPermissionCatalog>(compiled);
             }
 
             return services;

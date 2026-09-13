@@ -176,6 +176,20 @@ public static class DesignTimeDbContextHelper
                 Enabled = designOptions.EnableRefreshSessions,
                 DataSourceName = physical.Key.Name,
             }));
+        // Same two-part gate for the stored permission-grants table (ADR-116): the context maps it
+        // only when the framework's marker is registered AND this context's source is the one named
+        // by the settings, so the marker is registered behind the flag and the source name is the one
+        // THIS context resolved to, for the same collapse reason as the refresh-session block.
+        if (designOptions.EnableStoredPermissionGrants)
+        {
+            services.AddSingleton<Persistence.Auth.PermissionGrantModelGate>();
+        }
+
+        services.AddSingleton<IOptions<Application.Auth.Permissions.PermissionGrantSettings>>(
+            Options.Create(new Application.Auth.Permissions.PermissionGrantSettings
+            {
+                DataSourceName = physical.Key.Name,
+            }));
         services.AddSingleton<IEntityConfigurationAssemblyProvider>(assemblyProvider);
         services.AddSingleton<IDataSourceResolver>(resolver);
         services.AddSingleton<IEntityDataSourceRegistry>(registry);

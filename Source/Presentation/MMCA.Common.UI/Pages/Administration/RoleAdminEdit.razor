@@ -1,0 +1,76 @@
+<PageTitle>@Title</PageTitle>
+
+<PageHeader Title="@Title" />
+
+<MudLink Href="@ListHref" Class="d-inline-flex align-center mb-2">
+    <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="mr-1" />
+    @T("Action.Back")
+</MudLink>
+
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@T("Description")</MudText>
+
+@* Inline rather than a snackbar: the server's refusal names the permission it rejected, which is
+   exactly what the operator has to read before trying again. *@
+<ErrorSummary Result="_loadResult" Localizer="L" />
+<ErrorSummary Result="_saveResult" Localizer="L" Title="@T("Save.FailedTitle")" />
+
+@if (IsLoading)
+{
+    <PageLoadingState Label="@T("Loading")" />
+}
+else if (_loadResult is { IsFailure: true })
+{
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Refresh"
+               OnClick="LoadAsync">
+        @T("Action.Retry")
+    </MudButton>
+}
+else if (_groups.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Outlined.Rule" Message="@T("Empty.NoPermissions")" />
+}
+else
+{
+    @foreach (var group in _groups)
+    {
+        @* fieldset + legend, not a heading over a div: the checkboxes really are one group of
+           related controls, and that is the grouping a screen reader announces per control. *@
+        <fieldset class="mmca-permission-group mb-4">
+            <legend>@group.Area</legend>
+            @foreach (var permission in group.Permissions)
+            {
+                <div class="d-flex flex-wrap align-center">
+                    @* MudCheckBox renders its Label as the input's own <label>, so the control is
+                       named without a separate aria-label. *@
+                    <MudCheckBox T="bool"
+                                 Value="@IsChecked(permission)"
+                                 ValueChanged="@(value => Toggle(permission, value))"
+                                 Disabled="@IsReadOnly(permission)"
+                                 Dense="true"
+                                 Label="@permission"
+                                 data-testid="permission-checkbox"
+                                 data-permission="@permission" />
+                    @if (ReadOnlyHint(permission) is { Length: > 0 } hint)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2">@hint</MudText>
+                    }
+                </div>
+            }
+        </fieldset>
+    }
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Save"
+               Disabled="@IsSaving"
+               OnClick="SaveAsync"
+               data-testid="save-permissions"
+               aria-busy="@(IsSaving ? "true" : "false")"
+               aria-label="@T("Aria.Save", Role)">
+        @if (IsSaving)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+        }
+        @T("Action.Save")
+    </MudButton>
+}

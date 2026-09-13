@@ -77,6 +77,26 @@ public static class ClaimsPrincipalExtensions
         && principal.GetRoleValues().Contains(role, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Whether the principal carries an <see cref="AuthClaimTypes.Permission"/> claim granting
+    /// <paramref name="permission"/> outright, independently of the roles it holds.
+    /// </summary>
+    /// <remarks>
+    /// SECURITY: this is the framework's ONE definition of "the token itself grants this
+    /// permission". Both authorization gates read it, the HTTP policy handler and the CQRS pipeline
+    /// gate, so a grant the minting host stored and emitted as a claim cannot be honored at one
+    /// boundary and denied at the other: in a multi-service deployment the claim is the only way
+    /// such a grant reaches a service that does not own the grant table. It is additive, never a
+    /// denial, so a principal without the claim still passes on a role the registry grants.
+    /// </remarks>
+    /// <param name="principal">The principal to read; a null principal holds no permission.</param>
+    /// <param name="permission">The permission name to look for, compared ordinally.</param>
+    /// <returns><see langword="true"/> when the principal carries a matching claim.</returns>
+    public static bool HasPermissionClaim(this ClaimsPrincipal? principal, string permission) =>
+        !string.IsNullOrEmpty(permission)
+        && principal is not null
+        && principal.HasClaim(AuthClaimTypes.Permission, permission);
+
+    /// <summary>
     /// Returns the refresh-session identifier the token was minted for (the <c>sid</c> claim), or
     /// <see langword="null"/> when the principal carries none or carries an unparsable value.
     /// </summary>

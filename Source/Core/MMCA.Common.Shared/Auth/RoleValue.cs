@@ -6,7 +6,8 @@ namespace MMCA.Common.Shared.Auth;
 /// <summary>
 /// Abstract base for a role value object. Roles are stored as plain strings in the database and
 /// emitted as JWT claims; this type adds canonical-value storage, case-insensitive value equality,
-/// and validation against a per-app set of known role names (see <see cref="RoleNames"/>).
+/// and validation against a per-app set of known role names, which the app declares: the framework
+/// ships no role vocabulary of its own.
 /// </summary>
 /// <remarks>
 /// Lives in <c>MMCA.Common.Shared</c> so it stays dependency-free and usable from Blazor WASM/UI as

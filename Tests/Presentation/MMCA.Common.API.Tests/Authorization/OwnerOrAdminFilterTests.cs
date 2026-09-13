@@ -14,6 +14,8 @@ namespace MMCA.Common.API.Tests.Authorization;
 
 public sealed class OwnerOrAdminFilterTests
 {
+    private const string BypassRole = "Admin";
+
     private readonly Mock<ICurrentUserService> _currentUserService = new();
 
     private static (ActionExecutingContext Context, bool NextCalled) CreateContext(
@@ -33,9 +35,12 @@ public sealed class OwnerOrAdminFilterTests
         return (context, false);
     }
 
-    // Defaults preserve the original hard-coded vocabulary: customer_id / Admin / id.
+    // The claim and parameter names keep their framework defaults (customer_id / id); the bypass
+    // role has none, so this suite names the one it uses.
     private OwnerOrAdminFilter CreateFilter(OwnerOrAdminFilterOptions? options = null) =>
-        new(_currentUserService.Object, Options.Create(options ?? new OwnerOrAdminFilterOptions()));
+        new(
+            _currentUserService.Object,
+            Options.Create(options ?? new OwnerOrAdminFilterOptions { BypassRole = BypassRole }));
 
     // ── Admin passes through ──
     [Fact]

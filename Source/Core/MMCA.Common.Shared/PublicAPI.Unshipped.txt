@@ -255,6 +255,7 @@ override MMCA.Common.Shared.Auth.Responses.TwoFactorRecoveryCodesResponse.ToStri
 override MMCA.Common.Shared.Auth.Responses.TwoFactorSetupResponse.GetHashCode() -> int
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.FindMultiFactorMethod(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
+static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasPermissionClaim(this System.Security.Claims.ClaimsPrincipal? principal, string! permission) -> bool
 static MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest left, MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest left, MMCA.Common.Shared.Auth.Requests.ConfirmEmailRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest.operator !=(MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest left, MMCA.Common.Shared.Auth.Requests.SendEmailConfirmationRequest right) -> bool
@@ -314,3 +315,26 @@ static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.Describe(System.Colle
 static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.Describe(System.Reflection.Assembly! assembly) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.FeatureFlags.FeatureFlagDescriptor!>!
 static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.FlagFields(System.Type! type) -> System.Collections.Generic.IEnumerable<System.Reflection.FieldInfo!>!
 static MMCA.Common.Shared.FeatureFlags.FeatureFlagRegistry.IsFeatureClass(System.Type! type) -> bool
+MMCA.Common.Shared.Auth.Permissions.IPermissionCatalog
+MMCA.Common.Shared.Auth.Permissions.IPermissionCatalog.Permissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Permissions.IPermissionCatalog.Roles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.<Clone>$() -> MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse!
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Deconstruct(out System.Collections.Generic.IReadOnlyList<string!>! Roles, out System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Equals(MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse? other) -> bool
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.PermissionCatalogResponse(System.Collections.Generic.IReadOnlyList<string!>! Roles, System.Collections.Generic.IReadOnlyList<string!>! Permissions) -> void
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Permissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Permissions.init -> void
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Roles.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Roles.init -> void
+override MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.Equals(object? obj) -> bool
+override MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.GetHashCode() -> int
+override MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.ToString() -> string!
+static MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.operator !=(MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse? left, MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse? right) -> bool
+static MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse.operator ==(MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse? left, MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse? right) -> bool
+*REMOVED*MMCA.Common.Shared.Auth.RoleNames
+*REMOVED*const MMCA.Common.Shared.Auth.RoleNames.Admin = "Admin" -> string!
+*REMOVED*const MMCA.Common.Shared.Auth.RoleNames.Attendee = "Attendee" -> string!
+*REMOVED*const MMCA.Common.Shared.Auth.RoleNames.ContentEditor = "ContentEditor" -> string!
+*REMOVED*const MMCA.Common.Shared.Auth.RoleNames.Customer = "Customer" -> string!
+*REMOVED*const MMCA.Common.Shared.Auth.RoleNames.Organizer = "Organizer" -> string!

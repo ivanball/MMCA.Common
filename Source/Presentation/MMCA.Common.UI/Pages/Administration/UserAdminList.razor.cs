@@ -70,7 +70,8 @@ public partial class UserAdminList<TUser>
     [Parameter] public IReadOnlyList<string> AssignableRoles { get; set; } = [];
 
     /// <summary>
-    /// Maps a role value to its display name (Store shows "Administrator" for "Admin"). When null
+    /// Maps a role value to its display name (an app might show "Administrator" for its stored
+    /// "Admin" value). When null
     /// the raw value is shown. Used in the Role column, the mobile chip, and the set-role menu items
     /// and confirmations.
     /// </summary>

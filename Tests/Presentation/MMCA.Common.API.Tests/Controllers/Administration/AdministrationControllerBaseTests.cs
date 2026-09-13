@@ -156,6 +156,34 @@ public sealed class AdministrationControllerBaseTests
     }
 
     [Fact]
+    public async Task GetCatalogAsync_ReturnsTheClosedSetsAnEditorRenders()
+    {
+        _roles.Setup(x => x.GetCatalogAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success(
+                new PermissionCatalogResponse(["Admin", "Customer"], ["orders:write", "reports:read"])));
+        var sut = CreateRolesController();
+
+        var result = await sut.GetCatalogAsync();
+
+        var catalog = (result.Result as OkObjectResult)!.Value as PermissionCatalogResponse;
+        catalog!.Roles.Should().Equal("Admin", "Customer");
+        catalog.Permissions.Should().Equal("orders:write", "reports:read");
+    }
+
+    [Fact]
+    public async Task GetCatalogAsync_Failure_ReturnsProblemDetails()
+    {
+        _roles.Setup(x => x.GetCatalogAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<PermissionCatalogResponse>(
+                Error.Forbidden("Admin.Denied", "Not allowed.")));
+        var sut = CreateRolesController();
+
+        var result = await sut.GetCatalogAsync();
+
+        (result.Result as ObjectResult)!.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    [Fact]
     public async Task GetRoleAsync_UnknownRole_ReturnsProblemDetails()
     {
         _roles.Setup(x => x.GetRoleAsync("Ghost", It.IsAny<CancellationToken>()))
@@ -166,6 +194,26 @@ public sealed class AdministrationControllerBaseTests
         var result = await sut.GetAsync("Ghost");
 
         (result.Result as ObjectResult)!.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    /// <summary>
+    /// The stored-permission refusals reach the client as 400s with the service's own code, which is
+    /// what lets an editor tell "you cannot store that" apart from "that role does not exist".
+    /// </summary>
+    /// <param name="code">The refusal the service produced.</param>
+    [Theory]
+    [InlineData("PermissionGrant.ManageRolesMustBeCompiled")]
+    [InlineData("PermissionGrant.UnknownPermission")]
+    public async Task SetPermissionsAsync_RefusedSet_ReturnsBadRequestProblemDetails(string code)
+    {
+        _roles.Setup(x => x.SetStoredPermissionsAsync(
+                "Admin", It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<RolePermissionsResponse>(Error.Validation(code, "Refused.")));
+        var sut = CreateRolesController();
+
+        var result = await sut.SetPermissionsAsync("Admin", new SetRolePermissionsRequest(["roles:manage"]));
+
+        (result.Result as ObjectResult)!.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
 
     [Fact]

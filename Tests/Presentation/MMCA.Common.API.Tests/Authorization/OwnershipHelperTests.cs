@@ -10,6 +10,9 @@ namespace MMCA.Common.API.Tests.Authorization;
 
 public sealed class OwnershipHelperTests
 {
+    // The framework declares no role names, so the bypass role is the suite's own.
+    private const string BypassRole = "Admin";
+
     private readonly Mock<ICurrentUserService> _currentUserService = new();
 
     // ── Test specification ──
@@ -27,7 +30,7 @@ public sealed class OwnershipHelperTests
     {
         _currentUserService.Setup(s => s.Role).Returns("Admin");
 
-        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object);
+        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
 
         result.Should().BeTrue();
     }
@@ -37,7 +40,7 @@ public sealed class OwnershipHelperTests
     {
         _currentUserService.Setup(s => s.Role).Returns("admin");
 
-        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object);
+        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
 
         result.Should().BeTrue();
     }
@@ -47,7 +50,7 @@ public sealed class OwnershipHelperTests
     {
         _currentUserService.Setup(s => s.Role).Returns("Customer");
 
-        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object);
+        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
 
         result.Should().BeFalse();
     }
@@ -57,7 +60,7 @@ public sealed class OwnershipHelperTests
     {
         _currentUserService.Setup(s => s.Role).Returns((string?)null);
 
-        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object);
+        bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
 
         result.Should().BeFalse();
     }
@@ -65,7 +68,7 @@ public sealed class OwnershipHelperTests
     [Fact]
     public void IsAdmin_NullService_ThrowsArgumentNullException()
     {
-        Action act = () => OwnershipHelper.IsAdmin(null!);
+        Action act = () => OwnershipHelper.IsAdmin(null!, BypassRole);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -79,7 +82,8 @@ public sealed class OwnershipHelperTests
         var result = OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
             _currentUserService.Object,
             "customer_id",
-            id => new TestOwnerSpecification(id));
+            id => new TestOwnerSpecification(id),
+            BypassRole);
 
         result.Should().BeNull();
     }
@@ -93,7 +97,8 @@ public sealed class OwnershipHelperTests
         var result = OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
             _currentUserService.Object,
             "customer_id",
-            id => new TestOwnerSpecification(id));
+            id => new TestOwnerSpecification(id),
+            BypassRole);
 
         result.Should().NotBeNull();
         result!.CustomerId.Should().Be(42);
@@ -108,7 +113,8 @@ public sealed class OwnershipHelperTests
         var result = OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
             _currentUserService.Object,
             "customer_id",
-            id => new TestOwnerSpecification(id));
+            id => new TestOwnerSpecification(id),
+            BypassRole);
 
         result.Should().BeNull();
     }
@@ -119,7 +125,8 @@ public sealed class OwnershipHelperTests
         Action act = () => OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
             null!,
             "customer_id",
-            id => new TestOwnerSpecification(id));
+            id => new TestOwnerSpecification(id),
+            BypassRole);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -130,7 +137,8 @@ public sealed class OwnershipHelperTests
         Action act = () => OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
             _currentUserService.Object,
             "customer_id",
-            null!);
+            null!,
+            BypassRole);
 
         act.Should().Throw<ArgumentNullException>();
     }
@@ -143,7 +151,8 @@ public sealed class OwnershipHelperTests
 
         var result = OwnershipHelper.GetOwnershipSpecification(
             _currentUserService.Object,
-            id => new TestOwnerSpecification(id));
+            id => new TestOwnerSpecification(id),
+            BypassRole);
 
         result.Should().BeNull();
     }
@@ -156,7 +165,8 @@ public sealed class OwnershipHelperTests
 
         var result = OwnershipHelper.GetOwnershipSpecification(
             _currentUserService.Object,
-            id => new TestOwnerSpecification(id));
+            id => new TestOwnerSpecification(id),
+            BypassRole);
 
         result.Should().NotBeNull();
         result!.CustomerId.Should().Be(99);

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Claims;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
@@ -22,6 +23,10 @@ namespace MMCA.Common.UI.Tests.Layout;
 /// </summary>
 public sealed class NavMenuTests : BunitTestBase
 {
+    // Role names are the app's vocabulary, not the framework's, so the test declares its own.
+    private const string AdminRole = "Admin";
+    private const string OrganizerRole = "Organizer";
+
     private readonly Mock<IAuthUIService> _auth = new();
 
     public NavMenuTests()
@@ -116,7 +121,7 @@ public sealed class NavMenuTests : BunitTestBase
     {
         // Last registration wins, so this replaces the ungated settings from the constructor.
         Services.AddSingleton<IOptions<LayoutSettings>>(Options.Create(
-            new LayoutSettings { BrandName = "TestBrand", SessionsNavRequiredRole = RoleNames.Admin }));
+            new LayoutSettings { BrandName = "TestBrand", SessionsNavRequiredRole = AdminRole }));
 
         RenderMudProviders();
         var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
@@ -133,11 +138,11 @@ public sealed class NavMenuTests : BunitTestBase
     public void WithSessionsNavRequiredRole_ShowsTheLinkToAUserInThatRole()
     {
         Services.AddSingleton<IOptions<LayoutSettings>>(Options.Create(
-            new LayoutSettings { BrandName = "TestBrand", SessionsNavRequiredRole = RoleNames.Admin }));
+            new LayoutSettings { BrandName = "TestBrand", SessionsNavRequiredRole = AdminRole }));
 
         RenderMudProviders();
         var cut = RenderAs<NavMenu>(
-            TestPrincipal.AuthenticatedUser("1", "Ada Lovelace", RoleNames.Admin), _ => { });
+            TestPrincipal.AuthenticatedUser("1", "Ada Lovelace", AdminRole), _ => { });
 
         var sessions = cut.Find($".nav-auth-section a[href='{RoutePaths.Sessions}']");
         sessions.TextContent.Should().Contain("Signed-in devices");
@@ -174,17 +179,51 @@ public sealed class NavMenuTests : BunitTestBase
     }
 
     [Fact]
-    public void WhenOrganizer_ShowsRoleGatedNavItems()
+    public void WhenInTheGatedRole_ShowsRoleGatedNavItems()
     {
         RegisterModule(
             new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
-            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), RequiredRole: "Organizer", Section: NavSection.Admin));
+            new NavItem("Manage Events", "/events", "icon", typeof(SharedResource), RequiredRole: OrganizerRole, Section: NavSection.Admin));
 
         RenderMudProviders();
-        var cut = RenderAs<NavMenu>(TestPrincipal.Organizer(), _ => { });
+        var cut = RenderAs<NavMenu>(TestPrincipal.InRole(OrganizerRole), _ => { });
 
         cut.Markup.Should().Contain("Browse Catalog");
         cut.Markup.Should().Contain("Manage Events");
+    }
+
+    // RequiredPermission is the role-free gate: the item names the capability it needs and the
+    // principal carries it as a permission claim, so no role name appears on either side.
+    [Fact]
+    public void WithoutThePermissionClaim_HidesPermissionGatedNavItems()
+    {
+        RegisterModule(
+            new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
+            new NavItem("Push Notifications", "/notifications", "icon", typeof(SharedResource), RequiredPermission: "notifications:manage", Section: NavSection.Admin));
+
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(TestPrincipal.InRole(AdminRole), _ => { });
+
+        cut.Markup.Should().Contain("Browse Catalog");
+        cut.Markup.Should().NotContain("Push Notifications",
+            "a role, however privileged, is not the permission the item asked for");
+    }
+
+    [Fact]
+    public void WithThePermissionClaim_ShowsPermissionGatedNavItems()
+    {
+        RegisterModule(
+            new NavItem("Browse Catalog", "/catalog", "icon", typeof(SharedResource)),
+            new NavItem("Push Notifications", "/notifications", "icon", typeof(SharedResource), RequiredPermission: "notifications:manage", Section: NavSection.Admin));
+
+        var principal = TestPrincipal.InRole(AdminRole);
+        ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(AuthClaimTypes.Permission, "notifications:manage"));
+
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(principal, _ => { });
+
+        cut.Markup.Should().Contain("Browse Catalog");
+        cut.Markup.Should().Contain("Push Notifications");
     }
 
     // NavItem.RequiredRole defaults to null and is independent of Section, so an Admin item
