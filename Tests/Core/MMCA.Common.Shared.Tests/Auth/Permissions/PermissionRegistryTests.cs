@@ -11,7 +11,7 @@ public sealed class PermissionRegistryTests
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
     private const string Manager = "Manager";
     private const string Member = "Member";
-    private const string Customer = "Customer";
+    private const string Guest = "Guest";
 
     [Fact]
     public void HasPermission_WhenRoleGrantsPermission_ReturnsTrue()
@@ -71,6 +71,6 @@ public sealed class PermissionRegistryTests
             .Grant(Manager, Manage)
             .Build();
 
-        registry.HasPermission([Member, Customer], Manage).Should().BeFalse();
+        registry.HasPermission([Member, Guest], Manage).Should().BeFalse();
     }
 }

@@ -48,9 +48,9 @@ public sealed class ApplicationNamespaceTests
     [Fact]
     public void Resolve_ReadsTheHostApplicationNameKeyWhenNoEnvironmentIsAvailable()
     {
-        var resolved = ApplicationNamespace.Resolve(Config(("applicationName", "MMCA.Store.Sales")), environment: null);
+        var resolved = ApplicationNamespace.Resolve(Config(("applicationName", "MMCA.Demo.Sales")), environment: null);
 
-        resolved.Should().Be("MMCA-Store-Sales");
+        resolved.Should().Be("MMCA-Demo-Sales");
     }
 
     [Fact]
@@ -65,9 +65,9 @@ public sealed class ApplicationNamespaceTests
     public void Resolve_IsDistinctPerApplication()
     {
         var gateway = ApplicationNamespace.Resolve(Config(), Environment("MMCA.Demo.Gateway"));
-        var store = ApplicationNamespace.Resolve(Config(), Environment("MMCA.Store.Gateway"));
+        var other = ApplicationNamespace.Resolve(Config(), Environment("MMCA.Other.Gateway"));
 
-        gateway.Should().NotBe(store);
+        gateway.Should().NotBe(other);
     }
 
     private static ServiceProvider BuildProvider(IConfiguration configuration)

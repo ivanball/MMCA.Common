@@ -66,7 +66,7 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_OwnerMatchesRouteId_PassesThrough()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "42" });
         var nextCalled = false;
@@ -86,7 +86,7 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_NonOwner_ReturnsForbid()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "99" });
         var sut = CreateFilter();
@@ -102,7 +102,7 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_NoCustomerIdClaim_ReturnsForbid()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns((int?)null);
         var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "42" });
         var sut = CreateFilter();
@@ -179,7 +179,7 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_OwnerParameterMissing_ReturnsForbid()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext();
         var nextCalled = false;
@@ -202,7 +202,7 @@ public sealed class OwnerOrAdminFilterTests
     [InlineData("")]
     public async Task OnActionExecutionAsync_OwnerParameterUnparseable_ReturnsForbid(string routeValue)
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = routeValue });
         var sut = CreateFilter();
@@ -218,7 +218,7 @@ public sealed class OwnerOrAdminFilterTests
     public async Task OnActionExecutionAsync_ComplexBoundArgument_ReturnsForbid()
     {
         // A model-bound object whose ToString() is the type name must not read as a match.
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext(
             actionArguments: new Dictionary<string, object?> { ["id"] = new object() });
@@ -242,7 +242,7 @@ public sealed class OwnerOrAdminFilterTests
         try
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
-            _currentUserService.Setup(s => s.Role).Returns("Customer");
+            _currentUserService.Setup(s => s.Role).Returns("Guest");
             _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
             var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "42" });
             var nextCalled = false;
@@ -275,7 +275,7 @@ public sealed class OwnerOrAdminFilterTests
         try
         {
             CultureInfo.CurrentCulture = culture;
-            _currentUserService.Setup(s => s.Role).Returns("Customer");
+            _currentUserService.Setup(s => s.Role).Returns("Guest");
             _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(-5);
             var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "\u22125" });
             var sut = CreateFilter();
@@ -297,7 +297,7 @@ public sealed class OwnerOrAdminFilterTests
     [Fact]
     public async Task OnActionExecutionAsync_AllowMissingOwner_PassesThroughWithoutOwnerParameter()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext(allowMissingOwner: true);
         var nextCalled = false;
@@ -319,7 +319,7 @@ public sealed class OwnerOrAdminFilterTests
     {
         // The opt-out excuses a missing parameter, not a foreign one: an action that does carry an
         // owner id is still checked against the caller's claim.
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
         var (context, _) = CreateContext(new RouteValueDictionary { ["id"] = "99" }, allowMissingOwner: true);
         var sut = CreateFilter();
@@ -335,7 +335,7 @@ public sealed class OwnerOrAdminFilterTests
     public async Task OnActionExecutionAsync_AllowMissingOwner_DoesNotExcuseAMissingOwnerClaim()
     {
         // The claim check runs before the parameter check and is unaffected by the opt-out.
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Guest");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns((int?)null);
         var (context, _) = CreateContext(allowMissingOwner: true);
         var sut = CreateFilter();

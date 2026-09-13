@@ -173,7 +173,7 @@ public static class PageExtensions
 
             if (!blazorReady)
             {
-                // External page (e.g., Stripe) or Blazor not initialized — load a public page first.
+                // External page (e.g., a payment provider) or Blazor not initialized: load a public page first.
                 await page.GotoAndWaitForBlazorAsync("/").ConfigureAwait(false);
             }
             else

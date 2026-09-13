@@ -41,8 +41,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 ///   <item><see cref="OnAfterSoftDeleteAsync"/> - the app's tail. It runs after <c>Delete()</c> and
 ///     before <c>Anonymize()</c>, which is the only point where an app can both read personal data
 ///     that anonymization is about to erase (ADC captures the avatar blob name) and enlist further
-///     aggregates in the same unit of work (Store cascades to its linked <c>Customer</c>). Work that
-///     must wait for the commit is enqueued on the <c>afterCommit</c> collection instead of being run
+///     aggregates in the same unit of work (an app with a linked profile aggregate cascades to it).
+///     Work that must wait for the commit is enqueued on the <c>afterCommit</c> collection instead of being run
 ///     inline, so the override can hand values it captured here to a post-commit closure without
 ///     parking them in mutable handler state.</item>
 /// </list>

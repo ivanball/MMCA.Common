@@ -13,10 +13,17 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   consumer runs on Cosmos; a Cosmos host that relied on the old default sets
   `ConnectionStrings:CosmosDatabaseName` (or a per-source
   `DataSources:<Name>:CosmosDatabaseName`) explicitly.
-- **Framework XML docs, samples and tests use neutral role names** (`Admin`, `Manager`, `Member`)
-  wherever an example role was needed, replacing the borrowed consumer vocabulary
-  (`Organizer`, `Attendee`). The framework ships no role vocabulary of its own, so the examples no
+- **Framework XML docs, samples and tests use neutral role names** (`Admin`, `Manager`, `Member`,
+  `Guest`) wherever an example role was needed, replacing the borrowed consumer vocabulary from both
+  apps (`Organizer`, `Attendee`, `Customer`). Store- and ADC-specific doc examples (a payment-session
+  index filter, a landing-page stylesheet name, an external checkout page, a linked profile
+  aggregate) are neutral too. The framework ships no role vocabulary of its own, so the examples no
   longer read as one. No API change.
+- **`ArchitectureRules.ForbiddenDomainDependencies` no longer bans `"Stripe"` by default**
+  (`MMCA.Common.Testing.Architecture`). The default list carries general-purpose frameworks only, not
+  one consumer's payment SDK; a consumer that uses Stripe adds it through
+  `DomainPurityTestsBase.ExtraForbiddenDomainDependencies`, the extension point already provided for
+  repo-specific bans. Every other entry is unchanged, and the member's signature is unchanged.
 
 ## [1.201.0] - 2026-09-13
 

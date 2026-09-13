@@ -16,7 +16,7 @@ public sealed class RoleValueTests
 
     // Role names are the app's vocabulary, not the framework's, so the test declares its own.
     private const string Admin = "Admin";
-    private const string Customer = "Customer";
+    private const string Guest = "Guest";
     private const string Manager = "Manager";
     private const string Member = "Member";
 
@@ -24,7 +24,7 @@ public sealed class RoleValueTests
     public void Validate_WithDefaultComparerSet_MatchesRoleCaseInsensitively()
     {
         // A default-comparer set: ordinal, so "admin" is not "Admin" to the set's own lookup.
-        var knownRoles = new HashSet<string> { Admin, Customer };
+        var knownRoles = new HashSet<string> { Admin, Guest };
 
         var result = RoleValue.Validate("admin", knownRoles, Source);
 

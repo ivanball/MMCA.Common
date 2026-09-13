@@ -3,7 +3,7 @@ namespace MMCA.Common.Testing.Architecture;
 /// <summary>
 /// Framework-independence fitness functions: Domain and Shared stay free of infrastructure frameworks,
 /// Application stays host-agnostic. Override <see cref="ExtraForbiddenDomainDependencies"/> to add
-/// repo-specific bans (e.g. Store → "Stripe", ADC → "RabbitMQ").
+/// repo-specific bans (e.g. a payment SDK or a broker client).
 /// </summary>
 public abstract class DomainPurityTestsBase
 {

@@ -46,9 +46,9 @@ public sealed class OwnershipHelperTests
     }
 
     [Fact]
-    public void IsAdmin_WhenRoleIsCustomer_ReturnsFalse()
+    public void IsAdmin_WhenRoleIsMember_ReturnsFalse()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Member");
 
         bool result = OwnershipHelper.IsAdmin(_currentUserService.Object, BypassRole);
 
@@ -91,7 +91,7 @@ public sealed class OwnershipHelperTests
     [Fact]
     public void GetOwnershipSpecification_NonAdminWithClaim_ReturnsSpecification()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Member");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(42);
 
         var result = OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
@@ -107,7 +107,7 @@ public sealed class OwnershipHelperTests
     [Fact]
     public void GetOwnershipSpecification_NonAdminWithoutClaim_ReturnsNull()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Member");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns((int?)null);
 
         var result = OwnershipHelper.GetOwnershipSpecification<TestOwnerSpecification, int>(
@@ -160,7 +160,7 @@ public sealed class OwnershipHelperTests
     [Fact]
     public void GetOwnershipSpecification_ConvenienceOverload_NonAdminWithClaim_ReturnsSpecification()
     {
-        _currentUserService.Setup(s => s.Role).Returns("Customer");
+        _currentUserService.Setup(s => s.Role).Returns("Member");
         _currentUserService.Setup(s => s.GetClaimValue<int>("customer_id")).Returns(99);
 
         var result = OwnershipHelper.GetOwnershipSpecification(

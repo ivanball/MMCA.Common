@@ -21,8 +21,8 @@ namespace MMCA.Common.Application.Users.UseCases.ExportUserData;
 ///     evaluated app-side because the role vocabulary stays app-owned.</item>
 ///   <item><see cref="BuildSubjectSnapshotAsync"/> - which of the account's own fields are portable
 ///     personal data. It is asynchronous, and receives the query, because an app may need to read a
-///     second owned aggregate for the snapshot (Store's linked <c>Customer</c> profile does exactly
-///     that).</item>
+///     second owned aggregate for the snapshot (an app with a linked profile aggregate snapshots it
+///     as well).</item>
 ///   <item><see cref="OnExportCompletedAsync"/> - the app's tail (an access-log row, a metric), run
 ///     after the package is assembled and before it is returned.</item>
 /// </list>

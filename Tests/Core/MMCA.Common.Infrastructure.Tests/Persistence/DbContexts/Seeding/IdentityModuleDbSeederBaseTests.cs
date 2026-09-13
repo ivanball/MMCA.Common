@@ -20,7 +20,7 @@ public sealed class IdentityModuleDbSeederBaseTests
     private static readonly SeedAccount[] TwoAccounts =
     [
         new("admin@example.com", "Admin123!", "Admin", "Admin", "User"),
-        new("customer@example.com", "Password", "Customer", "Ivan", "Ball"),
+        new("member@example.com", "Password", "Member", "Ivan", "Ball"),
     ];
 
     [Fact]
