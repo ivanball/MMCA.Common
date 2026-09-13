@@ -14,7 +14,7 @@ public interface ICurrentUserService
     /// <summary>Gets the current user's identifier, or <see langword="null"/> if unauthenticated.</summary>
     UserIdentifierType? UserId { get; }
 
-    /// <summary>Gets the current user's role (e.g. "Organizer", "Attendee"), or <see langword="null"/> if unauthenticated.</summary>
+    /// <summary>Gets the current user's role, as the host names it, or <see langword="null"/> if unauthenticated.</summary>
     /// <remarks>
     /// This is the <b>first</b> role claim only. Use <see cref="Roles"/> or <see cref="IsInRole"/>
     /// for membership checks so a principal carrying more than one role is handled correctly.
@@ -77,7 +77,7 @@ public interface ICurrentUserService
     /// Returns <see langword="true"/> if the current user holds <paramref name="roleName"/>,
     /// using case-insensitive comparison.
     /// </summary>
-    /// <param name="roleName">The role name to check (use <see cref="Common.Shared.Auth.RoleNames"/> constants).</param>
+    /// <param name="roleName">The role name to check (use the host's own role constants).</param>
     /// <returns><see langword="true"/> if the user has the specified role; otherwise, <see langword="false"/>.</returns>
     /// <remarks>
     /// Checks every role claim. Comparing against <see cref="Role"/> alone matched only the first

@@ -14,11 +14,17 @@ public sealed class RoleValueTests
 {
     private const string Source = nameof(RoleValueTests);
 
+    // Role names are the app's vocabulary, not the framework's, so the test declares its own.
+    private const string Admin = "Admin";
+    private const string Customer = "Customer";
+    private const string Organizer = "Organizer";
+    private const string Attendee = "Attendee";
+
     [Fact]
     public void Validate_WithDefaultComparerSet_MatchesRoleCaseInsensitively()
     {
         // A default-comparer set: ordinal, so "admin" is not "Admin" to the set's own lookup.
-        var knownRoles = new HashSet<string> { RoleNames.Admin, RoleNames.Customer };
+        var knownRoles = new HashSet<string> { Admin, Customer };
 
         var result = RoleValue.Validate("admin", knownRoles, Source);
 
@@ -29,7 +35,7 @@ public sealed class RoleValueTests
     [Fact]
     public void Validate_WithOrdinalIgnoreCaseSet_MatchesRoleCaseInsensitively()
     {
-        var knownRoles = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { RoleNames.Admin };
+        var knownRoles = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Admin };
 
         RoleValue.Validate("ADMIN", knownRoles, Source).IsSuccess.Should().BeTrue();
     }
@@ -37,15 +43,15 @@ public sealed class RoleValueTests
     [Fact]
     public void Validate_WithExactRole_Succeeds()
     {
-        var knownRoles = new HashSet<string> { RoleNames.Organizer, RoleNames.Attendee };
+        var knownRoles = new HashSet<string> { Organizer, Attendee };
 
-        RoleValue.Validate(RoleNames.Organizer, knownRoles, Source).IsSuccess.Should().BeTrue();
+        RoleValue.Validate(Organizer, knownRoles, Source).IsSuccess.Should().BeTrue();
     }
 
     [Fact]
     public void Validate_WithUnknownRole_FailsWithInvariantCode()
     {
-        var knownRoles = new HashSet<string> { RoleNames.Admin };
+        var knownRoles = new HashSet<string> { Admin };
 
         var result = RoleValue.Validate("Wizard", knownRoles, Source);
 
@@ -58,7 +64,7 @@ public sealed class RoleValueTests
     [Fact]
     public void Validate_WithNullRole_Fails()
     {
-        var knownRoles = new HashSet<string> { RoleNames.Admin };
+        var knownRoles = new HashSet<string> { Admin };
 
         RoleValue.Validate(null!, knownRoles, Source).IsFailure.Should().BeTrue();
     }
@@ -66,7 +72,7 @@ public sealed class RoleValueTests
     [Fact]
     public void Validate_WithNullKnownRoles_Throws()
     {
-        var act = () => RoleValue.Validate(RoleNames.Admin, null!, Source);
+        var act = () => RoleValue.Validate(Admin, null!, Source);
 
         act.Should().Throw<ArgumentNullException>();
     }

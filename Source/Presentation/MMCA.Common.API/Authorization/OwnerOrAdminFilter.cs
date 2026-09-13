@@ -11,8 +11,8 @@ namespace MMCA.Common.API.Authorization;
 /// resource identified by the configured route parameter. The ownership check compares the route value
 /// against the current user's configured owner claim. Returns 403 Forbidden if the user is neither
 /// privileged nor the resource owner. The vocabulary (claim type, bypass role, route parameter) comes
-/// from <see cref="OwnerOrAdminFilterOptions"/>, whose defaults preserve the original
-/// <c>customer_id</c> / <c>Admin</c> / <c>id</c> behavior (ADR-033).
+/// from <see cref="OwnerOrAdminFilterOptions"/>, whose claim and parameter names default to
+/// <c>customer_id</c> and <c>id</c> while the bypass role is required of the host (ADR-033).
 /// <para>
 /// The filter denies by default. When the owner parameter cannot be resolved from the route or the
 /// bound action arguments, the request is rejected rather than allowed through: an ownership gate

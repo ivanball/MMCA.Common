@@ -18,11 +18,20 @@ namespace MMCA.Common.Application.Auth;
 /// </summary>
 /// <param name="logger">Logger for the one-time misconfiguration warning.</param>
 internal sealed partial class UnconfiguredPermissionRegistry(ILogger<UnconfiguredPermissionRegistry> logger)
-    : IPermissionRegistry
+    : IPermissionRegistry, IPermissionCatalog
 {
     private static readonly HashSet<string> None = [];
 
     private int _warned;
+
+    /// <summary>
+    /// No roles, because nothing declared any. An administration screen over this host renders an
+    /// empty catalog rather than failing, which reads as "this host grants nothing yet".
+    /// </summary>
+    public IReadOnlyList<string> Roles => [];
+
+    /// <inheritdoc cref="Roles" />
+    public IReadOnlyList<string> Permissions => [];
 
     /// <inheritdoc />
     public IReadOnlySet<string> GetPermissions(string role)

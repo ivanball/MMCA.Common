@@ -13,6 +13,16 @@ namespace MMCA.Common.Application.UseCases.Markers;
 /// gate for everything that has not opted in.
 /// </para>
 /// </summary>
+/// <remarks>
+/// The gate evaluates the CURRENT principal, and for a command that does not run inline that is the
+/// principal restored from the scheduling request: an internal command carries the scheduling user
+/// and tenant on its row and <c>InternalCommandProcessor</c> puts them back before the handler runs,
+/// and an integration-event consumer restores the same context from the message headers. So never
+/// mark a command that can be scheduled without an operator principal behind it (work queued by a
+/// buyer, by an anonymous webhook, or by a system sweep with no user at all): the restored principal
+/// holds no roles, the registry grants nothing, and the gate denies the command instead of running
+/// it. Gate such work at the edge that accepts it, and leave the deferred command ungated.
+/// </remarks>
 public interface IRequiresPermission
 {
     /// <summary>

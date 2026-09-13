@@ -28,8 +28,8 @@ namespace MMCA.Common.API.FeatureManagement;
 /// simply off for anonymous callers unless the audience opts everyone in.
 /// </para>
 /// <example>
-/// A rollout that always includes the Organizer role, includes 25 percent of everyone else, and
-/// pins two named users:
+/// A rollout that always includes one of the host's own roles, includes 25 percent of everyone
+/// else, and pins two named users:
 /// <code>
 /// "FeatureManagement": {
 ///   "Conference.NewAgenda": {
@@ -39,7 +39,7 @@ namespace MMCA.Common.API.FeatureManagement;
 ///         "Parameters": {
 ///           "Audience": {
 ///             "Users": [ "42", "1337" ],
-///             "Groups": [ { "Name": "Organizer", "RolloutPercentage": 100 } ],
+///             "Groups": [ { "Name": "Reviewers", "RolloutPercentage": 100 } ],
 ///             "DefaultRolloutPercentage": 25
 ///           }
 ///         }

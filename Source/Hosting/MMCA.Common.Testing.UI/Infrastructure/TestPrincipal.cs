@@ -31,7 +31,13 @@ public static class TestPrincipal
         return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "TestAuth"));
     }
 
-    /// <summary>An authenticated organizer/admin (carries the <c>Organizer</c> role).</summary>
-    public static ClaimsPrincipal Organizer(string userId = "1")
-        => AuthenticatedUser(userId, "Organizer User", "Organizer");
+    /// <summary>
+    /// An authenticated user carrying exactly one role, named by the caller. The framework declares
+    /// no role vocabulary, so a test states the role its own app uses.
+    /// </summary>
+    /// <param name="role">The role the principal holds.</param>
+    /// <param name="userId">The user identifier written under <c>sub</c> and NameIdentifier.</param>
+    /// <returns>An authenticated principal in <paramref name="role"/>.</returns>
+    public static ClaimsPrincipal InRole(string role, string userId = "1")
+        => AuthenticatedUser(userId, "Test User", role);
 }
