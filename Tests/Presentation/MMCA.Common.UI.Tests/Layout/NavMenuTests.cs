@@ -4,6 +4,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Shared.Auth;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
@@ -108,6 +109,38 @@ public sealed class NavMenuTests : BunitTestBase
         cut.FindAll($"a[href='{RoutePaths.Sessions}']").Should().BeEmpty(
             "the sessions page belongs to a signed-in account");
         cut.Markup.Should().NotContain("Signed-in devices");
+    }
+
+    [Fact]
+    public void WithSessionsNavRequiredRole_HidesTheLinkFromAUserWithoutThatRole()
+    {
+        // Last registration wins, so this replaces the ungated settings from the constructor.
+        Services.AddSingleton<IOptions<LayoutSettings>>(Options.Create(
+            new LayoutSettings { BrandName = "TestBrand", SessionsNavRequiredRole = RoleNames.Admin }));
+
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
+
+        cut.FindAll($"a[href='{RoutePaths.Sessions}']").Should().BeEmpty(
+            "the host gated the menu entry on a role this user does not hold");
+        cut.Markup.Should().NotContain("Signed-in devices");
+
+        // The gate covers the sessions entry alone: the way out is still there.
+        cut.Markup.Should().Contain("Logout");
+    }
+
+    [Fact]
+    public void WithSessionsNavRequiredRole_ShowsTheLinkToAUserInThatRole()
+    {
+        Services.AddSingleton<IOptions<LayoutSettings>>(Options.Create(
+            new LayoutSettings { BrandName = "TestBrand", SessionsNavRequiredRole = RoleNames.Admin }));
+
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(
+            TestPrincipal.AuthenticatedUser("1", "Ada Lovelace", RoleNames.Admin), _ => { });
+
+        var sessions = cut.Find($".nav-auth-section a[href='{RoutePaths.Sessions}']");
+        sessions.TextContent.Should().Contain("Signed-in devices");
     }
 
     [Fact]

@@ -28,4 +28,13 @@ public sealed class LayoutSettings
         "CA1056:URI-like properties should not be strings",
         Justification = "Bound from configuration and emitted straight into an img src, which is normally a host-relative path (e.g. /img/logo.svg). System.Uri cannot represent that without RelativeOrAbsolute round-tripping, and the other endpoint settings in this namespace are strings for the same reason.")]
     public string BrandLogoUrl { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Optional role name that gates the framework-owned "Signed-in devices" entry in the
+    /// navigation menu. Null or whitespace (the default) shows the link to every signed-in user;
+    /// a role name (for example <c>RoleNames.Admin</c>) shows it only to users in that role.
+    /// This gates the menu entry alone, not the <c>/profile/sessions</c> page itself, which stays
+    /// available to any signed-in account.
+    /// </summary>
+    public string? SessionsNavRequiredRole { get; init; }
 }

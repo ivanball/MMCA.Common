@@ -85,6 +85,8 @@ MMCA.Common.UI.Common.NavItem.TitleResource.get -> System.Type!
 MMCA.Common.UI.Common.ResultUiExtensions
 MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.get -> string!
 MMCA.Common.UI.Common.Settings.LayoutSettings.BrandLogoUrl.init -> void
+MMCA.Common.UI.Common.Settings.LayoutSettings.SessionsNavRequiredRole.get -> string?
+MMCA.Common.UI.Common.Settings.LayoutSettings.SessionsNavRequiredRole.init -> void
 MMCA.Common.UI.Common.Settings.NotificationBellOptions
 MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.get -> System.TimeSpan
 MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.init -> void
