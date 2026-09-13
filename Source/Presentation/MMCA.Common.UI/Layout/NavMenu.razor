@@ -75,8 +75,14 @@
                 </div>
                 <MudNavMenu Color="Color.Default">
                     @* Framework-owned account page: every host that renders this menu gets the
-                       signed-in devices list without wiring a NavItem of its own. *@
-                    <MudNavLink Href="@RoutePaths.Sessions" Icon="@Icons.Material.Filled.Devices">@L["Auth.Sessions.NavLabel"]</MudNavLink>
+                       signed-in devices list without wiring a NavItem of its own. A host that sets
+                       Layout:SessionsNavRequiredRole narrows the entry to that role; the default
+                       (unset) keeps it visible to every signed-in user. The gate covers the menu
+                       entry only: the page itself stays reachable for any signed-in account. *@
+                    @if (_showSessionsLink)
+                    {
+                        <MudNavLink Href="@RoutePaths.Sessions" Icon="@Icons.Material.Filled.Devices">@L["Auth.Sessions.NavLabel"]</MudNavLink>
+                    }
                     <MudNavLink Icon="@Icons.Material.Filled.Logout" OnClick="HandleLogoutAsync">@L["Common.Button.Logout"]</MudNavLink>
                 </MudNavMenu>
             </Authorized>
@@ -171,6 +177,7 @@
     private List<NavItem> _generalItems = [];
     private List<NavItem> _userItems = [];
     private List<NavItem> _adminItems = [];
+    private bool _showSessionsLink;
 
     // ADR-027: Title and Group are resource keys resolved at render time against the item's
     // TitleResource resx pair, so the menu follows the active culture; a key the resource type does
@@ -202,6 +209,9 @@
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
+
+        var sessionsRole = LayoutSettingsOptions.Value.SessionsNavRequiredRole;
+        _showSessionsLink = string.IsNullOrWhiteSpace(sessionsRole) || _user?.IsInRole(sessionsRole) == true;
 
         _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
 
