@@ -49,6 +49,19 @@ public static class Extensions
     internal const string PollyMeterName = "Polly";
 
     /// <summary>
+    /// The one name the optional AI package publishes both its traces and its metrics under
+    /// (<c>AiUsageMeter.MeterName</c>, which is also the source name it hands to
+    /// <c>UseOpenTelemetry</c>), so a host enables the model dependency's telemetry with one string.
+    /// <para>
+    /// A literal, deliberately: <c>AiDependencyIsolationTestsBase</c> bars a project reference from
+    /// this package to <c>MMCA.Common.AI</c>, which is what keeps the optional language-model
+    /// dependency out of every host that never adopts it. Subscribing a meter and a source that
+    /// nothing publishes to is inert, so a host without the AI package is unaffected.
+    /// </para>
+    /// </summary>
+    internal const string AiTelemetryName = "MMCA.Common.AI";
+
+    /// <summary>
     /// Polly's resilience-event counter: one increment per strategy event, tagged with
     /// <c>pipeline.name</c>, <c>strategy.name</c>, <c>event.name</c> (OnRetry / OnCircuitOpened /
     /// OnCircuitClosed / OnTimeout / ...), <c>event.severity</c> and <c>exception.type</c>. Always
@@ -168,7 +181,8 @@ public static class Extensions
                 {
                     tracing.AddSource(builder.Environment.ApplicationName)
                         .AddSource("MMCA.Common.Outbox")
-                        .AddSource("MMCA.Common.InternalCommands");
+                        .AddSource("MMCA.Common.InternalCommands")
+                        .AddSource(AiTelemetryName);
 
                     // Cost control (rubric §31): health-probe traces. Container Apps liveness and
                     // readiness probes, the gateway's downstream aggregate probes, YARP active
@@ -577,8 +591,10 @@ public static class Extensions
         // schedule lag (inert in a host that never enables Scheduler:Enabled), the
         // broker transport's consumer faults plus outbox circuit-breaker openings
         // (inert in a host that stays on the in-process bus), the output-cache
-        // eviction consumer's failed tag evictions, and the swallowed failures of
-        // best-effort side effects (both inert until a host opts into them).
+        // eviction consumer's failed tag evictions, the swallowed failures of
+        // best-effort side effects (both inert until a host opts into them), and the
+        // optional AI package's token spend plus call duration (inert until a host
+        // adds that package and enables Ai:Enabled).
         metrics.AddMeter("MMCA.Common.Outbox")
             .AddMeter("MMCA.Common.Cqrs")
             .AddMeter("MMCA.Common.Idempotency")
@@ -586,7 +602,8 @@ public static class Extensions
             .AddMeter("MMCA.Common.Broker")
             .AddMeter("MMCA.Common.OutputCache")
             .AddMeter("MMCA.Common.BestEffort")
-            .AddMeter("MMCA.Common.InternalCommands");
+            .AddMeter("MMCA.Common.InternalCommands")
+            .AddMeter(AiTelemetryName);
 
         // Polly's own meter (ADR-009). The standard resilience handler above is on every
         // HttpClient and every gRPC typed client, so it is the component that decides

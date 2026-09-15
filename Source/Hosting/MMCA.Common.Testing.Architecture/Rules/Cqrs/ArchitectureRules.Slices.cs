@@ -23,12 +23,20 @@ public static partial class ArchitectureRules
     /// exactly where a feature would otherwise be split across horizontal folders; the shared
     /// aggregate-level types are already cohesive around the aggregate.
     /// </para>
+    /// <para>
+    /// <b>Abstract bases are scanned too.</b> An abstract handler base is checked whenever its
+    /// contract is a concrete type declared in the same assembly, because that is the shape a
+    /// consumer derives from and therefore the one that can strand a slice. A base parameterized
+    /// over its contract (<c>ICommandHandler&lt;TCommand, ...&gt;</c>,
+    /// <c>IQueryHandler&lt;TQuery, ...&gt;</c>) has a generic-parameter contract and stays exempt,
+    /// like any other contract that is not a concrete same-assembly type.
+    /// </para>
     /// </summary>
     public static void HandlersAreCoLocatedWithTheirContracts(IArchitectureMap map)
     {
         var offenders = new List<string>();
 
-        foreach (var handler in map.OfLayer(Layer.Application).SelectMany(a => a.ConcreteClasses).Where(IsHandler))
+        foreach (var handler in map.OfLayer(Layer.Application).SelectMany(a => a.Classes).Where(IsHandler))
         {
             var contract = HandlerContract(handler);
             if (contract is null || !IsSameAssemblyConcreteContract(contract, handler))
@@ -51,12 +59,14 @@ public static partial class ArchitectureRules
     /// as the command/query/request it validates, so the slice's validation stays inside the slice.
     /// Only same-assembly validated types are checked — validators over Shared request DTOs or generic
     /// type parameters are exempt (the validated type is, by design, not in the Application slice).
+    /// Abstract validator bases are scanned on the same terms: checked when the validated type is a
+    /// concrete same-assembly type, exempt when it is a generic parameter.
     /// </summary>
     public static void ValidatorsAreCoLocatedWithTheirContracts(IArchitectureMap map)
     {
         var offenders = new List<string>();
 
-        foreach (var validator in map.OfLayer(Layer.Application).SelectMany(a => a.ConcreteClasses))
+        foreach (var validator in map.OfLayer(Layer.Application).SelectMany(a => a.Classes))
         {
             var validated = ValidatedType(validator);
             if (validated is null || !IsSameAssemblyConcreteContract(validated, validator))

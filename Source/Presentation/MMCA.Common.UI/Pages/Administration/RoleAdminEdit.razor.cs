@@ -50,6 +50,10 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
     private Result? _loadResult;
     private Result? _saveResult;
     private string? _loadedRole;
+
+    // Ticked checkboxes live in _stored until Save runs, so this is the whole unsaved state the
+    // navigation guard protects. Set by Toggle, cleared by a load and by a successful save.
+    private bool _isDirty;
     private bool _disposed;
 
     /// <summary>The role being edited. Required.</summary>
@@ -154,6 +158,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
         _loadResult = null;
         _saveResult = null;
         _loadedRole = Role;
+        _isDirty = false;
 
         try
         {
@@ -254,6 +259,8 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
         {
             _stored.Remove(permission);
         }
+
+        _isDirty = true;
     }
 
     private async Task SaveAsync()
@@ -280,6 +287,7 @@ public partial class RoleAdminEdit : ComponentBase, IDisposable
             _compiled.UnionWith(result.Value!.RegisteredPermissions);
             _stored.Clear();
             _stored.UnionWith(result.Value.StoredPermissions);
+            _isDirty = false;
 
             Toast.Success(T("Snackbar.Saved"));
         }

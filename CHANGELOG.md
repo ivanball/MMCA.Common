@@ -6,7 +6,111 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Broker backpressure settings: `MessageBus:PrefetchCount` and `MessageBus:ConcurrentMessageLimit`**
+  (`MMCA.Common.Infrastructure`, rubric section 12). Both are optional `int?` settings on
+  `MessageBusSettings` and both are applied to the bus factory configurator before
+  `ConfigureEndpoints`, so they reach every receive endpoint on RabbitMQ and on Azure Service Bus
+  alike. Left unset (the default) the transport keeps its own defaults, so nothing changes for an
+  existing host; a service that needs to cap how much work one burst of events opens at once now sets
+  the two keys instead of hand-rolling a MassTransit callback. Values of zero or less are ignored:
+  `AddBrokerMessaging` binds the section with `Get<MessageBusSettings>()`, which runs no annotation
+  validation, so the range guard lives in the registration code.
+- **The unsaved-changes guard is wired into the role editor and the notification compose page**
+  (`MMCA.Common.UI`, rubric section 24). `RoleAdminEdit` tracks a permission tick as unsaved state
+  until a save lands, and `NotificationSend` treats anything typed into either field as unsaved until
+  the send navigates away by itself; both render `UnsavedChangesGuard` bound through the live
+  `IsDirtyAccessor`, so browser navigation raises the native prompt and in-app navigation raises the
+  confirm dialog. Neither page used to warn at all: leaving discarded the edit silently.
+- **`MeasureWebVitalsWithInteractionAsync`** (`MMCA.Common.Testing.E2E`, rubric section 23). The
+  sibling of `MeasureWebVitalsAsync` for a page whose interaction is not "type into a placeholder":
+  it takes a `Func<IPage, Task>`, drives it after the load, and lets the event-timing observer record
+  an INP sample, keeping the load-bearing order (observers installed before the navigation) identical.
+  A distinct name rather than an overload, because the optional parameters would make the two
+  ambiguous at the call site.
+- **Plural-aware resource lookup: `IStringLocalizer.Plural(key, count, args)`**
+  (`MMCA.Common.UI`, rubric section 27). A resource file declares two sibling keys beside a base key,
+  suffixed `.One` and `.Other`, and the call site asks for the base key plus a count; the resolver
+  picks the category and falls back to the base key when the plural sibling is missing, so a resource
+  set that has not been split yet keeps rendering its single message instead of leaking a raw key
+  name. `SharedResource` splits `Notif.Send.SentTo` accordingly (English and Spanish), and the
+  notification compose page uses it, so a send that reached exactly one person no longer says
+  "1 recipients". Two categories cover both cultures the framework ships; a language with more CLDR
+  categories needs a category selector, which does not change the call site.
+- **The AI trace source and meter are exported by default** (`MMCA.Common.Aspire`, rubric section 16).
+  `ConfigureOpenTelemetry()` subscribes `MMCA.Common.AI` as a trace source and as a meter, so a host
+  that adds the optional AI package gets its spans and its token-spend counters on the same
+  dashboards as everything else instead of having to hand-register them. The name is a literal,
+  because the layer rules bar a project reference from Aspire to the AI package; subscribing a source
+  and a meter nothing publishes to is inert, so a host without the AI package is unaffected.
+- **Call-duration histogram `mmca.ai.call.duration`** (`MMCA.Common.AI`, rubric section 16).
+  `UsageRecordingChatClient` records end-to-end latency in seconds on every call, tagged with the
+  same attribution dimensions as the token counters plus an `outcome` of `success`, `error` or
+  `canceled`; the streaming path stops the clock when the stream ends. Microsoft.Extensions.AI's own
+  `UseOpenTelemetry` layer already emits `gen_ai.client.operation.duration` on the same meter, and
+  this instrument does not replace it: it is the same measurement under `prompt_name`,
+  `prompt_version` and `outcome`, which is what lets one query answer "which prompt got slower, and
+  how often does it fail". A failed call reports no usage at all, so the histogram is the only place
+  it appears.
+- **Chat guardrail extension point: `IChatGuardrail`, `GuardrailVerdict`, `GuardrailChatClient`,
+  `ChatGuardrailException`** (`MMCA.Common.AI`, rubric section 16, ADR-120). An application
+  implements `IChatGuardrail` to inspect outgoing messages and incoming responses and to refuse
+  either (`GuardrailVerdict.Allow` / `GuardrailVerdict.Block(reason)`); a block throws
+  `ChatGuardrailException` carrying the reason. Every registered guardrail runs and the first block
+  stops the call. The framework ships the extension point and **no content policy**: what counts as a
+  prompt injection, a leaked secret or a disallowed topic is an application decision. The layer is
+  inserted between the bounds and usage recording ONLY when at least one `IChatGuardrail` is
+  registered, so a host that adopts none keeps its existing pipeline down to the type the container
+  hands back. The streaming path inspects the request only, because buffering a streamed answer to
+  inspect it defeats the reason a caller chose streaming.
+- **SLO alerts and a paired runbook in the deployment sample** (`samples/deployment`, rubric
+  section 13). `main.bicep` now provisions four scheduled-query rules over the Log Analytics
+  workspace (`failed-requests` sev 2, `server-response-time` sev 3, `availability` sev 1, and
+  `ai-token-spend` sev 3 over the `MMCA.Common.AI` token counters, sized by the new
+  `aiTokenAlertThreshold` parameter), wired to the action group when `alertEmail` is set and created
+  without notification when it is not. The new `OPERATIONS.md` beside it carries one triage section
+  per alert (symptom, first checks, recovery, escalate) plus the two steps for copying the pair into
+  a consumer repository. The sample now proves the gate it documents: the framework's own
+  architecture tests subclass `ObservabilityConventionTestsBase` over these two files, so an alert
+  cannot be added, renamed or re-tiered in the sample without its runbook section moving in the same
+  change. The template's thresholds are placeholders, deliberately: an alert that pages on normal
+  traffic gets muted, and a muted alert is worse than none.
+
+### Changed
+
+- **The slice-cohesion gate now scans abstract handler and validator bases**
+  (`MMCA.Common.Testing.Architecture`, rubric section 5). `HandlersAreCoLocatedWithTheirContracts`
+  and `ValidatorsAreCoLocatedWithTheirContracts` read every class in the Application layer instead of
+  the concrete ones only, so an abstract `*HandlerBase` declared away from the concrete contract it
+  serves is reported like any other stranded handler. That is the shape consumers derive from, so a
+  stranded base strands every handler built on it while staying invisible to the gate. Nothing that
+  passed before starts failing: a base parameterized over its contract
+  (`ICommandHandler<TCommand, ...>`, `IQueryHandler<TQuery, ...>`) has a generic-parameter contract
+  and is still exempt, which covers every framework base but the one whose contract is concrete and
+  already co-located. No API change.
+- **Money renders in the reader's culture** (`MMCA.Common.UI`, rubric section 27).
+  `Money.ToDisplayString()` and `IReadOnlyCollection<Money>.ToDisplayRange()` format their amounts
+  with `CultureInfo.CurrentCulture` instead of the invariant culture, so a request carrying `es-ES`
+  now reads `$1.234,56 USD` where it used to read `$1,234.56 USD`. The currency symbol and the
+  trailing code still come from the money itself, so a USD price stays USD in every locale. Both
+  methods take an optional `CultureInfo? culture = null` for callers that render off the reader's
+  thread (background jobs, exports, tests); left unset it resolves to the current culture, so every
+  existing call site compiles and reads exactly as it did. One consumer-side consequence: a test
+  asserting `$1,234.56` has to pin `CultureInfo.CurrentCulture` to `en-US` rather than inherit
+  whatever the build agent runs under.
+- **`MMCA.Common.UI` drops about 1 MB of unreferenced static assets**: a speaker photograph nothing in
+  any repo referenced, and the Bootstrap CSS source map, which only the stylesheet's own
+  `sourceMappingURL` comment pointed at (that comment is unchanged; a missing map is a silent no-op in
+  the browser). The project also excludes `wwwroot/**/*.map` from its content, so a source map cannot
+  ride back into the package with a future vendor drop. Every referenced asset is untouched.
+
 ### Fixed
+
+- **The Register and Reset Password forms now mirror the server's 128-character password maximum**
+  (`MMCA.Common.UI`, rubric section 24). Both models carry `[StringLength(128)]` beside the existing
+  complexity rule, matching `CommonValidationRules`' `MaximumLength(128)`. An overlong password used
+  to pass every client rule and be refused only by the API, after the round trip.
 
 - **Language switching on MAUI Blazor Hybrid heads no longer sticks to the launch language**
   (`MMCA.Common.UI`, ADR-027 Decision 10). MudBlazor 9.7+ reads its built-in English strings by

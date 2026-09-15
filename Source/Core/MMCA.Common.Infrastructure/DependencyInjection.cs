@@ -1230,6 +1230,7 @@ public static class DependencyInjection
                         TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
                         TimeSpan.FromSeconds(settings.RetryMaxIntervalSeconds),
                         TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds)));
+                    ApplyBackpressure(cfg, settings);
                     cfg.ConfigureEndpoints(context);
                 });
                 break;
@@ -1269,6 +1270,7 @@ public static class DependencyInjection
                         TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds),
                         TimeSpan.FromSeconds(settings.RetryMaxIntervalSeconds),
                         TimeSpan.FromSeconds(settings.RetryMinIntervalSeconds)));
+                    ApplyBackpressure(cfg, settings);
                     cfg.ConfigureEndpoints(context);
                 });
                 break;
@@ -1277,6 +1279,30 @@ public static class DependencyInjection
             default:
                 // Caller short-circuits InProcess before reaching this method.
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Applies the two backpressure knobs to the bus factory configurator, which is where MassTransit
+    /// carries them onto every receive endpoint <c>ConfigureEndpoints</c> then builds. Both are
+    /// optional and both are range-guarded HERE rather than with a <c>[Range]</c> attribute:
+    /// <c>AddBrokerMessaging</c> binds this section with <c>Get&lt;MessageBusSettings&gt;()</c>, which
+    /// never runs DataAnnotations, so an annotation would document the bound without enforcing it. A
+    /// value of zero or less is left unapplied, so the transport keeps its own default instead of
+    /// receiving a window that would stall the endpoint.
+    /// </summary>
+    /// <param name="cfg">The transport's bus factory configurator.</param>
+    /// <param name="settings">The bound message-bus settings.</param>
+    private static void ApplyBackpressure(IBusFactoryConfigurator cfg, MessageBusSettings settings)
+    {
+        if (settings.PrefetchCount is > 0)
+        {
+            cfg.PrefetchCount = settings.PrefetchCount.Value;
+        }
+
+        if (settings.ConcurrentMessageLimit is > 0)
+        {
+            cfg.ConcurrentMessageLimit = settings.ConcurrentMessageLimit.Value;
         }
     }
 

@@ -463,6 +463,12 @@
   <data name="Notif.Send.SentTo" xml:space="preserve">
     <value>Notification sent to {0} recipients.</value>
   </data>
+  <data name="Notif.Send.SentTo.One" xml:space="preserve">
+    <value>Notification sent to {0} recipient.</value>
+  </data>
+  <data name="Notif.Send.SentTo.Other" xml:space="preserve">
+    <value>Notification sent to {0} recipients.</value>
+  </data>
   <data name="Delete.Title" xml:space="preserve">
     <value>Delete {0}</value>
   </data>

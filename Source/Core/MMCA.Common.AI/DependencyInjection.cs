@@ -20,19 +20,27 @@ namespace MMCA.Common.AI;
 /// pipeline, outermost first:
 /// </para>
 /// <code>
-/// BoundedChatClient          -- what the call is allowed to do (tokens, timeout, tools, input size)
-///   UsageRecordingChatClient -- what the call cost (mmca.ai.input_tokens / output_tokens)
-///     DistributedCaching     -- optional: Ai:EnableCache AND a registered IDistributedCache
-///       OpenTelemetry        -- traces under the MMCA.Common.AI source
-///         Logging
-///           provider client  -- Anthropic via the SDK's own AsIChatClient adapter
+/// BoundedChatClient            -- what the call is allowed to do (tokens, timeout, tools, input size)
+///   GuardrailChatClient        -- optional: only when an IChatGuardrail is registered
+///     UsageRecordingChatClient -- what the call cost and how long it took
+///       DistributedCaching     -- optional: Ai:EnableCache AND a registered IDistributedCache
+///         OpenTelemetry        -- traces under the MMCA.Common.AI source
+///           Logging
+///             provider client  -- Anthropic via the SDK's own AsIChatClient adapter
 /// </code>
 /// <para>
 /// The order is the point. Bounds are outermost so nothing downstream can be asked to do something
 /// the configuration forbids, and so a rejected call is rejected before it is logged or cached.
-/// Usage recording sits just inside them, which does mean a cache HIT records the usage of the
-/// cached response: that is deliberate, and reads as "what this call would have cost" rather than
-/// "what was billed" (the provider span is absent on a hit, so the two are distinguishable).
+/// Guardrails sit just inside the bounds and outside usage recording: a blocked request never
+/// reaches the provider, so it has no cost to record. Usage recording sits inside them, which does
+/// mean a cache HIT records the usage of the cached response: that is deliberate, and reads as
+/// "what this call would have cost" rather than "what was billed" (the provider span is absent on a
+/// hit, so the two are distinguishable).
+/// </para>
+/// <para>
+/// The guardrail layer is added ONLY when the host registered at least one
+/// <see cref="Chat.IChatGuardrail"/>, so an application that adopts none keeps the chain it had,
+/// down to the type the container hands back.
 /// </para>
 /// <para>
 /// <b>What it registers when disabled: nothing.</b> A host with <c>Ai:Enabled</c> false gets the
@@ -101,7 +109,19 @@ public static class AiServiceCollectionExtensions
                 .AddChatClient(providerFactory)
                 .Use((inner, serviceProvider) => new BoundedChatClient(
                     inner,
-                    serviceProvider.GetRequiredService<IOptions<AiSettings>>().Value))
+                    serviceProvider.GetRequiredService<IOptions<AiSettings>>().Value));
+
+            // The descriptor check (not a resolve) is what keeps the layer out of a host that
+            // registered no guardrail: adding an empty-loop client would change the type the
+            // container hands back for every application that adopts none of this.
+            if (services.Any(descriptor => descriptor.ServiceType == typeof(IChatGuardrail)))
+            {
+                builder = builder.Use((inner, serviceProvider) => new GuardrailChatClient(
+                    inner,
+                    serviceProvider.GetServices<IChatGuardrail>()));
+            }
+
+            builder = builder
                 .Use((inner, serviceProvider) => new UsageRecordingChatClient(
                     inner,
                     serviceProvider.GetRequiredService<AiUsageMeter>(),

@@ -62,5 +62,49 @@ public static class WebVitalsPageExtensions
             budget.AssertWithinBudget(sample, label, path, writeLine);
             return sample;
         }
+
+        /// <summary>
+        /// Measures one page's Core Web Vitals around a scripted interaction and asserts them against
+        /// <paramref name="budget"/>. Same order as <c>MeasureWebVitalsAsync</c> (observers installed
+        /// BEFORE the navigation), with the interaction driven after the load so the event-timing
+        /// observer records an INP latency sample. Carries its own name rather than overloading
+        /// <c>MeasureWebVitalsAsync</c>, whose optional parameters would make the two ambiguous at the
+        /// call site.
+        /// </summary>
+        /// <param name="label">The artifact label (also the failure-message label), e.g. <c>"home"</c>.</param>
+        /// <param name="path">The path to load.</param>
+        /// <param name="budget">The budget to assert against.</param>
+        /// <param name="interaction">
+        /// The interaction to drive once the page has loaded: a click, a keystroke, anything the
+        /// event-timing observer can time. An interaction that clears nothing over the 16 ms threshold
+        /// leaves INP at 0, which the budget skips rather than reads as a pass.
+        /// </param>
+        /// <param name="writeLine">Test output sink for the single-line sample record, or null.</param>
+        /// <returns>The collected sample, for any further app-specific assertion.</returns>
+        public async Task<WebVitalsSample> MeasureWebVitalsWithInteractionAsync(
+            string label,
+            string path,
+            WebVitalsBudget budget,
+            Func<IPage, Task> interaction,
+            Action<string>? writeLine = null)
+        {
+            ArgumentNullException.ThrowIfNull(page);
+            ArgumentNullException.ThrowIfNull(budget);
+            ArgumentNullException.ThrowIfNull(interaction);
+
+            await WebVitalsCollector.InstallAsync(page).ConfigureAwait(false);
+            await page.GotoAndWaitForBlazorAsync(path).ConfigureAwait(false);
+
+            await interaction(page).ConfigureAwait(false);
+
+            // Give the event-timing observer a slice to record the interaction it just saw.
+            await page.WaitForTimeoutAsync(300).ConfigureAwait(false);
+
+            var sample = await WebVitalsCollector.CollectAsync(page).ConfigureAwait(false);
+            await WebVitalsCollector.WriteArtifactAsync(label, path, sample).ConfigureAwait(false);
+
+            budget.AssertWithinBudget(sample, label, path, writeLine);
+            return sample;
+        }
     }
 }

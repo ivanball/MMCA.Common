@@ -31,8 +31,31 @@ public sealed class AiUsageMeter
     /// <summary>Counter name for completion (output) tokens.</summary>
     public const string OutputTokensCounterName = "mmca.ai.output_tokens";
 
+    /// <summary>
+    /// Histogram name for end-to-end call latency, in seconds.
+    /// <para>
+    /// Microsoft.Extensions.AI's own <c>UseOpenTelemetry</c> layer already publishes
+    /// <c>gen_ai.client.operation.duration</c> on this same meter, and this histogram does not
+    /// replace it: the standard instrument carries the GenAI semantic-convention dimensions, while
+    /// this one carries <c>prompt_name</c>, <c>prompt_version</c> and <c>outcome</c>, so a latency
+    /// regression can be attributed to the prompt that caused it and a failure rate can be read off
+    /// the same series as the latency.
+    /// </para>
+    /// </summary>
+    public const string CallDurationHistogramName = "mmca.ai.call.duration";
+
+    /// <summary>The <c>outcome</c> tag value for a call that returned an answer.</summary>
+    public const string SuccessOutcome = "success";
+
+    /// <summary>The <c>outcome</c> tag value for a call that threw.</summary>
+    public const string ErrorOutcome = "error";
+
+    /// <summary>The <c>outcome</c> tag value for a call the caller (or a bound) cancelled.</summary>
+    public const string CanceledOutcome = "canceled";
+
     private readonly Counter<long> _inputTokens;
     private readonly Counter<long> _outputTokens;
+    private readonly Histogram<double> _callDuration;
 
     /// <summary>Initializes a new instance of the <see cref="AiUsageMeter"/> class.</summary>
     /// <param name="meterFactory">The factory that owns the meter's lifetime.</param>
@@ -59,6 +82,10 @@ public sealed class AiUsageMeter
             OutputTokensCounterName,
             unit: "{token}",
             description: "Completion tokens billed by the language-model provider.");
+        _callDuration = meter.CreateHistogram<double>(
+            CallDurationHistogramName,
+            unit: "s",
+            description: "End-to-end duration of a governed chat call, tagged with the prompt identity and the outcome.");
     }
 
     /// <summary>
@@ -83,13 +110,7 @@ public sealed class AiUsageMeter
             return;
         }
 
-        var tags = new TagList
-        {
-            { "model", model ?? "unknown" },
-            { "prompt_name", promptName ?? "unknown" },
-            { "prompt_version", promptVersion ?? "unknown" },
-            { "provider", provider.ToString() },
-        };
+        var tags = AttributionTags(model, promptName, promptVersion, provider);
 
         if (usage.InputTokenCount is { } input)
         {
@@ -101,4 +122,45 @@ public sealed class AiUsageMeter
             _outputTokens.Add(output, tags);
         }
     }
+
+    /// <summary>
+    /// Records one call's end-to-end duration, in seconds, under the same attribution dimensions as
+    /// the token counters plus an <c>outcome</c>. Recorded on every call, including one that threw,
+    /// so a failure rate and a latency distribution come off one series.
+    /// </summary>
+    /// <param name="elapsed">The measured wall-clock duration of the call.</param>
+    /// <param name="model">The model that answered, when the call got far enough to know.</param>
+    /// <param name="promptName">The prompt name stamped on the request, if any.</param>
+    /// <param name="promptVersion">The prompt version stamped on the request, if any.</param>
+    /// <param name="provider">The provider the call went to.</param>
+    /// <param name="outcome">One of <see cref="SuccessOutcome"/>, <see cref="ErrorOutcome"/> or <see cref="CanceledOutcome"/>.</param>
+    public void RecordDuration(
+        TimeSpan elapsed,
+        string? model,
+        string? promptName,
+        string? promptVersion,
+        AiProvider provider,
+        string outcome)
+    {
+        var tags = AttributionTags(model, promptName, promptVersion, provider);
+        tags.Add("outcome", outcome ?? "unknown");
+
+        _callDuration.Record(elapsed.TotalSeconds, tags);
+    }
+
+    /// <summary>
+    /// The attribution dimensions every instrument on this meter shares, so a dashboard can join the
+    /// cost series and the latency series on the same tags.
+    /// </summary>
+    private static TagList AttributionTags(
+        string? model,
+        string? promptName,
+        string? promptVersion,
+        AiProvider provider) => new()
+        {
+            { "model", model ?? "unknown" },
+            { "prompt_name", promptName ?? "unknown" },
+            { "prompt_version", promptVersion ?? "unknown" },
+            { "provider", provider.ToString() },
+        };
 }
