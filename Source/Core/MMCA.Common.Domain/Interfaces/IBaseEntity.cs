@@ -7,6 +7,6 @@ namespace MMCA.Common.Domain.Interfaces;
 public interface IBaseEntity<TIdentifierType>
         where TIdentifierType : notnull
 {
-    /// <summary>Gets the entity's unique identifier. Set once via <c>init</c> and immutable thereafter.</summary>
+    /// <summary>Gets the entity's unique identifier. Set once via <see langword="init"/> and immutable thereafter.</summary>
     TIdentifierType Id { get; init; }
 }

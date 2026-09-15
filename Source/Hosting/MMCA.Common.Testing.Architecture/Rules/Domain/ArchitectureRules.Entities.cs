@@ -113,7 +113,7 @@ public static partial class ArchitectureRules
 
     /// <summary>
     /// Every public instance property on a module domain entity is closed for outside assignment: it
-    /// has no setter, an <c>init</c>-only setter, or a non-public one.
+    /// has no setter, an <see langword="init"/>-only setter, or a non-public one.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -127,10 +127,10 @@ public static partial class ArchitectureRules
     /// </para>
     /// <para>
     /// <b>What counts as compliant.</b> A get-only property, a computed property, an
-    /// <c>init</c>-only property (construction-time assignment is what the factory already governs),
+    /// <see langword="init"/>-only property (construction-time assignment is what the factory already governs),
     /// and any property whose setter is <see langword="private"/>, <see langword="protected"/> or
     /// <see langword="internal"/>. Only a
-    /// genuinely public, non-<c>init</c> setter is a violation. Navigation properties are included
+    /// genuinely public, non-<see langword="init"/> setter is a violation. Navigation properties are included
     /// rather than exempted: assigning a child collection or a related aggregate from outside is the
     /// same invariant hole, so navigation assignment goes through a <c>SetXxx</c> method too (the
     /// framework's <c>SetItems&lt;T&gt;</c> is that method for the collection case).

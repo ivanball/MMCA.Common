@@ -6,7 +6,7 @@ namespace MMCA.Common.Testing.Architecture;
 /// straight into the handler. The pipeline stage is there, it simply has nothing to run, and the gap
 /// is invisible until bad input reaches the domain.
 /// <para>
-/// Every command that carries data (at least one public settable property, <c>init</c> included) and
+/// Every command that carries data (at least one public settable property, <see langword="init"/> included) and
 /// is handled by an <c>ICommandHandler</c> in the repo's per-module Application assemblies must be
 /// covered, either by its own <c>IValidator&lt;TCommand&gt;</c> or through the
 /// <c>CommandRequestValidator</c> bridge: the command implements

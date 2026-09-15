@@ -573,7 +573,7 @@ public abstract class EntityControllerBase<
     /// <b>Why asynchronous.</b> Row scoping is rarely a pure function of the current principal: it
     /// is resolved through a query handler, a claim lookup that hits a store, a tenancy read. A
     /// synchronous hook forced every such controller to override all five actions by hand purely to
-    /// get an <c>await</c> in before the query, which is exactly the duplication (and the
+    /// get an <see langword="await"/> in before the query, which is exactly the duplication (and the
     /// export-drifts-from-the-list hazard) this hook removes. An override that has nothing to await
     /// returns <c>ValueTask.FromResult(...)</c> and allocates nothing.
     /// </para>
@@ -607,7 +607,7 @@ public abstract class EntityControllerBase<
     /// <para>
     /// The synchronous half of <see cref="GetReadSpecificationAsync"/>, which returns this by
     /// default. A controller that can build its scope without awaiting anything overrides this one
-    /// and gets all five read actions scoped; a controller that needs an <c>await</c> overrides
+    /// and gets all five read actions scoped; a controller that needs an <see langword="await"/> overrides
     /// <see cref="GetReadSpecificationAsync"/> instead, and then this hook is no longer consulted
     /// (the override replaces the default that called it).
     /// </para>

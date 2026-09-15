@@ -130,7 +130,7 @@ public static partial class ArchitectureRules
 
     /// <summary>
     /// True when the type exposes at least one public instance property with a public setter.
-    /// <c>init</c> setters count: a positional record command is exactly the shape this rule guards.
+    /// <see langword="init"/> setters count: a positional record command is exactly the shape this rule guards.
     /// </summary>
     private static bool HasSettablePublicProperty(Type type) =>
         Array.Exists(

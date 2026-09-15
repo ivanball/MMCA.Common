@@ -8,7 +8,7 @@ namespace MMCA.Common.Domain.DomainEvents;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Equality is not a deduplication mechanism.</b> This is a <c>record</c>, so it has structural
+/// <b>Equality is not a deduplication mechanism.</b> This is a <see langword="record"/>, so it has structural
 /// equality, but <see cref="MessageId"/> and <see cref="DateOccurred"/> both default to a fresh
 /// value per instance: two logically identical events raised separately are never equal. Anything
 /// relying on that comparison to spot a duplicate would silently never match. Consumer-side

@@ -21,7 +21,7 @@ namespace MMCA.Common.Application.Services;
 /// <para>
 /// <b>Envelope preservation is the registry's job, not the author's.</b> After each hop
 /// <c>MessageId</c> and <c>DateOccurred</c> are stamped from the pre-hop instance onto the upcasted
-/// one through cached <see cref="PropertyInfo"/> handles (both are <c>init</c>-only on
+/// one through cached <see cref="PropertyInfo"/> handles (both are <see langword="init"/>-only on
 /// <c>BaseDomainEvent</c>, which reflection can still set). That keeps consumer-side inbox
 /// deduplication keyed on the id the producer published, by construction: upcasters map payload
 /// fields only, and one that copies the envelope itself simply gets the same values written twice.
