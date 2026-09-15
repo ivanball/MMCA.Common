@@ -6,6 +6,23 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **Language switching on MAUI Blazor Hybrid heads no longer sticks to the launch language**
+  (`MMCA.Common.UI`, ADR-027 Decision 10). MudBlazor 9.7+ reads its built-in English strings by
+  assigning `CultureInfo.CurrentUICulture` (invariant, then the previous value back), and that
+  restore writes an `AsyncLocal` culture into the calling context. On a hybrid head the renderer
+  dispatches on the main thread, which nothing resets, so the first MudBlazor chrome string a page
+  rendered (a pager, a bell badge, a dialog close button) pinned the app: `MauiCultureApplier` set
+  the thread defaults and reloaded the WebView, and the pinned `AsyncLocal` still won. Anonymous
+  landing pages render little MudBlazor chrome, which is why the symptom surfaced as "switching
+  works signed out but not signed in". `AddUIShared` now installs `InvariantMudLocalizationInterceptor`
+  through MudBlazor's `AddLocalizationInterceptor`: the same resolution order as the default (English
+  or no `MudLocalizer` reads the built-ins, otherwise `MudTranslations` with a built-in fallback),
+  reading the built-ins through a `ResourceManager` under an explicit invariant culture instead of a
+  culture swap. Web heads are unaffected. A canary test pins the upstream behaviour so the
+  replacement can be retired when MudBlazor stops assigning the culture.
+
 ## [1.202.0] - 2026-09-13
 
 ### Changed
