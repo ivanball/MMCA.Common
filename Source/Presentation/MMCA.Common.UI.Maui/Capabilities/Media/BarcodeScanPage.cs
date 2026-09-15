@@ -13,7 +13,7 @@ namespace MMCA.Common.UI.Maui.Capabilities.Media;
 /// camera is always released.
 /// </para>
 /// <para>
-/// <c>partial</c> is required by CsWinRT1028 on the windows TFM (a ContentPage crosses the WinRT
+/// <see langword="partial"/> is required by CsWinRT1028 on the windows TFM (a ContentPage crosses the WinRT
 /// ABI); the redundancy style rules that object to it on the other TFMs are silenced project-wide
 /// in the csproj, exactly as the comment there describes.
 /// </para>

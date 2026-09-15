@@ -4,7 +4,7 @@ namespace MMCA.Common.UI.Services;
 
 /// <summary>
 /// Snapshot of a list page's state for restoration after navigation.
-/// Immutable — use <c>with</c> expressions to update.
+/// Immutable — use <see langword="with"/> expressions to update.
 /// </summary>
 public sealed record ListPageState
 {

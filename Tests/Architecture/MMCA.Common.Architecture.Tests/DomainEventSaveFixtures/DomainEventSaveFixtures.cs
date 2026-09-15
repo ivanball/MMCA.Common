@@ -25,7 +25,7 @@ internal sealed class DirectSavingHandler : IDomainEventHandler<FixtureDomainEve
 
 /// <summary>
 /// The real-world shape: the handler delegates to a service, which delegates to a writer, which
-/// saves. Two hops, both through <c>async</c> methods, so the walk must follow the compiler-generated
+/// saves. Two hops, both through <see langword="async"/> methods, so the walk must follow the compiler-generated
 /// state machines to see anything at all.
 /// </summary>
 internal sealed class TransitiveSavingHandler : IDomainEventHandler<FixtureDomainEvent>

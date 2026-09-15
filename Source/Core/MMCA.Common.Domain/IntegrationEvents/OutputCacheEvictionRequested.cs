@@ -31,7 +31,7 @@ public sealed record class OutputCacheEvictionRequested : BaseIntegrationEvent
     /// <summary>
     /// The output-cache tags to evict, exactly as the producing host spelled them in its
     /// <c>[OutputCache(Tags = ...)]</c> / policy registration. Defaults to empty rather than being
-    /// <c>required</c> so a message that arrives without the field deserializes into a harmless
+    /// <see langword="required"/> so a message that arrives without the field deserializes into a harmless
     /// no-op instead of faulting the consumer and dead-lettering.
     /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];

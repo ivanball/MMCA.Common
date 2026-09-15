@@ -115,7 +115,7 @@ internal static class RuleHelpers
     {
         /// <summary>
         /// Gets a value indicating whether the property has a publicly-settable, non-init setter,
-        /// i.e. it is mutable after construction. <c>init</c>-only setters carry the
+        /// i.e. it is mutable after construction. <see langword="init"/>-only setters carry the
         /// <c>IsExternalInit</c> modreq and are treated as immutable.
         /// </summary>
         internal bool HasPublicMutableSetter

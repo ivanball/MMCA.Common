@@ -4,9 +4,9 @@
     "net10.0": {
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.258, )",
-        "resolved": "3.0.258",
-        "contentHash": "1Woi+EqYRjvHh/bySi4OAf7Dwe8+jwGSEkoSroBgxnXb78bd+OfsLgM7fE9HvfSmoz6W47OwWFWztul5RoKrwg=="
+        "requested": "[3.0.259, )",
+        "resolved": "3.0.259",
+        "contentHash": "WhnkpMzWWsUhdEEyPVXRVZx1maVnfymzJuzZn3bkDsgrgFd4WxKfCLzG1ZK7k0dmuJC8T9IAM72UwYaA1wmF/Q=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -746,8 +746,8 @@
       },
       "RESPite": {
         "type": "Transitive",
-        "resolved": "3.1.31",
-        "contentHash": "u+MFK6FzGWngKaY3wJ/V9vQSVe/NSqpk0IYYw6ACwmlPq5eTnsyZGlzEa3YMifJGVs3omrl5MkgigB1jZYNnGg=="
+        "resolved": "3.2.1",
+        "contentHash": "xgf0teM++NNTWxlXBv91K8qKW4ULhQNcmO1/rAI/4qVFgaZdWCKD1SeImGtUnCq/orIWkke5GQ4Q40239S/utw=="
       },
       "Serilog": {
         "type": "Transitive",
@@ -859,8 +859,8 @@
       },
       "System.IO.Hashing": {
         "type": "Transitive",
-        "resolved": "10.0.8",
-        "contentHash": "+dJsbPJ3FyUbTZNplFj0RCKePFizmv6ewDV46JE9q/IVH4c3xTCftHfHelLsAKf0jryIPqgMb5GpS0x7TAY3mg=="
+        "resolved": "10.0.12",
+        "contentHash": "jDix4bBMYnpZdSPcnY+KDV6ik3SRMzpMKby/bZl/XUwIiflwRNAFZ0oOl61R/pSaveIJ8t1gs2BUlrGsPs/bcg=="
       },
       "System.Memory.Data": {
         "type": "Transitive",
@@ -869,8 +869,8 @@
       },
       "System.Security.Cryptography.Pkcs": {
         "type": "Transitive",
-        "resolved": "10.0.11",
-        "contentHash": "8IV+rI3xN/Mkq9MsSX7VZTv9T9Wt+tyhHLwBX9VNZBk8m8kknEs1JeTSjI2x9M2L/fSja+c2WSE5n5Yy0GXdoQ=="
+        "resolved": "10.0.12",
+        "contentHash": "W6BsawU2tB2qy6u4+3cBOSOmiTUgYWW365b5WMVA1bDxQwZZeNWD+qufKJkDQNKzAKq4b6Q04DDKhmr2SNJ1eg=="
       },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
@@ -921,8 +921,8 @@
           "AspNetCore.HealthChecks.Rabbitmq": "[9.0.0, )",
           "AspNetCore.HealthChecks.SqlServer": "[9.0.0, )",
           "AspNetCore.HealthChecks.Sqlite": "[9.0.0, )",
-          "Aspire.StackExchange.Redis": "[13.5.3, )",
-          "Aspire.StackExchange.Redis.DistributedCaching": "[13.5.3, )",
+          "Aspire.StackExchange.Redis": "[13.5.4, )",
+          "Aspire.StackExchange.Redis.DistributedCaching": "[13.5.4, )",
           "Azure.Extensions.AspNetCore.Configuration.Secrets": "[1.5.2, )",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.5.4, )",
           "Azure.Extensions.AspNetCore.DataProtection.Keys": "[1.6.4, )",
@@ -944,8 +944,8 @@
           "Serilog.AspNetCore": "[10.0.0, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Serilog.Sinks.File": "[7.0.0, )",
-          "StackExchange.Redis": "[3.1.31, )",
-          "System.Security.Cryptography.Xml": "[10.0.11, )"
+          "StackExchange.Redis": "[3.2.1, )",
+          "System.Security.Cryptography.Xml": "[10.0.12, )"
         }
       },
       "mmca.common.domain": {
@@ -979,7 +979,7 @@
           "Polly.Core": "[8.8.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
-          "StackExchange.Redis": "[3.1.31, )"
+          "StackExchange.Redis": "[3.2.1, )"
         }
       },
       "mmca.common.shared": {
@@ -1016,9 +1016,9 @@
       },
       "Aspire.StackExchange.Redis": {
         "type": "CentralTransitive",
-        "requested": "[13.5.3, )",
-        "resolved": "13.5.3",
-        "contentHash": "B0mJpW8715pp8ecZ5RXh3pG78ncg8EKMM1pOZO2X10z0RLqTLerhyW4i2RrxOZMkx00BDRrZT+43e6GHmvdjUQ==",
+        "requested": "[13.5.4, )",
+        "resolved": "13.5.4",
+        "contentHash": "pDghhwQYWWbIJ0XKE33v5rZGL6GoaoBdk8c9g7/S6KYFQarWM7gxSC7F/QLXxNQnYl2gQOoLG6njMclMRPmTrw==",
         "dependencies": {
           "AspNetCore.HealthChecks.Redis": "9.0.0",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.11",
@@ -1039,12 +1039,12 @@
       },
       "Aspire.StackExchange.Redis.DistributedCaching": {
         "type": "CentralTransitive",
-        "requested": "[13.5.3, )",
-        "resolved": "13.5.3",
-        "contentHash": "EBkcHLElw38oWRbBlY/TRY1OEWOE+zMptWlPidsCY3lKhj3v0usGrH18BdB5JPRQKdJDA7fjJd7eqsvAOIJlNw==",
+        "requested": "[13.5.4, )",
+        "resolved": "13.5.4",
+        "contentHash": "3sSm2Mh2CodJm8J8VMJyO0Tmtjl2OjIAzEM2bFU0R7G5kUrqKGbcrH2sBDevTV4IAXMVk2/BUjoRT1O0YJp2hA==",
         "dependencies": {
           "AspNetCore.HealthChecks.Redis": "9.0.0",
-          "Aspire.StackExchange.Redis": "13.5.3",
+          "Aspire.StackExchange.Redis": "13.5.4",
           "Microsoft.Extensions.Caching.StackExchangeRedis": "10.0.11",
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.11",
           "Microsoft.Extensions.Configuration.Binder": "10.0.11",
@@ -1658,13 +1658,13 @@
       },
       "StackExchange.Redis": {
         "type": "CentralTransitive",
-        "requested": "[3.1.31, )",
-        "resolved": "3.1.31",
-        "contentHash": "QillloeZxgw9+IWmnowTrjrn+JV7JIMVzr1JiUpCa7pJQI48rtcqG9yy6u5UBRiTuCiKU5909aRu67Ch6gWVMg==",
+        "requested": "[3.2.1, )",
+        "resolved": "3.2.1",
+        "contentHash": "jIeqcfmZJ+LUBsVEs0qQ5DRJFMLT4xmV8qVKtox3CiQox6ivaU5Mo4bBs8XsPZ/wvjGUQ4TiYLvWwBTvEBSAbA==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "10.0.5",
-          "RESPite": "3.1.31",
-          "System.IO.Hashing": "10.0.5"
+          "RESPite": "3.2.1",
+          "System.IO.Hashing": "10.0.12"
         }
       },
       "System.IdentityModel.Tokens.Jwt": {
@@ -1685,11 +1685,11 @@
       },
       "System.Security.Cryptography.Xml": {
         "type": "CentralTransitive",
-        "requested": "[10.0.11, )",
-        "resolved": "10.0.11",
-        "contentHash": "TokfVsaU2fmcwvsU6ihLCkseVfwhLX6Tmbl3qh3nOBIqHSX4yqFllpslA+PuHERH/ENu3kwqo4deZiyT0Wvh3Q==",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "T3snzcc04R1JDj2XmzrLyk5fHT0YroBz5o2P+YdyJKYePSMqp8JsrxEJQPvUnK6oozQBvKLki9vnI7uMuWepKQ==",
         "dependencies": {
-          "System.Security.Cryptography.Pkcs": "10.0.11"
+          "System.Security.Cryptography.Pkcs": "10.0.12"
         }
       }
     }

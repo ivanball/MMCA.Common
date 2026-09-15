@@ -112,7 +112,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="12.47.0" />
+    <PackageVersion Include="Anthropic" Version="12.48.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
          license check at startup ("License must be specified with SetLicense/SetLicenseLocation
@@ -161,7 +161,7 @@
     <PackageVersion Include="Grpc.AspNetCore" Version="2.83.0" />
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
-    <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
+    <PackageVersion Include="Grpc.Tools" Version="2.84.0" />
     <!-- Common.UI -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.12" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" />
@@ -218,7 +218,7 @@
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.258" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.259" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -291,7 +291,7 @@
          in-process host boot + throwaway SQL database + Respawn reset. SqlClient is referenced directly
          only by MMCA.Common.Testing and CPM does not pin transitives, so every other project keeps
          resolving the 6.1.6 that EF Core SqlServer 10.0.11 floors. On the 7.0 line since 2026-08-28:
-         Aspire.Hosting 13.5.3 already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
+         Aspire.Hosting 13.5.4 already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
          the same major the hosting stack does. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.3" />
@@ -340,28 +340,28 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- Redis client integrations (MMCA.Common.Aspire.Caching.RedisCachingExtensions). Held at the
-         same 13.5.3 the hosting stack sits on, and matching the pins both consumer apps already
+         same 13.5.4 the hosting stack sits on, and matching the pins both consumer apps already
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.5.3" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.3" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.5.4" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.4" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.12" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.5.3" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.3" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.4" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
-         boots a real AppHost in-process. Held at the SAME 13.5.3 as every other Aspire entry on
+         boots a real AppHost in-process. Held at the SAME 13.5.4 as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.4" />
     <!-- Sample AppHost + sample service behind the apphost-testing CI tier only (the three projects
          under Tests/Hosting that sit OUTSIDE MMCA.Common.slnx). Aspire.Hosting.AppHost brings the DCP
          orchestrator the testing builder starts. -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.3" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.4" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
