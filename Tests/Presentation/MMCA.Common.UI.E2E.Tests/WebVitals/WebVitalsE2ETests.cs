@@ -14,20 +14,27 @@ namespace MMCA.Common.UI.E2E.Tests.WebVitals;
 /// </summary>
 public sealed class WebVitalsE2ETests : GalleryAxeTestBase
 {
-    private const double LcpBudgetMs = 8000;
-    private const double TtfbBudgetMs = 4000;
-    private const double ClsBudget = 0.25;
+    private const double LcpBudgetMs = 4000;
+    private const double FcpBudgetMs = 3000;
+    private const double TtfbBudgetMs = 1500;
+    private const double ClsBudget = 0.1;
+    private const double InpBudgetMs = 500;
 
     /// <summary>
     /// The measurement flow lives in the shipped <c>MeasureWebVitalsAsync</c> extension (install the
     /// observers BEFORE the navigation, load, collect, write the artifact, assert), so this suite no
-    /// longer hand-rolls it. FCP is pinned to the LCP ceiling rather than left on the package default:
-    /// FCP always precedes LCP, so this keeps the effective gate exactly the three metrics the suite has
-    /// always gated on and its CI history comparable. INP stays on the default and is skipped anyway,
-    /// since neither case drives an interaction.
+    /// longer hand-rolls it.
+    /// <para>
+    /// These ceilings are a deliberate step down from the opening 8000/4000/0.25 set, which was loose
+    /// enough to miss anything short of a catastrophe. They step down again to the package default
+    /// (<c>new WebVitalsBudget()</c>: 2500/1800/800/0.1/500) after one green cross-browser cycle; the
+    /// numbers move on measured CI evidence, never on a guess. LCP and CLS are Chromium-only and INP
+    /// needs a real interaction, so firefox and webkit report 0 for those and
+    /// <c>WebVitalsBudget.AssertWithinBudget</c> skips a zero INP rather than reading it as a pass.
+    /// </para>
     /// </summary>
     private static readonly WebVitalsBudget Budget =
-        new(Lcp: LcpBudgetMs, Fcp: LcpBudgetMs, Ttfb: TtfbBudgetMs, Cls: ClsBudget);
+        new(Lcp: LcpBudgetMs, Fcp: FcpBudgetMs, Ttfb: TtfbBudgetMs, Cls: ClsBudget, Inp: InpBudgetMs);
 
     public WebVitalsE2ETests(PlaywrightFixture playwright, GalleryHostFixture gallery)
         : base(playwright, gallery)
@@ -42,10 +49,20 @@ public sealed class WebVitalsE2ETests : GalleryAxeTestBase
         AssertSomethingWasMeasured(sample);
     }
 
+    /// <summary>
+    /// The one case that drives an interaction, so INP is sampled rather than skipped: the gallery's
+    /// dirty toggle is a plain button click, which is exactly the kind of event the responsiveness
+    /// metric is about. Non-Chromium engines record no INP and the budget skips it there.
+    /// </summary>
+    /// <returns>A task that completes when the page is measured.</returns>
     [Fact]
     public async Task ComponentsPage_CoreWebVitals_WithinBudget()
     {
-        var sample = await Page.MeasureWebVitalsAsync("gallery-components", "/components", Budget);
+        var sample = await Page.MeasureWebVitalsWithInteractionAsync(
+            "gallery-components",
+            "/components",
+            Budget,
+            page => page.GetByTestId("toggle-dirty").ClickAsync());
 
         AssertSomethingWasMeasured(sample);
     }

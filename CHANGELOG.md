@@ -23,6 +23,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   the send navigates away by itself; both render `UnsavedChangesGuard` bound through the live
   `IsDirtyAccessor`, so browser navigation raises the native prompt and in-app navigation raises the
   confirm dialog. Neither page used to warn at all: leaving discarded the edit silently.
+- **`MeasureWebVitalsWithInteractionAsync`** (`MMCA.Common.Testing.E2E`, rubric section 23). The
+  sibling of `MeasureWebVitalsAsync` for a page whose interaction is not "type into a placeholder":
+  it takes a `Func<IPage, Task>`, drives it after the load, and lets the event-timing observer record
+  an INP sample, keeping the load-bearing order (observers installed before the navigation) identical.
+  A distinct name rather than an overload, because the optional parameters would make the two
+  ambiguous at the call site.
 
 ### Changed
 
@@ -36,6 +42,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   (`ICommandHandler<TCommand, ...>`, `IQueryHandler<TQuery, ...>`) has a generic-parameter contract
   and is still exempt, which covers every framework base but the one whose contract is concrete and
   already co-located. No API change.
+- **`MMCA.Common.UI` drops about 1 MB of unreferenced static assets**: a speaker photograph nothing in
+  any repo referenced, and the Bootstrap CSS source map, which only the stylesheet's own
+  `sourceMappingURL` comment pointed at (that comment is unchanged; a missing map is a silent no-op in
+  the browser). The project also excludes `wwwroot/**/*.map` from its content, so a source map cannot
+  ride back into the package with a future vendor drop. Every referenced asset is untouched.
 
 ### Fixed
 

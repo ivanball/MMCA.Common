@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Source maps are debug artifacts: they must not ride along as static web assets in the package. -->
+    <Content Remove="wwwroot\**\*.map" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Lets the unit tier cover ChannelReferenceCounter directly. The ref-count semantics cannot be
          reached through NotificationHubService's public API: JoinChannelAsync starts a real
          HubConnection, so a join-based test would need a live server and a multi-second backoff. -->
