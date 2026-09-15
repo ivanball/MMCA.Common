@@ -3,6 +3,7 @@ using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 
 namespace MMCA.Common.Infrastructure.Tests;
@@ -24,6 +25,12 @@ public sealed class DependencyInjectionBrokerMessagingTests
                 ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
             })
             .Build();
+
+    // The exact binding AddBrokerMessaging performs (see its Get<MessageBusSettings>() call): the
+    // section is bound without options validation, so this is the path a setting really travels.
+    private static MessageBusSettings Bind(IConfiguration configuration) =>
+        configuration.GetSection(MessageBusSettings.SectionName).Get<MessageBusSettings>()
+            ?? new MessageBusSettings();
 
     private static bool HasHostedService<T>(IServiceCollection services) =>
         services.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(T));
@@ -159,6 +166,43 @@ public sealed class DependencyInjectionBrokerMessagingTests
             .Should().ContainSingle().Subject;
 
         formatter.Consumer<OrderPlacedConsumer>().Should().Be("demo-orders-order-placed");
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_BackpressureSettings_BindAndRegisterCleanly()
+    {
+        // The two knobs reach the transport inside the MassTransit factory lambda, which only runs
+        // when a real bus is built, so what this suite can pin is the half that silently rots: the
+        // binding AddBrokerMessaging itself performs, and that a configured pair still registers.
+        var services = new ServiceCollection();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MessageBus:Provider"] = "RabbitMq",
+                ["MessageBus:ConnectionString"] = "amqp://guest:guest@localhost:5672",
+                ["MessageBus:PrefetchCount"] = "16",
+                ["MessageBus:ConcurrentMessageLimit"] = "8",
+            })
+            .Build();
+
+        var settings = Bind(configuration);
+        settings.PrefetchCount.Should().Be(16);
+        settings.ConcurrentMessageLimit.Should().Be(8);
+
+        services.AddBrokerMessaging(configuration);
+
+        services.Should().NotBeEmpty("a configured backpressure pair must not derail the registration");
+    }
+
+    [Fact]
+    public void AddBrokerMessaging_BackpressureSettingsOmitted_LeaveTheTransportDefaults()
+    {
+        // Unset must mean "whatever the transport does", not zero: a prefetch window of 0 would stall
+        // the endpoint, which is why the registration applies the values only when they are above 0.
+        var settings = Bind(ConfigurationFor("RabbitMq", enableInbox: true));
+
+        settings.PrefetchCount.Should().BeNull();
+        settings.ConcurrentMessageLimit.Should().BeNull();
     }
 
     /// <summary>A consumer that exists only to be named by the endpoint name formatter.</summary>

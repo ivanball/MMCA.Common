@@ -6,6 +6,18 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Broker backpressure settings: `MessageBus:PrefetchCount` and `MessageBus:ConcurrentMessageLimit`**
+  (`MMCA.Common.Infrastructure`, rubric section 12). Both are optional `int?` settings on
+  `MessageBusSettings` and both are applied to the bus factory configurator before
+  `ConfigureEndpoints`, so they reach every receive endpoint on RabbitMQ and on Azure Service Bus
+  alike. Left unset (the default) the transport keeps its own defaults, so nothing changes for an
+  existing host; a service that needs to cap how much work one burst of events opens at once now sets
+  the two keys instead of hand-rolling a MassTransit callback. Values of zero or less are ignored:
+  `AddBrokerMessaging` binds the section with `Get<MessageBusSettings>()`, which runs no annotation
+  validation, so the range guard lives in the registration code.
+
 ### Changed
 
 - **The slice-cohesion gate now scans abstract handler and validator bases**

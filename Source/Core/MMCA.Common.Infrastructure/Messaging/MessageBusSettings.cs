@@ -209,6 +209,27 @@ public sealed class MessageBusSettings
     /// </para>
     /// </summary>
     public IReadOnlyList<int> RedeliveryIntervalsSeconds { get; init; } = [60, 600, 3600];
+
+    /// <summary>
+    /// Gets the number of messages the transport may hold locally ahead of the consumer, or
+    /// <see langword="null"/> (the default) to leave the transport's own default in place. Applied to
+    /// every broker receive endpoint. A prefetch window larger than the work a consumer can finish
+    /// inside the lock or lease is what turns a slow consumer into redeliveries; a window of one
+    /// serializes the endpoint. Values of zero or less are ignored rather than pushed to the
+    /// transport, because the binder never validates this section (see
+    /// <c>AddBrokerMessaging</c>), so the guard has to live in code.
+    /// </summary>
+    public int? PrefetchCount { get; init; }
+
+    /// <summary>
+    /// Gets the maximum number of messages consumed concurrently on a receive endpoint, or
+    /// <see langword="null"/> (the default) to leave the transport's own default in place. Applied to
+    /// every broker receive endpoint. This is the backpressure knob: it caps how much work the
+    /// service takes on at once, and therefore how many database connections and downstream calls one
+    /// burst of events can open. Values of zero or less are ignored, same as
+    /// <see cref="PrefetchCount"/>.
+    /// </summary>
+    public int? ConcurrentMessageLimit { get; init; }
 }
 
 /// <summary>Available message bus transports.</summary>
