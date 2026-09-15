@@ -64,6 +64,18 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   registered, so a host that adopts none keeps its existing pipeline down to the type the container
   hands back. The streaming path inspects the request only, because buffering a streamed answer to
   inspect it defeats the reason a caller chose streaming.
+- **SLO alerts and a paired runbook in the deployment sample** (`samples/deployment`, rubric
+  section 13). `main.bicep` now provisions four scheduled-query rules over the Log Analytics
+  workspace (`failed-requests` sev 2, `server-response-time` sev 3, `availability` sev 1, and
+  `ai-token-spend` sev 3 over the `MMCA.Common.AI` token counters, sized by the new
+  `aiTokenAlertThreshold` parameter), wired to the action group when `alertEmail` is set and created
+  without notification when it is not. The new `OPERATIONS.md` beside it carries one triage section
+  per alert (symptom, first checks, recovery, escalate) plus the two steps for copying the pair into
+  a consumer repository. The sample now proves the gate it documents: the framework's own
+  architecture tests subclass `ObservabilityConventionTestsBase` over these two files, so an alert
+  cannot be added, renamed or re-tiered in the sample without its runbook section moving in the same
+  change. The template's thresholds are placeholders, deliberately: an alert that pages on normal
+  traffic gets muted, and a muted alert is worse than none.
 
 ### Changed
 

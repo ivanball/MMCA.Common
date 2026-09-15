@@ -84,6 +84,19 @@ jobs:
                appIdentityResourceId=$UAMI_ID sqlAdminLogin=$SQL_USER sqlAdminPassword=$SQL_PWD ...
 ```
 
+## Alerting and its runbook
+
+`main.bicep` provisions four SLO log-search alerts (failed requests, server response time,
+availability, and language-model token spend) over the Log Analytics workspace, wired to the action
+group when `alertEmail` is set. Each one has a triage section in `OPERATIONS.md` next to this file:
+what it means, what to look at first, how to recover, when to escalate. The pairing is a build gate,
+not a convention: `ObservabilityConventionTestsBase` (`MMCA.Common.Testing.Architecture`) parses
+`sloAlertSpecs` out of the template and the `###` headings out of the runbook, and fails the build
+when an alert has no section, a section names an alert that no longer exists, or a heading's severity
+disagrees with the template. `OPERATIONS.md` closes with the two steps for wiring that gate into your
+own repository; the thresholds in the sample are placeholders, so size them from your own baseline
+before the first page.
+
 ## Migrations
 
 Each service applies its own migrations at startup (`ApplicationSettings.DatabaseInitStrategy=Migrate`,
