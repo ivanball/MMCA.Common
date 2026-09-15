@@ -1,12 +1,4 @@
 #nullable enable
-const MMCA.Common.AI.AiSettings.DefaultMaxOutputTokens = 1024 -> int
-const MMCA.Common.AI.AiSettings.SectionName = "Ai" -> string!
-const MMCA.Common.AI.Observability.AiUsageMeter.InputTokensCounterName = "mmca.ai.input_tokens" -> string!
-const MMCA.Common.AI.Observability.AiUsageMeter.MeterName = "MMCA.Common.AI" -> string!
-const MMCA.Common.AI.Observability.AiUsageMeter.OutputTokensCounterName = "mmca.ai.output_tokens" -> string!
-const MMCA.Common.AI.PromptContract.HashPropertyKey = "mmca.prompt.hash" -> string!
-const MMCA.Common.AI.PromptContract.NamePropertyKey = "mmca.prompt.name" -> string!
-const MMCA.Common.AI.PromptContract.VersionPropertyKey = "mmca.prompt.version" -> string!
 MMCA.Common.AI.AiProvider
 MMCA.Common.AI.AiProvider.Anthropic = 0 -> MMCA.Common.AI.AiProvider
 MMCA.Common.AI.AiServiceCollectionExtensions
@@ -36,13 +28,28 @@ MMCA.Common.AI.AiSettings.Timeout.init -> void
 MMCA.Common.AI.AiSettings.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
 MMCA.Common.AI.Chat.BoundedChatClient
 MMCA.Common.AI.Chat.BoundedChatClient.BoundedChatClient(Microsoft.Extensions.AI.IChatClient! innerClient, MMCA.Common.AI.AiSettings! settings) -> void
+MMCA.Common.AI.Chat.ChatGuardrailException
+MMCA.Common.AI.Chat.ChatGuardrailException.ChatGuardrailException() -> void
+MMCA.Common.AI.Chat.ChatGuardrailException.ChatGuardrailException(string! message) -> void
+MMCA.Common.AI.Chat.ChatGuardrailException.ChatGuardrailException(string! message, System.Exception! innerException) -> void
+MMCA.Common.AI.Chat.GuardrailChatClient
+MMCA.Common.AI.Chat.GuardrailChatClient.GuardrailChatClient(Microsoft.Extensions.AI.IChatClient! innerClient, System.Collections.Generic.IEnumerable<MMCA.Common.AI.Chat.IChatGuardrail!>! guardrails) -> void
+MMCA.Common.AI.Chat.GuardrailVerdict
+MMCA.Common.AI.Chat.GuardrailVerdict.Equals(MMCA.Common.AI.Chat.GuardrailVerdict other) -> bool
+MMCA.Common.AI.Chat.GuardrailVerdict.GuardrailVerdict() -> void
+MMCA.Common.AI.Chat.GuardrailVerdict.IsAllowed.get -> bool
+MMCA.Common.AI.Chat.GuardrailVerdict.Reason.get -> string?
 MMCA.Common.AI.Chat.IAiTokenEstimator
 MMCA.Common.AI.Chat.IAiTokenEstimator.EstimateTokenCount(string! text) -> int
+MMCA.Common.AI.Chat.IChatGuardrail
+MMCA.Common.AI.Chat.IChatGuardrail.InspectRequestAsync(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Chat.IChatGuardrail.InspectResponseAsync(Microsoft.Extensions.AI.ChatResponse! response, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
 MMCA.Common.AI.Chat.UsageRecordingChatClient
 MMCA.Common.AI.Chat.UsageRecordingChatClient.UsageRecordingChatClient(Microsoft.Extensions.AI.IChatClient! innerClient, MMCA.Common.AI.Observability.AiUsageMeter! meter, MMCA.Common.AI.AiProvider provider) -> void
 MMCA.Common.AI.Observability.AiUsageMeter
 MMCA.Common.AI.Observability.AiUsageMeter.AiUsageMeter(System.Diagnostics.Metrics.IMeterFactory! meterFactory) -> void
 MMCA.Common.AI.Observability.AiUsageMeter.Record(Microsoft.Extensions.AI.UsageDetails? usage, string? model, string? promptName, string? promptVersion, MMCA.Common.AI.AiProvider provider) -> void
+MMCA.Common.AI.Observability.AiUsageMeter.RecordDuration(System.TimeSpan elapsed, string? model, string? promptName, string? promptVersion, MMCA.Common.AI.AiProvider provider, string! outcome) -> void
 MMCA.Common.AI.PromptContract
 MMCA.Common.AI.PromptContract.<Clone>$() -> MMCA.Common.AI.PromptContract!
 MMCA.Common.AI.PromptContract.Apply(Microsoft.Extensions.AI.ChatOptions! options) -> Microsoft.Extensions.AI.ChatOptions!
@@ -59,8 +66,24 @@ MMCA.Common.AI.PromptContract.SystemPrompt.init -> void
 MMCA.Common.AI.PromptContract.ToChatOptions() -> Microsoft.Extensions.AI.ChatOptions!
 MMCA.Common.AI.PromptContract.Version.get -> string!
 MMCA.Common.AI.PromptContract.Version.init -> void
+const MMCA.Common.AI.AiSettings.DefaultMaxOutputTokens = 1024 -> int
+const MMCA.Common.AI.AiSettings.SectionName = "Ai" -> string!
+const MMCA.Common.AI.Chat.GuardrailVerdict.UnspecifiedReason = "Blocked by a chat guardrail." -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.CallDurationHistogramName = "mmca.ai.call.duration" -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.CanceledOutcome = "canceled" -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.ErrorOutcome = "error" -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.InputTokensCounterName = "mmca.ai.input_tokens" -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.MeterName = "MMCA.Common.AI" -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.OutputTokensCounterName = "mmca.ai.output_tokens" -> string!
+const MMCA.Common.AI.Observability.AiUsageMeter.SuccessOutcome = "success" -> string!
+const MMCA.Common.AI.PromptContract.HashPropertyKey = "mmca.prompt.hash" -> string!
+const MMCA.Common.AI.PromptContract.NamePropertyKey = "mmca.prompt.name" -> string!
+const MMCA.Common.AI.PromptContract.VersionPropertyKey = "mmca.prompt.version" -> string!
 override MMCA.Common.AI.Chat.BoundedChatClient.GetResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.Extensions.AI.ChatResponse!>!
 override MMCA.Common.AI.Chat.BoundedChatClient.GetStreamingResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate!>!
+override MMCA.Common.AI.Chat.GuardrailChatClient.GetResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.Extensions.AI.ChatResponse!>!
+override MMCA.Common.AI.Chat.GuardrailChatClient.GetStreamingResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate!>!
+override MMCA.Common.AI.Chat.GuardrailVerdict.GetHashCode() -> int
 override MMCA.Common.AI.Chat.UsageRecordingChatClient.GetResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.Extensions.AI.ChatResponse!>!
 override MMCA.Common.AI.Chat.UsageRecordingChatClient.GetStreamingResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate!>!
 override MMCA.Common.AI.PromptContract.Equals(object? obj) -> bool
@@ -69,8 +92,14 @@ override MMCA.Common.AI.PromptContract.ToString() -> string!
 static MMCA.Common.AI.AiServiceCollectionExtensions.AddMmcaChatClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.AI.AiServiceCollectionExtensions.AddMmcaChatClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, System.Func<System.IServiceProvider!, Microsoft.Extensions.AI.IChatClient!>! providerFactory) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.AI.Chat.BoundedChatClient.EstimateInputTokens(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options, MMCA.Common.AI.Chat.IAiTokenEstimator? estimator) -> int
-static MMCA.Common.AI.PromptContract.operator !=(MMCA.Common.AI.PromptContract? left, MMCA.Common.AI.PromptContract? right) -> bool
-static MMCA.Common.AI.PromptContract.operator ==(MMCA.Common.AI.PromptContract? left, MMCA.Common.AI.PromptContract? right) -> bool
+static MMCA.Common.AI.Chat.GuardrailVerdict.Allow.get -> MMCA.Common.AI.Chat.GuardrailVerdict
+static MMCA.Common.AI.Chat.GuardrailVerdict.Block(string! reason) -> MMCA.Common.AI.Chat.GuardrailVerdict
+static MMCA.Common.AI.Chat.GuardrailVerdict.operator !=(MMCA.Common.AI.Chat.GuardrailVerdict left, MMCA.Common.AI.Chat.GuardrailVerdict right) -> bool
+static MMCA.Common.AI.Chat.GuardrailVerdict.operator ==(MMCA.Common.AI.Chat.GuardrailVerdict left, MMCA.Common.AI.Chat.GuardrailVerdict right) -> bool
 static MMCA.Common.AI.PromptContract.ReadName(Microsoft.Extensions.AI.ChatOptions? options) -> string?
 static MMCA.Common.AI.PromptContract.ReadVersion(Microsoft.Extensions.AI.ChatOptions? options) -> string?
+static MMCA.Common.AI.PromptContract.operator !=(MMCA.Common.AI.PromptContract? left, MMCA.Common.AI.PromptContract? right) -> bool
+static MMCA.Common.AI.PromptContract.operator ==(MMCA.Common.AI.PromptContract? left, MMCA.Common.AI.PromptContract? right) -> bool
 static readonly MMCA.Common.AI.AiSettings.DefaultTimeout -> System.TimeSpan
+~override MMCA.Common.AI.Chat.GuardrailVerdict.Equals(object obj) -> bool
+~override MMCA.Common.AI.Chat.GuardrailVerdict.ToString() -> string

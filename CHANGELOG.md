@@ -38,6 +38,32 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   notification compose page uses it, so a send that reached exactly one person no longer says
   "1 recipients". Two categories cover both cultures the framework ships; a language with more CLDR
   categories needs a category selector, which does not change the call site.
+- **The AI trace source and meter are exported by default** (`MMCA.Common.Aspire`, rubric section 16).
+  `ConfigureOpenTelemetry()` subscribes `MMCA.Common.AI` as a trace source and as a meter, so a host
+  that adds the optional AI package gets its spans and its token-spend counters on the same
+  dashboards as everything else instead of having to hand-register them. The name is a literal,
+  because the layer rules bar a project reference from Aspire to the AI package; subscribing a source
+  and a meter nothing publishes to is inert, so a host without the AI package is unaffected.
+- **Call-duration histogram `mmca.ai.call.duration`** (`MMCA.Common.AI`, rubric section 16).
+  `UsageRecordingChatClient` records end-to-end latency in seconds on every call, tagged with the
+  same attribution dimensions as the token counters plus an `outcome` of `success`, `error` or
+  `canceled`; the streaming path stops the clock when the stream ends. Microsoft.Extensions.AI's own
+  `UseOpenTelemetry` layer already emits `gen_ai.client.operation.duration` on the same meter, and
+  this instrument does not replace it: it is the same measurement under `prompt_name`,
+  `prompt_version` and `outcome`, which is what lets one query answer "which prompt got slower, and
+  how often does it fail". A failed call reports no usage at all, so the histogram is the only place
+  it appears.
+- **Chat guardrail extension point: `IChatGuardrail`, `GuardrailVerdict`, `GuardrailChatClient`,
+  `ChatGuardrailException`** (`MMCA.Common.AI`, rubric section 16, ADR-120). An application
+  implements `IChatGuardrail` to inspect outgoing messages and incoming responses and to refuse
+  either (`GuardrailVerdict.Allow` / `GuardrailVerdict.Block(reason)`); a block throws
+  `ChatGuardrailException` carrying the reason. Every registered guardrail runs and the first block
+  stops the call. The framework ships the extension point and **no content policy**: what counts as a
+  prompt injection, a leaked secret or a disallowed topic is an application decision. The layer is
+  inserted between the bounds and usage recording ONLY when at least one `IChatGuardrail` is
+  registered, so a host that adopts none keeps its existing pipeline down to the type the container
+  hands back. The streaming path inspects the request only, because buffering a streamed answer to
+  inspect it defeats the reason a caller chose streaming.
 
 ### Changed
 
