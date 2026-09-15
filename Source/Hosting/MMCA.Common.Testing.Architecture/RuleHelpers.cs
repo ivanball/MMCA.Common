@@ -35,6 +35,14 @@ internal static class RuleHelpers
         /// <summary>Gets the concrete (non-abstract, non-interface) classes in the assembly.</summary>
         internal IEnumerable<Type> ConcreteClasses =>
             assembly.LoadableTypes.Where(t => t is { IsClass: true, IsAbstract: false });
+
+        /// <summary>
+        /// Gets every class in the assembly, ABSTRACT ONES INCLUDED (interfaces excluded). Used by the
+        /// rules whose subject can legitimately be an abstract base a consumer derives from, such as an
+        /// abstract handler base declared beside the contract it serves.
+        /// </summary>
+        internal IEnumerable<Type> Classes =>
+            assembly.LoadableTypes.Where(t => t.IsClass);
     }
 
     extension(Type type)

@@ -6,6 +6,19 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Changed
+
+- **The slice-cohesion gate now scans abstract handler and validator bases**
+  (`MMCA.Common.Testing.Architecture`, rubric section 5). `HandlersAreCoLocatedWithTheirContracts`
+  and `ValidatorsAreCoLocatedWithTheirContracts` read every class in the Application layer instead of
+  the concrete ones only, so an abstract `*HandlerBase` declared away from the concrete contract it
+  serves is reported like any other stranded handler. That is the shape consumers derive from, so a
+  stranded base strands every handler built on it while staying invisible to the gate. Nothing that
+  passed before starts failing: a base parameterized over its contract
+  (`ICommandHandler<TCommand, ...>`, `IQueryHandler<TQuery, ...>`) has a generic-parameter contract
+  and is still exempt, which covers every framework base but the one whose contract is concrete and
+  already co-located. No API change.
+
 ### Fixed
 
 - **Language switching on MAUI Blazor Hybrid heads no longer sticks to the launch language**
