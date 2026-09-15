@@ -365,4 +365,4 @@
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
-</Project>
+</Project>
