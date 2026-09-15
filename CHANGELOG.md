@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.203.0] - 2026-09-15
+
 ### Added
 
 - **Broker backpressure settings: `MessageBus:PrefetchCount` and `MessageBus:ConcurrentMessageLimit`**
