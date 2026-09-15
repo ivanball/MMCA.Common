@@ -93,12 +93,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   `Money.ToDisplayString()` and `IReadOnlyCollection<Money>.ToDisplayRange()` format their amounts
   with `CultureInfo.CurrentCulture` instead of the invariant culture, so a request carrying `es-ES`
   now reads `$1.234,56 USD` where it used to read `$1,234.56 USD`. The currency symbol and the
-  trailing code still come from the money itself, so a USD price stays USD in every locale. A new
-  `ToDisplayString(CultureInfo culture)` overload serves callers that render off the reader's thread
-  (background jobs, exports, tests). Two consumer-side consequences: a test asserting `$1,234.56` has
-  to pin `CultureInfo.CurrentCulture` to `en-US` rather than inherit the agent's, and because the
-  culture-taking overload now exists, existing `ToDisplayString()` call sites raise CA1304 under
-  `TreatWarningsAsErrors` (pass `CultureInfo.CurrentCulture` explicitly to keep today's behaviour).
+  trailing code still come from the money itself, so a USD price stays USD in every locale. Both
+  methods take an optional `CultureInfo? culture = null` for callers that render off the reader's
+  thread (background jobs, exports, tests); left unset it resolves to the current culture, so every
+  existing call site compiles and reads exactly as it did. One consumer-side consequence: a test
+  asserting `$1,234.56` has to pin `CultureInfo.CurrentCulture` to `en-US` rather than inherit
+  whatever the build agent runs under.
 - **`MMCA.Common.UI` drops about 1 MB of unreferenced static assets**: a speaker photograph nothing in
   any repo referenced, and the Bootstrap CSS source map, which only the stylesheet's own
   `sourceMappingURL` comment pointed at (that comment is unchanged; a missing map is a silent no-op in

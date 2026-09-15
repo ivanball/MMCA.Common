@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using AwesomeAssertions;
 using MMCA.Common.Shared.ValueObjects.Financial;
@@ -6,10 +5,6 @@ using MMCA.Common.UI.Extensions;
 
 namespace MMCA.Common.UI.Tests.Extensions;
 
-[SuppressMessage(
-    "Globalization",
-    "CA1304:Specify CultureInfo",
-    Justification = "The culture-less overload is the subject under test: these facts exist to pin what the ambient culture produces, so routing them through the explicit overload would assert nothing.")]
 public class MoneyExtensionsTests
 {
     /// <summary>
@@ -87,6 +82,8 @@ public class MoneyExtensionsTests
     }
 
     [Fact]
+    // The culture is an optional PARAMETER, not a second overload: supplying it overrides the
+    // ambient culture, and omitting it is the same method call every razor page already makes.
     public void ToDisplayString_ExplicitCulture_IgnoresTheAmbientCulture()
     {
         using var culture = CultureScope.Use("en-US");
@@ -164,5 +161,27 @@ public class MoneyExtensionsTests
         using var culture = CultureScope.Use("es-ES");
         List<Money> prices = [CreateMoney(1234.56m), CreateMoney(2345.67m)];
         prices.ToDisplayRange().Should().Be("$1.234,56 - $2.345,67 USD");
+    }
+
+    [Fact]
+    public void ToDisplayRange_ExplicitCulture_IgnoresTheAmbientCulture()
+    {
+        using var culture = CultureScope.Use("en-US");
+        List<Money> prices = [CreateMoney(1234.56m), CreateMoney(2345.67m)];
+
+        prices.ToDisplayRange(CultureInfo.GetCultureInfo("es-ES"))
+            .Should()
+            .Be("$1.234,56 - $2.345,67 USD");
+    }
+
+    [Fact]
+    public void ToDisplayRange_ExplicitEnglishCulture_IsStableUnderASpanishAmbientCulture()
+    {
+        using var culture = CultureScope.Use("es-ES");
+        List<Money> prices = [CreateMoney(1234.56m), CreateMoney(2345.67m)];
+
+        prices.ToDisplayRange(CultureInfo.GetCultureInfo("en-US"))
+            .Should()
+            .Be("$1,234.56 - $2,345.67 USD");
     }
 }

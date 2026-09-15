@@ -17,18 +17,16 @@ public static class MoneyExtensions
     {
         /// <summary>
         /// Formats a single price as <c>$12.50 USD</c>, using the symbol of its own currency and the
-        /// number format of <see cref="CultureInfo.CurrentCulture"/>, so a Spanish request renders
-        /// <c>$1.234,56 USD</c> where an English one renders <c>$1,234.56 USD</c>.
+        /// number format of <paramref name="culture"/>, so a Spanish reader gets
+        /// <c>$1.234,56 USD</c> where an English one gets <c>$1,234.56 USD</c>.
         /// </summary>
-        public string ToDisplayString() =>
-            FormatGroup(price.Amount, price.Amount, price.Currency.Code, CultureInfo.CurrentCulture);
-
-        /// <summary>
-        /// Formats a single price using an explicitly supplied culture, for callers that render on a
-        /// thread whose culture is not the reader's (background jobs, exports, tests).
-        /// </summary>
-        /// <param name="culture">The culture whose number format is used.</param>
-        public string ToDisplayString(CultureInfo culture) =>
+        /// <param name="culture">
+        /// The culture whose number format is used. Left unset (the normal call in a Blazor page) it
+        /// resolves to <see cref="CultureInfo.CurrentCulture"/>, which the request's culture provider
+        /// has already set to the reader's. Pass one explicitly when rendering off the reader's
+        /// thread: a background job, an export, a test.
+        /// </param>
+        public string ToDisplayString(CultureInfo? culture = null) =>
             FormatGroup(price.Amount, price.Amount, price.Currency.Code, culture);
     }
 
@@ -39,23 +37,27 @@ public static class MoneyExtensions
         /// When all prices are equal, a single price is displayed instead of a range.
         /// Prices are grouped by currency, so a mixed collection renders one range per currency,
         /// each with its own symbol, instead of collapsing unrelated amounts under whichever
-        /// currency happened to appear first. Amounts follow <see cref="CultureInfo.CurrentCulture"/>,
-        /// exactly as a single price does.
+        /// currency happened to appear first.
         /// </summary>
-        public string ToDisplayRange()
+        /// <param name="culture">
+        /// The culture whose number format is used, resolving to
+        /// <see cref="CultureInfo.CurrentCulture"/> when unset, exactly as a single price does. The
+        /// two must not drift: a one-element range and the price it holds have to read the same.
+        /// </param>
+        public string ToDisplayRange(CultureInfo? culture = null)
         {
             if (prices.Count == 0)
             {
                 return string.Empty;
             }
 
-            var culture = CultureInfo.CurrentCulture;
+            var resolved = culture ?? CultureInfo.CurrentCulture;
 
             // GroupBy preserves first-appearance order, so a single-currency collection (every
             // collection in practice today) renders exactly one group and is unchanged.
             var groups = prices
                 .GroupBy(p => p.Currency.Code, StringComparer.Ordinal)
-                .Select(g => FormatGroup(g.Min(p => p.Amount), g.Max(p => p.Amount), g.Key, culture));
+                .Select(g => FormatGroup(g.Min(p => p.Amount), g.Max(p => p.Amount), g.Key, resolved));
 
             return string.Join(", ", groups);
         }
@@ -79,14 +81,17 @@ public static class MoneyExtensions
     /// the trailing code come from the money itself; only the digit grouping and the decimal
     /// separator follow <paramref name="culture"/>, so a USD price stays USD in every locale.
     /// </summary>
-    private static string FormatGroup(decimal min, decimal max, string code, CultureInfo culture)
+    /// <param name="min">The lower bound of the group.</param>
+    /// <param name="max">The upper bound of the group; equal to <paramref name="min"/> for a single price.</param>
+    /// <param name="code">The currency code shared by the group.</param>
+    /// <param name="culture">The culture to format under, or <see langword="null"/> for the current one.</param>
+    private static string FormatGroup(decimal min, decimal max, string code, CultureInfo? culture)
     {
-        ArgumentNullException.ThrowIfNull(culture);
-
+        var resolved = culture ?? CultureInfo.CurrentCulture;
         var symbol = Symbol(code);
         var body = min == max
-            ? $"{symbol}{min.ToString("N2", culture)}"
-            : $"{symbol}{min.ToString("N2", culture)} - {symbol}{max.ToString("N2", culture)}";
+            ? $"{symbol}{min.ToString("N2", resolved)}"
+            : $"{symbol}{min.ToString("N2", resolved)} - {symbol}{max.ToString("N2", resolved)}";
 
         return string.IsNullOrEmpty(code) ? body : $"{body} {code}";
     }
