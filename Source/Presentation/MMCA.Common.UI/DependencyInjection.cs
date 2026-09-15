@@ -17,6 +17,7 @@ using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Services.Navigation;
 using MMCA.Common.UI.Services.Preferences;
 using MMCA.Common.UI.Theme;
+using MudBlazor.Services;
 
 namespace MMCA.Common.UI;
 
@@ -76,6 +77,15 @@ public static class DependencyInjection
             // not register a MudLocalizer of its own (guarded by a DI resolution test), so TryAdd is
             // authoritative regardless of host registration order.
             services.TryAddTransient<MudBlazor.MudLocalizer, ResxMudLocalizer>();
+
+            // MudBlazor's default interceptor reads its built-in English strings by assigning
+            // CultureInfo.CurrentUICulture (invariant, then the previous value back), which writes an
+            // AsyncLocal culture into the calling context. On a MAUI hybrid head that is the main
+            // thread, nothing resets it, and the app is pinned to its launch language: a switch sets
+            // the thread defaults and reloads, and the pinned AsyncLocal still wins. This interceptor
+            // reads the same resource under an explicit invariant culture instead. Replace semantics,
+            // so it wins whether AddMudServices ran before or after this call (ADR-027 Decision 10).
+            services.AddLocalizationInterceptor<InvariantMudLocalizationInterceptor>();
 
             // Auth handler injects Bearer token into every outgoing API request; culture handler forwards
             // the active UI culture as Accept-Language so the API localizes error messages to match.
