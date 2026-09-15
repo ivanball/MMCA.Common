@@ -15,9 +15,21 @@ public static class MoneyExtensions
 {
     extension(Money price)
     {
-        /// <summary>Formats a single price as <c>$12.50 USD</c>, using the symbol of its own currency.</summary>
+        /// <summary>
+        /// Formats a single price as <c>$12.50 USD</c>, using the symbol of its own currency and the
+        /// number format of <see cref="CultureInfo.CurrentCulture"/>, so a Spanish request renders
+        /// <c>$1.234,56 USD</c> where an English one renders <c>$1,234.56 USD</c>.
+        /// </summary>
         public string ToDisplayString() =>
-            FormatGroup(price.Amount, price.Amount, price.Currency.Code);
+            FormatGroup(price.Amount, price.Amount, price.Currency.Code, CultureInfo.CurrentCulture);
+
+        /// <summary>
+        /// Formats a single price using an explicitly supplied culture, for callers that render on a
+        /// thread whose culture is not the reader's (background jobs, exports, tests).
+        /// </summary>
+        /// <param name="culture">The culture whose number format is used.</param>
+        public string ToDisplayString(CultureInfo culture) =>
+            FormatGroup(price.Amount, price.Amount, price.Currency.Code, culture);
     }
 
     extension(IReadOnlyCollection<Money> prices)
@@ -27,7 +39,8 @@ public static class MoneyExtensions
         /// When all prices are equal, a single price is displayed instead of a range.
         /// Prices are grouped by currency, so a mixed collection renders one range per currency,
         /// each with its own symbol, instead of collapsing unrelated amounts under whichever
-        /// currency happened to appear first.
+        /// currency happened to appear first. Amounts follow <see cref="CultureInfo.CurrentCulture"/>,
+        /// exactly as a single price does.
         /// </summary>
         public string ToDisplayRange()
         {
@@ -36,11 +49,13 @@ public static class MoneyExtensions
                 return string.Empty;
             }
 
+            var culture = CultureInfo.CurrentCulture;
+
             // GroupBy preserves first-appearance order, so a single-currency collection (every
             // collection in practice today) renders exactly one group and is unchanged.
             var groups = prices
                 .GroupBy(p => p.Currency.Code, StringComparer.Ordinal)
-                .Select(g => FormatGroup(g.Min(p => p.Amount), g.Max(p => p.Amount), g.Key));
+                .Select(g => FormatGroup(g.Min(p => p.Amount), g.Max(p => p.Amount), g.Key, culture));
 
             return string.Join(", ", groups);
         }
@@ -60,14 +75,18 @@ public static class MoneyExtensions
 
     /// <summary>
     /// Formats one currency's amounts, as a single price when the bounds are equal and as a range
-    /// otherwise. The trailing code is omitted for the empty sentinel code.
+    /// otherwise. The trailing code is omitted for the empty sentinel code. The currency symbol and
+    /// the trailing code come from the money itself; only the digit grouping and the decimal
+    /// separator follow <paramref name="culture"/>, so a USD price stays USD in every locale.
     /// </summary>
-    private static string FormatGroup(decimal min, decimal max, string code)
+    private static string FormatGroup(decimal min, decimal max, string code, CultureInfo culture)
     {
+        ArgumentNullException.ThrowIfNull(culture);
+
         var symbol = Symbol(code);
         var body = min == max
-            ? $"{symbol}{min.ToString("N2", CultureInfo.InvariantCulture)}"
-            : $"{symbol}{min.ToString("N2", CultureInfo.InvariantCulture)} - {symbol}{max.ToString("N2", CultureInfo.InvariantCulture)}";
+            ? $"{symbol}{min.ToString("N2", culture)}"
+            : $"{symbol}{min.ToString("N2", culture)} - {symbol}{max.ToString("N2", culture)}";
 
         return string.IsNullOrEmpty(code) ? body : $"{body} {code}";
     }

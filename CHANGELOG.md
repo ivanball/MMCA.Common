@@ -29,6 +29,15 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   an INP sample, keeping the load-bearing order (observers installed before the navigation) identical.
   A distinct name rather than an overload, because the optional parameters would make the two
   ambiguous at the call site.
+- **Plural-aware resource lookup: `IStringLocalizer.Plural(key, count, args)`**
+  (`MMCA.Common.UI`, rubric section 27). A resource file declares two sibling keys beside a base key,
+  suffixed `.One` and `.Other`, and the call site asks for the base key plus a count; the resolver
+  picks the category and falls back to the base key when the plural sibling is missing, so a resource
+  set that has not been split yet keeps rendering its single message instead of leaking a raw key
+  name. `SharedResource` splits `Notif.Send.SentTo` accordingly (English and Spanish), and the
+  notification compose page uses it, so a send that reached exactly one person no longer says
+  "1 recipients". Two categories cover both cultures the framework ships; a language with more CLDR
+  categories needs a category selector, which does not change the call site.
 
 ### Changed
 
@@ -42,6 +51,16 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   (`ICommandHandler<TCommand, ...>`, `IQueryHandler<TQuery, ...>`) has a generic-parameter contract
   and is still exempt, which covers every framework base but the one whose contract is concrete and
   already co-located. No API change.
+- **Money renders in the reader's culture** (`MMCA.Common.UI`, rubric section 27).
+  `Money.ToDisplayString()` and `IReadOnlyCollection<Money>.ToDisplayRange()` format their amounts
+  with `CultureInfo.CurrentCulture` instead of the invariant culture, so a request carrying `es-ES`
+  now reads `$1.234,56 USD` where it used to read `$1,234.56 USD`. The currency symbol and the
+  trailing code still come from the money itself, so a USD price stays USD in every locale. A new
+  `ToDisplayString(CultureInfo culture)` overload serves callers that render off the reader's thread
+  (background jobs, exports, tests). Two consumer-side consequences: a test asserting `$1,234.56` has
+  to pin `CultureInfo.CurrentCulture` to `en-US` rather than inherit the agent's, and because the
+  culture-taking overload now exists, existing `ToDisplayString()` call sites raise CA1304 under
+  `TreatWarningsAsErrors` (pass `CultureInfo.CurrentCulture` explicitly to keep today's behaviour).
 - **`MMCA.Common.UI` drops about 1 MB of unreferenced static assets**: a speaker photograph nothing in
   any repo referenced, and the Bootstrap CSS source map, which only the stylesheet's own
   `sourceMappingURL` comment pointed at (that comment is unchanged; a missing map is a silent no-op in

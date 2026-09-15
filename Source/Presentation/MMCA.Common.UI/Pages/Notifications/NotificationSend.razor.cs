@@ -4,6 +4,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
@@ -113,7 +114,7 @@ public partial class NotificationSend : IDisposable
 
             if (result.TryGetValue(out PushNotificationDTO? sent))
             {
-                Toast.Success(L["Notif.Send.SentTo", sent.RecipientCount]);
+                Toast.Success(L.Plural("Notif.Send.SentTo", sent.RecipientCount, sent.RecipientCount));
 
                 // Cleared BEFORE the navigation: the guard reads the live accessor, so a page that has
                 // just sent must not prompt on its own redirect.

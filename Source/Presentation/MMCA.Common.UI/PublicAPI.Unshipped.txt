@@ -505,3 +505,11 @@ MMCA.Common.UI.Services.Administration.RoleAdminService.GetAllAsync(System.Threa
 MMCA.Common.UI.Services.Administration.RoleAdminService.GetAsync(string! role, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
 MMCA.Common.UI.Services.Administration.RoleAdminService.GetCatalogAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.PermissionCatalogResponse!>!>!
 MMCA.Common.UI.Services.Administration.RoleAdminService.SetStoredPermissionsAsync(string! role, System.Collections.Generic.IReadOnlyList<string!>! permissions, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>!>!
+MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObjects.Financial.Money!).ToDisplayString(System.Globalization.CultureInfo! culture) -> string!
+static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Common.Shared.ValueObjects.Financial.Money! price, System.Globalization.CultureInfo! culture) -> string!
+MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions
+const MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.OneSuffix = ".One" -> string!
+const MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.OtherSuffix = ".Other" -> string!
+MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.extension(Microsoft.Extensions.Localization.IStringLocalizer!)
+MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.extension(Microsoft.Extensions.Localization.IStringLocalizer!).Plural(string! key, int count, params object![]! args) -> Microsoft.Extensions.Localization.LocalizedString!
+static MMCA.Common.UI.Globalization.StringLocalizerPluralExtensions.Plural(this Microsoft.Extensions.Localization.IStringLocalizer! localizer, string! key, int count, params object![]! args) -> Microsoft.Extensions.Localization.LocalizedString!

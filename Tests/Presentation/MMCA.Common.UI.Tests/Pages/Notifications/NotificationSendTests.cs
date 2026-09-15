@@ -183,6 +183,24 @@ public sealed class NotificationSendTests : BunitTestBase
     }
 
     [Fact]
+    // The count is resolved through the plural extension point, so a send that reached exactly one
+    // person says "1 recipient" instead of the ungrammatical "1 recipients".
+    public void SubmittingValidForm_WithASingleRecipient_UsesTheSingularWording()
+    {
+        _service
+            .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Accepted(recipientCount: 1));
+
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        cut.Find("input").Input("Hello");
+        cut.Find("textarea").Input("World body");
+        cut.ClickButtonByText("Send to All Recipients");
+
+        cut.WaitForAssertion(() =>
+            _toast.Verify(t => t.Success("Notification sent to 1 recipient."), Times.Once()));
+    }
+
+    [Fact]
     public void WhenTheSendFails_StaysOnThePageAndRaisesOneToast()
     {
         _service
