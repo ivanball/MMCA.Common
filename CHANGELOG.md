@@ -17,6 +17,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   the two keys instead of hand-rolling a MassTransit callback. Values of zero or less are ignored:
   `AddBrokerMessaging` binds the section with `Get<MessageBusSettings>()`, which runs no annotation
   validation, so the range guard lives in the registration code.
+- **The unsaved-changes guard is wired into the role editor and the notification compose page**
+  (`MMCA.Common.UI`, rubric section 24). `RoleAdminEdit` tracks a permission tick as unsaved state
+  until a save lands, and `NotificationSend` treats anything typed into either field as unsaved until
+  the send navigates away by itself; both render `UnsavedChangesGuard` bound through the live
+  `IsDirtyAccessor`, so browser navigation raises the native prompt and in-app navigation raises the
+  confirm dialog. Neither page used to warn at all: leaving discarded the edit silently.
 
 ### Changed
 
@@ -32,6 +38,11 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   already co-located. No API change.
 
 ### Fixed
+
+- **The Register and Reset Password forms now mirror the server's 128-character password maximum**
+  (`MMCA.Common.UI`, rubric section 24). Both models carry `[StringLength(128)]` beside the existing
+  complexity rule, matching `CommonValidationRules`' `MaximumLength(128)`. An overlong password used
+  to pass every client rule and be refused only by the API, after the round trip.
 
 - **Language switching on MAUI Blazor Hybrid heads no longer sticks to the launch language**
   (`MMCA.Common.UI`, ADR-027 Decision 10). MudBlazor 9.7+ reads its built-in English strings by

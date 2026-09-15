@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
@@ -237,6 +238,48 @@ public sealed class NotificationSendTests : BunitTestBase
         cut.Markup.Should().Contain("The notification service is unavailable.");
     }
 
+    // -- Unsaved-changes guard --
+    [Fact]
+    public void OnLoad_TheUnsavedChangesGuardIsStoodDown()
+    {
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        ConfirmsNavigation(cut).Should().BeFalse("an empty compose form holds nothing to lose");
+    }
+
+    [Fact]
+    public void AfterTypingATitle_TheGuardConfirmsNavigation()
+    {
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+
+        cut.Find("input").Input("Hello");
+
+        cut.WaitForAssertion(() => ConfirmsNavigation(cut).Should()
+            .BeTrue("a half-composed notification is unsaved work"));
+    }
+
+    [Fact]
+    public void AfterASuccessfulSend_TheGuardStandsDownBeforeTheRedirect()
+    {
+        // The page navigates itself on success, so a guard still reporting dirty would prompt the
+        // user about the send they just made.
+        _service
+            .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Accepted(recipientCount: 10));
+
+        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        cut.Find("input").Input("Hello");
+        cut.Find("textarea").Input("World body");
+        cut.ClickButtonByText("Send to All Recipients");
+
+        cut.WaitForAssertion(() => ConfirmsNavigation(cut).Should().BeFalse());
+    }
+
+    /// <summary>Whether the guard would prompt: the NavigationLock the page renders says so.</summary>
+    /// <param name="cut">The rendered page.</param>
+    /// <returns>The lock's current external-navigation posture.</returns>
+    private static bool ConfirmsNavigation(IRenderedComponent<NotificationSend> cut) =>
+        cut.FindComponent<NavigationLock>().Instance.ConfirmExternalNavigation;
     [Fact]
     public void ClickingCancel_NavigatesToListWithoutSending()
     {

@@ -106,6 +106,73 @@ public sealed class AuthModelValidationTests
         Validate(model).SelectMany(r => r.MemberNames).Should().Contain(nameof(RegisterModel.Email));
     }
 
+    // The server caps a password at 128 characters (CommonValidationRules PasswordRules /
+    // StrongPasswordRules), so the client has to say the same thing rather than let the form submit
+    // something the API will refuse.
+    [Fact]
+    public void RegisterModel_OverlongPassword_FailsOnPassword()
+    {
+        var password = LongPassword(129);
+        var model = new RegisterModel
+        {
+            FirstName = "Ada",
+            LastName = "Lovelace",
+            Email = "ada@example.com",
+            Password = password,
+            ConfirmPassword = password,
+        };
+
+        Validate(model).SelectMany(r => r.MemberNames).Should().Contain(nameof(RegisterModel.Password));
+    }
+
+    [Fact]
+    public void RegisterModel_PasswordAtTheLimit_PassesValidation()
+    {
+        var password = LongPassword(128);
+        var model = new RegisterModel
+        {
+            FirstName = "Ada",
+            LastName = "Lovelace",
+            Email = "ada@example.com",
+            Password = password,
+            ConfirmPassword = password,
+        };
+
+        Validate(model).Should().BeEmpty("128 characters is the server's maximum, not one past it");
+    }
+
+    [Fact]
+    public void ResetPasswordModel_OverlongPassword_FailsOnNewPassword()
+    {
+        var password = LongPassword(129);
+        var model = new ResetPasswordModel
+        {
+            Email = "ada@example.com",
+            Token = "reset-token",
+            NewPassword = password,
+            ConfirmPassword = password,
+        };
+
+        Validate(model).SelectMany(r => r.MemberNames).Should().Contain(nameof(ResetPasswordModel.NewPassword));
+    }
+
+    [Fact]
+    public void ResetPasswordModel_PasswordAtTheLimit_PassesValidation()
+    {
+        var password = LongPassword(128);
+        var model = new ResetPasswordModel
+        {
+            Email = "ada@example.com",
+            Token = "reset-token",
+            NewPassword = password,
+            ConfirmPassword = password,
+        };
+
+        Validate(model).Should().BeEmpty("128 characters is the server's maximum, not one past it");
+    }
+
+    /// <summary>A complexity-satisfying password of exactly the requested length.</summary>
+    private static string LongPassword(int length) => "Aa1!" + new string('x', length - 4);
     [Fact]
     public void LoginModel_Valid_PassesValidation() =>
         Validate(new LoginModel { Email = "ada@example.com", Password = "anything" }).Should().BeEmpty();

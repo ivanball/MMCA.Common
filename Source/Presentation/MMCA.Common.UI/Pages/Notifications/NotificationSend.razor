@@ -7,6 +7,10 @@
 
 <PageTitle>@Title</PageTitle>
 
+@* A half-composed notification is unsaved work: leaving the page throws it away silently. The guard
+   stands down once the send has navigated away of its own accord. *@
+<UnsavedChangesGuard IsDirty="IsDirty" IsDirtyAccessor="() => IsDirty" />
+
 <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
 @* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
 <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">@Title</MudText>
