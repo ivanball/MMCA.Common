@@ -295,6 +295,11 @@
          the same major the hosting stack does. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.3" />
+    <!-- Same version as Microsoft.Data.SqlClient: since 7.0 the Entra ID authentication providers live
+         here, and MMCA.Common.Infrastructure references it so every consumer host that connects with
+         Authentication=Active Directory Managed Identity keeps working (the 2026-09-16 ADC startup
+         failure). Bump the two together. -->
+    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.0.3" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <!-- Health Checks. AspNetCore.HealthChecks.Redis is deliberately absent: its check issues
          CLUSTER INFO against any server StackExchange.Redis 3.x reports as clustered, which Azure
