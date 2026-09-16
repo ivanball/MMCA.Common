@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 *REMOVED*MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor.DomainEventSaveChangesInterceptor(MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher! domainEventDispatcher, Microsoft.Extensions.Logging.ILogger<MMCA.Common.Infrastructure.Persistence.Interceptors.DomainEventSaveChangesInterceptor!>! logger, MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal! outboxSignal) -> void
 *REMOVED*MMCA.Common.Infrastructure.Messaging.InProcessEventBus.InProcessEventBus(MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory! dbContextFactory, MMCA.Common.Application.Interfaces.Events.IDomainEventDispatcher! domainEventDispatcher, MMCA.Common.Infrastructure.Persistence.DataSources.IDataSourceResolver! dataSourceResolver, Microsoft.Extensions.Options.IOptions<MMCA.Common.Infrastructure.Persistence.Outbox.Administration.OutboxSettings!>! outboxOptions) -> void
 *REMOVED*MMCA.Common.Infrastructure.Auth.TokenService.TokenService(MMCA.Common.Infrastructure.Settings.IJwtSettings! jwtSettings, System.TimeProvider? timeProvider = null) -> void
@@ -54,6 +54,8 @@ MMCA.Common.Infrastructure.Caching.CacheSettings.PopulateLockTimeout.get -> Syst
 MMCA.Common.Infrastructure.Caching.CacheSettings.PopulateLockTimeout.init -> void
 MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.SqliteMigrationsAssembly.get -> string!
 MMCA.Common.Infrastructure.Persistence.DataSources.DataSourceEntrySettings.SqliteMigrationsAssembly.init -> void
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.ConcurrentMessageLimit.get -> int?
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.ConcurrentMessageLimit.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EmulatorAdminEndpoint.get -> string?
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EmulatorAdminEndpoint.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableInbox.get -> bool?
@@ -89,6 +91,8 @@ override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnConnectedAsy
 override MMCA.Common.Infrastructure.Notifications.NotificationHub.OnDisconnectedAsync(System.Exception? exception) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.MaxConnectionsPerUser.get -> int
 MMCA.Common.Infrastructure.Notifications.Push.PushNotificationSettings.MaxConnectionsPerUser.init -> void
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PrefetchCount.get -> int?
+MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PrefetchCount.init -> void
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.get -> bool
 MMCA.Common.Infrastructure.Messaging.MessageBusSettings.PreserveDefaultEndpointNames.init -> void
 const MMCA.Common.Infrastructure.Persistence.Auth.PermissionGrantModelBuilderExtensions.RolePermissionIndexName = "IX_PermissionGrants_Role_Permission" -> string!

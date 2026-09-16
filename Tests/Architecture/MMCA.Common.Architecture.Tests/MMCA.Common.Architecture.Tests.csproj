@@ -20,6 +20,15 @@
     <EmbeddedResource Include="Fixtures\observability-OPERATIONS.md">
       <LogicalName>fixtures.observability-OPERATIONS.md</LogicalName>
     </EmbeddedResource>
+    <!-- The deployment sample's own IaC pair (rubric section 13): SampleDeploymentObservabilityTests
+         runs the shipped pairing gate over samples/deployment, so the sample consumers copy cannot
+         gain, lose or re-tier an alert without its runbook section moving in the same change. -->
+    <EmbeddedResource Include="..\..\..\samples\deployment\main.bicep">
+      <LogicalName>samples.deployment.main.bicep</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\..\samples\deployment\OPERATIONS.md">
+      <LogicalName>samples.deployment.OPERATIONS.md</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />

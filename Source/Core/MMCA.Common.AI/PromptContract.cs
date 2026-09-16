@@ -39,7 +39,7 @@ public sealed record PromptContract(string Name, string Version, string Model, s
     /// </summary>
     /// <remarks>
     /// Computed on each read rather than cached in a field. A record's generated copy constructor
-    /// copies fields verbatim, so a cached hash would survive a <c>with</c> expression and describe
+    /// copies fields verbatim, so a cached hash would survive a <see langword="with"/> expression and describe
     /// the prompt the copy was made FROM: exactly the drift this type exists to prevent. Hashing
     /// four short strings is cheap enough that correctness wins outright.
     /// </remarks>

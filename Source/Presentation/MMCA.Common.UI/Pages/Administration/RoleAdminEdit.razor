@@ -2,6 +2,10 @@
 
 <PageHeader Title="@Title" />
 
+@* Ticking a checkbox changes only in-memory state until Save runs, so leaving the page is a silent
+   loss. The live accessor is what the guard reads, which avoids the one-render lag after a save. *@
+<UnsavedChangesGuard IsDirty="_isDirty" IsDirtyAccessor="() => _isDirty" />
+
 <MudLink Href="@ListHref" Class="d-inline-flex align-center mb-2">
     <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="mr-1" />
     @T("Action.Back")

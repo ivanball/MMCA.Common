@@ -48,7 +48,7 @@
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
         Dirty state: @(_isDirty ? "unsaved changes" : "clean")
     </MudText>
-    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => _isDirty = !_isDirty)">
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => _isDirty = !_isDirty)" data-testid="toggle-dirty">
         Toggle unsaved changes
     </MudButton>
     <UnsavedChangesGuard IsDirty="_isDirty" />

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Bunit;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Auth.Permissions;
@@ -183,6 +184,47 @@ public sealed class RoleAdminEditTests : BunitTestBase
         _toast.Verify(x => x.Error("Failed to save the stored permissions."), Times.Once);
     }
 
+    // -- Unsaved-changes guard --
+    [Fact]
+    public async Task OnLoad_TheUnsavedChangesGuardIsStoodDown()
+    {
+        var cut = RenderEdit();
+
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+
+        ConfirmsNavigation(cut).Should().BeFalse("nothing has been edited yet");
+    }
+
+    [Fact]
+    public async Task AfterTogglingAPermission_TheGuardConfirmsNavigation()
+    {
+        // The tick lives in memory until Save runs, so navigating away silently discards it.
+        var cut = RenderEdit();
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+
+        await Checkbox(cut, OrdersWrite).ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = true });
+
+        await cut.WaitForAssertionAsync(() => ConfirmsNavigation(cut).Should().BeTrue());
+    }
+
+    [Fact]
+    public async Task AfterASuccessfulSave_TheGuardStandsDownAgain()
+    {
+        var cut = RenderEdit();
+        await cut.WaitForAssertionAsync(() => Checkboxes(cut).Should().HaveCount(4));
+        await Checkbox(cut, OrdersWrite).ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = true });
+
+        await cut.Find("[data-testid=\"save-permissions\"]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => ConfirmsNavigation(cut).Should()
+            .BeFalse("the edit is persisted, so leaving the page loses nothing"));
+    }
+
+    /// <summary>Whether the guard would prompt: the NavigationLock the component renders says so.</summary>
+    /// <param name="cut">The rendered component.</param>
+    /// <returns>The lock's current external-navigation posture.</returns>
+    private static bool ConfirmsNavigation(IRenderedComponent<RoleAdminEdit> cut) =>
+        cut.FindComponent<NavigationLock>().Instance.ConfirmExternalNavigation;
     private void SetupRole(IReadOnlyList<string> compiled, IReadOnlyList<string> stored) =>
         _roles.Setup(x => x.GetAsync(Role, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(new RolePermissionsResponse(Role, compiled, stored)));

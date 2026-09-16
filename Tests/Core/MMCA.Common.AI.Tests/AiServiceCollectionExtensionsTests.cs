@@ -28,13 +28,22 @@ public sealed class AiServiceCollectionExtensionsTests
             .. extra,
         ]);
 
-    private static ServiceProvider Build(IConfiguration configuration, StubChatClient inner, bool withDistributedCache = false)
+    private static ServiceProvider Build(
+        IConfiguration configuration,
+        StubChatClient inner,
+        bool withDistributedCache = false,
+        IChatGuardrail? guardrail = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         if (withDistributedCache)
         {
             services.AddDistributedMemoryCache();
+        }
+
+        if (guardrail is not null)
+        {
+            services.AddSingleton(guardrail);
         }
 
         services.AddMmcaChatClient(configuration, _ => inner);
@@ -81,6 +90,40 @@ public sealed class AiServiceCollectionExtensionsTests
             because: "nothing downstream may be asked to do what the configuration forbids");
         client.GetService(typeof(UsageRecordingChatClient)).Should().NotBeNull();
         client.GetService(typeof(StubChatClient)).Should().BeSameAs(inner);
+    }
+
+    [Fact]
+    // The layer must not appear in a host that adopts no guardrail: an empty-loop client would change
+    // the pipeline for every application that never asked for one.
+    public void Enabled_WithoutGuardrails_AddsNoLayer()
+    {
+        using var inner = new StubChatClient();
+        using var provider = Build(EnabledConfiguration(), inner);
+
+        provider.GetRequiredService<IChatClient>()
+            .GetService(typeof(GuardrailChatClient)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Enabled_WithAGuardrail_InsertsTheLayer()
+    {
+        var guardrail = new StubGuardrail();
+        using var inner = new StubChatClient();
+        await using var provider = Build(EnabledConfiguration(), inner, guardrail: guardrail);
+
+        var client = provider.GetRequiredService<IChatClient>();
+
+        client.Should().BeOfType<BoundedChatClient>(
+            because: "bounds stay outermost; the guardrail sits inside them");
+        client.GetService(typeof(GuardrailChatClient)).Should().NotBeNull();
+
+        // Proves the registered instance is the one the layer runs, not just that a layer exists.
+        await client.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, "score this")],
+            options: null,
+            TestContext.Current.CancellationToken);
+
+        guardrail.RequestInspections.Should().Be(1);
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
+using MMCA.Common.UI.Globalization;
 using MMCA.Common.UI.Pages.Common;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Notifications;
@@ -113,7 +114,11 @@ public partial class NotificationSend : IDisposable
 
             if (result.TryGetValue(out PushNotificationDTO? sent))
             {
-                Toast.Success(L["Notif.Send.SentTo", sent.RecipientCount]);
+                Toast.Success(L.Plural("Notif.Send.SentTo", sent.RecipientCount, sent.RecipientCount));
+
+                // Cleared BEFORE the navigation: the guard reads the live accessor, so a page that has
+                // just sent must not prompt on its own redirect.
+                Sent = true;
                 NavigationManager.NavigateTo(NotificationRoutePaths.Notifications);
             }
             else
@@ -134,6 +139,20 @@ public partial class NotificationSend : IDisposable
     }
 
     private void NavigateToList() => NavigationManager.NavigateTo(NotificationRoutePaths.Notifications);
+
+    /// <summary>
+    /// Set the moment a send has succeeded and the page is about to navigate away by itself, so the
+    /// unsaved-changes guard does not prompt over work that has just left the building.
+    /// </summary>
+    private bool Sent { get; set; }
+
+    /// <summary>
+    /// Whether the compose form holds work a navigation would throw away: anything typed into either
+    /// field, until the send navigates away of its own accord.
+    /// </summary>
+    private bool IsDirty =>
+        !Sent
+        && (!string.IsNullOrWhiteSpace(_model.Title) || !string.IsNullOrWhiteSpace(_model.Body));
 
     private bool _disposed;
 

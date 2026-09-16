@@ -44,7 +44,7 @@ public static partial class ArchitectureRules
     /// <para>
     /// <b>What the walk follows.</b> Direct calls, delegate creations (<c>ldftn</c>, so lambdas and
     /// local functions are covered), and interface/virtual calls, which are expanded to every
-    /// implementation found inside the scanned assemblies. <c>async</c> and iterator methods are
+    /// implementation found inside the scanned assemblies. <see langword="async"/> and iterator methods are
     /// followed into their compiler-generated state machine, whose <c>MoveNext</c> holds the real body.
     /// </para>
     /// <para>
@@ -194,7 +194,7 @@ public static partial class ArchitectureRules
 
     /// <summary>
     /// The methods that actually hold a method's logic: the method itself, plus every method of the
-    /// compiler-generated state machine an <c>async</c> or iterator method rewrites its body into. The
+    /// compiler-generated state machine an <see langword="async"/> or iterator method rewrites its body into. The
     /// visible method only starts the machine, so a walk that stops there sees an empty handler.
     /// </summary>
     private static IEnumerable<MethodDefinition> BodyMethods(MethodDefinition method, CallGraphIndex index)

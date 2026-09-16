@@ -4,18 +4,18 @@
     "net10.0": {
       "Anthropic": {
         "type": "Direct",
-        "requested": "[12.47.0, )",
-        "resolved": "12.47.0",
-        "contentHash": "v1tVxkx2C2Ejf/2YU2Gtb1NPa/YwKDpGOmN2l4ASIf3zYSECokTm/CP7Uyn/Wa+LC1QiHKmxWtifoxbsUIeEEg==",
+        "requested": "[12.48.0, )",
+        "resolved": "12.48.0",
+        "contentHash": "6ZexqS2S1h1hGVcSFGLY0rRNDKy19LCQw9/gcVQLPH4sG8piK+LP+gNd8ztp/QUkAdSNccCPvWaef7m7+p0RcA==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.228, )",
-        "resolved": "3.0.228",
-        "contentHash": "YqzQrn2kokjvvZzYPM90b95CJyKONv60iZ6H0SuPy+6fWz3c8Fnqnd4rp+f7KxUc00r+FmLgGtQXeAPZxkZmGA=="
+        "requested": "[3.0.259, )",
+        "resolved": "3.0.259",
+        "contentHash": "WhnkpMzWWsUhdEEyPVXRVZx1maVnfymzJuzZn3bkDsgrgFd4WxKfCLzG1ZK7k0dmuJC8T9IAM72UwYaA1wmF/Q=="
       },
       "Microsoft.CodeAnalysis.PublicApiAnalyzers": {
         "type": "Direct",
@@ -53,9 +53,9 @@
       },
       "SonarAnalyzer.CSharp": {
         "type": "Direct",
-        "requested": "[10.33.0.1635, )",
-        "resolved": "10.33.0.1635",
-        "contentHash": "nOwgvMh7p64z62GTy2n4Ki51DVy4Q2ejxxfuclW6Y5u6Htk1i2RNRqxuONiZ/4aaBi8V6RwzuCcGTOFcoVoQOg=="
+        "requested": "[10.34.0.3385, )",
+        "resolved": "10.34.0.3385",
+        "contentHash": "FfjaQa9G9xdEyh14AYWeG6vLQ+2PZWkooI/w3cH5aGBGGeWmhjeWS+/luYoJDYgrXMI2ciBj42y6buhJJHO2ow=="
       },
       "StyleCop.Analyzers": {
         "type": "Direct",

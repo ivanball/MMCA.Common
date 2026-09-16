@@ -2,7 +2,7 @@ namespace MMCA.Common.Shared.Abstractions;
 
 /// <summary>
 /// Task-returning counterparts of the <see cref="Result{T}"/> combinators, so an asynchronous
-/// pipeline composes end to end without an intermediate <c>await</c> (and its temporary local)
+/// pipeline composes end to end without an intermediate <see langword="await"/> (and its temporary local)
 /// between every step. Each method awaits the incoming task once, then delegates to the same
 /// instance combinator, preserving its short-circuit behaviour: a failed result never runs the
 /// supplied delegate.

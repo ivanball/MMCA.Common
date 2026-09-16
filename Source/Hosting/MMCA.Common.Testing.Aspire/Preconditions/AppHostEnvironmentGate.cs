@@ -9,7 +9,7 @@ namespace MMCA.Common.Testing.Aspire.Preconditions;
 public static class AppHostEnvironmentGate
 {
     /// <summary>
-    /// The opt-in variable. Set it to <c>1</c> or <c>true</c> to allow AppHost-backed collections to
+    /// The opt-in variable. Set it to <c>1</c> or <see langword="true"/> to allow AppHost-backed collections to
     /// run. Absent by default so a developer's ordinary unit loop never starts an orchestrator, which
     /// is the slowest thing in any repo per assertion and can wedge a headless shell.
     /// </summary>

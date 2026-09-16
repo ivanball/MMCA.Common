@@ -98,7 +98,77 @@ public sealed class UsageRecordingChatClientTests
         recorder.Measurements.Single(m => m.Instrument == AiUsageMeter.OutputTokensCounterName).Value.Should().Be(3);
     }
 
+    // ── The call-duration histogram ──
+    [Fact]
+    public async Task GetResponseAsync_RecordsTheDurationWithASuccessOutcome()
+    {
+        using var recorder = new UsageRecorder();
+        var response = new ChatResponse { ModelId = "claude-haiku-4-5" };
+        using var inner = new StubChatClient(response);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        var options = new PromptContract("session-scoring", "3", "claude-haiku-4-5", "be terse").ToChatOptions();
+
+        await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        var duration = recorder.Durations.Should().ContainSingle().Subject;
+        duration.Instrument.Should().Be(AiUsageMeter.CallDurationHistogramName);
+        duration.Value.Should().BeGreaterThanOrEqualTo(0);
+        duration.Tags["outcome"].Should().Be(AiUsageMeter.SuccessOutcome);
+        duration.Tags["prompt_name"].Should().Be("session-scoring");
+        duration.Tags["model"].Should().Be("claude-haiku-4-5");
+    }
+
+    [Fact]
+    // A failed call is the one a latency dashboard most needs, and it reports no usage at all, so the
+    // histogram is the only place it shows up.
+    public async Task GetResponseAsync_RecordsTheDurationWithAnErrorOutcome_AndRethrows()
+    {
+        using var recorder = new UsageRecorder();
+        using var inner = new StubChatClient(respond: (_, _, _) => throw new InvalidOperationException("provider down"));
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+
+        var act = async () => await client.GetResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        recorder.Measurements.Should().BeEmpty("a failed call billed no tokens");
+        recorder.Durations.Should().ContainSingle()
+            .Which.Tags["outcome"].Should().Be(AiUsageMeter.ErrorOutcome);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_RecordsTheDurationWithACanceledOutcome()
+    {
+        using var recorder = new UsageRecorder();
+        using var inner = new StubChatClient(respond: (_, _, _) => throw new OperationCanceledException());
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+
+        var act = async () => await client.GetResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        recorder.Durations.Should().ContainSingle()
+            .Which.Tags["outcome"].Should().Be(AiUsageMeter.CanceledOutcome);
+    }
+
+    [Fact]
+    // The stream ENDING stops the clock, which is the elapsed time a caller of a streaming API feels.
+    public async Task GetStreamingResponseAsync_RecordsTheDurationOnceTheStreamEnds()
+    {
+        using var recorder = new UsageRecorder();
+        using var inner = new StubChatClient(updates: [new ChatResponseUpdate(ChatRole.Assistant, "ok")]);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+
+        await foreach (var update in client.GetStreamingResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken))
+        {
+            recorder.Durations.Should().BeEmpty("the clock stops when the stream ends, not on the first update");
+        }
+
+        recorder.Durations.Should().ContainSingle()
+            .Which.Tags["outcome"].Should().Be(AiUsageMeter.SuccessOutcome);
+    }
+
     private sealed record Measurement(string Instrument, long Value, IReadOnlyDictionary<string, object?> Tags);
+
+    private sealed record DurationMeasurement(string Instrument, double Value, IReadOnlyDictionary<string, object?> Tags);
 
     /// <summary>
     /// A meter factory plus a listener filtered to the meters THIS factory created, which is what
@@ -109,6 +179,7 @@ public sealed class UsageRecordingChatClientTests
         private readonly ServiceProvider _provider;
         private readonly MeterListener _listener;
         private readonly List<Measurement> _measurements = [];
+        private readonly List<DurationMeasurement> _durations = [];
         private readonly Lock _gate = new();
 
         public UsageRecorder()
@@ -131,15 +202,17 @@ public sealed class UsageRecordingChatClientTests
 
             _listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
             {
-                var copied = new Dictionary<string, object?>(StringComparer.Ordinal);
-                foreach (var tag in tags)
-                {
-                    copied[tag.Key] = tag.Value;
-                }
-
                 lock (_gate)
                 {
-                    _measurements.Add(new Measurement(instrument.Name, value, copied));
+                    _measurements.Add(new Measurement(instrument.Name, value, CopyTags(tags)));
+                }
+            });
+
+            _listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
+            {
+                lock (_gate)
+                {
+                    _durations.Add(new DurationMeasurement(instrument.Name, value, CopyTags(tags)));
                 }
             });
 
@@ -147,6 +220,17 @@ public sealed class UsageRecordingChatClientTests
         }
 
         public AiUsageMeter Meter { get; }
+
+        public IReadOnlyList<DurationMeasurement> Durations
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return [.. _durations];
+                }
+            }
+        }
 
         public IReadOnlyList<Measurement> Measurements
         {
@@ -163,6 +247,17 @@ public sealed class UsageRecordingChatClientTests
         {
             _listener.Dispose();
             _provider.Dispose();
+        }
+
+        private static Dictionary<string, object?> CopyTags(ReadOnlySpan<KeyValuePair<string, object?>> tags)
+        {
+            var copied = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var tag in tags)
+            {
+                copied[tag.Key] = tag.Value;
+            }
+
+            return copied;
         }
     }
 }

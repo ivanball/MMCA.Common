@@ -19,6 +19,7 @@ public sealed class RegisterModel
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Password is required")]
+    [StringLength(128, ErrorMessage = "Password cannot be longer than 128 characters")]
     [PasswordComplexity]
     public string Password { get; set; } = string.Empty;
 

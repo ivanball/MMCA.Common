@@ -35,6 +35,14 @@ internal static class RuleHelpers
         /// <summary>Gets the concrete (non-abstract, non-interface) classes in the assembly.</summary>
         internal IEnumerable<Type> ConcreteClasses =>
             assembly.LoadableTypes.Where(t => t is { IsClass: true, IsAbstract: false });
+
+        /// <summary>
+        /// Gets every class in the assembly, ABSTRACT ONES INCLUDED (interfaces excluded). Used by the
+        /// rules whose subject can legitimately be an abstract base a consumer derives from, such as an
+        /// abstract handler base declared beside the contract it serves.
+        /// </summary>
+        internal IEnumerable<Type> Classes =>
+            assembly.LoadableTypes.Where(t => t.IsClass);
     }
 
     extension(Type type)
@@ -115,7 +123,7 @@ internal static class RuleHelpers
     {
         /// <summary>
         /// Gets a value indicating whether the property has a publicly-settable, non-init setter,
-        /// i.e. it is mutable after construction. <c>init</c>-only setters carry the
+        /// i.e. it is mutable after construction. <see langword="init"/>-only setters carry the
         /// <c>IsExternalInit</c> modreq and are treated as immutable.
         /// </summary>
         internal bool HasPublicMutableSetter

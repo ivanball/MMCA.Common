@@ -24,8 +24,8 @@ public sealed class InternalCommandProcessorTests : IDisposable
 
     /// <summary>
     /// Every provider a test built, disposed together at the end. Held here rather than with a
-    /// <c>using</c> per test because the provider is <see cref="IAsyncDisposable"/> and a
-    /// <c>using</c> declaration over one is an analyzer error in this repo.
+    /// <see langword="using"/> per test because the provider is <see cref="IAsyncDisposable"/> and a
+    /// <see langword="using"/> declaration over one is an analyzer error in this repo.
     /// </summary>
     private readonly List<ServiceProvider> _providers = [];
 
