@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.204.0] - 2026-09-16
+
 ### Fixed
 
 - **Entra ID SQL authentication restored under SqlClient 7** (`MMCA.Common.Infrastructure`). The 2026-09-15 dependency sweep pinned `Microsoft.Data.SqlClient` 7.0.3, whose core driver no longer carries the Entra ID providers, so every host connecting with `Authentication=Active Directory Managed Identity` failed at startup with "Cannot find an authentication provider" (the ADC production revisions of 2026-09-16 never became ready and were rolled back). The package now references `Microsoft.Data.SqlClient.Extensions.Azure` at the same version, which registers the providers on load; `SqlClientEntraAuthenticationTests` pins the registration.
