@@ -3,3 +3,7 @@ MMCA.Common.UI.Web.DependencyInjection.extension(Microsoft.Extensions.Dependency
 MMCA.Common.UI.Web.Security.TrustedCallerHandler
 MMCA.Common.UI.Web.Security.TrustedCallerHandler.TrustedCallerHandler(string! headerName, string! secret, System.Uri! gatewayOrigin) -> void
 static MMCA.Common.UI.Web.DependencyInjection.AddTrustedCallerHeader(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.UI.Web.Security.BlazorCspSettings
+MMCA.Common.UI.Web.Security.BlazorCspSettings.BlazorCspSettings() -> void
+MMCA.Common.UI.Web.Security.BlazorCspSettings.FrameSources.get -> System.Collections.Generic.IList<string!>!
+const MMCA.Common.UI.Web.Security.BlazorCspSettings.SectionName = "BlazorCsp" -> string!

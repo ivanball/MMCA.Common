@@ -1,11 +1,14 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire.Security;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Web.Security;
 using Moq;
 
 namespace MMCA.Common.UI.Web.Tests.Security;
@@ -17,7 +20,8 @@ namespace MMCA.Common.UI.Web.Tests.Security;
 /// (https + matching ws scheme, port preserved, WasmApiEndpoint preferred), the fail-closed
 /// <c>connect-src 'self'</c> degradation on missing/unparseable endpoints (still enforced), the
 /// Development-only localhost and inline-script allowances, and the no-unsafe-eval /
-/// no-inline-script-in-production regressions.
+/// no-inline-script-in-production regressions, and the opt-in <c>BlazorCsp:FrameSources</c> allow-list
+/// (absent = byte-identical policy, configured = <c>frame-src</c> emitted, invalid = startup failure).
 /// </summary>
 public sealed class BlazorCspPolicyProviderTests
 {
@@ -49,9 +53,24 @@ public sealed class BlazorCspPolicyProviderTests
     private static CspPolicy? GetPolicy(
         string? apiEndpoint,
         string? wasmApiEndpoint = null,
-        bool isDevelopment = false)
+        bool isDevelopment = false,
+        string[]? frameSources = null)
+    {
+        using var provider = BuildProvider(apiEndpoint, wasmApiEndpoint, isDevelopment, frameSources ?? []);
+        return provider.GetRequiredService<ICspPolicyProvider>().GetPolicy(new DefaultHttpContext());
+    }
+
+    private static ServiceProvider BuildProvider(
+        string? apiEndpoint,
+        string? wasmApiEndpoint,
+        bool isDevelopment,
+        string[] frameSources)
     {
         var services = new ServiceCollection();
+        var configValues = frameSources
+            .Select((source, index) => new KeyValuePair<string, string?>(
+                string.Create(CultureInfo.InvariantCulture, $"BlazorCsp:FrameSources:{index}"), source));
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(configValues).Build());
         services.AddSingleton(Options.Create(new ApiSettings
         {
             ApiEndpoint = apiEndpoint,
@@ -63,8 +82,7 @@ public sealed class BlazorCspPolicyProviderTests
         services.AddSingleton(environment.Object);
         services.AddCommonBlazorCsp();
 
-        using var provider = services.BuildServiceProvider();
-        return provider.GetRequiredService<ICspPolicyProvider>().GetPolicy(new DefaultHttpContext());
+        return services.BuildServiceProvider();
     }
 
     // == Enforced production policy ==
@@ -159,12 +177,112 @@ public sealed class BlazorCspPolicyProviderTests
             .Should().Be("style-src 'self' 'unsafe-inline'");
     }
 
+    // == Frame-source allow-list ==
+    [Fact]
+    public void GetPolicy_WithNoFrameSources_EmitsNoFrameSrcDirective()
+    {
+        var policy = GetPolicy("https://api.example.com");
+
+        policy!.Value.Should().Be(ExpectedProductionPolicy, "an empty allow-list leaves the policy byte-identical");
+        policy.Value.Should().NotContain("frame-src");
+    }
+
+    [Fact]
+    public void GetPolicy_WithFrameSources_EmitsFrameSrcBetweenConnectSrcAndBaseUri()
+    {
+        var policy = GetPolicy(
+            "https://api.example.com",
+            frameSources: ["https://www.google.com", "https://maps.google.com/"]);
+
+        policy!.Enforce.Should().BeTrue();
+        policy.Value.Should().Be(ExpectedProductionPolicy.Replace(
+            "base-uri 'self'; ",
+            "frame-src 'self' https://www.google.com https://maps.google.com; base-uri 'self'; ",
+            StringComparison.Ordinal));
+        policy.Value.Should().EndWith("frame-ancestors 'none'", "who may frame this host is never relaxed");
+    }
+
+    [Fact]
+    public void GetPolicy_WithFrameSources_CanonicalizesAndDeduplicatesOrigins()
+    {
+        var policy = GetPolicy(
+            "https://api.example.com",
+            frameSources: ["https://Maps.Example.com:443", "https://maps.example.com", "https://embed.example.com:8443"]);
+
+        policy!.Value.Split("; ", StringSplitOptions.None)
+            .Single(d => d.StartsWith("frame-src", StringComparison.Ordinal))
+            .Should().Be("frame-src 'self' https://maps.example.com https://embed.example.com:8443");
+    }
+
+    [Fact]
+    public void GetPolicy_WithFrameSourcesAndFailClosedEndpoint_StillEmitsFrameSrc()
+    {
+        var policy = GetPolicy(null, frameSources: ["https://www.google.com"]);
+
+        policy!.Value.Should().Contain("connect-src 'self'; frame-src 'self' https://www.google.com; base-uri 'self'");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("*")]
+    [InlineData("https://*")]
+    [InlineData("https://*.google.com")]
+    [InlineData("https:")]
+    [InlineData("www.google.com")]
+    [InlineData("http://www.google.com")]
+    [InlineData("data:text/html,hi")]
+    [InlineData("'self'")]
+    [InlineData("'unsafe-inline'")]
+    [InlineData("https://www.google.com; script-src *")]
+    [InlineData("https://www.google.com 'unsafe-eval'")]
+    [InlineData("https://www.google.com,https://evil.example")]
+    [InlineData("https://www.google.com/maps")]
+    [InlineData("https://www.google.com/?q=1")]
+    [InlineData("https://www.google.com/#frag")]
+    [InlineData("https://www.google.com?")]
+    [InlineData("https://user:pass@www.google.com")]
+    public void AddCommonBlazorCsp_WithInvalidFrameSource_FailsOptionsValidationNamingTheEntry(string source)
+    {
+        using var provider = BuildProvider("https://api.example.com", null, false, [source]);
+
+        var act = () => provider.GetRequiredService<ICspPolicyProvider>();
+
+        act.Should().Throw<OptionsValidationException>()
+            .Which.Message.Should().Contain("BlazorCsp:FrameSources").And.Contain($"'{source}'");
+    }
+
+    [Fact]
+    public async Task AddCommonBlazorCsp_WithInvalidFrameSource_FailsAtHostStartup()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration.AddInMemoryCollection(
+            [new KeyValuePair<string, string?>("BlazorCsp:FrameSources:0", "https://*.example.com")]);
+        builder.Services.AddCommonBlazorCsp();
+        using var host = builder.Build();
+
+        var act = () => host.StartAsync(TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<OptionsValidationException>();
+    }
+
+    [Fact]
+    public void AddCommonBlazorCsp_WithValidFrameSources_BindsThemFromTheBlazorCspSection()
+    {
+        using var provider = BuildProvider(
+            "https://api.example.com", null, false, ["https://www.google.com", "https://maps.google.com"]);
+
+        provider.GetRequiredService<IOptions<BlazorCspSettings>>().Value.FrameSources
+            .Should().Equal("https://www.google.com", "https://maps.google.com");
+    }
+
     // == Singleton computation ==
     [Fact]
     public void GetPolicy_IsComputedOnce_ReturnsTheSameInstanceForEveryRequest()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Options.Create(new ApiSettings { ApiEndpoint = "https://api.example.com" }));
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
         var environment = new Mock<IWebHostEnvironment>();
         environment.SetupGet(e => e.EnvironmentName).Returns(Environments.Production);
         services.AddSingleton(environment.Object);

@@ -6,6 +6,18 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Configurable frame sources for the Blazor CSP: `BlazorCsp:FrameSources`** (`MMCA.Common.UI.Web`).
+  `AddCommonBlazorCsp()` now binds the new `BlazorCspSettings` from the `BlazorCsp` section and
+  validates it on start. When `FrameSources` lists at least one origin, the policy emits
+  `frame-src 'self' <origins>` (canonicalized and de-duplicated) between `connect-src` and `base-uri`,
+  so a page can embed a third-party iframe such as a map without loosening `default-src`. Every entry
+  must be a bare absolute https origin: a path, query, fragment, user info, wildcard, quote, semicolon,
+  comma or whitespace fails the boot with an `OptionsValidationException` naming the entry. With the
+  section absent or empty the policy is byte-identical to before, and `frame-ancestors 'none'` is never
+  relaxed. The binding reads the container's `IConfiguration`, which every host supplies.
+
 ## [1.204.0] - 2026-09-16
 
 ### Fixed

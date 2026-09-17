@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Aspire.Gateway;
 using MMCA.Common.Aspire.Security;
 using MMCA.Common.UI.Common.Settings;
@@ -36,12 +38,29 @@ public static class DependencyInjection
         /// <summary>
         /// Registers the Blazor host's dynamic Content-Security-Policy provider
         /// (<c>connect-src</c> pinned to the configured API/Gateway origin from <c>ApiSettings</c>,
-        /// permissive Report-Only fallback on misconfiguration). Call BEFORE
+        /// enforced <c>connect-src 'self'</c> fallback on misconfiguration). Call BEFORE
         /// <c>AddCommonSecurityHeaders</c> so it wins over the default static provider (which is
         /// registered with <c>TryAdd</c>).
+        /// <para>
+        /// Also binds <see cref="BlazorCspSettings"/> from the <c>"BlazorCsp"</c> configuration
+        /// section (resolved from the container's <see cref="IConfiguration"/>) and validates it on
+        /// start: <c>BlazorCsp:FrameSources</c> lists the https origins the host's pages may frame,
+        /// emitted as <c>frame-src 'self' &lt;origins&gt;</c>. An absent or empty list leaves the
+        /// policy unchanged; an invalid entry fails the boot.
+        /// </para>
         /// </summary>
-        public IServiceCollection AddCommonBlazorCsp() =>
-            services.AddSingleton<ICspPolicyProvider, BlazorCspPolicyProvider>();
+        public IServiceCollection AddCommonBlazorCsp()
+        {
+            services.AddOptions<BlazorCspSettings>()
+                .BindConfiguration(BlazorCspSettings.SectionName)
+                .ValidateOnStart();
+
+            // TryAddEnumerable: calling this twice must not run the same validation twice.
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IValidateOptions<BlazorCspSettings>, BlazorCspSettingsValidator>());
+
+            return services.AddSingleton<ICspPolicyProvider, BlazorCspPolicyProvider>();
+        }
 
         /// <summary>
         /// Registers the Blazor Server <see cref="IFormFactor"/> (<see cref="WebFormFactor"/>: reports
