@@ -18,6 +18,10 @@ namespace MMCA.Common.UI.Web.Security;
 /// enforced. A misconfigured endpoint therefore surfaces immediately as blocked API calls in the browser
 /// console, instead of as a permissive Report-Only header that protects nothing and that nobody notices;
 /// a security response header that quietly stops being enforced is the worse failure mode.
+/// <c>frame-src</c> is emitted only when <see cref="BlazorCspSettings.FrameSources"/> lists at least one origin
+/// (<c>frame-src 'self' &lt;origins&gt;</c>); with the default empty list the directive is absent and frames
+/// fall back to <c>default-src 'self'</c>, so the policy is unchanged. <c>frame-ancestors 'none'</c> is
+/// never relaxed.
 /// Hoisted from the app Blazor Web hosts (byte-identical there); register via
 /// <c>AddCommonBlazorCsp()</c> BEFORE <c>AddCommonSecurityHeaders</c>.
 /// </summary>
@@ -26,11 +30,15 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
     // Computed once (registered as a singleton): the full CSP value and whether to enforce it.
     private readonly CspPolicy _policy;
 
-    public BlazorCspPolicyProvider(IOptions<ApiSettings> apiOptions, IWebHostEnvironment environment)
+    public BlazorCspPolicyProvider(
+        IOptions<ApiSettings> apiOptions,
+        IOptions<BlazorCspSettings> cspOptions,
+        IWebHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(apiOptions);
+        ArgumentNullException.ThrowIfNull(cspOptions);
         ArgumentNullException.ThrowIfNull(environment);
-        _policy = BuildCsp(apiOptions.Value, environment.IsDevelopment());
+        _policy = BuildCsp(apiOptions.Value, BuildFrameSrc(cspOptions.Value), environment.IsDevelopment());
     }
 
     /// <inheritdoc />
@@ -38,7 +46,7 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
 
     // Builds the CSP. When the API/Gateway origin can be pinned, connect-src carries it; otherwise the
     // policy fails closed on the strictest connect-src we can be sure of ('self') and stays enforced.
-    private static CspPolicy BuildCsp(ApiSettings api, bool isDevelopment)
+    private static CspPolicy BuildCsp(ApiSettings api, string? frameSrc, bool isDevelopment)
     {
         var endpoint = api.WasmApiEndpoint ?? api.ApiEndpoint;
 
@@ -51,7 +59,7 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
         {
             // Fail closed: an endpoint we cannot parse is a misconfiguration, and the honest signal is
             // blocked cross-origin calls in the console rather than a policy that is emitted but inert.
-            return new CspPolicy(BuildPolicy("connect-src 'self'", isDevelopment), Enforce: true);
+            return new CspPolicy(BuildPolicy("connect-src 'self'", frameSrc, isDevelopment), Enforce: true);
         }
 
         // scheme://host:port for the API/Gateway, plus its WebSocket origin (SignalR notification hub).
@@ -68,20 +76,38 @@ internal sealed class BlazorCspPolicyProvider : ICspPolicyProvider
             connectSrc += " http://localhost:* ws://localhost:*";
         }
 
-        return new CspPolicy(BuildPolicy(connectSrc, isDevelopment), Enforce: true);
+        return new CspPolicy(BuildPolicy(connectSrc, frameSrc, isDevelopment), Enforce: true);
+    }
+
+    // frame-src is opt-in: null (no directive at all) keeps the policy byte-identical to the baseline.
+    // Every entry already passed the startup validator, so each one is a plain https origin. The origins are
+    // canonicalized and de-duplicated before being spliced into the header.
+    private static string? BuildFrameSrc(BlazorCspSettings settings)
+    {
+        if (settings.FrameSources.Count == 0)
+        {
+            return null;
+        }
+
+        var origins = settings.FrameSources
+            .Select(BlazorCspSettingsValidator.ToOrigin)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        return "frame-src 'self' " + string.Join(" ", origins);
     }
 
     // img-src allows any https source: profile pictures and other content images come from arbitrary
     // external hosts (CDNs/user-supplied URLs). Images are low XSS-risk; the directives that matter
     // for exfiltration — script-src and connect-src — stay locked down. In Development only, script-src
     // also permits 'unsafe-inline' so Visual Studio's injected Hot Reload bootstrap script can run.
-    private static string BuildPolicy(string connectSrc, bool isDevelopment) =>
+    private static string BuildPolicy(string connectSrc, string? frameSrc, bool isDevelopment) =>
         "default-src 'self'; " +
         $"script-src 'self' 'wasm-unsafe-eval'{(isDevelopment ? " 'unsafe-inline'" : string.Empty)}; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: https:; " +
         "font-src 'self'; " +
         connectSrc + "; " +
+        (frameSrc is null ? string.Empty : frameSrc + "; ") +
         "base-uri 'self'; " +
         "form-action 'self'; " +
         "frame-ancestors 'none'";
