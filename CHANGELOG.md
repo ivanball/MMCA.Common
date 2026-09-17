@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.205.0] - 2026-09-17
+
 ### Added
 
 - **Configurable frame sources for the Blazor CSP: `BlazorCsp:FrameSources`** (`MMCA.Common.UI.Web`).
