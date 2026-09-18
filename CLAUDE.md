@@ -146,7 +146,7 @@ xUnit v3 + AwesomeAssertions + Moq + coverlet under MTP. Test projects mirror `S
 
 ## Governance Docs & Commit Convention
 
-The documentation library is canonical in the Website repo (`../Website/docs-src/`). Re-render with `cd ../Website/tools && npm run build` after any docs-src edit and land via a Website PR.
+The documentation library is canonical in the Website repo (`../Website/docs-src/`). Docs-src edits are re-rendered and land via a Website PR.
 
 - **In this repo**: `FACTS.md` (generated and CI-gated by `build/facts`; never hand-edit computed values, link to it rather than restating numbers), `CHANGELOG.md`, `UPGRADING.md`, `SECURITY.md`, `CONTRIBUTING.md`, `samples/deployment/DEPLOYMENT.md`, and `NavigationFlow.md` (an embedded resource parsed by `NavigationContractTests`, so **it must stay next to the code**).
 - **`../Website/docs-src/`**: `adr/` (its `README.md` owns the count and range; **add new ADRs there, never here**), `governance/` (the 34-category rubric plus `common-ArchitectureScorecard.md` / `common-RemediationBacklog.md`), `guides/` (`common-GETTING-STARTED.md`, `common-BUILD-BY-HAND.md`, `common-TEMPLATES.md`, `common-VERSIONING.md`, `common-COST.md`, `common-RESPONSIVE.md`, `common-RESILIENCE.md`, `common-ACCESSIBILITY.md`).
