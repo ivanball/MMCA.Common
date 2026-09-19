@@ -24,9 +24,14 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// <remarks>
 /// Lives in <c>MMCA.Common.Shared</c> so it stays dependency-free and usable from Blazor WASM/UI as
 /// well as Domain. It deliberately does NOT derive from <see cref="ValueObject"/>: the
-/// <c>ValueObjectsAreImmutableSealedInShared</c> fitness rule forces every <see cref="ValueObject"/>
-/// derivative to be a sealed record living in the Shared layer, which would forbid the static-member
-/// idiom this type exists for. <c>RoleValue</c> is the shipped precedent for the same trade-off.
+/// <c>ValueObjectsAreImmutableSealedInShared</c> fitness rule asserts three things about every
+/// concrete <see cref="ValueObject"/> derivative, that the type is sealed, that its assembly sits in
+/// the Shared layer, and that it declares no public property with a public mutable setter. Deriving
+/// would therefore pin every concrete enumeration to the Shared layer and to
+/// <see langword="sealed"/>, which is not where a consumer declares a per-module set. The rule names
+/// no <see langword="record"/> and inspects no fields, so it does not forbid the
+/// <c>public static readonly</c> field idiom this type exists for.
+/// <c>RoleValue</c> is the shipped precedent for the same trade-off.
 /// <para>
 /// Members are discovered by reflection over the <c>public static readonly</c> fields declared on
 /// <typeparamref name="TEnumeration"/> itself, on first use, and then frozen. Two members sharing a
