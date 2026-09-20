@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.206.0] - 2026-09-20
+
 ### Added
 
 - **Constructor-dependency ceiling for controllers and handlers**

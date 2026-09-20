@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.206.0] - 2026-09-20
+
 **`ConstructorDependencyCountTestsBase` subclasses must declare two more ceilings.** The base now
 carries `MaxControllerConstructorDependencies` and `MaxHandlerConstructorDependencies` as abstract
 properties beside the existing `MaxConstructorDependencies`, with a fact for each. A subclass that
