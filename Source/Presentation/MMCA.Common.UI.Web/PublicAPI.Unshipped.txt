@@ -7,3 +7,41 @@ MMCA.Common.UI.Web.Security.BlazorCspSettings
 MMCA.Common.UI.Web.Security.BlazorCspSettings.BlazorCspSettings() -> void
 MMCA.Common.UI.Web.Security.BlazorCspSettings.FrameSources.get -> System.Collections.Generic.IList<string!>!
 const MMCA.Common.UI.Web.Security.BlazorCspSettings.SectionName = "BlazorCsp" -> string!
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitExtensions
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddBoundedBlazorCircuits() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitExtensions.AddBoundedBlazorCircuits(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitExtensions.RetentionFrom(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> System.Action<Microsoft.AspNetCore.Components.Server.CircuitOptions!>!
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.BlazorCircuitLimitSettings() -> void
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.DisconnectedCircuitMaxRetained.get -> int
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.DisconnectedCircuitMaxRetained.init -> void
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.DisconnectedCircuitRetentionSeconds.get -> int
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.DisconnectedCircuitRetentionSeconds.init -> void
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.MaxActiveCircuits.get -> int
+MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.MaxActiveCircuits.init -> void
+static MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings.SectionName.get -> string!
+MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler
+MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler.ActiveCircuits.get -> int
+MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler.BoundedCircuitHandler(Microsoft.Extensions.Options.IOptions<MMCA.Common.UI.Web.Hardening.BlazorCircuitLimitSettings!>! settings, Microsoft.Extensions.Logging.ILogger<MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler!>! logger) -> void
+override MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler.OnCircuitClosedAsync(Microsoft.AspNetCore.Components.Server.Circuits.Circuit! circuit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler.OnCircuitOpenedAsync(Microsoft.AspNetCore.Components.Server.Circuits.Circuit! circuit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Web.Hardening.BoundedCircuitHandler.Order.get -> int
+MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions
+MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseUiRateLimiting() -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddUiRateLimiting(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.AddUiRateLimiting(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.UI.Web.Hardening.UiRateLimitingExtensions.UseUiRateLimiting(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.Enabled.get -> bool
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.Enabled.init -> void
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.GlobalConcurrencyLimit.get -> int
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.GlobalConcurrencyLimit.init -> void
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.PermitLimit.get -> int
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.PermitLimit.init -> void
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.UiRateLimitingSettings() -> void
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.get -> int
+MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.init -> void
+static MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.SectionName.get -> string!

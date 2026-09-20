@@ -235,13 +235,65 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         // SECURITY (SEC-Common-24): this path never enters EntityQueryPipeline, so the framework's
         // row ceiling has to be applied here or a lookup stays the one unpaginated, uncapped read in
         // the framework. Take runs BEFORE the projection is materialized, so the provider emits the
-        // ceiling as a TOP/LIMIT rather than reading the table and trimming in memory.
-        return await query
+        // ceiling as a TOP/LIMIT rather than reading the table and trimming in memory. Both legs
+        // below keep that ordering.
+        if (selector is Expression<Func<TEntity, BaseLookup<TIdentifierType>>> stringSelector)
+        {
+            return await query
+                .Select(stringSelector)
+                .OrderBy(l => l.Name)
+                .Take(EntityQueryPipeline.MaxUnboundedResultLimit)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // A non-string name property is formatted in memory instead. ToString() has no server-side
+        // translation for a value-object property (an Email, say), so appending it to the projection
+        // threw InvalidOperationException for the whole query and surfaced as an HTTP 500 on a
+        // property QueryFieldService had already approved. The raw value comes back in its own CLR
+        // type under the same server-side ceiling, which bounds what the in-memory leg touches.
+        var rawNameType = selector.ReturnType.GetGenericArguments()[1];
+        var pending = (Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>>)ExecuteRawLookupMethod
+            .MakeGenericMethod(rawNameType)
+            .Invoke(null, [query, selector, cancellationToken])!;
+
+        return await pending.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Closed over the name property's own CLR type by <see cref="GetAllForLookupAsync"/>: the type
+    /// is only known once the property has been resolved, which is after compile time.
+    /// </summary>
+    private static readonly MethodInfo ExecuteRawLookupMethod = typeof(EFReadRepository<TEntity, TIdentifierType>)
+        .GetMethod(nameof(ExecuteRawLookupAsync), BindingFlags.Public | BindingFlags.Static)!;
+
+    /// <summary>
+    /// Runs the lookup for a non-string name property: the raw value is projected, ordered and
+    /// capped server-side, then formatted to the lookup's display name in memory. Public only so the
+    /// closing above needs no accessibility bypass; the declaring repository is internal.
+    /// </summary>
+    /// <typeparam name="TName">The name property's own CLR type.</typeparam>
+    /// <param name="query">The filtered entity query.</param>
+    /// <param name="selector">The projection onto <see cref="LookupRow{TId,TName}"/>.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The capped, ordered lookups with their display names formatted.</returns>
+    public static async Task<IReadOnlyCollection<BaseLookup<TIdentifierType>>> ExecuteRawLookupAsync<TName>(
+        IQueryable<TEntity> query,
+        Expression<Func<TEntity, LookupRow<TIdentifierType, TName>>> selector,
+        CancellationToken cancellationToken)
+    {
+        var rows = await query
             .Select(selector)
-            .OrderBy(l => l.Name)
+            .OrderBy(row => row.Name)
             .Take(EntityQueryPipeline.MaxUnboundedResultLimit)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        return [.. rows.Select(row => new BaseLookup<TIdentifierType>
+        {
+            Id = row.Id,
+            Name = row.Name is null ? string.Empty : row.Name.ToString() ?? string.Empty,
+        })];
     }
 
     /// <summary>
@@ -261,9 +313,11 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     private static readonly ConcurrentDictionary<(Type EntityType, string PropertyName), LambdaExpression> LookupSelectorCache = new();
 
     /// <summary>
-    /// Gets or builds a projection expression mapping the entity's Id and the named property to <see cref="BaseLookup{TIdentifierType}"/>.
+    /// Gets or builds the projection expression for the named property: straight to
+    /// <see cref="BaseLookup{TIdentifierType}"/> for a string property, or to
+    /// <see cref="LookupRow{TId,TName}"/> carrying the raw value for anything else.
     /// </summary>
-    private static Expression<Func<TEntity, BaseLookup<TIdentifierType>>> GetOrBuildLookupSelector(string nameProperty)
+    private static LambdaExpression GetOrBuildLookupSelector(string nameProperty)
     {
         // The canonical name is what the expression tree would have resolved to anyway, so keying on
         // it changes nothing about the built selector, only about how many copies of it exist.
@@ -274,35 +328,47 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         var key = (typeof(TEntity), canonicalName);
 
         if (LookupSelectorCache.TryGetValue(key, out var cached))
-            return (Expression<Func<TEntity, BaseLookup<TIdentifierType>>>)cached;
+            return cached;
 
         // The Count check (which takes every bucket lock) runs only on a miss, exactly like the
         // capped caches in QueryFieldService.
         if (LookupSelectorCache.Count >= MaxLookupSelectorCacheEntries)
             return BuildLookupSelector(canonicalName);
 
-        return (Expression<Func<TEntity, BaseLookup<TIdentifierType>>>)LookupSelectorCache.GetOrAdd(
+        return LookupSelectorCache.GetOrAdd(
             key,
             static key => BuildLookupSelector(key.PropertyName));
     }
 
-    private static Expression<Func<TEntity, BaseLookup<TIdentifierType>>> BuildLookupSelector(string canonicalName)
+    private static LambdaExpression BuildLookupSelector(string canonicalName)
     {
         var param = Expression.Parameter(typeof(TEntity), "e");
         var idAccess = Expression.Property(param, "Id");
         var nameAccess = Expression.Property(param, canonicalName);
 
-        Expression nameExpr = nameAccess.Type == typeof(string)
-            ? Expression.Coalesce(nameAccess, Expression.Constant(string.Empty))
-            : Expression.Call(
-                nameAccess,
-                nameAccess.Type.GetMethod("ToString", Type.EmptyTypes)!);
+        if (nameAccess.Type != typeof(string))
+        {
+            // The raw value, in its own CLR type: EF materializes it through whatever value
+            // converter the property carries, and ExecuteRawLookupAsync formats it afterwards.
+            var rowType = typeof(LookupRow<,>).MakeGenericType(typeof(TIdentifierType), nameAccess.Type);
+            var rowBody = Expression.MemberInit(
+                Expression.New(rowType),
+                Expression.Bind(rowType.GetProperty(nameof(LookupRow<,>.Id))!, idAccess),
+                Expression.Bind(rowType.GetProperty(nameof(LookupRow<,>.Name))!, nameAccess));
+
+            return Expression.Lambda(
+                typeof(Func<,>).MakeGenericType(typeof(TEntity), rowType),
+                rowBody,
+                param);
+        }
 
         var lookupType = typeof(BaseLookup<TIdentifierType>);
         var body = Expression.MemberInit(
             Expression.New(lookupType),
             Expression.Bind(lookupType.GetProperty(nameof(BaseLookup<>.Id))!, idAccess),
-            Expression.Bind(lookupType.GetProperty(nameof(BaseLookup<>.Name))!, nameExpr));
+            Expression.Bind(
+                lookupType.GetProperty(nameof(BaseLookup<>.Name))!,
+                Expression.Coalesce(nameAccess, Expression.Constant(string.Empty))));
 
         return Expression.Lambda<Func<TEntity, BaseLookup<TIdentifierType>>>(body, param);
     }
@@ -641,4 +707,21 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
 
         return true;
     }
+}
+
+/// <summary>
+/// The intermediate row a non-string lookup projection materializes: the identifier plus the name
+/// property in its own CLR type. EF can translate this projection for any mapped property, while
+/// appending <c>ToString()</c> to the projection cannot be translated for a value object, so the
+/// display string is built from <see cref="Name"/> after materialization.
+/// </summary>
+/// <typeparam name="TId">The entity identifier type.</typeparam>
+/// <typeparam name="TName">The name property's own CLR type.</typeparam>
+internal sealed class LookupRow<TId, TName>
+{
+    /// <summary>Gets or sets the entity identifier.</summary>
+    public TId Id { get; set; } = default!;
+
+    /// <summary>Gets or sets the raw name value, exactly as the provider materialized it.</summary>
+    public TName? Name { get; set; }
 }

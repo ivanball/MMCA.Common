@@ -11,6 +11,10 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- The Hardening kit's exemption and partition helpers are internal: they are implementation
+         detail of the limiter, not a surface a host calls, but the rule they encode (which paths are
+         metered) has to be pinned by a unit test rather than by a full request flood. -->
+    <InternalsVisibleTo Include="MMCA.Common.UI.Web.Tests" />
   </ItemGroup>
 
   <ItemGroup>
