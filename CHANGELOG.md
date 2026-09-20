@@ -6,6 +6,64 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Constructor-dependency ceiling for controllers and handlers**
+  (`MMCA.Common.Testing.Architecture`, rubric section 1). `ConstructorDependencyCountTestsBase`
+  gains two facts and two abstract ratchets: `Controllers_DoNotExceedConstructorDependencyCeiling`
+  over every concrete `ControllerBase` subclass in `Map.Api()` (framework and module API
+  assemblies alike) against `MaxControllerConstructorDependencies`, and
+  `Handlers_DoNotExceedConstructorDependencyCeiling` over every `ICommandHandler` / `IQueryHandler`
+  implementation in `Map.ModuleApplication()` against `MaxHandlerConstructorDependencies`. Until
+  now the gate scanned only Application types named `*Service`, so a 14-dependency controller sat
+  above a stated ceiling of 9 with a green build. Detection is name-based, so the rule library
+  still takes no ASP.NET Core or Application reference. Each ceiling is a ratchet: a consumer sets it
+  at its current high-water mark and lowers it deliberately. **Breaking (subclasses only):** both new
+  properties are abstract, so every `ConstructorDependencyCountTestsBase` subclass must add them;
+  the map is in `UPGRADING.md`.
+- **UI-host hardening kit** (`MMCA.Common.UI.Web`, rubric sections 11 and 12).
+  `AddUiRateLimiting(configuration)` and `UseUiRateLimiting()` install a per-IP fixed-window limiter
+  chained with a replica-wide concurrency ceiling on a Blazor Web host's own public origin (the
+  gateway edge limiter never sees that origin), exempting health probes, `/_framework`, `/_content`
+  and `/hubs` while metering `/_blazor/negotiate`, with 429 on rejection and an `Enabled` escape
+  hatch. `AddBoundedBlazorCircuits()` registers `BoundedCircuitHandler`, a singleton cap on
+  concurrently ACTIVE circuits, and `BlazorCircuitLimitExtensions.RetentionFrom(configuration)`
+  applies the disconnected-circuit retention to `AddInteractiveServerComponents`, both read from
+  the same section so the two numbers cannot drift. Settings bind from `UiRateLimiting` and
+  `BlazorCircuitLimits`, the section and key names MMCA.ADC and MMCA.Store already use, so a
+  consumer that carried its own copy swaps one `using`, deletes its `Hardening/` folder and changes
+  no configuration. Defaults ship tight (300 requests per window, 60 s retention); both first-party
+  consumers set every value explicitly.
+
+### Fixed
+
+- **Lookup projection over a value-object property no longer fails with HTTP 500**
+  (`MMCA.Common.Infrastructure`, ledger CD-2). `EFReadRepository.GetAllForLookupAsync` appended a
+  `ToString()` call to the projection for every non-string name property; EF cannot translate that
+  for a value-object property such as `Email`, so the whole query threw `InvalidOperationException`
+  on a property `QueryFieldService` had already approved. The string leg is unchanged (server-side
+  coalesce, order, TOP). A non-string property is now projected in its own CLR type under the same
+  server-side TOP ceiling and formatted in memory, so the ceiling still bounds the read and a
+  value-object, enum, int or date name property returns a lookup.
+- **One email-identity normalizer** (`MMCA.Common.Infrastructure`). `LoginProtectionService`,
+  `PasswordResetTokenService` and `EmailConfirmationTokenService` each carried a byte-identical
+  private `NormalizeIdentity`; the shared internal `EmailIdentity.Normalize` replaces the three, so
+  the key the lockout, reset and confirmation paths agree on has one definition.
+
+### Changed
+
+- **The four oversized registration files are partial classes by concern** (no API change).
+  `MMCA.Common.Infrastructure` `DependencyInjection.cs` (1321 lines), `MMCA.Common.Application`
+  `DependencyInjection.cs` (747), `MMCA.Common.API` `WebApplicationBuilderExtensions.cs` (771) and
+  `MMCA.Common.Aspire` `Extensions.cs` (735) are each split into one file per concern in the same
+  folder (`DependencyInjection.Messaging.cs`, `.Caching.cs`, `.Auth.cs`, `.Jobs.cs`,
+  `.Notifications.cs`; `.Crud.cs`, `.ModuleScanning.cs`, `.Extensibility.cs`;
+  `.RateLimiting.cs`, `.Authentication.cs`; `Extensions.Telemetry.cs`, `Extensions.Health.cs`).
+  Every member keeps its name, signature, accessibility and namespace; the largest resulting file
+  is 401 lines.
+- **`OutboxProcessor` names its startup delay** (`StartupDelay`, 5 s) the way
+  `InternalCommandProcessor` already does. No behavior change.
+
 ## [1.205.0] - 2026-09-17
 
 ### Added

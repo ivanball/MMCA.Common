@@ -34,6 +34,32 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**`ConstructorDependencyCountTestsBase` subclasses must declare two more ceilings.** The base now
+carries `MaxControllerConstructorDependencies` and `MaxHandlerConstructorDependencies` as abstract
+properties beside the existing `MaxConstructorDependencies`, with a fact for each. A subclass that
+does not override them fails to compile.
+
+The mechanical fix: add both properties, each set to the repo's current high-water mark so the
+adopting build is green, then lower them in the same PR as the reduction they gate. Find the marks
+by setting each to `0`, running the architecture test project, and reading the offender list in the
+failure message (`FullName (N ctor dependencies)`).
+
+```csharp
+public sealed class ConstructorDependencyCountTests : ConstructorDependencyCountTestsBase
+{
+    protected override IArchitectureMap Map { get; } = new StoreArchitectureMap();
+
+    protected override int MaxConstructorDependencies => 8;
+
+    protected override int MaxControllerConstructorDependencies => 8;
+
+    protected override int MaxHandlerConstructorDependencies => 8;
+}
+```
+
+The controller fact scans `Map.Api()`, which includes the framework API assembly, so a framework
+controller above the ceiling is reported alongside the repo's own.
+
 ## [1.201.0] - 2026-09-13
 
 **The framework stops owning application role vocabulary.** `MMCA.Common` named five roles and used
