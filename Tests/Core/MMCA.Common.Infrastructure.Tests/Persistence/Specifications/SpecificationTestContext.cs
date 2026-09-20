@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
+using MMCA.Common.Shared.ValueObjects.Contact;
 
 namespace MMCA.Common.Infrastructure.Tests.Persistence.Specifications;
 
@@ -19,6 +21,13 @@ public sealed class SpecTestEntity : AuditableBaseEntity<int>
 
     /// <summary>Gets or sets the optional category (a nullable sort key).</summary>
     public string? Category { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional contact address: a VALUE OBJECT property, mapped through a value
+    /// converter, so the lookup projection is exercised against a property whose <c>ToString()</c>
+    /// has no server-side translation.
+    /// </summary>
+    public Email? ContactEmail { get; set; }
 
     /// <summary>Gets or sets the child collection, so includes can be exercised.</summary>
     public ICollection<SpecTestChild> Children { get; set; } = [];
@@ -58,6 +67,7 @@ public sealed class SpecificationTestDbContext(DbContextOptions options) : DbCon
             b.Property(e => e.Name);
             b.Property(e => e.Rank);
             b.Property(e => e.Category);
+            b.Property(e => e.ContactEmail).HasConversion(new NullableEmailValueConverter());
             b.Ignore(e => e.RowVersion);
             b.HasMany(e => e.Children).WithOne().HasForeignKey(c => c.SpecTestEntityId);
             b.HasQueryFilter(ApplicationDbContext.SoftDeleteFilterName, e => !e.IsDeleted);

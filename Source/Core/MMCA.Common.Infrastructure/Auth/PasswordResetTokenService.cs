@@ -37,20 +37,9 @@ public sealed class PasswordResetTokenService(
     /// request input would give <c>User@x.com</c> and <c>user@x.com</c> independent tokens and
     /// independent request counters while resolving to one account.
     /// </summary>
-    private static string NormalizeIdentity(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return string.Empty;
+    private static string TokenKey(string email) => $"pwdreset:token:{EmailIdentity.Normalize(email)}";
 
-        var result = Email.Create(email);
-#pragma warning disable CA1308 // Matches Email's own RFC 5321 lowercase normalization.
-        return result.IsSuccess ? result.Value!.Value : email.Trim().ToLowerInvariant();
-#pragma warning restore CA1308
-    }
-
-    private static string TokenKey(string email) => $"pwdreset:token:{NormalizeIdentity(email)}";
-
-    private static string RequestKey(string email) => $"pwdreset:req:{NormalizeIdentity(email)}";
+    private static string RequestKey(string email) => $"pwdreset:req:{EmailIdentity.Normalize(email)}";
 
     private static byte[] HashToken(string token) =>
         SHA256.HashData(Encoding.UTF8.GetBytes(token));

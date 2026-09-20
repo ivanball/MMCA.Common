@@ -121,21 +121,10 @@ public sealed class EmailConfirmationTokenService(
     /// independent request counters while resolving to one account.
     /// </summary>
     /// <param name="email">The raw address from the request.</param>
-    /// <returns>The normalized address.</returns>
-    private static string NormalizeIdentity(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return string.Empty;
+    /// <returns>The key for that address.</returns>
+    private static string TokenKey(string email) => $"emailconfirm:token:{EmailIdentity.Normalize(email)}";
 
-        var result = Email.Create(email);
-#pragma warning disable CA1308 // Matches Email's own RFC 5321 lowercase normalization.
-        return result.IsSuccess ? result.Value!.Value : email.Trim().ToLowerInvariant();
-#pragma warning restore CA1308
-    }
-
-    private static string TokenKey(string email) => $"emailconfirm:token:{NormalizeIdentity(email)}";
-
-    private static string RequestKey(string email) => $"emailconfirm:req:{NormalizeIdentity(email)}";
+    private static string RequestKey(string email) => $"emailconfirm:req:{EmailIdentity.Normalize(email)}";
 
     private static byte[] HashToken(string token) =>
         SHA256.HashData(Encoding.UTF8.GetBytes(token));

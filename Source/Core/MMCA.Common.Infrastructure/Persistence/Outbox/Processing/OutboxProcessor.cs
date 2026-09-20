@@ -84,6 +84,12 @@ public sealed partial class OutboxProcessor(
     private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
 
     /// <summary>
+    /// Brief startup delay so the host finishes initializing (module registration, migration) before
+    /// the first cycle polls the outbox tables. Matches the internal command processor's delay.
+    /// </summary>
+    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Budget for the best-effort save that flushes ProcessedOn stamps when a batch is cancelled
     /// mid-flight. Deliberately short: the work is one small UPDATE against an already-open
     /// connection, and anything slower is a dependency that must not delay host shutdown.
@@ -109,8 +115,7 @@ public sealed partial class OutboxProcessor(
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Brief startup delay so the application finishes initializing before we start polling.
-        await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, stoppingToken).ConfigureAwait(false);
+        await Task.Delay(StartupDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
 
         if (GetOutboxTargets().Count == 0)
         {

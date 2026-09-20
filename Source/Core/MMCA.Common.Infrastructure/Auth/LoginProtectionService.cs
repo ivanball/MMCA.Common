@@ -31,20 +31,9 @@ public sealed class LoginProtectionService(
     /// A malformed address (which never matches a user, but still increments a counter) falls back
     /// to the same trim-and-lowercase shape so its attempts collapse onto one key too.
     /// </summary>
-    private static string NormalizeIdentity(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return string.Empty;
+    private static string LockoutKey(string email) => $"login:lockout:{EmailIdentity.Normalize(email)}";
 
-        var result = Email.Create(email);
-#pragma warning disable CA1308 // Matches Email's own RFC 5321 lowercase normalization.
-        return result.IsSuccess ? result.Value!.Value : email.Trim().ToLowerInvariant();
-#pragma warning restore CA1308
-    }
-
-    private static string LockoutKey(string email) => $"login:lockout:{NormalizeIdentity(email)}";
-
-    private static string AttemptsKey(string email) => $"login:attempts:{NormalizeIdentity(email)}";
+    private static string AttemptsKey(string email) => $"login:attempts:{EmailIdentity.Normalize(email)}";
 
     /// <inheritdoc />
     public async Task<Result> CheckLockoutAsync(string email, CancellationToken cancellationToken = default)
