@@ -76,8 +76,9 @@ public sealed class GuardrailChatClientTests
     }
 
     [Fact]
-    // Documented asymmetry: buffering a streamed answer to inspect it defeats the reason a caller
-    // chose streaming, so the streaming path inspects the request only.
+    // Documented asymmetry: the streaming path inspects the request and each update (see
+    // Guardrails/StreamedGuardrailTests), but never calls InspectResponseAsync, because accumulating
+    // a whole streamed answer before releasing any of it defeats the reason a caller chose streaming.
     public async Task TheStreamingPath_InspectsTheRequestOnly()
     {
         var guardrail = new StubGuardrail();

@@ -97,7 +97,10 @@ public sealed class BoundedChatClientTests
     public async Task GetResponseAsync_KeepsToolsWhenToolUseIsAllowed()
     {
         using var inner = new StubChatClient();
-        using var client = new BoundedChatClient(inner, Settings(allowTools: true));
+
+        // An allowing policy, because the switch alone is no longer enough: with none registered the
+        // layer fails closed (Guardrails/ToolPolicyTests pins that half).
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
         var options = new ChatOptions { Tools = [AIFunctionFactory.Create(() => 42, "answer")] };
 
         await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);

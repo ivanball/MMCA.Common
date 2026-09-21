@@ -112,3 +112,27 @@ static MMCA.Common.AI.Chat.UsageRecordingChatClient.ResolveProviderName(Microsof
 MMCA.Common.AI.Providers.IAiProviderFactory
 MMCA.Common.AI.Providers.IAiProviderFactory.Create(MMCA.Common.AI.AiSettings! settings, System.IServiceProvider! serviceProvider) -> Microsoft.Extensions.AI.IChatClient!
 MMCA.Common.AI.Providers.IAiProviderFactory.Name.get -> string!
+MMCA.Common.AI.AiSettings.RequireGuardrail.get -> bool
+MMCA.Common.AI.AiSettings.RequireGuardrail.init -> void
+MMCA.Common.AI.Chat.BoundedChatClient.BoundedChatClient(Microsoft.Extensions.AI.IChatClient! innerClient, MMCA.Common.AI.AiSettings! settings, System.Collections.Generic.IEnumerable<MMCA.Common.AI.Guardrails.IChatToolPolicy!>! toolPolicies) -> void
+MMCA.Common.AI.Chat.GuardrailChatClient.GuardrailChatClient(Microsoft.Extensions.AI.IChatClient! innerClient, System.Collections.Generic.IEnumerable<MMCA.Common.AI.Chat.IChatGuardrail!>! guardrails, System.Collections.Generic.IEnumerable<MMCA.Common.AI.Guardrails.IChatRequestRedactor!>! redactors) -> void
+MMCA.Common.AI.Chat.IChatGuardrail.InspectStreamedUpdateAsync(Microsoft.Extensions.AI.ChatResponseUpdate! update, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Guardrails.ChatToolPolicy
+const MMCA.Common.AI.Guardrails.ChatToolPolicy.ConsequentialPropertyKey = "mmca.tool.consequential" -> string!
+const MMCA.Common.AI.Guardrails.ChatToolPolicy.ConfirmedToolsPropertyKey = "mmca.tool.confirmed" -> string!
+MMCA.Common.AI.Guardrails.GuardrailServiceCollectionExtensions
+MMCA.Common.AI.Guardrails.GuardrailServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.AI.Guardrails.GuardrailServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddPiiRedactionGuardrail() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.AI.Guardrails.GuardrailServiceCollectionExtensions.AddPiiRedactionGuardrail(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+MMCA.Common.AI.Guardrails.IChatRequestRedactor
+MMCA.Common.AI.Guardrails.IChatRequestRedactor.Redact(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>! messages) -> System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>!
+MMCA.Common.AI.Guardrails.IChatToolPolicy
+MMCA.Common.AI.Guardrails.IChatToolPolicy.Authorize(Microsoft.Extensions.AI.AITool! tool, Microsoft.Extensions.AI.ChatOptions! options) -> MMCA.Common.AI.Guardrails.ToolAuthorization
+MMCA.Common.AI.Guardrails.PiiRedactionGuardrail
+MMCA.Common.AI.Guardrails.PiiRedactionGuardrail.PiiRedactionGuardrail() -> void
+MMCA.Common.AI.Guardrails.PiiRedactionGuardrail.Redact(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>! messages) -> System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>!
+MMCA.Common.AI.Guardrails.PiiRedactionGuardrail.InspectRequestAsync(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Guardrails.PiiRedactionGuardrail.InspectResponseAsync(Microsoft.Extensions.AI.ChatResponse! response, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Guardrails.ToolAuthorization
+MMCA.Common.AI.Guardrails.ToolAuthorization.Denied = 0 -> MMCA.Common.AI.Guardrails.ToolAuthorization
+MMCA.Common.AI.Guardrails.ToolAuthorization.Allowed = 1 -> MMCA.Common.AI.Guardrails.ToolAuthorization

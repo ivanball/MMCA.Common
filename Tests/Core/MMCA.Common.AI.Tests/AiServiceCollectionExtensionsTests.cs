@@ -26,6 +26,11 @@ public sealed class AiServiceCollectionExtensionsTests
             ("Ai:Model", "claude-haiku-4-5"),
             ("Ai:ApiKey", "test-key"),
             ("Ai:MaxOutputTokens", "256"),
+
+            // These facts are about the pipeline's SHAPE, so they opt out of the guardrail
+            // requirement rather than registering one: the default that makes the absence a startup
+            // failure is pinned once, in Guardrails/GuardrailRegistrationTests.
+            ("Ai:RequireGuardrail", "false"),
             .. extra,
         ]);
 
@@ -177,7 +182,9 @@ public sealed class AiServiceCollectionExtensionsTests
     public void Enabled_WithoutAModel_FailsValidation()
     {
         using var inner = new StubChatClient();
-        using var provider = Build(Configuration(("Ai:Enabled", "true"), ("Ai:ApiKey", "test-key")), inner);
+        using var provider = Build(
+            Configuration(("Ai:Enabled", "true"), ("Ai:ApiKey", "test-key"), ("Ai:RequireGuardrail", "false")),
+            inner);
 
         var act = () => provider.GetRequiredService<IOptions<AiSettings>>().Value;
 
@@ -188,7 +195,9 @@ public sealed class AiServiceCollectionExtensionsTests
     public void Enabled_WithoutAnApiKey_FailsValidation()
     {
         using var inner = new StubChatClient();
-        using var provider = Build(Configuration(("Ai:Enabled", "true"), ("Ai:Model", "claude-haiku-4-5")), inner);
+        using var provider = Build(
+            Configuration(("Ai:Enabled", "true"), ("Ai:Model", "claude-haiku-4-5"), ("Ai:RequireGuardrail", "false")),
+            inner);
 
         var act = () => provider.GetRequiredService<IOptions<AiSettings>>().Value;
 

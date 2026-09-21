@@ -24,6 +24,10 @@ public sealed class AiProviderSelectionTests
                 ["Ai:Provider"] = provider,
                 ["Ai:Model"] = "any-model",
                 ["Ai:ApiKey"] = "test-key",
+
+                // Provider selection, not guardrail policy: opted out here so the default stays
+                // pinned in one dedicated place (Guardrails/GuardrailRegistrationTests).
+                ["Ai:RequireGuardrail"] = "false",
             })
             .Build();
 

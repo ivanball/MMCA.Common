@@ -9,13 +9,17 @@ namespace MMCA.Common.AI.Tests.Fixtures;
 /// </summary>
 internal sealed class StubGuardrail(
     GuardrailVerdict? requestVerdict = null,
-    GuardrailVerdict? responseVerdict = null) : IChatGuardrail
+    GuardrailVerdict? responseVerdict = null,
+    Func<ChatResponseUpdate, GuardrailVerdict>? updateVerdict = null) : IChatGuardrail
 {
     /// <summary>How many times the request inspection ran.</summary>
     public int RequestInspections { get; private set; }
 
     /// <summary>How many times the response inspection ran.</summary>
     public int ResponseInspections { get; private set; }
+
+    /// <summary>How many streamed updates were inspected.</summary>
+    public int UpdateInspections { get; private set; }
 
     public ValueTask<GuardrailVerdict> InspectRequestAsync(
         IReadOnlyList<ChatMessage> messages,
@@ -33,5 +37,14 @@ internal sealed class StubGuardrail(
     {
         ResponseInspections++;
         return ValueTask.FromResult(responseVerdict ?? GuardrailVerdict.Allow);
+    }
+
+    public ValueTask<GuardrailVerdict> InspectStreamedUpdateAsync(
+        ChatResponseUpdate update,
+        ChatOptions? options,
+        CancellationToken cancellationToken)
+    {
+        UpdateInspections++;
+        return ValueTask.FromResult(updateVerdict?.Invoke(update) ?? GuardrailVerdict.Allow);
     }
 }

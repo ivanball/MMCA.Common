@@ -96,6 +96,20 @@ public sealed class AiSettings : IValidatableObject
     public bool AllowTools { get; init; }
 
     /// <summary>
+    /// Whether this host must register at least one guardrail before it may talk to a model.
+    /// <see langword="true"/> by default.
+    /// <para>
+    /// A guardrail is a policy the feature cannot bypass: it runs inside the composition root, on
+    /// every call, whatever the calling code believes it is doing. Defaulting this to
+    /// <see langword="true"/> makes "we shipped a model call and nobody inspects it" a startup
+    /// failure rather than a finding, and the message names the one-line fix
+    /// (<c>AddPiiRedactionGuardrail()</c>). A host that deliberately wants none sets it false, which
+    /// is a reviewable line in a configuration file rather than an absence nobody can see.
+    /// </para>
+    /// </summary>
+    public bool RequireGuardrail { get; init; } = true;
+
+    /// <summary>
     /// Whether identical requests may be served from the registered <c>IDistributedCache</c>. Off by
     /// default, and it stays off when the host registered no distributed cache.
     /// </summary>

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.AI;
+using MMCA.Common.AI.Guardrails;
 
 namespace MMCA.Common.AI.Chat;
 
@@ -27,7 +28,13 @@ namespace MMCA.Common.AI.Chat;
 /// <item><description>
 /// <b>Tool use.</b> While <see cref="AiSettings.AllowTools"/> is false, tools and the tool mode are
 /// stripped from the request. A model that is never handed a tool cannot be argued into calling one,
-/// which is the difference between "we told it not to" and "it could not".
+/// which is the difference between "we told it not to" and "it could not". While it is true, each
+/// tool is offered only when EVERY registered <see cref="Guardrails.IChatToolPolicy"/> allows it,
+/// and a tool marked consequential
+/// (<see cref="Guardrails.ChatToolPolicy.ConsequentialPropertyKey"/>) only when the request also
+/// names it in <see cref="Guardrails.ChatToolPolicy.ConfirmedToolsPropertyKey"/>. With no policy
+/// registered every tool is stripped: the layer fails closed, so a missing policy costs a capability
+/// rather than granting one.
 /// </description></item>
 /// <item><description>
 /// <b>Input size.</b> When <see cref="AiSettings.PerCallInputTokenBudget"/> is set, an ESTIMATED
@@ -58,15 +65,35 @@ namespace MMCA.Common.AI.Chat;
 public sealed class BoundedChatClient : DelegatingChatClient
 {
     private readonly AiSettings _settings;
+    private readonly IChatToolPolicy[] _toolPolicies;
 
     /// <summary>Initializes a new instance of the <see cref="BoundedChatClient"/> class.</summary>
     /// <param name="innerClient">The client to wrap.</param>
     /// <param name="settings">The bounds to enforce.</param>
+    /// <remarks>
+    /// No tool policies, which while <see cref="AiSettings.AllowTools"/> is true means every tool is
+    /// stripped. Registration refuses that combination outright, so this overload is for a host that
+    /// composes the client by hand and does not offer tools.
+    /// </remarks>
     public BoundedChatClient(IChatClient innerClient, AiSettings settings)
+        : this(innerClient, settings, [])
+    {
+    }
+
+    /// <summary>Initializes a new instance of the <see cref="BoundedChatClient"/> class.</summary>
+    /// <param name="innerClient">The client to wrap.</param>
+    /// <param name="settings">The bounds to enforce.</param>
+    /// <param name="toolPolicies">Every tool policy to consult, all of which must allow a tool for it to be offered.</param>
+    public BoundedChatClient(
+        IChatClient innerClient,
+        AiSettings settings,
+        IEnumerable<IChatToolPolicy> toolPolicies)
         : base(innerClient)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(toolPolicies);
         _settings = settings;
+        _toolPolicies = [.. toolPolicies];
     }
 
     /// <inheritdoc />
@@ -164,6 +191,16 @@ public sealed class BoundedChatClient : DelegatingChatClient
             bounded.Tools = null;
             bounded.ToolMode = null;
         }
+        else
+        {
+            bounded.Tools = FilterTools(bounded);
+            if (bounded.Tools is null)
+            {
+                // A tool mode without tools is a request the provider cannot honor, and
+                // RequireAny would make it an error rather than a plain answer.
+                bounded.ToolMode = null;
+            }
+        }
 
         if (_settings.Model is { } pinned)
         {
@@ -183,6 +220,51 @@ public sealed class BoundedChatClient : DelegatingChatClient
         }
 
         return bounded;
+    }
+
+    /// <summary>
+    /// Narrows the tools on a request to the ones every policy allows and the caller confirmed where
+    /// confirmation is required.
+    /// </summary>
+    /// <param name="bounded">This client's own clone of the options, never the caller's.</param>
+    /// <returns>The tools to offer, or <see langword="null"/> when none survive.</returns>
+    private List<AITool>? FilterTools(ChatOptions bounded)
+    {
+        if (bounded.Tools is not { Count: > 0 } requested)
+        {
+            return null;
+        }
+
+        // No policy is not "no restriction": an unanswered question about a capability is answered
+        // by withholding it. Registration refuses this combination, so reaching here means the
+        // client was composed by hand.
+        if (_toolPolicies.Length == 0)
+        {
+            return null;
+        }
+
+        var confirmed = ChatToolPolicy.ReadConfirmedTools(bounded);
+        var offered = new List<AITool>(requested.Count);
+
+        foreach (var tool in requested)
+        {
+            if (!Array.TrueForAll(_toolPolicies, policy => policy.Authorize(tool, bounded) == ToolAuthorization.Allowed))
+            {
+                continue;
+            }
+
+            // The confirmation is checked on top of the policies, never instead of them: a confirmed
+            // tool a policy denies stays denied, because a human saying yes to a prompt is not a
+            // grant of an authority the application never had.
+            if (ChatToolPolicy.IsConsequential(tool) && !confirmed.Contains(tool.Name, StringComparer.Ordinal))
+            {
+                continue;
+            }
+
+            offered.Add(tool);
+        }
+
+        return offered.Count == 0 ? null : offered;
     }
 
     private CancellationTokenSource CreateLinkedTimeout(CancellationToken cancellationToken)

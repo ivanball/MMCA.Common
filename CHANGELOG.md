@@ -6,6 +6,59 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`MMCA.Common.AI.Anthropic` and `MMCA.Common.AI.OpenAI` (NEW packages): the provider is an
+  adapter, not a member of the governed package** (rubric section 16, ADR-120). Each ships one
+  `IAiProviderFactory` (`MMCA.Common.AI.Providers`) and one registration call
+  (`AddAnthropicAiProvider()`, `AddOpenAiProvider()`); `AddMmcaChatClient(configuration)` selects
+  the factory whose `Name` matches `Ai:Provider` case-insensitively and validates that match on
+  start, so a host naming a provider it never registered fails at boot with the registered names in
+  the message. `Ai:Endpoint` (absolute URI, optional) routes either adapter through an AI gateway,
+  a regional endpoint or an OpenAI-compatible server. The `provider` tag on every
+  `MMCA.Common.AI` instrument now comes from the inner client's `ChatClientMetadata.ProviderName`
+  (`anthropic`, `openai`), so a foreign client supplied through the factory overload is metered as
+  what it is; the configured name is only the fallback.
+- **`MMCA.Common.AI.Testing` (NEW package): a provider-neutral evaluation harness.**
+  `ReplayChatClient` replays `ChatResponse` recordings, `RecordedResponses` reads and writes them
+  in Microsoft.Extensions.AI's own JSON shape (never a vendor wire format, so a provider swap
+  cannot invalidate a corpus), `GoldenReplayTestsBase` runs every golden case through a subclass's
+  real code path and fails once naming each failing case, and `PromptContractPinTestsBase` pins
+  every `PromptContract` hash to a `prompt-versions.json`, failing on an unrecorded version or a
+  prompt edit without a version bump. The framework's own AI test project subclasses both over a
+  reference contract and a three-case corpus, so the evaluation gate and the prompt-change protocol
+  run on every MMCA.Common pull request.
+- **`PromptTaggingChatClient`** (`MMCA.Common.AI.Chat`): composed just inside the OpenTelemetry
+  layer, it sets `mmca.prompt.name`, `mmca.prompt.version` and `mmca.prompt.hash` on the pipeline's
+  own `gen_ai` span (and only on an activity from the `MMCA.Common.AI` source), so a trace can be
+  filtered by prompt exactly as the token counters already can.
+- **Guardrails with substance** (`MMCA.Common.AI.Guardrails`): `IChatRequestRedactor` rewrites the
+  outgoing messages before any guardrail inspects them (new instances, never the caller's);
+  `PiiRedactionGuardrail` (`AddPiiRedactionGuardrail()`) redacts email addresses and phone numbers
+  with the same patterns the ADC session scorer used in-class; `IChatGuardrail` gains a default
+  `InspectStreamedUpdateAsync`, and `GuardrailChatClient` now inspects every streamed update before
+  yielding it, ending the stream with `ChatGuardrailException` on the first block.
+- **Tool policy with a confirmation path** (`MMCA.Common.AI.Guardrails`): `IChatToolPolicy`
+  authorizes each `AITool` per request; with `Ai:AllowTools` true a tool is offered only when every
+  registered policy allows it, and a tool marked `ChatToolPolicy.ConsequentialPropertyKey` also
+  needs its name in the request's `ChatToolPolicy.ConfirmedToolsPropertyKey`. No policy registered
+  means no tool leaves the boundary.
+
+### Changed
+
+- **`MMCA.Common.AI` takes no vendor SDK.** The `Anthropic` package reference moved to
+  `MMCA.Common.AI.Anthropic`; `AiProvider` (the enum) is removed and `AiSettings.Provider` is a
+  required string when `Ai:Enabled` is true. `BoundedChatClient` pins the model: every request goes
+  out naming `Ai:Model`, and one naming a different model is refused before the provider is called,
+  which makes `PromptContract.Model` mean the same thing on an adapter that honors a per-request
+  override (Anthropic) and one that binds the model at construction (OpenAI).
+  `EnforceAiLayerBoundary` covers every `MMCA.Common.AI.*` project.
+- **Two governance defaults are on:** `Ai:RequireGuardrail` (default `true`) makes
+  `AddMmcaChatClient` throw at registration when the dependency is enabled with no guardrail or
+  redactor registered, and `Ai:AllowTools` true now requires at least one `IChatToolPolicy` or
+  registration throws. **Breaking:** the map, the mechanical fix and the `provider` tag casing
+  change (`Anthropic` to `anthropic`) are in `UPGRADING.md`.
+
 ## [1.206.0] - 2026-09-20
 
 ### Added

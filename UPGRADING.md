@@ -34,6 +34,54 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**`MMCA.Common.AI` names no vendor: the provider is an adapter package selected by name.** The
+`Anthropic` package reference leaves the governed package, `AiProvider` (the enum) is gone, and
+`Ai:Provider` is a string matched case-insensitively against the `IAiProviderFactory` instances the
+host registered. Two adapters ship: `MMCA.Common.AI.Anthropic` (`AddAnthropicAiProvider()`, name
+`Anthropic`) and `MMCA.Common.AI.OpenAI` (`AddOpenAiProvider()`, name `OpenAI`). A host that names
+a provider it never registered fails at startup with the registered names in the message.
+
+The mechanical fix for a host on the Anthropic provider:
+
+1. Reference `MMCA.Common.AI.Anthropic` beside `MMCA.Common.AI` (the host project that calls
+   `AddMmcaChatClient`; the adapter is an Infrastructure-tier reference like the governed package).
+2. Call `builder.Services.AddAnthropicAiProvider();` before `AddMmcaChatClient(configuration)`.
+3. Keep `"Provider": "Anthropic"` in the `Ai` section (it now binds as a string; `Ai:Provider` is
+   required whenever `Ai:Enabled` is true). Optional new key `Ai:Endpoint` (absolute URI) routes the
+   adapter through a gateway or compatible endpoint.
+4. Delete any code that constructed `AnthropicClient` for the governed pipeline itself; a test tier
+   that built one directly builds its client through `AddMmcaChatClient` with the same section, or
+   through the factory overload.
+
+Old-to-new map for the public surface:
+
+| Old | New |
+|-----|-----|
+| `MMCA.Common.AI.AiProvider` (enum) | removed; `AiSettings.Provider` is `string?` |
+| `UsageRecordingChatClient(inner, meter, AiProvider)` | `UsageRecordingChatClient(inner, meter, string? configuredProvider)`; the `provider` tag now comes from the inner client's `ChatClientMetadata.ProviderName` (`anthropic`, `openai`, lower-case) and the configured name is only the fallback |
+| `AiUsageMeter.Record(..., AiProvider)` / `RecordDuration(..., AiProvider, outcome)` | same members with `string? provider` |
+| provider constructed inside `AddMmcaChatClient` | `IAiProviderFactory` (`MMCA.Common.AI.Providers`), one per adapter package |
+
+**Dashboards and alerts:** the `provider` dimension on `mmca.ai.input_tokens`, `mmca.ai.output_tokens`
+and `mmca.ai.call.duration` changes value from `Anthropic` to `anthropic`. A query filtering on the
+old casing must be updated in the same release.
+
+**Three new bounds are on by default and can refuse a host at startup or a request at the call:**
+
+- `Ai:RequireGuardrail` (default `true`): `AddMmcaChatClient` throws at registration when
+  `Ai:Enabled` is true and no `IChatGuardrail` or `IChatRequestRedactor` is registered. Register
+  one (`AddPiiRedactionGuardrail()` is the framework's own) or set the key to `false` deliberately.
+- `Ai:AllowTools` now needs an `IChatToolPolicy`: with `AllowTools` true and no policy registered,
+  registration throws; with policies, a tool is offered only when every policy allows it, and a
+  tool marked `mmca.tool.consequential` also needs its name in the request's
+  `mmca.tool.confirmed` property.
+- The model is pinned: a request whose `ChatOptions.ModelId` differs from `Ai:Model` is refused
+  before the provider is called. A `PromptContract` whose `Model` is not the configured model now
+  fails at the call rather than silently routing (Anthropic) or silently hashing (OpenAI).
+
+**`IChatGuardrail` gained a default member** (`InspectStreamedUpdateAsync`); existing
+implementations compile unchanged and inspect nothing on the streamed path until they override it.
+
 ## [1.206.0] - 2026-09-20
 
 **`ConstructorDependencyCountTestsBase` subclasses must declare two more ceilings.** The base now

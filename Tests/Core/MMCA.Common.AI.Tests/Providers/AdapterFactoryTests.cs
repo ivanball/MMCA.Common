@@ -91,6 +91,10 @@ public sealed class AdapterFactoryTests
                 ["Ai:Provider"] = configured,
                 ["Ai:Model"] = "any-model",
                 ["Ai:ApiKey"] = "test-key",
+
+                // Adapter selection, not guardrail policy: opted out here so the default stays
+                // pinned in one dedicated place (Guardrails/GuardrailRegistrationTests).
+                ["Ai:RequireGuardrail"] = "false",
             })
             .Build();
         var services = new ServiceCollection();

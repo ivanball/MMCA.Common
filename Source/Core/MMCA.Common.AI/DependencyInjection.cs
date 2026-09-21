@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.AI.Chat;
+using MMCA.Common.AI.Guardrails;
 using MMCA.Common.AI.Observability;
 using MMCA.Common.AI.Providers;
 
@@ -40,8 +41,17 @@ namespace MMCA.Common.AI;
 /// </para>
 /// <para>
 /// The guardrail layer is added ONLY when the host registered at least one
-/// <see cref="Chat.IChatGuardrail"/>, so an application that adopts none keeps the chain it had,
-/// down to the type the container hands back.
+/// <see cref="Chat.IChatGuardrail"/> or one <see cref="Guardrails.IChatRequestRedactor"/>, so an
+/// application that adopts neither keeps the chain it had, down to the type the container hands
+/// back. Registering neither is itself a startup failure while
+/// <see cref="AiSettings.RequireGuardrail"/> is true (its default), and
+/// <c>AddPiiRedactionGuardrail()</c> is the one-line answer.
+/// </para>
+/// <para>
+/// <b>Two registration-time refusals.</b> Both are thrown here rather than left to the first
+/// request, because a bound nobody reaches is not a bound: an application that ships without a
+/// guardrail, or with tools enabled and no policy to gate them, should fail the deployment rather
+/// than the tenth user.
 /// </para>
 /// <para>
 /// <b>The provider is a registered factory, never a type this package names.</b> The
@@ -121,6 +131,16 @@ public static class AiServiceCollectionExtensions
                 return services;
             }
 
+            // The descriptor checks (not resolves) are what keep the guardrail layer out of a host
+            // that registered neither: adding an empty-loop client would change the type the
+            // container hands back for every application that adopts none of this. They are also
+            // what the two registration-time refusals below read, so the answer is the same one the
+            // pipeline is built from.
+            var hasGuardrail = services.Any(descriptor => descriptor.ServiceType == typeof(IChatGuardrail));
+            var hasRedactor = services.Any(descriptor => descriptor.ServiceType == typeof(IChatRequestRedactor));
+
+            RefuseAnUngovernedHost(services, settings, hasGuardrail, hasRedactor);
+
             services.AddMetrics();
             services.TryAddSingleton<AiUsageMeter>();
 
@@ -130,16 +150,15 @@ public static class AiServiceCollectionExtensions
                 .AddChatClient(providerFactory)
                 .Use((inner, serviceProvider) => new BoundedChatClient(
                     inner,
-                    serviceProvider.GetRequiredService<IOptions<AiSettings>>().Value));
+                    serviceProvider.GetRequiredService<IOptions<AiSettings>>().Value,
+                    serviceProvider.GetServices<IChatToolPolicy>()));
 
-            // The descriptor check (not a resolve) is what keeps the layer out of a host that
-            // registered no guardrail: adding an empty-loop client would change the type the
-            // container hands back for every application that adopts none of this.
-            if (services.Any(descriptor => descriptor.ServiceType == typeof(IChatGuardrail)))
+            if (hasGuardrail || hasRedactor)
             {
                 builder = builder.Use((inner, serviceProvider) => new GuardrailChatClient(
                     inner,
-                    serviceProvider.GetServices<IChatGuardrail>()));
+                    serviceProvider.GetServices<IChatGuardrail>(),
+                    serviceProvider.GetServices<IChatRequestRedactor>()));
             }
 
             builder = builder
@@ -165,6 +184,45 @@ public static class AiServiceCollectionExtensions
                 .UseLogging();
 
             return services;
+        }
+    }
+
+    /// <summary>
+    /// Throws when an enabled host has switched something on without registering what governs it.
+    /// </summary>
+    /// <param name="services">The service collection being configured.</param>
+    /// <param name="settings">The bound settings for this host.</param>
+    /// <param name="hasGuardrail">Whether an <see cref="IChatGuardrail"/> descriptor is present.</param>
+    /// <param name="hasRedactor">Whether an <see cref="IChatRequestRedactor"/> descriptor is present.</param>
+    /// <exception cref="InvalidOperationException">When a required extension point is missing.</exception>
+    /// <remarks>
+    /// At registration rather than on the first call, and with the fix in the message both times: a
+    /// bound nobody reaches is not a bound, so the deployment fails instead of the tenth user.
+    /// </remarks>
+    private static void RefuseAnUngovernedHost(
+        IServiceCollection services,
+        AiSettings settings,
+        bool hasGuardrail,
+        bool hasRedactor)
+    {
+        if (settings.RequireGuardrail && !hasGuardrail && !hasRedactor)
+        {
+            throw new InvalidOperationException(
+                $"{AiSettings.SectionName}:{nameof(AiSettings.Enabled)} is true but this host registered no "
+                + $"{nameof(IChatGuardrail)} and no {nameof(IChatRequestRedactor)}, so nothing inspects what is "
+                + "sent to the model or what comes back. Register a guardrail before AddMmcaChatClient, or call "
+                + "AddPiiRedactionGuardrail() for the one this framework ships. A host that deliberately wants "
+                + $"none sets {AiSettings.SectionName}:{nameof(AiSettings.RequireGuardrail)} to false, which is a "
+                + "reviewable line rather than an absence nobody can see.");
+        }
+
+        if (settings.AllowTools && !services.Any(descriptor => descriptor.ServiceType == typeof(IChatToolPolicy)))
+        {
+            throw new InvalidOperationException(
+                $"{AiSettings.SectionName}:{nameof(AiSettings.AllowTools)} is true but this host registered no "
+                + $"{nameof(IChatToolPolicy)}, so nothing decides which tools the model may be offered and every "
+                + $"tool would be stripped. Register an {nameof(IChatToolPolicy)} before AddMmcaChatClient, or "
+                + $"leave {AiSettings.SectionName}:{nameof(AiSettings.AllowTools)} false.");
         }
     }
 
