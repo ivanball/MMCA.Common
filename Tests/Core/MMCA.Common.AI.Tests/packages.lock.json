@@ -215,6 +215,13 @@
           "OpenAI": "[2.14.0, )"
         }
       },
+      "mmca.common.ai.testing": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.AI": "[1.0.0, )",
+          "xunit.v3.extensibility.core": "[4.0.1, )"
+        }
+      },
       "Anthropic": {
         "type": "CentralTransitive",
         "requested": "[12.48.0, )",
