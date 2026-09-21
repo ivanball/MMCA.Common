@@ -1,0 +1,20 @@
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "contents": [
+        {
+          "$type": "text",
+          "text": "A golden corpus is recorded once and replayed on every pull request.\nIt runs with no model, no credential and no network.\nWhen the answer changes, the diff is the evidence."
+        }
+      ]
+    }
+  ],
+  "modelId": "reference-model",
+  "finishReason": "stop",
+  "usage": {
+    "inputTokenCount": 35,
+    "outputTokenCount": 33,
+    "totalTokenCount": 68
+  }
+}

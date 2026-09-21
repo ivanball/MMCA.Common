@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.AI.Testing</PackageId>
+    <Description>MMCA framework evaluation harness for the governed language-model boundary: a replay IChatClient over recorded Microsoft.Extensions.AI responses, abstract xUnit bases for a golden-replay gate and for pinning every PromptContract to a recorded hash, so a prompt change cannot ship unevaluated and a corpus survives a provider swap</Description>
+    <!--
+      This package ships abstract xUnit [Fact] bases, so it carries test-style member names
+      (underscores). Relax the documentation analyzers exactly as the sibling
+      MMCA.Common.Testing.Architecture package does for test infrastructure, plus CA1707 (underscores
+      in the inherited [Fact] method names) and only the rules the code still triggers (kept minimal
+      on purpose). S2699 ("add at least one assertion") goes with them: these [Fact] bodies report a
+      violation by throwing with the full list of what failed, which is the assertion, and the rule
+      only recognizes a call into an assertion library.
+    -->
+    <NoWarn>$(NoWarn);CA1707;S2699;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0076;MA0127;RCS1112</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3.extensibility.core" />
+  </ItemGroup>
+  <!--
+    The governed package and nothing else. A vendor SDK reference here would defeat the point: the
+    corpus is recorded in the Microsoft.Extensions.AI shape, so the same recorded answers replay
+    unchanged after a provider swap. The harness needs PromptContract (the hash a recorded corpus is
+    keyed on) and the Microsoft.Extensions.AI abstractions it arrives with, so it takes the AI
+    package by project reference and stays free of every other MMCA layer
+    (EnforceAiLayerBoundary in MMCA.Common.LayerEnforcement.targets matches this project too, by the
+    MMCA.Common.AI. prefix).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\MMCA.Common.AI\MMCA.Common.AI.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

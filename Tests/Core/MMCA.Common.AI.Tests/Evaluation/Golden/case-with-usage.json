@@ -1,0 +1,20 @@
+{
+  "messages": [
+    {
+      "role": "assistant",
+      "contents": [
+        {
+          "$type": "text",
+          "text": "Every call records its token usage, tagged by prompt name, version and hash."
+        }
+      ]
+    }
+  ],
+  "modelId": "reference-model",
+  "finishReason": "stop",
+  "usage": {
+    "inputTokenCount": 41,
+    "outputTokenCount": 16,
+    "totalTokenCount": 57
+  }
+}

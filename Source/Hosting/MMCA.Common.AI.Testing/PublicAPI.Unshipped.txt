@@ -1,0 +1,43 @@
+#nullable enable
+MMCA.Common.AI.Testing.GoldenReplayCase
+MMCA.Common.AI.Testing.GoldenReplayCase.<Clone>$() -> MMCA.Common.AI.Testing.GoldenReplayCase!
+MMCA.Common.AI.Testing.GoldenReplayCase.Deconstruct(out string! Id, out string! Description, out string! ResponsePath) -> void
+MMCA.Common.AI.Testing.GoldenReplayCase.Description.get -> string!
+MMCA.Common.AI.Testing.GoldenReplayCase.Description.init -> void
+MMCA.Common.AI.Testing.GoldenReplayCase.Equals(MMCA.Common.AI.Testing.GoldenReplayCase? other) -> bool
+MMCA.Common.AI.Testing.GoldenReplayCase.GoldenReplayCase(string! Id, string! Description, string! ResponsePath) -> void
+MMCA.Common.AI.Testing.GoldenReplayCase.Id.get -> string!
+MMCA.Common.AI.Testing.GoldenReplayCase.Id.init -> void
+MMCA.Common.AI.Testing.GoldenReplayCase.ResponsePath.get -> string!
+MMCA.Common.AI.Testing.GoldenReplayCase.ResponsePath.init -> void
+MMCA.Common.AI.Testing.GoldenReplayTestsBase
+MMCA.Common.AI.Testing.GoldenReplayTestsBase.EveryGoldenCase_ReplaysAsRecorded() -> System.Threading.Tasks.Task!
+MMCA.Common.AI.Testing.GoldenReplayTestsBase.GoldenReplayTestsBase() -> void
+MMCA.Common.AI.Testing.PromptContractPinTestsBase
+MMCA.Common.AI.Testing.PromptContractPinTestsBase.EveryContract_HasARecordedHash() -> void
+MMCA.Common.AI.Testing.PromptContractPinTestsBase.EveryRecordedHash_MatchesTheCurrentContract() -> void
+MMCA.Common.AI.Testing.PromptContractPinTestsBase.PromptContractPinTestsBase() -> void
+MMCA.Common.AI.Testing.RecordedResponses
+MMCA.Common.AI.Testing.ReplayChatClient
+MMCA.Common.AI.Testing.ReplayChatClient.CallCount.get -> int
+MMCA.Common.AI.Testing.ReplayChatClient.Dispose() -> void
+MMCA.Common.AI.Testing.ReplayChatClient.GetResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.Extensions.AI.ChatResponse!>!
+MMCA.Common.AI.Testing.ReplayChatClient.GetService(System.Type! serviceType, object? serviceKey = null) -> object?
+MMCA.Common.AI.Testing.ReplayChatClient.GetStreamingResponseAsync(System.Collections.Generic.IEnumerable<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate!>!
+MMCA.Common.AI.Testing.ReplayChatClient.LastMessages.get -> System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>!
+MMCA.Common.AI.Testing.ReplayChatClient.LastOptions.get -> Microsoft.Extensions.AI.ChatOptions?
+MMCA.Common.AI.Testing.ReplayChatClient.ReplayChatClient(Microsoft.Extensions.AI.ChatResponse! response) -> void
+MMCA.Common.AI.Testing.ReplayChatClient.ReplayChatClient(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatResponse!>! responses) -> void
+abstract MMCA.Common.AI.Testing.GoldenReplayTestsBase.AssertCaseAsync(MMCA.Common.AI.Testing.GoldenReplayCase! testCase, MMCA.Common.AI.Testing.ReplayChatClient! replay, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+abstract MMCA.Common.AI.Testing.GoldenReplayTestsBase.Cases.get -> System.Collections.Generic.IEnumerable<MMCA.Common.AI.Testing.GoldenReplayCase!>!
+abstract MMCA.Common.AI.Testing.PromptContractPinTestsBase.Contracts.get -> System.Collections.Generic.IEnumerable<MMCA.Common.AI.PromptContract!>!
+abstract MMCA.Common.AI.Testing.PromptContractPinTestsBase.PinFilePath.get -> string!
+override MMCA.Common.AI.Testing.GoldenReplayCase.Equals(object? obj) -> bool
+override MMCA.Common.AI.Testing.GoldenReplayCase.GetHashCode() -> int
+override MMCA.Common.AI.Testing.GoldenReplayCase.ToString() -> string!
+static MMCA.Common.AI.Testing.GoldenReplayCase.operator !=(MMCA.Common.AI.Testing.GoldenReplayCase? left, MMCA.Common.AI.Testing.GoldenReplayCase? right) -> bool
+static MMCA.Common.AI.Testing.GoldenReplayCase.operator ==(MMCA.Common.AI.Testing.GoldenReplayCase? left, MMCA.Common.AI.Testing.GoldenReplayCase? right) -> bool
+static MMCA.Common.AI.Testing.RecordedResponses.Deserialize(string! json) -> Microsoft.Extensions.AI.ChatResponse!
+static MMCA.Common.AI.Testing.RecordedResponses.Read(string! path) -> Microsoft.Extensions.AI.ChatResponse!
+static MMCA.Common.AI.Testing.RecordedResponses.Serialize(Microsoft.Extensions.AI.ChatResponse! response) -> string!
+static MMCA.Common.AI.Testing.RecordedResponses.Write(string! path, Microsoft.Extensions.AI.ChatResponse! response) -> void
