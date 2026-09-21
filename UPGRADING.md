@@ -34,6 +34,8 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.207.0] - 2026-09-21
+
 **`MMCA.Common.AI` names no vendor: the provider is an adapter package selected by name.** The
 `Anthropic` package reference leaves the governed package, `AiProvider` (the enum) is gone, and
 `Ai:Provider` is a string matched case-insensitively against the `IAiProviderFactory` instances the
