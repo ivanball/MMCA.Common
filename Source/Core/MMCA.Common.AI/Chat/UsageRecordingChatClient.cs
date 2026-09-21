@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using MMCA.Common.AI.Observability;
@@ -12,6 +13,13 @@ namespace MMCA.Common.AI.Chat;
 /// It reads the numbers the provider returned rather than estimating them, which is why it sits here
 /// and not beside the input-budget check in <see cref="BoundedChatClient"/>: a bound has to be
 /// decided BEFORE the call, and a cost has to be measured AFTER it.
+/// </para>
+/// <para>
+/// The <c>provider</c> tag is read from the inner client itself: the <see cref="ChatClientMetadata"/>
+/// every Microsoft.Extensions.AI adapter publishes carries the provider's own name
+/// (<c>anthropic</c>, <c>openai</c>), so a host that supplied a foreign client through the factory
+/// overload is metered as what it is. The configured <see cref="AiSettings.Provider"/> is only the
+/// fallback for a client that reports none, lower-cased to match the convention the adapters use.
 /// </para>
 /// <para>
 /// The streaming path accumulates usage from the update stream, where providers deliver it as a
@@ -30,18 +38,46 @@ namespace MMCA.Common.AI.Chat;
 public sealed class UsageRecordingChatClient : DelegatingChatClient
 {
     private readonly AiUsageMeter _meter;
-    private readonly AiProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="UsageRecordingChatClient"/> class.</summary>
     /// <param name="innerClient">The client to wrap.</param>
     /// <param name="meter">The meter to report to.</param>
-    /// <param name="provider">The provider tag applied to every measurement.</param>
-    public UsageRecordingChatClient(IChatClient innerClient, AiUsageMeter meter, AiProvider provider)
+    /// <param name="configuredProvider">The configured provider name, used only when the inner client reports none.</param>
+    public UsageRecordingChatClient(IChatClient innerClient, AiUsageMeter meter, string? configuredProvider)
         : base(innerClient)
     {
         ArgumentNullException.ThrowIfNull(meter);
         _meter = meter;
-        _provider = provider;
+        Provider = ResolveProviderName(innerClient, configuredProvider);
+    }
+
+    /// <summary>The provider name every measurement from this client is tagged with.</summary>
+    public string Provider { get; }
+
+    /// <summary>
+    /// Resolves the provider tag for a client: what the client says it is, else what the host
+    /// configured, else <c>unknown</c>.
+    /// </summary>
+    /// <param name="client">The client whose metadata to read.</param>
+    /// <param name="configuredProvider">The configured fallback.</param>
+    /// <returns>A non-empty provider name.</returns>
+    [SuppressMessage(
+        "Globalization",
+        "CA1308:Normalize strings to uppercase",
+        Justification = "The tag is a lowercase identifier matching the provider names Microsoft.Extensions.AI adapters report (anthropic, openai), not display text; upper-casing would split one provider into two series.")]
+    public static string ResolveProviderName(IChatClient client, string? configuredProvider)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        var reported = client.GetService<ChatClientMetadata>()?.ProviderName;
+        if (!string.IsNullOrWhiteSpace(reported))
+        {
+            return reported;
+        }
+
+        return string.IsNullOrWhiteSpace(configuredProvider)
+            ? "unknown"
+            : configuredProvider.ToLowerInvariant();
     }
 
     /// <inheritdoc />
@@ -75,7 +111,7 @@ public sealed class UsageRecordingChatClient : DelegatingChatClient
             response.ModelId ?? options?.ModelId,
             PromptContract.ReadName(options),
             PromptContract.ReadVersion(options),
-            _provider);
+            Provider);
 
         return response;
     }
@@ -149,7 +185,7 @@ public sealed class UsageRecordingChatClient : DelegatingChatClient
                 model,
                 PromptContract.ReadName(options),
                 PromptContract.ReadVersion(options),
-                _provider);
+                Provider);
         }
     }
 
@@ -162,6 +198,6 @@ public sealed class UsageRecordingChatClient : DelegatingChatClient
             model,
             PromptContract.ReadName(options),
             PromptContract.ReadVersion(options),
-            _provider,
+            Provider,
             outcome);
 }

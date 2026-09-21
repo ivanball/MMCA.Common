@@ -38,4 +38,23 @@ public interface IChatGuardrail
         ChatResponse response,
         ChatOptions? options,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Inspects one streamed update before it reaches the caller. Allows by default, so a guardrail
+    /// written before this member existed keeps compiling and keeps its streaming behavior.
+    /// </summary>
+    /// <param name="update">The update about to be yielded.</param>
+    /// <param name="options">The options the call carried.</param>
+    /// <param name="cancellationToken">The caller's cancellation token.</param>
+    /// <returns>A verdict; a block ends the stream at this update.</returns>
+    /// <remarks>
+    /// An update is a fragment, not an answer: a rule that needs the whole text has to accumulate it
+    /// in the implementation, because this member is handed the pieces as they arrive. Blocking here
+    /// stops the stream from that point on, and the caller has already seen everything yielded
+    /// before it.
+    /// </remarks>
+    ValueTask<GuardrailVerdict> InspectStreamedUpdateAsync(
+        ChatResponseUpdate update,
+        ChatOptions? options,
+        CancellationToken cancellationToken) => ValueTask.FromResult(GuardrailVerdict.Allow);
 }

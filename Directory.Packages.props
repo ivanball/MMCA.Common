@@ -113,6 +113,12 @@
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
     <PackageVersion Include="Anthropic" Version="12.48.0" />
+    <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
+         AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
+         line above, so the two bump together; OpenAI is referenced directly by the adapter project so
+         the vendor SDK is pinned here like Anthropic is, not floated by the adapter's own floor. -->
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.0" />
+    <PackageVersion Include="OpenAI" Version="2.14.0" />
     <!-- Messaging (MassTransit) -->
     <!-- Pinned to v8 (free). v9.x introduced a commercial license requirement; the bus fails the
          license check at startup ("License must be specified with SetLicense/SetLicenseLocation

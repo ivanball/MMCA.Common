@@ -19,6 +19,21 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <!-- The governed package plus both adapters: the provider tests construct each adapter's client
+         with a fake key and assert its shape and metadata, never a request. No test here reaches a
+         network, and the project carries no credential a test could accidentally use. -->
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI\MMCA.Common.AI.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI.Anthropic\MMCA.Common.AI.Anthropic.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI.OpenAI\MMCA.Common.AI.OpenAI.csproj" />
+    <!-- The evaluation harness this project both consumes and proves: the framework runs its own
+         golden-replay gate and its own prompt-contract pin over a reference contract, so the bases
+         consumers subclass are exercised on every pull request here rather than only downstream. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.AI.Testing\MMCA.Common.AI.Testing.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The golden corpus and the prompt-version pin file are data, not code: they are read from
+         disk at run time so a recorded answer stays readable in review and a case can be added
+         without recompiling the harness. -->
+    <None Update="Evaluation\Golden\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

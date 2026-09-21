@@ -1,0 +1,10 @@
+#nullable enable
+MMCA.Common.AI.OpenAI.OpenAiProviderFactory
+MMCA.Common.AI.OpenAI.OpenAiProviderFactory.Create(MMCA.Common.AI.AiSettings! settings, System.IServiceProvider! serviceProvider) -> Microsoft.Extensions.AI.IChatClient!
+MMCA.Common.AI.OpenAI.OpenAiProviderFactory.Name.get -> string!
+MMCA.Common.AI.OpenAI.OpenAiProviderFactory.OpenAiProviderFactory() -> void
+MMCA.Common.AI.OpenAI.OpenAiServiceCollectionExtensions
+MMCA.Common.AI.OpenAI.OpenAiServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.AI.OpenAI.OpenAiServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddOpenAiProvider() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+const MMCA.Common.AI.OpenAI.OpenAiProviderFactory.ProviderName = "OpenAI" -> string!
+static MMCA.Common.AI.OpenAI.OpenAiServiceCollectionExtensions.AddOpenAiProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

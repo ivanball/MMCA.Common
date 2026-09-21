@@ -26,7 +26,7 @@ public sealed class UsageRecordingChatClientTests
             Usage = new UsageDetails { InputTokenCount = 120, OutputTokenCount = 34 },
         };
         using var inner = new StubChatClient(response);
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
         var options = new PromptContract("session-scoring", "3", "claude-haiku-4-5", "be terse").ToChatOptions();
 
         await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
@@ -38,7 +38,7 @@ public sealed class UsageRecordingChatClientTests
         input.Tags["model"].Should().Be("claude-haiku-4-5");
         input.Tags["prompt_name"].Should().Be("session-scoring");
         input.Tags["prompt_version"].Should().Be("3");
-        input.Tags["provider"].Should().Be("Anthropic");
+        input.Tags["provider"].Should().Be("anthropic", "a client reporting no metadata falls back to the configured name, lower-cased like the adapters' own");
 
         recorder.Measurements.Single(m => m.Instrument == AiUsageMeter.OutputTokensCounterName).Value.Should().Be(34);
     }
@@ -48,7 +48,7 @@ public sealed class UsageRecordingChatClientTests
     {
         using var recorder = new UsageRecorder();
         using var inner = new StubChatClient(new ChatResponse { ModelId = "claude-haiku-4-5" });
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
 
         await client.GetResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken);
 
@@ -62,7 +62,7 @@ public sealed class UsageRecordingChatClientTests
         using var recorder = new UsageRecorder();
         var response = new ChatResponse { Usage = new UsageDetails { InputTokenCount = 10 } };
         using var inner = new StubChatClient(response);
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
 
         await client.GetResponseAsync(Prompt, new ChatOptions { ModelId = "fallback-model" }, TestContext.Current.CancellationToken);
 
@@ -85,7 +85,7 @@ public sealed class UsageRecordingChatClientTests
             ModelId = "claude-haiku-4-5",
         };
         using var inner = new StubChatClient(updates: [new ChatResponseUpdate(ChatRole.Assistant, "ok"), usage]);
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
 
         await foreach (var update in client.GetStreamingResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken))
         {
@@ -105,7 +105,7 @@ public sealed class UsageRecordingChatClientTests
         using var recorder = new UsageRecorder();
         var response = new ChatResponse { ModelId = "claude-haiku-4-5" };
         using var inner = new StubChatClient(response);
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
         var options = new PromptContract("session-scoring", "3", "claude-haiku-4-5", "be terse").ToChatOptions();
 
         await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
@@ -125,7 +125,7 @@ public sealed class UsageRecordingChatClientTests
     {
         using var recorder = new UsageRecorder();
         using var inner = new StubChatClient(respond: (_, _, _) => throw new InvalidOperationException("provider down"));
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
 
         var act = async () => await client.GetResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken);
 
@@ -140,7 +140,7 @@ public sealed class UsageRecordingChatClientTests
     {
         using var recorder = new UsageRecorder();
         using var inner = new StubChatClient(respond: (_, _, _) => throw new OperationCanceledException());
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
 
         var act = async () => await client.GetResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken);
 
@@ -155,7 +155,7 @@ public sealed class UsageRecordingChatClientTests
     {
         using var recorder = new UsageRecorder();
         using var inner = new StubChatClient(updates: [new ChatResponseUpdate(ChatRole.Assistant, "ok")]);
-        using var client = new UsageRecordingChatClient(inner, recorder.Meter, AiProvider.Anthropic);
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
 
         await foreach (var update in client.GetStreamingResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken))
         {
@@ -174,6 +174,21 @@ public sealed class UsageRecordingChatClientTests
     /// A meter factory plus a listener filtered to the meters THIS factory created, which is what
     /// makes the assertions safe under xUnit's parallel test classes.
     /// </summary>
+    [Fact]
+    public async Task GetResponseAsync_TagsTheProviderTheClientReports()
+    {
+        using var recorder = new UsageRecorder();
+        var response = new ChatResponse { Usage = new UsageDetails { InputTokenCount = 10, OutputTokenCount = 1 } };
+        using var inner = new StubChatClient(response, service: new ChatClientMetadata("openai"));
+        using var client = new UsageRecordingChatClient(inner, recorder.Meter, "Anthropic");
+
+        await client.GetResponseAsync(Prompt, options: null, TestContext.Current.CancellationToken);
+
+        client.Provider.Should().Be("openai");
+        recorder.Measurements.Should().OnlyContain(m => Equals(m.Tags["provider"], "openai"),
+            "a foreign client supplied through the factory overload is metered as what it is, not as the configured name");
+    }
+
     private sealed class UsageRecorder : IDisposable
     {
         private readonly ServiceProvider _provider;

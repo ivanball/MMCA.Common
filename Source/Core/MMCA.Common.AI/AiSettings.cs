@@ -3,21 +3,6 @@ using System.ComponentModel.DataAnnotations;
 namespace MMCA.Common.AI;
 
 /// <summary>
-/// The language-model providers this package knows how to construct for itself. A host that needs a
-/// provider not listed here supplies the inner <c>IChatClient</c> through the factory overload of
-/// <c>AddMmcaChatClient</c> instead: the governance pipeline (bounds, usage metering, telemetry) is
-/// provider-agnostic and wraps whatever client it is handed.
-/// </summary>
-public enum AiProvider
-{
-    /// <summary>
-    /// Anthropic's Messages API, constructed through the official Anthropic .NET SDK and adapted to
-    /// <c>IChatClient</c> by that SDK's own <c>AsIChatClient</c> extension.
-    /// </summary>
-    Anthropic = 0,
-}
-
-/// <summary>
 /// The whole configuration surface of <c>AddMmcaChatClient</c>, bound from the <c>Ai</c> section.
 /// <para>
 /// Every value here is a bound, not a suggestion: the model is pinned rather than negotiated, the
@@ -26,6 +11,12 @@ public enum AiProvider
 /// turns it on, and the optional input-token budget refuses a call that would exceed it before it
 /// reaches the provider. That is what makes an unbounded external dependency answerable to a
 /// reviewable configuration file (rubric section 16).
+/// </para>
+/// <para>
+/// Nothing here names a vendor. <see cref="Provider"/> is matched against the
+/// <see cref="Providers.IAiProviderFactory.Name"/> of whatever factories the host registered (one
+/// per adapter package, <c>MMCA.Common.AI.Anthropic</c> and <c>MMCA.Common.AI.OpenAI</c> ship one
+/// each), and the rest of the section reads identically for every provider.
 /// </para>
 /// </summary>
 public sealed class AiSettings : IValidatableObject
@@ -47,14 +38,22 @@ public sealed class AiSettings : IValidatableObject
     /// </summary>
     public bool Enabled { get; init; }
 
-    /// <summary>The provider whose client this host builds when <see cref="Enabled"/>.</summary>
-    public AiProvider Provider { get; init; } = AiProvider.Anthropic;
+    /// <summary>
+    /// The name of the provider whose client this host builds when <see cref="Enabled"/>, e.g.
+    /// <c>Anthropic</c> or <c>OpenAI</c>. Required when <see cref="Enabled"/>. Matched
+    /// case-insensitively against the registered <see cref="Providers.IAiProviderFactory"/> names,
+    /// so the value is only valid when the host referenced the matching adapter package and called
+    /// its registration method; an unknown name fails at startup naming the registered ones.
+    /// </summary>
+    public string? Provider { get; init; }
 
     /// <summary>
-    /// The model id, e.g. <c>claude-haiku-4-5</c>. Required when <see cref="Enabled"/>: a model is
-    /// part of the prompt contract (it is hashed into <see cref="PromptContract.Hash"/>), so an
-    /// implicit provider default would silently change evaluated behavior on the provider's
-    /// schedule rather than on a reviewed version bump.
+    /// The model id, e.g. <c>claude-haiku-4-5</c> or <c>gpt-5</c>. Required when
+    /// <see cref="Enabled"/>: a model is part of the prompt contract (it is hashed into
+    /// <see cref="PromptContract.Hash"/>), so an implicit provider default would silently change
+    /// evaluated behavior on the provider's schedule rather than on a reviewed version bump. It is
+    /// also a bound: <see cref="Chat.BoundedChatClient"/> refuses a request that names a different
+    /// model, so no adapter can be asked for one the configuration did not pin.
     /// </summary>
     public string? Model { get; init; }
 
@@ -68,6 +67,13 @@ public sealed class AiSettings : IValidatableObject
     /// </para>
     /// </summary>
     public string? ApiKey { get; init; }
+
+    /// <summary>
+    /// An optional base address for the provider's API. <see langword="null"/> (the default) uses
+    /// the provider's public endpoint. Set it to route through an AI gateway, a regional endpoint or
+    /// an OpenAI-compatible server; each adapter passes it to its SDK's base-address option.
+    /// </summary>
+    public Uri? Endpoint { get; init; }
 
     /// <summary>
     /// The hard ceiling on output tokens for any single call. A caller that asks for more is clamped
@@ -88,6 +94,20 @@ public sealed class AiSettings : IValidatableObject
     /// tool cannot be talked into using one.
     /// </summary>
     public bool AllowTools { get; init; }
+
+    /// <summary>
+    /// Whether this host must register at least one guardrail before it may talk to a model.
+    /// <see langword="true"/> by default.
+    /// <para>
+    /// A guardrail is a policy the feature cannot bypass: it runs inside the composition root, on
+    /// every call, whatever the calling code believes it is doing. Defaulting this to
+    /// <see langword="true"/> makes "we shipped a model call and nobody inspects it" a startup
+    /// failure rather than a finding, and the message names the one-line fix
+    /// (<c>AddPiiRedactionGuardrail()</c>). A host that deliberately wants none sets it false, which
+    /// is a reviewable line in a configuration file rather than an absence nobody can see.
+    /// </para>
+    /// </summary>
+    public bool RequireGuardrail { get; init; } = true;
 
     /// <summary>
     /// Whether identical requests may be served from the registered <c>IDistributedCache</c>. Off by
@@ -117,6 +137,14 @@ public sealed class AiSettings : IValidatableObject
             yield break;
         }
 
+        if (string.IsNullOrWhiteSpace(Provider))
+        {
+            yield return new ValidationResult(
+                $"{SectionName}:{nameof(Provider)} is required when {SectionName}:{nameof(Enabled)} is true "
+                + "(the name of a registered provider, e.g. Anthropic or OpenAI).",
+                [nameof(Provider)]);
+        }
+
         if (string.IsNullOrWhiteSpace(Model))
         {
             yield return new ValidationResult(
@@ -130,6 +158,13 @@ public sealed class AiSettings : IValidatableObject
                 $"{SectionName}:{nameof(ApiKey)} is required when {SectionName}:{nameof(Enabled)} is true "
                 + "(production binds it from Key Vault).",
                 [nameof(ApiKey)]);
+        }
+
+        if (Endpoint is { IsAbsoluteUri: false })
+        {
+            yield return new ValidationResult(
+                $"{SectionName}:{nameof(Endpoint)} must be an absolute URI when set.",
+                [nameof(Endpoint)]);
         }
 
         if (Timeout <= TimeSpan.Zero)

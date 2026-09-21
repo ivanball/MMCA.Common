@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <PackageId>MMCA.Common.AI</PackageId>
-    <Description>MMCA framework: a governed Microsoft.Extensions.AI IChatClient. Versioned prompt contracts with a stable hash, per-call output-token and timeout bounds, a tool-use gate, token-usage metrics, and one configuration section that keeps the model dependency isolated, evaluated and observable</Description>
+    <Description>MMCA framework: a governed, provider-agnostic Microsoft.Extensions.AI IChatClient. Versioned prompt contracts with a stable hash, per-call output-token / timeout / model bounds, a tool-use gate, guardrails, token-usage metrics, and one configuration section; the provider itself comes from an adapter package (MMCA.Common.AI.Anthropic, MMCA.Common.AI.OpenAI) so the model dependency stays isolated, evaluated, observable and swappable</Description>
   </PropertyGroup>
   <ItemGroup>
     <!-- IHostEnvironment (the Development-only sensitive-data gate), IDistributedCache (the opt-in
@@ -12,22 +12,22 @@
     <InternalsVisibleTo Include="MMCA.Common.AI.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The only two runtime dependencies, and deliberately NO MMCA.Common project reference.
-         This package is the language-model boundary: everything it governs (a prompt contract, a
-         bounded delegating client, a usage meter) is expressed in Microsoft.Extensions.AI
+    <!-- The only runtime dependency, and deliberately NO MMCA.Common project reference and NO
+         vendor SDK. This package is the language-model boundary: everything it governs (a prompt
+         contract, a bounded delegating client, a usage meter) is expressed in Microsoft.Extensions.AI
          primitives, so it needs nothing from Domain, Application or Infrastructure and must stay
-         installable by a host that has taken none of them. Same reasoning as MMCA.Common.Gateway's
-         single YARP dependency. The direction is enforced the other way instead: no MMCA layer may
-         reference this package outside Infrastructure (EnforceAiLayerBoundary in
-         MMCA.Common.LayerEnforcement.targets, plus AiDependencyIsolationTestsBase at runtime).
+         installable by a host that has taken none of them. The vendor SDKs live one package out,
+         in MMCA.Common.AI.Anthropic and MMCA.Common.AI.OpenAI, each contributing one
+         IAiProviderFactory: a host references the adapter for the provider it configured and
+         nothing else, and this package never learns which one. The direction is enforced the other
+         way instead: no MMCA layer may reference this package outside Infrastructure
+         (EnforceAiLayerBoundary in MMCA.Common.LayerEnforcement.targets, plus
+         AiDependencyIsolationTestsBase at runtime).
 
          Microsoft.Extensions.AI brings Microsoft.Extensions.AI.Abstractions (IChatClient,
-         ChatOptions, UsageDetails) plus the pipeline pieces this package composes: UseLogging,
-         UseOpenTelemetry and UseDistributedCache. Anthropic is the official Anthropic .NET SDK and
-         carries its own Microsoft.Extensions.AI adapter (AsIChatClient), so the provider half is a
-         one-line construction rather than a hand-rolled HttpClient. -->
+         ChatOptions, UsageDetails, ChatClientMetadata) plus the pipeline pieces this package
+         composes: UseLogging, UseOpenTelemetry and UseDistributedCache. -->
     <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="Anthropic" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

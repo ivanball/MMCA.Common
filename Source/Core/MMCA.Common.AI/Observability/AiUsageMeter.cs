@@ -103,7 +103,7 @@ public sealed class AiUsageMeter
         string? model,
         string? promptName,
         string? promptVersion,
-        AiProvider provider)
+        string? provider)
     {
         if (usage is null)
         {
@@ -139,7 +139,7 @@ public sealed class AiUsageMeter
         string? model,
         string? promptName,
         string? promptVersion,
-        AiProvider provider,
+        string? provider,
         string outcome)
     {
         var tags = AttributionTags(model, promptName, promptVersion, provider);
@@ -156,11 +156,11 @@ public sealed class AiUsageMeter
         string? model,
         string? promptName,
         string? promptVersion,
-        AiProvider provider) => new()
+        string? provider) => new()
         {
             { "model", model ?? "unknown" },
             { "prompt_name", promptName ?? "unknown" },
             { "prompt_version", promptVersion ?? "unknown" },
-            { "provider", provider.ToString() },
+            { "provider", string.IsNullOrWhiteSpace(provider) ? "unknown" : provider },
         };
 }
