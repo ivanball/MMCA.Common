@@ -19,6 +19,11 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <!-- The governed package plus both adapters: the provider tests construct each adapter's client
+         with a fake key and assert its shape and metadata, never a request. No test here reaches a
+         network, and the project carries no credential a test could accidentally use. -->
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI\MMCA.Common.AI.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI.Anthropic\MMCA.Common.AI.Anthropic.csproj" />
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.AI.OpenAI\MMCA.Common.AI.OpenAI.csproj" />
   </ItemGroup>
 </Project>

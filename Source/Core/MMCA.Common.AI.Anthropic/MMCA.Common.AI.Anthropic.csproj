@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.AI.Anthropic</PackageId>
+    <Description>MMCA framework: the Anthropic adapter for MMCA.Common.AI. One IAiProviderFactory over the official Anthropic .NET SDK's Microsoft.Extensions.AI client, selected by Ai:Provider=Anthropic; the governed pipeline, bounds and telemetry stay in MMCA.Common.AI</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The adapter's whole job is to hold the vendor SDK so MMCA.Common.AI does not have to. It
+         references the governed package for IAiProviderFactory and AiSettings, and the official
+         Anthropic .NET SDK for its own Microsoft.Extensions.AI adapter (AsIChatClient), so nothing
+         here hand-rolls the Messages API over HttpClient. A host references this package only when
+         its Ai:Provider is Anthropic. -->
+    <ProjectReference Include="..\MMCA.Common.AI\MMCA.Common.AI.csproj" />
+    <PackageReference Include="Anthropic" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>

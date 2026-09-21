@@ -1,6 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Anthropic;
-using Anthropic.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.AI.Chat;
 using MMCA.Common.AI.Observability;
+using MMCA.Common.AI.Providers;
 
 namespace MMCA.Common.AI;
 
@@ -20,13 +19,14 @@ namespace MMCA.Common.AI;
 /// pipeline, outermost first:
 /// </para>
 /// <code>
-/// BoundedChatClient            -- what the call is allowed to do (tokens, timeout, tools, input size)
+/// BoundedChatClient            -- what the call is allowed to do (tokens, timeout, tools, input size, model)
 ///   GuardrailChatClient        -- optional: only when an IChatGuardrail is registered
 ///     UsageRecordingChatClient -- what the call cost and how long it took
 ///       DistributedCaching     -- optional: Ai:EnableCache AND a registered IDistributedCache
 ///         OpenTelemetry        -- traces under the MMCA.Common.AI source
-///           Logging
-///             provider client  -- Anthropic via the SDK's own AsIChatClient adapter
+///           PromptTagging      -- the prompt identity as attributes on that trace
+///             Logging
+///               provider client -- whichever IAiProviderFactory matches Ai:Provider
 /// </code>
 /// <para>
 /// The order is the point. Bounds are outermost so nothing downstream can be asked to do something
@@ -35,12 +35,22 @@ namespace MMCA.Common.AI;
 /// reaches the provider, so it has no cost to record. Usage recording sits inside them, which does
 /// mean a cache HIT records the usage of the cached response: that is deliberate, and reads as
 /// "what this call would have cost" rather than "what was billed" (the provider span is absent on a
-/// hit, so the two are distinguishable).
+/// hit, so the two are distinguishable). Prompt tagging sits just inside the OpenTelemetry layer so
+/// the activity it decorates is that layer's own <c>gen_ai</c> span.
 /// </para>
 /// <para>
 /// The guardrail layer is added ONLY when the host registered at least one
 /// <see cref="Chat.IChatGuardrail"/>, so an application that adopts none keeps the chain it had,
 /// down to the type the container hands back.
+/// </para>
+/// <para>
+/// <b>The provider is a registered factory, never a type this package names.</b> The
+/// configuration overload resolves every <see cref="IAiProviderFactory"/> the host registered
+/// (one per adapter package: <c>AddAnthropicAiProvider()</c>, <c>AddOpenAiProvider()</c>) and
+/// selects the one whose <see cref="IAiProviderFactory.Name"/> matches <c>Ai:Provider</c>. That
+/// match is validated at startup through the options pipeline, so a host naming a provider it
+/// never registered fails at boot with the registered names in the message, not on a user's
+/// first request.
 /// </para>
 /// <para>
 /// <b>What it registers when disabled: nothing.</b> A host with <c>Ai:Enabled</c> false gets the
@@ -60,24 +70,35 @@ public static class AiServiceCollectionExtensions
     {
         /// <summary>
         /// Binds <see cref="AiSettings"/> from the <c>Ai</c> configuration section and, when it is
-        /// enabled, registers the governed <c>IChatClient</c> over the configured provider.
+        /// enabled, registers the governed <c>IChatClient</c> over the provider whose registered
+        /// <see cref="IAiProviderFactory"/> matches <c>Ai:Provider</c>.
         /// </summary>
         /// <param name="configuration">The application configuration.</param>
         /// <returns>The same collection for chaining.</returns>
-        public IServiceCollection AddMmcaChatClient(IConfiguration configuration) =>
-            services.AddMmcaChatClient(configuration, CreateProviderChatClient);
+        public IServiceCollection AddMmcaChatClient(IConfiguration configuration)
+        {
+            ArgumentNullException.ThrowIfNull(services);
+
+            // Registered before the shared path so ValidateOnStart runs it with the data
+            // annotations: an unknown or unregistered provider is a boot failure, not a first-call one.
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<AiSettings>, AiProviderValidator>());
+
+            return services.AddMmcaChatClient(configuration, CreateProviderChatClient);
+        }
 
         /// <summary>
-        /// The provider-agnostic overload: same binding, same validation, same governance pipeline,
-        /// with the innermost client supplied by the caller.
+        /// The factory overload: same binding, same validation, same governance pipeline, with the
+        /// innermost client supplied by the caller instead of a registered provider factory.
         /// </summary>
         /// <param name="configuration">The application configuration.</param>
         /// <param name="providerFactory">Builds the innermost, ungoverned provider client.</param>
         /// <returns>The same collection for chaining.</returns>
         /// <remarks>
         /// This is the extension point a test uses to exercise the pipeline without a network, and
-        /// the one a future provider (or a host with its own credential story) plugs into. The
-        /// Anthropic overload above is nothing more than this one with a known factory.
+        /// the one a host with its own credential story plugs into. The configuration overload is
+        /// nothing more than this one with the registered <see cref="IAiProviderFactory"/> as the
+        /// factory. <c>Ai:Provider</c> is still required here (it names what the metrics fall back
+        /// to when the client reports no provider of its own) but is not matched against anything.
         /// </remarks>
         public IServiceCollection AddMmcaChatClient(
             IConfiguration configuration,
@@ -140,6 +161,7 @@ public static class AiServiceCollectionExtensions
                 .UseOpenTelemetry(
                     sourceName: AiUsageMeter.MeterName,
                     configure: client => client.EnableSensitiveData = enableSensitiveData)
+                .Use(inner => new PromptTaggingChatClient(inner))
                 .UseLogging();
 
             return services;
@@ -147,34 +169,24 @@ public static class AiServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Builds the innermost provider client for <see cref="AiSettings.Provider"/>.
+    /// Builds the innermost provider client by resolving the registered
+    /// <see cref="IAiProviderFactory"/> whose name matches <see cref="AiSettings.Provider"/>.
     /// </summary>
     /// <param name="serviceProvider">The resolved service provider.</param>
     /// <returns>An ungoverned provider client, which the caller then wraps.</returns>
-    [SuppressMessage(
-        "Reliability",
-        "CA2000:Dispose objects before losing scope",
-        Justification = "Ownership passes to the IChatClient the adapter returns, which the pipeline wraps and the container disposes with the singleton. Disposing here would close the transport before the first call.")]
+    /// <remarks>
+    /// <see cref="AiProviderValidator"/> has already refused a name with no factory at startup, so
+    /// the throw here is a belt for the case where the options pipeline was bypassed.
+    /// </remarks>
     private static IChatClient CreateProviderChatClient(IServiceProvider serviceProvider)
     {
         var settings = serviceProvider.GetRequiredService<IOptions<AiSettings>>().Value;
+        var factories = serviceProvider.GetServices<IAiProviderFactory>().ToArray();
 
-        return settings.Provider switch
-        {
-            // AsIChatClient is the official SDK's own Microsoft.Extensions.AI adapter
-            // (Microsoft.Extensions.AI.AnthropicClientExtensions), so nothing here hand-rolls the
-            // Messages API over HttpClient. The model and the output ceiling are passed as the
-            // client's defaults; BoundedChatClient still clamps per call, because a default is a
-            // suggestion and a bound is not.
-            AiProvider.Anthropic => new AnthropicClient(new ClientOptions
-            {
-                ApiKey = settings.ApiKey,
-                Timeout = settings.Timeout,
-            }).AsIChatClient(settings.Model, settings.MaxOutputTokens),
-            _ => throw new NotSupportedException(
-                $"{AiSettings.SectionName}:{nameof(AiSettings.Provider)} '{settings.Provider}' has no built-in "
-                + "client. Supply one through the AddMmcaChatClient(IConfiguration, Func<IServiceProvider, IChatClient>) overload."),
-        };
+        var factory = AiProviderValidator.Match(factories, settings.Provider)
+            ?? throw new InvalidOperationException(AiProviderValidator.DescribeMismatch(factories, settings.Provider));
+
+        return factory.Create(settings, serviceProvider);
     }
 
     /// <summary>

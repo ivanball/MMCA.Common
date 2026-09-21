@@ -9,6 +9,8 @@
   </Folder>
   <Folder Name="/Source/Core/">
     <Project Path="Source/Core/MMCA.Common.AI/MMCA.Common.AI.csproj" />
+    <Project Path="Source/Core/MMCA.Common.AI.Anthropic/MMCA.Common.AI.Anthropic.csproj" />
+    <Project Path="Source/Core/MMCA.Common.AI.OpenAI/MMCA.Common.AI.OpenAI.csproj" />
     <Project Path="Source/Core/MMCA.Common.Shared/MMCA.Common.Shared.csproj" />
     <Project Path="Source/Core/MMCA.Common.Domain/MMCA.Common.Domain.csproj" />
     <Project Path="Source/Core/MMCA.Common.Application/MMCA.Common.Application.csproj" />

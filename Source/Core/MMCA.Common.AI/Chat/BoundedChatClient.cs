@@ -33,6 +33,13 @@ namespace MMCA.Common.AI.Chat;
 /// <b>Input size.</b> When <see cref="AiSettings.PerCallInputTokenBudget"/> is set, an ESTIMATED
 /// input size above the budget fails the call locally instead of paying for it remotely.
 /// </description></item>
+/// <item><description>
+/// <b>Model.</b> The request goes out naming <see cref="AiSettings.Model"/>, and a request that
+/// names a different model is refused. Adapters differ in whether a per-request model id overrides
+/// the one the client was built with; pinning it here makes <see cref="PromptContract.Model"/>
+/// mean the same thing on every provider: the model the prompt was evaluated against, and the
+/// only one it may be sent to.
+/// </description></item>
 /// </list>
 /// <para>
 /// <b>The input estimate is an estimate.</b> It asks the inner pipeline for an
@@ -156,6 +163,23 @@ public sealed class BoundedChatClient : DelegatingChatClient
         {
             bounded.Tools = null;
             bounded.ToolMode = null;
+        }
+
+        if (_settings.Model is { } pinned)
+        {
+            if (bounded.ModelId is { } requestedModel && !string.Equals(requestedModel, pinned, StringComparison.Ordinal))
+            {
+                var setting = $"{AiSettings.SectionName}:{nameof(AiSettings.Model)}";
+                throw new InvalidOperationException(
+                    $"The request names model '{requestedModel}' but {setting} pins '{pinned}'. The model is part of the "
+                    + "prompt contract and is not negotiated per call: align the PromptContract.Model with the "
+                    + "configured model, or change the configured model deliberately and re-evaluate.");
+            }
+
+            // Stated explicitly so every adapter is asked for the pinned model by name, whether or
+            // not it honors a per-request override, and so the model tag on an errored call is
+            // never blank.
+            bounded.ModelId = pinned;
         }
 
         return bounded;

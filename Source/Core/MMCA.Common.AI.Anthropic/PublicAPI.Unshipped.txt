@@ -1,0 +1,10 @@
+#nullable enable
+MMCA.Common.AI.Anthropic.AnthropicAiProviderFactory
+MMCA.Common.AI.Anthropic.AnthropicAiProviderFactory.AnthropicAiProviderFactory() -> void
+MMCA.Common.AI.Anthropic.AnthropicAiProviderFactory.Create(MMCA.Common.AI.AiSettings! settings, System.IServiceProvider! serviceProvider) -> Microsoft.Extensions.AI.IChatClient!
+MMCA.Common.AI.Anthropic.AnthropicAiProviderFactory.Name.get -> string!
+MMCA.Common.AI.Anthropic.AnthropicAiServiceCollectionExtensions
+MMCA.Common.AI.Anthropic.AnthropicAiServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.AI.Anthropic.AnthropicAiServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAnthropicAiProvider() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+const MMCA.Common.AI.Anthropic.AnthropicAiProviderFactory.ProviderName = "Anthropic" -> string!
+static MMCA.Common.AI.Anthropic.AnthropicAiServiceCollectionExtensions.AddAnthropicAiProvider(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

@@ -22,6 +22,7 @@ public sealed class AiServiceCollectionExtensionsTests
     private static IConfiguration EnabledConfiguration(params (string Key, string Value)[] extra) =>
         Configuration([
             ("Ai:Enabled", "true"),
+            ("Ai:Provider", "Stub"),
             ("Ai:Model", "claude-haiku-4-5"),
             ("Ai:ApiKey", "test-key"),
             ("Ai:MaxOutputTokens", "256"),

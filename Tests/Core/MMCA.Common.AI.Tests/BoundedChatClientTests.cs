@@ -213,4 +213,68 @@ public sealed class BoundedChatClientTests
 
         BoundedChatClient.EstimateInputTokens(messages, options: null, new FixedTokenEstimator(7)).Should().Be(7);
     }
+
+    [Fact]
+    public async Task GetResponseAsync_SendsThePinnedModelByName()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings());
+
+        await client.GetResponseAsync(Prompt, new ChatOptions(), TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.ModelId.Should().Be("claude-haiku-4-5",
+            because: "every adapter is asked for the pinned model explicitly, whether or not it honors a per-request override");
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_AcceptsARequestNamingThePinnedModel()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings());
+        var options = new PromptContract("session-scoring", "3", "claude-haiku-4-5", "be terse").ToChatOptions();
+
+        await client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        inner.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_RefusesARequestNamingAnotherModel()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings());
+        var options = new PromptContract("session-scoring", "3", "gpt-5", "be terse").ToChatOptions();
+
+        var act = () => client.GetResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*'gpt-5'*")
+            .WithMessage("*Ai:Model*")
+            .WithMessage("*'claude-haiku-4-5'*");
+        inner.CallCount.Should().Be(0, "a model mismatch is refused before the provider is called");
+    }
+
+    [Fact]
+    public void GetStreamingResponseAsync_RefusesARequestNamingAnotherModelEagerly()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings());
+        var options = new PromptContract("session-scoring", "3", "gpt-5", "be terse").ToChatOptions();
+
+        var act = () => client.GetStreamingResponseAsync(Prompt, options, TestContext.Current.CancellationToken);
+
+        act.Should().Throw<InvalidOperationException>("the refusal happens when the request is made, not when the stream is read");
+    }
+
+    [Fact]
+    public async Task GetResponseAsync_WithNoPinnedModel_LeavesTheRequestsModelAlone()
+    {
+        using var inner = new StubChatClient();
+        var settings = new AiSettings { Enabled = true, Provider = "Stub", ApiKey = "key", MaxOutputTokens = 256 };
+        using var client = new BoundedChatClient(inner, settings);
+
+        await client.GetResponseAsync(Prompt, new ChatOptions { ModelId = "anything" }, TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.ModelId.Should().Be("anything");
+    }
 }

@@ -111,6 +111,19 @@
         "resolved": "1.2.0.556",
         "contentHash": "zvn9Mqs/ox/83cpYPignI8hJEM2A93s2HkHs8HYMOAQW0PkampyoErAiIyKxgTLqbbad29HX/shv/6LGSjPJNQ=="
       },
+      "System.ClientModel": {
+        "type": "Transitive",
+        "resolved": "1.15.0",
+        "contentHash": "y6zQLInrpX+oGL1gXM04DrUSu1O1esWxt4rD/zrujTnzIFChn/noD1OiVVpTrU8ZvglwqO2Uw038svUR3SiAOg==",
+        "dependencies": {
+          "System.Memory.Data": "10.0.9"
+        }
+      },
+      "System.Memory.Data": {
+        "type": "Transitive",
+        "resolved": "10.0.9",
+        "contentHash": "YweovHiLUoEdbr2Xv8eRqCSkTu1vMms4a6xBHaQiMSFVy32PL+hXv6Vhol2NWOmLHjaVgTyhJ3R52U6JxS6w3Q=="
+      },
       "System.Numerics.Tensors": {
         "type": "Transitive",
         "resolved": "10.0.12",
@@ -184,8 +197,22 @@
       "mmca.common.ai": {
         "type": "Project",
         "dependencies": {
-          "Anthropic": "[12.48.0, )",
           "Microsoft.Extensions.AI": "[10.10.0, )"
+        }
+      },
+      "mmca.common.ai.anthropic": {
+        "type": "Project",
+        "dependencies": {
+          "Anthropic": "[12.48.0, )",
+          "MMCA.Common.AI": "[1.0.0, )"
+        }
+      },
+      "mmca.common.ai.openai": {
+        "type": "Project",
+        "dependencies": {
+          "MMCA.Common.AI": "[1.0.0, )",
+          "Microsoft.Extensions.AI.OpenAI": "[10.10.0, )",
+          "OpenAI": "[2.14.0, )"
         }
       },
       "Anthropic": {
@@ -205,6 +232,25 @@
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.10.0",
           "System.Numerics.Tensors": "10.0.12"
+        }
+      },
+      "Microsoft.Extensions.AI.OpenAI": {
+        "type": "CentralTransitive",
+        "requested": "[10.10.0, )",
+        "resolved": "10.10.0",
+        "contentHash": "Z5uwqIJ0tGp50P+ark1/qb7wFa6inIRKvaR3L9Frtf7M9uGIil/cz4k9S7va8HMrXzE/xjIJqd6A9cJ7WlMpgg==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.10.0",
+          "OpenAI": "2.13.0"
+        }
+      },
+      "OpenAI": {
+        "type": "CentralTransitive",
+        "requested": "[2.14.0, )",
+        "resolved": "2.14.0",
+        "contentHash": "AeyC3GxbrJ7KRoWDyFeNSUOQQWD9AnNvM7LYQijCcXcqjyr53aGRcf5GBLExcSBzIs0RWYHe+NbzPrHTeuU5zA==",
+        "dependencies": {
+          "System.ClientModel": "1.15.0"
         }
       },
       "xunit.v3.extensibility.core": {

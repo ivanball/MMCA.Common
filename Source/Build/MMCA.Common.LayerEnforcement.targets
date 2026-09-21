@@ -85,7 +85,7 @@
        reference MMCA.Common.AI). -->
   <Target Name="EnforceAiLayerBoundary"
           BeforeTargets="ResolveProjectReferences"
-          Condition="$(MSBuildProjectName) == 'MMCA.Common.AI'">
+          Condition="$(MSBuildProjectName) == 'MMCA.Common.AI' OR $(MSBuildProjectName.StartsWith('MMCA.Common.AI.'))">
     <ItemGroup>
       <_ForbiddenAiRefs Include="@(ProjectReference)"
         Condition="$([System.String]::new('%(Filename)').Contains('MMCA.Common.Domain'))
@@ -96,7 +96,7 @@
                 OR $([System.String]::new('%(Filename)').Contains('MMCA.Common.UI'))" />
     </ItemGroup>
     <Error Condition="@(_ForbiddenAiRefs->Count()) &gt; 0"
-           Text="Layer violation: MMCA.Common.AI must not reference %(_ForbiddenAiRefs.Filename). The language-model boundary depends on Microsoft.Extensions.AI and its provider SDK only." />
+           Text="Layer violation: $(MSBuildProjectName) must not reference %(_ForbiddenAiRefs.Filename). The language-model boundary (MMCA.Common.AI and its MMCA.Common.AI.* adapters) depends on Microsoft.Extensions.AI and a provider SDK only." />
   </Target>
 
   <!-- UI: depends only on Shared -->

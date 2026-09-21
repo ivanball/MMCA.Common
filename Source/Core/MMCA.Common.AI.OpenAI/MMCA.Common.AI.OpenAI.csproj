@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>MMCA.Common.AI.OpenAI</PackageId>
+    <Description>MMCA framework: the OpenAI adapter for MMCA.Common.AI. One IAiProviderFactory over the official OpenAI .NET SDK through Microsoft.Extensions.AI.OpenAI, selected by Ai:Provider=OpenAI and pointable at any OpenAI-compatible endpoint; the governed pipeline, bounds and telemetry stay in MMCA.Common.AI</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The adapter's whole job is to hold the vendor SDK so MMCA.Common.AI does not have to. It
+         references the governed package for IAiProviderFactory and AiSettings, the official OpenAI
+         .NET SDK for the transport, and Microsoft.Extensions.AI.OpenAI for the AsIChatClient
+         adapter over it. The OpenAI package is a direct reference rather than a transitive one so
+         its version is pinned here, in Directory.Packages.props, like every other vendor SDK. -->
+    <ProjectReference Include="..\MMCA.Common.AI\MMCA.Common.AI.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="OpenAI" />
+    <PackageReference Include="MinVer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+</Project>
