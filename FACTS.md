@@ -1,7 +1,7 @@
 # MMCA.Common — Canonical Facts
 
 **Single source of truth for the framework-wide facts that otherwise drift across dozens of docs.**
-_As of: 2026-09-20 (framework v1.206.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
+_As of: 2026-09-21 (framework v1.206.0) — **generated from source by `build/facts`; do not hand-edit the numbers below.**_
 
 > **Rule: link here, don't restate.** Other docs (scorecards, CLAUDE.md files, READMEs, the LinkedIn/Medium
 > campaigns) must **reference** these facts rather than copy the numbers inline. A "thirteen packages"
@@ -16,28 +16,31 @@ _As of: 2026-09-20 (framework v1.206.0) — **generated from source by `build/fa
   `MMCA.Common.*` entry in each consumer's `Directory.Packages.props` is bumped together (ADR-016; no phased
   rollout).
 
-## Published packages — **19**
+## Published packages — **22**
 Released in lockstep to nuget.org and GitHub Packages (dual-registry, ADR-053; the packable projects under `Source/` carrying a `<PackageId>`):
 
 1. `MMCA.Common.AI`
-2. `MMCA.Common.Application`
-3. `MMCA.Common.Domain`
-4. `MMCA.Common.Infrastructure`
-5. `MMCA.Common.Shared`
-6. `MMCA.Common.API`
-7. `MMCA.Common.Grpc`
-8. `MMCA.Common.UI`
-9. `MMCA.Common.UI.Maui`
-10. `MMCA.Common.UI.Web`
-11. `MMCA.Common.Aspire`
-12. `MMCA.Common.Aspire.Hosting`
-13. `MMCA.Common.Gateway`
-14. `MMCA.Common.Testing`
-15. `MMCA.Common.Testing.Architecture`
-16. `MMCA.Common.Testing.Aspire`
-17. `MMCA.Common.Testing.E2E`
-18. `MMCA.Common.Testing.UI`
-19. `MMCA.Common`
+2. `MMCA.Common.AI.Anthropic`
+3. `MMCA.Common.AI.OpenAI`
+4. `MMCA.Common.Application`
+5. `MMCA.Common.Domain`
+6. `MMCA.Common.Infrastructure`
+7. `MMCA.Common.Shared`
+8. `MMCA.Common.API`
+9. `MMCA.Common.Grpc`
+10. `MMCA.Common.UI`
+11. `MMCA.Common.UI.Maui`
+12. `MMCA.Common.UI.Web`
+13. `MMCA.Common.AI.Testing`
+14. `MMCA.Common.Aspire`
+15. `MMCA.Common.Aspire.Hosting`
+16. `MMCA.Common.Gateway`
+17. `MMCA.Common.Testing`
+18. `MMCA.Common.Testing.Architecture`
+19. `MMCA.Common.Testing.Aspire`
+20. `MMCA.Common.Testing.E2E`
+21. `MMCA.Common.Testing.UI`
+22. `MMCA.Common`
 
 ## Architecture Decision Records
 The ADRs live in the Website repo (`docs-src/adr/`), published at
