@@ -6,6 +6,25 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`MMCA.Common.AI`: a content policy the feature cannot bypass** (rubric section 16).
+  `ContentPolicyGuardrail` (`AddContentPolicyGuardrail(configuration)`) is the second shipped
+  guardrail, registered as one singleton under both `IChatGuardrail` and `IChatRequestRedactor`, so
+  registering it also satisfies `Ai:RequireGuardrail`. It carries eight built-in prompt-injection
+  markers, each anchored on an imperative verb aimed at the model (`ignore previous instructions`,
+  `disregard the system prompt`, `you are now a`, `new instructions:`, `reveal your system prompt`,
+  `act as unrestricted`, `developer mode`, `do anything now`), matched case-insensitively against
+  USER-role content only: a system or assistant message says what it says on purpose. The new
+  `Ai:ContentPolicy` section chooses what happens on a match. `InjectionMode` is `Redact` (the
+  default: the marker is replaced with `RedactionPlaceholder` and the call proceeds), `Block` (the
+  call is refused naming the marker that matched) or `Off`. `AdditionalRequestPatterns` merges an
+  application's own regular expressions with the built-in list, and `BlockedResponsePatterns`
+  refuses an answer, buffered or streamed, whose text matches one, naming the pattern by index and
+  never echoing the text. Every configured pattern is compiled once with a match timeout and is
+  validated on start, so one that does not compile fails the deployment naming the offending
+  pattern rather than throwing on a user's request.
+
 ## [1.207.0] - 2026-09-21
 
 ### Added
