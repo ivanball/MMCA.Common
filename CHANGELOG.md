@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.207.0] - 2026-09-21
+
 ### Added
 
 - **`MMCA.Common.AI.Anthropic` and `MMCA.Common.AI.OpenAI` (NEW packages): the provider is an
