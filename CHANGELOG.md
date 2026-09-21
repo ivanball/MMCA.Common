@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.208.0] - 2026-09-21
+
 ### Added
 
 - **`MMCA.Common.AI`: a content policy the feature cannot bypass** (rubric section 16).
