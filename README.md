@@ -66,7 +66,7 @@ Every package ships at the same version and is bumped in lockstep (ADR-016). The
 | `MMCA.Common.Domain` | DDD base entities, aggregate roots, domain events, specifications |
 | `MMCA.Common.Application` | CQRS handlers, decorator pipeline, module system, query service, `IMessageBus` |
 | `MMCA.Common.Infrastructure` | EF Core multi-DB, repositories, UoW, caching, JWT, JWKS, outbox, message bus, SignalR |
-| `MMCA.Common.AI` | Governed, provider-agnostic `IChatClient` (Microsoft.Extensions.AI): versioned prompt contracts with a stable hash, per-call output-token / timeout / model bounds, a tool policy with a confirmation path, request redaction and guardrails, token-usage metrics and prompt-tagged traces. Optional; nothing else references it, and it names no vendor |
+| `MMCA.Common.AI` | Governed, provider-agnostic `IChatClient` (Microsoft.Extensions.AI): versioned prompt contracts with a stable hash, per-call output-token / timeout / model bounds, a tool policy with a confirmation path, request redaction and guardrails, a content policy (injection markers, response patterns), token-usage metrics and prompt-tagged traces. Optional; nothing else references it, and it names no vendor |
 | `MMCA.Common.AI.Anthropic` | The Anthropic provider for `MMCA.Common.AI`: one `IAiProviderFactory` over the official Anthropic .NET SDK, selected by `Ai:Provider=Anthropic` |
 | `MMCA.Common.AI.OpenAI` | The OpenAI provider for `MMCA.Common.AI`: one `IAiProviderFactory` over the official OpenAI .NET SDK (Microsoft.Extensions.AI.OpenAI), selected by `Ai:Provider=OpenAI`, pointable at any OpenAI-compatible endpoint |
 | `MMCA.Common.API` | Base controllers, middleware, idempotency, error-to-HTTP mapping, JWKS endpoint |

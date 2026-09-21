@@ -136,3 +136,28 @@ MMCA.Common.AI.Guardrails.PiiRedactionGuardrail.InspectResponseAsync(Microsoft.E
 MMCA.Common.AI.Guardrails.ToolAuthorization
 MMCA.Common.AI.Guardrails.ToolAuthorization.Denied = 0 -> MMCA.Common.AI.Guardrails.ToolAuthorization
 MMCA.Common.AI.Guardrails.ToolAuthorization.Allowed = 1 -> MMCA.Common.AI.Guardrails.ToolAuthorization
+MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode
+MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode.Redact = 0 -> MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode
+MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode.Block = 1 -> MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode
+MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode.Off = 2 -> MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode
+MMCA.Common.AI.Guardrails.ContentPolicySettings
+MMCA.Common.AI.Guardrails.ContentPolicySettings.ContentPolicySettings() -> void
+const MMCA.Common.AI.Guardrails.ContentPolicySettings.SectionName = "Ai:ContentPolicy" -> string!
+const MMCA.Common.AI.Guardrails.ContentPolicySettings.DefaultRedactionPlaceholder = "[redacted-instruction]" -> string!
+MMCA.Common.AI.Guardrails.ContentPolicySettings.InjectionMode.get -> MMCA.Common.AI.Guardrails.ContentPolicyInjectionMode
+MMCA.Common.AI.Guardrails.ContentPolicySettings.InjectionMode.init -> void
+MMCA.Common.AI.Guardrails.ContentPolicySettings.AdditionalRequestPatterns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.AI.Guardrails.ContentPolicySettings.AdditionalRequestPatterns.init -> void
+MMCA.Common.AI.Guardrails.ContentPolicySettings.BlockedResponsePatterns.get -> System.Collections.Generic.IReadOnlyList<string!>!
+MMCA.Common.AI.Guardrails.ContentPolicySettings.BlockedResponsePatterns.init -> void
+MMCA.Common.AI.Guardrails.ContentPolicySettings.RedactionPlaceholder.get -> string!
+MMCA.Common.AI.Guardrails.ContentPolicySettings.RedactionPlaceholder.init -> void
+MMCA.Common.AI.Guardrails.ContentPolicySettings.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+MMCA.Common.AI.Guardrails.ContentPolicyGuardrail
+MMCA.Common.AI.Guardrails.ContentPolicyGuardrail.ContentPolicyGuardrail(Microsoft.Extensions.Options.IOptions<MMCA.Common.AI.Guardrails.ContentPolicySettings!>! settings) -> void
+MMCA.Common.AI.Guardrails.ContentPolicyGuardrail.Redact(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>! messages) -> System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>!
+MMCA.Common.AI.Guardrails.ContentPolicyGuardrail.InspectRequestAsync(System.Collections.Generic.IReadOnlyList<Microsoft.Extensions.AI.ChatMessage!>! messages, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Guardrails.ContentPolicyGuardrail.InspectResponseAsync(Microsoft.Extensions.AI.ChatResponse! response, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Guardrails.ContentPolicyGuardrail.InspectStreamedUpdateAsync(Microsoft.Extensions.AI.ChatResponseUpdate! update, Microsoft.Extensions.AI.ChatOptions? options, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<MMCA.Common.AI.Chat.GuardrailVerdict>
+MMCA.Common.AI.Guardrails.GuardrailServiceCollectionExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddContentPolicyGuardrail(Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.AI.Guardrails.GuardrailServiceCollectionExtensions.AddContentPolicyGuardrail(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
