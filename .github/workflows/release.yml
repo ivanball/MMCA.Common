@@ -18,6 +18,7 @@ jobs:
       packages: write
       contents: read
       id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
+      attestations: write # build provenance attestations on the packed nupkgs (ADR-038)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -74,16 +75,23 @@ jobs:
       - name: Pack
         run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
+      # Build provenance (ADR-038): a signed SLSA attestation binding each .nupkg to this workflow,
+      # this commit and this repository, stored by GitHub and verifiable by anyone with
+      # `gh attestation verify <file>.nupkg --owner ivanball`. Needs `attestations: write` above.
+      - name: Attest build provenance (nupkgs)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ./nupkgs/*.nupkg
+
       # Software Bill of Materials for the released packages (CycloneDX).
-      # Hard gate (R29 §32): every published version must ship a verifiable SBOM, so a failed
-      # generation OR an empty/missing artifact fails the release (was continue-on-error while the
-      # tooling was being validated in CI — now promoted to a blocking step).
+      # Hard gate (R29 section 32): every published version must ship a verifiable SBOM. The shared
+      # composite action fails the release when generation fails OR the BOM lists zero components
+      # (ADR-038); the ADC and Store deploy.yml run the identical action from this repository.
       - name: Generate SBOM (CycloneDX)
-        run: |
-          dotnet tool install --global CycloneDX --version 6.2.0
-          dotnet CycloneDX MMCA.Common.slnx --output ./sbom --json
-          ls -la ./sbom
-          test -n "$(ls -A ./sbom 2>/dev/null)" || { echo "::error::SBOM generation produced no output"; exit 1; }
+        uses: ./.github/actions/cyclonedx-sbom
+        with:
+          solution: MMCA.Common.slnx
+          output-dir: ./sbom
 
       - name: Upload SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -129,6 +137,7 @@ jobs:
       packages: write
       contents: read
       id-token: write # OIDC token for nuget.org trusted publishing (ADR-053)
+      attestations: write # build provenance attestations on the packed nupkgs (ADR-038)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -180,13 +189,22 @@ jobs:
       - name: Pack
         run: dotnet pack Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj -c Release --no-build -o ./nupkgs-maui -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
 
+      # Build provenance (ADR-038): a signed SLSA attestation binding each .nupkg to this workflow,
+      # this commit and this repository, stored by GitHub and verifiable by anyone with
+      # `gh attestation verify <file>.nupkg --owner ivanball`. Needs `attestations: write` above.
+      - name: Attest build provenance (nupkgs)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ./nupkgs-maui/*.nupkg
+
       - name: Generate SBOM (CycloneDX)
-        shell: bash
-        run: |
-          dotnet tool install --global CycloneDX --version 6.2.0
-          dotnet CycloneDX Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj --output ./sbom-maui --json
-          ls -la ./sbom-maui
-          test -n "$(ls -A ./sbom-maui 2>/dev/null)" || { echo "::error::SBOM generation produced no output"; exit 1; }
+        # Shared gate (ADR-038): the composite action fails unless the BOM exists AND lists at least
+        # one component, the same check the ADC and Store deploy.yml run through
+        # ivanball/MMCA.Common/.github/actions/cyclonedx-sbom@main.
+        uses: ./.github/actions/cyclonedx-sbom
+        with:
+          solution: Source/Presentation/MMCA.Common.UI.Maui/MMCA.Common.UI.Maui.csproj
+          output-dir: ./sbom-maui
 
       - name: Upload SBOM
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

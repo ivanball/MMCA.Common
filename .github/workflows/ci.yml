@@ -110,7 +110,7 @@ jobs:
             Directory.Packages.props
 
       # Fast, dependency-free drift gate: FACTS.md must match what `build/facts` computes from source
-      # (version from the git tag, package count, ADR range, fitness-method/base counts). Fails the
+      # (version from the git tag, package count, fitness-method/base counts; the ADR count and range are owned by the Website ADR index). Fails the
       # build if the committed FACTS.md is stale — regenerate with `dotnet run --project build/facts -- .`.
       - name: Verify FACTS.md is current
         # NOT code-guarded: FACTS.md is markdown, so a docs-only PR is exactly the kind of change
@@ -134,38 +134,13 @@ jobs:
 
       - name: Audit dependencies (fail on known vulnerabilities)
         if: needs.changes.outputs.code == 'true'
-        # Fails CLOSED (SEC-Common-62). The verdict used to be derived purely from grepping stdout for
-        # vulnerable-package rows, with the command's own exit code discarded, so every way the tool
-        # itself can fail (a transient nuget.org 5xx while fetching the advisory index, an auth or
-        # proxy error, an slnx parse change, an SDK band that renames the output) produced an empty
-        # grep and a green "no vulnerabilities". Two assertions must now hold before that conclusion
-        # is allowed: the command exited 0, AND the log is actually a `dotnet list package` report
-        # (which always prints the sources header first).
-        run: |
-          rc=0
-          dotnet list MMCA.Common.slnx package --vulnerable --include-transitive > audit.log 2>&1 || rc=$?
-          cat audit.log
-          if [ "$rc" -ne 0 ]; then
-            echo "::error::dotnet list --vulnerable exited $rc: the vulnerability gate did not run, so it fails"; exit 1
-          fi
-          if ! grep -q 'The following sources were used' audit.log; then
-            echo "::error::audit.log is not a dotnet list package report (no sources header): the vulnerability gate did not run, so it fails"; exit 1
-          fi
-          # `dotnet list --vulnerable` ignores NuGetAuditSuppress, so honor the same accepted-advisory
-          # list here (single source of truth: Directory.Build.props). Fail only on a vulnerable-package
-          # row (">") whose advisory is NOT suppressed (e.g. the unpatched SQLite advisory is accepted).
-          # Scoped to actual <NuGetAuditSuppress> lines: a GHSA id mentioned in a comment about a
-          # NON-accepted advisory must not silently suppress it here.
-          suppressed=$(grep -E '<NuGetAuditSuppress\b' Directory.Build.props | grep -oE 'GHSA-[a-z0-9-]+' | sort -u | paste -sd'|' -)
-          echo "Accepted (suppressed) advisories: ${suppressed:-<none>}"
-          vulns=$(grep -E '^[[:space:]]*>[[:space:]]' audit.log || true)
-          if [ -n "$suppressed" ]; then
-            vulns=$(printf '%s\n' "$vulns" | grep -vE "$suppressed" || true)
-          fi
-          if printf '%s' "$vulns" | grep -q .; then
-            echo "::error::Non-suppressed vulnerable NuGet packages detected (see log above)"; exit 1
-          fi
-          echo "No non-suppressed vulnerable packages."
+        # Fails CLOSED (SEC-Common-62) and honours the NuGetAuditSuppress accept-list in
+        # Directory.Build.props. The logic lives in the composite action so this repository and its
+        # consumers (ADC and Store deploy.yml, via ivanball/MMCA.Common/.github/actions/...@main) run
+        # ONE implementation instead of a per-repository copy that drifts (ADR-038).
+        uses: ./.github/actions/nuget-vulnerability-audit
+        with:
+          solution: MMCA.Common.slnx
 
       - name: Install coverage tool
         if: needs.changes.outputs.code == 'true'
@@ -778,6 +753,38 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         working-directory: ${{ runner.temp }}/pkg-consumer
         run: dotnet build Consumer.csproj -c Release
+
+      - name: Layer rules ship with the packages (compile-time probes)
+        if: needs.changes.outputs.code == 'true'
+        # MMCA.Common.Shared carries buildTransitive/MMCA.Common.Shared.targets (ADR-015 / ADR-058):
+        # a consumer project named {App}.{Module}.{Layer} gets the layer rules at
+        # ResolveProjectReferences with no opt-in. One positive and two negative probes prove the
+        # import reaches a package-mode consumer AND that both error codes fire: a passing probe on
+        # its own would also pass if the file were silently missing from the package.
+        working-directory: ${{ runner.temp }}/pkg-consumer
+        run: |
+          set -euo pipefail
+          probe() { local name="$1"; shift; mkdir -p "probes/$name"
+            { printf '<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>\n  <ItemGroup>\n'
+              for item in "$@"; do printf '    %s\n' "$item"; done
+              printf '  </ItemGroup>\n</Project>\n'; } > "probes/$name/$name.csproj"; }
+          pkg() { printf '<PackageReference Include="%s" Version="%s" />' "$1" "$PACK_VERSION"; }
+          prj() { printf '<ProjectReference Include="../%s/%s.csproj" />' "$1" "$1"; }
+          expect_error() { # $1 project, $2 error code
+            if dotnet build "probes/$1/$1.csproj" -c Release > "probes/$1.log" 2>&1; then
+              cat "probes/$1.log"; echo "::error::$1 built although it violates a layer rule; $2 did not fire"; exit 1
+            fi
+            grep -q "$2" "probes/$1.log" || { cat "probes/$1.log"; echo "::error::$1 failed for a reason other than $2"; exit 1; }
+            echo "$1: $2 fired as expected"; }
+          probe Probe.Sample.Domain "$(pkg MMCA.Common.Domain)"
+          probe Probe.Sample.Application "$(pkg MMCA.Common.Application)" "$(prj Probe.Sample.Domain)"
+          dotnet build probes/Probe.Sample.Application/Probe.Sample.Application.csproj -c Release
+          probe Probe.BadPackage.Domain "$(pkg MMCA.Common.Domain)" "$(pkg MMCA.Common.Infrastructure)"
+          expect_error Probe.BadPackage.Domain MMCA0002
+          probe Probe.BadProject.Application "$(pkg MMCA.Common.Application)"
+          probe Probe.BadProject.Domain "$(pkg MMCA.Common.Domain)" "$(prj Probe.BadProject.Application)"
+          expect_error Probe.BadProject.Domain MMCA0001
+          echo "Layer-rule probes: positive built, MMCA0001 and MMCA0002 fired."
 
   # Reference-deployment validation gate (§17): the samples/deployment Bicep is the framework's
   # distilled IaC/OIDC reference (a library cannot deploy itself; DEPLOYMENT.md), so keep it

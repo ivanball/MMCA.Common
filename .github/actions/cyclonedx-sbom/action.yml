@@ -1,0 +1,72 @@
+name: CycloneDX SBOM (gating)
+description: >-
+  Generates a CycloneDX software bill of materials for a solution, filter or project and fails
+  unless the result exists AND lists at least one component. A zero-component skeleton passes a
+  plain file-size check, which is exactly how an empty SBOM once shipped unnoticed; asserting the
+  component count is the gate. A .slnf is normalised to forward slashes first: it records Windows
+  paths, and on Linux CycloneDX opens them literally and silently resolves zero projects.
+  Shared by MMCA.Common (release.yml) and its consumers (ADC/Store deploy.yml) so the gate has
+  one implementation instead of one drifting copy per repository (ADR-038).
+
+inputs:
+  solution:
+    description: Solution (.slnx / .sln / .slnf) or project to describe.
+    required: true
+  output-dir:
+    description: Directory the BOM is written to (created if missing).
+    required: true
+  filename:
+    description: BOM file name inside output-dir.
+    required: false
+    default: bom.json
+  name:
+    description: BOM metadata component name (--set-name). Defaults to the input's file name.
+    required: false
+    default: ""
+  tool-version:
+    description: CycloneDX .NET tool version to install.
+    required: false
+    default: 6.2.0
+
+outputs:
+  bom-path:
+    description: Path of the generated BOM.
+    value: ${{ steps.generate.outputs.bom-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate SBOM (CycloneDX)
+      id: generate
+      shell: bash
+      env:
+        SBOM_INPUT: ${{ inputs.solution }}
+        SBOM_OUT_DIR: ${{ inputs.output-dir }}
+        SBOM_FILENAME: ${{ inputs.filename }}
+        SBOM_NAME: ${{ inputs.name }}
+        SBOM_TOOL_VERSION: ${{ inputs.tool-version }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$SBOM_OUT_DIR"
+        dotnet tool install --global CycloneDX --version "$SBOM_TOOL_VERSION" \
+          || dotnet tool update --global CycloneDX --version "$SBOM_TOOL_VERSION"
+        export PATH="$PATH:$HOME/.dotnet/tools"
+        input="$SBOM_INPUT"
+        case "$input" in
+          *.slnf)
+            # Write a forward-slash copy NEXT TO the original so its relative project paths still resolve.
+            normalised="$(dirname "$input")/sbom-linux-$(basename "$input")"
+            jq '.solution.projects |= map(gsub("\\\\"; "/"))' "$input" > "$normalised"
+            echo "Projects in filter: $(jq '.solution.projects | length' "$normalised")"
+            input="$normalised"
+            ;;
+        esac
+        name_arg=()
+        if [ -n "$SBOM_NAME" ]; then name_arg=(--set-name "$SBOM_NAME"); fi
+        dotnet CycloneDX "$input" --output "$SBOM_OUT_DIR" --json --filename "$SBOM_FILENAME" "${name_arg[@]}"
+        bom="$SBOM_OUT_DIR/$SBOM_FILENAME"
+        test -s "$bom" || { echo "::error::SBOM not generated or empty: $bom"; exit 1; }
+        components=$(jq '.components | length' "$bom")
+        echo "SBOM components: $components"
+        [ "$components" -gt 0 ] || { echo "::error::SBOM contains zero components: $bom"; exit 1; }
+        echo "bom-path=$bom" >> "$GITHUB_OUTPUT"
