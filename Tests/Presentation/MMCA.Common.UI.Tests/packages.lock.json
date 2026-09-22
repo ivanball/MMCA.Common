@@ -4,9 +4,9 @@
     "net10.0": {
       "AngleSharp": {
         "type": "Direct",
-        "requested": "[1.8.1, )",
-        "resolved": "1.8.1",
-        "contentHash": "fTLPBxwYK5zmt+ernY3GL1kFBDA/2Cl72hpNnMHeNceZNJ/AT7Km9CXFaMHybuEFhXDy2Dv7Bjkez5G0Z4Io4g=="
+        "requested": "[1.8.2, )",
+        "resolved": "1.8.2",
+        "contentHash": "iRlkfBIhi+gTgTxBlYNT4PlmaiVEy7+qX3BmprAK4cYE1UjfSNFI4mEDyxC1qgtAKYg5rjGYgL3tJlzGF+Ukdg=="
       },
       "AwesomeAssertions": {
         "type": "Direct",
@@ -42,9 +42,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.259, )",
-        "resolved": "3.0.259",
-        "contentHash": "WhnkpMzWWsUhdEEyPVXRVZx1maVnfymzJuzZn3bkDsgrgFd4WxKfCLzG1ZK7k0dmuJC8T9IAM72UwYaA1wmF/Q=="
+        "requested": "[3.0.270, )",
+        "resolved": "3.0.270",
+        "contentHash": "E2OnRZmSZ3ZLhhFj0q/En47RhWrmLEVtsRsNZIW12ecQLT9y4Wimo+A8x/kuhtzLlePJ9yPp7aPiSQx8a8H5mw=="
       },
       "Microsoft.Extensions.TimeProvider.Testing": {
         "type": "Direct",
@@ -753,7 +753,7 @@
       "mmca.common.testing.ui": {
         "type": "Project",
         "dependencies": {
-          "AngleSharp": "[1.8.1, )",
+          "AngleSharp": "[1.8.2, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "Moq": "[4.20.72, )",
           "MudBlazor": "[9.10.0, )",

@@ -79,6 +79,7 @@
          v8 resilience-pipeline API); the v7 compatibility shim in the Polly meta-package is not
          used here. -->
     <PackageReference Include="Polly.Core" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" VersionOverride="8.23.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MMCA.Common.Application\MMCA.Common.Application.csproj" />

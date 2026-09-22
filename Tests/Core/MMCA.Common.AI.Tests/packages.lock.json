@@ -16,9 +16,9 @@
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[3.0.259, )",
-        "resolved": "3.0.259",
-        "contentHash": "WhnkpMzWWsUhdEEyPVXRVZx1maVnfymzJuzZn3bkDsgrgFd4WxKfCLzG1ZK7k0dmuJC8T9IAM72UwYaA1wmF/Q=="
+        "requested": "[3.0.270, )",
+        "resolved": "3.0.270",
+        "contentHash": "E2OnRZmSZ3ZLhhFj0q/En47RhWrmLEVtsRsNZIW12ecQLT9y4Wimo+A8x/kuhtzLlePJ9yPp7aPiSQx8a8H5mw=="
       },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
@@ -203,7 +203,7 @@
       "mmca.common.ai.anthropic": {
         "type": "Project",
         "dependencies": {
-          "Anthropic": "[12.48.0, )",
+          "Anthropic": "[12.49.0, )",
           "MMCA.Common.AI": "[1.0.0, )"
         }
       },
@@ -224,9 +224,9 @@
       },
       "Anthropic": {
         "type": "CentralTransitive",
-        "requested": "[12.48.0, )",
-        "resolved": "12.48.0",
-        "contentHash": "6ZexqS2S1h1hGVcSFGLY0rRNDKy19LCQw9/gcVQLPH4sG8piK+LP+gNd8ztp/QUkAdSNccCPvWaef7m7+p0RcA==",
+        "requested": "[12.49.0, )",
+        "resolved": "12.49.0",
+        "contentHash": "uPz9LkpCfelVXZUxmnBKgdn6SyHwmdD0IYnJsvwJOk8SIlTEX62V1kr1EoxnmHSlUIcKIhGnZzvmuMHz+B9MMQ==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }

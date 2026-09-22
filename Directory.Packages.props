@@ -39,7 +39,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.3" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.7" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -51,7 +51,7 @@
          OpenTelemetry.Api below) so the fix flows to consumers through the published package graph.
          Moved to the 3.x line on 2026-08-28: both dependents constrain MessagePack with a lower
          bound only, so the major bump restores and builds clean and carries the same fix. -->
-    <PackageVersion Include="MessagePack" Version="3.1.8" />
+    <PackageVersion Include="MessagePack" Version="3.1.9" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Cosmos" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
@@ -67,7 +67,7 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.12" />
     <PackageVersion Include="MiniProfiler.EntityFrameworkCore" Version="4.5.4" />
-    <PackageVersion Include="StackExchange.Redis" Version="3.2.1" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.3.0" />
     <!-- Two-level cache (L1 in-process + L2 distributed) behind the opt-in AddCommonHybridCache
          (HybridCacheService). Deliberately writes under its own disjoint 'hc:' keyspace so it can
          never cross-read an entry DistributedCacheService wrote: two serialization formats sharing
@@ -96,7 +96,7 @@
          claim) is framework code, so this is the only piece taken as a dependency, and it is
          referenced from Infrastructure alone: Application, Domain and Shared stay dependency-free. -->
     <PackageVersion Include="Otp.NET" Version="1.4.1" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
     <!-- AI (MMCA.Common.AI) -->
     <!-- Microsoft.Extensions.AI is the abstraction the governed client is written against
          (IChatClient, ChatOptions, UsageDetails) plus the pipeline pieces it composes (UseLogging,
@@ -112,7 +112,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="12.48.0" />
+    <PackageVersion Include="Anthropic" Version="12.49.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -166,7 +166,7 @@
     <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.83.0" />
     <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
-    <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.83.0" />
+    <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.84.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.84.0" />
     <!-- Common.UI -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.12" />
@@ -224,7 +224,7 @@
          binds to the MAUI train: bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="ZXing.Net.Maui.Controls" Version="0.10.4" />
     <!-- Analyzers -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.259" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.270" />
     <!-- Public API surface gate (RS0016/RS0017): every packable Source project carries a
          PublicAPI.Shipped.txt baseline, so adding or removing a public member is a deliberate,
          reviewable diff instead of an accident discovered by a consumer. Source-only (see the
@@ -240,7 +240,7 @@
     <!-- Pin the transitive AngleSharp (pulled by bUnit) to the patched 1.5.2: bUnit 2.7.2 floors it at
          1.4.0, which carries CVE-2026-54570 / GHSA-pgww-w46g-26qg (mXSS via MathML annotation-xml). CPM
          does not pin transitives, so the two bUnit-referencing projects add a direct PackageReference. -->
-    <PackageVersion Include="AngleSharp" Version="1.8.1" />
+    <PackageVersion Include="AngleSharp" Version="1.8.2" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -290,7 +290,7 @@
          only way to prove that the Telemetry:Disable*Metrics knobs actually drop a stream, rather
          than merely skipping one AddXInstrumentation call that another component re-adds. Version
          tracks the OpenTelemetry family pinned below. -->
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.19.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.1" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
@@ -300,12 +300,12 @@
          Aspire.Hosting 13.5.4 already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
          the same major the hosting stack does. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.3" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.0" />
     <!-- Same version as Microsoft.Data.SqlClient: since 7.0 the Entra ID authentication providers live
          here, and MMCA.Common.Infrastructure references it so every consumer host that connects with
          Authentication=Active Directory Managed Identity keeps working (the 2026-09-16 ADC startup
          failure). Bump the two together. -->
-    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.0.3" />
+    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.0" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <!-- Health Checks. AspNetCore.HealthChecks.Redis is deliberately absent: its check issues
          CLUSTER INFO against any server StackExchange.Redis 3.x reports as clustered, which Azure
@@ -335,12 +335,12 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
     <!-- Serilog, for MMCA.Common.Aspire's AddCommonSerilog: the host-logging bootstrap every
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and
