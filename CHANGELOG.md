@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.209.0] - 2026-09-22
+
 ### Added
 
 - **Compile-time layer enforcement for consumers.** `MMCA.Common.Shared` now carries
@@ -33,6 +35,15 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 - `CLAUDE.md` moved to `AGENTS.md`, the vendor-neutral agent instruction file; `CLAUDE.md` now
   imports it, so Claude Code reads the same text and other coding agents read it directly.
+
+- **Dependencies (minor and patch group, #435).** OpenTelemetry.Api, .Exporter.InMemory,
+  .Exporter.OpenTelemetryProtocol and .Extensions.Hosting 1.19.1; OpenTelemetry.Instrumentation.AspNetCore,
+  .Http and .Runtime 1.19.0; Microsoft.Data.SqlClient and .Extensions.Azure 7.1.0; StackExchange.Redis
+  3.3.0; Grpc.Net.ClientFactory 2.84.0; System.IdentityModel.Tokens.Jwt 8.23.0; Anthropic 12.49.0;
+  MessagePack 3.1.9; AngleSharp 1.8.2; Scalar.AspNetCore 2.17.7; Meziantou.Analyzer 3.0.270. A consumer
+  that pins OpenTelemetry.Api, .Exporter.OpenTelemetryProtocol or .Extensions.Hosting, Grpc.Net.ClientFactory
+  or System.IdentityModel.Tokens.Jwt below these versions gets NU1605 (package downgrade) on the bump;
+  raise those pins in the same commit as the `MMCA.Common.*` pin.
 
 ## [1.208.0] - 2026-09-21
 
