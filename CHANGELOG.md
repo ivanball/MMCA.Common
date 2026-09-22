@@ -6,6 +6,34 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Compile-time layer enforcement for consumers.** `MMCA.Common.Shared` now carries
+  `buildTransitive/MMCA.Common.Shared.targets`, which NuGet imports into every project that takes any
+  `MMCA.Common` package, directly or through a project reference. A project named
+  `{App}.{Module}.{Layer}` (suffix `.Shared`, `.Domain`, `.Application`, `.Infrastructure`, `.API` or
+  `.UI`) gets the layer boundaries the `MMCA.Common.Testing.Architecture` runtime rules already
+  assert, one step earlier: a forbidden `ProjectReference` fails with `MMCA0001` and a forbidden
+  `PackageReference` with `MMCA0002` at `ResolveProjectReferences`, on the developer's machine, before
+  any test runs. The rules never go beyond the runtime suite (`ArchitectureRules.Purity`, `.Transport`,
+  `.Modules`); opt one project out with `<MmcaLayerEnforcement>false</MmcaLayerEnforcement>` next to a
+  comment saying why. The `package-consumption` CI job proves the import reaches a package-mode
+  consumer with one positive and two negative probes, so a silently missing file cannot pass.
+- **Shared supply-chain gates as composite actions.** `.github/actions/nuget-vulnerability-audit`
+  (fail-closed, suppress-aware `dotnet list package --vulnerable`) and
+  `.github/actions/cyclonedx-sbom` (CycloneDX BOM, failing on zero components) are consumed here by
+  local path and by the ADC and Store `deploy.yml` as `ivanball/MMCA.Common/.github/actions/...@main`,
+  so each gate has one implementation instead of one drifting copy per repository (ADR-038).
+- **Build provenance attestations on releases.** `release.yml` attaches a signed SLSA provenance
+  attestation to every published `.nupkg` (`actions/attest-build-provenance`), verifiable with
+  `gh attestation verify <file>.nupkg --owner ivanball`. Closes the "not yet signed or attested"
+  trade-off recorded in ADR-038.
+
+### Changed
+
+- `CLAUDE.md` moved to `AGENTS.md`, the vendor-neutral agent instruction file; `CLAUDE.md` now
+  imports it, so Claude Code reads the same text and other coding agents read it directly.
+
 ## [1.208.0] - 2026-09-21
 
 ### Added
