@@ -1,0 +1,161 @@
+<!--
+  MMCA.Common consumer layer enforcement (compile time)
+  ═══════════════════════════════════════════════════════════════════
+  Ships inside the MMCA.Common.Shared package under buildTransitive/, so NuGet imports it into
+  every project that references any MMCA.Common package, directly or through a ProjectReference
+  chain. Nothing in a consumer has to opt in.
+
+  It is the reference-level mirror of the runtime rules MMCA.Common.Testing.Architecture asserts
+  over compiled assemblies (ArchitectureRules.Purity, .Transport and .Modules): the same layer
+  boundaries, checked one step earlier, at ResolveProjectReferences on the developer's machine,
+  so a wrong reference fails the build in the IDE instead of in the architecture test tier.
+  A rule here never goes beyond what the runtime suite already forbids.
+
+  It keys on the module project naming convention {App}.{Module}.{Layer} by suffix:
+
+    .Shared          may reference .Shared projects only
+    .Domain          may reference .Shared projects only
+    .Application     may reference .Shared projects and its own {App}.{Module}.Domain
+    .Infrastructure  may reference .Shared projects and its own Application and Domain
+    .API             may reference .Shared projects and its own Application, Infrastructure, Domain
+    .UI              may reference .Shared and .UI projects only
+
+  Shared, Domain and Application are the core layers: they may not take Entity Framework Core,
+  ASP.NET Core, MassTransit, Grpc.*, Google.Protobuf, or the MMCA.Common.Infrastructure, .API,
+  .AI, .Grpc, .UI, .Aspire or .Gateway packages. Shared and Domain may not take
+  MMCA.Common.Application either.
+
+  Only the references THIS project declares are judged (DefiningProjectName). The SDK folds the
+  transitive project closure into @(ProjectReference) before ResolveProjectReferences runs, and
+  judging the closure would forbid references the rules allow one hop away.
+
+  Projects whose name does not end in one of the six suffixes (hosts, .Contracts, .Tests,
+  migrations, AppHost) are not judged. MMCA.Common's own projects are governed by
+  MMCA.Common.LayerEnforcement.targets and are skipped here.
+
+  Opt a single project out with <MmcaLayerEnforcement>false</MmcaLayerEnforcement> in its csproj,
+  next to a comment saying why. The opt-out is per project on purpose: a global switch would turn
+  the rule off silently for a whole repository.
+-->
+<Project>
+
+  <PropertyGroup>
+    <MmcaLayerEnforcement Condition="'$(MmcaLayerEnforcement)' == ''">true</MmcaLayerEnforcement>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MmcaLayerEnforcement)' == 'true' AND !$(MSBuildProjectName.StartsWith('MMCA.Common'))">
+    <_MmcaLayer Condition="$(MSBuildProjectName.EndsWith('.Shared'))">Shared</_MmcaLayer>
+    <_MmcaLayer Condition="$(MSBuildProjectName.EndsWith('.Domain'))">Domain</_MmcaLayer>
+    <_MmcaLayer Condition="$(MSBuildProjectName.EndsWith('.Application'))">Application</_MmcaLayer>
+    <_MmcaLayer Condition="$(MSBuildProjectName.EndsWith('.Infrastructure'))">Infrastructure</_MmcaLayer>
+    <_MmcaLayer Condition="$(MSBuildProjectName.EndsWith('.API'))">API</_MmcaLayer>
+    <_MmcaLayer Condition="$(MSBuildProjectName.EndsWith('.UI'))">UI</_MmcaLayer>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(_MmcaLayer)' != '' AND $(MSBuildProjectName.Contains('.'))">
+    <!-- {App}.{Module} for {App}.{Module}.{Layer}: the prefix the "own layer" allowances key on. -->
+    <_MmcaModulePrefix>$(MSBuildProjectName.Substring(0, $(MSBuildProjectName.LastIndexOf('.'))))</_MmcaModulePrefix>
+    <_MmcaCoreLayer Condition="'$(_MmcaLayer)' == 'Shared' OR '$(_MmcaLayer)' == 'Domain' OR '$(_MmcaLayer)' == 'Application'">true</_MmcaCoreLayer>
+    <_MmcaAllowedProjectRefs Condition="'$(_MmcaLayer)' == 'Shared' OR '$(_MmcaLayer)' == 'Domain'">A $(_MmcaLayer) project may reference .Shared projects only</_MmcaAllowedProjectRefs>
+    <_MmcaAllowedProjectRefs Condition="'$(_MmcaLayer)' == 'Application'">An Application project may reference .Shared projects and $(_MmcaModulePrefix).Domain only</_MmcaAllowedProjectRefs>
+    <_MmcaAllowedProjectRefs Condition="'$(_MmcaLayer)' == 'Infrastructure'">An Infrastructure project may reference .Shared projects, $(_MmcaModulePrefix).Application and $(_MmcaModulePrefix).Domain only</_MmcaAllowedProjectRefs>
+    <_MmcaAllowedProjectRefs Condition="'$(_MmcaLayer)' == 'API'">An API project may reference .Shared projects, $(_MmcaModulePrefix).Application, $(_MmcaModulePrefix).Infrastructure and $(_MmcaModulePrefix).Domain only</_MmcaAllowedProjectRefs>
+    <_MmcaAllowedProjectRefs Condition="'$(_MmcaLayer)' == 'UI'">A UI project may reference .Shared and .UI projects only</_MmcaAllowedProjectRefs>
+  </PropertyGroup>
+
+  <Target Name="MmcaEnforceConsumerLayerBoundaries"
+          BeforeTargets="ResolveProjectReferences"
+          Condition="'$(_MmcaLayer)' != '' AND '$(_MmcaModulePrefix)' != ''">
+
+    <ItemGroup>
+      <_MmcaDeclaredProjectRef Include="@(ProjectReference)"
+                               Condition="'%(ProjectReference.DefiningProjectName)' == '$(MSBuildProjectName)'" />
+
+      <!-- Shared and Domain: .Shared projects only (Purity + ModuleDomainsAreIsolated +
+           ModuleSharedDoesNotDependOnOwnInternalLayers). -->
+      <_MmcaBadProjectRef Include="@(_MmcaDeclaredProjectRef)"
+        Condition="('$(_MmcaLayer)' == 'Shared' OR '$(_MmcaLayer)' == 'Domain')
+               AND !$([System.String]::new('%(Filename)').EndsWith('.Shared'))" />
+
+      <!-- Application: .Shared projects and the module's own Domain
+           (ModuleApplicationsAreIsolated + ModuleApplicationsDoNotReachOtherInfrastructures). -->
+      <_MmcaBadProjectRef Include="@(_MmcaDeclaredProjectRef)"
+        Condition="'$(_MmcaLayer)' == 'Application'
+               AND !$([System.String]::new('%(Filename)').EndsWith('.Shared'))
+               AND '%(Filename)' != '$(_MmcaModulePrefix).Domain'" />
+
+      <!-- Infrastructure: .Shared projects and the module's own Application and Domain
+           (ModuleInfrastructuresAreIsolated + ModuleInternalLayersAreIsolated). -->
+      <_MmcaBadProjectRef Include="@(_MmcaDeclaredProjectRef)"
+        Condition="'$(_MmcaLayer)' == 'Infrastructure'
+               AND !$([System.String]::new('%(Filename)').EndsWith('.Shared'))
+               AND '%(Filename)' != '$(_MmcaModulePrefix).Application'
+               AND '%(Filename)' != '$(_MmcaModulePrefix).Domain'" />
+
+      <!-- API: .Shared projects and the module's own Application, Infrastructure and Domain
+           (ModuleApisAreIsolated + ModuleInternalLayersAreIsolated). -->
+      <_MmcaBadProjectRef Include="@(_MmcaDeclaredProjectRef)"
+        Condition="'$(_MmcaLayer)' == 'API'
+               AND !$([System.String]::new('%(Filename)').EndsWith('.Shared'))
+               AND '%(Filename)' != '$(_MmcaModulePrefix).Application'
+               AND '%(Filename)' != '$(_MmcaModulePrefix).Infrastructure'
+               AND '%(Filename)' != '$(_MmcaModulePrefix).Domain'" />
+
+      <!-- UI: .Shared and .UI projects only (the Blazor WASM boundary: UI depends on Shared). -->
+      <_MmcaBadProjectRef Include="@(_MmcaDeclaredProjectRef)"
+        Condition="'$(_MmcaLayer)' == 'UI'
+               AND !$([System.String]::new('%(Filename)').EndsWith('.Shared'))
+               AND !$([System.String]::new('%(Filename)').EndsWith('.UI'))" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Core layers: no persistence, web or transport framework and no outer-layer MMCA package
+           (DomainIsFrameworkFree, SharedIsFrameworkFree, ApplicationDoesNotDependOnEntityFrameworkCore,
+           ApplicationDoesNotDependOnAspNetCore, TransportDoesNotLeakIntoCoreLayers). -->
+      <_MmcaBadPackageRef Include="@(PackageReference)"
+        Condition="'$(_MmcaCoreLayer)' == 'true'
+               AND ($([System.String]::new('%(Identity)').StartsWith('Microsoft.EntityFrameworkCore'))
+                 OR $([System.String]::new('%(Identity)').StartsWith('Microsoft.AspNetCore'))
+                 OR $([System.String]::new('%(Identity)').StartsWith('MassTransit'))
+                 OR $([System.String]::new('%(Identity)').StartsWith('Grpc.'))
+                 OR $([System.String]::new('%(Identity)').StartsWith('Google.Protobuf'))
+                 OR '%(Identity)' == 'MMCA.Common.Infrastructure'
+                 OR '%(Identity)' == 'MMCA.Common.API'
+                 OR '%(Identity)' == 'MMCA.Common.AI'
+                 OR $([System.String]::new('%(Identity)').StartsWith('MMCA.Common.AI.'))
+                 OR '%(Identity)' == 'MMCA.Common.Grpc'
+                 OR $([System.String]::new('%(Identity)').StartsWith('MMCA.Common.UI'))
+                 OR $([System.String]::new('%(Identity)').StartsWith('MMCA.Common.Aspire'))
+                 OR '%(Identity)' == 'MMCA.Common.Gateway')" />
+
+      <!-- Shared and Domain sit below Application. -->
+      <_MmcaBadPackageRef Include="@(PackageReference)"
+        Condition="('$(_MmcaLayer)' == 'Shared' OR '$(_MmcaLayer)' == 'Domain')
+               AND '%(Identity)' == 'MMCA.Common.Application'" />
+
+      <!-- Infrastructure must not depend on the presentation packages. -->
+      <_MmcaBadPackageRef Include="@(PackageReference)"
+        Condition="'$(_MmcaLayer)' == 'Infrastructure'
+               AND ('%(Identity)' == 'MMCA.Common.API'
+                 OR $([System.String]::new('%(Identity)').StartsWith('MMCA.Common.UI')))" />
+
+      <!-- UI depends on Shared (and the UI packages), never on the server-side layers. -->
+      <_MmcaBadPackageRef Include="@(PackageReference)"
+        Condition="'$(_MmcaLayer)' == 'UI'
+               AND ('%(Identity)' == 'MMCA.Common.Domain'
+                 OR '%(Identity)' == 'MMCA.Common.Application'
+                 OR '%(Identity)' == 'MMCA.Common.Infrastructure'
+                 OR '%(Identity)' == 'MMCA.Common.API')" />
+    </ItemGroup>
+
+    <Error Condition="@(_MmcaBadProjectRef->Count()) &gt; 0"
+           Code="MMCA0001"
+           Text="Layer rule: $(MSBuildProjectName) is a $(_MmcaLayer) project and must not reference project %(_MmcaBadProjectRef.Filename). $(_MmcaAllowedProjectRefs). Expose what it needs through an interface in a .Shared project, or opt this project out with &lt;MmcaLayerEnforcement&gt;false&lt;/MmcaLayerEnforcement&gt; next to a comment saying why. Mirrors MMCA.Common.Testing.Architecture (ArchitectureRules.Modules / .Purity)." />
+
+    <Error Condition="@(_MmcaBadPackageRef->Count()) &gt; 0"
+           Code="MMCA0002"
+           Text="Layer rule: $(MSBuildProjectName) is a $(_MmcaLayer) project and must not reference package %(_MmcaBadPackageRef.Identity). Core layers (Shared, Domain, Application) take no persistence, web or transport framework and no outer-layer MMCA.Common package; Infrastructure takes no presentation package; UI takes no server-side layer. Move the dependency to the layer that owns it, or opt this project out with &lt;MmcaLayerEnforcement&gt;false&lt;/MmcaLayerEnforcement&gt; next to a comment saying why. Mirrors MMCA.Common.Testing.Architecture (ArchitectureRules.Purity / .Transport)." />
+
+  </Target>
+
+</Project>

@@ -1,7 +1,7 @@
 # Contributing to MMCA.Common
 
 Thanks for taking an interest in the framework. This is a short guide; the full contributor
-reference (package layout, layer rules, build/test commands) is [CLAUDE.md](CLAUDE.md).
+reference (package layout, layer rules, build/test commands) is [AGENTS.md](AGENTS.md).
 
 Participation here is governed by the [Code of Conduct](CODE_OF_CONDUCT.md) (Contributor Covenant
 2.1). By taking part you agree to uphold it.

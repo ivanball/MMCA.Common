@@ -11,5 +11,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\README.md" Pack="true" PackagePath="\" />
+    <!-- Compile-time layer enforcement for CONSUMERS (ADR-015 / ADR-058). Shipped under
+         buildTransitive/ so NuGet imports it into every project that takes any MMCA.Common package,
+         directly or through a project reference; Shared is the one package every layer reaches.
+         The file name must equal the PackageId for the automatic import. -->
+    <None Include="..\..\Build\MMCA.Common.Shared.targets" Pack="true" PackagePath="buildTransitive/MMCA.Common.Shared.targets" />
   </ItemGroup>
 </Project>
