@@ -290,7 +290,7 @@
          only way to prove that the Telemetry:Disable*Metrics knobs actually drop a stream, rather
          than merely skipping one AddXInstrumentation call that another component re-adds. Version
          tracks the OpenTelemetry family pinned below. -->
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.19.1" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.1" />
     <!-- Shared integration-test scaffolding (MMCA.Common.Testing.Fixtures.SqlServerIntegrationTestFixtureBase):
@@ -335,12 +335,12 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.10.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <!-- OpenTelemetry.Api pinned directly to force transitive resolution to non-vulnerable version. -->
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0" />
     <!-- Serilog, for MMCA.Common.Aspire's AddCommonSerilog: the host-logging bootstrap every
          service host repeated verbatim. Serilog.AspNetCore supplies the ILoggingBuilder.AddSerilog
          provider registration (never UseSerilog, which would replace the whole ILoggerFactory and
