@@ -18,6 +18,7 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Tests.Scheduling;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
@@ -397,17 +398,10 @@ public sealed class RefreshSessionCleanupServiceTests
 
             await service.StartAsync(CancellationToken.None);
 
-            var interval = TimeSpan.FromHours(settings.CleanupIntervalHours);
-            for (var i = 0; i < 100 && !sweepObserved.Task.IsCompleted; i++)
-            {
-                TimeProvider.Advance(interval);
-
-                // A REAL (system-clock) yield so the awoken sweep can run; the fake provider in scope
-                // must not be used here or the wait itself would need advancing.
-                await Task.Delay(TimeSpan.FromMilliseconds(10), System.TimeProvider.System, CancellationToken.None);
-            }
-
-            await sweepObserved.Task.WaitAsync(TimeSpan.FromSeconds(5), System.TimeProvider.System);
+            await FakeClockLoop.AdvanceUntilAsync(
+                TimeProvider,
+                TimeSpan.FromHours(settings.CleanupIntervalHours),
+                sweepObserved.Task);
             await service.StopAsync(CancellationToken.None);
         }
 

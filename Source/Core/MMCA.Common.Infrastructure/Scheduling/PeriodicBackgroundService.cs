@@ -37,6 +37,14 @@ public abstract partial class PeriodicBackgroundService(
     /// </summary>
     protected virtual bool IsEnabled => true;
 
+    /// <summary>
+    /// Logs a cycle that threw. The default writes one generic Error naming the service; override it
+    /// to keep a service's own message (and its event id, which dashboards and tests key on).
+    /// </summary>
+    /// <param name="exception">The exception the cycle threw.</param>
+    protected virtual void LogCycleFailure(Exception exception) =>
+        LogCycleError(logger, GetType().Name, exception);
+
     /// <summary>Runs one sweep cycle. Exceptions are logged and do not stop the loop.</summary>
     /// <param name="stoppingToken">Canceled when the host shuts down.</param>
     protected abstract Task ExecuteCycleAsync(CancellationToken stoppingToken);
@@ -72,7 +80,7 @@ public abstract partial class PeriodicBackgroundService(
             }
             catch (Exception ex)
             {
-                LogCycleError(logger, GetType().Name, ex);
+                LogCycleFailure(ex);
             }
 
             try

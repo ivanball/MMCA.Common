@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
+using MMCA.Common.Infrastructure.Scheduling;
 
 namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 
@@ -48,41 +48,44 @@ public sealed partial class InternalCommandCleanupService(
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
     TimeProvider? timeProvider = null,
-    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
+    IOptions<TenancySettings>? tenancyOptions = null)
+    : PeriodicBackgroundService(timeProvider ?? TimeProvider.System, logger)
 {
     private readonly InternalCommandsSettings _settings = options.Value;
+
+    // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
+    // the same parameter into this type's state would be CS9107.
     private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);
+
+    /// <summary>
+    /// Gets one full interval: the first sweep waits a whole interval so cleanup never competes with
+    /// startup or migration work.
+    /// </summary>
+    protected override TimeSpan StartupDelay => Interval;
+
+    /// <inheritdoc />
+    protected override bool IsEnabled
     {
-        if (_settings.RetentionDays <= 0)
+        get
         {
-            LogCleanupDisabled(logger);
-            return;
-        }
+            if (_settings.RetentionDays <= 0)
+            {
+                LogCleanupDisabled(logger);
+                return false;
+            }
 
-        var interval = TimeSpan.FromHours(_settings.CleanupIntervalHours);
-
-        // Wait one interval before the first sweep so cleanup never competes with startup or
-        // migration work, then sweep on each interval until shutdown.
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
-                await PurgeAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                LogCleanupError(logger, ex);
-            }
+            return true;
         }
     }
+
+    /// <inheritdoc />
+    protected override Task ExecuteCycleAsync(CancellationToken stoppingToken) => PurgeAsync(stoppingToken);
+
+    /// <inheritdoc />
+    protected override void LogCycleFailure(Exception exception) => LogCleanupError(logger, exception);
 
     /// <summary>
     /// Sweeps every target once. Internal so tests can drive one sweep without advancing the
