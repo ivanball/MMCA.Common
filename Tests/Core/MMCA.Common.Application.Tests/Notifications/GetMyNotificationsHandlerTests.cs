@@ -143,9 +143,9 @@ public sealed class GetMyNotificationsHandlerTests
         var pushNotificationRepo = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
         var queryableExecutor = new Mock<IQueryableExecutor>();
 
-        unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<UserNotification, UserNotificationIdentifierType>())
             .Returns(userNotificationRepo.Object);
-        unitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<PushNotification, PushNotificationIdentifierType>())
             .Returns(pushNotificationRepo.Object);
 
         userNotificationRepo.Setup(x => x.TableNoTracking).Returns(userNotifications.AsQueryable());
@@ -180,9 +180,9 @@ public sealed class GetMyNotificationsHandlerTests
         var pushNotificationRepo = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
         var queryableExecutor = new Mock<IQueryableExecutor>();
 
-        unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<UserNotification, UserNotificationIdentifierType>())
             .Returns(userNotificationRepo.Object);
-        unitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<PushNotification, PushNotificationIdentifierType>())
             .Returns(pushNotificationRepo.Object);
 
         userNotificationRepo.Setup(x => x.TableNoTracking)

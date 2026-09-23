@@ -77,7 +77,7 @@ public sealed class GetNotificationHistoryHandlerTests
         var repository = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
         var queryableExecutor = new Mock<IQueryableExecutor>();
 
-        unitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<PushNotification, PushNotificationIdentifierType>())
             .Returns(repository.Object);
 
         repository.Setup(x => x.CountAsync(It.IsAny<CancellationToken>()))

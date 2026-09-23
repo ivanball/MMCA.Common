@@ -59,7 +59,7 @@ public sealed class GetUnreadNotificationCountHandlerTests
         Result<int> result = await sut.HandleAsync(new GetUnreadNotificationCountQuery(UserId: 42));
 
         result.Value.Should().Be(7);
-        mocks.UnitOfWork.Verify(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>(), Times.Never);
+        mocks.UnitOfWork.Verify(x => x.GetReadRepository<PushNotification, PushNotificationIdentifierType>(), Times.Never);
     }
 
     [Fact]
@@ -118,9 +118,9 @@ public sealed class GetUnreadNotificationCountHandlerTests
         var pushNotificationRepo = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
         var queryableExecutor = new Mock<IQueryableExecutor>();
 
-        unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<UserNotification, UserNotificationIdentifierType>())
             .Returns(repository.Object);
-        unitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<PushNotification, PushNotificationIdentifierType>())
             .Returns(pushNotificationRepo.Object);
 
         repository.Setup(x => x.TableNoTracking).Returns(userNotifications.AsQueryable());
@@ -155,7 +155,7 @@ public sealed class GetUnreadNotificationCountHandlerTests
         var repository = new Mock<IRepository<UserNotification, UserNotificationIdentifierType>>();
         var queryableExecutor = new Mock<IQueryableExecutor>();
 
-        unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
+        unitOfWork.Setup(x => x.GetReadRepository<UserNotification, UserNotificationIdentifierType>())
             .Returns(repository.Object);
 
         repository.Setup(x => x.TableNoTracking)
