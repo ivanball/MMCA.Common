@@ -31,8 +31,8 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
 /// <param name="signal">Signal that wakes the processor as soon as a requeue lands.</param>
-/// <param name="timeProvider">Clock behind the purge threshold; defaults to
-/// <see cref="TimeProvider.System"/> so tests can drive it deterministically.</param>
+/// <param name="timeProvider">Clock behind the purge threshold; injected so tests can drive it
+/// deterministically.</param>
 /// <param name="tenancyOptions">Bound tenancy settings, used to expand per-tenant copies of a source.</param>
 public sealed partial class InternalCommandAdministration(
     IServiceScopeFactory scopeFactory,
@@ -41,7 +41,7 @@ public sealed partial class InternalCommandAdministration(
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
     IInternalCommandSignal signal,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null) : IInternalCommandAdministration
 {
     /// <summary>Upper bound on one page, so an admin call cannot ask for the whole table at once.</summary>
@@ -57,7 +57,7 @@ public sealed partial class InternalCommandAdministration(
         Error.Validation("InternalCommands.InvalidOlderThan", "OlderThan must be zero or greater.");
 
     private readonly InternalCommandsSettings _settings = options.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     public async Task<Result<long>> CountPendingAsync(string? dataSource, CancellationToken cancellationToken)

@@ -105,7 +105,7 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
             var dispatcher = new Mock<IDomainEventDispatcher>();
             var logger = new Mock<ILogger<DomainEventSaveChangesInterceptor>>();
             var outboxSignal = new Mock<IOutboxSignal>();
-            return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
+            return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
         });
         services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
 

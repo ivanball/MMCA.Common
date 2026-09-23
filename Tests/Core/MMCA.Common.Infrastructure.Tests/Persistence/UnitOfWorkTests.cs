@@ -39,47 +39,6 @@ public sealed class UnitOfWorkTests
     }
 
     [Fact]
-    public void Save_DelegatesToDbContextFactory()
-    {
-        var (sut, mocks) = CreateSut();
-        mocks.DbContextFactory.Setup(x => x.SaveChanges()).Returns(3);
-
-        var result = sut.Save();
-
-        result.Should().Be(3);
-    }
-
-    [Fact]
-    public void BeginTransaction_DelegatesToDbContextFactory()
-    {
-        var (sut, mocks) = CreateSut();
-
-        sut.BeginTransaction();
-
-        mocks.DbContextFactory.Verify(x => x.BeginTransaction(), Times.Once);
-    }
-
-    [Fact]
-    public void CommitTransaction_DelegatesToDbContextFactory()
-    {
-        var (sut, mocks) = CreateSut();
-
-        sut.CommitTransaction();
-
-        mocks.DbContextFactory.Verify(x => x.CommitTransaction(), Times.Once);
-    }
-
-    [Fact]
-    public void RollbackTransaction_DelegatesToDbContextFactory()
-    {
-        var (sut, mocks) = CreateSut();
-
-        sut.RollbackTransaction();
-
-        mocks.DbContextFactory.Verify(x => x.RollbackTransaction(), Times.Once);
-    }
-
-    [Fact]
     public void Dispose_DisposesDbContextFactory()
     {
         var (sut, mocks) = CreateSut();

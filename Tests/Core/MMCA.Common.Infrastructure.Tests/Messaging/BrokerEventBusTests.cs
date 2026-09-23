@@ -324,7 +324,7 @@ public sealed class BrokerEventBusTests
             var dispatcher = new Mock<IDomainEventDispatcher>();
             var logger = new Mock<Microsoft.Extensions.Logging.ILogger<DomainEventSaveChangesInterceptor>>();
             var outboxSignal = new Mock<IOutboxSignal>();
-            return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
+            return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
         });
         services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
         return services.BuildServiceProvider();

@@ -53,7 +53,7 @@ public sealed class RefreshSessionCleanupServiceTests
         using var sut = new RefreshSessionCleanupService(
             scopeFactory.Object,
             logger.Object,
-            Options.Create(new RefreshSessionSettings { Enabled = false }));
+            Options.Create(new RefreshSessionSettings { Enabled = false }), timeProvider: TimeProvider.System);
 
         await sut.StartAsync(CancellationToken.None);
         await sut.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
@@ -72,7 +72,7 @@ public sealed class RefreshSessionCleanupServiceTests
         using var sut = new RefreshSessionCleanupService(
             scopeFactory.Object,
             logger.Object,
-            Options.Create(new RefreshSessionSettings { Enabled = true, RetentionDays = 0 }));
+            Options.Create(new RefreshSessionSettings { Enabled = true, RetentionDays = 0 }), timeProvider: TimeProvider.System);
 
         await sut.StartAsync(CancellationToken.None);
         await sut.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(30));
@@ -90,7 +90,7 @@ public sealed class RefreshSessionCleanupServiceTests
         using var sut = new RefreshSessionCleanupService(
             scopeFactory.Object,
             CreateLogger().Object,
-            Options.Create(new RefreshSessionSettings { Enabled = true, CleanupIntervalHours = 1 }));
+            Options.Create(new RefreshSessionSettings { Enabled = true, CleanupIntervalHours = 1 }), timeProvider: TimeProvider.System);
 
         await sut.StartAsync(CancellationToken.None);
         await sut.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
@@ -212,7 +212,7 @@ public sealed class RefreshSessionCleanupServiceTests
         using var sut = new RefreshSessionCleanupService(
             new Mock<IServiceScopeFactory>().Object,
             CreateLogger().Object,
-            Options.Create(new RefreshSessionSettings { Enabled = true, DataSourceName = "Identity" }));
+            Options.Create(new RefreshSessionSettings { Enabled = true, DataSourceName = "Identity" }), timeProvider: TimeProvider.System);
 
         DataSourceKey key = InvokeResolveDataSourceKey(sut, new EmptyEntityDataSourceRegistry());
 
@@ -226,7 +226,7 @@ public sealed class RefreshSessionCleanupServiceTests
         using var sut = new RefreshSessionCleanupService(
             new Mock<IServiceScopeFactory>().Object,
             CreateLogger().Object,
-            Options.Create(new RefreshSessionSettings { Enabled = true, DataSourceName = "Identity" }));
+            Options.Create(new RefreshSessionSettings { Enabled = true, DataSourceName = "Identity" }), timeProvider: TimeProvider.System);
 
         var registered = new DataSourceKey(DataSource.Sqlite, "Registered");
         var registry = new Mock<IEntityDataSourceRegistry>();
@@ -484,7 +484,7 @@ public sealed class RefreshSessionCleanupServiceTests
             var dispatcher = new Mock<IDomainEventDispatcher>();
             var logger = new Mock<ILogger<DomainEventSaveChangesInterceptor>>();
             var outboxSignal = new Mock<IOutboxSignal>();
-            return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
+            return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
         });
         services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
         return services.BuildServiceProvider();

@@ -45,7 +45,7 @@ public sealed class EfInboxStoreTests : IDisposable
         contextServices.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
         var outboxSignal = Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
         contextServices.AddSingleton(new DomainEventSaveChangesInterceptor(
-            dispatcher, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal));
+            dispatcher, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal, timeProvider: TimeProvider.System));
         contextServices.AddSingleton(Mock.Of<IEntityConfigurationAssemblyProvider>(
             p => p.GetConfigurationAssemblies() == Array.Empty<Assembly>()));
         contextServices.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());

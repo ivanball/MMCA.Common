@@ -46,7 +46,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
 /// <param name="timeProvider">Clock abstraction for the startup delay and lease/eligibility timestamps;
-/// defaults to <see cref="TimeProvider.System"/> so tests can drive the loop deterministically.</param>
+/// injected so tests can drive the loop deterministically.</param>
 /// <param name="tenancyOptions">
 /// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
 /// such database has its own outbox table that nothing else would drain. Defaulted, so a host
@@ -59,11 +59,11 @@ public sealed partial class OutboxProcessor(
     IOutboxSignal outboxSignal,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <summary>
     /// Name of the per-cycle poll activity wrapping the outbox fetch query. Must stay in sync

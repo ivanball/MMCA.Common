@@ -253,7 +253,7 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
             services.AddSingleton(new DomainEventSaveChangesInterceptor(
                 dispatcher,
                 NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-                Mock.Of<IOutboxSignal>()));
+                Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 

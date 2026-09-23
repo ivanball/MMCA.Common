@@ -38,8 +38,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
 /// <param name="timeProvider">Clock abstraction for the startup delay and every lease, backoff and
-/// eligibility timestamp; defaults to <see cref="TimeProvider.System"/> so tests can drive the loop
-/// deterministically.</param>
+/// eligibility timestamp; injected so tests can drive the loop deterministically.</param>
 /// <param name="tenancyOptions">Bound tenancy settings, used to discover tenants that keep their own
 /// copy of a source: each such database has its own queue table that nothing else would drain.</param>
 public sealed partial class InternalCommandProcessor(
@@ -49,7 +48,7 @@ public sealed partial class InternalCommandProcessor(
     IInternalCommandSignal signal,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
 {
     /// <summary>
@@ -81,7 +80,7 @@ public sealed partial class InternalCommandProcessor(
     private static readonly ActivitySource InternalCommandActivitySource = new(InternalCommandMetrics.MeterName);
 
     private readonly InternalCommandsSettings _settings = options.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

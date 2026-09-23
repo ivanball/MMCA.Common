@@ -36,8 +36,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 /// <param name="messageBusOptions">Message-bus settings; used to gate inbox purging on <c>EnableInbox</c>.</param>
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
-/// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff; defaults to
-/// <see cref="TimeProvider.System"/> so tests can drive the hour-scale loop deterministically.</param>
+/// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff;
+/// injected so tests can drive the hour-scale loop deterministically.</param>
 /// <param name="tenancyOptions">
 /// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
 /// such database has its own outbox and inbox tables, which the shared sweep never reaches.
@@ -49,16 +49,16 @@ public sealed partial class OutboxCleanupService(
     IOptions<MessageBusSettings> messageBusOptions,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null)
-    : PeriodicBackgroundService(timeProvider ?? TimeProvider.System, logger)
+    : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
     private readonly bool _inboxEnabled = messageBusOptions.Value.IsInboxEnabled;
 
     // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
     // the same parameter into this type's state would be CS9107.
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);

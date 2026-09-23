@@ -401,10 +401,9 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     }
 
     /// <summary>
-    /// Places the resolved migrations assembly in the slot of the engine it belongs to. A physical
-    /// source is per-engine, so at most one of the three properties is ever populated; keeping them
-    /// apart is what stops a SQL Server assembly from being handed to <c>UseSqlite</c> or
-    /// <c>UseNpgsql</c>.
+    /// Builds the physical source. The migrations assembly was already read from the configuration
+    /// key of this source's own engine (<see cref="GetMigrationsAssembly"/>), which is what stops a
+    /// SQL Server assembly from being handed to <c>UseSqlite</c> or <c>UseNpgsql</c>; Cosmos has none.
     /// </summary>
     private static PhysicalDataSource BuildPhysicalSource(
         DataSource engine,
@@ -415,12 +414,8 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         new(
             key,
             connectionString,
-            engine == DataSource.SQLServer ? migrationsAssembly : null,
-            cosmosDatabaseName)
-        {
-            SqliteMigrationsAssembly = engine == DataSource.Sqlite ? migrationsAssembly : null,
-            PostgreSQLMigrationsAssembly = engine == DataSource.PostgreSQL ? migrationsAssembly : null,
-        };
+            engine == DataSource.CosmosDB ? null : migrationsAssembly,
+            cosmosDatabaseName);
 
     /// <summary>
     /// The per-engine migrations assembly declared on one <c>DataSources</c> entry. Only the

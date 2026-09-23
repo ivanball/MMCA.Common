@@ -38,7 +38,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
 /// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff;
-/// defaults to <see cref="TimeProvider.System"/> so tests can drive the hour-scale loop.</param>
+/// injected so tests can drive the hour-scale loop.</param>
 /// <param name="tenancyOptions">Bound tenancy settings, used to discover tenants that keep their own
 /// copy of a source, whose queue table the shared sweep never reaches.</param>
 public sealed partial class InternalCommandCleanupService(
@@ -47,15 +47,15 @@ public sealed partial class InternalCommandCleanupService(
     IOptions<InternalCommandsSettings> options,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null)
-    : PeriodicBackgroundService(timeProvider ?? TimeProvider.System, logger)
+    : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly InternalCommandsSettings _settings = options.Value;
 
     // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
     // the same parameter into this type's state would be CS9107.
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);

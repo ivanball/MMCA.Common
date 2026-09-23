@@ -260,7 +260,7 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
                 var dispatcher = new Mock<Application.Interfaces.Events.IDomainEventDispatcher>();
                 var logger = new Mock<Microsoft.Extensions.Logging.ILogger<DomainEventSaveChangesInterceptor>>();
                 var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
-                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
+                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
             });
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();

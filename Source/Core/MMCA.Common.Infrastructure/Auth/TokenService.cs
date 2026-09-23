@@ -51,9 +51,8 @@ public sealed class TokenService : ITokenService, IDisposable
     /// simply carry no permission claims.
     /// </param>
     /// <param name="timeProvider">
-    /// Clock used for token timestamps (<c>iat</c>, <c>nbf</c>, <c>exp</c>). Optional so the service
-    /// can be constructed directly in tests; resolved from DI in production and defaults to
-    /// <see cref="TimeProvider.System"/>.
+    /// Clock used for token timestamps (<c>iat</c>, <c>nbf</c>, <c>exp</c>); resolved from the container
+    /// <c>AddServices</c> registers it in, so a test passes its own.
     /// </param>
     /// <param name="jwksSettings">
     /// The bound <see cref="JwksSettings"/>, whose <see cref="JwksSettings.KeyId"/> becomes the
@@ -64,7 +63,7 @@ public sealed class TokenService : ITokenService, IDisposable
     public TokenService(
         IOptions<JwtSettings> jwtOptions,
         IPermissionRegistry permissionRegistry,
-        TimeProvider? timeProvider = null,
+        TimeProvider timeProvider,
         IOptions<JwksSettings>? jwksSettings = null)
     {
         ArgumentNullException.ThrowIfNull(jwtOptions);
@@ -72,7 +71,7 @@ public sealed class TokenService : ITokenService, IDisposable
         var jwtSettings = jwtOptions.Value;
         _jwtSettings = jwtSettings;
         _permissionRegistry = permissionRegistry;
-        _timeProvider = timeProvider ?? TimeProvider.System;
+        _timeProvider = timeProvider;
 
         if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
         {

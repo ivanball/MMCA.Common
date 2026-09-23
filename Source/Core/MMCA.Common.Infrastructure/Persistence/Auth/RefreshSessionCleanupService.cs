@@ -42,21 +42,21 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <param name="logger">Logger for sweep diagnostics; the per-sweep deleted count is logged here.</param>
 /// <param name="options">Bound refresh-session settings (retention window and sweep interval).</param>
 /// <param name="timeProvider">
-/// Clock for the sweep interval and the retention cutoff; defaults to <see cref="TimeProvider.System"/>
-/// so tests can drive the hour-scale loop deterministically.
+/// Clock for the sweep interval and the retention cutoff; injected so tests can drive the hour-scale
+/// loop deterministically.
 /// </param>
 public sealed partial class RefreshSessionCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<RefreshSessionCleanupService> logger,
     IOptions<RefreshSessionSettings> options,
-    TimeProvider? timeProvider = null)
-    : PeriodicBackgroundService(timeProvider ?? TimeProvider.System, logger)
+    TimeProvider timeProvider)
+    : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly RefreshSessionSettings _settings = options.Value;
 
     // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
     // the same parameter into this type's state would be CS9107.
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);

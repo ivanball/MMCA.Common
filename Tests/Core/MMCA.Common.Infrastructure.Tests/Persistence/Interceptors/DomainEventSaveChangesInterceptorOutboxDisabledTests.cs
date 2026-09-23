@@ -31,7 +31,7 @@ public sealed class DomainEventSaveChangesInterceptorOutboxDisabledTests : IDisp
             _mockDispatcher.Object,
             NullLogger<DomainEventSaveChangesInterceptor>.Instance,
             _mockSignal.Object,
-            timeProvider: null,
+            timeProvider: TimeProvider.System,
             Options.Create(new MessageBusSettings { EnableOutbox = false }));
         _dbContext = DomainEventSaveChangesInterceptorOutboxRoutingTests.OutboxRoutingTestDbContext.Create(interceptor);
     }

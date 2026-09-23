@@ -92,7 +92,7 @@ public sealed class DeleteBehaviorConventionTests : DeleteBehaviorConventionTest
             services.AddSingleton(new DomainEventSaveChangesInterceptor(
                 new NoDomainEventDispatcher(),
                 NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-                new NoOutboxSignal()));
+                new NoOutboxSignal(), timeProvider: TimeProvider.System));
             services.AddSingleton<IEntityDataSourceRegistry>(new NoEntityDataSources());
             return services.BuildServiceProvider();
         }

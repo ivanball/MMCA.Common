@@ -36,7 +36,7 @@ public sealed class DomainEventSaveChangesInterceptorOutboxRoutingTests : IDispo
         var interceptor = new DomainEventSaveChangesInterceptor(
             _mockDispatcher.Object,
             NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-            _mockSignal.Object);
+            _mockSignal.Object, timeProvider: TimeProvider.System);
         _dbContext = OutboxRoutingTestDbContext.Create(interceptor);
     }
 

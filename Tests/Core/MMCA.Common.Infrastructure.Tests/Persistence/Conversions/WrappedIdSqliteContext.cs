@@ -199,7 +199,7 @@ internal static class WrappedIdContextServices
         services.AddSingleton(_ => new DomainEventSaveChangesInterceptor(
             Mock.Of<IDomainEventDispatcher>(),
             NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-            Mock.Of<IOutboxSignal>()));
+            Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
         services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
 
         if (withRegistry)

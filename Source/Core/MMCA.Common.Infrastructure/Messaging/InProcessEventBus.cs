@@ -25,8 +25,8 @@ namespace MMCA.Common.Infrastructure.Messaging;
 /// <param name="domainEventDispatcher">Dispatches the published events in-process.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
 /// <param name="outboxOptions">Configurable outbox settings supplying that target.</param>
-/// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on the dispatched rows; defaults to
-/// <see cref="TimeProvider.System"/> so an existing host keeps the previous constructor shape.</param>
+/// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on the dispatched rows; resolved from
+/// the container <c>AddServices</c> registers it in.</param>
 /// <param name="messageBusOptions">Transport posture supplying <c>IsOutboxEnabled</c>. A host that
 /// resolves no options (and any test constructing this type directly) keeps the outbox path, so the
 /// opt-out is only ever taken because configuration asked for it.</param>
@@ -35,10 +35,10 @@ public sealed class InProcessEventBus(
     IDomainEventDispatcher domainEventDispatcher,
     IDataSourceResolver dataSourceResolver,
     IOptions<OutboxSettings> outboxOptions,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<MessageBusSettings>? messageBusOptions = null) : IEventBus
 {
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     private readonly bool _outboxEnabled = messageBusOptions?.Value.IsOutboxEnabled ?? true;
 

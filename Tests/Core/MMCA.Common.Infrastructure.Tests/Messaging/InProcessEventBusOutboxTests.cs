@@ -42,7 +42,7 @@ public sealed class InProcessEventBusOutboxTests : IDisposable
             .Returns((DataSource engine, string _) => DataSourceKey.Default(engine));
 
         IOptions<OutboxSettings> options = Options.Create(_outboxSettings);
-        _sut = new InProcessEventBus(_mockDbContextFactory.Object, _mockDispatcher.Object, _mockResolver.Object, options);
+        _sut = new InProcessEventBus(_mockDbContextFactory.Object, _mockDispatcher.Object, _mockResolver.Object, options, timeProvider: TimeProvider.System);
     }
 
     public void Dispose() => _testContext.Dispose();
@@ -102,7 +102,7 @@ public sealed class InProcessEventBusOutboxTests : IDisposable
             _mockDispatcher.Object,
             _mockResolver.Object,
             Options.Create(_outboxSettings),
-            timeProvider: null,
+            timeProvider: TimeProvider.System,
             Options.Create(new MessageBusSettings { EnableOutbox = false }));
         var integrationEvent = new TestIntegrationEvent { DateOccurred = DateTime.UtcNow };
 
@@ -161,7 +161,7 @@ public sealed class InProcessEventBusOutboxTests : IDisposable
                 var dispatcher = new Mock<IDomainEventDispatcher>();
                 var logger = new Mock<Microsoft.Extensions.Logging.ILogger<DomainEventSaveChangesInterceptor>>();
                 var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
-                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
+                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
             });
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();

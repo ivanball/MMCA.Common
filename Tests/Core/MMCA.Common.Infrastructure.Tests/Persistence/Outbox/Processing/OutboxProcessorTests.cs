@@ -56,7 +56,7 @@ public sealed class OutboxProcessorTests : IDisposable
         contextServices.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
         var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
         contextServices.AddSingleton(new DomainEventSaveChangesInterceptor(
-            _dispatcherMock.Object, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal.Object));
+            _dispatcherMock.Object, NullLogger<DomainEventSaveChangesInterceptor>.Instance, outboxSignal.Object, timeProvider: TimeProvider.System));
         contextServices.AddSingleton(Mock.Of<IEntityConfigurationAssemblyProvider>(
             p => p.GetConfigurationAssemblies() == Array.Empty<Assembly>()));
         contextServices.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
@@ -116,7 +116,7 @@ public sealed class OutboxProcessorTests : IDisposable
             Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>(),
             _registry,
             _resolver,
-            timeProvider);
+            timeProvider ?? TimeProvider.System);
 
     public void Dispose()
     {

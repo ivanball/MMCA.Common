@@ -131,7 +131,7 @@ public sealed class RefreshSessionModelGateTests
             new PhysicalDataSource(
                 new DataSourceKey(DataSource.SQLServer, dataSourceName),
                 GateContext<TCase>.ConnectionString,
-                SqlServerMigrationsAssembly: null,
+                MigrationsAssembly: null,
                 CosmosDatabaseName: string.Empty));
     }
 

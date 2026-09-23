@@ -15,14 +15,14 @@ namespace MMCA.Common.Infrastructure.Persistence.Repositories;
 /// <typeparam name="TEntity">The entity type.</typeparam>
 /// <typeparam name="TIdentifierType">The entity's primary key type.</typeparam>
 /// <remarks>
-/// The optional <paramref name="timeProvider"/> and <paramref name="currentUserService"/> serve
+/// <paramref name="timeProvider"/> and the optional <paramref name="currentUserService"/> serve
 /// audit stamping on <see cref="ExecuteUpdateAsync"/>, which bypasses the save pipeline and so
-/// stamps the clock and the acting user itself. When absent (direct construction in tests) the
-/// system clock is used and the user stamp is skipped.
+/// stamps the clock and the acting user itself. Without a user service (direct construction in
+/// tests) the user stamp is skipped.
 /// </remarks>
 internal sealed class EFRepository<TEntity, TIdentifierType>(
     DbContext context,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     ICurrentUserService? currentUserService = null
 ) : EFReadRepository<TEntity, TIdentifierType>(context), IRepository<TEntity, TIdentifierType>
     where TEntity : AuditableAggregateRootEntity<TIdentifierType>
@@ -141,7 +141,7 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
         // modification audit fields here unless the caller assigned them explicitly.
         if (!builder.SetsProperty(nameof(IAuditableEntity.LastModifiedOn)))
         {
-            var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
             builder.Set(e => e.LastModifiedOn, (DateTime?)now);
         }
 
