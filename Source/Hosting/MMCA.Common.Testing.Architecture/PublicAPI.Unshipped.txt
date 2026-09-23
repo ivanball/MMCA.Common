@@ -150,3 +150,15 @@ MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Controllers
 MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.Handlers_DoNotExceedConstructorDependencyCeiling() -> void
 abstract MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.MaxControllerConstructorDependencies.get -> int
 abstract MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.MaxHandlerConstructorDependencies.get -> int
+MMCA.Common.Testing.Architecture.ClockReadTestsBase
+MMCA.Common.Testing.Architecture.ClockReadTestsBase.ClockReadTestsBase() -> void
+MMCA.Common.Testing.Architecture.ClockReadTestsBase.DomainAndApplication_ShouldNotReadTheAmbientClock() -> void
+MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase
+MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.QueryHandlerReadRepositoryTestsBase() -> void
+MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.QueryHandlers_ShouldUseReadRepositories() -> void
+abstract MMCA.Common.Testing.Architecture.ClockReadTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+abstract MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.Map.get -> MMCA.Common.Testing.Architecture.IArchitectureMap!
+static MMCA.Common.Testing.Architecture.ArchitectureRules.DomainAndApplicationDoNotReadTheClock(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndMembers) -> void
+static MMCA.Common.Testing.Architecture.ArchitectureRules.QueryHandlersUseReadRepositories(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
+virtual MMCA.Common.Testing.Architecture.ClockReadTestsBase.AllowedClockReaders.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+virtual MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.AllowedHandlers.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

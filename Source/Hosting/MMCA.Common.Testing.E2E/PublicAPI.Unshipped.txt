@@ -69,3 +69,8 @@ virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsB
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.Timeout.get -> float
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.SignOutAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.EmailAlreadyRegisteredAlert.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.Infrastructure.E2EPolling
+static MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.PollUntilAsync(System.Func<System.Threading.Tasks.Task<bool>!>! probe, System.TimeSpan? timeout = null, System.TimeSpan? interval = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+static MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.PollUntilAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! probe, System.Func<T, bool>! isSatisfied, System.TimeSpan? timeout = null, System.TimeSpan? interval = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>!
+static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultInterval -> System.TimeSpan
+static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultTimeout -> System.TimeSpan
