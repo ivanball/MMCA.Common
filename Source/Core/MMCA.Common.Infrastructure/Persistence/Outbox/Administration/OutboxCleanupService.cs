@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -98,14 +96,8 @@ public sealed partial class OutboxCleanupService(
             var sourceName = target.ToString();
             try
             {
-                using var scope = scopeFactory.CreateScope();
-
-                // Set before the context is asked for: the tenant is what routes the scoped factory
-                // to this tenant's own database.
-                if (target.TenantId is { } tenantId)
-                {
-                    scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-                }
+                // The tenant is set before the context is asked for (see CreateTenantScope).
+                using var scope = scopeFactory.CreateTenantScope(target);
 
                 var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
                 var context = dbContextFactory.GetDbContext(target.Source);
@@ -194,30 +186,18 @@ public sealed partial class OutboxCleanupService(
     }
 
     /// <summary>
-    /// The relational physical sources whose outbox tables this host owns — the same set the
-    /// <see cref="OutboxProcessor"/> drains (every source backing a registered entity plus the
-    /// configured publish target; Cosmos has no outbox table).
-    /// </summary>
-    private List<DataSourceKey> GetRelationalSources()
-    {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        return [.. sources.Distinct()];
-    }
-
-    /// <summary>
-    /// The units this sweep visits: every owned source against the shared database, plus one extra
-    /// unit per tenant that keeps its own copy of a source (whose outbox and inbox tables live in a
-    /// database nothing else opens).
+    /// The units this sweep visits: the same relational sources the <see cref="OutboxProcessor"/>
+    /// drains (every source backing a registered entity plus the configured publish target; Cosmos
+    /// has no outbox table) against the shared database, plus one extra unit per tenant that keeps
+    /// its own copy of a source (whose outbox and inbox tables live in a database nothing else opens).
     /// </summary>
     internal List<TenantDataSourceTarget> GetRelationalTargets() =>
-        TenantDataSourceTargets.Expand(GetRelationalSources(), tenancyOptions?.Value);
+        TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox cleanup disabled: Outbox:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);

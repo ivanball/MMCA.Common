@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Modules;
 using MMCA.Common.Application.Settings;
@@ -138,8 +137,7 @@ public static class DatabaseInitializationExtensions
         foreach (var target in TenantDataSourceTargets.Expand(sourcesInUse, settings)
             .Where(t => t.TenantId is not null))
         {
-            using var tenantScope = services.CreateScope();
-            tenantScope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(target.TenantId!);
+            using var tenantScope = services.GetRequiredService<IServiceScopeFactory>().CreateTenantScope(target);
 
             var factory = tenantScope.ServiceProvider.GetRequiredService<IDbContextFactory>();
             var database = factory.GetDbContext(target.Source).Database;

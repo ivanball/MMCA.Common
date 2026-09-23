@@ -437,17 +437,12 @@ public sealed class OutboxCleanupServiceTests
     // ── Helpers ──
 
     /// <summary>
-    /// Invokes the private <c>GetRelationalSources</c> helper via reflection so the pure
-    /// source-selection logic can be verified without driving the hour-scale purge loop.
+    /// Reads the sources behind the internal <c>GetRelationalTargets</c> so the pure
+    /// source-selection logic can be verified without driving the hour-scale purge loop. With no
+    /// tenancy configured every target is a shared-database target, so the sources are the whole set.
     /// </summary>
-    private static List<DataSourceKey> InvokeGetRelationalSources(OutboxCleanupService sut)
-    {
-        MethodInfo? method = typeof(OutboxCleanupService)
-            .GetMethod("GetRelationalSources", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.Should().NotBeNull();
-
-        return (List<DataSourceKey>)method!.Invoke(sut, [])!;
-    }
+    private static List<DataSourceKey> InvokeGetRelationalSources(OutboxCleanupService sut) =>
+        [.. sut.GetRelationalTargets().Select(target => target.Source)];
 
     // ── Sweep-test harness ──
 

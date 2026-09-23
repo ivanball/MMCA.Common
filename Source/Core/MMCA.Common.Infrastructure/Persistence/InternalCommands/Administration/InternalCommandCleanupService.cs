@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -106,14 +104,8 @@ public sealed partial class InternalCommandCleanupService(
             var sourceName = target.ToString();
             try
             {
-                using var scope = scopeFactory.CreateScope();
-
-                // Set before the context is asked for: the tenant is what routes the scoped factory
-                // to this tenant's own database.
-                if (target.TenantId is { } tenantId)
-                {
-                    scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-                }
+                // The tenant is set before the context is asked for (see CreateTenantScope).
+                using var scope = scopeFactory.CreateTenantScope(target);
 
                 var context = scope.ServiceProvider.GetRequiredService<IDbContextFactory>()
                     .GetDbContext(target.Source);
@@ -168,18 +160,13 @@ public sealed partial class InternalCommandCleanupService(
     /// The relational physical sources whose queue tables this host owns: the same set the
     /// <c>InternalCommandProcessor</c> drains, expanded per tenant that keeps its own copy.
     /// </summary>
-    internal List<TenantDataSourceTarget> GetTargets()
-    {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        return TenantDataSourceTargets.Expand([.. sources.Distinct()], tenancyOptions?.Value);
-    }
+    internal List<TenantDataSourceTarget> GetTargets() =>
+        TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Internal command cleanup disabled: InternalCommands:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);
