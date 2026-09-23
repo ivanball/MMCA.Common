@@ -10,9 +10,9 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 /// error numbers, which are the authoritative answer, and the message fallback that carries the
 /// links in the chain that are not a <see cref="SqlException"/>. The number cases build a real
 /// <see cref="SqlException"/> through the provider's own non-public factory, because the type has
-/// no public constructor and cannot otherwise be produced without a server; if a provider upgrade
-/// ever moves that factory the cases report themselves as skipped instead of failing the build for
-/// a reason that has nothing to do with the detector.
+/// no public constructor and cannot otherwise be produced without a server. If a provider upgrade
+/// ever moves that factory the number cases FAIL, naming the factory: a skip would silently leave
+/// the authoritative half of the detector untested for as long as nobody read the skip count.
 /// </summary>
 public sealed class SqlServerUniqueConstraintViolationDetectorTests
 {
@@ -23,12 +23,7 @@ public sealed class SqlServerUniqueConstraintViolationDetectorTests
     [InlineData(2627)]
     public void IsUniqueConstraintViolation_WithAUniqueViolationNumber_ReturnsTrue(int number)
     {
-        var exception = TryCreateSqlException(number, "Cannot insert duplicate key row in object 'dbo.Widgets'.");
-        if (exception is null)
-        {
-            Assert.Skip("Microsoft.Data.SqlClient no longer exposes the non-public SqlException factory.");
-            return;
-        }
+        var exception = CreateSqlException(number, "Cannot insert duplicate key row in object 'dbo.Widgets'.");
 
         _sut.IsUniqueConstraintViolation(exception).Should().BeTrue();
     }
@@ -38,12 +33,7 @@ public sealed class SqlServerUniqueConstraintViolationDetectorTests
     {
         // The shape EF Core produces: DbUpdateException wrapping the provider's own error. The
         // message on the wrapper says nothing about a duplicate, so only the number can answer.
-        var inner = TryCreateSqlException(2627, "Violation of UNIQUE KEY constraint 'UX_Widgets_Code'.");
-        if (inner is null)
-        {
-            Assert.Skip("Microsoft.Data.SqlClient no longer exposes the non-public SqlException factory.");
-            return;
-        }
+        var inner = CreateSqlException(2627, "Violation of UNIQUE KEY constraint 'UX_Widgets_Code'.");
 
         var exception = new InvalidOperationException("An error occurred while saving the entity changes.", inner);
 
@@ -54,14 +44,9 @@ public sealed class SqlServerUniqueConstraintViolationDetectorTests
     public void IsUniqueConstraintViolation_WithAnUnrelatedSqlErrorNumber_ReturnsFalse()
     {
         // 547 is the foreign-key violation: a real fault that must keep propagating.
-        var exception = TryCreateSqlException(
+        var exception = CreateSqlException(
             547,
             "The INSERT statement conflicted with the FOREIGN KEY constraint 'FK_Widgets_Owners'.");
-        if (exception is null)
-        {
-            Assert.Skip("Microsoft.Data.SqlClient no longer exposes the non-public SqlException factory.");
-            return;
-        }
 
         _sut.IsUniqueConstraintViolation(exception).Should().BeFalse();
     }
@@ -118,6 +103,23 @@ public sealed class SqlServerUniqueConstraintViolationDetectorTests
             "Command timed out after 2601 milliseconds (correlation 2627).");
 
         _sut.IsUniqueConstraintViolation(exception).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Builds a genuine <see cref="SqlException"/> carrying <paramref name="number"/>, failing the
+    /// test with the reason when the provider's non-public factory is no longer reachable.
+    /// </summary>
+    private static SqlException CreateSqlException(int number, string message)
+    {
+        var exception = TryCreateSqlException(number, message);
+        if (exception is null)
+        {
+            Assert.Fail(
+                "Microsoft.Data.SqlClient no longer exposes the non-public SqlException factory this test builds its "
+                + "exceptions through; repair TryCreateSqlException for the new provider version.");
+        }
+
+        return exception;
     }
 
     /// <summary>
