@@ -521,61 +521,31 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return cached;
         }
 
-        IsLoading = true;
-        LoadFailed = false;
-        StateHasChanged();
-
-        // Bound the fetch token: during SSR pre-render (CreateFetchCts) it times out so a cold/unreachable
-        // backend can't block prerendering — and therefore the page load / navigation — indefinitely (the
-        // dominant cause of E2E navigation timeouts). On timeout the fetch throws OperationCanceledException
-        // and we return an empty grid; the first INTERACTIVE ServerData call then loads the real data.
-        // No extra token to link: the paged funnel has no per-request token of its own.
-        using var fetchCts = CreateFetchCts(CancellationToken.None);
-
-        // Filter and sort extraction run INSIDE the try: the caller's additionalFilters callback is
-        // arbitrary page code, and a throw from it (or from the extraction itself) used to escape
-        // past the finally, stranding IsLoading at true and leaving the grid spinning forever.
-        try
-        {
-            var filters = ExtractGridFilters(state.FilterDefinitions);
-            additionalFilters?.Invoke(filters);
-
-            var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
-
-            var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, fetchCts.Token);
-            if (!fetched.TryGetValue(out var page))
+        // No extra token to link: the paged funnel has no per-request token of its own. The
+        // pre-render timeout still applies (RunFetchAsync builds the token through CreateFetchCts).
+        return await RunFetchAsync(
+            async token =>
             {
-                fetched.NotifyOnFailure(Toast, Localizer);
-                LoadFailed = true;
-                return new GridData<TDto> { Items = [], TotalItems = 0 };
-            }
+                var filters = ExtractGridFilters(state.FilterDefinitions);
+                additionalFilters?.Invoke(filters);
 
-            var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
-            _lastSuccessfulGridData = gridData;
-            SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
-            return gridData;
-        }
-        catch (OperationCanceledException)
-        {
-            // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
-            // toast is a no-op (separate render: no JS toast host), so no special-casing is needed.
-            if (showCancelSnackbar)
-                Toast.Info(Localizer["Grid.Snackbar.LoadCancelled"]);
-            return new GridData<TDto> { Items = [], TotalItems = 0 };
-        }
-        catch (Exception ex)
-        {
-            // Still guarded: the caller's additionalFilters callback and the grid-state extraction
-            // above are arbitrary page code, and a throw from either must not strand IsLoading.
-            Toast.Error(ErrorMessages.LoadError(Title, ex));
-            LoadFailed = true;
-            return new GridData<TDto> { Items = [], TotalItems = 0 };
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
+                var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
+
+                var fetched = await fetchAsync(filters, state.Page + 1, state.PageSize, sortColumn, sortDirection, token);
+                if (!fetched.TryGetValue(out var page))
+                {
+                    return FailedFetch(fetched, EmptyGridData);
+                }
+
+                var gridData = new GridData<TDto> { Items = page.Items, TotalItems = page.TotalItems };
+                _lastSuccessfulGridData = gridData;
+                SaveCurrentState(state.Page, state.PageSize, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
+                return gridData;
+            },
+            onCancelled: EmptyGridData,
+            onFailed: EmptyGridData,
+            showCancelSnackbar,
+            CancellationToken.None);
     }
 
     /// <summary>
@@ -614,57 +584,94 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
 
         await ResetCancellationTokenAsync();
 
+        // Cancellation is deliberately silent here: see the remarks above.
+        return await RunFetchAsync(
+            async token =>
+            {
+                var filters = ExtractGridFilters(state.FilterDefinitions);
+                additionalFilters?.Invoke(filters);
+
+                var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
+                var window = ComputeVirtualWindow(state.StartIndex, state.Count);
+
+                var fetched = await fetchAsync(filters, window.FirstPage, window.PageSize, sortColumn, sortDirection, token);
+                if (!fetched.TryGetValue(out var page))
+                {
+                    return FailedFetch(fetched, EmptyGridData);
+                }
+
+                var items = page.Items;
+                if (window.NeedsSecondPage)
+                {
+                    var continued = await fetchAsync(filters, window.FirstPage + 1, window.PageSize, sortColumn, sortDirection, token);
+                    if (!continued.TryGetValue(out var nextPage))
+                    {
+                        return FailedFetch(continued, EmptyGridData);
+                    }
+
+                    items = [.. items, .. nextPage.Items];
+                }
+
+                // Trim to exactly the requested window; the tail of the data set legitimately yields fewer.
+                var slice = items.Skip(window.Offset).Take(Math.Max(state.Count, 0)).ToList();
+                SaveCurrentState(0, 0, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
+                return new GridData<TDto> { Items = slice, TotalItems = page.TotalItems };
+            },
+            onCancelled: EmptyGridData,
+            onFailed: EmptyGridData,
+            showCancelSnackbar: false,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// The one fetch pipeline behind the paged, virtualized and mobile loaders. It raises
+    /// <see cref="IsLoading"/>, clears <see cref="LoadFailed"/>, builds the fetch token through
+    /// <see cref="CreateFetchCts"/> (so the SSR pre-render timeout applies on every path), and runs
+    /// <paramref name="fetchAsync"/> ENTIRELY inside the <see langword="try"/>: filter extraction and
+    /// the caller's <c>additionalFilters</c> callback are arbitrary page code, and a throw from either
+    /// must be reported through the toast rather than escape past the <see langword="finally"/> and
+    /// strand <see cref="IsLoading"/> at <see langword="true"/> (a grid that spins forever).
+    /// The caller resets the cancellation source first, because the paged path must still be able
+    /// to return persisted pre-render data without toggling the loading state.
+    /// </summary>
+    /// <typeparam name="TResult">What the loader returns to its caller.</typeparam>
+    /// <param name="fetchAsync">The fetch body; receives the bounded token.</param>
+    /// <param name="onCancelled">The result to return on cancellation (user, disposal or pre-render timeout).</param>
+    /// <param name="onFailed">The result to return when the body throws; <see cref="LoadFailed"/> is set first.</param>
+    /// <param name="showCancelSnackbar">Whether a cancellation raises the informational toast.</param>
+    /// <param name="additionalToken">An extra token to link in; <see cref="CancellationToken.None"/> links nothing.</param>
+    private async Task<TResult> RunFetchAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> fetchAsync,
+        Func<TResult> onCancelled,
+        Func<TResult> onFailed,
+        bool showCancelSnackbar,
+        CancellationToken additionalToken)
+    {
         IsLoading = true;
         LoadFailed = false;
         StateHasChanged();
 
-        using var fetchCts = CreateFetchCts(cancellationToken);
-
         try
         {
-            var filters = ExtractGridFilters(state.FilterDefinitions);
-            additionalFilters?.Invoke(filters);
-
-            var (sortColumn, sortDirection) = ResolveSortParameters(state.SortDefinitions);
-            var window = ComputeVirtualWindow(state.StartIndex, state.Count);
-
-            var fetched = await fetchAsync(filters, window.FirstPage, window.PageSize, sortColumn, sortDirection, fetchCts.Token);
-            if (!fetched.TryGetValue(out var page))
-            {
-                fetched.NotifyOnFailure(Toast, Localizer);
-                LoadFailed = true;
-                return new GridData<TDto> { Items = [], TotalItems = 0 };
-            }
-
-            var items = page.Items;
-            if (window.NeedsSecondPage)
-            {
-                var continued = await fetchAsync(filters, window.FirstPage + 1, window.PageSize, sortColumn, sortDirection, fetchCts.Token);
-                if (!continued.TryGetValue(out var nextPage))
-                {
-                    continued.NotifyOnFailure(Toast, Localizer);
-                    LoadFailed = true;
-                    return new GridData<TDto> { Items = [], TotalItems = 0 };
-                }
-
-                items = [.. items, .. nextPage.Items];
-            }
-
-            // Trim to exactly the requested window; the tail of the data set legitimately yields fewer.
-            var slice = items.Skip(window.Offset).Take(Math.Max(state.Count, 0)).ToList();
-            SaveCurrentState(0, 0, sortColumn, string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase));
-            return new GridData<TDto> { Items = slice, TotalItems = page.TotalItems };
+            using var fetchCts = CreateFetchCts(additionalToken);
+            return await fetchAsync(fetchCts.Token);
         }
         catch (OperationCanceledException)
         {
-            // Deliberately silent — see the remarks above.
-            return new GridData<TDto> { Items = [], TotalItems = 0 };
+            // Covers user/disposal cancellation and the pre-render timeout. During pre-render the
+            // toast is a no-op (separate render: no JS toast host), so no special-casing is needed.
+            if (showCancelSnackbar)
+            {
+                Toast.Info(Localizer["Grid.Snackbar.LoadCancelled"]);
+            }
+
+            return onCancelled();
         }
         catch (Exception ex)
         {
             Toast.Error(ErrorMessages.LoadError(Title, ex));
             LoadFailed = true;
-            return new GridData<TDto> { Items = [], TotalItems = 0 };
+            return onFailed();
         }
         finally
         {
@@ -672,6 +679,19 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             StateHasChanged();
         }
     }
+
+    /// <summary>
+    /// Reports a failed fetch <see cref="Result"/> the way <see cref="RunFetchAsync{TResult}"/> reports
+    /// a thrown one: the localized message goes to the toast and <see cref="LoadFailed"/> is set.
+    /// </summary>
+    private TResult FailedFetch<TResult>(Result fetched, Func<TResult> onFailed)
+    {
+        fetched.NotifyOnFailure(Toast, Localizer);
+        LoadFailed = true;
+        return onFailed();
+    }
+
+    private static GridData<TDto> EmptyGridData() => new() { Items = [], TotalItems = 0 };
 
     /// <summary>
     /// Maps a virtualization row window onto the page-based fetch contract. The window's own size
@@ -730,50 +750,41 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     {
         await ResetCancellationTokenAsync();
 
-        IsLoading = true;
-        LoadFailed = false;
-        StateHasChanged();
-
-        var filters = new Dictionary<string, (string Operator, string Value)>();
-        additionalFilters?.Invoke(filters);
-
-        try
-        {
-            var fetched = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, _cts!.Token);
-            if (!fetched.TryGetValue(out var page))
+        // Cancellation (component disposal or user cancellation) keeps the cards already shown and
+        // raises no toast; a failure of any kind, the additionalFilters callback included, empties them.
+        await RunFetchAsync(
+            async token =>
             {
-                fetched.NotifyOnFailure(Toast, Localizer);
-                LoadFailed = true;
-                MobileItems = [];
-                MobileTotalItems = 0;
-                return;
-            }
+                var filters = new Dictionary<string, (string Operator, string Value)>();
+                additionalFilters?.Invoke(filters);
 
-            MobileItems = page.Items;
-            MobileTotalItems = page.TotalItems;
+                var fetched = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, token);
+                if (!fetched.TryGetValue(out var page))
+                {
+                    return FailedFetch(fetched, ClearMobileItems);
+                }
 
-            // Page size 0, like the virtualized path above: the restore guards skip a saved size of
-            // 0, and MobilePageSize is never restored from state anyway. Persisting it would only
-            // overwrite the desktop grid's RowsPerPage, so a user who set 50 rows and then narrowed
-            // the viewport would come back to 10.
-            SaveCurrentState(0, 0, _savedSortColumn, _savedSortDescending);
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected during component disposal or user cancellation
-        }
-        catch (Exception ex)
-        {
-            Toast.Error(ErrorMessages.LoadError(Title, ex));
-            LoadFailed = true;
-            MobileItems = [];
-            MobileTotalItems = 0;
-        }
-        finally
-        {
-            IsLoading = false;
-            StateHasChanged();
-        }
+                MobileItems = page.Items;
+                MobileTotalItems = page.TotalItems;
+
+                // Page size 0, like the virtualized path above: the restore guards skip a saved size of
+                // 0, and MobilePageSize is never restored from state anyway. Persisting it would only
+                // overwrite the desktop grid's RowsPerPage, so a user who set 50 rows and then narrowed
+                // the viewport would come back to 10.
+                SaveCurrentState(0, 0, _savedSortColumn, _savedSortDescending);
+                return true;
+            },
+            onCancelled: static () => false,
+            onFailed: ClearMobileItems,
+            showCancelSnackbar: false,
+            CancellationToken.None);
+    }
+
+    private bool ClearMobileItems()
+    {
+        MobileItems = [];
+        MobileTotalItems = 0;
+        return false;
     }
 
     private async Task ResetCancellationTokenAsync()
