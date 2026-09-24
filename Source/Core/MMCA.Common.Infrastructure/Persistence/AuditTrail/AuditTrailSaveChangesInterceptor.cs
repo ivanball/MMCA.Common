@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using MMCA.Common.Domain.Attributes;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Privacy;
+using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -189,8 +190,8 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
         var capture = new CaptureContext(
             context.CurrentSaveUserId,
             timeProvider.GetUtcNow().UtcDateTime,
-            Truncate(Activity.Current?.TraceId.ToString(), MaxCorrelationIdLength),
-            Truncate(context.CurrentTenantId, MaxTenantIdLength));
+            ColumnWidth.Truncate(Activity.Current?.TraceId.ToString(), MaxCorrelationIdLength),
+            ColumnWidth.Truncate(context.CurrentTenantId, MaxTenantIdLength));
 
         // Snapshot before adding: the rows this method writes land in the same tracker, and
         // enumerating it lazily while adding to it would throw.
@@ -240,7 +241,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
         EntityEntry entry,
         CaptureContext capture)
     {
-        var entityType = Truncate(entry.Metadata.ClrType.FullName ?? entry.Metadata.ClrType.Name, MaxEntityTypeLength)!;
+        var entityType = ColumnWidth.Truncate(entry.Metadata.ClrType.FullName ?? entry.Metadata.ClrType.Name, MaxEntityTypeLength)!;
         var entityKey = BuildEntityKey(entry);
 
         if (entry.State == EntityState.Modified)
@@ -305,7 +306,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
             {
                 EntityType = entityType,
                 EntityKey = entityKey,
-                PropertyName = Truncate(property.Metadata.Name, MaxKeyLength),
+                PropertyName = ColumnWidth.Truncate(property.Metadata.Name, MaxKeyLength),
                 OldValue = isPii ? PiiRedactor.RedactedToken : FormatValue(original),
                 NewValue = isPii ? PiiRedactor.RedactedToken : FormatValue(current),
                 Operation = OperationModified,
@@ -481,7 +482,7 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
         var parts = key.Properties
             .Select(property => FormatValue(entry.Property(property.Name).CurrentValue) ?? string.Empty);
 
-        return Truncate(string.Join(KeySeparator, parts), MaxKeyLength)!;
+        return ColumnWidth.Truncate(string.Join(KeySeparator, parts), MaxKeyLength)!;
     }
 
     /// <summary>Whether the CLR property behind an EF property carries <see cref="PiiAttribute"/>.</summary>
@@ -528,10 +529,6 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
         return original.Equals(current);
     }
-
-    /// <summary>Truncates a value to a column width, preserving null.</summary>
-    private static string? Truncate(string? value, int maxLength) =>
-        value is null || value.Length <= maxLength ? value : value[..maxLength];
 
     /// <summary>The values every row of one save shares.</summary>
     /// <param name="ChangedBy">The user the save runs as, or null.</param>
