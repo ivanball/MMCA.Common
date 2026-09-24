@@ -27,21 +27,21 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePassword;
 /// <param name="passwordHasher">Verifies the current credential and derives the new one.</param>
 /// <param name="logger">Logger for the change-password audit line.</param>
 /// <param name="refreshSessions">
-/// Optional refresh-session store. When supplied, a successful change revokes every live session on
-/// the account (ADR-097), so a stolen refresh chain cannot survive the remediation the user just
-/// performed. Optional and defaulted so an existing subclass keeps compiling; a host that wired
-/// refresh sessions should pass it.
+/// The refresh-session store. A successful change revokes every live session on the account
+/// (ADR-097), so a stolen refresh chain cannot survive the remediation the user just performed.
 /// </param>
 /// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
 public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ILogger logger,
-    IRefreshSessionStore? refreshSessions = null,
+    IRefreshSessionStore refreshSessions,
     TimeProvider? timeProvider = null) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IPasswordChangeableUser
     where TCommand : IUserScopedCommand<ChangePasswordRequest>
 {
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
     /// <summary>The unit of work (exposed for app-level extensions).</summary>
     protected IUnitOfWork UnitOfWork => unitOfWork;
 
@@ -91,7 +91,7 @@ public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
             // Credential rotation evicts every live refresh session: an attacker holding a stolen
             // chain must not keep minting tokens through the exact remediation the user performed.
             await RefreshSessionRevocation
-                .RevokeAllAsync(refreshSessions, timeProvider, command.UserId, cancellationToken)
+                .RevokeAllAsync(refreshSessions, _timeProvider, command.UserId, cancellationToken)
                 .ConfigureAwait(false);
 
             UserUseCaseLog.PasswordChanged(logger, command.UserId);

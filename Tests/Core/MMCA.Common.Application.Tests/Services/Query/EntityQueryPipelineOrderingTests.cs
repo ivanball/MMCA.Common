@@ -1,8 +1,8 @@
 using AwesomeAssertions;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Interfaces.Navigation;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Testing.Support;
 
 namespace MMCA.Common.Application.Tests.Services.Query;
 
@@ -117,24 +117,5 @@ public sealed class EntityQueryPipelineOrderingTests
 
         // Stable LINQ-to-Objects ordering keeps the seeded order inside each name group.
         items.Select(e => e.Id).Should().Equal(4, 2, 3, 1);
-    }
-
-    /// <summary>
-    /// Executes the queryable for real (LINQ to Objects) so the tests observe the ORDER the pipeline
-    /// actually produced, which a Moq executor returning a canned list cannot show.
-    /// </summary>
-    private sealed class InMemoryQueryableExecutor : IQueryableExecutor
-    {
-        public IQueryable<T> Include<T>(IQueryable<T> query, string navigationPropertyPath)
-            where T : class => query;
-
-        public IQueryable<T> AsSplitQuery<T>(IQueryable<T> query)
-            where T : class => query;
-
-        public Task<List<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-            => Task.FromResult(query.ToList());
-
-        public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-            => Task.FromResult(query.Count());
     }
 }

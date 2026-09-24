@@ -2,7 +2,6 @@ using System.Collections;
 using System.Globalization;
 using System.Reflection;
 using AwesomeAssertions;
-using Microsoft.Extensions.Caching.Memory;
 using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Shared.Concurrency;
 
@@ -10,7 +9,7 @@ namespace MMCA.Common.Infrastructure.Tests.Caching;
 
 public sealed class MemoryCacheServiceTests : IDisposable
 {
-    private readonly MemoryCache _cache = new(new MemoryCacheOptions());
+    private readonly EvictionSignalingMemoryCache _cache = new();
     private readonly MemoryCacheService _sut;
 
     public MemoryCacheServiceTests() =>
@@ -130,8 +129,8 @@ public sealed class MemoryCacheServiceTests : IDisposable
         await _sut.SetAsync("product:1", "first");
         await _sut.SetAsync("product:1", "second");
 
-        // Give any queued post-eviction callback from the overwrite time to run.
-        await Task.Delay(100);
+        // Wait for the overwrite's queued post-eviction callback (one Replaced eviction) to run.
+        await _cache.WaitForEvictionCallbacksAsync(1);
 
         await _sut.RemoveByPrefixAsync("product:");
 
@@ -148,7 +147,9 @@ public sealed class MemoryCacheServiceTests : IDisposable
             await _sut.SetAsync("product:2", $"value-{round.ToString(CultureInfo.InvariantCulture)}");
         }
 
-        await Task.Delay(100);
+        // 40 writes over 2 keys: every write after each key's first replaces a live entry, so 38
+        // Replaced callbacks are queued. Wait for all of them before evicting.
+        await _cache.WaitForEvictionCallbacksAsync(38);
 
         await _sut.RemoveByPrefixAsync("product:");
 
@@ -161,11 +162,13 @@ public sealed class MemoryCacheServiceTests : IDisposable
     {
         // The callback must still clean up on a genuine eviction; only Replaced is exempt.
         await _sut.SetAsync("product:1", "value", TimeSpan.FromMilliseconds(1));
-        await Task.Delay(150);
+        _cache.AdvanceClock(TimeSpan.FromSeconds(1));
 
-        // Touch the cache so MemoryCache processes the expiry.
+        // Touch the cache so MemoryCache processes the expiry, then wait for its callback to run.
         (await _sut.GetAsync<string>("product:1")).Should().BeNull();
+        await _cache.WaitForEvictionCallbacksAsync(1);
 
+        TrackedKeysOf(_sut).Should().NotContain("product:1", "a genuine expiry removes its own tracking record");
         await FluentActions.Invoking(() => _sut.RemoveByPrefixAsync("product:"))
             .Should().NotThrowAsync();
     }

@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.Permissions;
+using MMCA.Common.Infrastructure.Hosting.Background;
 
 namespace MMCA.Common.Infrastructure.Persistence.Auth;
 
@@ -32,43 +32,29 @@ internal sealed partial class PermissionGrantRefreshService(
     IPermissionGrantCache cache,
     IOptions<PermissionGrantSettings> settings,
     ILogger<PermissionGrantRefreshService> logger,
-    TimeProvider? timeProvider = null) : BackgroundService
+    TimeProvider? timeProvider = null)
+    : PeriodicBackgroundService(timeProvider ?? TimeProvider.System, logger)
 {
     private readonly PermissionGrantSettings _settings = settings.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        var interval = TimeSpan.FromSeconds(_settings.CacheSeconds);
+    protected override TimeSpan Interval => TimeSpan.FromSeconds(_settings.CacheSeconds);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await cache.RefreshAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-#pragma warning disable CA1031 // Do not catch general exception types: any load fault must degrade to "no stored grants", never stop the host.
-            catch (Exception ex)
-#pragma warning restore CA1031
-            {
-                LogRefreshFailed(logger, ex);
-            }
+    /// <summary>
+    /// Gets <see cref="TimeSpan.Zero"/>: the snapshot is primed immediately at startup, because until
+    /// the first load authorization sees no stored grants at all.
+    /// </summary>
+    protected override TimeSpan StartupDelay => TimeSpan.Zero;
 
-            try
-            {
-                await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-        }
-    }
+    /// <inheritdoc />
+    /// <remarks>
+    /// A failed load reaches <see cref="LogCycleFailure"/> and the loop carries on: any load fault must
+    /// degrade to "no stored grants", never stop the host.
+    /// </remarks>
+    protected override Task ExecuteCycleAsync(CancellationToken stoppingToken) => cache.RefreshAsync(stoppingToken);
+
+    /// <inheritdoc />
+    protected override void LogCycleFailure(Exception exception) => LogRefreshFailed(logger, exception);
 
     [LoggerMessage(
         Level = LogLevel.Error,

@@ -6,6 +6,73 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **Shared in-memory test fakes (`MMCA.Common.Testing.Support`).** `InMemoryQueryableExecutor` runs a
+  queryable with LINQ to Objects so a test drives the real query pipeline, and
+  `InMemoryRefreshSessionStore` mirrors the EF store's visibility rules (same instances on every read,
+  staged inserts invisible until `SaveChangesAsync`, owner-scoped `FindByIdAsync`, and a
+  `RotationOutcome` callback that loses the rotation race on demand). They replace the copies the
+  framework and its consumers each kept.
+- **Two fitness rules (`MMCA.Common.Testing.Architecture`).** `QueryHandlerReadRepositoryTestsBase`
+  fails when an `IQueryHandler` calls `IUnitOfWork.GetRepository` instead of `GetReadRepository`
+  (async and lambda bodies included; `AllowedHandlers` is the adoption ratchet).
+  `ClockReadTestsBase` fails when Domain or Application code reads `DateTime.UtcNow`,
+  `DateTime.Now`, `DateTimeOffset.UtcNow` or `DateTimeOffset.Now`; `AllowedClockReaders` takes a
+  type, a namespace prefix or one `Type.Member`, and the framework's `BaseDomainEvent.DateOccurred`
+  stamp is always exempt.
+- **`E2EPolling.PollUntilAsync` (`MMCA.Common.Testing.E2E`)**, a deadline-bounded poll for
+  eventually-consistent end-to-end assertions, the E2E counterpart of `TestPolling`.
+- **`TenantDataSourceTargets.CreateTenantScope(target)`** creates a DI scope with the target's tenant
+  already set, the step every per-tenant sweep repeated by hand.
+- **`PeriodicBackgroundService.LogCycleFailure(exception)`**, a protected virtual hook that lets a
+  subclass keep its own error message and event id for a failed cycle.
+
+### Changed
+
+- The outbox, internal-command and refresh-session cleanup services and the permission-grant refresh
+  run on `PeriodicBackgroundService` instead of four hand-written loops. First-run timing is
+  unchanged (the cleanups wait one full interval, the grant refresh primes immediately) and each keeps
+  its own log lines; a disabled service additionally logs the base's one-line
+  `{ServiceName} is disabled` notice.
+- The notification query handlers (history, unread count, inbox) take `GetReadRepository`.
+- The CSV export machinery moved out of `EntityControllerBase` into an internal exporter;
+  `ExportAsync`, `GetExportSpecification`, `BuildExportFileName` and `ExportFileNamePrefix` are
+  unchanged.
+
+### Fixed
+
+- **`DataGridListPageBase.LoadMobileDataAsync` no longer strands the card view spinning.** A throwing
+  `additionalFilters` callback ran outside the `try`, so `IsLoading` stayed `true`; it now reports
+  through the error toast and sets `LoadFailed`, exactly as the paged loader does. The mobile fetch
+  also gets the SSR pre-render timeout it was missing. All three loaders share one fetch pipeline.
+
+**Breaking:** removals, tightenings and one namespace move in shipped signatures. Hosts that resolve these types
+from DI change nothing; code that constructs them by hand, mocks the removed members or reads the
+renamed properties does. See [UPGRADING.md](UPGRADING.md) for the map and the mechanical fix.
+
+- `IUnitOfWork` loses its synchronous members: `Save()`, `BeginTransaction()`, `CommitTransaction()`
+  and `RollbackTransaction()`. Use `SaveChangesAsync` and `ExecuteInTransactionAsync`.
+  `IDbContextFactory` keeps its synchronous members.
+- `ChangePasswordHandlerBase` and `ResetPasswordHandlerBase` require `refreshSessions` (it was an
+  optional `IRefreshSessionStore?`), so a successful change or reset always revokes the account's
+  live sessions (ADR-097).
+- `TimeProvider` is a required constructor parameter (it was `TimeProvider? timeProvider = null`) on
+  the types `AddInfrastructure` resolves: `TokenService`, `InProcessEventBus`,
+  `DomainEventSaveChangesInterceptor`, `OutboxProcessor`, `OutboxCleanupService`,
+  `InternalCommandProcessor`, `InternalCommandCleanupService`, `InternalCommandAdministration` and
+  `RefreshSessionCleanupService`.
+- `IFileStorageService.UploadAsync(blobName, content, contentType, FileUploadOptions options, ...)`
+  is abstract; its default implementation, which dropped the options, is gone.
+- `PhysicalDataSource` carries one `MigrationsAssembly` (the third positional parameter) in place
+  of `SqlServerMigrationsAssembly`, `SqliteMigrationsAssembly` and `PostgreSQLMigrationsAssembly`.
+  The configuration keys are unchanged.
+- `PeriodicBackgroundService` moved from `MMCA.Common.Infrastructure.Scheduling` to
+  `MMCA.Common.Infrastructure.Hosting.Background`. The persistence sweeps now derive from it, and
+  `Scheduling` depends on `Persistence` (the job runner leases its rows in the database), so leaving
+  the base in `Scheduling` would have tied the two namespaces into a cycle. The type itself is
+  unchanged.
+
 ## [1.209.0] - 2026-09-22
 
 ### Added

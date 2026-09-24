@@ -35,10 +35,6 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     /// <returns>The number of state entries written to the database.</returns>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Synchronous save. Prefer <see cref="SaveChangesAsync"/> in async code paths.</summary>
-    /// <returns>The number of state entries written to the database.</returns>
-    int Save();
-
     /// <summary>
     /// Signals that the next <see cref="SaveChangesAsync"/> may include entities with
     /// explicit values for database-generated identity columns (e.g., imported from an
@@ -47,15 +43,6 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     /// cleared after the save completes.
     /// </summary>
     void RequestIdentityInsert();
-
-    /// <summary>Begins a database transaction.</summary>
-    void BeginTransaction();
-
-    /// <summary>Commits the current transaction.</summary>
-    void CommitTransaction();
-
-    /// <summary>Rolls back the current transaction.</summary>
-    void RollbackTransaction();
 
     /// <summary>
     /// Executes <paramref name="operation"/> inside a database transaction, wrapped by the

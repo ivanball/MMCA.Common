@@ -29,7 +29,9 @@ public sealed class RepositoryFactoryTests : IDisposable
         _context = new TestDbContext(options);
         _context.Database.EnsureCreated();
 
+        // EFRepository takes the clock from the container, as AddInfrastructure registers it.
         var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
         _serviceProvider = services.BuildServiceProvider();
     }
 

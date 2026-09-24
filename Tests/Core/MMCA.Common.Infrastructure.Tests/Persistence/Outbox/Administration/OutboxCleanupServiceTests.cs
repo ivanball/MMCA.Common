@@ -16,6 +16,7 @@ using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Tests.Scheduling;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using Moq;
 using IDbContextFactory = MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory;
@@ -73,7 +74,7 @@ public sealed class OutboxCleanupServiceTests
             Options.Create(outboxSettings),
             Options.Create(messageBusSettings ?? new MessageBusSettings()),
             registry.Object,
-            resolver.Object);
+            resolver.Object, timeProvider: TimeProvider.System);
 
         return (sut, new Mocks(scopeFactory, logger, registry, resolver));
     }
@@ -254,7 +255,7 @@ public sealed class OutboxCleanupServiceTests
         using var service = sut;
 
         await service.StartAsync(CancellationToken.None);
-        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await FakeClockLoop.AdvanceUntilAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
         await service.StopAsync(CancellationToken.None);
 
         List<Guid> remaining = await context.Set<OutboxMessage>().AsNoTracking()
@@ -298,7 +299,7 @@ public sealed class OutboxCleanupServiceTests
         using var service = sut;
 
         await service.StartAsync(CancellationToken.None);
-        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await FakeClockLoop.AdvanceUntilAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
         await service.StopAsync(CancellationToken.None);
 
         List<Guid> remaining = await context.Set<OutboxMessage>().AsNoTracking()
@@ -342,7 +343,7 @@ public sealed class OutboxCleanupServiceTests
         using var service = sut;
 
         await service.StartAsync(CancellationToken.None);
-        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await FakeClockLoop.AdvanceUntilAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
         await service.StopAsync(CancellationToken.None);
 
         (await context.Set<OutboxMessage>().AsNoTracking().CountAsync(CancellationToken.None)).Should().Be(
@@ -382,7 +383,7 @@ public sealed class OutboxCleanupServiceTests
         using var service = sut;
 
         await service.StartAsync(CancellationToken.None);
-        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await FakeClockLoop.AdvanceUntilAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
         await service.StopAsync(CancellationToken.None);
 
         (await context.Set<OutboxMessage>().AsNoTracking().CountAsync(CancellationToken.None)).Should().Be(0);
@@ -423,7 +424,7 @@ public sealed class OutboxCleanupServiceTests
         using var service = sut;
 
         await service.StartAsync(CancellationToken.None);
-        await AdvanceUntilSweepAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
+        await FakeClockLoop.AdvanceUntilAsync(timeProvider, TimeSpan.FromHours(1), sweepObserved);
         await service.StopAsync(CancellationToken.None);
 
         List<Guid> remaining = await context.Set<InboxMessage>().AsNoTracking()
@@ -437,17 +438,12 @@ public sealed class OutboxCleanupServiceTests
     // ── Helpers ──
 
     /// <summary>
-    /// Invokes the private <c>GetRelationalSources</c> helper via reflection so the pure
-    /// source-selection logic can be verified without driving the hour-scale purge loop.
+    /// Reads the sources behind the internal <c>GetRelationalTargets</c> so the pure
+    /// source-selection logic can be verified without driving the hour-scale purge loop. With no
+    /// tenancy configured every target is a shared-database target, so the sources are the whole set.
     /// </summary>
-    private static List<DataSourceKey> InvokeGetRelationalSources(OutboxCleanupService sut)
-    {
-        MethodInfo? method = typeof(OutboxCleanupService)
-            .GetMethod("GetRelationalSources", BindingFlags.NonPublic | BindingFlags.Instance);
-        method.Should().NotBeNull();
-
-        return (List<DataSourceKey>)method!.Invoke(sut, [])!;
-    }
+    private static List<DataSourceKey> InvokeGetRelationalSources(OutboxCleanupService sut) =>
+        [.. sut.GetRelationalTargets().Select(target => target.Source)];
 
     // ── Sweep-test harness ──
 
@@ -514,28 +510,6 @@ public sealed class OutboxCleanupServiceTests
             timeProvider);
 
         return (sut, sweepObserved.Task, logger, scopeServices);
-    }
-
-    /// <summary>
-    /// Advances the fake clock one cleanup interval at a time, yielding a few real milliseconds after
-    /// each advance so the awoken sweep can run, until the observed log event fires.
-    /// <see cref="FakeTimeProvider.Advance"/> only completes a Delay whose timer already exists, so the
-    /// loop tolerates the startup race between <c>StartAsync</c> and the first Delay registration. The
-    /// iteration cap both fails a broken sweep fast and keeps cumulative fake time far below the
-    /// retention window of the seeded "survivor" rows.
-    /// </summary>
-    private static async Task AdvanceUntilSweepAsync(FakeTimeProvider timeProvider, TimeSpan interval, Task sweepObserved)
-    {
-        for (var i = 0; i < 100 && !sweepObserved.IsCompleted; i++)
-        {
-            timeProvider.Advance(interval);
-
-            // A REAL (system-clock) yield so the sweep continuation can run; the fake provider in
-            // scope must not be used here or the wait itself would need advancing.
-            await Task.Delay(TimeSpan.FromMilliseconds(10), TimeProvider.System, CancellationToken.None);
-        }
-
-        await sweepObserved.WaitAsync(TimeSpan.FromSeconds(5), TimeProvider.System);
     }
 
     private static OutboxMessage ProcessedOutboxMessage(DateTime processedOn) => new()
@@ -632,7 +606,7 @@ public sealed class OutboxCleanupServiceTests
                 var dispatcher = new Mock<IDomainEventDispatcher>();
                 var logger = new Mock<ILogger<DomainEventSaveChangesInterceptor>>();
                 var outboxSignal = new Mock<IOutboxSignal>();
-                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object);
+                return new DomainEventSaveChangesInterceptor(dispatcher.Object, logger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
             });
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             return services.BuildServiceProvider();

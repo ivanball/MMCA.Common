@@ -21,5 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Application\MMCA.Common.Application.csproj" />
+    <!-- The shared in-memory fakes (InMemoryQueryableExecutor, InMemoryRefreshSessionStore) the consumers use too. -->
+    <ProjectReference Include="..\..\..\Source\Hosting\MMCA.Common.Testing\MMCA.Common.Testing.csproj" />
   </ItemGroup>
 </Project>

@@ -27,7 +27,7 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
 
         _context = new TestDbContext(options);
         _context.Database.EnsureCreated();
-        _sut = new EFRepository<TestEntity, int>(_context);
+        _sut = new EFRepository<TestEntity, int>(_context, timeProvider: TimeProvider.System);
     }
 
     public void Dispose()

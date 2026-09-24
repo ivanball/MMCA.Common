@@ -197,7 +197,7 @@ public sealed class EFRawSqlQueryExecutorTests : IDisposable
             services.AddSingleton(new DomainEventSaveChangesInterceptor(
                 Mock.Of<IDomainEventDispatcher>(),
                 NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-                Mock.Of<IOutboxSignal>()));
+                Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider serviceProvider = services.BuildServiceProvider();
 

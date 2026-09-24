@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -207,15 +206,12 @@ public sealed partial class OutboxAdministration(
     /// </summary>
     private List<TenantDataSourceTarget> SelectTargets(string? dataSource)
     {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        var targets = TenantDataSourceTargets.Expand([.. sources.Distinct()], tenancyOptions?.Value);
+        var targets = TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
         return dataSource is null
             ? targets
@@ -234,12 +230,7 @@ public sealed partial class OutboxAdministration(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var scope = scopeFactory.CreateScope();
-
-        if (target.TenantId is { } tenantId)
-        {
-            scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-        }
+        using var scope = scopeFactory.CreateTenantScope(target);
 
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
         return await work(dbContextFactory.GetDbContext(target.Source)).ConfigureAwait(false);

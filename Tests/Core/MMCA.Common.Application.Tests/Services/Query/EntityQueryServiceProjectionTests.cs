@@ -7,6 +7,7 @@ using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Specifications;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Services.Query;
@@ -263,21 +264,5 @@ public sealed class EntityQueryServiceProjectionTests
             null!);
 
         act.Should().Throw<ArgumentNullException>();
-    }
-
-    /// <summary>Executes the queryable for real (LINQ to Objects), so projections actually run.</summary>
-    private sealed class InMemoryQueryableExecutor : IQueryableExecutor
-    {
-        public IQueryable<T> Include<T>(IQueryable<T> query, string navigationPropertyPath)
-            where T : class => query;
-
-        public IQueryable<T> AsSplitQuery<T>(IQueryable<T> query)
-            where T : class => query;
-
-        public Task<List<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-            => Task.FromResult(query.ToList());
-
-        public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-            => Task.FromResult(query.Count());
     }
 }

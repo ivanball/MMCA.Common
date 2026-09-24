@@ -37,8 +37,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// <param name="logger">Logger for error diagnostics.</param>
 /// <param name="outboxSignal">Signal to wake the outbox processor for pending rows.</param>
 /// <param name="timeProvider">Clock stamping <c>ProcessedOn</c> on locally dispatched outbox rows;
-/// defaults to <see cref="TimeProvider.System"/> so an existing host keeps the previous
-/// constructor shape while tests can drive the stamp deterministically.</param>
+/// resolved from the container <c>AddInfrastructure</c> registers it in, so tests can drive the stamp
+/// deterministically.</param>
 /// <param name="messageBusOptions">Transport posture supplying <c>IsOutboxEnabled</c>. When the
 /// outbox is off (<c>MessageBus:EnableOutbox=false</c>, the in-process default) no rows are written
 /// and every captured event is dispatched in-process, exactly as a context without outbox support
@@ -47,10 +47,10 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<DomainEventSaveChangesInterceptor> logger,
     Outbox.Processing.IOutboxSignal outboxSignal,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     Microsoft.Extensions.Options.IOptions<Messaging.MessageBusSettings>? messageBusOptions = null) : SaveChangesInterceptor
 {
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     private readonly bool _outboxEnabled = messageBusOptions?.Value.IsOutboxEnabled ?? true;
 

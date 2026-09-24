@@ -37,8 +37,8 @@ public sealed class MarkAllNotificationsReadHandlerTrackingTests : IDisposable
         _context = CreateContext();
         _context.Database.EnsureCreated();
 
-        var userNotificationRepository = new EFRepository<UserNotification, UserNotificationIdentifierType>(_context);
-        var pushNotificationRepository = new EFRepository<PushNotification, PushNotificationIdentifierType>(_context);
+        var userNotificationRepository = new EFRepository<UserNotification, UserNotificationIdentifierType>(_context, timeProvider: TimeProvider.System);
+        var pushNotificationRepository = new EFRepository<PushNotification, PushNotificationIdentifierType>(_context, timeProvider: TimeProvider.System);
 
         // Only the repository lookup and the save are stubbed; both repositories and the executor are
         // the production types over the production DbContext, so tracking behaves exactly as it does

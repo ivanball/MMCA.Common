@@ -9,42 +9,20 @@ namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 /// </summary>
 /// <param name="Key">The physical identity (engine + name) of this source.</param>
 /// <param name="ConnectionString">The engine-specific connection string.</param>
-/// <param name="SqlServerMigrationsAssembly">
-/// The EF Core migrations assembly for SQL Server sources; <see langword="null"/> when EF should
-/// default to the context assembly. Ignored for non-SQL-Server engines.
+/// <param name="MigrationsAssembly">
+/// The EF Core migrations assembly for this source, taken from the configuration key of the
+/// source's own engine (<c>SQLServerMigrationsAssembly</c>, <c>SqliteMigrationsAssembly</c> or
+/// <c>PostgreSQLMigrationsAssembly</c>); <see langword="null"/> when none is configured. A physical
+/// source belongs to exactly one engine, so one slot is enough, and the resolver never hands one
+/// engine's assembly to another. Always <see langword="null"/> for Cosmos, which migrates nothing.
 /// </param>
 /// <param name="CosmosDatabaseName">The Cosmos DB database name. Ignored for relational engines.</param>
 public sealed record PhysicalDataSource(
     DataSourceKey Key,
     string ConnectionString,
-    string? SqlServerMigrationsAssembly,
+    string? MigrationsAssembly,
     string CosmosDatabaseName)
 {
-    /// <summary>
-    /// Gets the EF Core migrations assembly for SQLite sources; <see langword="null"/> when EF should
-    /// default to the context assembly. Ignored for non-SQLite engines.
-    /// <para>
-    /// Declared in the record body rather than as a positional parameter so the constructor and
-    /// deconstruction shape of this shipped record stay exactly as they were: a consumer that
-    /// constructs or deconstructs it positionally is unaffected, and the resolver sets this through
-    /// an object initializer. Only one of the two migrations-assembly properties is ever populated,
-    /// since a physical source belongs to exactly one engine.
-    /// </para>
-    /// </summary>
-    public string? SqliteMigrationsAssembly { get; init; }
-
-    /// <summary>
-    /// Gets the EF Core migrations assembly for PostgreSQL sources; <see langword="null"/> when the
-    /// source is created outright instead of migrated. Ignored for non-PostgreSQL engines.
-    /// <para>
-    /// Declared in the record body for the same reason as
-    /// <see cref="SqliteMigrationsAssembly"/>: the positional shape of this shipped record must not
-    /// change. At most one of the three migrations-assembly properties is ever populated, since a
-    /// physical source belongs to exactly one engine.
-    /// </para>
-    /// </summary>
-    public string? PostgreSQLMigrationsAssembly { get; init; }
-
     /// <summary>
     /// Gets a value indicating whether this source participates in EF Core migrations, which is what
     /// decides between <c>Migrate</c> and <c>EnsureCreated</c> at startup for this one database.
@@ -52,7 +30,7 @@ public sealed record PhysicalDataSource(
     /// SQL Server always does: a SQL Server host has been migration-driven since the first release,
     /// including the single-database monolith whose <c>Default</c> source names no migrations
     /// assembly at all and lets EF look next to the context. SQLite does only once a
-    /// <c>SqliteMigrationsAssembly</c> is configured for it, because a SQLite source wired by hand
+    /// <see cref="MigrationsAssembly"/> is configured for it, because a SQLite source wired by hand
     /// before that setting existed has no migrations to apply and must keep being created outright.
     /// PostgreSQL follows the SQLite rule rather than the SQL Server one: it ships with no host that
     /// already depends on being migrated, so a source that names no migrations assembly has nothing
@@ -63,8 +41,7 @@ public sealed record PhysicalDataSource(
     public bool UsesMigrations => Key.Engine switch
     {
         DataSource.SQLServer => true,
-        DataSource.PostgreSQL => !string.IsNullOrEmpty(PostgreSQLMigrationsAssembly),
-        DataSource.Sqlite => !string.IsNullOrEmpty(SqliteMigrationsAssembly),
+        DataSource.PostgreSQL or DataSource.Sqlite => !string.IsNullOrEmpty(MigrationsAssembly),
         DataSource.CosmosDB => false,
         _ => false,
     };

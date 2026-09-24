@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 
@@ -42,56 +42,59 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <param name="logger">Logger for sweep diagnostics; the per-sweep deleted count is logged here.</param>
 /// <param name="options">Bound refresh-session settings (retention window and sweep interval).</param>
 /// <param name="timeProvider">
-/// Clock for the sweep interval and the retention cutoff; defaults to <see cref="TimeProvider.System"/>
-/// so tests can drive the hour-scale loop deterministically.
+/// Clock for the sweep interval and the retention cutoff; injected so tests can drive the hour-scale
+/// loop deterministically.
 /// </param>
 public sealed partial class RefreshSessionCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<RefreshSessionCleanupService> logger,
     IOptions<RefreshSessionSettings> options,
-    TimeProvider? timeProvider = null) : BackgroundService
+    TimeProvider timeProvider)
+    : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly RefreshSessionSettings _settings = options.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
+    // the same parameter into this type's state would be CS9107.
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);
+
+    /// <summary>
+    /// Gets one full interval: the first sweep waits a whole interval so cleanup never competes with
+    /// startup or migration work.
+    /// </summary>
+    protected override TimeSpan StartupDelay => Interval;
+
+    /// <inheritdoc />
+    protected override bool IsEnabled
     {
-        // Registration is already gated on Enabled; this second check is what keeps a host that
-        // registers the service by hand from sweeping a table its model never mapped.
-        if (!_settings.Enabled)
+        get
         {
-            LogSessionsDisabled(logger);
-            return;
-        }
-
-        if (_settings.RetentionDays <= 0)
-        {
-            LogCleanupDisabled(logger);
-            return;
-        }
-
-        var interval = TimeSpan.FromHours(_settings.CleanupIntervalHours);
-
-        // Wait one interval before the first sweep so cleanup never competes with startup or
-        // migration work, then sweep on each interval until shutdown.
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
+            // Registration is already gated on Enabled; this second check is what keeps a host that
+            // registers the service by hand from sweeping a table its model never mapped.
+            if (!_settings.Enabled)
             {
-                await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
-                await PurgeAsync(stoppingToken).ConfigureAwait(false);
+                LogSessionsDisabled(logger);
+                return false;
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+
+            if (_settings.RetentionDays <= 0)
             {
-                break;
+                LogCleanupDisabled(logger);
+                return false;
             }
-            catch (Exception ex)
-            {
-                LogCleanupError(logger, ex);
-            }
+
+            return true;
         }
     }
+
+    /// <inheritdoc />
+    protected override Task ExecuteCycleAsync(CancellationToken stoppingToken) => PurgeAsync(stoppingToken);
+
+    /// <inheritdoc />
+    protected override void LogCycleFailure(Exception exception) => LogCleanupError(logger, exception);
 
     /// <summary>
     /// Deletes every session that died before the cutoff. "Died" is the revocation instant when the

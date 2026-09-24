@@ -67,15 +67,16 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
     }
 
     [Fact]
-    public async Task Save_OnApplicationDbContext_StampsTheActingUser()
+    public void Save_OnApplicationDbContext_StampsTheActingUser()
     {
-        var sut = CreateUnitOfWork(CurrentUser(ActingUserId));
-        await sut.GetRepository<StampedEntity, int>().AddAsync(new StampedEntity { Id = 2 });
+        // The synchronous flush lives on the context factory: IUnitOfWork forwards only the async one.
+        var (_, dbContextFactory) = CreateSavePath(CurrentUser(ActingUserId));
+        dbContextFactory.GetDbContext(SqliteKey).Add(new StampedEntity { Id = 2 });
 
-        var written = sut.Save();
+        var written = dbContextFactory.SaveChanges();
 
         written.Should().Be(1);
-        var stored = await _context.Set<StampedEntity>().AsNoTracking().SingleAsync(e => e.Id == 2);
+        var stored = _context.Set<StampedEntity>().AsNoTracking().Single(e => e.Id == 2);
         stored.CreatedBy.Should().Be(ActingUserId);
     }
 
@@ -109,7 +110,14 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
     /// registry, and the repository factory are doubled, so the user id travels through the same
     /// <see cref="UnitOfWork"/> and <see cref="DbContextFactory"/> code a host runs.
     /// </summary>
-    private UnitOfWork CreateUnitOfWork(ICurrentUserService currentUserService)
+    private UnitOfWork CreateUnitOfWork(ICurrentUserService currentUserService) =>
+        CreateSavePath(currentUserService).UnitOfWork;
+
+    /// <summary>
+    /// <see cref="CreateUnitOfWork"/> plus the <see cref="DbContextFactory"/> behind it, for the test
+    /// that drives the synchronous flush.
+    /// </summary>
+    private (UnitOfWork UnitOfWork, DbContextFactory DbContextFactory) CreateSavePath(ICurrentUserService currentUserService)
     {
         var physicalFactory = new Mock<IPhysicalDbContextFactory>();
         physicalFactory.Setup(f => f.Create(It.IsAny<DataSourceKey>())).Returns(_context);
@@ -131,9 +139,9 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
         var repositoryFactory = new Mock<IRepositoryFactory>();
         repositoryFactory
             .Setup(f => f.Create<StampedEntity, int>(It.IsAny<DbContext>()))
-            .Returns<DbContext>(context => new EFRepository<StampedEntity, int>(context));
+            .Returns<DbContext>(context => new EFRepository<StampedEntity, int>(context, timeProvider: TimeProvider.System));
 
-        return new UnitOfWork(dbContextFactory, dataSourceService.Object, repositoryFactory.Object);
+        return (new UnitOfWork(dbContextFactory, dataSourceService.Object, repositoryFactory.Object), dbContextFactory);
     }
 
     private static ICurrentUserService CurrentUser(UserIdentifierType userId)
@@ -165,7 +173,7 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
             services.AddSingleton(new DomainEventSaveChangesInterceptor(
                 Mock.Of<IDomainEventDispatcher>(),
                 NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-                Mock.Of<IOutboxSignal>()));
+                Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 

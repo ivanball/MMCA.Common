@@ -34,6 +34,48 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**Removals, tightenings and one namespace move in shipped signatures.** Hosts that resolve these types from DI
+change nothing; code that constructs them by hand, mocks the removed members or reads the renamed
+properties does. Configuration keys are unchanged.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `IUnitOfWork.Save()` | removed; `await unitOfWork.SaveChangesAsync(cancellationToken)` |
+| `IUnitOfWork.BeginTransaction()` / `CommitTransaction()` / `RollbackTransaction()` | removed; `await unitOfWork.ExecuteInTransactionAsync(ct => ..., cancellationToken)` (`IDbContextFactory` keeps its synchronous members) |
+| `ChangePasswordHandlerBase(..., IRefreshSessionStore? refreshSessions = null, TimeProvider? timeProvider = null)` | `ChangePasswordHandlerBase(..., IRefreshSessionStore refreshSessions, TimeProvider? timeProvider = null)` |
+| `ResetPasswordHandlerBase(..., IRefreshSessionStore? refreshSessions = null, TimeProvider? timeProvider = null)` | `ResetPasswordHandlerBase(..., IRefreshSessionStore refreshSessions, TimeProvider? timeProvider = null)` |
+| `TimeProvider? timeProvider = null` on `TokenService`, `InProcessEventBus`, `DomainEventSaveChangesInterceptor`, `OutboxProcessor`, `OutboxCleanupService`, `InternalCommandProcessor`, `InternalCommandCleanupService`, `InternalCommandAdministration`, `RefreshSessionCleanupService` | `TimeProvider timeProvider`, required, same position |
+| `IFileStorageService.UploadAsync(..., FileUploadOptions options, ...)` default interface member | abstract; every implementation provides it |
+| `PhysicalDataSource(Key, ConnectionString, SqlServerMigrationsAssembly, CosmosDatabaseName)` plus `SqliteMigrationsAssembly` / `PostgreSQLMigrationsAssembly` init properties | `PhysicalDataSource(Key, ConnectionString, MigrationsAssembly, CosmosDatabaseName)`, one slot for the source's own engine |
+| `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` | `MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService` (namespace move only; the type is unchanged) |
+
+The mechanical fix:
+
+1. **`IUnitOfWork` sync members.** Replace a call with the async member in the table. In a test,
+   delete a `Setup` or `Verify(..., Times.Never)` on one of the four removed members: the property
+   it asserted now holds by construction, because the member no longer exists.
+2. **Password handler subclasses.** Pass the injected `IRefreshSessionStore` through to the base (an
+   app with refresh sessions already does). A test that built the subclass without one passes an
+   `IRefreshSessionStore` fake (`InMemoryRefreshSessionStore` from `MMCA.Common.Testing`) or a mock.
+3. **Required `TimeProvider`.** Where a type in the list is constructed by hand (usually a test),
+   add `timeProvider: TimeProvider.System`, or a `FakeTimeProvider` when the test drives time. A
+   call that passed `timeProvider: null` passes `TimeProvider.System`.
+4. **`IFileStorageService` implementations.** Implement the options overload and honor the
+   headers; a store that has none to set forwards to the three-argument overload.
+5. **`PhysicalDataSource`.** Positional construction compiles unchanged. Rename a named argument
+   `SqlServerMigrationsAssembly:` to `MigrationsAssembly:`; move an initializer
+   `{ SqliteMigrationsAssembly = x }` or `{ PostgreSQLMigrationsAssembly = x }` into the third
+   positional argument; read `.MigrationsAssembly` where the code read any of the three old
+   properties.
+6. **`PeriodicBackgroundService` namespace.** In a file that derives from it, add
+   `using MMCA.Common.Infrastructure.Hosting.Background;`, and remove
+   `using MMCA.Common.Infrastructure.Scheduling;` when the file uses nothing else from it (the build
+   reports it as IDE0005). Re-qualify any fully qualified
+   `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` reference. This is the
+   namespace-move fix at the top of this file, applied to one type.
+
 ## [1.207.0] - 2026-09-21
 
 **`MMCA.Common.AI` names no vendor: the provider is an adapter package selected by name.** The

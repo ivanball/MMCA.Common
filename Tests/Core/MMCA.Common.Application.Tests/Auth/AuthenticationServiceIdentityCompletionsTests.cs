@@ -16,6 +16,7 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.ValueObjects.Contact;
+using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Auth;
@@ -101,7 +102,7 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorRequiredCode);
-        harness.Sessions.Saved.Should().BeEmpty("no session is opened for a sign-in that never completed");
+        harness.Sessions.Sessions.Should().BeEmpty("no session is opened for a sign-in that never completed");
     }
 
     [Fact]
@@ -264,7 +265,7 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
 
         public Mock<ITokenService> TokenService { get; } = new();
 
-        public FakeRefreshSessionStore Sessions { get; } = new();
+        public InMemoryRefreshSessionStore Sessions { get; } = new();
 
         public ConfirmableAuthenticationService Sut { get; }
 

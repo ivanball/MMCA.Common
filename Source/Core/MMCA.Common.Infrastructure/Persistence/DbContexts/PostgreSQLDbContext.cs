@@ -56,9 +56,9 @@ public sealed class PostgreSQLDbContext(
                     // Same contract as SQLServerDbContext and SqliteDbContext: without an explicit
                     // assembly EF looks for migrations next to the context, which lives in
                     // MMCA.Common.Infrastructure and has none.
-                    if (!string.IsNullOrEmpty(PhysicalSource.PostgreSQLMigrationsAssembly))
+                    if (!string.IsNullOrEmpty(PhysicalSource.MigrationsAssembly))
                     {
-                        npgsql.MigrationsAssembly(PhysicalSource.PostgreSQLMigrationsAssembly);
+                        npgsql.MigrationsAssembly(PhysicalSource.MigrationsAssembly);
                     }
 
                     // Without this every command silently inherits the ADO.NET default with no way

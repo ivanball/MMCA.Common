@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace MMCA.Common.Infrastructure.Scheduling;
+namespace MMCA.Common.Infrastructure.Hosting.Background;
 
 /// <summary>
 /// Base class for fixed-interval background sweeps: an optional enablement gate, a short
@@ -36,6 +36,14 @@ public abstract partial class PeriodicBackgroundService(
     /// toggle is off or a required credential is not configured).
     /// </summary>
     protected virtual bool IsEnabled => true;
+
+    /// <summary>
+    /// Logs a cycle that threw. The default writes one generic Error naming the service; override it
+    /// to keep a service's own message (and its event id, which dashboards and tests key on).
+    /// </summary>
+    /// <param name="exception">The exception the cycle threw.</param>
+    protected virtual void LogCycleFailure(Exception exception) =>
+        LogCycleError(logger, GetType().Name, exception);
 
     /// <summary>Runs one sweep cycle. Exceptions are logged and do not stop the loop.</summary>
     /// <param name="stoppingToken">Canceled when the host shuts down.</param>
@@ -72,7 +80,7 @@ public abstract partial class PeriodicBackgroundService(
             }
             catch (Exception ex)
             {
-                LogCycleError(logger, GetType().Name, ex);
+                LogCycleFailure(ex);
             }
 
             try

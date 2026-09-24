@@ -180,7 +180,7 @@ public sealed class DataSourceResolverTests
             new ConnectionStringSettings { SQLServerConnectionString = DefaultSql, SQLServerMigrationsAssembly = "Main.Migrations" });
 
         sut.GetPhysical(DataSourceKey.Default(DataSource.SQLServer))
-            .SqlServerMigrationsAssembly.Should().Be("Main.Migrations");
+            .MigrationsAssembly.Should().Be("Main.Migrations");
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class DataSourceResolverTests
 
         var key = sut.ResolveLogical(DataSource.SQLServer, "Conference");
 
-        sut.GetPhysical(key).SqlServerMigrationsAssembly.Should().Be("Conference.Migrations");
+        sut.GetPhysical(key).MigrationsAssembly.Should().Be("Conference.Migrations");
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public sealed class DataSourceResolverTests
 
         var key = sut.ResolveLogical(DataSource.SQLServer, "Conference");
 
-        sut.GetPhysical(key).SqlServerMigrationsAssembly.Should().Be("Main.Migrations");
+        sut.GetPhysical(key).MigrationsAssembly.Should().Be("Main.Migrations");
     }
 
     // ── GetPhysical ──
@@ -261,7 +261,7 @@ public sealed class DataSourceResolverTests
 
         var key = sut.ResolveLogical(DataSource.Sqlite, "Tickets");
 
-        sut.GetPhysical(key).SqliteMigrationsAssembly.Should().Be("Tickets.Migrations.Sqlite");
+        sut.GetPhysical(key).MigrationsAssembly.Should().Be("Tickets.Migrations.Sqlite");
     }
 
     // The two slots are per-engine on purpose: a mixed host declares both, and handing the SQL Server
@@ -283,9 +283,8 @@ public sealed class DataSourceResolverTests
 
         var sqlite = sut.GetPhysical(sut.ResolveLogical(DataSource.Sqlite, "Tickets"));
 
-        sqlite.SqliteMigrationsAssembly.Should().BeNull(
-            "the entry declared none, and the top-level value belongs to SQL Server");
-        sqlite.SqlServerMigrationsAssembly.Should().BeNull("this physical source is not a SQL Server one");
+        sqlite.MigrationsAssembly.Should().BeNull(
+            "the entry declared none, and the top-level value belongs to SQL Server, not to this SQLite source");
     }
 
     [Fact]
@@ -312,7 +311,7 @@ public sealed class DataSourceResolverTests
         var key = sut.ResolveLogical(DataSource.Sqlite, "Tickets");
 
         key.Should().Be(DataSourceKey.Default(DataSource.Sqlite));
-        sut.GetPhysical(key).SqliteMigrationsAssembly.Should().Be("App.Migrations.Sqlite");
+        sut.GetPhysical(key).MigrationsAssembly.Should().Be("App.Migrations.Sqlite");
     }
 
     [Fact]
@@ -389,7 +388,7 @@ public sealed class DataSourceResolverTests
 
         physical.Key.Should().Be(DataSourceKey.Default(DataSource.SQLServer));
         physical.ConnectionString.Should().Be(DefaultSql);
-        physical.SqlServerMigrationsAssembly.Should().Be("Helpdesk.Migrations");
+        physical.MigrationsAssembly.Should().Be("Helpdesk.Migrations");
     }
 
     [Fact]
@@ -503,9 +502,7 @@ public sealed class DataSourceResolverTests
         var physical = sut.GetPhysical(DataSourceKey.Default(DataSource.PostgreSQL));
 
         physical.ConnectionString.Should().Be(DefaultPostgres);
-        physical.PostgreSQLMigrationsAssembly.Should().Be("App.Migrations.PostgreSQL");
-        physical.SqlServerMigrationsAssembly.Should().BeNull("the slots are per engine, never shared");
-        physical.SqliteMigrationsAssembly.Should().BeNull();
+        physical.MigrationsAssembly.Should().Be("App.Migrations.PostgreSQL");
     }
 
     [Fact]
@@ -525,7 +522,7 @@ public sealed class DataSourceResolverTests
         var key = sut.ResolveLogical(DataSource.PostgreSQL, "Tickets");
 
         key.Should().Be(new DataSourceKey(DataSource.PostgreSQL, "Tickets"));
-        sut.GetPhysical(key).PostgreSQLMigrationsAssembly.Should().Be("Tickets.Migrations.PostgreSQL");
+        sut.GetPhysical(key).MigrationsAssembly.Should().Be("Tickets.Migrations.PostgreSQL");
     }
 
     // The top-level migrations assembly is read per engine, so a mixed host cannot scaffold its
@@ -542,9 +539,9 @@ public sealed class DataSourceResolverTests
         });
 
         sut.GetPhysical(DataSourceKey.Default(DataSource.SQLServer))
-            .SqlServerMigrationsAssembly.Should().Be("App.Migrations.SqlServer");
+            .MigrationsAssembly.Should().Be("App.Migrations.SqlServer");
         sut.GetPhysical(DataSourceKey.Default(DataSource.PostgreSQL))
-            .PostgreSQLMigrationsAssembly.Should().Be("App.Migrations.PostgreSQL");
+            .MigrationsAssembly.Should().Be("App.Migrations.PostgreSQL");
     }
 
     [Fact]

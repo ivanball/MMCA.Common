@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Messaging;
@@ -47,7 +46,7 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
 /// <param name="timeProvider">Clock abstraction for the startup delay and lease/eligibility timestamps;
-/// defaults to <see cref="TimeProvider.System"/> so tests can drive the loop deterministically.</param>
+/// injected so tests can drive the loop deterministically.</param>
 /// <param name="tenancyOptions">
 /// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
 /// such database has its own outbox table that nothing else would drain. Defaulted, so a host
@@ -60,11 +59,11 @@ public sealed partial class OutboxProcessor(
     IOutboxSignal outboxSignal,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <summary>
     /// Name of the per-cycle poll activity wrapping the outbox fetch query. Must stay in sync
@@ -186,31 +185,19 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
-    /// The relational physical sources whose outbox tables this host owns: every source backing a
-    /// registered entity plus the configured publish target (Cosmos has no outbox table).
-    /// Recomputed per cycle — cheap, and tolerant of module assemblies loading after startup.
-    /// </summary>
-    private List<DataSourceKey> GetOutboxSources()
-    {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        return [.. sources.Distinct()];
-    }
-
-    /// <summary>
-    /// The units this cycle visits: every owned source against the shared database, plus one extra
-    /// unit per tenant that keeps its own copy of a source. A tenant database has its own
-    /// <c>OutboxMessages</c> table, and nothing else opens that database, so without this its events
-    /// would sit undelivered forever.
+    /// The units this cycle visits: every relational source this host owns (every source backing a
+    /// registered entity plus the configured publish target; Cosmos has no outbox table) against the
+    /// shared database, plus one extra unit per tenant that keeps its own copy of a source. A tenant
+    /// database has its own <c>OutboxMessages</c> table, and nothing else opens that database, so
+    /// without this its events would sit undelivered forever.
     /// </summary>
     internal List<TenantDataSourceTarget> GetOutboxTargets() =>
-        TenantDataSourceTargets.Expand(GetOutboxSources(), tenancyOptions?.Value);
+        TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
     /// <summary>
     /// Drains every outbox source once and aggregates the per-source results: any source with
@@ -268,14 +255,8 @@ public sealed partial class OutboxProcessor(
     {
         var source = target.Source;
         var sourceName = target.ToString();
-        using var scope = scopeFactory.CreateScope();
-
-        // Before the context is asked for, not after: the tenant is what routes the scoped factory
-        // to this tenant's database, and it is also what the query filter reads.
-        if (target.TenantId is { } tenantId)
-        {
-            scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-        }
+        // The tenant is set before the context is asked for (see CreateTenantScope).
+        using var scope = scopeFactory.CreateTenantScope(target);
 
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<DbContexts.Factory.IDbContextFactory>();
         var context = dbContextFactory.GetDbContext(source);

@@ -151,7 +151,7 @@ public sealed class PermissionGrantModelGateTests
             new PhysicalDataSource(
                 new DataSourceKey(DataSource.SQLServer, dataSourceName),
                 GateContext<TCase>.ConnectionString,
-                SqlServerMigrationsAssembly: null,
+                MigrationsAssembly: null,
                 CosmosDatabaseName: string.Empty));
     }
 

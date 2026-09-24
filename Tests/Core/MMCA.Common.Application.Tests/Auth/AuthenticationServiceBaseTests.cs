@@ -14,6 +14,7 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.ValueObjects.Contact;
+using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Auth;
@@ -205,7 +206,7 @@ public sealed class AuthenticationServiceBaseTests
         result.Value.RefreshToken.Should().Be("refresh-1");
         result.Value.AccessTokenExpiry.Should().Be(FixedNow.UtcDateTime.AddMinutes(15), "BR-205 access-token lifetime");
 
-        var session = mocks.Sessions.Saved.Should().ContainSingle().Subject;
+        var session = mocks.Sessions.Sessions.Should().ContainSingle().Subject;
         session.UserId.Should().Be(1);
         session.ExpiresAt.Should().Be(FixedNow.UtcDateTime.AddDays(7), "BR-205 refresh-token lifetime");
         session.CreatedAt.Should().Be(FixedNow.UtcDateTime);
@@ -227,7 +228,7 @@ public sealed class AuthenticationServiceBaseTests
 
         Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
 
-        var session = mocks.Sessions.Saved.Should().ContainSingle().Subject;
+        var session = mocks.Sessions.Sessions.Should().ContainSingle().Subject;
         session.TokenHash.Should().NotBe(result.Value.RefreshToken, "a stored plaintext token is a usable credential at rest");
         session.TokenHash.Should().Be(RefreshSession.HashToken(result.Value.RefreshToken));
         session.TokenHash.Should().HaveLength(RefreshSession.TokenHashLength);
@@ -246,7 +247,7 @@ public sealed class AuthenticationServiceBaseTests
         result.IsSuccess.Should().BeTrue();
         phone.IsRevoked.Should().BeFalse("signing in on a new device must not sign the phone out");
         laptop.IsRevoked.Should().BeFalse();
-        mocks.Sessions.Saved.Should().HaveCount(3);
+        mocks.Sessions.Sessions.Should().HaveCount(3);
     }
 
     [Fact]
@@ -265,7 +266,7 @@ public sealed class AuthenticationServiceBaseTests
         oldest.ReasonRevoked.Should().Be(RefreshSession.ReasonSessionCap);
         middle.IsRevoked.Should().BeFalse();
         newest.IsRevoked.Should().BeFalse();
-        mocks.Sessions.Saved.Count(s => !s.IsRevoked).Should().Be(3, "the cap holds after the new session opens");
+        mocks.Sessions.Sessions.Count(s => !s.IsRevoked).Should().Be(3, "the cap holds after the new session opens");
     }
 
     [Fact]
@@ -282,7 +283,7 @@ public sealed class AuthenticationServiceBaseTests
         result.Value.AccessTokenExpiry.Should().Be(
             FixedNow.UtcDateTime.AddMinutes(30),
             "Jwt:AccessTokenExpirationMinutes drives the reported expiry");
-        mocks.Sessions.Saved.Should().ContainSingle()
+        mocks.Sessions.Sessions.Should().ContainSingle()
             .Which.ExpiresAt.Should().Be(
                 FixedNow.UtcDateTime.AddDays(14),
                 "Jwt:RefreshTokenExpirationDays drives the stored session expiry");
@@ -432,7 +433,7 @@ public sealed class AuthenticationServiceBaseTests
         persisted!.PasswordHash.Should().Equal(HashedPassword, "the factory receives the hasher output");
         persisted.PasswordSalt.Should().Equal(GeneratedSalt);
 
-        var session = mocks.Sessions.Saved.Should().ContainSingle().Subject;
+        var session = mocks.Sessions.Sessions.Should().ContainSingle().Subject;
         session.UserId.Should().Be(77, "the session is opened after the insert assigns the id");
         session.TokenHash.Should().Be(RefreshSession.HashToken("refresh-1"));
         session.IpAddress.Should().Be("10.0.0.1");
@@ -584,7 +585,7 @@ public sealed class AuthenticationServiceBaseTests
             RefreshSession.HashToken("refresh-1"),
             "the rotation chain must be walkable from the retired session to its successor");
 
-        var successor = mocks.Sessions.Saved.Should().ContainSingle(s => !s.IsRevoked).Subject;
+        var successor = mocks.Sessions.Sessions.Should().ContainSingle(s => !s.IsRevoked).Subject;
         successor.TokenHash.Should().Be(RefreshSession.HashToken("refresh-1"));
         successor.ExpiresAt.Should().Be(FixedNow.UtcDateTime.AddDays(7));
     }
@@ -625,7 +626,7 @@ public sealed class AuthenticationServiceBaseTests
         replay.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
         otherDevice.IsRevoked.Should().BeTrue("reuse detection cannot tell which device was stolen");
         otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
-        mocks.Sessions.Saved.Should().OnlyContain(s => s.IsRevoked, "the successor minted by the first call goes too");
+        mocks.Sessions.Sessions.Should().OnlyContain(s => s.IsRevoked, "the successor minted by the first call goes too");
     }
 
     // H35: two requests presenting the same still-live token both read an un-revoked row. The store
@@ -646,7 +647,7 @@ public sealed class AuthenticationServiceBaseTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
-        mocks.Sessions.Saved.Should().NotContain(
+        mocks.Sessions.Sessions.Should().NotContain(
             s => string.Equals(s.TokenHash, RefreshSession.HashToken("refresh-1"), StringComparison.Ordinal),
             "the loser of the claim mints nothing");
         presented.IsRevoked.Should().BeTrue();
@@ -671,7 +672,7 @@ public sealed class AuthenticationServiceBaseTests
         result.Value.RefreshToken.Should().Be("refresh-1");
         presented.IsRevoked.Should().BeTrue();
         presented.ReplacedByTokenHash.Should().Be(RefreshSession.HashToken("refresh-1"));
-        mocks.Sessions.Saved.Should().ContainSingle(s => !s.IsRevoked);
+        mocks.Sessions.Sessions.Should().ContainSingle(s => !s.IsRevoked);
     }
 
     [Fact]
@@ -870,7 +871,7 @@ public sealed class AuthenticationServiceBaseTests
         Mock<ITokenService> TokenService,
         Mock<IPasswordHasher> PasswordHasher,
         Mock<ILoginProtectionService> LoginProtection,
-        FakeRefreshSessionStore Sessions);
+        InMemoryRefreshSessionStore Sessions);
 
     private static (TestAuthenticationService Sut, ServiceMocks Mocks) CreateSut(
         bool loginRequestValid = true,
@@ -883,7 +884,7 @@ public sealed class AuthenticationServiceBaseTests
         var tokenService = new Mock<ITokenService>();
         var passwordHasher = new Mock<IPasswordHasher>();
         var loginProtection = new Mock<ILoginProtectionService>();
-        var sessions = new FakeRefreshSessionStore();
+        var sessions = new InMemoryRefreshSessionStore();
 
         unitOfWork
             .Setup(x => x.GetRepository<TestAuthUser, UserIdentifierType>())
@@ -935,95 +936,6 @@ public sealed class AuthenticationServiceBaseTests
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => utcNow;
-    }
-}
-
-/// <summary>
-/// In-memory <see cref="IRefreshSessionStore"/> mirroring the EF implementation's visibility rules:
-/// a staged insert is invisible to queries until it is saved (EF does not read the change tracker
-/// from a database query), and every read hands back the same live instance, so a revocation the
-/// workflow performs is observable in the assertions.
-/// </summary>
-public sealed class FakeRefreshSessionStore : IRefreshSessionStore
-{
-    private readonly List<RefreshSession> _staged = [];
-    private readonly List<RefreshSession> _saved = [];
-
-    /// <summary>The persisted sessions.</summary>
-    public IReadOnlyList<RefreshSession> Saved => _saved;
-
-    /// <summary>How many times the workflow flushed.</summary>
-    public int SaveCount { get; private set; }
-
-    /// <summary>
-    /// When set, decides whether <see cref="TryRotateAsync"/> claims the rotation. A false outcome
-    /// stands in for the database arbitrating a concurrent rotation of the same token: the loser
-    /// writes nothing at all.
-    /// </summary>
-    public Func<bool>? RotationOutcome { get; set; }
-
-    /// <summary>Places an already-persisted session in the store.</summary>
-    public void Seed(RefreshSession session) => _saved.Add(session);
-
-    /// <inheritdoc />
-    public Task AddAsync(RefreshSession session, CancellationToken cancellationToken = default)
-    {
-        _staged.Add(session);
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public Task<RefreshSession?> FindByTokenHashAsync(string tokenHash, CancellationToken cancellationToken = default) =>
-        Task.FromResult(_saved.Find(s => string.Equals(s.TokenHash, tokenHash, StringComparison.Ordinal)));
-
-    /// <inheritdoc />
-    public Task<RefreshSession?> FindByIdAsync(
-        Guid id,
-        UserIdentifierType userId,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(_saved.Find(s => s.Id == id && s.UserId == userId));
-
-    /// <inheritdoc />
-    public Task<IReadOnlyList<RefreshSession>> GetUnrevokedByUserAsync(
-        UserIdentifierType userId,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<RefreshSession>>(
-            [.. _saved
-                .Where(s => s.UserId == userId && !s.IsRevoked)
-                .OrderBy(s => s.CreatedAt)
-                .ThenBy(s => s.Id)]);
-
-    /// <inheritdoc />
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        SaveCount++;
-        var written = _staged.Count;
-        _saved.AddRange(_staged);
-        _staged.Clear();
-        return Task.FromResult(written);
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> TryRotateAsync(
-        RefreshSession presented,
-        RefreshSession successor,
-        DateTime revokedAt,
-        CancellationToken cancellationToken = default)
-    {
-        if (RotationOutcome is not null && !RotationOutcome())
-        {
-            return false;
-        }
-
-        if (presented.Revoke(revokedAt, RefreshSession.ReasonRotated, successor.TokenHash).IsFailure)
-        {
-            return false;
-        }
-
-        await AddAsync(successor, cancellationToken);
-        await SaveChangesAsync(cancellationToken);
-
-        return true;
     }
 }
 

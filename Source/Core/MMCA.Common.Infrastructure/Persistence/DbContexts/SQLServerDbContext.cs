@@ -45,9 +45,9 @@ public sealed class SQLServerDbContext(
                 PhysicalSource.ConnectionString,
                 sql =>
                 {
-                    if (!string.IsNullOrEmpty(PhysicalSource.SqlServerMigrationsAssembly))
+                    if (!string.IsNullOrEmpty(PhysicalSource.MigrationsAssembly))
                     {
-                        sql.MigrationsAssembly(PhysicalSource.SqlServerMigrationsAssembly);
+                        sql.MigrationsAssembly(PhysicalSource.MigrationsAssembly);
                     }
 
                     // Without this every command silently inherits ADO.NET's 30 second default with

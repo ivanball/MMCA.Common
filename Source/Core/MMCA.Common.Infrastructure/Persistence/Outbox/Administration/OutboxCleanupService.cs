@@ -1,10 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -38,8 +36,8 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 /// <param name="messageBusOptions">Message-bus settings; used to gate inbox purging on <c>EnableInbox</c>.</param>
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
-/// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff; defaults to
-/// <see cref="TimeProvider.System"/> so tests can drive the hour-scale loop deterministically.</param>
+/// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff;
+/// injected so tests can drive the hour-scale loop deterministically.</param>
 /// <param name="tenancyOptions">
 /// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
 /// such database has its own outbox and inbox tables, which the shared sweep never reaches.
@@ -51,43 +49,46 @@ public sealed partial class OutboxCleanupService(
     IOptions<MessageBusSettings> messageBusOptions,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
-    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
+    TimeProvider timeProvider,
+    IOptions<TenancySettings>? tenancyOptions = null)
+    : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
     private readonly bool _inboxEnabled = messageBusOptions.Value.IsInboxEnabled;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
+    // the same parameter into this type's state would be CS9107.
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);
+
+    /// <summary>
+    /// Gets one full interval: the first sweep waits a whole interval so cleanup never competes with
+    /// startup or migration work.
+    /// </summary>
+    protected override TimeSpan StartupDelay => Interval;
+
+    /// <inheritdoc />
+    protected override bool IsEnabled
     {
-        if (_settings.RetentionDays <= 0)
+        get
         {
-            LogCleanupDisabled(logger);
-            return;
-        }
+            if (_settings.RetentionDays <= 0)
+            {
+                LogCleanupDisabled(logger);
+                return false;
+            }
 
-        var interval = TimeSpan.FromHours(_settings.CleanupIntervalHours);
-
-        // Wait one interval before the first sweep so cleanup never competes with startup or
-        // migration work, then sweep on each interval until shutdown.
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
-                await PurgeAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                LogCleanupError(logger, ex);
-            }
+            return true;
         }
     }
+
+    /// <inheritdoc />
+    protected override Task ExecuteCycleAsync(CancellationToken stoppingToken) => PurgeAsync(stoppingToken);
+
+    /// <inheritdoc />
+    protected override void LogCycleFailure(Exception exception) => LogCleanupError(logger, exception);
 
     private async Task PurgeAsync(CancellationToken cancellationToken)
     {
@@ -98,14 +99,8 @@ public sealed partial class OutboxCleanupService(
             var sourceName = target.ToString();
             try
             {
-                using var scope = scopeFactory.CreateScope();
-
-                // Set before the context is asked for: the tenant is what routes the scoped factory
-                // to this tenant's own database.
-                if (target.TenantId is { } tenantId)
-                {
-                    scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-                }
+                // The tenant is set before the context is asked for (see CreateTenantScope).
+                using var scope = scopeFactory.CreateTenantScope(target);
 
                 var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
                 var context = dbContextFactory.GetDbContext(target.Source);
@@ -194,30 +189,18 @@ public sealed partial class OutboxCleanupService(
     }
 
     /// <summary>
-    /// The relational physical sources whose outbox tables this host owns — the same set the
-    /// <see cref="OutboxProcessor"/> drains (every source backing a registered entity plus the
-    /// configured publish target; Cosmos has no outbox table).
-    /// </summary>
-    private List<DataSourceKey> GetRelationalSources()
-    {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        return [.. sources.Distinct()];
-    }
-
-    /// <summary>
-    /// The units this sweep visits: every owned source against the shared database, plus one extra
-    /// unit per tenant that keeps its own copy of a source (whose outbox and inbox tables live in a
-    /// database nothing else opens).
+    /// The units this sweep visits: the same relational sources the <see cref="OutboxProcessor"/>
+    /// drains (every source backing a registered entity plus the configured publish target; Cosmos
+    /// has no outbox table) against the shared database, plus one extra unit per tenant that keeps
+    /// its own copy of a source (whose outbox and inbox tables live in a database nothing else opens).
     /// </summary>
     internal List<TenantDataSourceTarget> GetRelationalTargets() =>
-        TenantDataSourceTargets.Expand(GetRelationalSources(), tenancyOptions?.Value);
+        TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox cleanup disabled: Outbox:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);

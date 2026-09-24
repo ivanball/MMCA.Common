@@ -68,3 +68,23 @@ virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ConfigureRece
 virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ContainerStartTimeout.get -> System.TimeSpan
 virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.EmulatorImage.get -> string!
 virtual MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ReceiveQueueName.get -> string?
+MMCA.Common.Testing.Support.InMemoryQueryableExecutor
+MMCA.Common.Testing.Support.InMemoryQueryableExecutor.AsSplitQuery<T>(System.Linq.IQueryable<T!>! query) -> System.Linq.IQueryable<T!>!
+MMCA.Common.Testing.Support.InMemoryQueryableExecutor.CountAsync<T>(System.Linq.IQueryable<T>! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Testing.Support.InMemoryQueryableExecutor.InMemoryQueryableExecutor() -> void
+MMCA.Common.Testing.Support.InMemoryQueryableExecutor.Include<T>(System.Linq.IQueryable<T!>! query, string! navigationPropertyPath) -> System.Linq.IQueryable<T!>!
+MMCA.Common.Testing.Support.InMemoryQueryableExecutor.ToListAsync<T>(System.Linq.IQueryable<T>! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.List<T>!>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.AddAsync(MMCA.Common.Domain.Auth.RefreshSession! session, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.FindByIdAsync(System.Guid id, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.FindByTokenHashAsync(string! tokenHash, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Domain.Auth.RefreshSession?>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.GetUnrevokedByUserAsync(int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.InMemoryRefreshSessionStore() -> void
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.RotationOutcome.get -> System.Func<bool>?
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.RotationOutcome.set -> void
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.SaveChangesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.SaveCount.get -> int
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.Seed(MMCA.Common.Domain.Auth.RefreshSession! session) -> void
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.SeedLive(int userId, string! token, System.DateTime createdAt, System.DateTime expiresAt) -> MMCA.Common.Domain.Auth.RefreshSession!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.Sessions.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Domain.Auth.RefreshSession!>!
+MMCA.Common.Testing.Support.InMemoryRefreshSessionStore.TryRotateAsync(MMCA.Common.Domain.Auth.RefreshSession! presented, MMCA.Common.Domain.Auth.RefreshSession! successor, System.DateTime revokedAt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!

@@ -35,11 +35,8 @@ public sealed class PhysicalDataSourceTests
         var source = new PhysicalDataSource(
             new DataSourceKey(DataSource.Sqlite, "Tickets"),
             "Data Source=tickets.db",
-            null,
-            string.Empty)
-        {
-            SqliteMigrationsAssembly = "Tickets.Migrations.Sqlite",
-        };
+            "Tickets.Migrations.Sqlite",
+            string.Empty);
 
         source.UsesMigrations.Should().BeTrue();
     }
@@ -54,24 +51,7 @@ public sealed class PhysicalDataSourceTests
         var source = new PhysicalDataSource(
             new DataSourceKey(DataSource.Sqlite, "Tickets"),
             "Data Source=tickets.db",
-            null,
-            string.Empty)
-        {
-            SqliteMigrationsAssembly = migrationsAssembly,
-        };
-
-        source.UsesMigrations.Should().BeFalse();
-    }
-
-    // The SQL Server slot is never consulted for a SQLite source: the two are kept apart precisely
-    // so a mixed host cannot hand one engine's snapshot to the other.
-    [Fact]
-    public void UsesMigrations_SqliteCarryingOnlyTheSqlServerAssembly_IsFalse()
-    {
-        var source = new PhysicalDataSource(
-            new DataSourceKey(DataSource.Sqlite, "Tickets"),
-            "Data Source=tickets.db",
-            "Main.Migrations",
+            migrationsAssembly,
             string.Empty);
 
         source.UsesMigrations.Should().BeFalse();
@@ -86,11 +66,8 @@ public sealed class PhysicalDataSourceTests
         var source = new PhysicalDataSource(
             new DataSourceKey(DataSource.PostgreSQL, "Tickets"),
             "Host=localhost;Database=tickets;Username=app",
-            null,
-            string.Empty)
-        {
-            PostgreSQLMigrationsAssembly = "Tickets.Migrations.PostgreSQL",
-        };
+            "Tickets.Migrations.PostgreSQL",
+            string.Empty);
 
         source.UsesMigrations.Should().BeTrue();
     }
@@ -103,24 +80,7 @@ public sealed class PhysicalDataSourceTests
         var source = new PhysicalDataSource(
             new DataSourceKey(DataSource.PostgreSQL, "Tickets"),
             "Host=localhost;Database=tickets;Username=app",
-            null,
-            string.Empty)
-        {
-            PostgreSQLMigrationsAssembly = migrationsAssembly,
-        };
-
-        source.UsesMigrations.Should().BeFalse();
-    }
-
-    // The three migrations-assembly slots are kept apart precisely so a mixed-engine host cannot hand
-    // one engine's snapshot to another.
-    [Fact]
-    public void UsesMigrations_PostgreSQLCarryingOnlyTheSqlServerAssembly_IsFalse()
-    {
-        var source = new PhysicalDataSource(
-            new DataSourceKey(DataSource.PostgreSQL, "Tickets"),
-            "Host=localhost;Database=tickets;Username=app",
-            "Main.Migrations",
+            migrationsAssembly,
             string.Empty);
 
         source.UsesMigrations.Should().BeFalse();

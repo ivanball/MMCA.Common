@@ -1,10 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -40,7 +38,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
 /// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff;
-/// defaults to <see cref="TimeProvider.System"/> so tests can drive the hour-scale loop.</param>
+/// injected so tests can drive the hour-scale loop.</param>
 /// <param name="tenancyOptions">Bound tenancy settings, used to discover tenants that keep their own
 /// copy of a source, whose queue table the shared sweep never reaches.</param>
 public sealed partial class InternalCommandCleanupService(
@@ -49,42 +47,45 @@ public sealed partial class InternalCommandCleanupService(
     IOptions<InternalCommandsSettings> options,
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
-    TimeProvider? timeProvider = null,
-    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
+    TimeProvider timeProvider,
+    IOptions<TenancySettings>? tenancyOptions = null)
+    : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly InternalCommandsSettings _settings = options.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+
+    // Not the timeProvider parameter itself: the base constructor already receives it, and capturing
+    // the same parameter into this type's state would be CS9107.
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override TimeSpan Interval => TimeSpan.FromHours(_settings.CleanupIntervalHours);
+
+    /// <summary>
+    /// Gets one full interval: the first sweep waits a whole interval so cleanup never competes with
+    /// startup or migration work.
+    /// </summary>
+    protected override TimeSpan StartupDelay => Interval;
+
+    /// <inheritdoc />
+    protected override bool IsEnabled
     {
-        if (_settings.RetentionDays <= 0)
+        get
         {
-            LogCleanupDisabled(logger);
-            return;
-        }
+            if (_settings.RetentionDays <= 0)
+            {
+                LogCleanupDisabled(logger);
+                return false;
+            }
 
-        var interval = TimeSpan.FromHours(_settings.CleanupIntervalHours);
-
-        // Wait one interval before the first sweep so cleanup never competes with startup or
-        // migration work, then sweep on each interval until shutdown.
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(interval, _timeProvider, stoppingToken).ConfigureAwait(false);
-                await PurgeAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                LogCleanupError(logger, ex);
-            }
+            return true;
         }
     }
+
+    /// <inheritdoc />
+    protected override Task ExecuteCycleAsync(CancellationToken stoppingToken) => PurgeAsync(stoppingToken);
+
+    /// <inheritdoc />
+    protected override void LogCycleFailure(Exception exception) => LogCleanupError(logger, exception);
 
     /// <summary>
     /// Sweeps every target once. Internal so tests can drive one sweep without advancing the
@@ -106,14 +107,8 @@ public sealed partial class InternalCommandCleanupService(
             var sourceName = target.ToString();
             try
             {
-                using var scope = scopeFactory.CreateScope();
-
-                // Set before the context is asked for: the tenant is what routes the scoped factory
-                // to this tenant's own database.
-                if (target.TenantId is { } tenantId)
-                {
-                    scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-                }
+                // The tenant is set before the context is asked for (see CreateTenantScope).
+                using var scope = scopeFactory.CreateTenantScope(target);
 
                 var context = scope.ServiceProvider.GetRequiredService<IDbContextFactory>()
                     .GetDbContext(target.Source);
@@ -168,18 +163,13 @@ public sealed partial class InternalCommandCleanupService(
     /// The relational physical sources whose queue tables this host owns: the same set the
     /// <c>InternalCommandProcessor</c> drains, expanded per tenant that keeps its own copy.
     /// </summary>
-    internal List<TenantDataSourceTarget> GetTargets()
-    {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        return TenantDataSourceTargets.Expand([.. sources.Distinct()], tenancyOptions?.Value);
-    }
+    internal List<TenantDataSourceTarget> GetTargets() =>
+        TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Internal command cleanup disabled: InternalCommands:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);

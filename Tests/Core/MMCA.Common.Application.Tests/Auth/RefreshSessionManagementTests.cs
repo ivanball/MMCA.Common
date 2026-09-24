@@ -13,6 +13,7 @@ using MMCA.Common.Shared.Auth;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.ValueObjects.Contact;
+using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Auth;
@@ -44,8 +45,8 @@ public sealed class RefreshSessionManagementTests
         Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
 
         result.IsSuccess.Should().BeTrue();
-        mocks.Sessions.Saved.Should().ContainSingle();
-        var expected = mocks.Sessions.Saved[0].Id;
+        mocks.Sessions.Sessions.Should().ContainSingle();
+        var expected = mocks.Sessions.Sessions[0].Id;
         SessionIdOf(mocks, result.Value!.AccessToken).Should().Be(
             expected,
             "the token names the device it was minted for, and that is the session just opened");
@@ -77,7 +78,7 @@ public sealed class RefreshSessionManagementTests
             new RegisterRequest("new@example.com", "Password123!", "John", "Doe"));
 
         result.IsSuccess.Should().BeTrue();
-        SessionIdOf(mocks, result.Value!.AccessToken).Should().Be(mocks.Sessions.Saved[0].Id);
+        SessionIdOf(mocks, result.Value!.AccessToken).Should().Be(mocks.Sessions.Sessions[0].Id);
     }
 
     // ── sid claim: rotation ──
@@ -88,14 +89,14 @@ public sealed class RefreshSessionManagementTests
         ArrangeUser(sut, mocks, UserId);
 
         Result<AuthenticationResponse> login = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
-        var originalSessionId = mocks.Sessions.Saved[0].Id;
+        var originalSessionId = mocks.Sessions.Sessions[0].Id;
         ArrangeExpiredPrincipal(mocks, UserId);
 
         Result<AuthenticationResponse> refreshed = await sut.RefreshTokenAsync(
             new RefreshTokenRequest(login.Value!.AccessToken, login.Value.RefreshToken));
 
         refreshed.IsSuccess.Should().BeTrue();
-        RefreshSession successor = mocks.Sessions.Saved.Single(s => !s.IsRevoked);
+        RefreshSession successor = mocks.Sessions.Sessions.Single(s => !s.IsRevoked);
         successor.Id.Should().NotBe(originalSessionId, "rotation opens a new row with a new id");
         SessionIdOf(mocks, refreshed.Value!.AccessToken).Should().Be(
             successor.Id,
@@ -293,7 +294,7 @@ public sealed class RefreshSessionManagementTests
         Mock<IUnitOfWork> UnitOfWork,
         Mock<IRepository<TestAuthUser, UserIdentifierType>> Repository,
         Mock<ITokenService> TokenService,
-        FakeRefreshSessionStore Sessions,
+        InMemoryRefreshSessionStore Sessions,
         Dictionary<string, List<Claim>> MintedClaims);
 
     private static (SessionAwareAuthenticationService Sut, ServiceMocks Mocks) CreateSut()
@@ -303,7 +304,7 @@ public sealed class RefreshSessionManagementTests
         var tokenService = new Mock<ITokenService>();
         var passwordHasher = new Mock<IPasswordHasher>();
         var loginProtection = new Mock<ILoginProtectionService>();
-        var sessions = new FakeRefreshSessionStore();
+        var sessions = new InMemoryRefreshSessionStore();
         var mintedClaims = new Dictionary<string, List<Claim>>(StringComparer.Ordinal);
 
         unitOfWork.Setup(x => x.GetRepository<TestAuthUser, UserIdentifierType>()).Returns(repository.Object);

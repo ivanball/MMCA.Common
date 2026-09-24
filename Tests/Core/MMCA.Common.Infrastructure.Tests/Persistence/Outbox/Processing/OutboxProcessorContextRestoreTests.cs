@@ -56,7 +56,7 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         contextServices.AddSingleton(new DomainEventSaveChangesInterceptor(
             dispatcher,
             NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-            Mock.Of<IOutboxSignal>()));
+            Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
         contextServices.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
         ServiceProvider contextProvider = contextServices.BuildServiceProvider();
 
@@ -104,7 +104,7 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
             Options.Create(new OutboxSettings { ProcessingDelaySeconds = 0 }),
             Mock.Of<IOutboxSignal>(),
             registry.Object,
-            resolver.Object);
+            resolver.Object, timeProvider: TimeProvider.System);
     }
 
     public void Dispose()

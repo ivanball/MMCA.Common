@@ -30,8 +30,8 @@ public sealed class GetMyNotificationsHandler(
         // reject the negative OFFSET. It also floors the page size, which the [Range] attribute at
         // the API boundary enforces but a direct handler caller does not inherit.
         var (skip, take) = PagingMath.Clamp(query.PageNumber, query.PageSize, MaxPageSize);
-        var userNotificationRepo = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
-        var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
+        var userNotificationRepo = unitOfWork.GetReadRepository<UserNotification, UserNotificationIdentifierType>();
+        var pushNotificationRepo = unitOfWork.GetReadRepository<PushNotification, PushNotificationIdentifierType>();
 
         // Scope is a view filter, not a security boundary: a read that supplies one sees the
         // notifications carrying that scope plus the unscoped ones, and a read that supplies none

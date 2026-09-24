@@ -70,19 +70,7 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
         _dbContextFactory.SaveChangesAsync(cancellationToken);
 
     /// <inheritdoc />
-    public int Save() => _dbContextFactory.SaveChanges();
-
-    /// <inheritdoc />
     public void RequestIdentityInsert() => _dbContextFactory.RequestIdentityInsert();
-
-    /// <inheritdoc />
-    public void BeginTransaction() => _dbContextFactory.BeginTransaction();
-
-    /// <inheritdoc />
-    public void CommitTransaction() => _dbContextFactory.CommitTransaction();
-
-    /// <inheritdoc />
-    public void RollbackTransaction() => _dbContextFactory.RollbackTransaction();
 
     /// <inheritdoc />
     public Task<TResult> ExecuteInTransactionAsync<TResult>(

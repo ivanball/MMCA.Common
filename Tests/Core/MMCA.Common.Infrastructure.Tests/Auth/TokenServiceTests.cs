@@ -30,7 +30,7 @@ public sealed class TokenServiceTests : IDisposable
     // tokens carry no permission claims.
     private static readonly IPermissionRegistry NoPermissions = new PermissionRegistryBuilder().Build();
 
-    private readonly TokenService _sut = new(Options.Create(Settings), NoPermissions);
+    private readonly TokenService _sut = new(Options.Create(Settings), NoPermissions, timeProvider: TimeProvider.System);
 
     public void Dispose() => _sut.Dispose();
 
@@ -84,7 +84,7 @@ public sealed class TokenServiceTests : IDisposable
         var registry = new PermissionRegistryBuilder()
             .Grant("Manager", "sessions:manage", "notifications:manage")
             .Build();
-        using var sut = new TokenService(Options.Create(Settings), registry);
+        using var sut = new TokenService(Options.Create(Settings), registry, timeProvider: TimeProvider.System);
 
         var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
@@ -108,7 +108,7 @@ public sealed class TokenServiceTests : IDisposable
         var registry = new PermissionRegistryBuilder()
             .Grant("Manager", "sessions:manage")
             .Build();
-        using var sut = new TokenService(Options.Create(Settings), registry);
+        using var sut = new TokenService(Options.Create(Settings), registry, timeProvider: TimeProvider.System);
 
         var token = sut.GenerateAccessToken(1, "user@test.com", "Member", "Test User");
 
@@ -122,7 +122,7 @@ public sealed class TokenServiceTests : IDisposable
         var registry = new PermissionRegistryBuilder()
             .Grant("Manager", "sessions:manage")
             .Build();
-        using var sut = new TokenService(Options.Create(Settings), registry);
+        using var sut = new TokenService(Options.Create(Settings), registry, timeProvider: TimeProvider.System);
         var additionalClaims = new[] { new Claim(AuthClaimTypes.Permission, "sessions:manage") };
 
         var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User", additionalClaims);
@@ -174,7 +174,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 45,
             RefreshTokenExpirationDays = 10
         };
-        using var service = new TokenService(Options.Create(settings), NoPermissions);
+        using var service = new TokenService(Options.Create(settings), NoPermissions, timeProvider: TimeProvider.System);
 
         service.AccessTokenLifetime.Should().Be(TimeSpan.FromMinutes(45));
         service.RefreshTokenLifetime.Should().Be(TimeSpan.FromDays(10));
@@ -213,7 +213,7 @@ public sealed class TokenServiceTests : IDisposable
             Audience = Settings.Audience,
             AccessTokenExpirationMinutes = 30
         };
-        using var wrongService = new TokenService(Options.Create(wrongSettings), NoPermissions);
+        using var wrongService = new TokenService(Options.Create(wrongSettings), NoPermissions, timeProvider: TimeProvider.System);
         var token = wrongService.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
@@ -233,7 +233,7 @@ public sealed class TokenServiceTests : IDisposable
             Audience = Settings.Audience,
             AccessTokenExpirationMinutes = 30
         };
-        using var wrongService = new TokenService(Options.Create(wrongSettings), NoPermissions);
+        using var wrongService = new TokenService(Options.Create(wrongSettings), NoPermissions, timeProvider: TimeProvider.System);
         var token = wrongService.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var result = _sut.GetPrincipalFromExpiredToken(token);
@@ -271,7 +271,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30,
         };
 
-        var act = () => new TokenService(Options.Create(settings), NoPermissions);
+        var act = () => new TokenService(Options.Create(settings), NoPermissions, timeProvider: TimeProvider.System);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*RsaPrivateKeyPem is required*");
     }
@@ -288,7 +288,7 @@ public sealed class TokenServiceTests : IDisposable
             AccessTokenExpirationMinutes = 30,
         };
 
-        var act = () => new TokenService(Options.Create(settings), NoPermissions);
+        var act = () => new TokenService(Options.Create(settings), NoPermissions, timeProvider: TimeProvider.System);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*SecretForKey is required*");
     }
@@ -297,7 +297,7 @@ public sealed class TokenServiceTests : IDisposable
     public void GenerateAccessToken_Rs256_ProducesRs256Header()
     {
         var (privatePem, publicPem) = GenerateRsaKeyPair();
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions);
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, timeProvider: TimeProvider.System);
 
         var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
@@ -311,7 +311,7 @@ public sealed class TokenServiceTests : IDisposable
     public void GetPrincipalFromExpiredToken_Rs256_RoundTripsValidToken()
     {
         var (privatePem, publicPem) = GenerateRsaKeyPair();
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions);
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, timeProvider: TimeProvider.System);
 
         var token = sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
         var principal = sut.GetPrincipalFromExpiredToken(token);
@@ -329,7 +329,7 @@ public sealed class TokenServiceTests : IDisposable
         // it with HS256 using the public key as the symmetric secret. The validator pins
         // ValidAlgorithms = [RsaSha256] so HS256 tokens are rejected even if the bytes match.
         var (privatePem, publicPem) = GenerateRsaKeyPair();
-        using var rsaService = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions);
+        using var rsaService = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, timeProvider: TimeProvider.System);
 
         var hmacSettings = new JwtSettings
         {
@@ -339,7 +339,7 @@ public sealed class TokenServiceTests : IDisposable
             Audience = "test-audience",
             AccessTokenExpirationMinutes = 30,
         };
-        using var hmacService = new TokenService(Options.Create(hmacSettings), NoPermissions);
+        using var hmacService = new TokenService(Options.Create(hmacSettings), NoPermissions, timeProvider: TimeProvider.System);
         var hmacToken = hmacService.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
         var principal = rsaService.GetPrincipalFromExpiredToken(hmacToken);
@@ -366,7 +366,7 @@ public sealed class TokenServiceTests : IDisposable
     {
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, TimeProvider.System, Options.Create(jwks));
 
         var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
 
@@ -381,7 +381,7 @@ public sealed class TokenServiceTests : IDisposable
     {
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, TimeProvider.System, Options.Create(jwks));
         var provider = new RsaJwksProvider(Options.Create(jwks));
 
         var jwt = new JwtSecurityTokenHandler()
@@ -405,7 +405,7 @@ public sealed class TokenServiceTests : IDisposable
     {
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, TimeProvider.System, Options.Create(jwks));
 
         var token = sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
 
@@ -420,7 +420,7 @@ public sealed class TokenServiceTests : IDisposable
     {
         var (privatePem, publicPem) = GenerateRsaKeyPair();
         var jwks = new JwksSettings { Enabled = true, KeyId = "identity-2026-07", RsaPublicKeyPem = publicPem };
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, null, Options.Create(jwks));
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem), NoPermissions, TimeProvider.System, Options.Create(jwks));
         var token = sut.GenerateAccessToken(42, "user@test.com", "Member", "Test Member");
 
         using var validationRsa = RSA.Create();
@@ -447,7 +447,7 @@ public sealed class TokenServiceTests : IDisposable
         // When RsaPublicKeyPem is omitted, the service derives the public parameters from the
         // private key so the issuer can still self-validate (refresh-token flow).
         var (privatePem, _) = GenerateRsaKeyPair();
-        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem: null), NoPermissions);
+        using var sut = new TokenService(CreateRsaSettings(privatePem, publicPem: null), NoPermissions, timeProvider: TimeProvider.System);
 
         var token = sut.GenerateAccessToken(1, "user@test.com", "Manager", "Test User");
         var principal = sut.GetPrincipalFromExpiredToken(token);

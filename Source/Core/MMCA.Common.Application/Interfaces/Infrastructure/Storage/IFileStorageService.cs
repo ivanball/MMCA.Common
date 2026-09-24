@@ -33,14 +33,7 @@ public interface IFileStorageService
     /// <param name="options">The response headers to store with the blob; <see cref="FileUploadOptions.None"/> stores none.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The blob's absolute URI, or a failure result.</returns>
-    /// <remarks>
-    /// The default implementation exists only so an implementation written against the original
-    /// three-argument contract keeps compiling: it drops <paramref name="options"/> and forwards to
-    /// <see cref="UploadAsync(string, Stream, string, CancellationToken)"/>. Implementations SHOULD
-    /// override it and honor the headers.
-    /// </remarks>
-    Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, FileUploadOptions options, CancellationToken cancellationToken = default) =>
-        UploadAsync(blobName, content, contentType, cancellationToken);
+    Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, FileUploadOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a blob; unknown names succeed (idempotent).</summary>
     /// <param name="blobName">The blob name within the configured container.</param>

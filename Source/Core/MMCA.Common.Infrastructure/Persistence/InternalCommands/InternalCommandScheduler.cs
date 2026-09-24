@@ -35,7 +35,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands;
 /// <param name="signal">Wakes the processor when a due row was saved outright.</param>
 /// <param name="logger">Logger for scheduling diagnostics.</param>
 /// <param name="timeProvider">Clock stamping <c>CreatedOn</c> and resolving a relative delay;
-/// defaults to <see cref="TimeProvider.System"/> so tests can schedule deterministically.</param>
+/// injected so tests can schedule deterministically.</param>
 internal sealed partial class InternalCommandScheduler(
     IDbContextFactory dbContextFactory,
     IDataSourceResolver dataSourceResolver,
@@ -45,7 +45,7 @@ internal sealed partial class InternalCommandScheduler(
     ICorrelationContext correlationContext,
     IInternalCommandSignal signal,
     ILogger<InternalCommandScheduler> logger,
-    TimeProvider? timeProvider = null) : IInternalCommandScheduler
+    TimeProvider timeProvider) : IInternalCommandScheduler
 {
     /// <summary>
     /// Column width of <c>UserRoles</c>; a longer list is truncated to fit. Shared with the outbox's
@@ -58,7 +58,7 @@ internal sealed partial class InternalCommandScheduler(
         Error.Validation("InternalCommands.NullCommand", "A null command cannot be scheduled.");
 
     private readonly InternalCommandsSettings _settings = options.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     public Task<Result<Guid>> ScheduleAsync(

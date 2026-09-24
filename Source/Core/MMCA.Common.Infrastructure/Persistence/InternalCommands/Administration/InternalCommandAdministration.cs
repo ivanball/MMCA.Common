@@ -2,8 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -33,8 +31,8 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration
 /// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
 /// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
 /// <param name="signal">Signal that wakes the processor as soon as a requeue lands.</param>
-/// <param name="timeProvider">Clock behind the purge threshold; defaults to
-/// <see cref="TimeProvider.System"/> so tests can drive it deterministically.</param>
+/// <param name="timeProvider">Clock behind the purge threshold; injected so tests can drive it
+/// deterministically.</param>
 /// <param name="tenancyOptions">Bound tenancy settings, used to expand per-tenant copies of a source.</param>
 public sealed partial class InternalCommandAdministration(
     IServiceScopeFactory scopeFactory,
@@ -43,7 +41,7 @@ public sealed partial class InternalCommandAdministration(
     IEntityDataSourceRegistry entityDataSourceRegistry,
     IDataSourceResolver dataSourceResolver,
     IInternalCommandSignal signal,
-    TimeProvider? timeProvider = null,
+    TimeProvider timeProvider,
     IOptions<TenancySettings>? tenancyOptions = null) : IInternalCommandAdministration
 {
     /// <summary>Upper bound on one page, so an admin call cannot ask for the whole table at once.</summary>
@@ -59,7 +57,7 @@ public sealed partial class InternalCommandAdministration(
         Error.Validation("InternalCommands.InvalidOlderThan", "OlderThan must be zero or greater.");
 
     private readonly InternalCommandsSettings _settings = options.Value;
-    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     public async Task<Result<long>> CountPendingAsync(string? dataSource, CancellationToken cancellationToken)
@@ -252,15 +250,12 @@ public sealed partial class InternalCommandAdministration(
     /// </summary>
     private List<TenantDataSourceTarget> SelectTargets(string? dataSource)
     {
-        IEnumerable<DataSourceKey> sources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(k => k.Engine != DataSource.CosmosDB);
-
-        if (_settings.DataSource != DataSource.CosmosDB)
-        {
-            sources = sources.Append(dataSourceResolver.ResolveLogical(_settings.DataSource, _settings.DatabaseName));
-        }
-
-        var targets = TenantDataSourceTargets.Expand([.. sources.Distinct()], tenancyOptions?.Value);
+        var targets = TenantDataSourceTargets.ExpandRelational(
+            entityDataSourceRegistry,
+            dataSourceResolver,
+            _settings.DataSource,
+            _settings.DatabaseName,
+            tenancyOptions?.Value);
 
         return dataSource is null
             ? targets
@@ -279,12 +274,7 @@ public sealed partial class InternalCommandAdministration(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var scope = scopeFactory.CreateScope();
-
-        if (target.TenantId is { } tenantId)
-        {
-            scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(tenantId);
-        }
+        using var scope = scopeFactory.CreateTenantScope(target);
 
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory>();
         return await work(dbContextFactory.GetDbContext(target.Source)).ConfigureAwait(false);

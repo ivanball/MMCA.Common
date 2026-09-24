@@ -76,7 +76,9 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
             Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null) =>
             LoadServerDataAsync(state, Fetch, additionalFilters, showCancelSnackbar);
 
-        public Task LoadMobileAsync() => LoadMobileDataAsync(Fetch);
+        public Task LoadMobileAsync(
+            Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null) =>
+            LoadMobileDataAsync(Fetch, additionalFilters);
 
         public void ToggleDensityNow() => ToggleDensity();
 
@@ -463,6 +465,23 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.LoadFailedNow.Should().BeTrue();
         cut.Instance.LoadingNow.Should().BeFalse();
         _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
+    }
+
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenAdditionalFiltersCallbackThrows_ReportsAndResetsLoading()
+    {
+        // Mirrors the paged path's guarantee: the callback is arbitrary page code, and a throw from
+        // it must not escape past the finally, or IsLoading stays true and the card view spins forever.
+        var cut = Render<TestGridPage>();
+
+        var escaped = await Record.ExceptionAsync(() => cut.InvokeAsync(
+            () => cut.Instance.LoadMobileAsync(_ => throw new InvalidOperationException("bad filter"))));
+
+        cut.Instance.LoadingNow.Should().BeFalse("the loading flag must always be reset");
+        cut.Instance.LoadFailedNow.Should().BeTrue("a throwing filter callback is a failed load");
+        escaped.Should().BeNull("the failure is reported through the toast, not thrown to the caller");
+        cut.Instance.MobileItemsNow.Should().BeEmpty();
+        _toast.Verify(t => t.Error(It.IsAny<string>()), Times.Once);
     }
 
     [Fact]

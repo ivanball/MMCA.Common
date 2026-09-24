@@ -19,7 +19,7 @@ public sealed class GetUnreadNotificationCountHandler(
         GetUnreadNotificationCountQuery query,
         CancellationToken cancellationToken = default)
     {
-        var repository = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
+        var repository = unitOfWork.GetReadRepository<UserNotification, UserNotificationIdentifierType>();
 
         IQueryable<UserNotification> unread = repository.TableNoTracking
             .Where(un => un.UserId == query.UserId && !un.IsRead);
@@ -31,7 +31,7 @@ public sealed class GetUnreadNotificationCountHandler(
         if (!string.IsNullOrWhiteSpace(query.ScopeKey))
         {
             string scopeKey = query.ScopeKey;
-            var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
+            var pushNotificationRepo = unitOfWork.GetReadRepository<PushNotification, PushNotificationIdentifierType>();
 
             unread = from un in unread
                      join pn in pushNotificationRepo.TableNoTracking on un.PushNotificationId equals pn.Id

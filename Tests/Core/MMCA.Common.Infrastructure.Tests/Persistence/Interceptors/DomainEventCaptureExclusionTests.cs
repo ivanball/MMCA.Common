@@ -39,7 +39,7 @@ public sealed class DomainEventCaptureExclusionTests : IDisposable
         _dbContext = ExclusionTestDbContext.Create(new DomainEventSaveChangesInterceptor(
             _dispatcherMock.Object,
             NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-            Mock.Of<IOutboxSignal>()));
+            Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
     }
 
     public void Dispose() => _dbContext.Dispose();

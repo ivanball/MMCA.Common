@@ -7,6 +7,7 @@ using MMCA.Common.Application.Services;
 using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Shared.DTOs;
+using MMCA.Common.Testing.Support;
 using Moq;
 
 namespace MMCA.Common.Application.Tests.Services.Query;
@@ -216,24 +217,8 @@ public sealed class EntityQueryServiceTests
 
     // ── Harness: the REAL query pipeline over an in-memory queryable ──
     // Sorting, paging and the pagination metadata are only meaningful together, so these tests
-    // drive the real EntityQueryPipeline and only fake the EF-facing executor.
-    private sealed class InMemoryQueryableExecutor : IQueryableExecutor
-    {
-        public IQueryable<T> Include<T>(IQueryable<T> query, string navigationPropertyPath)
-            where T : class
-            => query;
-
-        public IQueryable<T> AsSplitQuery<T>(IQueryable<T> query)
-            where T : class
-            => query;
-
-        public Task<List<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-            => Task.FromResult(query.ToList());
-
-        public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-            => Task.FromResult(query.Count());
-    }
-
+    // drive the real EntityQueryPipeline and only fake the EF-facing executor (the shared
+    // InMemoryQueryableExecutor from MMCA.Common.Testing).
     private sealed class FakeEntityDTOMapper : IEntityDTOMapper<FakeEntity, FakeEntityDTO, int>
     {
         public FakeEntityDTO MapToDTO(FakeEntity entity) => new() { Id = entity.Id, Name = entity.Name };

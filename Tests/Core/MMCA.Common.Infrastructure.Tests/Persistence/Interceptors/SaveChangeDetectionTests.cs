@@ -120,7 +120,7 @@ public sealed class SaveChangeDetectionTests : IDisposable
             services.AddSingleton(new DomainEventSaveChangesInterceptor(
                 Mock.Of<IDomainEventDispatcher>(),
                 NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-                Mock.Of<IOutboxSignal>()));
+                Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 

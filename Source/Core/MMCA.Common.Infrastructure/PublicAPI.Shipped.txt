@@ -447,8 +447,8 @@ MMCA.Common.Infrastructure.Auth.PasswordHasher
 MMCA.Common.Infrastructure.Auth.PasswordHasher.HashPassword(string! password) -> (byte[]! Hash, byte[]! Salt)
 MMCA.Common.Infrastructure.Auth.PasswordHasher.PasswordHasher() -> void
 MMCA.Common.Infrastructure.Auth.PasswordHasher.VerifyPassword(string! password, byte[]! hash, byte[]! salt) -> bool
-MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService
-MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.PeriodicBackgroundService(System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger! logger) -> void
+MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService
+MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.PeriodicBackgroundService(System.TimeProvider! timeProvider, Microsoft.Extensions.Logging.ILogger! logger) -> void
 MMCA.Common.Infrastructure.Notifications.Live.SignalRLiveChannelPublisher
 MMCA.Common.Infrastructure.Notifications.Live.SignalRLiveChannelPublisher.PublishAsync(string! channelKey, string! eventName, string! payloadJson, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.Infrastructure.Notifications.Live.SignalRLiveChannelPublisher.SignalRLiveChannelPublisher(Microsoft.AspNetCore.SignalR.IHubContext<MMCA.Common.Infrastructure.Notifications.NotificationHub!>! hubContext) -> void
@@ -689,8 +689,8 @@ abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.DbSeeder.Seed
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.Accounts.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount!>!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.CreateUser(MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.SeedAccount! account, byte[]! passwordHash, byte[]! passwordSalt) -> MMCA.Common.Shared.Abstractions.Result<TUser!>!
 abstract MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.EmailExistsAsync(MMCA.Common.Shared.ValueObjects.Contact.Email? email, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
-abstract MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.ExecuteCycleAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
-abstract MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.Interval.get -> System.TimeSpan
+abstract MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteCycleAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
+abstract MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.Interval.get -> System.TimeSpan
 const MMCA.Common.Infrastructure.Auth.LoginProtectionSettings.SectionName = "LoginProtection" -> string!
 const MMCA.Common.Infrastructure.Caching.CacheKeyPrefixOptions.SectionName = "Cache" -> string!
 const MMCA.Common.Infrastructure.Notifications.NotificationHub.JoinChannelMethod = "JoinChannel" -> string!
@@ -727,7 +727,7 @@ override MMCA.Common.Infrastructure.Persistence.Interceptors.TenantSaveChangesIn
 override MMCA.Common.Infrastructure.Persistence.Interceptors.TenantSaveChangesInterceptor.SavingChangesAsync(Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData! eventData, Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>>
 override MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator.GeneratesTemporaryValues.get -> bool
 override MMCA.Common.Infrastructure.Persistence.ValueGenerators.CosmosIntIdValueGenerator.Next(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry! entry) -> int
-override MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.ExecuteAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
+override MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.ExecuteAsync(System.Threading.CancellationToken stoppingToken) -> System.Threading.Tasks.Task!
 static MMCA.Common.Infrastructure.Caching.CacheOptions.Create(System.TimeSpan? expiration) -> Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions!
 static MMCA.Common.Infrastructure.Caching.CacheOptions.DefaultDuration.get -> System.TimeSpan
 static MMCA.Common.Infrastructure.Caching.CacheOptions.DefaultExpiration.get -> Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions!
@@ -782,6 +782,6 @@ static readonly MMCA.Common.Infrastructure.Mail.SmtpSettings.SectionName -> stri
 static readonly MMCA.Common.Infrastructure.Persistence.Tenancy.TenancySettings.SectionName -> string!
 virtual MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration.EntityTypeConfigurationBase<TEntity, TIdentifierType>.Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity!>! builder) -> void
 virtual MMCA.Common.Infrastructure.Persistence.DbContexts.Seeding.IdentityModuleDbSeederBase<TUser>.ShouldSeed.get -> bool
-virtual MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.IsEnabled.get -> bool
-virtual MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService.StartupDelay.get -> System.TimeSpan
+virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.IsEnabled.get -> bool
+virtual MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService.StartupDelay.get -> System.TimeSpan
 ~override MMCA.Common.Infrastructure.Persistence.DataSources.TenantDataSourceTarget.Equals(object obj) -> bool

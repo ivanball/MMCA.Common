@@ -212,6 +212,6 @@ public sealed class TestResetPasswordHandler(
     IPasswordHasher passwordHasher,
     IPasswordResetTokenService tokenService,
     ILoginProtectionService loginProtection,
-    IRefreshSessionStore? refreshSessions = null)
+    IRefreshSessionStore refreshSessions)
     : ResetPasswordHandlerBase<TestIdentityUser, TestResetPasswordCommand>(
         unitOfWork, passwordHasher, tokenService, loginProtection, NullLogger.Instance, refreshSessions);

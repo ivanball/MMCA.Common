@@ -28,7 +28,7 @@ public sealed class GetNotificationHistoryHandler(
         // Shared 64-bit clamp: see PagingMath. A 32-bit (PageNumber - 1) * PageSize wraps negative
         // near int.MaxValue, and SQL Server rejects a negative OFFSET outright.
         var (skip, take) = PagingMath.Clamp(query.PageNumber, query.PageSize, MaxPageSize);
-        var repository = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
+        var repository = unitOfWork.GetReadRepository<PushNotification, PushNotificationIdentifierType>();
 
         int totalCount = await repository.CountAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 

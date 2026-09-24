@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
@@ -76,11 +75,7 @@ internal sealed partial class AuditTrailCleanupJob(
 
         var cutoff = timeProvider.GetUtcNow().UtcDateTime.Subtract(TimeSpan.FromDays(_settings.RetentionDays));
 
-        var relationalSources = entityDataSourceRegistry.GetPhysicalSourcesInUse()
-            .Where(key => key.Engine != DataSource.CosmosDB)
-            .Distinct();
-
-        foreach (var target in TenantDataSourceTargets.Expand(relationalSources, tenancyOptions?.Value))
+        foreach (var target in TenantDataSourceTargets.ExpandRelational(entityDataSourceRegistry, tenancyOptions?.Value))
         {
             await PurgeTargetAsync(target, cutoff, cancellationToken).ConfigureAwait(false);
         }
@@ -102,8 +97,7 @@ internal sealed partial class AuditTrailCleanupJob(
             return;
         }
 
-        using var scope = scopeFactory.CreateScope();
-        scope.ServiceProvider.GetRequiredService<ITenantContext>().SetTenant(target.TenantId);
+        using var scope = scopeFactory.CreateTenantScope(target);
         await PurgeWithFactoryAsync(
             scope.ServiceProvider.GetRequiredService<IDbContextFactory>(),
             target,

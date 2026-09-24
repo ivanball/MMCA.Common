@@ -196,6 +196,6 @@ public sealed class ChangePasswordHandlerBaseTests
 public sealed class TestChangePasswordHandler(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
-    IRefreshSessionStore? refreshSessions = null)
+    IRefreshSessionStore refreshSessions)
     : ChangePasswordHandlerBase<TestIdentityUser, TestChangePasswordCommand>(
         unitOfWork, passwordHasher, NullLogger.Instance, refreshSessions);

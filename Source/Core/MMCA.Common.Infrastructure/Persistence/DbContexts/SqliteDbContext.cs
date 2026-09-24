@@ -28,9 +28,9 @@ public sealed class SqliteDbContext(
                     // Same contract as SQLServerDbContext: without an explicit assembly EF looks for
                     // migrations next to the context, which lives in MMCA.Common.Infrastructure and
                     // has none, so a per-source migrations project would never be found.
-                    if (!string.IsNullOrEmpty(PhysicalSource.SqliteMigrationsAssembly))
+                    if (!string.IsNullOrEmpty(PhysicalSource.MigrationsAssembly))
                     {
-                        sqlite.MigrationsAssembly(PhysicalSource.SqliteMigrationsAssembly);
+                        sqlite.MigrationsAssembly(PhysicalSource.MigrationsAssembly);
                     }
                 });
 
