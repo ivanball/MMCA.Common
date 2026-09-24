@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -303,7 +304,7 @@ public sealed partial class ScheduledJobRunner(
                     CronExpression = cron,
                     NextRunOn = nextRun ?? DateTime.MaxValue,
                     LastOutcome = parseError is null ? null : OutcomeSkipped,
-                    LastError = Truncate(parseError),
+                    LastError = ColumnWidth.Truncate(parseError, MaxErrorLength),
                 });
                 inserted = true;
                 LogJobRegistered(logger, job.Name, cron);
@@ -344,7 +345,7 @@ public sealed partial class ScheduledJobRunner(
             return;
         }
 
-        var truncated = Truncate(parseError);
+        var truncated = ColumnWidth.Truncate(parseError, MaxErrorLength);
         await context.Set<ScheduledJobEntry>()
             .Where(e => e.JobName == jobName)
             .ExecuteUpdateAsync(
@@ -483,7 +484,7 @@ public sealed partial class ScheduledJobRunner(
         }
 
         var durationMs = (long)elapsed.TotalMilliseconds;
-        var truncatedError = Truncate(error);
+        var truncatedError = ColumnWidth.Truncate(error, MaxErrorLength);
 
         // Guarded by the claim token: a replica whose lease expired mid-execution (another replica
         // has since claimed and possibly re-run the row) matches nothing here and silently drops its
@@ -548,10 +549,6 @@ public sealed partial class ScheduledJobRunner(
             return (OutcomeFailed, ex.Message);
         }
     }
-
-    /// <summary>Truncates a message to the <c>LastError</c> column width, preserving null.</summary>
-    private static string? Truncate(string? message) =>
-        message is null || message.Length <= MaxErrorLength ? message : message[..MaxErrorLength];
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Scheduled job runner disabled: set Scheduler:Enabled to true to run recurring jobs")]
     private static partial void LogSchedulerDisabled(ILogger logger);

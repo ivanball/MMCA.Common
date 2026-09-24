@@ -6,10 +6,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Infrastructure.Context;
+using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
+using MMCA.Common.Infrastructure.Persistence.Polling;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
 
@@ -68,61 +70,28 @@ public sealed partial class InternalCommandProcessor(
     /// </summary>
     internal const string PrincipalAuthenticationType = "InternalCommand";
 
-    /// <summary>Floor for the computed wait so an overdue row cannot hot-loop the processor.</summary>
-    private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// Brief startup delay so the host finishes initializing (module registration, migration) before
-    /// the first cycle touches the queue table. Matches the outbox processor's delay.
-    /// </summary>
-    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(5);
-
     private static readonly ActivitySource InternalCommandActivitySource = new(InternalCommandMetrics.MeterName);
 
     private readonly InternalCommandsSettings _settings = options.Value;
     private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        await Task.Delay(StartupDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
-
-        if (GetTargets().Count == 0)
-        {
-            LogNoRelationalSources(logger);
-            return;
-        }
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            InternalCommandCycleResult cycle = default;
-            try
+    /// <remarks>The loop, startup delay and smart wait are the shared <see cref="PollingLoop"/>.</remarks>
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        PollingLoop.RunAsync(
+            _timeProvider,
+            () => GetTargets().Count > 0,
+            () => LogNoRelationalSources(logger),
+            async ct =>
             {
-                cycle = await ProcessDueCommandsAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                LogCycleError(logger, ex);
-            }
-
-            if (cycle.HasMoreDueWork)
-            {
-                continue;
-            }
-
-            var wait = ComputeWaitTime(
-                cycle.EarliestUpcoming,
-                _timeProvider.GetUtcNow().UtcDateTime,
-                TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds),
-                TimeSpan.FromSeconds(_settings.PollingIntervalSeconds));
-
-            await signal.WaitAsync(wait, stoppingToken).ConfigureAwait(false);
-        }
-    }
+                var cycle = await ProcessDueCommandsAsync(ct).ConfigureAwait(false);
+                return (cycle.HasMoreDueWork, cycle.EarliestUpcoming);
+            },
+            ex => LogCycleError(logger, ex),
+            _settings.ProcessingDelaySeconds,
+            _settings.PollingIntervalSeconds,
+            signal.WaitAsync,
+            stoppingToken);
 
     /// <summary>
     /// Computes how long to wait before the next cycle: until the earliest upcoming row becomes due
@@ -138,21 +107,8 @@ public sealed partial class InternalCommandProcessor(
         DateTime? earliestUpcoming,
         DateTime utcNow,
         TimeSpan processingDelay,
-        TimeSpan pollingInterval)
-    {
-        if (earliestUpcoming is null)
-        {
-            return pollingInterval;
-        }
-
-        var untilDue = earliestUpcoming.Value + processingDelay - utcNow;
-        if (untilDue < MinimumWait)
-        {
-            untilDue = MinimumWait;
-        }
-
-        return untilDue < pollingInterval ? untilDue : pollingInterval;
-    }
+        TimeSpan pollingInterval) =>
+        PollingLoop.ComputeWaitTime(earliestUpcoming, utcNow, processingDelay, pollingInterval);
 
     /// <summary>
     /// The units this cycle visits: every relational source this host owns (every source backing a
@@ -178,35 +134,16 @@ public sealed partial class InternalCommandProcessor(
     /// <remarks>Internal so tests can drive one cycle without advancing the loop's timers.</remarks>
     internal async Task<InternalCommandCycleResult> ProcessDueCommandsAsync(CancellationToken cancellationToken)
     {
-        var hasMoreDueWork = false;
-        DateTime? earliestUpcoming = null;
-        var pendingDepth = 0L;
-
-        foreach (var target in GetTargets())
-        {
-            try
+        var (hasMoreDueWork, earliestUpcoming, pendingDepth) = await PollingLoop.DrainAllAsync(
+            GetTargets(),
+            async (target, ct) =>
             {
                 (InternalCommandCycleResult result, long sourceDepth) =
-                    await ProcessSourceAsync(target, cancellationToken).ConfigureAwait(false);
-
-                pendingDepth += sourceDepth;
-                hasMoreDueWork |= result.HasMoreDueWork;
-                if (result.EarliestUpcoming is { } upcoming
-                    && (earliestUpcoming is null || upcoming < earliestUpcoming))
-                {
-                    earliestUpcoming = upcoming;
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                // One unreachable database must not starve the other sources' queues.
-                LogSourceError(logger, target.ToString(), ex);
-            }
-        }
+                    await ProcessSourceAsync(target, ct).ConfigureAwait(false);
+                return (result.HasMoreDueWork, result.EarliestUpcoming, sourceDepth);
+            },
+            (sourceName, ex) => LogSourceError(logger, sourceName, ex),
+            cancellationToken).ConfigureAwait(false);
 
         InternalCommandMetrics.SetPendingDepth(pendingDepth);
 
@@ -573,7 +510,7 @@ public sealed partial class InternalCommandProcessor(
         CancellationToken cancellationToken)
     {
         var retryAt = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(ComputeRetryBackoffSeconds(attempts));
-        var truncated = Truncate(message);
+        var truncated = ColumnWidth.Truncate(message, MaxErrorLength);
 
         await StampAsync(
             context,
@@ -597,7 +534,7 @@ public sealed partial class InternalCommandProcessor(
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var attempts = row.Attempts + 1;
-        var truncated = Truncate(message);
+        var truncated = ColumnWidth.Truncate(message, MaxErrorLength);
 
         await StampAsync(
             context,
@@ -656,21 +593,8 @@ public sealed partial class InternalCommandProcessor(
     /// </summary>
     /// <param name="attempts">The attempt number that just failed, counting from one.</param>
     /// <returns>The wait, in seconds, before the row becomes claimable again.</returns>
-    internal double ComputeRetryBackoffSeconds(int attempts)
-    {
-        // Clamp the exponent before it reaches Math.Pow: MaxAttempts is bounded at 20 today, but the
-        // cap below is what actually decides the wait, so there is no reason to let a future settings
-        // change turn this into an overflow.
-        var exponent = Math.Min(Math.Max(attempts - 1, 0), 16);
-        var backoff = _settings.RetryBackoffBaseSeconds * Math.Pow(2, exponent);
-
-        // Jitter is applied BEFORE the cap so a capped backoff stays exactly at the ceiling.
-#pragma warning disable S2245, CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
-        var jitter = 0.8 + Random.Shared.NextDouble() * 0.4;
-#pragma warning restore S2245, CA5394
-
-        return Math.Min(backoff * jitter, _settings.MaxRetryBackoffSeconds);
-    }
+    internal double ComputeRetryBackoffSeconds(int attempts) =>
+        PollingLoop.ComputeRetryBackoffSeconds(attempts, _settings.RetryBackoffBaseSeconds, _settings.MaxRetryBackoffSeconds);
 
     /// <summary>
     /// Renders a failed result's errors for the <c>LastError</c> column. Codes and messages only: the
@@ -681,10 +605,6 @@ public sealed partial class InternalCommandProcessor(
         result.Errors.Count == 0
             ? "The handler returned a failure with no errors."
             : string.Join("; ", result.Errors.Select(e => $"{e.Code}: {e.Message}"));
-
-    /// <summary>Truncates a message to the <c>LastError</c> column width, preserving null.</summary>
-    private static string? Truncate(string? message) =>
-        message is null || message.Length <= MaxErrorLength ? message : message[..MaxErrorLength];
 
     /// <summary>
     /// Starts an activity linked to the trace context captured at schedule time, so the deferred

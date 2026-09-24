@@ -12,6 +12,7 @@ using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
+using MMCA.Common.Infrastructure.Persistence.Polling;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Resilience;
 using Polly;
@@ -79,15 +80,6 @@ public sealed partial class OutboxProcessor(
     /// </summary>
     internal const string OutboxPrincipalAuthenticationType = "Outbox";
 
-    /// <summary>Floor for the computed wait so an overdue pending message cannot hot-loop the processor.</summary>
-    private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// Brief startup delay so the host finishes initializing (module registration, migration) before
-    /// the first cycle polls the outbox tables. Matches the internal command processor's delay.
-    /// </summary>
-    private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(5);
-
     /// <summary>
     /// Budget for the best-effort save that flushes ProcessedOn stamps when a batch is cancelled
     /// mid-flight. Deliberately short: the work is one small UPDATE against an already-open
@@ -112,77 +104,34 @@ public sealed partial class OutboxProcessor(
     private readonly ResiliencePipeline _brokerPublishPipeline = BuildBrokerPublishPipeline();
 
     /// <inheritdoc />
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        await Task.Delay(StartupDelay, _timeProvider, stoppingToken).ConfigureAwait(false);
-
-        if (GetOutboxTargets().Count == 0)
-        {
-            LogOutboxDisabled(logger);
-            return;
-        }
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            OutboxCycleResult cycle = default;
-            try
+    /// <remarks>The loop, startup delay and smart wait are the shared <see cref="PollingLoop"/>.</remarks>
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) =>
+        PollingLoop.RunAsync(
+            _timeProvider,
+            () => GetOutboxTargets().Count > 0,
+            () => LogOutboxDisabled(logger),
+            async ct =>
             {
-                cycle = await ProcessPendingMessagesAsync(stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                // Normal shutdown — exit gracefully.
-                break;
-            }
-            catch (Exception ex)
-            {
-                LogProcessingError(logger, ex);
-            }
-
-            if (cycle.HasMoreEligibleWork)
-            {
-                // A full batch was drained with progress — more eligible rows may be waiting.
-                continue;
-            }
-
-            // Wait for a signal (new outbox entries written), the moment the earliest pending
-            // message becomes eligible (smart wait), or the fallback polling interval —
-            // whichever comes first.
-            var wait = ComputeWaitTime(
-                cycle.EarliestPendingOccurredOn,
-                _timeProvider.GetUtcNow().UtcDateTime,
-                TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds),
-                TimeSpan.FromSeconds(_settings.PollingIntervalSeconds));
-            await outboxSignal.WaitAsync(wait, stoppingToken).ConfigureAwait(false);
-        }
-    }
+                var cycle = await ProcessPendingMessagesAsync(ct).ConfigureAwait(false);
+                return (cycle.HasMoreEligibleWork, cycle.EarliestPendingOccurredOn);
+            },
+            ex => LogProcessingError(logger, ex),
+            _settings.ProcessingDelaySeconds,
+            _settings.PollingIntervalSeconds,
+            outboxSignal.WaitAsync,
+            stoppingToken);
 
     /// <summary>
-    /// Computes how long to wait before the next polling cycle: until the earliest pending
-    /// message becomes eligible (<paramref name="earliestPendingOccurredOn"/> plus the
-    /// processing delay), capped at the polling interval and floored at one second to avoid
-    /// hot-looping. Failed-but-already-eligible messages never shorten the wait — they retry
-    /// on the next signal or interval, which throttles permanently failing messages.
+    /// Computes how long to wait before the next polling cycle: until the earliest pending message
+    /// becomes eligible, capped at the polling interval and floored at one second (see
+    /// <see cref="PollingLoop.ComputeWaitTime"/>).
     /// </summary>
     internal static TimeSpan ComputeWaitTime(
         DateTime? earliestPendingOccurredOn,
         DateTime utcNow,
         TimeSpan processingDelay,
-        TimeSpan pollingInterval)
-    {
-        if (earliestPendingOccurredOn is null)
-        {
-            return pollingInterval;
-        }
-
-        var untilEligible = earliestPendingOccurredOn.Value + processingDelay - utcNow;
-        if (untilEligible < MinimumWait)
-        {
-            untilEligible = MinimumWait;
-        }
-
-        return untilEligible < pollingInterval ? untilEligible : pollingInterval;
-    }
+        TimeSpan pollingInterval) =>
+        PollingLoop.ComputeWaitTime(earliestPendingOccurredOn, utcNow, processingDelay, pollingInterval);
 
     /// <summary>
     /// The units this cycle visits: every relational source this host owns (every source backing a
@@ -207,36 +156,16 @@ public sealed partial class OutboxProcessor(
     /// </summary>
     internal async Task<OutboxCycleResult> ProcessPendingMessagesAsync(CancellationToken cancellationToken)
     {
-        var hasMoreEligibleWork = false;
-        DateTime? earliestPendingOccurredOn = null;
-        var pendingDepth = 0L;
-
-        foreach (var target in GetOutboxTargets())
-        {
-            try
+        var (hasMoreEligibleWork, earliestPendingOccurredOn, pendingDepth) = await PollingLoop.DrainAllAsync(
+            GetOutboxTargets(),
+            async (target, ct) =>
             {
                 (OutboxCycleResult result, long sourcePendingDepth) =
-                    await ProcessSourceAsync(target, cancellationToken).ConfigureAwait(false);
-                pendingDepth += sourcePendingDepth;
-                hasMoreEligibleWork |= result.HasMoreEligibleWork;
-                if (result.EarliestPendingOccurredOn is { } pending
-                    && (earliestPendingOccurredOn is null || pending < earliestPendingOccurredOn))
-                {
-                    earliestPendingOccurredOn = pending;
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                // One unreachable database must not starve the other sources' outboxes.
-                // A failing source contributes nothing to the wait — its rows are retried
-                // on the next signal or polling interval.
-                LogSourceProcessingError(logger, target.ToString(), ex);
-            }
-        }
+                    await ProcessSourceAsync(target, ct).ConfigureAwait(false);
+                return (result.HasMoreEligibleWork, result.EarliestPendingOccurredOn, sourcePendingDepth);
+            },
+            (sourceName, ex) => LogSourceProcessingError(logger, sourceName, ex),
+            cancellationToken).ConfigureAwait(false);
 
         // Publish what THIS instance observed this cycle. A source that threw contributes zero, so
         // an outage reads as a drop rather than as a stale plateau (see the gauge's remarks).
@@ -744,27 +673,12 @@ public sealed partial class OutboxProcessor(
     }
 
     /// <summary>
-    /// Exponential backoff for a failed message: <c>base * 2^(retryCount - 1)</c>, multiplied by a
-    /// random jitter factor in <c>[0.8, 1.2]</c> and then capped at the lease so a failing row never
-    /// holds its claim longer than a dead replica's rows would. The jitter is what keeps a batch
-    /// that failed together (one dependency outage fails all 50 rows in the same instant) from
-    /// retrying in lockstep and re-hammering that dependency on a single shared schedule.
+    /// Exponential backoff with jitter for a failed message (see
+    /// <see cref="PollingLoop.ComputeRetryBackoffSeconds"/>), capped at the lease so a failing row
+    /// never holds its claim longer than a dead replica's rows would.
     /// </summary>
-    internal double ComputeRetryBackoffSeconds(int retryCount)
-    {
-        // Clamp the shift exponent before it reaches Math.Pow: MaxRetries is bounded at 20 today,
-        // but the cap below is what actually decides the wait, so there is no reason to let a
-        // future settings change turn this into an overflow.
-        var exponent = Math.Min(Math.Max(retryCount - 1, 0), 16);
-        var backoff = _settings.RetryBackoffBaseSeconds * Math.Pow(2, exponent);
-
-        // Jitter is applied BEFORE the cap so a capped backoff stays exactly at the lease bound.
-#pragma warning disable S2245, CA5394 // Random spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.
-        var jitter = 0.8 + Random.Shared.NextDouble() * 0.4;
-#pragma warning restore S2245, CA5394
-
-        return Math.Min(backoff * jitter, _settings.LeaseSeconds);
-    }
+    internal double ComputeRetryBackoffSeconds(int retryCount) =>
+        PollingLoop.ComputeRetryBackoffSeconds(retryCount, _settings.RetryBackoffBaseSeconds, _settings.LeaseSeconds);
 
     /// <summary>
     /// Builds the broker-publish circuit breaker from <see cref="BrokerResilienceDefaults"/>.
