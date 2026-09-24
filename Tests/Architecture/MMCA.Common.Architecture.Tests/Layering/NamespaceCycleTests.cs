@@ -34,14 +34,7 @@ public sealed class NamespaceCycleTests : NamespaceCycleTestsBase
     /// internal graph edge.
     /// </description></item>
     /// </list>
-    /// <c>Scheduling</c> joined the component deliberately in the 2026-09 code-health wave, and both of
-    /// its edges are load-bearing: <c>Scheduling -&gt; Persistence</c> because <c>ScheduledJobRunner</c>
-    /// leases and records its runs in the database, and <c>Persistence -&gt; Scheduling</c> because the
-    /// persistence sweeps (outbox, internal-command and refresh-session cleanup, the permission-grant
-    /// refresh) now run on the shared <c>PeriodicBackgroundService</c> loop instead of four hand-written
-    /// copies of it. Moving that public base type out of <c>Scheduling</c> would be a namespace rename
-    /// for every consumer subclass to buy an internal graph edge.
-    /// The allowance covers the whole strongly connected component, so a fifth namespace joining this
+    /// The allowance covers the whole strongly connected component, so a fourth namespace joining this
     /// tangle still fails the test. (Before the 2026-09 feature-by-folder reorganization the third node
     /// was <c>Settings</c>; that folder dissolved into the features it configured, and the tenancy
     /// validator that carried the <c>Settings -&gt; Persistence</c> edge now lives in <c>Persistence/Tenancy</c>.)
@@ -51,6 +44,5 @@ public sealed class NamespaceCycleTests : NamespaceCycleTestsBase
         "MMCA.Common.Infrastructure",
         "MMCA.Common.Infrastructure.Persistence",
         "MMCA.Common.Infrastructure.Messaging",
-        "MMCA.Common.Infrastructure.Scheduling",
     ];
 }

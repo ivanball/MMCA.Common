@@ -47,7 +47,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   through the error toast and sets `LoadFailed`, exactly as the paged loader does. The mobile fetch
   also gets the SSR pre-render timeout it was missing. All three loaders share one fetch pipeline.
 
-**Breaking:** four removals or tightenings of shipped signatures. Hosts that resolve these types
+**Breaking:** removals, tightenings and one namespace move in shipped signatures. Hosts that resolve these types
 from DI change nothing; code that constructs them by hand, mocks the removed members or reads the
 renamed properties does. See [UPGRADING.md](UPGRADING.md) for the map and the mechanical fix.
 
@@ -67,6 +67,11 @@ renamed properties does. See [UPGRADING.md](UPGRADING.md) for the map and the me
 - `PhysicalDataSource` carries one `MigrationsAssembly` (the third positional parameter) in place
   of `SqlServerMigrationsAssembly`, `SqliteMigrationsAssembly` and `PostgreSQLMigrationsAssembly`.
   The configuration keys are unchanged.
+- `PeriodicBackgroundService` moved from `MMCA.Common.Infrastructure.Scheduling` to
+  `MMCA.Common.Infrastructure.Hosting.Background`. The persistence sweeps now derive from it, and
+  `Scheduling` depends on `Persistence` (the job runner leases its rows in the database), so leaving
+  the base in `Scheduling` would have tied the two namespaces into a cycle. The type itself is
+  unchanged.
 
 ## [1.209.0] - 2026-09-22
 

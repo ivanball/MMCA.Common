@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace MMCA.Common.Infrastructure.Scheduling;
+namespace MMCA.Common.Infrastructure.Hosting.Background;
 
 /// <summary>
 /// Base class for fixed-interval background sweeps: an optional enablement gate, a short

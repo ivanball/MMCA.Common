@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.Permissions;
-using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Infrastructure.Hosting.Background;
 
 namespace MMCA.Common.Infrastructure.Persistence.Auth;
 

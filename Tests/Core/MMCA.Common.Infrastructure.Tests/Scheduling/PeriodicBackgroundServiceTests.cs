@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using MMCA.Common.Infrastructure.Scheduling;
+using MMCA.Common.Infrastructure.Hosting.Background;
 
 namespace MMCA.Common.Infrastructure.Tests.Scheduling;
 

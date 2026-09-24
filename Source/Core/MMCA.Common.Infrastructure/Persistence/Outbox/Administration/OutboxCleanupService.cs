@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
@@ -9,7 +10,6 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
-using MMCA.Common.Infrastructure.Scheduling;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 

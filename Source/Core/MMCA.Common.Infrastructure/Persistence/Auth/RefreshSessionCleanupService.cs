@@ -5,9 +5,9 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
+using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
-using MMCA.Common.Infrastructure.Scheduling;
 
 namespace MMCA.Common.Infrastructure.Persistence.Auth;
 

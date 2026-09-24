@@ -34,7 +34,7 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
-**Four removals or tightenings of shipped signatures.** Hosts that resolve these types from DI
+**Removals, tightenings and one namespace move in shipped signatures.** Hosts that resolve these types from DI
 change nothing; code that constructs them by hand, mocks the removed members or reads the renamed
 properties does. Configuration keys are unchanged.
 
@@ -49,6 +49,7 @@ Old-to-new map:
 | `TimeProvider? timeProvider = null` on `TokenService`, `InProcessEventBus`, `DomainEventSaveChangesInterceptor`, `OutboxProcessor`, `OutboxCleanupService`, `InternalCommandProcessor`, `InternalCommandCleanupService`, `InternalCommandAdministration`, `RefreshSessionCleanupService` | `TimeProvider timeProvider`, required, same position |
 | `IFileStorageService.UploadAsync(..., FileUploadOptions options, ...)` default interface member | abstract; every implementation provides it |
 | `PhysicalDataSource(Key, ConnectionString, SqlServerMigrationsAssembly, CosmosDatabaseName)` plus `SqliteMigrationsAssembly` / `PostgreSQLMigrationsAssembly` init properties | `PhysicalDataSource(Key, ConnectionString, MigrationsAssembly, CosmosDatabaseName)`, one slot for the source's own engine |
+| `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` | `MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService` (namespace move only; the type is unchanged) |
 
 The mechanical fix:
 
@@ -68,6 +69,12 @@ The mechanical fix:
    `{ SqliteMigrationsAssembly = x }` or `{ PostgreSQLMigrationsAssembly = x }` into the third
    positional argument; read `.MigrationsAssembly` where the code read any of the three old
    properties.
+6. **`PeriodicBackgroundService` namespace.** In a file that derives from it, add
+   `using MMCA.Common.Infrastructure.Hosting.Background;`, and remove
+   `using MMCA.Common.Infrastructure.Scheduling;` when the file uses nothing else from it (the build
+   reports it as IDE0005). Re-qualify any fully qualified
+   `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` reference. This is the
+   namespace-move fix at the top of this file, applied to one type.
 
 ## [1.207.0] - 2026-09-21
 
