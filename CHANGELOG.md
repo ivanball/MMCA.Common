@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.210.0] - 2026-09-23
+
 ### Added
 
 - **Shared in-memory test fakes (`MMCA.Common.Testing.Support`).** `InMemoryQueryableExecutor` runs a
@@ -39,6 +41,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - The CSV export machinery moved out of `EntityControllerBase` into an internal exporter;
   `ExportAsync`, `GetExportSpecification`, `BuildExportFileName` and `ExportFileNamePrefix` are
   unchanged.
+- `OutboxProcessor` and `InternalCommandProcessor` share one internal polling core (startup delay,
+  smart wait, per-source drain, jittered retry backoff), and `OutboxSignal` / `InternalCommandSignal`
+  one wake-up implementation (#440). Internal only: public surface, log messages, metrics, activity
+  names and configuration keys are unchanged.
 
 ### Fixed
 
