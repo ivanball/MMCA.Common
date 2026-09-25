@@ -540,3 +540,11 @@ MMCA.Common.UI.Pages.Common.DetailPageBase.LoadGuard.get -> MMCA.Common.UI.Commo
 MMCA.Common.UI.Pages.Common.DetailPageBase.MarkDirty() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.PageToken.get -> System.Threading.CancellationToken
 virtual MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose(bool disposing) -> void
+MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap
+MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup
+const MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.ClientConfigPath = "client-config" -> string!
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultRetryDelay.get -> System.TimeSpan
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultTimeout.get -> System.TimeSpan
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Net.Http.HttpClient! client, System.TimeSpan retryDelay, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.IO.Stream!>!
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Uri! baseAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.IO.Stream!>!
+static MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup.WarmAsync(System.IServiceProvider! services) -> System.Threading.Tasks.Task!
