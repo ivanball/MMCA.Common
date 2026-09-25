@@ -123,6 +123,10 @@ public static class DependencyInjection
             // TryAdd prevents duplicate registration when called from multiple hosts
             services.TryAddScoped<IAuthUIService, AuthUIService>();
 
+            // The /confirm-email page's client (ADR-116). A separate interface rather than new
+            // IAuthUIService members, so a consumer's own IAuthUIService implementation keeps compiling.
+            services.TryAddScoped<IEmailConfirmationUIService, EmailConfirmationUIService>();
+
             // Binds an OAuth completion to the flow this client started, so a deep-linked completion
             // code from someone else's provider round trip is dropped instead of exchanged.
             services.TryAddScoped<OAuthFlowStateStore>();

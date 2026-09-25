@@ -33,3 +33,14 @@ abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.EditRout
 abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.FirstRole.get -> string!
 abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.SecondRole.get -> string!
 virtual MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleParameterName.get -> string!
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Confirmation.get -> Moq.Mock<MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService!>!
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.ConfirmEmailPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.RenderPage(string? email, string? token) -> Bunit.IRenderedComponent<MMCA.Common.UI.Pages.Auth.ConfirmEmail!>!
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Resend_AsksForAFreshLinkAndSaysSoWithoutConfirmingTheAccountExists() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.ResendWithNoAddress_DoesNotCallTheService() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.SubmittingWithoutAToken_ExplainsWhatIsMissingAndDoesNotCallTheService() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithACompleteLink_ConfirmsOnceAndReportsSuccess() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithARefusedToken_ShowsTheApisMessage_AndKeepsTheFormWithAResend() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithNoToken_DoesNotCallTheServiceAndShowsTheForm() -> void
+virtual MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Email.get -> string!

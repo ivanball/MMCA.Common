@@ -548,3 +548,17 @@ static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultTimeout.g
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Net.Http.HttpClient! client, System.TimeSpan retryDelay, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.IO.Stream!>!
 static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Uri! baseAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.IO.Stream!>!
 static MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup.WarmAsync(System.IServiceProvider! services) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Pages.Auth.ConfirmEmail
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.ConfirmEmail() -> void
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.EmailFromQuery.get -> string?
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.EmailFromQuery.set -> void
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.TokenFromQuery.get -> string?
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.TokenFromQuery.set -> void
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.ConfirmEmailAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.EmailConfirmationUIService(System.Net.Http.IHttpClientFactory! httpClientFactory) -> void
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.ResendEmailConfirmationAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService
+MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ConfirmEmailAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ResendEmailConfirmationAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
