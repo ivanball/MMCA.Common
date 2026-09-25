@@ -142,3 +142,12 @@ virtual MMCA.Common.API.Controllers.Administration.RolesAdminControllerBase.GetC
 static MMCA.Common.API.Authorization.OwnershipHelper.GetOwnershipSpecification<TSpec, TId>(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, string! claimType, System.Func<TId, TSpec!>! specFactory, string! bypassRole) -> TSpec?
 static MMCA.Common.API.Authorization.OwnershipHelper.GetOwnershipSpecification<TSpec>(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, System.Func<int, TSpec!>! specFactory, string! bypassRole) -> TSpec?
 static MMCA.Common.API.Authorization.OwnershipHelper.IsAdmin(MMCA.Common.Application.Interfaces.Infrastructure.Auth.ICurrentUserService! currentUserService, string! bypassRole) -> bool
+MMCA.Common.API.Startup.ForwardedHeadersDefaults
+MMCA.Common.API.Startup.ForwardedHeadersDefaultsExtensions
+MMCA.Common.API.Startup.ForwardedHeadersDefaultsExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!)
+MMCA.Common.API.Startup.ForwardedHeadersDefaultsExtensions.extension(Microsoft.AspNetCore.Builder.IApplicationBuilder!).UseCommonUiForwardedHeaders(Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders? headers = null) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+MMCA.Common.API.Startup.WebApplicationExtensions.extension(Microsoft.AspNetCore.Builder.WebApplication!).MapCultureEndpoint(bool httpOnly) -> Microsoft.AspNetCore.Builder.WebApplication!
+static MMCA.Common.API.Startup.ForwardedHeadersDefaults.Create(Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders? headers = null) -> Microsoft.AspNetCore.Builder.ForwardedHeadersOptions!
+static MMCA.Common.API.Startup.ForwardedHeadersDefaults.DefaultHeaders.get -> Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders
+static MMCA.Common.API.Startup.ForwardedHeadersDefaultsExtensions.UseCommonUiForwardedHeaders(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app, Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders? headers = null) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+static MMCA.Common.API.Startup.WebApplicationExtensions.MapCultureEndpoint(this Microsoft.AspNetCore.Builder.WebApplication! app, bool httpOnly) -> Microsoft.AspNetCore.Builder.WebApplication!
