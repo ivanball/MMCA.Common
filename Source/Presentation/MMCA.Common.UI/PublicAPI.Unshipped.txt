@@ -529,3 +529,14 @@ MMCA.Common.UI.Components.Ratings.RatingStars.Value.get -> double
 MMCA.Common.UI.Components.Ratings.RatingStars.Value.set -> void
 const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
 ~override MMCA.Common.UI.Components.Ratings.RatingStars.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase
+MMCA.Common.UI.Pages.Common.DetailPageBase.BeginEdit() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.DetailPageBase() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.EndEdit() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.IsDirty.get -> bool
+MMCA.Common.UI.Pages.Common.DetailPageBase.IsEditing.get -> bool
+MMCA.Common.UI.Pages.Common.DetailPageBase.LoadGuard.get -> MMCA.Common.UI.Common.LatestLoadGuard!
+MMCA.Common.UI.Pages.Common.DetailPageBase.MarkDirty() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.PageToken.get -> System.Threading.CancellationToken
+virtual MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose(bool disposing) -> void
