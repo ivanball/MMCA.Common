@@ -519,3 +519,13 @@ MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObje
 MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>!).ToDisplayRange(System.Globalization.CultureInfo? culture = null) -> string!
 static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayRange(this System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>! prices, System.Globalization.CultureInfo? culture = null) -> string!
 static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Common.Shared.ValueObjects.Financial.Money! price, System.Globalization.CultureInfo? culture = null) -> string!
+MMCA.Common.UI.Components.Ratings.RatingStars
+MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.get -> string!
+MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.set -> void
+MMCA.Common.UI.Components.Ratings.RatingStars.RatingStars() -> void
+MMCA.Common.UI.Components.Ratings.RatingStars.Size.get -> MudBlazor.Size
+MMCA.Common.UI.Components.Ratings.RatingStars.Size.set -> void
+MMCA.Common.UI.Components.Ratings.RatingStars.Value.get -> double
+MMCA.Common.UI.Components.Ratings.RatingStars.Value.set -> void
+const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
+~override MMCA.Common.UI.Components.Ratings.RatingStars.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void

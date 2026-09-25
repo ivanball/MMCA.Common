@@ -1,0 +1,12 @@
+@* Read-only star display. Deliberately NOT a read-only MudRating: MudBlazor v9 renders that as five
+   radio inputs carrying aria-readonly, an attribute axe rejects on a radio (aria-allowed-attr,
+   critical), and the WCAG 2.1 AA gates scan every page. A rating nobody can change is an image with
+   one accessible name, not a form control, so this renders exactly that. The data-testid and
+   data-star hooks are what consumer E2E and accessibility tests select on. *@
+<span role="img" aria-label="@AriaLabel" class="rating-stars d-inline-flex align-center" data-testid="rating-stars">
+    @for (int star = 1; star <= MaxValue; star++)
+    {
+        var fill = FillFor(star);
+        <MudIcon Icon="@IconFor(fill)" Color="Color.Warning" Size="Size" aria-hidden="true" data-star="@fill" />
+    }
+</span>
