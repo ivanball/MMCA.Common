@@ -19,6 +19,10 @@
          answers the JS breakpoint query. A hand-written stub would have to track every member
          MudBlazor adds to that interface. -->
     <PackageReference Include="Moq" />
+    <!-- The shared page-test bases under Pages/ declare their facts here (the ADR-015 pattern that
+         MMCA.Common.Testing.Architecture already follows), so a consumer keeps a one-line subclass. -->
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
     <PackageReference Include="MinVer">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>

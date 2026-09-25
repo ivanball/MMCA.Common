@@ -9,3 +9,27 @@ MMCA.Common.Testing.UI.CapturedRequest.Headers.get -> System.Collections.Generic
 MMCA.Common.Testing.UI.CapturedRequest.Headers.init -> void
 *REMOVED*static MMCA.Common.Testing.UI.TestPrincipal.Organizer(string! userId = "1") -> System.Security.Claims.ClaimsPrincipal!
 static MMCA.Common.Testing.UI.TestPrincipal.InRole(string! role, string! userId = "1") -> System.Security.Claims.ClaimsPrincipal!
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.ACompiledPermission_IsLocked_AndAnEditableOneIsNot() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RenderEditor() -> Bunit.IRenderedComponent<TPage>!
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleAdminEditPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.Roles.get -> Moq.Mock<MMCA.Common.UI.Services.Administration.IRoleAdminUIService!>!
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.ThePage_LinksBackToTheRoleRoster() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.TheRouteRole_ReachesTheComponentAndItsCatalogRenders() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.TickingAPermissionAndSaving_SubmitsItAsTheStoredSet() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.EachRow_LinksToTheRoleEditorRoute() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.RendersOneRowPerRoleWithItsCompiledAndStoredCounts() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.RoleAdminListPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.Roles.get -> Moq.Mock<MMCA.Common.UI.Services.Administration.IRoleAdminUIService!>!
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.SetupRoles(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>! roles) -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.WhenTheFetchFails_RendersNoRoleRows() -> void
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.CompiledPermission.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.EditedRole.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.OtherRole.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RosterRoute.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.StoredPermission.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.EditRoute(string! role) -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.FirstRole.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.SecondRole.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleParameterName.get -> string!
