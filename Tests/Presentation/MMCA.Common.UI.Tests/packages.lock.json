@@ -754,10 +754,12 @@
         "type": "Project",
         "dependencies": {
           "AngleSharp": "[1.8.2, )",
+          "AwesomeAssertions": "[9.6.0, )",
           "MMCA.Common.UI": "[1.0.0, )",
           "Moq": "[4.20.72, )",
           "MudBlazor": "[9.10.0, )",
-          "bunit": "[2.11.3, )"
+          "bunit": "[2.11.3, )",
+          "xunit.v3.extensibility.core": "[4.0.1, )"
         }
       },
       "mmca.common.ui": {

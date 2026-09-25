@@ -45,3 +45,14 @@ MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.UiRateLimitingSettings() -> 
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.get -> int
 MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.WindowSeconds.init -> void
 static MMCA.Common.UI.Web.Hardening.UiRateLimitingSettings.SectionName.get -> string!
+MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder
+MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder.Add(string! name, object? value) -> MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder!
+MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder.Configuration.get -> Microsoft.Extensions.Configuration.IConfiguration!
+MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder.HttpContext.get -> Microsoft.AspNetCore.Http.HttpContext!
+MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder.Services.get -> System.IServiceProvider!
+MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions
+MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
+MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapClientConfigEndpoint(System.Action<MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder!>? extras = null) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!
+const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ApiSectionName = "Api" -> string!
+const MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.ClientConfigPath = "/client-config" -> string!
+static MMCA.Common.UI.Web.ClientConfig.ClientConfigEndpointExtensions.MapClientConfigEndpoint(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints, System.Action<MMCA.Common.UI.Web.ClientConfig.ClientConfigBuilder!>? extras = null) -> Microsoft.AspNetCore.Builder.RouteHandlerBuilder!

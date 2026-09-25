@@ -646,4 +646,43 @@
   <data name="Grid.LoadingMore" xml:space="preserve">
     <value>Loading more items</value>
   </data>
+  <data name="Auth.Confirm.PageTitle" xml:space="preserve">
+    <value>Confirm your email</value>
+  </data>
+  <data name="Auth.Confirm.Title" xml:space="preserve">
+    <value>Confirm your email</value>
+  </data>
+  <data name="Auth.Confirm.Subtitle" xml:space="preserve">
+    <value>Enter the code from the message we sent you, or open the link in that message.</value>
+  </data>
+  <data name="Auth.Confirm.Confirming" xml:space="preserve">
+    <value>Confirming your address...</value>
+  </data>
+  <data name="Auth.Confirm.Success" xml:space="preserve">
+    <value>Your email address is confirmed. Thank you.</value>
+  </data>
+  <data name="Auth.Confirm.LinkSent" xml:space="preserve">
+    <value>If that address has an unconfirmed account, a new code is on its way.</value>
+  </data>
+  <data name="Auth.Confirm.GenericError" xml:space="preserve">
+    <value>That code could not be used. It may have expired or already been used; ask for a new one.</value>
+  </data>
+  <data name="Auth.Confirm.TokenLabel" xml:space="preserve">
+    <value>Confirmation code</value>
+  </data>
+  <data name="Auth.Confirm.Submit" xml:space="preserve">
+    <value>Confirm email</value>
+  </data>
+  <data name="Auth.Confirm.Resend" xml:space="preserve">
+    <value>Send me a new code</value>
+  </data>
+  <data name="Auth.Confirm.EmailRequired" xml:space="preserve">
+    <value>Enter your email address.</value>
+  </data>
+  <data name="Auth.Confirm.TokenRequired" xml:space="preserve">
+    <value>Enter the confirmation code.</value>
+  </data>
+  <data name="Auth.Confirm.EmailAndTokenRequired" xml:space="preserve">
+    <value>Enter your email address and the confirmation code.</value>
+  </data>
 </root>

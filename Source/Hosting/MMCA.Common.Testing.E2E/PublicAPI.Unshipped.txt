@@ -74,3 +74,15 @@ static MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.PollUntilAsync(System.F
 static MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.PollUntilAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! probe, System.Func<T, bool>! isSatisfied, System.TimeSpan? timeout = null, System.TimeSpan? interval = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<T>!
 static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultInterval -> System.TimeSpan
 static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultTimeout -> System.TimeSpan
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.SeedDarkThemeAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.WaitForDarkModeAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.EditLinks.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.GotoEditorAsync(string! role) -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.GotoListAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.PermissionCheckbox(string! permission) -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RoleAdminPage(Microsoft.Playwright.IPage! page) -> void
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RoleTable.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RowByRole(string! role) -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SaveButton.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SetPermissionAsync(string! permission, bool granted) -> System.Threading.Tasks.Task!

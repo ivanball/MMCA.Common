@@ -1,0 +1,109 @@
+@page "/confirm-email"
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@attribute [StreamRendering(false)]
+
+<PageTitle>@L["Auth.Confirm.PageTitle"]</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="auth-container">
+    <div class="d-flex flex-column align-center mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+        @* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+        <MudText Typo="Typo.h4" HtmlTag="h1" Align="Align.Center">@L["Auth.Confirm.Title"]</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">@L["Auth.Confirm.Subtitle"]</MudText>
+    </div>
+
+    <MudCard Elevation="1">
+        @switch (_state)
+        {
+            case ConfirmationState.Working:
+                <MudCardContent Class="pa-6">
+                    <div class="d-flex align-center" style="gap: 0.75rem;" role="status" data-testid="confirm-email-working">
+                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+                        <MudText Typo="Typo.body2">@L["Auth.Confirm.Confirming"]</MudText>
+                    </div>
+                </MudCardContent>
+                break;
+
+            case ConfirmationState.Confirmed:
+                <MudCardContent Class="pa-6">
+                    <MudAlert Severity="Severity.Success" Dense="true" role="status" data-testid="confirm-email-success">@L["Auth.Confirm.Success"]</MudAlert>
+                </MudCardContent>
+                <MudCardActions Class="d-flex flex-column pa-6 pt-0" Style="gap: 0.75rem;">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Href="/login" Size="Size.Large"
+                               data-testid="confirm-email-go-to-login">
+                        @L["Auth.Reset.GoToLogin"]
+                    </MudButton>
+                </MudCardActions>
+                break;
+
+            default:
+                <MudCardContent Class="pa-6">
+                    @* Both alerts appear after an async call with no navigation, so nothing else tells a
+                       screen-reader user the attempt finished. The failure is an alert (assertive: the
+                       user cannot proceed without acting on it), the resend notice is a status (polite:
+                       informational). WCAG 4.1.3. *@
+                    @if (_errorMessage is { Length: > 0 })
+                    {
+                        <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true" role="alert" data-testid="confirm-email-error">@_errorMessage</MudAlert>
+                    }
+                    @if (_linkSent)
+                    {
+                        @* Worded as "if that address has an unconfirmed account": the endpoint answers 202
+                           either way, so promising a delivered email would be a claim the server never made
+                           and an account-enumeration signal besides. *@
+                        <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true" role="status" aria-live="polite" data-testid="confirm-email-resent">@L["Auth.Confirm.LinkSent"]</MudAlert>
+                    }
+
+                    @* Both fields are mandatory: Confirm refuses without either. Required renders
+                       aria-required, so the obligation is stated before the submit (WCAG 3.3.2). *@
+                    <MudTextField @bind-Value="_email"
+                                  Label="@L["Auth.Field.Email"].Value"
+                                  InputType="InputType.Email"
+                                  Required="true"
+                                  RequiredError="@L["Auth.Confirm.EmailRequired"].Value"
+                                  Immediate="true"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-4"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email"
+                                  autocomplete="email"
+                                  data-testid="confirm-email-address" />
+
+                    @* The token field stays visible and editable even when the link prefilled it: the
+                       email also carries the raw code, which is the only entry path on a client that
+                       cannot follow the deep link. *@
+                    <MudTextField @bind-Value="_token"
+                                  Label="@L["Auth.Confirm.TokenLabel"].Value"
+                                  Required="true"
+                                  RequiredError="@L["Auth.Confirm.TokenRequired"].Value"
+                                  Immediate="true"
+                                  Variant="Variant.Outlined"
+                                  Class="mb-2"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Key"
+                                  autocomplete="one-time-code"
+                                  data-testid="confirm-email-token" />
+                </MudCardContent>
+                <MudCardActions Class="d-flex flex-column pa-6 pt-0" Style="gap: 0.75rem;">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               Disabled="_isBusy" OnClick="ConfirmAsync" Size="Size.Large"
+                               aria-busy="@(_isBusy ? "true" : "false")"
+                               data-testid="confirm-email-submit">
+                        @if (_isBusy)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        @L["Auth.Confirm.Submit"]
+                    </MudButton>
+                    <MudDivider Class="my-1" />
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true"
+                               Disabled="_isBusy" OnClick="ResendAsync" Size="Size.Medium"
+                               data-testid="confirm-email-resend">
+                        @L["Auth.Confirm.Resend"]
+                    </MudButton>
+                </MudCardActions>
+                break;
+        }
+    </MudCard>
+</MudContainer>

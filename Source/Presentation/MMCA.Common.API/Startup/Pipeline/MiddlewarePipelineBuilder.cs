@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Hosting;
 using MMCA.Common.API.Middleware;
 using MMCA.Common.API.Startup.Endpoints;
@@ -64,21 +63,10 @@ public sealed class MiddlewarePipelineBuilder
 
             new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.ForwardedHeaders,
-                static app =>
-                {
-                    var forwardedHeadersOptions = new ForwardedHeadersOptions
-                    {
-                        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
-                    };
-
-                    // Cloud reverse proxies (Azure Container Apps, AWS ALB, etc.) use internal
-                    // IPs that are not in the default KnownProxies/KnownNetworks allow-lists.
-                    // Clear them so forwarded headers are trusted regardless of proxy IP.
-                    forwardedHeadersOptions.KnownProxies.Clear();
-                    forwardedHeadersOptions.KnownIPNetworks.Clear();
-
-                    app.UseForwardedHeaders(forwardedHeadersOptions);
-                }),
+                // Cloud reverse proxies (Azure Container Apps, AWS ALB, etc.) use internal IPs that
+                // are not in the default KnownProxies/KnownNetworks allow-lists, so the shared
+                // posture clears them; UI hosts take the same options via UseCommonUiForwardedHeaders.
+                static app => app.UseForwardedHeaders(CommonForwardedHeaders.Create())),
 
             new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.HttpsRedirection,

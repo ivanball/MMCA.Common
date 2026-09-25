@@ -6,6 +6,62 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.211.0] - 2026-09-25
+
+### Added
+
+- **Shared `/confirm-email` page (`MMCA.Common.UI`, ADR-116).** `Pages/Auth/ConfirmEmail` reads the
+  address and single-use token from the URL fragment (then `?email=` / `?token=`), redeems a
+  complete link exactly once on arrival, and otherwise lands on manual entry with a resend whose
+  notice reads the same whether or not the address holds an account. Its client is a new sibling
+  interface, `IEmailConfirmationUIService` (`ConfirmEmailAsync`, `ResendEmailConfirmationAsync`),
+  implemented by `EmailConfirmationUIService` with no retry (a retried POST could only spend the
+  token twice) and registered by `AddUIShared` beside `IAuthUIService`. Strings live in
+  `SharedResource` (English and Spanish); the stable hooks are the `confirm-email-*` `data-testid`s.
+  Consumers delete their own page, code-behind and client service when they adopt it, so the route
+  exists once.
+- **`MapClientConfigEndpoint(Action<ClientConfigBuilder>? extras = null)` (`MMCA.Common.UI.Web`)**
+  serves the WebAssembly client's `/client-config` document: anonymous, excluded from the OpenAPI
+  description, and fail-closed (a request fails with an exception naming `Api:WasmApiEndpoint`
+  instead of serving the service-discovery name). `ClientConfigBuilder.Add(name, value)` adds a
+  host's own sections (sign-in provider flags, public contact details).
+- **`MmcaClientConfigBootstrap.LoadAsync` and `TokenHydrationWarmup.WarmAsync` (`MMCA.Common.UI`)**,
+  the WASM half: a bounded (15 s per attempt) fetch of `client-config` with one retry that returns
+  the buffered document for `AddJsonStream`, and an optional fire-and-forget access-token warm-up
+  that never faults.
+- **`CommonForwardedHeaders.Create(ForwardedHeaders? headers = null)` and
+  `UseCommonUiForwardedHeaders()` (`MMCA.Common.API`)**: the framework's forwarded-headers posture
+  (For, Proto and Host by default, known-proxy and known-network lists cleared) as one options
+  factory, with a UI-host entry point. `MMCA.Common.Gateway` keeps its own dependency-free copy.
+- **`DetailPageBase` (`MMCA.Common.UI`, `Pages/Common`)** for inline-edit detail pages: a
+  page-scoped `PageToken`, a `LoadGuard` for route-driven reloads, the `IsEditing` / `IsDirty`
+  lifecycle (`BeginEdit`, `EndEdit`, `MarkDirty`, `ClearDirty`) and a `virtual Dispose(bool)` hook.
+- **`RatingStars` (`MMCA.Common.UI`, `Components/Ratings`)**, a read-only star rating rendered as one
+  `role="img"` element (never read-only radio inputs, which axe rejects) with a `double Value`; the
+  `data-testid="rating-stars"` and `data-star` hooks are kept.
+- **`IDeleteBlobInternalCommand` and `DeleteBlobInternalCommandHandlerBase<TCommand>`
+  (`MMCA.Common.Application`, `InternalCommands`)**: an idempotent blob delete for the durable
+  internal-command queue. A missing blob completes the row; any other storage failure is returned
+  unchanged so the processor retries it. `BlobKind` names the blob in the log lines.
+- **`MapCultureEndpoint(bool httpOnly)` (`MMCA.Common.API`)**: a Server-only host can keep the culture
+  cookie `HttpOnly`. The parameterless overload is unchanged (non-`HttpOnly`, which the WASM client
+  needs).
+- **Test bases.** `MMCA.Common.Testing.UI` gains `ConfirmEmailPageTestsBase`,
+  `RoleAdminListPageTestsBase<TPage>` and `RoleAdminEditPageTestsBase<TPage>` (namespace
+  `MMCA.Common.Testing.UI.Pages`; the package now references `AwesomeAssertions` and
+  `xunit.v3.extensibility.core`, as `MMCA.Common.Testing.Architecture` does).
+  `MMCA.Common.Testing.E2E` gains the `RoleAdminPage` page object and `E2ETestBase.SeedDarkThemeAsync`
+  / `WaitForDarkModeAsync`.
+
+### Changed
+
+- The service pipeline's `ForwardedHeaders` step builds its options from
+  `CommonForwardedHeaders.Create()`; the values are unchanged.
+- The `nuget-vulnerability-audit` action accepts a `NuGetAuditSuppress` entry written either as
+  `Include="GHSA-..."` or as the advisory URL NuGet restore itself honors
+  (`Include="https://github.com/advisories/GHSA-..."`), so one entry satisfies both gates. Rationale
+  comments still never count.
+
 ## [1.210.0] - 2026-09-23
 
 ### Added

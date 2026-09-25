@@ -519,3 +519,47 @@ MMCA.Common.UI.Extensions.MoneyExtensions.extension(MMCA.Common.Shared.ValueObje
 MMCA.Common.UI.Extensions.MoneyExtensions.extension(System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>!).ToDisplayRange(System.Globalization.CultureInfo? culture = null) -> string!
 static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayRange(this System.Collections.Generic.IReadOnlyCollection<MMCA.Common.Shared.ValueObjects.Financial.Money!>! prices, System.Globalization.CultureInfo? culture = null) -> string!
 static MMCA.Common.UI.Extensions.MoneyExtensions.ToDisplayString(this MMCA.Common.Shared.ValueObjects.Financial.Money! price, System.Globalization.CultureInfo? culture = null) -> string!
+MMCA.Common.UI.Components.Ratings.RatingStars
+MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.get -> string!
+MMCA.Common.UI.Components.Ratings.RatingStars.AriaLabel.set -> void
+MMCA.Common.UI.Components.Ratings.RatingStars.RatingStars() -> void
+MMCA.Common.UI.Components.Ratings.RatingStars.Size.get -> MudBlazor.Size
+MMCA.Common.UI.Components.Ratings.RatingStars.Size.set -> void
+MMCA.Common.UI.Components.Ratings.RatingStars.Value.get -> double
+MMCA.Common.UI.Components.Ratings.RatingStars.Value.set -> void
+const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
+~override MMCA.Common.UI.Components.Ratings.RatingStars.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase
+MMCA.Common.UI.Pages.Common.DetailPageBase.BeginEdit() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.ClearDirty() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.DetailPageBase() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.EndEdit() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.IsDirty.get -> bool
+MMCA.Common.UI.Pages.Common.DetailPageBase.IsEditing.get -> bool
+MMCA.Common.UI.Pages.Common.DetailPageBase.LoadGuard.get -> MMCA.Common.UI.Common.LatestLoadGuard!
+MMCA.Common.UI.Pages.Common.DetailPageBase.MarkDirty() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.PageToken.get -> System.Threading.CancellationToken
+virtual MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose(bool disposing) -> void
+MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap
+MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup
+const MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.ClientConfigPath = "client-config" -> string!
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultRetryDelay.get -> System.TimeSpan
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.DefaultTimeout.get -> System.TimeSpan
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Net.Http.HttpClient! client, System.TimeSpan retryDelay, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.IO.Stream!>!
+static MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap.LoadAsync(System.Uri! baseAddress, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.IO.Stream!>!
+static MMCA.Common.UI.Services.Auth.Tokens.TokenHydrationWarmup.WarmAsync(System.IServiceProvider! services) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Pages.Auth.ConfirmEmail
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.ConfirmEmail() -> void
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.Dispose() -> void
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.EmailFromQuery.get -> string?
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.EmailFromQuery.set -> void
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.TokenFromQuery.get -> string?
+MMCA.Common.UI.Pages.Auth.ConfirmEmail.TokenFromQuery.set -> void
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.ConfirmEmailAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.EmailConfirmationUIService(System.Net.Http.IHttpClientFactory! httpClientFactory) -> void
+MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.ResendEmailConfirmationAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService
+MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ConfirmEmailAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ResendEmailConfirmationAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!

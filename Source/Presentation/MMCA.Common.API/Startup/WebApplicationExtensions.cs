@@ -99,7 +99,20 @@ public static class WebApplicationExtensions
         /// WASM runtime re-reads the cookie. Anonymous-accessible; only allowlisted cultures are honored.
         /// Map on Blazor UI hosts.
         /// </summary>
-        public WebApplication MapCultureEndpoint()
+        public WebApplication MapCultureEndpoint() => app.MapCultureEndpoint(httpOnly: false);
+
+        /// <summary>
+        /// Maps the <c>GET /culture/set</c> endpoint exactly as <c>MapCultureEndpoint()</c> does, with
+        /// control over the culture cookie's <c>HttpOnly</c> flag.
+        /// </summary>
+        /// <param name="httpOnly">
+        /// Whether the culture cookie is <c>HttpOnly</c>. Pass <see langword="false"/> (the
+        /// parameterless overload's value) on any host that serves a WebAssembly client, because the
+        /// WASM runtime reads the cookie directly on startup
+        /// (<c>MmcaCultureBootstrap.SetBrowserCultureAsync</c>). A Server-only host that never runs
+        /// WASM can pass <see langword="true"/> to keep the cookie out of script reach.
+        /// </param>
+        public WebApplication MapCultureEndpoint(bool httpOnly)
         {
             // Permit the pseudo locale only in Development (ADR-027 §8); it is a developer diagnostic,
             // never a production culture.
@@ -108,7 +121,7 @@ public static class WebApplicationExtensions
             {
                 if (SupportedCultures.IsSupported(culture) || allowPseudo && SupportedCultures.IsPseudoLocale(culture))
                 {
-#pragma warning disable S3330, S2092 // S3330: non-HttpOnly by design (ADR-027), the WASM client reads this cookie directly on startup (MmcaCultureBootstrap.SetBrowserCultureAsync); S2092: Secure is conditional on the hosting environment (false only in Development), same pattern as SessionCookieJar.BuildOptions
+#pragma warning disable S3330, S2092 // S3330: non-HttpOnly by default by design (ADR-027), the WASM client reads this cookie directly on startup (MmcaCultureBootstrap.SetBrowserCultureAsync); S2092: Secure is conditional on the hosting environment (false only in Development), same pattern as SessionCookieJar.BuildOptions
                     context.Response.Cookies.Append(
                         CookieRequestCultureProvider.DefaultCookieName,
                         CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
@@ -117,7 +130,7 @@ public static class WebApplicationExtensions
                             Path = "/",
                             Expires = DateTimeOffset.UtcNow.AddYears(1),
                             IsEssential = true,
-                            HttpOnly = false,
+                            HttpOnly = httpOnly,
                             Secure = !app.Environment.IsDevelopment(),
                             SameSite = SameSiteMode.Lax,
                         });

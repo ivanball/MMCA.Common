@@ -15,6 +15,7 @@
 | `/register` | `Auth/Register` | Anonymous | Client + server validation parity (EditForm). |
 | `/forgot-password` | `Auth/ForgotPassword` | Anonymous | Requests a reset email; always shows the same confirmation (anti-enumeration). |
 | `/reset-password` | `Auth/ResetPassword` | Anonymous | Accepts `?email=` and `?token=` prefill; the token stays editable for manual entry. |
+| `/confirm-email` | `Auth/ConfirmEmail` | Anonymous | Email-confirmation landing (ADR-116). Reads `email` and `token` from the URL fragment (then `?email=` / `?token=`), redeems a complete link once on arrival, and falls back to manual entry plus a resend that answers the same way whether or not the address holds an account. |
 | `/auth/oauth-complete` | `Auth/OAuthComplete` | Anonymous | External-login callback landing. |
 | `/notifications` | `Notifications/NotificationList` | Authenticated | Push-notification history. Route carries `[Authorize]`. |
 | `/notifications/inbox` | `Notifications/NotificationInbox` | Authenticated | Per-user durable inbox (paged). Route carries `[Authorize]`. |

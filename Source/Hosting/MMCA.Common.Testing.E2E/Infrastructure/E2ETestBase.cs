@@ -367,4 +367,32 @@ public abstract class E2ETestBase : IAsyncLifetime
         await Expect(Page.Locator("[role='progressbar']")).ToHaveCountAsync(0, new() { Timeout = 15_000 }).ConfigureAwait(false);
         await Page.AssertNoAccessibilityViolationsAsync(AxeOptions.Wcag21Aa).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Seeds the framework theme cookie (<c>mmca_theme=dark</c>, read by the Common UI's
+    /// <c>theme.js</c>) on the browser context, so the next page load starts in dark mode. Call it
+    /// before navigating, then <see cref="WaitForDarkModeAsync"/> before scanning.
+    /// </summary>
+    protected async Task SeedDarkThemeAsync() =>
+        await Page.Context.AddCookiesAsync(
+        [
+            new Cookie
+            {
+                Name = "mmca_theme",
+                Value = "dark",
+                Url = BaseUrl,
+            },
+        ]).ConfigureAwait(false);
+
+    /// <summary>
+    /// Waits until dark mode is actually applied. The Common theme toggle's accessible name flips to
+    /// "Switch to light mode" once <c>ThemeService</c> has initialized from the cookie and the
+    /// MudThemeProvider re-rendered with the dark palette: the reliable "dark is applied" signal. The
+    /// layout renders the toggle twice (app bar plus the mobile nav top row), so this waits on the
+    /// desktop cluster's copy. The name is the English resource, matching the default E2E culture.
+    /// </summary>
+    protected async Task WaitForDarkModeAsync() =>
+        await Expect(Page.Locator(".appbar-icon-actions").First
+                .GetByRole(AriaRole.Button, new() { Name = "Switch to light mode" }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 }).ConfigureAwait(false);
 }

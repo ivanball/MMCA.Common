@@ -46,6 +46,9 @@ public sealed class AnonymousEndpointTests : AnonymousEndpointTestsBase
         // Credential pages: a caller who has to sign in, register or recover cannot already hold a
         // token. AuthorizeRouteView reads attributes and ignores the fallback policy, so these
         // declare themselves.
+        // The email-confirmation landing (ADR-116) is followed from a mail client with no session,
+        // and an unconfirmed account may be unable to sign in at all when confirmation is required.
+        "MMCA.Common.UI.Pages.Auth.ConfirmEmail",
         "MMCA.Common.UI.Pages.Auth.ForgotPassword",
         "MMCA.Common.UI.Pages.Auth.Login",
         "MMCA.Common.UI.Pages.Auth.OAuthComplete",
