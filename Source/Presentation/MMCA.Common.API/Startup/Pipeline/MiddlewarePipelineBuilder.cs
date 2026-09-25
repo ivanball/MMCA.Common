@@ -66,7 +66,7 @@ public sealed class MiddlewarePipelineBuilder
                 // Cloud reverse proxies (Azure Container Apps, AWS ALB, etc.) use internal IPs that
                 // are not in the default KnownProxies/KnownNetworks allow-lists, so the shared
                 // posture clears them; UI hosts take the same options via UseCommonUiForwardedHeaders.
-                static app => app.UseForwardedHeaders(ForwardedHeadersDefaults.Create())),
+                static app => app.UseForwardedHeaders(CommonForwardedHeaders.Create())),
 
             new MiddlewarePipelineStep(
                 MiddlewarePipelineStepNames.HttpsRedirection,

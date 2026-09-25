@@ -1,35 +1,35 @@
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Hosting;
 using MMCA.Common.API.Startup;
-using ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders;
 
 namespace MMCA.Common.API.Tests.Startup;
 
 /// <summary>
-/// Tests for <see cref="ForwardedHeadersDefaults"/> and <c>UseCommonUiForwardedHeaders</c>: the
+/// Tests for <see cref="CommonForwardedHeaders"/> and <c>UseCommonUiForwardedHeaders</c>: the
 /// default mask is For, Proto and Host, both allow-lists are cleared (cloud ingress addresses are
 /// not knowable ahead of time), and a UI host that calls the extension sees the forwarded scheme,
 /// host and client address on the request.
 /// </summary>
-public sealed class ForwardedHeadersDefaultsTests
+public sealed class CommonForwardedHeadersTests
 {
     [Fact]
     public void Create_ByDefault_HonorsForProtoAndHost()
     {
-        var options = ForwardedHeadersDefaults.Create();
+        var options = CommonForwardedHeaders.Create();
 
         options.ForwardedHeaders.Should().Be(
             ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost);
-        ForwardedHeadersDefaults.DefaultHeaders.Should().Be(options.ForwardedHeaders);
+        CommonForwardedHeaders.DefaultHeaders.Should().Be(options.ForwardedHeaders);
     }
 
     [Fact]
     public void Create_ClearsTheKnownProxyAndNetworkAllowLists()
     {
-        var options = ForwardedHeadersDefaults.Create();
+        var options = CommonForwardedHeaders.Create();
 
         options.KnownProxies.Should().BeEmpty();
         options.KnownIPNetworks.Should().BeEmpty();
@@ -38,7 +38,7 @@ public sealed class ForwardedHeadersDefaultsTests
     [Fact]
     public void Create_WithAnExplicitMask_UsesItAndStillClearsTheAllowLists()
     {
-        var options = ForwardedHeadersDefaults.Create(ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+        var options = CommonForwardedHeaders.Create(ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
 
         options.ForwardedHeaders.Should().Be(ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
         options.KnownProxies.Should().BeEmpty();
@@ -47,7 +47,7 @@ public sealed class ForwardedHeadersDefaultsTests
 
     [Fact]
     public void Create_ReturnsAFreshInstanceEachCall() =>
-        ForwardedHeadersDefaults.Create().Should().NotBeSameAs(ForwardedHeadersDefaults.Create());
+        CommonForwardedHeaders.Create().Should().NotBeSameAs(CommonForwardedHeaders.Create());
 
     [Fact]
     public async Task UseCommonUiForwardedHeaders_RewritesSchemeHostAndClientAddress()

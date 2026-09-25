@@ -6,7 +6,7 @@ namespace MMCA.Common.API.Startup;
 /// <summary>
 /// The framework's one forwarded-headers posture, shared by the service pipeline's
 /// <c>ForwardedHeaders</c> step and by server-rendered UI hosts
-/// (<see cref="ForwardedHeadersDefaultsExtensions.UseCommonUiForwardedHeaders"/>), so every host
+/// (<see cref="CommonForwardedHeadersExtensions.UseCommonUiForwardedHeaders"/>), so every host
 /// behind the same ingress reads the scheme, host and client address the same way.
 /// </summary>
 /// <remarks>
@@ -24,7 +24,7 @@ namespace MMCA.Common.API.Startup;
 /// package does not reference this one.
 /// </para>
 /// </remarks>
-public static class ForwardedHeadersDefaults
+public static class CommonForwardedHeaders
 {
     /// <summary>
     /// The headers the framework honors by default: <c>X-Forwarded-For</c>,

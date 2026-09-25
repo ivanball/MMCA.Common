@@ -29,7 +29,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   the WASM half: a bounded (15 s per attempt) fetch of `client-config` with one retry that returns
   the buffered document for `AddJsonStream`, and an optional fire-and-forget access-token warm-up
   that never faults.
-- **`ForwardedHeadersDefaults.Create(ForwardedHeaders? headers = null)` and
+- **`CommonForwardedHeaders.Create(ForwardedHeaders? headers = null)` and
   `UseCommonUiForwardedHeaders()` (`MMCA.Common.API`)**: the framework's forwarded-headers posture
   (For, Proto and Host by default, known-proxy and known-network lists cleared) as one options
   factory, with a UI-host entry point. `MMCA.Common.Gateway` keeps its own dependency-free copy.
@@ -56,7 +56,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 ### Changed
 
 - The service pipeline's `ForwardedHeaders` step builds its options from
-  `ForwardedHeadersDefaults.Create()`; the values are unchanged.
+  `CommonForwardedHeaders.Create()`; the values are unchanged.
 - The `nuget-vulnerability-audit` action accepts a `NuGetAuditSuppress` entry written either as
   `Include="GHSA-..."` or as the advisory URL NuGet restore itself honors
   (`Include="https://github.com/advisories/GHSA-..."`), so one entry satisfies both gates. Rationale
