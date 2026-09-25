@@ -35,7 +35,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   factory, with a UI-host entry point. `MMCA.Common.Gateway` keeps its own dependency-free copy.
 - **`DetailPageBase` (`MMCA.Common.UI`, `Pages/Common`)** for inline-edit detail pages: a
   page-scoped `PageToken`, a `LoadGuard` for route-driven reloads, the `IsEditing` / `IsDirty`
-  lifecycle (`BeginEdit`, `EndEdit`, `MarkDirty`) and a `virtual Dispose(bool)` hook.
+  lifecycle (`BeginEdit`, `EndEdit`, `MarkDirty`, `ClearDirty`) and a `virtual Dispose(bool)` hook.
 - **`RatingStars` (`MMCA.Common.UI`, `Components/Ratings`)**, a read-only star rating rendered as one
   `role="img"` element (never read-only radio inputs, which axe rejects) with a `double Value`; the
   `data-testid="rating-stars"` and `data-star` hooks are kept.

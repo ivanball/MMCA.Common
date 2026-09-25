@@ -58,6 +58,12 @@ public abstract class DetailPageBase : ComponentBase, IDisposable
     /// <summary>Marks the open editor dirty. Bound to every editable field's <c>@bind-Value:after</c>.</summary>
     protected void MarkDirty() => IsDirty = true;
 
+    /// <summary>
+    /// Clears the dirty flag without opening or closing the editor. For a child panel that reports its
+    /// own dirty state in both directions (true then false) while the page's editor state stays as it is.
+    /// </summary>
+    protected void ClearDirty() => IsDirty = false;
+
     /// <summary>Opens the inline editor on a clean slate.</summary>
     protected void BeginEdit()
     {

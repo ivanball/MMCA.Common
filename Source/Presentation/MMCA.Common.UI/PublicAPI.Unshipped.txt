@@ -531,6 +531,7 @@ const MMCA.Common.UI.Components.Ratings.RatingStars.MaxValue = 5 -> int
 ~override MMCA.Common.UI.Components.Ratings.RatingStars.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase
 MMCA.Common.UI.Pages.Common.DetailPageBase.BeginEdit() -> void
+MMCA.Common.UI.Pages.Common.DetailPageBase.ClearDirty() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.DetailPageBase() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.Dispose() -> void
 MMCA.Common.UI.Pages.Common.DetailPageBase.EndEdit() -> void

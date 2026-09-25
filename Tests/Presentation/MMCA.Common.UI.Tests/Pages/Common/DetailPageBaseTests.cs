@@ -38,6 +38,24 @@ public sealed class DetailPageBaseTests : BunitTestBase
     }
 
     [Fact]
+    public void ClearDirty_ClearsTheFlagAndLeavesTheEditorAsItWas()
+    {
+        var editing = new ProbePage();
+        editing.CallBeginEdit();
+        editing.CallMarkDirty();
+        var reading = new ProbePage();
+        reading.CallMarkDirty();
+
+        editing.CallClearDirty();
+        reading.CallClearDirty();
+
+        editing.Dirty.Should().BeFalse();
+        editing.Editing.Should().BeTrue();
+        reading.Dirty.Should().BeFalse();
+        reading.Editing.Should().BeFalse();
+    }
+
+    [Fact]
     public void Dispose_CancelsThePageTokenAndRetiresTheLoadGuard()
     {
         var page = new ProbePage();
@@ -96,6 +114,8 @@ public sealed class DetailPageBaseTests : BunitTestBase
         public void CallEndEdit() => EndEdit();
 
         public void CallMarkDirty() => MarkDirty();
+
+        public void CallClearDirty() => ClearDirty();
 
         protected override void BuildRenderTree(RenderTreeBuilder builder) =>
             builder.AddContent(0, "probe");
