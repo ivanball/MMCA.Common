@@ -399,8 +399,7 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// <summary>
     /// Applies a client-supplied optimistic-concurrency token as the tracked entity's original
     /// <c>RowVersion</c>, so the next save raises <c>DbUpdateConcurrencyException</c> (answered as
-    /// <c>412 Precondition Failed</c> by <c>SupportsIfMatchAttribute</c>, since the token only arrives
-    /// through <c>If-Match</c>; ADR-035) when the row was modified by someone else since the client read it.
+    /// <c>412</c> by <c>SupportsIfMatchAttribute</c>, ADR-035) when the row changed since the client read it.
     /// </summary>
     /// <param name="entity">The tracked entity whose original concurrency token should be set.</param>
     /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>.</param>
