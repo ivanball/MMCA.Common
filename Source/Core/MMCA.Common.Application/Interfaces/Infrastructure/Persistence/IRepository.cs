@@ -398,8 +398,9 @@ public interface IWriteRepository<TEntity, TIdentifierType>
 
     /// <summary>
     /// Applies a client-supplied optimistic-concurrency token as the tracked entity's original
-    /// <c>RowVersion</c>, so the next save raises <c>DbUpdateConcurrencyException</c> (mapped to
-    /// <c>409 Conflict</c>) when the row was modified by someone else since the client read it.
+    /// <c>RowVersion</c>, so the next save raises <c>DbUpdateConcurrencyException</c> (answered as
+    /// <c>412 Precondition Failed</c> by <c>SupportsIfMatchAttribute</c>, since the token only arrives
+    /// through <c>If-Match</c>; ADR-035) when the row was modified by someone else since the client read it.
     /// </summary>
     /// <param name="entity">The tracked entity whose original concurrency token should be set.</param>
     /// <param name="rowVersion">The client's last-observed <c>RowVersion</c>.</param>
@@ -408,7 +409,7 @@ public interface IWriteRepository<TEntity, TIdentifierType>
     /// <summary>
     /// Applies a client-supplied optimistic-concurrency token to a tracked CHILD entity of this
     /// aggregate (e.g. a <c>ProductVariant</c> under a <c>Product</c>), so a child-level edit gets
-    /// the same stale-token 409 protection as the aggregate root (ADR-035). The aggregate-typed
+    /// the same stale-token 412 protection as the aggregate root (ADR-035). The aggregate-typed
     /// overload above cannot reach children because the repository's <c>TEntity</c> is the root;
     /// this overload accepts any <see cref="Domain.Interfaces.IRowVersioned"/> entity instead.
     /// </summary>
