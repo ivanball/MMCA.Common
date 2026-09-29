@@ -276,7 +276,7 @@
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.11" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
-    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
     <!-- Benchmark smoke harness only (Tests/Performance, outside the .slnx) — rubric §12. -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
@@ -285,7 +285,7 @@
          expiry); version matches the Microsoft.Extensions dotnet/extensions family (Http.Resilience,
          ServiceDiscovery) above. -->
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
-    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="Moq" Version="4.21.0" />
     <!-- Test tier only (Tests/Hosting/MMCA.Common.Aspire.Tests): an in-memory metric reader is the
          only way to prove that the Telemetry:Disable*Metrics knobs actually drop a stream, rather
          than merely skipping one AddXInstrumentation call that another component re-adds. Version
