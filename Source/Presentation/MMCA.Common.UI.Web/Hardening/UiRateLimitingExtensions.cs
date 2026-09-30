@@ -31,6 +31,14 @@ public static class UiRateLimitingExtensions
     private const string ConcurrencyPartitionKey = "__ui";
 
     /// <summary>
+    /// The Blazor circuit transport: negotiate, the circuit WebSocket and its long-polling fallback. A
+    /// WebSocket request holds its rate-limiter lease for the lifetime of the circuit, so this prefix is
+    /// kept out of the concurrency ceiling (circuits are bounded by <c>BlazorCircuitLimits</c> instead)
+    /// while staying inside the per-IP window.
+    /// </summary>
+    private const string BlazorTransportPrefix = "/_blazor";
+
+    /// <summary>
     /// Path prefixes that are never limited: the liveness and readiness probes (throttling them
     /// turns a traffic spike into a failed probe and a container restart), the two framework asset
     /// roots Blazor serves the WebAssembly runtime and every Razor class library's static web assets
@@ -53,7 +61,10 @@ public static class UiRateLimitingExtensions
     /// middleware ordering. Static files are served from disk with an ETag and cost almost nothing,
     /// while a single page load pulls dozens of them: counting those against the window would
     /// throttle the first visitor rather than an attacker. <c>/_blazor</c> deliberately has NO
-    /// extension and NO exemption, because the negotiate endpoint is exactly what opens a circuit.
+    /// extension and NO exemption from the per-IP window, because the negotiate endpoint is exactly what
+    /// opens a circuit. It is, however, kept out of the concurrency ceiling (see
+    /// <see cref="ConcurrencyPartition"/>): the same prefix carries the circuit WebSocket, whose lease
+    /// would otherwise be held for the whole circuit lifetime.
     /// <para>
     /// Internal (not private) so the exemption rule is unit-testable via <c>InternalsVisibleTo</c>
     /// rather than only through a full request flood.
@@ -110,7 +121,9 @@ public static class UiRateLimitingExtensions
 
     /// <summary>
     /// The replica-wide concurrency partition: one bucket for the whole process, exempt for the same
-    /// paths the per-IP window exempts.
+    /// paths the per-IP window exempts plus the Blazor circuit transport (<c>/_blazor</c>), whose
+    /// WebSocket would otherwise hold one permit per open circuit and starve page loads. Circuits are
+    /// bounded by <c>BlazorCircuitLimits:MaxActiveCircuits</c> instead.
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="settings">The bound settings.</param>
@@ -123,7 +136,8 @@ public static class UiRateLimitingExtensions
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
 
-        return IsExempt(httpContext.Request.Path)
+        var path = httpContext.Request.Path;
+        return IsExempt(path) || path.StartsWithSegments(BlazorTransportPrefix, StringComparison.OrdinalIgnoreCase)
             ? RateLimitPartition.GetNoLimiter(ExemptPartitionKey)
             : RateLimitPartition.GetConcurrencyLimiter(ConcurrencyPartitionKey, _ => new ConcurrencyLimiterOptions
             {

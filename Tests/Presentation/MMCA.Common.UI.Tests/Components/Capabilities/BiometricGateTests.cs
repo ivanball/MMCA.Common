@@ -9,6 +9,7 @@ using MMCA.Common.UI.Components.Capabilities;
 using MMCA.Common.UI.Services.Capabilities.Auth;
 using MMCA.Common.UI.Services.Capabilities.DeviceStatus;
 using MMCA.Common.UI.Services.Capabilities.DeviceStorage;
+using Moq;
 
 namespace MMCA.Common.UI.Tests.Components.Capabilities;
 
@@ -74,7 +75,38 @@ public sealed class BiometricGateTests : BunitTestBase
         _biometrics.PromptReasons.Should().ContainSingle();
     }
 
+    // -- A failing precondition read (L72) --
+    [Fact]
+    public async Task WhenTheStoredSessionCannotBeRead_AfterOptIn_TheGateLocks()
+    {
+        await EnableAppLockAsync();
+        _biometrics.NextResult = false;
+        var unreadable = new Mock<MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService>();
+        unreadable.Setup(t => t.GetRefreshTokenAsync()).ThrowsAsync(new InvalidOperationException("secure storage unavailable"));
+        Services.AddSingleton(unreadable.Object);
+
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain(
+            "mud-overlay",
+            "the owner opted in, so an unknown session state must fail closed"));
+        _biometrics.PromptReasons.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task WhenThePreferenceCannotBeRead_TheGateStaysOpenAndLogs()
+    {
+        _preferences.GetThrows = () => new InvalidOperationException("preferences unavailable");
+
+        var cut = RenderUnderTest<BiometricGate>(_ => { });
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Trim().Should().BeEmpty(
+            "nothing says the owner opted in, and forcing a prompt could strand a device with no biometrics"));
+        _biometrics.PromptReasons.Should().BeEmpty();
+    }
+
     private Task EnableAppLockAsync() =>
+
         _preferences.SetAsync(DevicePreferenceKeys.AppLockEnabled, true);
 
     // ── Inert states ──
@@ -191,8 +223,18 @@ public sealed class BiometricGateTests : BunitTestBase
 
         public bool IsPersistent => true;
 
-        public Task<T> GetAsync<T>(string key, T fallback, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_values.TryGetValue(key, out var value) && value is T typed ? typed : fallback);
+        /// <summary>When set, every read throws the exception it builds (a failing platform store).</summary>
+        public Func<Exception>? GetThrows { get; set; }
+
+        public Task<T> GetAsync<T>(string key, T fallback, CancellationToken cancellationToken = default)
+        {
+            if (GetThrows is not null)
+            {
+                return Task.FromException<T>(GetThrows());
+            }
+
+            return Task.FromResult(_values.TryGetValue(key, out var value) && value is T typed ? typed : fallback);
+        }
 
         public Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
         {

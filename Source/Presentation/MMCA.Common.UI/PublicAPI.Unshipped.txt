@@ -563,3 +563,24 @@ MMCA.Common.UI.Services.Auth.EmailConfirmationUIService.ResendEmailConfirmationA
 MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService
 MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ConfirmEmailAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
 MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService.ResendEmailConfirmationAsync(string! email, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+static readonly MMCA.Common.UI.Services.Auth.AuthDelegatingHandler.SkipBearer -> System.Net.Http.HttpRequestOptionsKey<bool>
+*REMOVED*MMCA.Common.UI.Services.Auth.ISessionCookieSync.ClearAsync() -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Auth.ISessionCookieSync.SyncAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.ClearAsync() -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.SyncAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Auth.ISessionCookieSync.ClearAsync() -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.ISessionCookieSync.SyncAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.ClearAsync() -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.JsFetchSessionCookieSync.SyncAsync(string! accessToken, string! refreshToken) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Auth.AuthUIService.RevokeAllSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Auth.IAuthUIService.RevokeAllSessionsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result!>!
+MMCA.Common.UI.Services.Caching.IUiReadCache.Generation.get -> long
+MMCA.Common.UI.Services.Caching.IUiReadCache.Set<T>(string! url, T value, long generation) -> void
+*REMOVED*MMCA.Common.UI.Services.Capabilities.Interop.BrowserExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+*REMOVED*MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+MMCA.Common.UI.Services.Capabilities.Interop.BrowserExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+MMCA.Common.UI.Layout.NavMenu.Dispose() -> void
+virtual MMCA.Common.UI.Layout.NavMenu.Dispose(bool disposing) -> void

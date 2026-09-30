@@ -13,7 +13,7 @@ public sealed class MauiExternalLinkService : IExternalLinkService
     public bool InterceptsLinks => true;
 
     /// <inheritdoc />
-    public async Task OpenAsync(Uri uri, CancellationToken cancellationToken = default)
+    public async Task<bool> OpenAsync(Uri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
@@ -23,16 +23,17 @@ public sealed class MauiExternalLinkService : IExternalLinkService
                 || string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             {
                 await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred).ConfigureAwait(false);
-                return;
+                return true;
             }
 
             // Browser.Default only accepts http(s); everything else (mailto:, tel:, sms:) goes
             // to the OS handler via the launcher so contact links work inside the WebView.
-            await Launcher.Default.TryOpenAsync(uri).ConfigureAwait(false);
+            return await Launcher.Default.TryOpenAsync(uri).ConfigureAwait(false);
         }
         catch (FeatureNotSupportedException)
         {
             // No handler available — swallow; the link is a convenience, not a workflow.
+            return false;
         }
     }
 }

@@ -81,6 +81,11 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
     private readonly string _observerId = Guid.NewGuid().ToString("N");
     private CancellationTokenSource? _cts;
     private bool _observerAttached;
+
+    // Set after a successful append that left more pages: the IntersectionObserver reports threshold
+    // CROSSINGS only, so a sentinel still inside the viewport after the append would never fire again.
+    // Re-observing creates a fresh observer, which delivers an initial entry with the current state.
+    private bool _reobservePending;
     private bool _disposed;
 
     protected override async Task OnInitializedAsync()
@@ -107,7 +112,10 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!_disposed && _hasMore && !_observerAttached && _items.Count > 0 && !_isInitialLoad)
+        var reobserve = _reobservePending;
+        _reobservePending = false;
+
+        if (!_disposed && _hasMore && (!_observerAttached || reobserve) && _items.Count > 0 && !_isInitialLoad)
         {
             await AttachObserverAsync();
         }
@@ -212,6 +220,8 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
             // Stop fetching once the rendered-item cap is reached so the DOM (and memory) stay
             // bounded even for very large result sets.
             _hasMore = _items.Count < _totalCount && _items.Count < MaxRenderedItems;
+
+            MarkReobserveAfterAppend(isInitial);
         }
         catch (OperationCanceledException)
         {
@@ -242,6 +252,18 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
                 _cts = null;
                 cts.Dispose();
             }
+        }
+    }
+
+    /// <summary>
+    /// Queues a re-observe after a non-initial append that left more pages, so a sentinel still in
+    /// view gets a fresh observer (and with it a fresh intersection entry) on the next render.
+    /// </summary>
+    private void MarkReobserveAfterAppend(bool isInitial)
+    {
+        if (!isInitial && _hasMore)
+        {
+            _reobservePending = true;
         }
     }
 

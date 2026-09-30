@@ -62,14 +62,22 @@ public sealed class WasmTokenStorageService(
     {
         _accessToken = accessToken;
         // Seed the HttpOnly cookies at login. The refresh token transits JS only for this same-origin POST
-        // and is never persisted in localStorage.
-        await sessionCookieSync.SyncAsync(accessToken, refreshToken);
+        // and is never persisted in localStorage. A failed write is surfaced (after the in-memory token is
+        // set) so AuthUIService reports Auth.TokenStorageUnavailable instead of a login that silently signs
+        // out at the first access-token expiry, when no cookie exists to refresh from.
+        if (!await sessionCookieSync.SyncAsync(accessToken, refreshToken))
+        {
+            throw new InvalidOperationException("The session cookie could not be written.");
+        }
     }
 
     public async Task ClearTokensAsync()
     {
         _accessToken = null;
-        await sessionCookieSync.ClearAsync();
+        // Best-effort by contract (IAuthUIService.LogoutAsync never fails), so a false is ignored. A caller
+        // that needs proof the session ended uses IAuthUIService.RevokeAllSessionsAsync, which reports the
+        // server-side revoke.
+        _ = await sessionCookieSync.ClearAsync();
     }
 
     private async Task<string?> HydrateAsync()

@@ -6,14 +6,18 @@
 
    Enter/Space do not preventDefault: a keydown handler that cancelled the default would also cancel
    Tab, which would trap the keyboard inside the list. The cost is that Space still scrolls the page
-   as well as activating the card; the requirement is operability, and that is met. *@
+   as well as activating the card; the requirement is operability, and that is met.
+
+   The content sits in a wrapper that stops keydown propagation, so Enter or Space pressed on a
+   control nested inside the card (a delete button, a link) never activates the card as well; a
+   keydown that starts on the focused card element itself does not pass through the wrapper. *@
 @if (IsInteractive)
 {
     <MudCard Elevation="@Elevation" Class="@Class" tabindex="0" role="button"
              aria-label="@AriaLabel"
              @onclick="ActivateAsync" @onkeydown="OnKeyDownAsync">
         <MudCardContent Class="pa-3">
-            @ChildContent
+            <div class="mobile-list-card-body" @onkeydown:stopPropagation>@ChildContent</div>
         </MudCardContent>
     </MudCard>
 }

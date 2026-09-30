@@ -68,7 +68,9 @@ public sealed class UiRateLimitingSettings
     /// Excess requests are rejected immediately with 429 rather than queued, so a saturated host
     /// sheds load instead of growing latency. Unlike the per-IP window this needs no widening for a
     /// shared-address audience: in-flight concurrency is bounded by what the container can actually
-    /// render, not by how many people share an address.
+    /// render, not by how many people share an address. The Blazor circuit transport
+    /// (<c>/_blazor</c>) is excluded: a circuit WebSocket would hold one permit for its whole
+    /// lifetime, so open circuits are bounded by <c>BlazorCircuitLimits:MaxActiveCircuits</c> instead.
     /// </summary>
     [Range(1, 1_000_000)]
     public int GlobalConcurrencyLimit { get; init; } = 200;

@@ -104,6 +104,24 @@ public sealed class PushNotificationServiceTests
         error.Type.Should().Be(ErrorType.Validation);
     }
 
+    [Fact]
+    public async Task SendAsync_CarriesAnIdempotencyKey()
+    {
+        // M126: the send runs through the retry policy, so a retried broadcast must be collapsible.
+        string[] keys = [];
+        var (sut, _) = CreateSut(request =>
+        {
+            keys = request.Headers.TryGetValues(IdempotencyHeaders.IdempotencyKey, out var values) ? [.. values] : [];
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Sent(7)) };
+        });
+
+        await sut.SendAsync(
+            new SendPushNotificationRequest("Title", "Body"),
+            TestContext.Current.CancellationToken);
+
+        keys.Should().ContainSingle().Which.Should().NotBeNullOrWhiteSpace();
+    }
+
     // == Scope stamping ==
     [Fact]
     public async Task SendAsync_WhenAppIsScoped_StampsScopeKeyOnTheRequestBody()

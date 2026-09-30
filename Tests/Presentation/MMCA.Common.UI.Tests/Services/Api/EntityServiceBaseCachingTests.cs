@@ -311,4 +311,48 @@ public sealed class EntityServiceBaseCachingTests
 
         handler.CallCount.Should().Be(2);
     }
+
+    // == Read racing a write (L66) ==
+    [Fact]
+    public async Task GetCached_WhenADeleteCompletesWhileTheReadIsInFlight_DoesNotRestoreTheStaleRow()
+    {
+        var cache = CreateCache();
+        using var handler = new GatedGetHandler();
+        var tokenStorage = new Mock<ITokenStorageService>();
+        tokenStorage.Setup(s => s.GetAccessTokenAsync()).ReturnsAsync("stored-access-token");
+        var sut = new WidgetService(new StubHttpClientFactory(handler), tokenStorage.Object, cache);
+
+        var read = sut.GetByIdAsync(7, cancellationToken: TestContext.Current.CancellationToken);
+        await handler.GetStarted.Task;
+
+        (await sut.DeleteAsync(7, TestContext.Current.CancellationToken)).IsSuccess.Should().BeTrue();
+        handler.ReleaseGet.SetResult();
+        (await read).IsSuccess.Should().BeTrue();
+
+        cache.TryGetFresh<WidgetDto>("widgets/7?includeChildren=False", out _).Should().BeFalse(
+            "the row the delete just removed must not be re-cached by the read that started before it");
+    }
+
+    /// <summary>
+    /// Holds every GET until the test releases it (answering with the pre-delete row) and answers every
+    /// other verb 204 at once, so a write can complete while a read is still in flight.
+    /// </summary>
+    private sealed class GatedGetHandler : HttpMessageHandler
+    {
+        public TaskCompletionSource GetStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource ReleaseGet { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.Method != HttpMethod.Get)
+            {
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+
+            GetStarted.TrySetResult();
+            await ReleaseGet.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Widget(7, "Deleted row")) };
+        }
+    }
 }

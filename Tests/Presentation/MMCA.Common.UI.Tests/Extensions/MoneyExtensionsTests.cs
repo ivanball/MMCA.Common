@@ -103,6 +103,18 @@ public class MoneyExtensionsTests
             .Be("$1,234.56 USD");
     }
 
+    [Fact]
+    public void ToDisplayString_NegativeAmount_PutsTheSignBeforeTheSymbol()
+    {
+        // L73: a refund or credit rendered as "$-5.00" reads as a typo.
+        using var culture = CultureScope.Use("en-US");
+
+        CreateMoney(-5m).ToDisplayString().Should().Be("-$5.00 USD");
+        CreateMoney(-5m).ToDisplayString(CultureInfo.GetCultureInfo("es-ES")).Should().Be("-$5,00 USD");
+        List<Money> prices = [CreateMoney(-5m), CreateMoney(10m)];
+        prices.ToDisplayRange().Should().Be("-$5.00 - $10.00 USD");
+    }
+
     // -- ToDisplayRange --
     [Fact]
     public void ToDisplayRange_EmptyCollection_ReturnsEmptyString()

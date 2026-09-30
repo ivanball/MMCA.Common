@@ -43,6 +43,24 @@ public sealed class InfiniteScrollSentinelTests : BunitTestBase
     }
 
     [Fact]
+    public void WhenALoadFinishes_TheSentinelIsObservedAgain()
+    {
+        // L75: the observer reports threshold crossings only, so a sentinel still in view after the
+        // host appended a page would never fire again; a finished load re-observes it.
+        var module = JSInterop.SetupModule("./_content/MMCA.Common.UI/infinite-scroll.js");
+        module.SetupVoid("observe", _ => true).SetVoidResult();
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+
+        var cut = RenderUnderTest<InfiniteScrollSentinel>(p => p.Add(c => c.IsLoading, false));
+        cut.WaitForAssertion(() => module.Invocations["observe"].Should().HaveCount(1));
+
+        cut.Render(p => p.Add(c => c.IsLoading, true));
+        cut.Render(p => p.Add(c => c.IsLoading, false));
+
+        cut.WaitForAssertion(() => module.Invocations["observe"].Should().HaveCount(2));
+    }
+
+    [Fact]
     public async Task OnSentinelVisible_RaisesTheHostCallback()
     {
         var appended = 0;

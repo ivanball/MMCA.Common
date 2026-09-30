@@ -17,8 +17,8 @@ namespace MMCA.Common.UI.Pages.Auth;
 /// <b>Two revoke paths, on purpose.</b> A row's button calls <c>auth/revoke/{sessionId}</c>, which
 /// ends one other device's session and leaves this one alone. The page-level button is the
 /// account-wide <c>auth/revoke</c>, which also ends the session the caller is using, so it is
-/// followed by the normal local sign-out (<see cref="IAuthUIService.LogoutAsync"/> does both) and a
-/// redirect to the login page. The row for the current device therefore offers no button at all:
+/// followed by the normal local sign-out (<see cref="IAuthUIService.RevokeAllSessionsAsync"/> does
+/// both) and a redirect to the login page, but only once the server confirmed the revoke. The row for the current device therefore offers no button at all:
 /// revoking it from here would leave the app signed in on a dead session until the access token
 /// expired.
 /// </para>
@@ -147,9 +147,11 @@ public partial class Sessions : IDisposable
     }
 
     /// <summary>
-    /// Ends every session, including this one. <see cref="IAuthUIService.LogoutAsync"/> is exactly
-    /// that operation: it calls the account-wide revoke and then clears local token storage and
-    /// notifies auth state, which is what keeps the app from sitting on a revoked session.
+    /// Ends every session, including this one, through <see cref="IAuthUIService.RevokeAllSessionsAsync"/>:
+    /// the account-wide revoke, then (on success) the local sign-out that keeps the app from sitting
+    /// on a revoked session. A failed revoke is shown and the page stays put: the button promises that
+    /// every device is signed out, and a best-effort logout would claim that even when the server
+    /// refused.
     /// </summary>
     private async Task RevokeAllAsync()
     {
@@ -162,8 +164,19 @@ public partial class Sessions : IDisposable
 
         try
         {
-            await AuthService.LogoutAsync();
-            Navigation.NavigateTo(LoginRoute, forceLoad: true);
+            var result = await AuthService.RevokeAllSessionsAsync(_cts.Token);
+            if (result.IsSuccess)
+            {
+                Navigation.NavigateTo(LoginRoute, forceLoad: true);
+            }
+            else
+            {
+                result.NotifyOnFailure(Toast, L);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected during component disposal.
         }
         finally
         {

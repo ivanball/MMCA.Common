@@ -58,6 +58,8 @@ public sealed class SessionsTests : BunitTestBase
             .ReturnsAsync(Loaded(CurrentDevice(), OtherDevice()));
         _auth.Setup(a => a.RevokeSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success());
+        _auth.Setup(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
     }
 
     private static RefreshSessionSummaryResponse CurrentDevice() =>
@@ -295,8 +297,9 @@ public sealed class SessionsTests : BunitTestBase
 
         cut.Find(SignOutEverywhereSelector).Click();
 
-        // One call does both halves: the account-wide server revoke AND the local sign-out.
-        cut.WaitForAssertion(() => _auth.Verify(a => a.LogoutAsync(), Times.Once()));
+        // One call does both halves: the account-wide server revoke AND (on success) the local
+        // sign-out. M131: the reporting RevokeAllSessionsAsync, not the best-effort LogoutAsync.
+        cut.WaitForAssertion(() => _auth.Verify(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()), Times.Once()));
         Services.GetRequiredService<NavigationManager>().Uri.Should().EndWith("/login");
     }
 
@@ -308,7 +311,28 @@ public sealed class SessionsTests : BunitTestBase
 
         cut.Find(SignOutEverywhereSelector).Click();
 
-        cut.WaitForAssertion(() => _auth.Verify(a => a.LogoutAsync(), Times.Once()));
+        cut.WaitForAssertion(() => _auth.Verify(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()), Times.Once()));
         _auth.Verify(a => a.RevokeSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Fact]
+    public void WhenSignOutEverywhereFails_ShowsTheErrorAndStaysOnThePage()
+    {
+        // M131: the button promises every device is signed out, so a refused revoke must be said,
+        // not papered over by the best-effort logout.
+        _auth.Setup(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Failure("Auth.Sessions.RevokeAllFailed", "Your other devices could not be signed out.")));
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+        var uriBefore = navigation.Uri;
+
+        cut.Find(SignOutEverywhereSelector).Click();
+
+        cut.WaitForAssertion(() =>
+            _toast.Verify(t => t.Show("Your other devices could not be signed out.", ToastSeverity.Error), Times.Once()));
+        navigation.Uri.Should().Be(uriBefore);
+        _auth.Verify(a => a.LogoutAsync(), Times.Never());
     }
 }

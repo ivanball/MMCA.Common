@@ -90,9 +90,18 @@ public static class MoneyExtensions
         var resolved = culture ?? CultureInfo.CurrentCulture;
         var symbol = Symbol(code);
         var body = min == max
-            ? $"{symbol}{min.ToString("N2", resolved)}"
-            : $"{symbol}{min.ToString("N2", resolved)} - {symbol}{max.ToString("N2", resolved)}";
+            ? FormatAmount(min, symbol, resolved)
+            : $"{FormatAmount(min, symbol, resolved)} - {FormatAmount(max, symbol, resolved)}";
 
         return string.IsNullOrEmpty(code) ? body : $"{body} {code}";
     }
+
+    /// <summary>
+    /// Formats one amount with its symbol. The sign goes before the symbol (<c>-$5.00</c>, not
+    /// <c>$-5.00</c>); formatting the absolute value keeps the culture digit grouping.
+    /// </summary>
+    private static string FormatAmount(decimal amount, string symbol, CultureInfo culture) =>
+        amount < 0
+            ? $"-{symbol}{Math.Abs(amount).ToString("N2", culture)}"
+            : $"{symbol}{amount.ToString("N2", culture)}";
 }

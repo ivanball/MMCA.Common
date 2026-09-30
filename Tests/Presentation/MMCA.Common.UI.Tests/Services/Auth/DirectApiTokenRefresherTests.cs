@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AwesomeAssertions;
 using MMCA.Common.Shared.Auth.Responses;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using MMCA.Common.UI.Tests.Infrastructure;
 using Moq;
@@ -55,6 +56,24 @@ public sealed class DirectApiTokenRefresherTests
         mocks.Handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/refresh");
         mocks.Handler.LastRequest.Body.Should().Contain("old-access").And.Contain("old-refresh");
         mocks.TokenStore.Verify(s => s.SetTokensAsync("new-access", "new-refresh"), Times.Once);
+    }
+
+    [Fact]
+    public async Task AcquireAccessTokenAsync_WithStoredPair_MarksTheRefreshPostToSkipTheBearer()
+    {
+        // H37: the refresh POST rides the APIClient pipeline; without the opt-out the delegating
+        // handler reads the storage that is awaiting this very refresh.
+        var skipBearer = false;
+        var (sut, _) = CreateSut(request =>
+        {
+            skipBearer = request.Options.TryGetValue(AuthDelegatingHandler.SkipBearer, out var skip) && skip;
+            return TokenResponse("new-access", "new-refresh");
+        });
+
+        var result = await sut.AcquireAccessTokenAsync(TestContext.Current.CancellationToken);
+
+        result.Should().Be("new-access");
+        skipBearer.Should().BeTrue();
     }
 
     // == Missing credentials: no HTTP round-trip at all ==

@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
@@ -56,6 +57,30 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
         cut.FindComponents<MudCard>().Count.Should().Be(2);
         cut.FindAll(".infinite-scroll-sentinel").Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task AfterAnAppendWithMorePages_TheSentinelIsObservedAgain()
+    {
+        // L75: a sentinel still inside the viewport after an append produces no threshold crossing,
+        // so without a re-observe the list stalls after the second page.
+        var module = JSInterop.SetupModule("./_content/MMCA.Common.UI/infinite-scroll.js");
+        module.SetupVoid("observe", _ => true).SetVoidResult();
+        module.SetupVoid("unobserve", _ => true).SetVoidResult();
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.PageSize, 2)
+            .Add(c => c.FetchPageResult, (page, _, _) =>
+                Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>(([PageItem(page, "a"), PageItem(page, "b")], 6)))));
+        await cut.WaitForAssertionAsync(() => module.Invocations["observe"].Should().HaveCount(1));
+
+        await cut.Instance.OnSentinelVisible();
+
+        await cut.WaitForAssertionAsync(() => module.Invocations["observe"].Should().HaveCount(2));
+    }
+
+    private static string PageItem(int page, string suffix) =>
+        string.Create(CultureInfo.InvariantCulture, $"item-{page}-{suffix}");
 
     [Fact]
     public void ClickingCard_InvokesOnCardClickWithItem()

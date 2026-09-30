@@ -205,6 +205,67 @@ public sealed class NotificationHubServiceTests
         sut.IsConnected.Should().BeFalse();
     }
 
+    // -- A connection whose reconnect gave up must not satisfy the start guard forever (M125) --
+    [Fact]
+    public async Task StartAsync_WithADisconnectedConnectionInTheField_RebuildsInsteadOfNoOping()
+    {
+        var server = new InMemoryHubServer();
+        var built = 0;
+        await using var sut = CreateInMemorySut(server, () => Interlocked.Increment(ref built));
+
+        await sut.StartAsync();
+        sut.IsConnected.Should().BeTrue();
+
+        // A close with no error raises no restart, so the dead connection stays in the field.
+        server.DropAll(error: null);
+        await WaitUntilAsync(() => !sut.IsConnected);
+
+        await sut.StartAsync();
+
+        Volatile.Read(ref built).Should().Be(2, "a Disconnected connection must be discarded and rebuilt");
+        sut.IsConnected.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WhenTheConnectionClosesWithAnError_TheServiceStartsANewOne()
+    {
+        var server = new InMemoryHubServer();
+        var built = 0;
+        await using var sut = CreateInMemorySut(server, () => Interlocked.Increment(ref built));
+
+        await sut.StartAsync();
+        sut.IsConnected.Should().BeTrue();
+
+        // What HubConnection raises once its automatic reconnect schedule is exhausted.
+        server.DropAll(new IOException("reconnect attempts exhausted"));
+
+        await WaitUntilAsync(() => Volatile.Read(ref built) == 2 && sut.IsConnected);
+    }
+
+    private static NotificationHubService CreateInMemorySut(InMemoryHubServer server, Action onBuild) =>
+        new(
+            new Mock<ITokenStorageService>().Object,
+            Options.Create(new ApiSettings { ApiEndpoint = "http://in-memory" }),
+            NullLogger<NotificationHubService>.Instance)
+        {
+            InitialRetryDelay = TimeSpan.FromMilliseconds(1),
+            ConnectionFactory = () =>
+            {
+                onBuild();
+                return server.CreateConnection();
+            },
+        };
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!condition())
+        {
+            DateTime.UtcNow.Should().BeBefore(deadline, "the condition should hold within five seconds");
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+    }
+
     // ── Concurrent starts must not each build a connection (L11) ──
     [Fact]
     public async Task StartAsync_CalledConcurrently_NeverRunsTwoStartsAtOnce()
