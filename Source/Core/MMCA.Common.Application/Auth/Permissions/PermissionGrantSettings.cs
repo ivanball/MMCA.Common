@@ -17,7 +17,9 @@ public sealed class PermissionGrantSettings
     /// <remarks>
     /// This is the bound on how stale another replica may be after an edit, since invalidation is
     /// per process. Five minutes is the default because a grant is an administrative change, not a
-    /// per-request one; lowering it trades database reads for a shorter window.
+    /// per-request one; lowering it trades database reads for a shorter window. Each cached entry
+    /// lives three intervals, so the snapshot outlives the gap before the next reload and survives up
+    /// to two failed reloads; after that it stops answering and stored grants fail closed.
     /// </remarks>
     [Range(5, 3600)]
     public int CacheSeconds { get; init; } = 300;

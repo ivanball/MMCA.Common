@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead;
@@ -8,58 +9,73 @@ using Moq;
 
 namespace MMCA.Common.Application.Tests.Notifications;
 
+/// <summary>
+/// The mark-all handler issues ONE set-based update (L49) instead of loading and tracking every
+/// unread row. These tests capture the predicate and the property assignments handed to
+/// <c>ExecuteUpdateAsync</c> and evaluate them in memory; the persisted effect against a real EF
+/// context is covered in the Infrastructure tier (MarkAllNotificationsReadHandlerTrackingTests).
+/// </summary>
 public sealed class MarkAllNotificationsReadHandlerTests
 {
-    // ── Marks all unread as read ──
+    // -- One set-based update, no tracked save -- (inverted from ..._MarksAllAsReadAndSaves, L49)
     [Fact]
-    public async Task HandleAsync_WithUnreadNotifications_MarksAllAsReadAndSaves()
+    public async Task HandleAsync_WithUnreadNotifications_MarksThemInOneSetBasedUpdateWithoutASave()
     {
-        var (sut, mocks) = CreateSut(unreadCount: 3);
+        var harness = new Harness();
+        List<UserNotification> rows =
+        [
+            Unread(userId: 42, pushNotificationId: 1),
+            Unread(userId: 42, pushNotificationId: 2),
+            Unread(userId: 42, pushNotificationId: 3),
+            Read(userId: 42, pushNotificationId: 4),
+            Unread(userId: 7, pushNotificationId: 5),
+        ];
 
-        var command = new MarkAllNotificationsReadCommand(UserId: 42);
-        Result result = await sut.HandleAsync(command);
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
 
         result.IsSuccess.Should().BeTrue();
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        harness.Predicate.Should().NotBeNull("the handler must mark the rows with one set-based update");
+        rows.Where(harness.Predicate!.Compile()).Should().BeEquivalentTo(rows.Take(3));
+        harness.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    // ── No unread notifications skips save ──
+    // -- Nothing is loaded or saved, whatever the row count -- (inverted from ..._SkipsSave, L49)
     [Fact]
-    public async Task HandleAsync_WhenNoUnreadNotifications_SkipsSave()
+    public async Task HandleAsync_WhenNoUnreadNotifications_IssuesTheUpdateAndNeverSaves()
     {
-        var (sut, mocks) = CreateSut(unreadCount: 0);
+        var harness = new Harness(affectedRows: 0);
 
-        var command = new MarkAllNotificationsReadCommand(UserId: 42);
-        Result result = await sut.HandleAsync(command);
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
 
         result.IsSuccess.Should().BeTrue();
-        mocks.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        harness.Predicate.Should().NotBeNull();
+        harness.UnitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Returns success even with no unread ──
     [Fact]
     public async Task HandleAsync_WhenNoUnreadNotifications_ReturnsSuccess()
     {
-        var (sut, _) = CreateSut(unreadCount: 0);
+        var harness = new Harness(affectedRows: 0);
 
-        var command = new MarkAllNotificationsReadCommand(UserId: 42);
-        Result result = await sut.HandleAsync(command);
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
 
         result.IsSuccess.Should().BeTrue();
     }
 
-    // ── Read time is stamped from the injected clock ──
+    // -- Read time is stamped from the injected clock -- (inverted to read the assignments, L49)
     [Fact]
     public async Task HandleAsync_WithUnreadNotifications_StampsReadOnFromInjectedClock()
     {
         var readInstant = new DateTimeOffset(2026, 6, 26, 14, 30, 0, TimeSpan.Zero);
-        var (sut, mocks) = CreateSut(unreadCount: 3, timeProvider: new FixedTimeProvider(readInstant));
+        var harness = new Harness(timeProvider: new FixedTimeProvider(readInstant));
 
-        Result result = await sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
 
         result.IsSuccess.Should().BeTrue();
-        mocks.Unread.Should().HaveCount(3);
-        mocks.Unread.Should().OnlyContain(n => n.IsRead && n.ReadOn == readInstant.UtcDateTime);
+        harness.Assignments.Should().HaveCount(2);
+        harness.Assignments[nameof(UserNotification.IsRead)].Should().Be(true);
+        harness.Assignments[nameof(UserNotification.ReadOn)].Should().Be(readInstant.UtcDateTime);
     }
 
     // ── Scope filtering ──
@@ -68,93 +84,51 @@ public sealed class MarkAllNotificationsReadHandlerTests
     {
         // Mirrors the unread count: an unconditional join would drag PushNotification's soft-delete
         // global filter into the legacy command and silently change which rows it clears.
-        var (sut, mocks) = CreateSut(unreadCount: 3);
+        var harness = new Harness();
 
-        Result result = await sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 42));
 
         result.IsSuccess.Should().BeTrue();
-        mocks.UnitOfWork.Verify(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>(), Times.Never);
+        harness.UnitOfWork.Verify(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>(), Times.Never);
     }
 
-    // These two scope tests pin the PREDICATE only. They run against in-memory queryables, which have
-    // no change tracker, so they stayed green while the scoped join composed over a no-tracking source
-    // and the marks were never persisted. Real tracking coverage lives in the Infrastructure tier
-    // (Tests/Core/MMCA.Common.Infrastructure.Tests/Persistence/MarkAllNotificationsReadHandlerTrackingTests.cs),
-    // where the handler runs against a real EF context.
+    // These two scope tests pin the PREDICATE only, evaluated over in-memory rows. The persisted
+    // effect lives in the Infrastructure tier, where the handler runs against a real EF context.
     [Fact]
     public async Task HandleAsync_WithScope_MarksMatchingAndUnscopedOnly()
     {
-        var (sut, notifications) = CreateFilteringSut();
+        var harness = new Harness();
+        var notifications = harness.WithScopedPushNotifications();
 
-        Result result = await sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 1, ScopeKey: "event:2"));
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 1, ScopeKey: "event:2"));
 
         result.IsSuccess.Should().BeTrue();
-        notifications[0].IsRead.Should().BeTrue("the unscoped notification is visible under every scope");
-        notifications[1].IsRead.Should().BeFalse("an \"event:1\" notification is invisible to an \"event:2\" client");
-        notifications[2].IsRead.Should().BeTrue();
+        var selected = notifications.Where(harness.Predicate!.Compile()).ToList();
+        selected.Should().Contain(notifications[0], "the unscoped notification is visible under every scope");
+        selected.Should().NotContain(notifications[1], "an \"event:1\" notification is invisible to an \"event:2\" client");
+        selected.Should().Contain(notifications[2]);
     }
 
     [Fact]
     public async Task HandleAsync_WithoutScope_MarksEveryUnreadNotification()
     {
-        var (sut, notifications) = CreateFilteringSut();
+        var harness = new Harness();
+        var notifications = harness.WithScopedPushNotifications();
 
-        Result result = await sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 1));
+        Result result = await harness.Sut.HandleAsync(new MarkAllNotificationsReadCommand(UserId: 1));
 
         result.IsSuccess.Should().BeTrue();
-        notifications.Should().OnlyContain(n => n.IsRead);
+        notifications.Where(harness.Predicate!.Compile()).Should().HaveCount(3);
     }
 
     // ── Helpers ──
+    private static UserNotification Unread(UserIdentifierType userId, PushNotificationIdentifierType pushNotificationId) =>
+        UserNotification.Create(userId, pushNotificationId).Value!;
 
-    /// <summary>
-    /// Builds a handler over three real unread notifications (unscoped, "event:1", "event:2") with an
-    /// executor that actually enumerates the composed query, so these tests pin the scope predicate
-    /// rather than a mocked result set. The returned list is in that same order.
-    /// </summary>
-    private static (MarkAllNotificationsReadHandler Sut, IReadOnlyList<UserNotification> Notifications) CreateFilteringSut()
+    private static UserNotification Read(UserIdentifierType userId, PushNotificationIdentifierType pushNotificationId)
     {
-        List<PushNotification> pushNotifications =
-        [
-            Push(id: 1, scopeKey: null),
-            Push(id: 2, scopeKey: "event:1"),
-            Push(id: 3, scopeKey: "event:2"),
-        ];
-        List<UserNotification> userNotifications =
-            [.. pushNotifications.Select(pn => UserNotification.Create(userId: 1, pushNotificationId: pn.Id).Value!)];
-
-        var unitOfWork = new Mock<IUnitOfWork>();
-        var repository = new Mock<IRepository<UserNotification, UserNotificationIdentifierType>>();
-        var pushNotificationRepo = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
-        var queryableExecutor = new Mock<IQueryableExecutor>();
-
-        unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
-            .Returns(repository.Object);
-        unitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
-            .Returns(pushNotificationRepo.Object);
-        unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
-
-        repository.Setup(x => x.Table).Returns(userNotifications.AsQueryable());
-        pushNotificationRepo.Setup(x => x.Table).Returns(pushNotifications.AsQueryable());
-
-        queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotification>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IQueryable<UserNotification> source, CancellationToken _) => source.ToList());
-
-        var sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, queryableExecutor.Object, TimeProvider.System);
-
-        return (sut, userNotifications);
-    }
-
-    /// <summary>
-    /// Builds a notification that looks persisted. <c>Id</c> is <c>required init</c> and the factory
-    /// leaves it at its default, so the identifier the join needs is written back through reflection
-    /// rather than by opening the entity up with a test-only setter.
-    /// </summary>
-    private static PushNotification Push(PushNotificationIdentifierType id, string? scopeKey)
-    {
-        PushNotification notification = PushNotification
-            .Create("Title", "Body", sentByUserId: 1, recipientCount: 1, scopeKey: scopeKey).Value!;
-        typeof(PushNotification).GetProperty(nameof(PushNotification.Id))!.SetValue(notification, id);
+        var notification = Unread(userId, pushNotificationId);
+        notification.MarkAsRead(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         return notification;
     }
 
@@ -163,40 +137,88 @@ public sealed class MarkAllNotificationsReadHandlerTests
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
-    private sealed record HandlerMocks(
-        Mock<IUnitOfWork> UnitOfWork,
-        Mock<IQueryableExecutor> QueryableExecutor,
-        IReadOnlyList<UserNotification> Unread);
-
-    private static (MarkAllNotificationsReadHandler Sut, HandlerMocks Mocks) CreateSut(
-        int unreadCount,
-        TimeProvider? timeProvider = null)
+    /// <summary>The handler over mocks that capture the one set-based update it issues.</summary>
+    private sealed class Harness
     {
-        var unitOfWork = new Mock<IUnitOfWork>();
-        var repository = new Mock<IRepository<UserNotification, UserNotificationIdentifierType>>();
-        var queryableExecutor = new Mock<IQueryableExecutor>();
+        private readonly Mock<IRepository<UserNotification, UserNotificationIdentifierType>> _repository = new();
 
-        unitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
-            .Returns(repository.Object);
-        unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(unreadCount);
-
-        repository.Setup(x => x.Table)
-            .Returns(Enumerable.Empty<UserNotification>().AsQueryable());
-
-        var unread = new List<UserNotification>();
-        for (int i = 0; i < unreadCount; i++)
+        public Harness(int affectedRows = 3, TimeProvider? timeProvider = null)
         {
-            var notification = UserNotification.Create(userId: 42, pushNotificationId: i + 1).Value!;
-            unread.Add(notification);
+            UnitOfWork.Setup(x => x.GetRepository<UserNotification, UserNotificationIdentifierType>())
+                .Returns(_repository.Object);
+            _repository.Setup(x => x.Table).Returns(Enumerable.Empty<UserNotification>().AsQueryable());
+            _repository
+                .Setup(x => x.ExecuteUpdateAsync(
+                    It.IsAny<Expression<Func<UserNotification, bool>>>(),
+                    It.IsAny<Action<IUpdatePropertySetter<UserNotification>>>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback((Expression<Func<UserNotification, bool>> where, Action<IUpdatePropertySetter<UserNotification>> setters, CancellationToken _) =>
+                {
+                    Predicate = where;
+                    var recorder = new RecordingSetter();
+                    setters(recorder);
+                    Assignments = recorder.Values;
+                })
+                .ReturnsAsync(affectedRows);
+
+            Sut = new MarkAllNotificationsReadHandler(UnitOfWork.Object, timeProvider ?? TimeProvider.System);
         }
 
-        queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotification>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(unread);
+        public Mock<IUnitOfWork> UnitOfWork { get; } = new();
 
-        var sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, queryableExecutor.Object, timeProvider ?? TimeProvider.System);
-        var mocks = new HandlerMocks(unitOfWork, queryableExecutor, unread);
+        public MarkAllNotificationsReadHandler Sut { get; }
 
-        return (sut, mocks);
+        public Expression<Func<UserNotification, bool>>? Predicate { get; private set; }
+
+        public Dictionary<string, object?> Assignments { get; private set; } = new(StringComparer.Ordinal);
+
+        /// <summary>Three unread rows for user 1 over push notifications scoped none, "event:1", "event:2".</summary>
+        public IReadOnlyList<UserNotification> WithScopedPushNotifications()
+        {
+            List<PushNotification> pushNotifications =
+            [
+                Push(id: 1, scopeKey: null),
+                Push(id: 2, scopeKey: "event:1"),
+                Push(id: 3, scopeKey: "event:2"),
+            ];
+
+            var pushRepository = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
+            pushRepository.Setup(x => x.Table).Returns(pushNotifications.AsQueryable());
+            UnitOfWork.Setup(x => x.GetRepository<PushNotification, PushNotificationIdentifierType>())
+                .Returns(pushRepository.Object);
+
+            return [.. pushNotifications.Select(pn => Unread(userId: 1, pushNotificationId: pn.Id))];
+        }
+        /// <summary>
+        /// Builds a notification that looks persisted. <c>Id</c> is <c>required init</c> and the factory
+        /// leaves it at its default, so the identifier the scope test needs is written back through
+        /// reflection rather than by opening the entity up with a test-only setter.
+        /// </summary>
+        private static PushNotification Push(PushNotificationIdentifierType id, string? scopeKey)
+        {
+            PushNotification notification = PushNotification
+                .Create("Title", "Body", sentByUserId: 1, recipientCount: 1, scopeKey: scopeKey).Value!;
+            typeof(PushNotification).GetProperty(nameof(PushNotification.Id))!.SetValue(notification, id);
+            return notification;
+        }
+    }
+
+    /// <summary>Records each fixed-value assignment by property name.</summary>
+    private sealed class RecordingSetter : IUpdatePropertySetter<UserNotification>
+    {
+        public Dictionary<string, object?> Values { get; } = new(StringComparer.Ordinal);
+
+        public IUpdatePropertySetter<UserNotification> Set<TProperty>(
+            Expression<Func<UserNotification, TProperty>> property,
+            TProperty value)
+        {
+            Values[((MemberExpression)property.Body).Member.Name] = value;
+            return this;
+        }
+
+        public IUpdatePropertySetter<UserNotification> Set<TProperty>(
+            Expression<Func<UserNotification, TProperty>> property,
+            Expression<Func<UserNotification, TProperty>> valueFactory) =>
+            throw new NotSupportedException("The handler assigns fixed values only.");
     }
 }

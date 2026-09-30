@@ -31,6 +31,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: `AddTypedServiceClient` configures its standard resilience handler from `HttpResilienceDefaults` instead of the library defaults (L58).
 - Fixed: `JwtForwardingClientInterceptor` forwards the access token saved on the authentication ticket when the inbound request has no `Authorization` header (a SignalR hub token sent as `?access_token=`); a present header still wins (H39).
 - Documented: `IHasOrderingKey` notes that a key with `BatchSize` or more pending rows fills the fetch window (L55); `SendPushNotificationHandler` notes that its live legs are at-least-once under an execution-strategy retry (M107); `DeleteUserHandlerBase` describes its marker and `afterCommit` tail as post-save, not post-commit, under an `ITransactional` command (L48).
+- **Breaking (C-3):** `ICacheService` gains `TryGetAsync<T>` (a default interface member, so implementations keep compiling) and `MarkAllNotificationsReadHandler` no longer takes an `IQueryableExecutor`. Map and fix: UPGRADING.md, [Unreleased].
+- Fixed: stored permission grants are cached under an upper-cased role key, so a role read with different casing than the stored row still finds its grants (M109).
+- Fixed: a cached permission-grant snapshot lives three refresh intervals instead of one, so it no longer expires in the gap before the next rebuild and survives two failed reloads before stored grants fail closed (M111).
+- Fixed: a concurrent duplicate `IPermissionGrantStore.GrantAsync` that loses the unique-index race answers success and detaches its failed insert instead of throwing (L52).
+- Fixed: `SetStoredPermissionsAsync` invalidates the grant snapshot on every exit, so rows already committed before a mid-sequence failure or exception are visible at once (L59).
+- Fixed: on PostgreSQL and SQLite the audit interceptor writes a fresh 16-byte `RowVersion` on every insert and update, so optimistic concurrency and If-Match actually detect a concurrent writer there (M113).
+- Fixed: keyset paging on PostgreSQL follows its null placement (`ASC NULLS LAST`, `DESC NULLS FIRST`), so a nullable sort key no longer skips the null rows ascending or repeats them descending (M112).
+- Fixed: entity configurations see the engine of the model being built (`EntityTypeConfiguration.EffectiveEngine`), and the notification index filters use it, so a PostgreSQL-only host no longer gets bracketed SQL Server filters (M117).
+- Fixed: under `DatabaseInitStrategy` "None" a tenant's own copy of a migration-less Cosmos, PostgreSQL or SQLite source is created at startup, as the shared copy already was (M123).
+- Fixed: `DbContextFactory` refuses to hand a shared context created before the tenant resolved to a tenant that overrides that source (L53).
+- Fixed: `EFRepository.ExecuteUpdateAsync` with no current user stamps `LastModifiedBy` with the system sentinel instead of leaving the previous editor (L51).
+- Fixed: `MemoryCacheService` applies `Cache:DefaultDuration` to an entry written without an expiration, like the distributed and hybrid stores (L57).
+- Fixed: `ICacheService.GetOrCreateAsync` reads presence through `TryGetAsync`, so a value-type `T` runs the factory on a miss instead of returning `default(T)` (L47).
+- Fixed: mark-all-notifications-read is one set-based `ExecuteUpdateAsync` instead of loading and tracking every unread row (L49).
+- Fixed: the inbox and notification-history pages tie-break on the id after `CreatedOn`, so equal timestamps cannot repeat or skip rows across pages (L50).
 
 ## [1.212.0] - 2026-09-29
 

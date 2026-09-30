@@ -20,6 +20,31 @@ public class DistributedCacheServiceTests
     public DistributedCacheServiceTests() =>
         _sut = new DistributedCacheService(_cacheMock.Object, NullLog);
 
+    // -- GetOrCreateAsync with a value type (L47) --
+    [Fact]
+    public async Task GetOrCreateAsync_WithAValueTypeOnAMiss_RunsTheFactoryAndCachesItsResult()
+    {
+        _cacheMock.Setup(c => c.GetAsync("int-factory", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((byte[]?)null);
+        var calls = 0;
+
+        var value = await ((MMCA.Common.Application.Interfaces.ICacheService)_sut).GetOrCreateAsync<int>("int-factory", _ =>
+        {
+            calls++;
+            return Task.FromResult(7);
+        });
+
+        value.Should().Be(7);
+        calls.Should().Be(1);
+        _cacheMock.Verify(
+            c => c.SetAsync(
+                "int-factory",
+                It.Is<byte[]>(b => JsonSerializer.Deserialize<int>(b, (JsonSerializerOptions?)null) == 7),
+                It.IsAny<DistributedCacheEntryOptions>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     // ── GetAsync ──
     [Fact]
     public async Task GetAsync_WhenKeyDoesNotExist_ReturnsDefault()

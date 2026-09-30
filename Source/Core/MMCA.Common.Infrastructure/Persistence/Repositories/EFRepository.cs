@@ -145,9 +145,12 @@ internal sealed class EFRepository<TEntity, TIdentifierType>(
             builder.Set(e => e.LastModifiedOn, (DateTime?)now);
         }
 
-        if (currentUserService?.UserId is { } userId && !builder.SetsProperty(nameof(IAuditableEntity.LastModifiedBy)))
+        // With no current user (a background or system scope) the editor is the default sentinel,
+        // exactly as the save pipeline attributes a system save; leaving the column alone would keep
+        // crediting the change to the previous human editor.
+        if (!builder.SetsProperty(nameof(IAuditableEntity.LastModifiedBy)))
         {
-            builder.Set(e => e.LastModifiedBy, userId);
+            builder.Set(e => e.LastModifiedBy, currentUserService?.UserId ?? default);
         }
 
         return await Entities.Where(where).ExecuteUpdateAsync(builder.Apply, cancellationToken).ConfigureAwait(false);

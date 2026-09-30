@@ -53,6 +53,8 @@ Old-to-new map:
 | `ChangePasswordHandlerBase(unitOfWork, passwordHasher, logger, refreshSessions, timeProvider)` | `ChangePasswordHandlerBase(unitOfWork, passwordHasher, logger, refreshSessions, ILoginProtectionService loginProtection, timeProvider)` (M108) |
 | `ITwoFactorService` (six members) | adds `bool VerifyCode(string secret, string? code, out long matchedStep)` (L56) |
 | `PasswordResetTokenService(cacheService, settings)` | `PasswordResetTokenService(cacheService, settings, IDistributedLock distributedLock)` (L91) |
+| `ICacheService` (seven members) | adds `Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken)` with a default body (L47) |
+| `MarkAllNotificationsReadHandler(unitOfWork, queryableExecutor, timeProvider)` | `MarkAllNotificationsReadHandler(unitOfWork, timeProvider)` (L49) |
 
 The mechanical fix:
 
@@ -87,6 +89,12 @@ The mechanical fix:
    `TotpTwoFactorService` needs nothing.
 9. **`PasswordResetTokenService` constructed by hand.** Pass an `IDistributedLock` (registered by
    `AddCaching`). Hosts resolving `IPasswordResetTokenService` from DI change nothing.
+10. **`ICacheService` implementations.** Nothing is required: the default body infers presence
+    from a non-null `GetAsync`. A store that can cache a value-type `default(T)` should override
+    `TryGetAsync` with a real presence check, or `GetOrCreateAsync` re-runs the factory for it.
+11. **`MarkAllNotificationsReadHandler` constructed by hand.** Drop the `IQueryableExecutor`
+    argument. A test that verified `SaveChangesAsync` or inspected mutated rows asserts on the
+    predicate and assignments passed to `IRepository.ExecuteUpdateAsync` instead.
 
 ## [1.207.0] - 2026-09-21
 

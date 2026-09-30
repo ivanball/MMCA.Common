@@ -55,9 +55,10 @@ internal sealed class PushNotificationConfiguration
         // Filtered unique index: at most one notification per deduplication key, while the many
         // sends that carry no key (NULL) coexist freely. This is what makes a retried send safe,
         // the database arbitrates the race that a check-then-act lookup in the handler cannot.
-        // "[DedupKey] IS NOT NULL" is SQL Server filter syntax and matches this configuration's
-        // engine base class (EntityTypeConfigurationSQLServer); the Cosmos context strips
-        // relational indexes, so no other engine sees it.
+        // The filter is written for the engine of the model being built (EffectiveEngine), not for
+        // the declared SQL Server base: a host that configures only PostgreSQL or SQLite substitutes
+        // its engine and applies this configuration to that model. The Cosmos context strips
+        // relational indexes.
         //
         // The IsDeleted clause follows the same precedent SoftDeleteUniqueIndexConvention applies
         // to every other unique index on a soft-deletable entity: without it a soft-deleted row
@@ -67,6 +68,8 @@ internal sealed class PushNotificationConfiguration
         // the column name and quoting read off the model, and the convention recognizes it and stops.
         builder.HasIndex(p => p.DedupKey)
             .IsUnique()
-            .HasSoftDeleteFilter(additionalFilter: "[DedupKey] IS NOT NULL");
+            .HasSoftDeleteFilter(
+                EffectiveEngine,
+                additionalFilter: $"{SoftDeleteFilterSql.QuoteColumn(EffectiveEngine, nameof(PushNotification.DedupKey))} IS NOT NULL");
     }
 }

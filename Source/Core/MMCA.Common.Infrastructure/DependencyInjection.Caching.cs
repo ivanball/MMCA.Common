@@ -74,7 +74,9 @@ public static partial class DependencyInjection
                 }
 
                 // In-process: the keyspace is private to this process, so no prefix is needed.
-                return new MemoryCacheService(sp.GetRequiredService<IMemoryCache>());
+                return new MemoryCacheService(
+                    sp.GetRequiredService<IMemoryCache>(),
+                    sp.GetService<IOptions<CacheSettings>>());
             });
 
             // Cross-replica mutual exclusion, registered alongside the cache because its one

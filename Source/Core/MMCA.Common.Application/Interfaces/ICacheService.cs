@@ -16,6 +16,27 @@ public interface ICacheService
     /// <returns>The cached value, or <see langword="null"/> if the key does not exist.</returns>
     Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Looks a key up and reports whether it was present, separately from the value. Needed for a
+    /// value-type <typeparamref name="T"/>, where <see cref="GetAsync{T}"/> answers a miss with
+    /// <c>default(T)</c> (<c>0</c>, <see langword="false"/>, <see cref="Guid.Empty"/>) that cannot be
+    /// told apart from a cached <c>default(T)</c>.
+    /// </summary>
+    /// <typeparam name="T">The cached value type.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Whether the key was present, and its value when it was.</returns>
+    /// <remarks>
+    /// The default implementation infers presence from a non-null <see cref="GetAsync{T}"/> result,
+    /// which is exact for reference and nullable types and keeps this a compatible addition for
+    /// hand-written implementations. The shipped stores override it with a real presence check.
+    /// </remarks>
+    async Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var value = await GetAsync<T>(key, cancellationToken).ConfigureAwait(false);
+        return (value is not null, value);
+    }
+
     /// <summary>Stores a value in the cache with an optional expiration.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="key">The cache key.</param>
@@ -104,18 +125,19 @@ public interface ICacheService
     {
         ArgumentNullException.ThrowIfNull(factory);
 
-        // Fast path: no lock on a hit.
-        var cached = await GetAsync<T>(key, cancellationToken).ConfigureAwait(false);
-        if (cached is not null)
-            return cached;
+        // Fast path: no lock on a hit. Presence comes from TryGetAsync, not from a non-null value,
+        // so a cached default(T) of a value type counts as a hit and a miss still runs the factory.
+        var (found, cached) = await TryGetAsync<T>(key, cancellationToken).ConfigureAwait(false);
+        if (found)
+            return cached!;
 
         using (await CacheKeyLocks.Locks.AcquireAsync(key, cancellationToken).ConfigureAwait(false))
         {
             // Double-check: the request that held the stripe has populated the key by now, so the
             // waiters read the fresh entry instead of re-running the factory.
-            cached = await GetAsync<T>(key, cancellationToken).ConfigureAwait(false);
-            if (cached is not null)
-                return cached;
+            (found, cached) = await TryGetAsync<T>(key, cancellationToken).ConfigureAwait(false);
+            if (found)
+                return cached!;
 
             var created = await factory(cancellationToken).ConfigureAwait(false);
             await SetAsync(key, created, expiration, cancellationToken).ConfigureAwait(false);

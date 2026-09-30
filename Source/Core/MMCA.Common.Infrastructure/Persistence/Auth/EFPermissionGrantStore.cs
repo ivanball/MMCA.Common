@@ -31,12 +31,14 @@ namespace MMCA.Common.Infrastructure.Persistence.Auth;
 /// <param name="dataSourceResolver">Resolves the logical default source's engine.</param>
 /// <param name="settings">Bound permission-grant settings.</param>
 /// <param name="timeProvider">Clock stamping <see cref="PermissionGrant.GrantedAt"/>.</param>
+/// <param name="violationDetector">Classifies the unique-index failure a concurrent duplicate grant raises.</param>
 internal sealed class EFPermissionGrantStore(
     IDbContextFactory dbContextFactory,
     IEntityDataSourceRegistry registry,
     IDataSourceResolver dataSourceResolver,
     IOptions<PermissionGrantSettings> settings,
-    TimeProvider timeProvider) : IPermissionGrantStore
+    TimeProvider timeProvider,
+    IUniqueConstraintViolationDetector violationDetector) : IPermissionGrantStore
 {
     private ApplicationDbContext Context => dbContextFactory.GetDbContext(ResolveDataSourceKey());
 
@@ -88,9 +90,9 @@ internal sealed class EFPermissionGrantStore(
         var grant = grantResult.Value!;
 
         // Check-then-act, and the unique index is what makes losing the race harmless: a concurrent
-        // duplicate insert fails at the database, and the row the winner wrote says exactly what the
-        // loser was trying to say. The check exists to make the ordinary duplicate free rather than
-        // to be the guarantee.
+        // duplicate insert fails at the database, the loser catches that failure below and answers
+        // success, because the row the winner wrote says exactly what the loser was trying to say.
+        // The check exists to make the ordinary duplicate free rather than to be the guarantee.
         var exists = await Grants
             .AsNoTracking()
             .AnyAsync(g => g.Role == grant.Role && g.Permission == grant.Permission, cancellationToken)
@@ -101,8 +103,18 @@ internal sealed class EFPermissionGrantStore(
             return Result.Success();
         }
 
-        await Grants.AddAsync(grant, cancellationToken).ConfigureAwait(false);
-        await dbContextFactory.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var context = Context;
+        await context.Set<PermissionGrant>().AddAsync(grant, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await dbContextFactory.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (violationDetector.IsUniqueConstraintViolation(ex))
+        {
+            // Lost the race to a concurrent duplicate. Detach the failed insert so the scoped
+            // context does not retry it on the next save.
+            context.Entry(grant).State = EntityState.Detached;
+        }
 
         return Result.Success();
     }
