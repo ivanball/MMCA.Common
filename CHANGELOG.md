@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.212.0] - 2026-09-29
+
 ### Added
 
 - **`Telemetry:DisableAspNetCoreMetrics` cost knob (`MMCA.Common.Aspire`, rubric section 31).** Set to
@@ -26,6 +28,19 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   slow request into a 503, and every probe bills an idle downstream replica at the Container Apps
   active rate. When `false`, `EveryCluster_CarriesAnActiveHealthCheckProbingAlive` asserts that no
   cluster carries an enabled active check, so a leftover block still fails the build.
+
+### Changed
+
+- **Dependencies (minor and patch group, #449).** Microsoft.FeatureManagement and .AspNetCore 4.8.0;
+  Scalar.AspNetCore 2.17.10; MessagePack 3.1.10; StackExchange.Redis 3.3.1; Anthropic 12.51.0;
+  Microsoft.Extensions.AI.OpenAI 10.10.1; Azure.Messaging.ServiceBus 7.21.0; MudBlazor 9.11.0;
+  Microsoft.Playwright 1.63.0; Moq 4.21.0; coverlet.collector 10.1.0; Meziantou.Analyzer 3.0.290;
+  SonarAnalyzer.CSharp 10.35.0.4138. A consumer that pins MudBlazor, Moq, Microsoft.Playwright or
+  Azure.Messaging.ServiceBus below these versions gets NU1605 (package downgrade) on the bump; raise
+  those pins in the same commit as the `MMCA.Common.*` pin. Two knock-on effects for consumer tests:
+  Moq 4.21 annotates `IInvocation.Arguments` and the `It.Is<It.IsAnyType>` lambda parameter as
+  nullable (casts need `!` under `TreatWarningsAsErrors`), and MudBlazor 9.11 reorders rendered
+  attributes and renumbers event handlers, so bUnit markup snapshots need a refresh.
 
 ## [1.211.0] - 2026-09-25
 
