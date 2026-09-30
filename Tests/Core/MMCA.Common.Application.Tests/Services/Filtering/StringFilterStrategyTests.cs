@@ -28,6 +28,14 @@ public sealed class StringFilterStrategyTests
             new Dictionary<string, (string, string)> { ["Name"] = (op, value) },
             EmptyMap);
 
+    // -- CanParseValue (L44) --
+    [Theory]
+    [InlineData("IN", " , ", false)]
+    [InlineData("IN", "a, ,b", true)]
+    [InlineData("EQUALS", "", true)]
+    public void CanParseValue_RejectsOnlyAnInListWithNoUsableItem(string op, string value, bool expected) =>
+        new StringFilterStrategy().CanParseValue(op, value).Should().Be(expected);
+
     // ── CONTAINS ──
     [Fact]
     public void Contains_ReturnsMatchingItems() =>

@@ -131,9 +131,13 @@ public static class QueryFilterService
 
             var opUpper = op.ToUpperInvariant();
 
+            // A flat key is applied under the property's declared name, so the Dynamic LINQ member
+            // access never depends on how the client cased it.
+            var memberPath = entityProperty.Contains('.', StringComparison.Ordinal) ? entityProperty : propertyInfo.Name;
+
             var strategy = ResolveStrategy(valueType);
             if (strategy is not null)
-                query = strategy.Apply(query, entityProperty, opUpper, value);
+                query = strategy.Apply(query, memberPath, opUpper, value);
         }
 
         return query;
@@ -346,7 +350,8 @@ public static class QueryFilterService
         if (PropertyCache.TryGetValue(key, out var cached))
             return cached;
 
-        var resolved = typeof(TEntity).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+        // Case-insensitive, like the sort column, the field contract and the filter dictionary.
+        var resolved = typeof(TEntity).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (resolved is not null)
             PropertyCache[key] = resolved;
 

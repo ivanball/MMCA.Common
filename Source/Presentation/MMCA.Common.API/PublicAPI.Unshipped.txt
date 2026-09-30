@@ -86,8 +86,12 @@ MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdent
 virtual MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateAsync(TIdentifierType id, TUpdateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
 const MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.TokenItemKey = "MMCA.Common.API.Concurrency.IfMatchToken" -> string!
 static MMCA.Common.API.Concurrency.SupportsIfMatchAttribute.RequiredToken(Microsoft.AspNetCore.Http.HttpContext! httpContext) -> byte[]!
-MMCA.Common.API.Idempotency.IdempotencyRecord.Deconstruct(out int StatusCode, out string! ResponseBody, out string! RequestBodyHash) -> void
-MMCA.Common.API.Idempotency.IdempotencyRecord.IdempotencyRecord(int StatusCode, string! ResponseBody, string! RequestBodyHash) -> void
+MMCA.Common.API.Idempotency.IdempotencyRecord.Deconstruct(out int StatusCode, out string! ResponseBody, out string! RequestBodyHash, out string? Location, out string? ETag) -> void
+MMCA.Common.API.Idempotency.IdempotencyRecord.IdempotencyRecord(int StatusCode, string! ResponseBody, string! RequestBodyHash, string? Location = null, string? ETag = null) -> void
+MMCA.Common.API.Idempotency.IdempotencyRecord.ETag.get -> string?
+MMCA.Common.API.Idempotency.IdempotencyRecord.ETag.init -> void
+MMCA.Common.API.Idempotency.IdempotencyRecord.Location.get -> string?
+MMCA.Common.API.Idempotency.IdempotencyRecord.Location.init -> void
 MMCA.Common.API.Idempotency.IdempotencyRecord.RequestBodyHash.get -> string!
 MMCA.Common.API.Authorization.AuthorizationExtensions.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).AddAuthorizationPolicies(System.Action<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>? configureFallback) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationHandler

@@ -17,6 +17,15 @@ internal sealed class StringFilterStrategy : IFilterStrategy
         "STARTS WITH", "ENDS WITH", "IS EMPTY", "IS NOT EMPTY", "IN"
     }.ToFrozenSet(StringComparer.Ordinal);
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Only IN has a value shape to reject: a list with no usable item would otherwise fail open and
+    /// return the unfiltered set, where every value-typed strategy refuses the same input. Every other
+    /// string operator accepts any value, including the empty string for EQUALS.
+    /// </remarks>
+    public bool CanParseValue(string op, string value) =>
+        !string.Equals(op, "IN", StringComparison.Ordinal) || FilterValueParser.ParseStringList(value).Count > 0;
+
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {

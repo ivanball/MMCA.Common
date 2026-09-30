@@ -38,15 +38,16 @@ public sealed record class DateRange : ValueObject
     public int LengthInDays => End.DayNumber - Start.DayNumber;
 
     /// <summary>
-    /// Determines whether this range overlaps with <paramref name="other"/> using half-open interval logic
-    /// (Start is inclusive, End is exclusive for overlap comparison).
+    /// Determines whether this range overlaps with <paramref name="other"/>. Both ranges are inclusive
+    /// on both ends, consistent with <see cref="Contains"/>, so two ranges that share only their
+    /// boundary day overlap, and a single-day range overlaps itself.
     /// </summary>
     /// <param name="other">The date range to test against.</param>
-    /// <returns><see langword="true"/> if the ranges share at least one point in time.</returns>
+    /// <returns><see langword="true"/> if the ranges share at least one day.</returns>
     public bool Overlaps(DateRange other)
     {
         ArgumentNullException.ThrowIfNull(other);
-        return Start < other.End && End > other.Start;
+        return Start <= other.End && End >= other.Start;
     }
 
     /// <summary>Determines whether the specified date falls within this range (inclusive).</summary>

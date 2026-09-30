@@ -36,6 +36,37 @@ public sealed class DateTimeFilterStrategyTests
             new Dictionary<string, (string, string)> { ["Occurred"] = (op, value) },
             EmptyMap);
 
+    // -- Time zone independence (L46) --
+    // The framework stores UTC. A bound carrying an offset is normalized to UTC, and a bare bound is
+    // taken as UTC, so the host's local zone never shifts which rows a filter selects.
+    [Fact]
+    public void Is_WithAnOffsetBound_MatchesTheSameUtcInstant()
+    {
+        var rows = new List<Item> { new() { Occurred = new DateTime(2026, 9, 30, 21, 0, 0, DateTimeKind.Utc) } }.AsQueryable();
+
+        var withOffset = QueryFilterService.ApplyFilters(
+            rows,
+            new Dictionary<string, (string, string)> { ["Occurred"] = ("IS", "2026-09-30T23:00:00+02:00") },
+            EmptyMap);
+        var bare = QueryFilterService.ApplyFilters(
+            rows,
+            new Dictionary<string, (string, string)> { ["Occurred"] = ("IS", "2026-09-30T21:00:00") },
+            EmptyMap);
+
+        withOffset.Should().ContainSingle();
+        bare.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void ParseDateTime_WithAnOffset_ReturnsTheUtcInstant()
+    {
+        var parsed = DateTimeFilterStrategy.ParseDateTime("2026-09-30T23:00:00+02:00");
+
+        parsed.Should().NotBeNull();
+        parsed!.Value.Kind.Should().Be(DateTimeKind.Utc);
+        parsed.Value.Hour.Should().Be(21);
+    }
+
     // ── IS ──
     [Fact]
     public void Is_ReturnsExactMatch() =>

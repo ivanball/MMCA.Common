@@ -3,6 +3,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement.Mvc;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.UseCases.Contracts;
@@ -102,9 +104,11 @@ public abstract class DataExportControllerBase<TQuery>(
 
         // Serialized here rather than returned as an ObjectResult so the response really is a file:
         // Ok(export) would negotiate content and render inline, and the point of this endpoint is a
-        // saved document. JsonSerializerOptions.Web keeps the payload byte-shape identical to every
-        // other response this API produces.
-        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(export, JsonSerializerOptions.Web);
+        // saved document. The MVC JSON options (the host's converters included) keep the payload
+        // byte-shape identical to every other response this API produces; Web is only the fallback.
+        var json = HttpContext.RequestServices?.GetService<IOptions<JsonOptions>>()?.Value.JsonSerializerOptions
+            ?? JsonSerializerOptions.Web;
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(export, json);
 
         return File(payload, ExportContentType, BuildFileName(userId, export.GeneratedOn));
     }

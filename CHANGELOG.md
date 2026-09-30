@@ -46,6 +46,18 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: `ICacheService.GetOrCreateAsync` reads presence through `TryGetAsync`, so a value-type `T` runs the factory on a miss instead of returning `default(T)` (L47).
 - Fixed: mark-all-notifications-read is one set-based `ExecuteUpdateAsync` instead of loading and tracking every unread row (L49).
 - Fixed: the inbox and notification-history pages tie-break on the id after `CreatedOn`, so equal timestamps cannot repeat or skip rows across pages (L50).
+- Fixed: `EntityControllerBase.MaxPageSize` is clamped to the query pipeline's 1000-row ceiling, and the CSV export treats a short page as the last one only when `TotalItemCount` agrees, so `Application:MaxPageSize` above 1000 no longer truncates an export silently (M120).
+- Fixed: a string `IN` filter with no usable value is refused as `Filter.Value.Invalid` instead of returning the whole set (L44).
+- Fixed: filter keys resolve their property case-insensitively, like the sort column and the field contract, and a flat key is applied under the declared property name (L45).
+- Fixed: `DateTime` filter bounds parse as UTC (an offset is honoured and normalized, a bare value is taken as UTC), so the host's time zone no longer shifts which rows match (L46).
+- Fixed: the idempotency replay body is serialized with the MVC `JsonOptions` (the host's converters), and `DataExportControllerBase` uses the same options (L60).
+- Fixed: `IdempotencyRecord` gains optional `Location` and `ETag`; a replay re-emits both, and a result with no value (`Accepted()`) stores and replays an empty body instead of JSON `null`. Records cached by an earlier version read both as null (L61).
+- Fixed: `OperationCanceledExceptionHandler` answers 499 only when the client aborted the request; any other cancellation (a downstream timeout) falls through to the 500 handler and is logged as an error (L64).
+- Fixed: gRPC error trailers percent-encode, as UTF-8, every character outside printable ASCII and `%` in the message, source and target, and `ToErrors` decodes them; plain ASCII values are unchanged on the wire (L65).
+- Fixed: `DateRange.Overlaps` is inclusive on both ends, like `Contains`, so ranges sharing a boundary day overlap and a single-day range overlaps itself (L89).
+- Fixed: the image normalizer decodes only the first frame (`DecoderOptions.MaxFrames = 1`), so a small animated upload cannot expand into one full pixel buffer per frame (L92).
+- Fixed: `SetItems` always snapshots the incoming items, so passing the backing collection itself no longer empties it (L42).
+- Fixed: `[Pii]` is inherited and `PiiRedactor` walks property overrides, so a derived type overriding a `[Pii]` property without repeating the marker stays redacted (L43).
 
 ## [1.212.0] - 2026-09-29
 

@@ -162,8 +162,7 @@ internal static class EntityCsvExporter<TEntityDTO>
                     break;
                 }
 
-                // A short page is the last page, cap or no cap.
-                if (items.Count < pageSize)
+                if (IsLastPage(items.Count, pageSize, rowsWritten, page.PaginationMetadata))
                     break;
 
                 // The cap landed exactly on a page boundary: only the total says whether anything
@@ -187,6 +186,15 @@ internal static class EntityCsvExporter<TEntityDTO>
 
         return Result.Success();
     }
+
+    /// <summary>
+    /// Decides whether the page just written was the last one. A short page is the last page only
+    /// when the total agrees: the query pipeline clamps every page to its own ceiling, so a FULL
+    /// clamped page can be shorter than a larger requested page size, and ending there would
+    /// truncate the export with no marker line.
+    /// </summary>
+    private static bool IsLastPage(int itemCount, int pageSize, int rowsWritten, PaginationMetadata metadata) =>
+        itemCount == 0 || itemCount < pageSize && rowsWritten >= metadata.TotalItemCount;
 
     /// <summary>
     /// Decides whether a DTO property type can render a faithful scalar CSV cell. See
