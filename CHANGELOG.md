@@ -20,6 +20,12 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
   is the distro's own `AzureMonitor` section (`AzureMonitor__EnableLiveMetrics=false` as an
   environment variable), which `ConfigureOpenTelemetry()` passes through untouched;
   `LiveMetricsConfigurationTests` fails if a distro upgrade stops honoring it.
+- **`MmcaGatewayHardeningTestsBase.ActiveHealthChecksExpected` (`MMCA.Common.Testing`).** Virtual,
+  default `true` (no change for existing subclasses). A host whose clusters each front one
+  platform-balanced address overrides it to `false`: ejecting the only destination can only turn a
+  slow request into a 503, and every probe bills an idle downstream replica at the Container Apps
+  active rate. When `false`, `EveryCluster_CarriesAnActiveHealthCheckProbingAlive` asserts that no
+  cluster carries an enabled active check, so a leftover block still fails the build.
 
 ## [1.211.0] - 2026-09-25
 
