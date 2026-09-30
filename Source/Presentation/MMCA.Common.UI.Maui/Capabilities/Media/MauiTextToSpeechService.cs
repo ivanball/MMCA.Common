@@ -8,6 +8,8 @@ namespace MMCA.Common.UI.Maui.Capabilities.Media;
 /// installed voice matching the current UI culture (two-letter language match) and falls back
 /// to the platform default voice — devices without an es voice still speak rather than throw.
 /// MAUI exposes no stop API, so <see cref="StopAsync"/> cancels the in-flight utterance's token.
+/// Calls are expected from the renderer dispatcher; two off-dispatcher callers racing a live
+/// utterance can orphan a token source.
 /// </summary>
 public sealed partial class MauiTextToSpeechService : ITextToSpeechService, IDisposable
 {

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Components.Server.Circuits;
@@ -18,10 +19,11 @@ namespace MMCA.Common.UI.Web.Tests.Hardening;
 /// </summary>
 public sealed class BoundedCircuitHandlerTests
 {
-    // Circuit has no public constructor, and the handler deliberately reads nothing off it: the
-    // count is all it keeps. Driving the callbacks with null is therefore honest rather than a
-    // shortcut, and it stops compiling by design the day the handler starts reading the circuit.
-    private static readonly Circuit NoCircuit = null!;
+    // Circuit has no public constructor. An uninitialized instance is a distinct reference, which is
+    // all the handler needs: it keys its admitted set by reference and reads no member of the circuit
+    // (L67). Each opened circuit is held in a local so it is closed by the same reference, exactly as
+    // the framework hands the same Circuit to both callbacks.
+    private static Circuit NewCircuit() => (Circuit)RuntimeHelpers.GetUninitializedObject(typeof(Circuit));
 
     [Fact]
     public async Task OnCircuitOpened_UpToTheCeiling_IsAccepted()
@@ -30,7 +32,7 @@ public sealed class BoundedCircuitHandlerTests
 
         for (var i = 0; i < 3; i++)
         {
-            await handler.OnCircuitOpenedAsync(NoCircuit, TestContext.Current.CancellationToken);
+            await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
         }
 
         handler.ActiveCircuits.Should().Be(3);
@@ -40,11 +42,11 @@ public sealed class BoundedCircuitHandlerTests
     public async Task OnCircuitOpened_PastTheCeiling_IsRefusedAndLeaksNoPermit()
     {
         var handler = CreateHandler(maxActiveCircuits: 2);
-        await handler.OnCircuitOpenedAsync(NoCircuit, TestContext.Current.CancellationToken);
-        await handler.OnCircuitOpenedAsync(NoCircuit, TestContext.Current.CancellationToken);
+        await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
+        await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
 
         var refused = async () =>
-            await handler.OnCircuitOpenedAsync(NoCircuit, TestContext.Current.CancellationToken);
+            await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
 
         await refused.Should().ThrowAsync<InvalidOperationException>(
             "a circuit past the ceiling must not open: the handler contract has no refusal return value");
@@ -57,10 +59,11 @@ public sealed class BoundedCircuitHandlerTests
     public async Task OnCircuitClosed_ReleasesThePermit()
     {
         var handler = CreateHandler(maxActiveCircuits: 1);
-        await handler.OnCircuitOpenedAsync(NoCircuit, TestContext.Current.CancellationToken);
+        var first = NewCircuit();
+        await handler.OnCircuitOpenedAsync(first, TestContext.Current.CancellationToken);
 
-        await handler.OnCircuitClosedAsync(NoCircuit, TestContext.Current.CancellationToken);
-        await handler.OnCircuitOpenedAsync(NoCircuit, TestContext.Current.CancellationToken);
+        await handler.OnCircuitClosedAsync(first, TestContext.Current.CancellationToken);
+        await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
 
         handler.ActiveCircuits.Should().Be(1);
     }
@@ -74,9 +77,33 @@ public sealed class BoundedCircuitHandlerTests
     {
         var handler = CreateHandler(maxActiveCircuits: 1);
 
-        await handler.OnCircuitClosedAsync(NoCircuit, TestContext.Current.CancellationToken);
+        await handler.OnCircuitClosedAsync(NewCircuit(), TestContext.Current.CancellationToken);
 
         handler.ActiveCircuits.Should().Be(0);
+    }
+
+    /// <summary>
+    /// L67: the framework closes a refused circuit too, and that close must not release a permit
+    /// another live circuit holds, or a flood of refused opens would walk the count down and let
+    /// circuits past the ceiling.
+    /// </summary>
+    [Fact]
+    public async Task OnCircuitClosed_ForARefusedCircuit_DoesNotReleaseSomeoneElsesPermit()
+    {
+        var handler = CreateHandler(maxActiveCircuits: 2);
+        await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
+        await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
+        var refusedCircuit = NewCircuit();
+        var openRefused = async () =>
+            await handler.OnCircuitOpenedAsync(refusedCircuit, TestContext.Current.CancellationToken);
+        await openRefused.Should().ThrowAsync<InvalidOperationException>();
+
+        await handler.OnCircuitClosedAsync(refusedCircuit, TestContext.Current.CancellationToken);
+
+        handler.ActiveCircuits.Should().Be(2, "the refused circuit never held a permit");
+        var openAnother = async () =>
+            await handler.OnCircuitOpenedAsync(NewCircuit(), TestContext.Current.CancellationToken);
+        await openAnother.Should().ThrowAsync<InvalidOperationException>("the ceiling is still full");
     }
 
     /// <summary>

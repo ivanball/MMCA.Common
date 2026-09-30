@@ -71,6 +71,34 @@ public sealed class ClickableCardTests : BunitTestBase
     }
 
     [Fact]
+    public void EnterOnANestedControl_DoesNotActivateTheCard()
+    {
+        // M130: Enter on a button inside the card belongs to that button, not to the card.
+        var activations = 0;
+        var innerPresses = 0;
+
+        // The nested control handles its own keydown, as a MudButton or a link would.
+        var cut = RenderUnderTest<ClickableCard>(p => p
+            .Add(c => c.OnActivate, EventCallback.Factory.Create(this, () => activations++))
+            .AddChildContent(builder =>
+            {
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "id", "inner");
+                builder.AddAttribute(2, "type", "button");
+                builder.AddAttribute(3, "onkeydown", EventCallback.Factory.Create<KeyboardEventArgs>(this, () => innerPresses++));
+                builder.AddContent(4, "Delete");
+                builder.CloseElement();
+            }));
+
+        cut.Find("#inner").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        innerPresses.Should().Be(1);
+        activations.Should().Be(0, "a keydown that starts on a nested control must not reach the card");
+
+        cut.Find(".mobile-list-card").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        activations.Should().Be(1, "Enter on the focused card itself still activates it");
+    }
+
+    [Fact]
     public void Click_StillRaisesTheCallback()
     {
         // The keyboard path is additive: the pointer behaviour the lists always had is unchanged.

@@ -1,8 +1,12 @@
+using System.Net;
 using AwesomeAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Resilience;
+using Polly;
+using Polly.Retry;
+using Polly.Timeout;
 using Xunit;
 
 namespace MMCA.Common.Grpc.Tests;
@@ -70,6 +74,39 @@ public sealed class ResilienceHandlerTests
             "east-west gRPC calls bypass the Gateway's active health checks, so the breaker shape is explicit rather than left at the library default");
         options.CircuitBreaker.MinimumThroughput.Should().Be(GrpcResilienceDefaults.MinimumThroughput);
         options.CircuitBreaker.BreakDuration.Should().Be(GrpcResilienceDefaults.BreakDuration);
+    }
+
+    // -- The retry must never replay a call that may have reached the handler (L80) --
+    [Fact]
+    public async Task AddTypedGrpcClient_RetriesOnlyConnectionFailures()
+    {
+        var services = new ServiceCollection();
+        services.AddTypedGrpcClient<FakeGrpcClient>("fake-service");
+        await using var provider = services.BuildServiceProvider();
+        var options = provider
+            .GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>()
+            .Get($"{nameof(FakeGrpcClient)}-standard");
+
+        (await ShouldHandleAsync(options, Outcome.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable))))
+            .Should().BeFalse("a 503 came from a server that may have run the call");
+        (await ShouldHandleAsync(options, Outcome.FromException<HttpResponseMessage>(new TimeoutRejectedException())))
+            .Should().BeFalse("a timed-out attempt may still be running on the server");
+        (await ShouldHandleAsync(options, Outcome.FromException<HttpResponseMessage>(new HttpRequestException("connection refused"))))
+            .Should().BeTrue("a failure to reach the service is the replica-rollover case the retry exists for");
+    }
+
+    private static async Task<bool> ShouldHandleAsync(HttpStandardResilienceOptions options, Outcome<HttpResponseMessage> outcome)
+    {
+        var context = ResilienceContextPool.Shared.Get(TestContext.Current.CancellationToken);
+        try
+        {
+            return await options.Retry.ShouldHandle(
+                new RetryPredicateArguments<HttpResponseMessage>(context, outcome, attemptNumber: 0));
+        }
+        finally
+        {
+            ResilienceContextPool.Shared.Return(context);
+        }
     }
 
     // ── The values themselves, pinned so a silent edit shows up as a failing test ──

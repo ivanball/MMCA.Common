@@ -34,6 +34,9 @@ export async function copyText(text) {
     }
 }
 
+// Returns true unless window.open threw. A blocked popup cannot be told apart from an opened one
+// here: with the noopener (or noreferrer) feature the HTML spec makes window.open return null even
+// when the tab opened, so a "!== null" check would report every open as a failure.
 export function openExternal(url) {
     try {
         window.open(url, '_blank', 'noopener,noreferrer');

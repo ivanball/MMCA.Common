@@ -97,6 +97,20 @@ public class ListPageQueryStateServiceTests
     }
 
     [Fact]
+    public void ParseQueryString_ClampsOutOfRangeValuesToTheirDefaults()
+    {
+        // L77: an out-of-range value falls back to the default exactly as an unparsable one does.
+        var negative = ListPageQueryStateService.ParseQueryString("?p=-3&ps=-1&mp=0");
+        negative.Page.Should().Be(0);
+        negative.PageSize.Should().Be(0);
+        negative.MobilePage.Should().Be(1);
+
+        ListPageQueryStateService.ParseQueryString("?ps=5000").PageSize.Should().Be(0);
+        ListPageQueryStateService.ParseQueryString("?mp=-1").MobilePage.Should().Be(1);
+        ListPageQueryStateService.ParseQueryString("?ps=1000").PageSize.Should().Be(1000, "the ceiling itself is allowed");
+    }
+
+    [Fact]
     public void ParseQueryString_EmptyValues_AreIgnoredFromFilters()
     {
         var state = ListPageQueryStateService.ParseQueryString("?q=&f:status=");

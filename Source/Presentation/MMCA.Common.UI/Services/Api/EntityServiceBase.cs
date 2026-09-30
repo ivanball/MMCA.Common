@@ -255,13 +255,17 @@ public abstract class EntityServiceBase<TEntityDTO, TIdentifierType>(
             return Result.Success(cached);
         }
 
+        // Captured before the GET: a write that invalidates this endpoint while the read is in flight
+        // moves the generation, and the late Set below is then dropped instead of re-caching the
+        // value the write just made stale.
+        var generation = ReadCache.Generation;
         var result = await SendGetAsync<T>(url, cancellationToken);
 
         // Only a success is stored: caching a failure would pin a transient outage in front of the
         // user for the whole TTL, and a 404 would survive the create that fixed it.
         if (result is { IsSuccess: true, Value: not null })
         {
-            ReadCache.Set(url, result.Value);
+            ReadCache.Set(url, result.Value, generation);
         }
 
         return result;

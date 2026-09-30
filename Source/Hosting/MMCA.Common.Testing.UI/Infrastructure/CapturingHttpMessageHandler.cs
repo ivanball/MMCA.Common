@@ -14,7 +14,8 @@ namespace MMCA.Common.Testing.UI;
 /// not-found behavior and keeps incidental refresh calls out of each test's setup. Responses are
 /// built fresh per request so a Polly retry pipeline never reuses a consumed
 /// <see cref="HttpContent"/>. Every request is recorded (method, URI, Authorization header, every
-/// request and content header, body).
+/// request and content header, body). Recording and route registration are thread-safe, so a service
+/// that fans requests out concurrently loses none; <see cref="Requests"/> returns a snapshot.
 /// </summary>
 public sealed class CapturingHttpMessageHandler : HttpMessageHandler
 {
@@ -23,6 +24,7 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
     private readonly Func<HttpRequestMessage, HttpResponseMessage>? _respond;
     private readonly List<Route> _routes = [];
     private readonly List<CapturedRequest> _requests = [];
+    private readonly Lock _sync = new();
 
     /// <summary>
     /// Route-registration mode: register canned responses via <see cref="SetResponse"/>; unmatched
@@ -38,8 +40,17 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
     /// </summary>
     public CapturingHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) => _respond = respond;
 
-    /// <summary>Every request the services sent, in order.</summary>
-    public IReadOnlyList<CapturedRequest> Requests => _requests;
+    /// <summary>A snapshot of every request the services sent so far, in order.</summary>
+    public IReadOnlyList<CapturedRequest> Requests
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return [.. _requests];
+            }
+        }
+    }
 
     /// <summary>
     /// Registers a canned response for the given method + absolute path (e.g. <c>"/orders/42/checkout"</c>).
@@ -54,19 +65,33 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
             string raw => raw,
             _ => JsonSerializer.Serialize(body, WebJson),
         };
-        _routes.Add(new Route(method, absolutePath, statusCode, json));
+        lock (_sync)
+        {
+            _routes.Add(new Route(method, absolutePath, statusCode, json));
+        }
     }
 
     /// <summary>All captured requests matching the given method + absolute path.</summary>
-    public IReadOnlyList<CapturedRequest> RequestsFor(HttpMethod method, string absolutePath) =>
-    [
-        .. _requests.Where(r =>
-            r.Method == method && string.Equals(r.Path, absolutePath, StringComparison.OrdinalIgnoreCase)),
-    ];
+    public IReadOnlyList<CapturedRequest> RequestsFor(HttpMethod method, string absolutePath)
+    {
+        lock (_sync)
+        {
+            return
+            [
+                .. _requests.Where(r =>
+                    r.Method == method && string.Equals(r.Path, absolutePath, StringComparison.OrdinalIgnoreCase)),
+            ];
+        }
+    }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        _requests.Add(await CaptureAsync(request, cancellationToken).ConfigureAwait(false));
+        var captured = await CaptureAsync(request, cancellationToken).ConfigureAwait(false);
+        lock (_sync)
+        {
+            _requests.Add(captured);
+        }
+
         return Respond(request);
     }
 
@@ -119,10 +144,16 @@ public sealed class CapturingHttpMessageHandler : HttpMessageHandler
     private HttpResponseMessage Respond(HttpRequestMessage request)
     {
         var path = request.RequestUri?.AbsolutePath;
-        var route = path is null
-            ? null
-            : _routes.LastOrDefault(r =>
-                r.Method == request.Method && string.Equals(r.Path, path, StringComparison.OrdinalIgnoreCase));
+        Route? route = null;
+        if (path is not null)
+        {
+            lock (_sync)
+            {
+                route = _routes.LastOrDefault(r =>
+                    r.Method == request.Method && string.Equals(r.Path, path, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
         if (route is not null)
         {
             return route.ToResponse();

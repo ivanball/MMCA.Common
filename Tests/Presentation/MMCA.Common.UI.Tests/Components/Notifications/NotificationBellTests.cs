@@ -312,6 +312,46 @@ public sealed class NotificationBellTests : BunitTestBase
     }
 
     [Fact]
+    public void WithTwoBells_APushRefreshIsReadOnce()
+    {
+        // L71: hosts render the bell twice (app bar and mobile nav); only the slot holder may answer a
+        // push, or every push reads the API once per placement.
+        CountIs(2);
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1));
+
+        var first = RenderUnderTest<NotificationBell>(_ => { });
+        var second = RenderUnderTest<NotificationBell>(_ => { });
+        first.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _state.RequestRefresh();
+
+        first.WaitForAssertion(() => VerifyFetchCount(Times.Exactly(2)));
+        first.Render();
+        second.Render();
+        VerifyFetchCount(Times.Exactly(2));
+    }
+
+    [Fact]
+    public void WithPollingDisabled_TheBellStillReadsOnceAndNeverStartsATimer()
+    {
+        // L76: a zero interval means "off"; PeriodicTimer rejects it, which used to fault the circuit
+        // on the first render.
+        var counting = new TimerCountingTimeProvider(_clock);
+        Services.AddSingleton<TimeProvider>(counting);
+        CountIs(2);
+        BellOptions(navigationRefreshMaxAge: TimeSpan.FromHours(1), pollInterval: TimeSpan.Zero);
+
+        var cut = RenderUnderTest<NotificationBell>(_ => { });
+        cut.WaitForAssertion(() => VerifyFetchCount(Times.Once()));
+
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        cut.Render();
+
+        counting.TimersCreated.Should().Be(0);
+        VerifyFetchCount(Times.Once());
+    }
+
+    [Fact]
     public void ThePeriodicTick_RefetchesUnconditionally()
     {
         // The tick runs off the injected TimeProvider (the PeriodicTimer overload), so the poll is

@@ -43,3 +43,9 @@ internal sealed class TwoMemberClockFixture
 
     public DateTime StillReported() => DateTime.UtcNow;
 }
+
+/// <summary>Reads the ambient local date through <c>DateTime.Today</c>, the fifth ambient-clock getter.</summary>
+internal sealed class TodayReadingFixture
+{
+    public DateOnly Stamp() => DateOnly.FromDateTime(DateTime.Today);
+}

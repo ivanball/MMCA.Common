@@ -106,3 +106,15 @@ internal static class NonThrowingFixture
 {
     internal static bool CanClose(bool alreadyClosed) => !alreadyClosed;
 }
+
+/// <summary>
+/// A switch expression with no discard arm: the compiler writes its own default-arm throw of
+/// <c>SwitchExpressionException</c> into this method. That throw is not the developer's, so the rule
+/// must stay silent about it. The CS8509 suppression is what makes the compiler emit it at all.
+/// </summary>
+internal static class SwitchExpressionFixture
+{
+#pragma warning disable CS8509, IDE0072 // The switch expression does not handle all possible values: deliberate, see summary.
+    internal static string Label(int n) => n switch { 1 => "one", 2 => "two" };
+#pragma warning restore CS8509, IDE0072
+}

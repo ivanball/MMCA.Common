@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -102,6 +103,52 @@ public sealed class ToolPolicyTests
             TestContext.Current.CancellationToken);
 
         inner.LastOptions!.Tools.Should().ContainSingle().Which.Name.Should().Be("lookup");
+    }
+
+    [Fact]
+    public async Task AJsonTrueMarker_ReadsConsequential_AndIsWithheldWithoutConfirmation()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
+        using var marker = JsonDocument.Parse("true");
+
+        await client.GetResponseAsync(
+            Prompt,
+            WithTools(StubTool.WithMarker("send_email", marker.RootElement)),
+            TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.Tools.Should().BeNull("a marker bound from JSON is still the marker, and the gate fails closed");
+    }
+
+    [Fact]
+    public async Task AJsonFalseMarker_ReadsHarmless_AndTheToolIsOffered()
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
+        using var marker = JsonDocument.Parse("false");
+
+        await client.GetResponseAsync(
+            Prompt,
+            WithTools(StubTool.WithMarker("lookup", marker.RootElement)),
+            TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.Tools.Should().ContainSingle().Which.Name.Should().Be("lookup");
+    }
+
+    [Theory]
+    [InlineData("not-a-bool")]
+    [InlineData(1)]
+    public async Task AnUnrecognisedMarker_ReadsConsequential(object marker)
+    {
+        using var inner = new StubChatClient();
+        using var client = new BoundedChatClient(inner, Settings(allowTools: true), [new StubToolPolicy()]);
+
+        await client.GetResponseAsync(
+            Prompt,
+            WithTools(StubTool.WithMarker("send_email", marker)),
+            TestContext.Current.CancellationToken);
+
+        inner.LastOptions!.Tools.Should().BeNull("only a definite false is harmless");
     }
 
     [Fact]

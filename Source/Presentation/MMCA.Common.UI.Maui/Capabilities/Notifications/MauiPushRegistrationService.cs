@@ -17,38 +17,36 @@ public sealed partial class MauiPushRegistrationService(
     IPushDeviceTokenProvider tokenProvider,
     IHttpClientFactory httpClientFactory,
     IDevicePreferences devicePreferences,
-    ILogger<MauiPushRegistrationService> logger) : IPushRegistrationService
+    ILogger<MauiPushRegistrationService> logger) : IPushRegistrationService, IDisposable
 {
     private const string InstallationIdKey = "mmca.push.installationId";
+
+    private readonly SemaphoreSlim _registration = new(1, 1);
 
     /// <inheritdoc />
     public bool IsSupported => true;
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Serialized end to end. <c>OnNewToken</c> fires a registration on a Firebase thread while the
+    /// login pass runs one from the renderer; with an empty preference store (an iOS reinstall keeps
+    /// the Keychain session but not the preferences) both passes used to create an installation id
+    /// and PUT it, leaving two server rows for one device. A lock around the id creation alone would
+    /// still let both passes PUT, one with a stale id.
+    /// </remarks>
     public async Task<bool> RegisterAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var token = await tokenProvider.GetTokenAsync(cancellationToken).ConfigureAwait(false);
-            if (token is null)
+            await _registration.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                return false;
+                return await RegisterCoreAsync(cancellationToken).ConfigureAwait(false);
             }
-
-            var installationId = await GetOrCreateInstallationIdAsync(cancellationToken).ConfigureAwait(false);
-            using var client = httpClientFactory.CreateClient("APIClient");
-            var response = await client.PutAsJsonAsync(
-                new Uri("Notifications/Devices", UriKind.Relative),
-                new { InstallationId = installationId, token.Platform, PushChannel = token.Token },
-                cancellationToken).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
+            finally
             {
-                LogRegistrationRejected(logger, (int)response.StatusCode);
-                return false;
+                _registration.Release();
             }
-
-            return true;
         }
 #pragma warning disable CA1031 // Do not catch general exception types — registration is best-effort
         catch (Exception ex)
@@ -57,6 +55,33 @@ public sealed partial class MauiPushRegistrationService(
             LogRegistrationFailed(logger, ex);
             return false;
         }
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => _registration.Dispose();
+
+    private async Task<bool> RegisterCoreAsync(CancellationToken cancellationToken)
+    {
+        var token = await tokenProvider.GetTokenAsync(cancellationToken).ConfigureAwait(false);
+        if (token is null)
+        {
+            return false;
+        }
+
+        var installationId = await GetOrCreateInstallationIdAsync(cancellationToken).ConfigureAwait(false);
+        using var client = httpClientFactory.CreateClient("APIClient");
+        var response = await client.PutAsJsonAsync(
+            new Uri("Notifications/Devices", UriKind.Relative),
+            new { InstallationId = installationId, token.Platform, PushChannel = token.Token },
+            cancellationToken).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            LogRegistrationRejected(logger, (int)response.StatusCode);
+            return false;
+        }
+
+        return true;
     }
 
     /// <inheritdoc />

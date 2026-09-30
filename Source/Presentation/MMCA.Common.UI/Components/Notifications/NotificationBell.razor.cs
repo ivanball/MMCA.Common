@@ -49,7 +49,6 @@ public partial class NotificationBell : IDisposable
         }
 
         State.OnChange += HandleStateChanged;
-        State.OnRefreshRequested += HandleRefreshRequested;
         State.OnPollerSlotFreed += HandlePollerSlotFreed;
 
         // Only the slot holder polls, so duplicate bell placements do not duplicate API calls.
@@ -75,6 +74,11 @@ public partial class NotificationBell : IDisposable
         _isActivePoller = true;
         NavigationManager.LocationChanged += OnLocationChanged;
 
+        // Push refreshes belong to the slot holder, like the navigation refresh above: subscribing every
+        // bell made each push read the API once per placement. A takeover runs this method again, so
+        // the surviving bell picks the subscription up with the slot; Dispose unsubscribes.
+        State.OnRefreshRequested += HandleRefreshRequested;
+
         // The first read is unconditional: nothing has established the count yet.
         await RefreshUnreadCountAsync();
 
@@ -83,6 +87,13 @@ public partial class NotificationBell : IDisposable
         // leak a PeriodicTimer nothing disposes and fault the discarded task on a disposed _cts. The
         // slot was released by Dispose through UnregisterPoller, so there is nothing else to undo.
         if (_disposed)
+        {
+            return;
+        }
+
+        // A zero or negative interval switches the periodic backstop off (push and navigation refresh
+        // keep working). PeriodicTimer rejects such a period, and throwing here faulted the circuit.
+        if (Options.Value.PollInterval <= TimeSpan.Zero)
         {
             return;
         }

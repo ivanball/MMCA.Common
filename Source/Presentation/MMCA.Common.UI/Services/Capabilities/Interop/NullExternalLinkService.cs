@@ -10,5 +10,5 @@ public sealed class NullExternalLinkService : IExternalLinkService
     public bool InterceptsLinks => false;
 
     /// <inheritdoc />
-    public Task OpenAsync(Uri uri, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<bool> OpenAsync(Uri uri, CancellationToken cancellationToken = default) => Task.FromResult(false);
 }

@@ -12,7 +12,8 @@ namespace MMCA.Common.UI.Components.Capabilities;
 /// preference/stored-token precondition, and the focus handling that makes the locked panel a real
 /// interaction boundary rather than a picture of one. The markup half is
 /// <c>BiometricGate.razor</c>, which supplies the injected services as properties on this same
-/// partial class.
+/// partial class. The precondition read never throws: a failure before the owner opted in keeps the
+/// gate open, and a failure after it fails closed (see <see cref="ShouldLockAsync"/>).
 /// </summary>
 public partial class BiometricGate
 {
@@ -129,16 +130,40 @@ public partial class BiometricGate
         }
     }
 
+    /// <summary>
+    /// Whether the gate must lock now. Never throws (it runs from the first render and from resume):
+    /// an unreadable preference means nothing says the owner opted in, so the gate stays open rather
+    /// than forcing a biometric prompt on a device that may have none enrolled; an unreadable stored
+    /// session AFTER the owner opted in fails closed, because the session state is unknown.
+    /// </summary>
     private async Task<bool> ShouldLockAsync()
     {
-        var appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
+        bool appLockEnabled;
+        try
+        {
+            appLockEnabled = await Preferences.GetAsync(DevicePreferenceKeys.AppLockEnabled, false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Reading the app-lock preference failed; the gate stays open.");
+            return false;
+        }
+
         if (!appLockEnabled)
         {
             return false;
         }
 
-        // Nothing to protect without a stored session.
-        return await TokenStorage.GetRefreshTokenAsync() is not null;
+        try
+        {
+            // Nothing to protect without a stored session.
+            return await TokenStorage.GetRefreshTokenAsync() is not null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Reading the stored session failed after app lock was enabled; the gate locks.");
+            return true;
+        }
     }
 
     private async Task UnlockAsync()

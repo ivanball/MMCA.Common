@@ -17,6 +17,7 @@ namespace MMCA.Common.AI.Testing;
 public sealed class ReplayChatClient : IChatClient
 {
     private readonly IReadOnlyList<ChatResponse> _responses;
+    private readonly Lock _sync = new();
 
     /// <summary>
     /// Creates a client that answers every call with the one recorded response.
@@ -104,12 +105,19 @@ public sealed class ReplayChatClient : IChatClient
     {
         ArgumentNullException.ThrowIfNull(messages);
 
-        LastMessages = [.. messages];
-        LastOptions = options;
+        ChatMessage[] recorded = [.. messages];
 
-        var index = Math.Min(CallCount, _responses.Count - 1);
-        CallCount++;
+        // One lock over the index read, the increment and the last-request writes, so concurrent
+        // calls neither lose a count nor pair one call's messages with another call's options.
+        lock (_sync)
+        {
+            LastMessages = recorded;
+            LastOptions = options;
 
-        return _responses[index];
+            var index = Math.Min(CallCount, _responses.Count - 1);
+            CallCount++;
+
+            return _responses[index];
+        }
     }
 }

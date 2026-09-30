@@ -68,6 +68,17 @@ public sealed class DomainThrowFitnessTests
     }
 
     [Fact]
+    public void CompilerSwitchExpressionThrow_IsNotFlagged()
+    {
+        var act = () => ArchitectureRules.DomainThrowsOnlyArgumentGuards(_map, NonFixtureThrows);
+
+        act.Should().Throw<XunitException>()
+            .Which.Message.Should().NotContain(
+                "SwitchExpressionException",
+                "the default-arm throw of a switch expression is written by the compiler, not by the developer");
+    }
+
+    [Fact]
     public void BareRethrow_IsNotFlagged()
     {
         var act = () => ArchitectureRules.DomainThrowsOnlyArgumentGuards(_map, NonFixtureThrows);

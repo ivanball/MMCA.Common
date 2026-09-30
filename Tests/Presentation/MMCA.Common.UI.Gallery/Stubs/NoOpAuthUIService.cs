@@ -76,4 +76,7 @@ internal sealed class NoOpAuthUIService : IAuthUIService
 
     public Task<Result> RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result.Failure(Unavailable));
+
+    public Task<Result> RevokeAllSessionsAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result.Failure(Unavailable));
 }

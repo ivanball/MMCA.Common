@@ -61,6 +61,8 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
     /// <summary>
     /// Consumes the pending attempt and reports whether <paramref name="returnedState"/> may be
     /// exchanged. The attempt is removed either way, so a value is good for exactly one completion.
+    /// When a pending attempt exists the redirect must carry its value back: an absent or empty
+    /// <paramref name="returnedState"/> is refused, since every legitimate flow round-trips it.
     /// </summary>
     /// <param name="returnedState">The state the completion redirect carried, if any.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -80,10 +82,11 @@ public sealed class OAuthFlowStateStore(ILocalCacheStore store, TimeProvider? ti
             return false;
         }
 
-        // An empty returned state means the redirect could not carry one back; the attempt marker
-        // is then the whole binding. A non-empty one must match exactly.
-        return string.IsNullOrEmpty(returnedState)
-            || string.Equals(pending.State, returnedState, StringComparison.Ordinal);
+        // A pending attempt exists, so the redirect must carry its value back. An absent value is a
+        // completion this client did not start with (every legitimate flow round-trips the state),
+        // and accepting it would let a pasted link bypass the binding by omitting the parameter.
+        return !string.IsNullOrEmpty(returnedState)
+            && string.Equals(pending.State, returnedState, StringComparison.Ordinal);
     }
 
     private sealed record PendingAttempt(string State, DateTimeOffset StartedAt);

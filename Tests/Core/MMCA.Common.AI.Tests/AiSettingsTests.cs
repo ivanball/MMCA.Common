@@ -71,6 +71,39 @@ public sealed class AiSettingsTests
     }
 
     [Fact]
+    public void Enabled_RejectsATimeoutAboveTheCeiling()
+    {
+        // "Ai:Timeout": 60 binds as sixty DAYS, which passes a positivity check and then throws on
+        // every call where the timeout is armed.
+        var results = Validate(new AiSettings
+        {
+            Enabled = true,
+            Provider = "Anthropic",
+            Model = "claude-haiku-4-5",
+            ApiKey = "key",
+            Timeout = TimeSpan.FromDays(60),
+        });
+
+        results.Should().ContainSingle()
+            .Which.MemberNames.Should().Contain(nameof(AiSettings.Timeout));
+    }
+
+    [Fact]
+    public void Enabled_AcceptsATimeoutAtTheCeiling()
+    {
+        var results = Validate(new AiSettings
+        {
+            Enabled = true,
+            Provider = "Anthropic",
+            Model = "claude-haiku-4-5",
+            ApiKey = "key",
+            Timeout = AiSettings.MaxTimeout,
+        });
+
+        results.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Enabled_RejectsARelativeEndpoint()
     {
         var results = Validate(new AiSettings

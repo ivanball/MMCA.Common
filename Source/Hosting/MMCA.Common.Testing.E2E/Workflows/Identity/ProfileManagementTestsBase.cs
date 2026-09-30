@@ -22,6 +22,19 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
     /// </summary>
     protected virtual bool ProfileSupportsEmailChange => false;
 
+    /// <summary>
+    /// The snackbar text the profile page shows once the name save has completed. The test waits for it
+    /// before re-navigating: navigating away while the save is in flight cancels the write, and without
+    /// the wait the read-back could run before the save persisted.
+    /// </summary>
+    protected virtual string NameSavedMessage => "Name updated successfully.";
+
+    /// <summary>The snackbar text shown once the address save has completed (see <see cref="NameSavedMessage"/>).</summary>
+    protected virtual string AddressSavedMessage => "Address updated successfully.";
+
+    /// <summary>The snackbar text shown once the email save has completed (see <see cref="NameSavedMessage"/>).</summary>
+    protected virtual string EmailSavedMessage => "Email updated successfully.";
+
     [Fact]
     public async Task ChangeName_ShouldUpdateProfileName()
     {
@@ -40,7 +53,7 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         await profilePage.LastNameField.ClearAsync().ConfigureAwait(false);
         await profilePage.LastNameField.FillAsync(newLastName).ConfigureAwait(false);
         await profilePage.SaveNameButton.ClickAsync().ConfigureAwait(false);
-        await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+        await Expect(Page.GetByText(NameSavedMessage)).ToBeVisibleAsync(new() { Timeout = 30_000 }).ConfigureAwait(false);
 
         // Assert — reload profile and verify name persisted
         await profilePage.GotoAsync().ConfigureAwait(false);
@@ -67,7 +80,7 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         await profilePage.ZipCodeField.FillAsync("12345").ConfigureAwait(false);
         await profilePage.CountryField.FillAsync("TestCountry").ConfigureAwait(false);
         await profilePage.SaveAddressButton.ClickAsync().ConfigureAwait(false);
-        await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+        await Expect(Page.GetByText(AddressSavedMessage)).ToBeVisibleAsync(new() { Timeout = 30_000 }).ConfigureAwait(false);
 
         // Assert — reload and verify
         await profilePage.GotoAsync().ConfigureAwait(false);
@@ -134,7 +147,7 @@ public abstract class ProfileManagementTestsBase : E2ETestBase
         await emailField.ClearAsync().ConfigureAwait(false);
         await emailField.FillAsync(newEmail).ConfigureAwait(false);
         await Page.GetByRole(AriaRole.Button, new() { Name = "Save Email" }).ClickAsync().ConfigureAwait(false);
-        await Page.WaitForLoadStateAsync(LoadState.Load).ConfigureAwait(false);
+        await Expect(Page.GetByText(EmailSavedMessage)).ToBeVisibleAsync(new() { Timeout = 30_000 }).ConfigureAwait(false);
 
         // Assert — reload and verify
         await profilePage.GotoAsync().ConfigureAwait(false);

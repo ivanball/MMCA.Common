@@ -24,6 +24,8 @@ public static class HttpResilienceDefaults
     /// hop multiplying its own full retry budget turns a backend brownout into an up-to-16x
     /// request storm at exactly the wrong moment. One transient-fault retry per hop plus the
     /// UI-owned policy bounds the worst case while still absorbing connection blips.
+    /// The retry never replays a mutation: the HTTP clients refuse it for POST and PATCH, and the gRPC
+    /// clients (all POST) retry only a failure to reach the service.
     /// </summary>
     public static int MaxRetryAttempts => 1;
 

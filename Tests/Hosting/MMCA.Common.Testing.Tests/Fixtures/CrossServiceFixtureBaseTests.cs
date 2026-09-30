@@ -27,6 +27,18 @@ public class CrossServiceFixtureBaseTests
     }
 
     [Fact]
+    public void ComposeConnectionString_KeepsTheLastKeyIntact_WhenTheBaseHasNoTrailingSeparator()
+    {
+        // The SQL fixture delegates here: a base ending in "Password=secret" must not be glued onto
+        // the catalog key ("Password=secretDatabase=X").
+        var composed = CrossServiceFixtureBase.ComposeConnectionString("Server=localhost,1433;User Id=sa;Password=secret", "Db");
+
+        var builder = new SqlConnectionStringBuilder(composed);
+        builder.InitialCatalog.Should().Be("Db");
+        builder.Password.Should().Be("secret");
+    }
+
+    [Fact]
     public void ComposeConnectionString_WithoutAnApplicationName_StaysOrdinallyEqualToTheTopLevelString()
     {
         var first = CrossServiceFixtureBase.ComposeConnectionString(BaseConnectionString, "ADC_Conference");

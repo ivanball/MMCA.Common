@@ -16,9 +16,10 @@ public abstract class DataResidencyTestsBase
     protected abstract IArchitectureMap Map { get; }
 
     /// <summary>
-    /// Region claims (however spelled — comparison is whitespace-insensitive and case-insensitive) that
-    /// must NOT appear in <c>PRIVACY.md</c>, e.g. a stale pre-migration region or a foreign region copied
-    /// from a sibling repo's policy.
+    /// Region claims (however spelled: comparison is whitespace-insensitive, case-insensitive and
+    /// whole-token: a region that is a prefix of another region does not match it) that must NOT appear
+    /// in <c>PRIVACY.md</c>, e.g. a stale pre-migration region or a foreign region copied from a sibling
+    /// repo's policy.
     /// </summary>
     protected virtual IReadOnlyList<string> ForbiddenResidencyClaims => [];
 
@@ -32,16 +33,49 @@ public abstract class DataResidencyTestsBase
             because: "the deployed data-storage region must be parseable from the repo's infrastructure source of truth");
 
         var privacyPolicy = File.ReadAllText(Path.Combine(repoRoot, "PRIVACY.md"));
-        var normalizedPolicy = Normalize(privacyPolicy);
 
-        normalizedPolicy.Should().Contain(Normalize(region),
+        ContainsRegionClaim(privacyPolicy, region).Should().BeTrue(
             because: $"PRIVACY.md must state the actual data-storage region ('{region}') where the repo provisions the databases holding personal data (rubric §30)");
 
         foreach (var claim in ForbiddenResidencyClaims)
         {
-            normalizedPolicy.Should().NotContain(Normalize(claim),
+            ContainsRegionClaim(privacyPolicy, claim).Should().BeFalse(
                 because: $"the residency claim '{claim}' is stale or belongs to another deployment and must not appear in PRIVACY.md");
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="policyText"/> states <paramref name="regionClaim"/> as a whole region
+    /// token. Both sides are normalized first (whitespace stripped, upper-cased), then an occurrence
+    /// counts only when the next character is not a digit and the text before it does not end with an
+    /// Azure directional prefix, so <c>westus</c> does not match "West US 2" and <c>centralus</c> does
+    /// not match "South Central US".
+    /// </summary>
+    /// <param name="policyText">The policy text to search.</param>
+    /// <param name="regionClaim">The region token or spelled-out region name.</param>
+    /// <returns><see langword="true"/> when a whole-token occurrence exists.</returns>
+    protected static bool ContainsRegionClaim(string policyText, string regionClaim)
+    {
+        ArgumentNullException.ThrowIfNull(policyText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(regionClaim);
+
+        var policy = Normalize(policyText);
+        var claim = Normalize(regionClaim);
+        for (var index = policy.IndexOf(claim, StringComparison.Ordinal);
+             index >= 0;
+             index = policy.IndexOf(claim, index + 1, StringComparison.Ordinal))
+        {
+            var end = index + claim.Length;
+            var digitFollows = end < policy.Length && char.IsDigit(policy[end]);
+            var prefixed = DirectionalPrefixes.Any(prefix =>
+                policy.AsSpan(0, index).EndsWith(prefix, StringComparison.Ordinal));
+            if (!digitFollows && !prefixed)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -51,6 +85,8 @@ public abstract class DataResidencyTestsBase
     /// empty string.
     /// </summary>
     protected abstract string ExtractDeployedRegion(string repoRoot);
+
+    private static readonly string[] DirectionalPrefixes = ["NORTH", "SOUTH", "EAST", "WEST", "CENTRAL"];
 
     // Whitespace-stripped, upper-cased (CA1308 prefers ToUpperInvariant) so "West US 2" matches the
     // "westus2" region token and "Central US" matches "CentralUS".
