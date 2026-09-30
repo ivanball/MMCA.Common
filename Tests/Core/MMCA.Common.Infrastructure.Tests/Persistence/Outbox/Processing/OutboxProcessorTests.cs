@@ -663,9 +663,9 @@ public sealed class OutboxProcessorTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
             .Callback(new InvocationAction(invocation =>
             {
-                var formatter = (Delegate)invocation.Arguments[4];
+                var formatter = (Delegate)invocation.Arguments[4]!;
                 logged.Add((
-                    (LogLevel)invocation.Arguments[0],
+                    (LogLevel)invocation.Arguments[0]!,
                     (string)formatter.DynamicInvoke(invocation.Arguments[2], invocation.Arguments[3])!));
             }));
 
