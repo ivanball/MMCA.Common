@@ -131,9 +131,14 @@ public static class QueryFilterService
 
             var opUpper = op.ToUpperInvariant();
 
-            // A flat key is applied under the property's declared name, so the Dynamic LINQ member
-            // access never depends on how the client cased it.
-            var memberPath = entityProperty.Contains('.', StringComparison.Ordinal) ? entityProperty : propertyInfo.Name;
+            // A flat CLIENT key is applied under the property's declared name, so the Dynamic LINQ
+            // member access never depends on how the client cased it. A server-authored map entry is
+            // applied verbatim: it may be an expression (ADC maps Speaker "FullName" to
+            // "(FirstName + \" \" + LastName)" because the entity's own FullName is unmapped), and
+            // substituting the property name for it produces a query EF cannot translate.
+            var memberPath = mappedByServer || entityProperty.Contains('.', StringComparison.Ordinal)
+                ? entityProperty
+                : propertyInfo.Name;
 
             var strategy = ResolveStrategy(valueType);
             if (strategy is not null)

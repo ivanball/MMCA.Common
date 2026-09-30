@@ -6,6 +6,10 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed: a filter key the server maps to an expression is applied verbatim again, even when the key also names an entity property. The 1.213.0 casing fix (L45) replaced such an entry with the property name, so a mapped computed member (ADC's Speaker `FullName` -> `(FirstName + " " + LastName)`) reached EF as the unmapped property and the query failed to translate. Only a client key the map does not author is normalized to the declared property name.
+
 ## [1.213.0] - 2026-09-30
 
 ### Fixed
