@@ -177,10 +177,11 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
     /// <param name="user">The tracked user being erased; its personal data is still intact here.</param>
     /// <param name="command">The originating command.</param>
     /// <param name="afterCommit">
-    /// Actions to run, in order, once the erasure has been committed and the shared soft-deleted
-    /// marker has been written. Use this for side effects that must not happen if the save fails
-    /// (deleting a blob, notifying another system); a post-commit action owns its own failure
-    /// handling, since the erasure has already succeeded by then. Do not queue a soft-deleted marker
+    /// Actions to run, in order, once the erasure has been saved and the shared soft-deleted
+    /// marker has been written (under an <c>ITransactional</c> command that is before the commit; see
+    /// the class summary). Use this for side effects that must not happen if the save fails
+    /// (deleting a blob, notifying another system); a post-save action owns its own failure
+    /// handling, since the erasure has already been saved by then. Do not queue a soft-deleted marker
     /// write here: the base already wrote it, ahead of this tail.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>

@@ -58,6 +58,46 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: the image normalizer decodes only the first frame (`DecoderOptions.MaxFrames = 1`), so a small animated upload cannot expand into one full pixel buffer per frame (L92).
 - Fixed: `SetItems` always snapshots the incoming items, so passing the backing collection itself no longer empties it (L42).
 - Fixed: `[Pii]` is inherited and `PiiRedactor` walks property overrides, so a derived type overriding a `[Pii]` property without repeating the marker stays redacted (L43).
+- Fixed: the audit-trail interceptor detects `[Pii]` through property overrides the same way, so an overriding property without the marker is recorded as the redaction token, never in clear text (L43 sibling).
+- **Breaking (C-5):** `ISessionCookieSync.SyncAsync` / `ClearAsync` return `Task<bool>` (true when the cookie jar was updated); `JsFetchSessionCookieSync` follows. A failed cookie write at login now reports `Auth.TokenStorageUnavailable` (M129). `IExternalLinkService.OpenAsync` returns `Task<bool>` (true when the platform reported the URL opened); `BrowserExternalLinkService`, `NullExternalLinkService` and `MauiExternalLinkService` follow, and `BrowserMapNavigationService.OpenAddressAsync` returns the real outcome. In a browser a blocked popup still reports true, because the link opens with `noopener,noreferrer` (L70).
+- Added: `IAuthUIService.RevokeAllSessionsAsync` reports the server-side revoke; the Sessions page shows the error and stays put when it fails (M131).
+- Added: `IUiReadCache.Generation` and `Set<T>(url, value, generation)` (default-implemented, source-compatible) (L66).
+- Added: `AuthDelegatingHandler.SkipBearer` request option (H37).
+- Fixed: MAUI token refresh no longer deadlocks re-entering the token storage through the APIClient pipeline (H37).
+- Fixed: the notification hub reconnects after SignalR's automatic reconnect gives up (M125).
+- Fixed: push notification send carries an Idempotency-Key, so a retried broadcast is not delivered twice (M126).
+- Fixed: OAuth completion with a pending attempt and no returned state is refused (M127).
+- Fixed: the Blazor circuit transport no longer holds a UI concurrency permit per open circuit (M128).
+- Fixed: Enter/Space on a control inside a ClickableCard no longer activates the card (M130).
+- Fixed: the client read cache drops a read that raced a write invalidation (L66).
+- Fixed: BoundedCircuitHandler no longer releases a permit when a refused circuit closes (L67).
+- Fixed: MauiBackNavigationBridge disposes the JS module it imports (L68).
+- Fixed: one caller's cancellation no longer faults a shared JS module import (L69).
+- Fixed: only one NotificationBell reads the API per push refresh (L71).
+- Fixed: BiometricGate precondition read failures fail open before opt-in and closed after it (L72).
+- Fixed: negative money displays as -$5.00, not $-5.00 (L73).
+- Fixed: NavMenu hides user and admin sections after an in-circuit sign-out (L74).
+- Fixed: infinite-scroll lists keep loading when the sentinel stays in view after an append (L75).
+- Fixed: `NotificationBell:PollInterval` of zero or less disables periodic polling instead of faulting the circuit (L76).
+- Fixed: out-of-range page, page-size and mobile-page URL values fall back to their defaults (L77).
+- Documented: `MauiTextToSpeechService` notes its single dispatcher-bound caller assumption (L78).
+- Fixed: MAUI push registration passes are serialized, so one device cannot register two installation ids (L79).
+- Fixed: the service-default HTTP retry no longer replays POST or PATCH; typed gRPC clients retry only connection failures (L80).
+- **Breaking (C-6, test and configuration surface):** see UPGRADING for the M133 snapshot regeneration, the L81 bUnit authorization change, L84 `Requests` snapshots, the L90 `Ai:Timeout` cap and the M135 consequential-marker default.
+- Fixed: the frozen integration-event contract spells out generic arguments (`Nullable<Int32>`, `IReadOnlyList<FulfilledLine>`) and pins members of an intermediate consumer base, so a retyped generic argument or an inherited member now fails the snapshot; the snapshot parser treats a multi-argument generic as one member (M133).
+- Fixed: `DataResidencyTestsBase` compares region claims as whole tokens, so `westus` no longer matches "West US 2" and `centralus` no longer matches "South Central US"; new `ContainsRegionClaim` helper (M134).
+- Fixed: a tool's `mmca.tool.consequential` marker fails closed: a `JsonElement` true, an unparseable string or any unrecognised shape now reads consequential; only a definite false is harmless (M135).
+- Fixed: `PiiRedactionGuardrail` redacts tool results, the string arguments of tool calls and reasoning text, not only message text (M136).
+- Fixed: `BunitComponentTestBase` uses the real `DefaultAuthorizationService`, so `<AuthorizeView Roles="...">` denies a principal outside the role (L81).
+- Fixed: `SqlServerIntegrationTestFixtureBase` composes its connection strings with `SqlConnectionStringBuilder`, so a `*_TEST_SQL_BASE` without a trailing semicolon works (L82).
+- Documented: `ClickAndVerifyAsync` notes that an effect slower than `timeout / 3` is re-clicked (L83).
+- Fixed: `CapturingHttpMessageHandler` and `ReplayChatClient` record under a lock, so concurrent requests are all captured and counted (L84).
+- Fixed: the proto contract parser no longer drops every declaration after a single-line block comment (L85).
+- Fixed: the stateful-singleton scan judges paths relative to `Source`, catches a registration wrapped across lines, and fails when it scanned no UI file (L86).
+- Fixed: the domain-throw rule no longer flags the compiler's `SwitchExpressionException` default-arm throw (L87).
+- Fixed: the ambient-clock rule flags `DateTime.Today` (L88).
+- Fixed: the profile E2E base waits for each save's snackbar and re-navigates through `GotoProtectedAsync`, so "persisted after reload" is actually read back from a fresh page; new `NameSavedMessage`/`AddressSavedMessage`/`EmailSavedMessage` overrides (M132).
+- Fixed: `Ai:Timeout` above one hour (`AiSettings.MaxTimeout`) fails startup validation instead of throwing on every call; a bare number binds as days (L90).
 
 ## [1.212.0] - 2026-09-29
 

@@ -191,6 +191,23 @@ public sealed class AuditTrailSaveChangesInterceptorTests : IDisposable
             "personal data must never reach the trail in clear text, in any column");
     }
 
+    // ── An override of a [Pii] property that does not repeat the marker is still redacted ──
+    [Fact]
+    public async Task SaveChanges_PiiPropertyOverriddenWithoutTheMarker_RecordsTheRedactionToken()
+    {
+        var thing = new OverridingPiiThing { Email = "original@example.com" };
+        _context.OverridingPiiThings.Add(thing);
+        await _context.SaveChangesAsync(userId: 1);
+
+        thing.Email = "new.address@example.com";
+        await _context.SaveChangesAsync(userId: 5);
+
+        var row = (await ModifiedRowsAsync()).Single();
+        row.PropertyName.Should().Be(nameof(OverridingPiiThing.Email));
+        row.OldValue.Should().Be(PiiRedactor.RedactedToken);
+        row.NewValue.Should().Be(PiiRedactor.RedactedToken);
+    }
+
     // ── The changing user comes from the save, and is null when the save carried none ──
     [Fact]
     public async Task SaveChanges_WithoutAUserId_RecordsANullChangedBy()

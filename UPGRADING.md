@@ -55,6 +55,10 @@ Old-to-new map:
 | `PasswordResetTokenService(cacheService, settings)` | `PasswordResetTokenService(cacheService, settings, IDistributedLock distributedLock)` (L91) |
 | `ICacheService` (seven members) | adds `Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken)` with a default body (L47) |
 | `MarkAllNotificationsReadHandler(unitOfWork, queryableExecutor, timeProvider)` | `MarkAllNotificationsReadHandler(unitOfWork, timeProvider)` (L49) |
+| `ISessionCookieSync.SyncAsync(string, string)` / `ClearAsync()` return `Task` | return `Task<bool>` (M129) |
+| `IExternalLinkService.OpenAsync(Uri, CancellationToken)` returns `Task` | returns `Task<bool>` (L70) |
+| `IAuthUIService` | adds `RevokeAllSessionsAsync(CancellationToken)` (M131) |
+| `CapturingHttpMessageHandler.Requests` (live list) | a snapshot taken at the time of the call (L84) |
 
 The mechanical fix:
 
@@ -95,6 +99,29 @@ The mechanical fix:
 11. **`MarkAllNotificationsReadHandler` constructed by hand.** Drop the `IQueryableExecutor`
     argument. A test that verified `SaveChangesAsync` or inspected mutated rows asserts on the
     predicate and assignments passed to `IRepository.ExecuteUpdateAsync` instead.
+12. **`ISessionCookieSync` and `IExternalLinkService` implementations.** Return `true` when the
+    cookie was written or cleared (M129), or when the URL was opened (L70), `false` otherwise.
+    Callers that only awaited the call keep compiling.
+13. **`IAuthUIService` implementations** (none known in consumers). Add `RevokeAllSessionsAsync`
+    (M131).
+14. **Integration-event contract snapshots.** Regenerate the `ExpectedContract` lines whose members
+    are constructed generics or come from an intermediate base (ADC `AttendeeCheckedIn`:
+    `SessionId:Nullable<Int32>, SponsorId:Nullable<Int32>`; Store `OrderFulfilled`:
+    `Lines:IReadOnlyList<FulfilledLine>`). Run the consumer's `IntegrationEventContractTests` and
+    paste the reported live line (M133).
+15. **bUnit tests.** `BunitComponentTestBase` no longer authorizes every authenticated principal. A
+    test that renders `Roles="..."` content uses a principal in that role (`TestPrincipal.InRole`),
+    and an `AuthorizeView Policy="X"` needs the policy registered
+    (`Services.AddAuthorizationCore(o => o.AddPolicy("X", ...))`) or it throws naming the policy (L81).
+16. **`CapturingHttpMessageHandler.Requests`.** Re-read the property after sending instead of
+    holding the list (L84).
+17. **`Ai:Timeout`.** At most `01:00:00`, written as a TimeSpan (`00:00:30`), since a bare number
+    binds as days (L90).
+18. **AI tools.** A tool whose `mmca.tool.consequential` value is present but not a definite false
+    is now withheld until the request confirms it (M135).
+19. **Profile E2E subclasses.** When the app's snackbar texts differ from "Name updated
+    successfully." / "Address updated successfully." / "Email updated successfully.", override
+    `NameSavedMessage` / `AddressSavedMessage` / `EmailSavedMessage` (M132).
 
 ## [1.207.0] - 2026-09-21
 

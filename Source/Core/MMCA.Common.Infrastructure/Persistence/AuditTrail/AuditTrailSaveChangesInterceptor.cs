@@ -500,7 +500,9 @@ public sealed class AuditTrailSaveChangesInterceptor(TimeProvider timeProvider) 
 
         return PiiCache.GetOrAdd(
             (info.DeclaringType, info.Name),
-            static (_, propertyInfo) => propertyInfo.IsDefined(typeof(PiiAttribute), inherit: false),
+            // Attribute.IsDefined walks an override back to the base declaration (the PropertyInfo
+            // instance method ignores inherit for properties), matching PiiRedactor.
+            static (_, propertyInfo) => Attribute.IsDefined(propertyInfo, typeof(PiiAttribute), inherit: true),
             info);
     }
 
