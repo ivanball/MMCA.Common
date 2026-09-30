@@ -149,7 +149,7 @@ public sealed class OutboxProcessorExecuteAsyncTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
             .Callback(new InvocationAction(invocation =>
             {
-                var formatter = (Delegate)invocation.Arguments[4];
+                var formatter = (Delegate)invocation.Arguments[4]!;
                 loggedMessages.Add((string)formatter.DynamicInvoke(invocation.Arguments[2], invocation.Arguments[3])!);
             }));
 

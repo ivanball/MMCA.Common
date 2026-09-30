@@ -613,8 +613,8 @@
       },
       "RESPite": {
         "type": "Transitive",
-        "resolved": "3.3.0",
-        "contentHash": "pzHmX5/ffYxDs0liGPwbAQ9c9xRmbhtJ6XnZOpktHAs9x7MTqQByEXiySXzT3xPZ/l8U95OfVUYvm/BOBK6f6w=="
+        "resolved": "3.3.1",
+        "contentHash": "1Ky6rOjP9YjA8eXWWSJDTSRgVQiRXwsKnET+X5hDuONJqq8KbYLQrTUjMg8gsdyKzwj74ivEioTuQd4mVhthdQ=="
       },
       "SharpZipLib": {
         "type": "Transitive",
@@ -773,7 +773,7 @@
           "Polly.Core": "[8.8.0, )",
           "SQLitePCLRaw.bundle_e_sqlite3": "[3.0.5, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
-          "StackExchange.Redis": "[3.3.0, )",
+          "StackExchange.Redis": "[3.3.1, )",
           "System.IdentityModel.Tokens.Jwt": "[8.23.0, )"
         }
       },
@@ -1087,11 +1087,11 @@
       },
       "StackExchange.Redis": {
         "type": "CentralTransitive",
-        "requested": "[3.3.0, )",
-        "resolved": "3.3.0",
-        "contentHash": "vSB6W7F85IJ9gYAHPcRsQYLGODptvm8kmp1z2XwmKHYWifHiGGDQHzYkNNUKk3bzODOoOM2fuy7nUeNp1MHIKA==",
+        "requested": "[3.3.1, )",
+        "resolved": "3.3.1",
+        "contentHash": "AnA3ZuYnOQl2Hh/PXqV+JagA6QO8hiHovHBOc0PKz+uafVSsI0lYPQy8D0rklCC5Wpmc9MznEw+Lpt8e+LaB9w==",
         "dependencies": {
-          "RESPite": "3.3.0",
+          "RESPite": "3.3.1",
           "System.IO.Hashing": "10.0.12"
         }
       },
