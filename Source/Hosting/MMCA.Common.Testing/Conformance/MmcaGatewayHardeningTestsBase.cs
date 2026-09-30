@@ -100,6 +100,16 @@ public abstract class MmcaGatewayHardeningTestsBase<TEntryPoint>
     /// </summary>
     protected virtual int NamedPolicyPermitLimit => 0;
 
+    /// <summary>
+    /// Whether every cluster must carry an enabled active health check. <see langword="false"/> fits a
+    /// host whose clusters each front ONE platform-balanced address (a Container Apps internal FQDN):
+    /// ejecting the only destination can only turn a slow request into a 503, the platform already
+    /// routes only to ready replicas, and each probe is a request that bills an otherwise idle
+    /// downstream replica at the active rate. When <see langword="false"/> the gate asserts the
+    /// opposite, so an active block left behind in configuration still fails the build.
+    /// </summary>
+    protected virtual bool ActiveHealthChecksExpected => true;
+
     /// <summary>The active probe interval every cluster must carry, from the host's health-check defaults.</summary>
     protected virtual TimeSpan ActiveProbeInterval => TimeSpan.FromSeconds(30);
 
@@ -295,6 +305,13 @@ public abstract class MmcaGatewayHardeningTestsBase<TEntryPoint>
             // against it, so a restarting service keeps absorbing requests until enough of them error.
             // The active probe polls out of band and ejects the destination first.
             var active = cluster.HealthCheck?.Active;
+            if (!ActiveHealthChecksExpected)
+            {
+                (active?.Enabled ?? false).Should().BeFalse(
+                    $"cluster '{cluster.ClusterId}' carries an active health check the host declared off");
+                continue;
+            }
+
             active.Should().NotBeNull($"cluster '{cluster.ClusterId}' must carry an active health check");
             active!.Enabled.Should().BeTrue($"cluster '{cluster.ClusterId}' declares the block but leaves it off");
 

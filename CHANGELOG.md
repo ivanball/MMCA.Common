@@ -6,6 +6,27 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`Telemetry:DisableAspNetCoreMetrics` cost knob (`MMCA.Common.Aspire`, rubric section 31).** Set to
+  `true`, it skips `AddAspNetCoreInstrumentation()` and drops every instrument on a meter named
+  under `Microsoft.AspNetCore.` (`http.server.*`, `kestrel.*`, `aspnetcore.*`, `signalr.server.*`)
+  through a View, so the toggle also holds against the copies the Azure Monitor distro subscribes
+  itself. That family was 73% of both production workspaces' ingestion over 2026-09-22..28 and no
+  alert reads it (request latency and failures alert off AppRequests traces). Unset keeps the
+  instrumentation, so a host that does not opt in sees no change.
+- **Live Metrics off switch, pinned by test.** Live Metrics is on by default in the Azure Monitor
+  distro and keeps an otherwise idle replica above the Container Apps idle-billing line. The switch
+  is the distro's own `AzureMonitor` section (`AzureMonitor__EnableLiveMetrics=false` as an
+  environment variable), which `ConfigureOpenTelemetry()` passes through untouched;
+  `LiveMetricsConfigurationTests` fails if a distro upgrade stops honoring it.
+- **`MmcaGatewayHardeningTestsBase.ActiveHealthChecksExpected` (`MMCA.Common.Testing`).** Virtual,
+  default `true` (no change for existing subclasses). A host whose clusters each front one
+  platform-balanced address overrides it to `false`: ejecting the only destination can only turn a
+  slow request into a 503, and every probe bills an idle downstream replica at the Container Apps
+  active rate. When `false`, `EveryCluster_CarriesAnActiveHealthCheckProbingAlive` asserts that no
+  cluster carries an enabled active check, so a leftover block still fails the build.
+
 ## [1.211.0] - 2026-09-25
 
 ### Added
