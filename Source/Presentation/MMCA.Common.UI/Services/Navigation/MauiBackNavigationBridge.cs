@@ -41,7 +41,10 @@ public static class MauiBackNavigationBridge
 
         try
         {
-            var module = await js.InvokeAsync<IJSObjectReference>("import", ModulePath).ConfigureAwait(false);
+            // Disposed per call: the class is static, so nothing else owns the module reference, and a
+            // back press that re-imported without disposing leaked one JS object reference each time.
+            // A dispose on a torn-down circuit throws JSDisconnectedException, caught below.
+            await using var module = await js.InvokeAsync<IJSObjectReference>("import", ModulePath).ConfigureAwait(false);
             var result = await module.InvokeAsync<BackNavigationResult>("tryGoBack").ConfigureAwait(false);
             return result;
         }

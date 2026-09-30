@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Grpc.Core;
 using MMCA.Common.Grpc.Exceptions;
 using MMCA.Common.Shared.Abstractions;
@@ -106,7 +107,11 @@ public static class ResultGrpcExtensions
         /// still answers <see cref="StatusCode.Unauthenticated"/>. Ties keep the earliest error.
         /// All errors are serialized into the trailers as <c>error-{i}-code</c>,
         /// <c>error-{i}-message</c>, and <c>error-{i}-type</c> entries for consumers that need
-        /// structured access to the failure; ranking picks the status only.
+        /// structured access to the failure; ranking picks the status only. In the message, source and
+        /// target values every character outside printable ASCII, and <c>%</c> itself, is written as
+        /// percent-encoded UTF-8: gRPC text metadata is printable ASCII only, so an accented character
+        /// or a newline written raw would break the trailer at the transport. A value that is already
+        /// printable ASCII without <c>%</c> goes on the wire unchanged.
         /// </summary>
         /// <returns>An <see cref="RpcException"/> populated with status, detail, and trailing metadata.</returns>
         public RpcException ToRpcException()
@@ -126,16 +131,16 @@ public static class ResultGrpcExtensions
             {
                 var error = errors[i];
                 trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-code"), error.Code);
-                trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-message"), error.Message);
+                trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-message"), EscapeTrailerValue(error.Message));
                 trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-type"), error.Type.ToString());
                 if (!string.IsNullOrEmpty(error.Source))
                 {
-                    trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-source"), error.Source);
+                    trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-source"), EscapeTrailerValue(error.Source));
                 }
 
                 if (!string.IsNullOrEmpty(error.Target))
                 {
-                    trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-target"), error.Target);
+                    trailers.Add(string.Create(CultureInfo.InvariantCulture, $"error-{i}-target"), EscapeTrailerValue(error.Target));
                 }
             }
 
@@ -153,7 +158,8 @@ public static class ResultGrpcExtensions
         /// <para>
         /// A missing <c>error-{i}-message</c> decodes as the empty string and a missing
         /// <c>error-{i}-source</c>/<c>error-{i}-target</c> as <see langword="null"/>, mirroring the
-        /// encoder's decision to omit an empty source or target entirely. An unrecognized
+        /// encoder's decision to omit an empty source or target entirely. Message, source and target
+        /// are percent-decoded, the inverse of the encoder's escaping. An unrecognized
         /// <c>error-{i}-type</c> falls back to <see cref="ErrorType.Failure"/> rather than throwing,
         /// so a newer peer that adds an error type cannot break an older client.
         /// </para>
@@ -180,10 +186,10 @@ public static class ResultGrpcExtensions
                     break;
                 }
 
-                var message = trailers.GetValue($"error-{indexText}-message") ?? string.Empty;
+                var message = Unescape(trailers.GetValue($"error-{indexText}-message")) ?? string.Empty;
                 var typeText = trailers.GetValue($"error-{indexText}-type");
-                var source = trailers.GetValue($"error-{indexText}-source");
-                var target = trailers.GetValue($"error-{indexText}-target");
+                var source = Unescape(trailers.GetValue($"error-{indexText}-source"));
+                var target = Unescape(trailers.GetValue($"error-{indexText}-target"));
 
                 errors.Add(BuildError(ParseErrorType(typeText), code, message, source, target));
                 index++;
@@ -270,6 +276,43 @@ public static class ResultGrpcExtensions
         Enum.TryParse<ErrorType>(typeText, ignoreCase: false, out var errorType)
             ? errorType
             : ErrorType.Failure;
+
+    /// <summary>
+    /// Percent-encodes, as UTF-8, every character a gRPC text trailer cannot carry (anything outside
+    /// printable ASCII) plus <c>%</c> itself, so the decoder can tell an escape from a literal.
+    /// </summary>
+    private static string EscapeTrailerValue(string value)
+    {
+        if (value.All(IsVerbatimTrailerChar))
+        {
+            return value;
+        }
+
+        var builder = new StringBuilder(value.Length * 3);
+        Span<byte> utf8 = stackalloc byte[4];
+        foreach (var rune in value.EnumerateRunes())
+        {
+            if (rune.IsAscii && IsVerbatimTrailerChar((char)rune.Value))
+            {
+                builder.Append((char)rune.Value);
+                continue;
+            }
+
+            var written = rune.EncodeToUtf8(utf8);
+            for (var i = 0; i < written; i++)
+            {
+                builder.Append('%').Append(utf8[i].ToString("X2", CultureInfo.InvariantCulture));
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static bool IsVerbatimTrailerChar(char c) => c is >= ' ' and <= '~' and not '%';
+
+    /// <summary>Percent-decodes a trailer value the encoder escaped; <see langword="null"/> stays null.</summary>
+    private static string? Unescape(string? value) =>
+        value is null ? null : Uri.UnescapeDataString(value);
 
     /// <summary>Builds an <see cref="Error"/> from the trailer fields via the factory for its type.</summary>
     private static Error BuildError(ErrorType errorType, string code, string message, string? source, string? target) =>

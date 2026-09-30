@@ -51,7 +51,7 @@ it owns the range/count and the one-line summaries. Do not restate the `(001-NNN
 - **140 test methods across 55 abstract `*TestsBase` classes**, shipped once in the
   `MMCA.Common.Testing.Architecture` package (ADR-015) and re-run as thin subclasses across all consuming
   repos (Common, ADC, Store).
-- MMCA.Common's own build executes **292** of them (the methods of the bases its arch-tests
+- MMCA.Common's own build executes **300** of them (the methods of the bases its arch-tests
   subclass, plus its Common-only direct tests, e.g. `FrameworkSanityTests`/`SpecificationFitnessTests`).
 
 ## Governance rubric

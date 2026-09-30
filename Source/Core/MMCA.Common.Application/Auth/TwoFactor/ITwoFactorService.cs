@@ -46,6 +46,19 @@ public interface ITwoFactorService
     bool VerifyCode(string secret, string? code);
 
     /// <summary>
+    /// Verifies a code exactly like <see cref="VerifyCode(string, string?)"/> and also reports which
+    /// time step it matched, so a caller that keeps per-account state can refuse a replay of a code
+    /// it has already accepted inside the same window.
+    /// </summary>
+    /// <param name="secret">The account's Base32 secret.</param>
+    /// <param name="code">The code the caller presented; null, empty and malformed all fail.</param>
+    /// <param name="matchedStep">
+    /// The matched time step (Unix seconds divided by the period), or 0 when nothing matched.
+    /// </param>
+    /// <returns><see langword="true"/> when the code is valid inside the window.</returns>
+    bool VerifyCode(string secret, string? code, out long matchedStep);
+
+    /// <summary>
     /// Generates a fresh set of single-use recovery codes: the plaintext to show the user once, and
     /// the hashes to store.
     /// </summary>

@@ -15,6 +15,12 @@ namespace MMCA.Common.UI.Services.Auth.Tokens;
 /// on the raw store). Taking the storage service instead would close that loop and let a refresh
 /// re-enter the very acquisition that started it.
 /// </para>
+/// <para>
+/// The same cycle also exists indirectly through the HTTP pipeline: the <c>APIClient</c> carries
+/// <see cref="AuthDelegatingHandler"/>, which reads the storage service for a bearer. The refresh POST
+/// therefore sets <see cref="AuthDelegatingHandler.SkipBearer"/> (the endpoint is anonymous), so it never
+/// reaches the storage instance that is awaiting it.
+/// </para>
 /// </summary>
 public sealed class DirectApiTokenRefresher(
     IHttpClientFactory httpClientFactory,
@@ -33,8 +39,12 @@ public sealed class DirectApiTokenRefresher(
         }
 
         using var httpClient = httpClientFactory.CreateClient(ApiClientName);
-        var request = new RefreshTokenRequest(accessToken, refreshToken);
-        var response = await httpClient.PostAsJsonAsync(new Uri("auth/refresh", UriKind.Relative), request, cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("auth/refresh", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new RefreshTokenRequest(accessToken, refreshToken)),
+        };
+        request.Options.Set(AuthDelegatingHandler.SkipBearer, true);
+        var response = await httpClient.SendAsync(request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Domain.Entities;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using Moq;
 
@@ -492,6 +493,23 @@ public sealed class EFRepositoryIntegrationTests : IDisposable
         updated.LastModifiedBy.Should().Be(42,
             because: "the current user is stamped when an ICurrentUserService is available");
         (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 2)).Name.Should().Be("untouched");
+    }
+
+    // L51: a bulk update from a scope with no current user is attributed to the system sentinel,
+    // not left on whoever edited the row last.
+    [Fact]
+    public async Task ExecuteUpdateAsync_WithNoCurrentUser_StampsTheSystemSentinelAsTheEditor()
+    {
+        var entity = TestEntity.Create(1, "before");
+        _context.Add(entity);
+        _context.Entry(entity).Property(nameof(IAuditableEntity.LastModifiedBy)).CurrentValue = 7;
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+
+        await _sut.ExecuteUpdateAsync(e => e.Id == 1, setters => setters.Set(e => e.Name, "renamed"));
+
+        (await _context.TestEntities.AsNoTracking().SingleAsync(e => e.Id == 1)).LastModifiedBy
+            .Should().Be(0, because: "the system sentinel (default id) made this change, not the previous editor");
     }
 
     [Fact]

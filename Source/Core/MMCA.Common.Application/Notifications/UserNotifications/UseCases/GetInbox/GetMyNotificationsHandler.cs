@@ -43,10 +43,12 @@ public sealed class GetMyNotificationsHandler(
             pushNotifications = pushNotifications.Where(pn => pn.ScopeKey == null || pn.ScopeKey == scopeKey);
         }
 
+        // The id tie-break makes the order total, so two notifications created in the same instant
+        // cannot swap places between two OFFSET pages (repeat or vanish).
         var joined = from un in userNotificationRepo.TableNoTracking
                      join pn in pushNotifications on un.PushNotificationId equals pn.Id
                      where un.UserId == query.UserId
-                     orderby pn.CreatedOn descending
+                     orderby pn.CreatedOn descending, un.Id descending
                      select new UserNotificationDTO
                      {
                          Id = un.Id,

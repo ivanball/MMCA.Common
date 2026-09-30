@@ -7,7 +7,15 @@ namespace MMCA.Common.UI.Services.Auth;
 /// </summary>
 public interface ISessionCookieSync
 {
-    Task SyncAsync(string accessToken, string refreshToken);
+    /// <summary>Writes the session cookies for the given token pair.</summary>
+    /// <param name="accessToken">The access token to mirror into the cookie.</param>
+    /// <param name="refreshToken">The refresh token to mirror into the cookie.</param>
+    /// <returns><see langword="true"/> when the cookie jar was updated; <see langword="false"/> when the write
+    /// failed or could not be attempted (non-2xx, dropped connection, JS interop unavailable).</returns>
+    Task<bool> SyncAsync(string accessToken, string refreshToken);
 
-    Task ClearAsync();
+    /// <summary>Clears the session cookies.</summary>
+    /// <returns><see langword="true"/> when the cookie jar was updated; <see langword="false"/> when the clear
+    /// failed or could not be attempted.</returns>
+    Task<bool> ClearAsync();
 }

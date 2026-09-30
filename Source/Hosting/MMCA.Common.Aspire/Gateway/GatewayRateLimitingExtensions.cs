@@ -52,6 +52,16 @@ public static class GatewayRateLimitingExtensions
     private const string ConcurrencyPartitionKey = "__gateway";
 
     /// <summary>
+    /// The <see cref="HttpContext.Items"/> key the per-IP partition stamps (value <see langword="true"/>)
+    /// once a request has proven the trusted-internal-caller secret. The named per-route policies of
+    /// <c>MMCA.Common.Gateway</c> read it (the same literal lives there as
+    /// <c>GatewayRoutePolicyExtensions.TrustedInternalCallerItemKey</c>): the global limiter runs
+    /// before the endpoint policy in the same middleware, and the Gateway package deliberately takes
+    /// no reference to this one, so the proof travels on the request rather than being re-derived.
+    /// </summary>
+    internal const string TrustedInternalCallerItemKey = "MMCA.Common.Gateway.TrustedInternalCaller";
+
+    /// <summary>
     /// Path prefixes that are exempt whatever the configuration says: liveness/readiness probes and
     /// JWKS discovery run at high frequency by design, and throttling them converts a traffic spike
     /// into a failed probe and a container restart.
@@ -188,6 +198,14 @@ public static class GatewayRateLimitingExtensions
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(settings);
+
+        if (IsTrustedInternalCaller(httpContext, settings))
+        {
+            // Hand the proof to the named per-route policies, which run after this limiter and
+            // cannot see these settings.
+            httpContext.Items[TrustedInternalCallerItemKey] = true;
+            return RateLimitPartition.GetNoLimiter(BypassPartitionKey);
+        }
 
         if (IsExemptFromLimiters(httpContext, settings))
         {

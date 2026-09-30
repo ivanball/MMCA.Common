@@ -88,6 +88,30 @@ public sealed class GatewayTrustedCallerTests
         GatewayRateLimitingExtensions.ConcurrencyPartition(context, settings).PartitionKey.Should().Be("__bypass");
     }
 
+    // M177: the proof is handed to the named per-route policies of MMCA.Common.Gateway, which read
+    // this exact key (they cannot see these settings).
+    [Fact]
+    public void ClientIpPartition_ForAProvenTrustedCaller_MarksTheRequestForTheRoutePolicies()
+    {
+        var settings = new GatewayRateLimitingSettings { TrustedCallerSecret = ConfiguredSecret };
+        var context = Ctx("X-Internal-Caller-Key", ConfiguredSecret);
+
+        GatewayRateLimitingExtensions.ClientIpPartition(context, settings);
+
+        context.Items["MMCA.Common.Gateway.TrustedInternalCaller"].Should().Be(true);
+    }
+
+    [Fact]
+    public void ClientIpPartition_ForAnUnprovenCaller_LeavesTheRequestUnmarked()
+    {
+        var settings = new GatewayRateLimitingSettings { TrustedCallerSecret = ConfiguredSecret };
+        var context = Ctx("X-Internal-Caller-Key", "wrong-secret");
+
+        GatewayRateLimitingExtensions.ClientIpPartition(context, settings);
+
+        context.Items.ContainsKey("MMCA.Common.Gateway.TrustedInternalCaller").Should().BeFalse();
+    }
+
     [Fact]
     public void BothLimiterPartitions_StillLimitAnUnprovenCaller()
     {

@@ -20,6 +20,8 @@ public sealed class WasmTokenStorageServiceTests
     private static (WasmTokenStorageService Sut, Mocks Mocks) CreateSut(string? refresherToken = "hydrated-token")
     {
         var cookieSync = new Mock<ISessionCookieSync>();
+        cookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+        cookieSync.Setup(c => c.ClearAsync()).ReturnsAsync(true);
         var refresher = new Mock<ITokenRefresher>();
         refresher
             .Setup(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()))
@@ -160,5 +162,30 @@ public sealed class WasmTokenStorageServiceTests
         mocks.CookieSync.Verify(c => c.ClearAsync(), Times.Once);
         afterClear.Should().Be("hydrated-token", "a cleared in-memory token must re-hydrate from the cookie session");
         mocks.Refresher.Verify(r => r.AcquireAccessTokenAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetTokensAsync_WhenTheCookieWriteFails_ThrowsSoLoginReportsStorageUnavailable()
+    {
+        // M129: a login whose cookie write failed would silently sign out at the first access-token
+        // expiry, because no cookie exists to refresh from.
+        var (sut, mocks) = CreateSut();
+        mocks.CookieSync.Setup(c => c.SyncAsync(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
+
+        var act = () => sut.SetTokensAsync("access-token", "refresh-token");
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ClearTokensAsync_WhenTheCookieClearFails_StillClearsMemoryWithoutThrowing()
+    {
+        // Logout stays best-effort by contract (IAuthUIService.LogoutAsync never fails).
+        var (sut, mocks) = CreateSut();
+        mocks.CookieSync.Setup(c => c.ClearAsync()).ReturnsAsync(false);
+
+        var act = () => sut.ClearTokensAsync();
+
+        await act.Should().NotThrowAsync();
     }
 }

@@ -708,4 +708,36 @@ public sealed class AuthUIServiceTests : IDisposable
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    // ==================== Revoke all sessions (M131) ====================
+    [Fact]
+    public async Task RevokeAllSessionsAsync_On503_ReturnsFailureAndKeepsTheLocalSession()
+    {
+        var sut = CreateSut(HttpStatusCode.ServiceUnavailable);
+
+        var result = await sut.RevokeAllSessionsAsync(Ct);
+
+        result.IsFailure.Should().BeTrue();
+        _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Never);
+        _pushRegistration.Verify(p => p.UnregisterAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _authStates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RevokeAllSessionsAsync_On204_ClearsLocalStateAndNotifiesLogout()
+    {
+        var sut = CreateSut(HttpStatusCode.NoContent);
+
+        var result = await sut.RevokeAllSessionsAsync(Ct);
+
+        result.IsSuccess.Should().BeTrue();
+        _handler.CallCount.Should().Be(1);
+        _handler.LastRequest.Method.Should().Be(HttpMethod.Post);
+        _handler.LastRequest.Uri!.AbsolutePath.Should().Be("/auth/revoke");
+        _handler.LastRequest.Authorization!.Parameter.Should().Be(StoredAccessToken);
+        _pushRegistration.Verify(p => p.UnregisterAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _tokenStorage.Verify(s => s.ClearTokensAsync(), Times.Once);
+        _authStates.Should().ContainSingle();
+        _authStates[0].User.Identity!.IsAuthenticated.Should().BeFalse();
+    }
 }

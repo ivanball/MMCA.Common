@@ -1,6 +1,9 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MMCA.Common.API.RateLimiting;
+using MMCA.Common.API.Startup;
 
 namespace MMCA.Common.API.Tests.RateLimiting;
 
@@ -90,5 +93,25 @@ public sealed class RateLimitingSettingsTests
         var configuration = new ConfigurationBuilder().Build();
 
         configuration.GetSection(RateLimitingSettings.SectionName).Get<RateLimitingSettings>().Should().BeNull();
+    }
+
+    // M124: the [Range] attributes are enforced when the settings come from configuration.
+    [Fact]
+    public void AddCommonRateLimiting_FromConfigurationWithAnOutOfRangeLimit_FailsValidation()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RateLimiting:GlobalPermitLimit"] = "0",
+            })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddCommonRateLimiting(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        Action read = () => _ = provider.GetRequiredService<IOptions<RateLimitingSettings>>().Value;
+
+        read.Should().Throw<OptionsValidationException>()
+            .Which.Message.Should().Contain(nameof(RateLimitingSettings.GlobalPermitLimit));
     }
 }

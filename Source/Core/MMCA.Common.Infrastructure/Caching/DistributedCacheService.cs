@@ -45,6 +45,14 @@ internal sealed partial class DistributedCacheService(
     }
 
     /// <inheritdoc />
+    public async Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        byte[]? bytes = await cache.GetAsync(_keys.Qualify(key), cancellationToken).ConfigureAwait(false);
+
+        return bytes is null ? (false, default) : (true, Deserialize<T>(bytes));
+    }
+
+    /// <inheritdoc />
     /// <remarks>
     /// A caller that supplies no expiration gets <see cref="CacheSettings.DefaultDuration"/>, which
     /// defaults to <see cref="CacheOptions.DefaultDuration"/>, so an unconfigured host writes the

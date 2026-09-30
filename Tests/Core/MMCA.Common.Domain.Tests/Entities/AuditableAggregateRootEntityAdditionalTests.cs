@@ -101,6 +101,22 @@ public sealed class AuditableAggregateRootEntityAdditionalTests
         aggregate.ChildCount.Should().Be(1);
     }
 
+    // L42: the caller may pass the backing collection itself; the replacement must still hold it.
+    [Fact]
+    public void SetItems_WithTheBackingCollectionItself_KeepsEveryChild()
+    {
+        var aggregate = new TestAggregate { Id = 1 };
+        var first = new ChildEntity { Id = 1, Name = "A" };
+        var second = new ChildEntity { Id = 2, Name = "B" };
+        aggregate.AddChild(first);
+        aggregate.AddChild(second);
+
+        aggregate.ReplaceChildren(aggregate.Children);
+
+        aggregate.ChildCount.Should().Be(2);
+        aggregate.Children.Should().Equal(first, second);
+    }
+
     [Fact]
     public void SetItems_WithEmptyCollection_ClearsChildren()
     {

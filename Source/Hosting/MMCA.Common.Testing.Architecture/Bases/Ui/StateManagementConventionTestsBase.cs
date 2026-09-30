@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace MMCA.Common.Testing.Architecture;
 
@@ -14,7 +15,7 @@ namespace MMCA.Common.Testing.Architecture;
 /// subclass in each repo; the subclass's <see cref="Map"/> must register its UI assemblies under
 /// <see cref="Layer.Ui"/> (the first rule asserts this non-vacuously).
 /// </summary>
-public abstract class StateManagementConventionTestsBase
+public abstract partial class StateManagementConventionTestsBase
 {
     protected abstract IArchitectureMap Map { get; }
 
@@ -68,33 +69,61 @@ public abstract class StateManagementConventionTestsBase
         var repoRoot = ArchitectureMapBase.FindRepoRoot($"{Map.RepoToken}.slnx");
         var sourceDir = Path.Combine(repoRoot, "Source");
 
-        var offenders = new List<string>();
-        foreach (var file in Directory.EnumerateFiles(sourceDir, "*.cs", SearchOption.AllDirectories))
-        {
-            if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
-                file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
-                !file.Contains(".UI", StringComparison.Ordinal) ||
-                file.Contains("Testing", StringComparison.Ordinal))
-            {
-                continue;
-            }
+        var offenders = FindSingletonStateRegistrations(sourceDir, out var scannedUiFiles);
 
-            var lines = File.ReadAllLines(file);
-            for (var i = 0; i < lines.Length; i++)
-            {
-                if (lines[i].Contains("AddSingleton", StringComparison.Ordinal) &&
-                    (lines[i].Contains("StateService", StringComparison.Ordinal) ||
-                     lines[i].Contains("StateContainer", StringComparison.Ordinal)))
-                {
-                    offenders.Add($"{Path.GetFileName(file)}:{i + 1}");
-                }
-            }
-        }
-
+        scannedUiFiles.Should().BeGreaterThan(0,
+            because: "the scan must see the repo's UI sources or it verifies nothing");
         offenders.Should().BeEmpty(
             because: "stateful UI services (*StateService/*StateContainer) hold per-user state and must be registered scoped, never singleton (§19). Offenders: "
             + string.Join(", ", offenders));
     }
+
+    /// <summary>
+    /// Scans the production UI sources under <paramref name="sourceDir"/> for a singleton registration
+    /// of a stateful service. Paths are judged RELATIVE to <paramref name="sourceDir"/>, segment by
+    /// segment: a file counts when one segment is a <c>*.UI</c> / <c>*.UI.*</c> project directory and no
+    /// segment contains <c>Testing</c> or is <c>bin</c>/<c>obj</c>, so where the checkout lives cannot
+    /// skip it. The match runs over the file text up to the end of the statement, so a registration
+    /// wrapped across lines is caught.
+    /// </summary>
+    /// <param name="sourceDir">The repo's <c>Source</c> directory.</param>
+    /// <param name="scannedUiFiles">How many UI source files were scanned.</param>
+    /// <returns>One <c>File.cs:line</c> entry per offending registration.</returns>
+    protected static IReadOnlyList<string> FindSingletonStateRegistrations(string sourceDir, out int scannedUiFiles)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceDir);
+
+        var offenders = new List<string>();
+        scannedUiFiles = 0;
+        foreach (var file in Directory.EnumerateFiles(sourceDir, "*.cs", SearchOption.AllDirectories))
+        {
+            var segments = Path.GetRelativePath(sourceDir, file)
+                .Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries)[..^1];
+            if (!segments.Any(static s => UiProjectSegment.IsMatch(s)) ||
+                segments.Any(static s => s.Contains("Testing", StringComparison.Ordinal) || s is "bin" or "obj"))
+            {
+                continue;
+            }
+
+            scannedUiFiles++;
+            var text = File.ReadAllText(file);
+            foreach (Match match in SingletonStateRegistration.Matches(text))
+            {
+                var line = 1 + text.AsSpan(0, match.Index).Count('\n');
+                offenders.Add($"{Path.GetFileName(file)}:{line}");
+            }
+        }
+
+        return offenders;
+    }
+
+    [GeneratedRegex(@"^[\w.]+\.UI(\.[\w.]+)?$", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex UiProjectSegment { get; }
+
+    // Up to the end of the statement, so the generic, the factory and the typeof forms all match and
+    // a registration wrapped across lines is still one match.
+    [GeneratedRegex(@"AddSingleton\b[^;]*?State(Service|Container)\b", RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex SingletonStateRegistration { get; }
 
     private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
     {

@@ -16,9 +16,9 @@ namespace MMCA.Common.Testing.UI;
 /// <summary>
 /// Shared base for bUnit component tests across MMCA repos. Registers MudBlazor services, puts
 /// JSInterop in loose mode (so MudBlazor components that probe JS during render don't throw), and
-/// wires permissive-but-real auth test doubles so <c>&lt;AuthorizeView&gt;</c> and pages that inject
-/// <see cref="AuthenticationStateProvider"/> directly both work. Anonymous by default; pass an
-/// authenticated <see cref="ClaimsPrincipal"/> (see <see cref="TestPrincipal"/>) to
+/// wires the real authorization service over a mutable provider so <c>&lt;AuthorizeView&gt;</c> (its
+/// <c>Roles</c> included) and pages that inject <see cref="AuthenticationStateProvider"/> directly both
+/// work. Anonymous by default; pass an authenticated <see cref="ClaimsPrincipal"/> (see <see cref="TestPrincipal"/>) to
 /// <see cref="RenderAs{TComponent}"/> to exercise the authorized branch.
 /// </summary>
 /// <remarks>
@@ -54,7 +54,12 @@ public abstract class BunitComponentTestBase : BunitContext
 
         JSInterop.Mode = JSRuntimeMode.Loose;
         Services.AddAuthorizationCore();
-        Services.AddSingleton<IAuthorizationService, IsAuthenticatedAuthorizationService>();
+
+        // bUnit pre-registers a placeholder IAuthorizationService that throws, and AddAuthorizationCore
+        // only TryAdds, so the real service is registered explicitly. It evaluates the requirements a
+        // view builds (Roles, the default deny-anonymous policy), where a permissive double would
+        // authorize every authenticated principal whatever the view asks for.
+        Services.AddSingleton<IAuthorizationService, DefaultAuthorizationService>();
         Services.AddSingleton<AuthenticationStateProvider>(_authProvider);
 
         // Localization (ADR-027): components/pages now inject IStringLocalizer<T>. Registering the open
@@ -171,17 +176,5 @@ public abstract class BunitComponentTestBase : BunitContext
 
         public override Task<AuthenticationState> GetAuthenticationStateAsync()
             => Task.FromResult(new AuthenticationState(_principal));
-    }
-
-    private sealed class IsAuthenticatedAuthorizationService : IAuthorizationService
-    {
-        public Task<AuthorizationResult> AuthorizeAsync(
-            ClaimsPrincipal user, object? resource, IEnumerable<IAuthorizationRequirement> requirements)
-            => Task.FromResult(user.Identity?.IsAuthenticated == true
-                ? AuthorizationResult.Success()
-                : AuthorizationResult.Failed());
-
-        public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object? resource, string policyName)
-            => AuthorizeAsync(user, resource, []);
     }
 }

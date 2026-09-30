@@ -131,6 +131,23 @@ public sealed class DbContextFactoryTenantTests : IDisposable
                 "the cached context is bound to one physical database for the life of the scope");
     }
 
+    // L53: a context created before the tenant resolved is the SHARED one; once the scope's tenant
+    // turns out to override the source, handing it back would serve the shared database to a tenant
+    // that owns its own.
+    [Fact]
+    public void ASharedContextCreatedBeforeTheTenantResolved_IsRefusedToATenantThatOverridesTheSource()
+    {
+        var tenantContext = new MutableTenantContext(null);
+        var sut = CreateSut(PhysicalFactory(), tenantContext, TenancyWithAcmeOverride());
+
+        sut.GetDbContext(SqliteKey);
+        tenantContext.Force(Acme);
+
+        var act = () => sut.GetDbContext(SqliteKey);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*acme*");
+    }
+
     [Fact]
     public void ChangingTheScopesTenant_OnASharedSource_IsAllowed()
     {

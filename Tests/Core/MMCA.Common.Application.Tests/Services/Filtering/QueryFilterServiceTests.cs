@@ -55,6 +55,12 @@ public class QueryFilterServiceTests
     public void String_Contains_FiltersCorrectly() =>
         Filter("Name", "CONTAINS", "Widget").Should().HaveCount(2);
 
+    // L45: a caller that skips validation still gets the filter applied under a differently cased key,
+    // instead of having it silently dropped and every row returned.
+    [Fact]
+    public void String_KeyInADifferentCase_StillFilters() =>
+        Filter("name", "EQUALS", "Widget").Should().ContainSingle();
+
     [Fact]
     public void String_NotContains_ExcludesMatches() =>
         Filter("Name", "NOT CONTAINS", "Widget").Should().HaveCount(2);

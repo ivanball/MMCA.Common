@@ -16,5 +16,9 @@ public interface IExternalLinkService
     bool InterceptsLinks { get; }
 
     /// <summary>Opens <paramref name="uri"/> in the system browser / a new tab. Best-effort.</summary>
-    Task OpenAsync(Uri uri, CancellationToken cancellationToken = default);
+    /// <param name="uri">The URL to open.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see langword="true"/> when the platform reported the URL was opened; <see langword="false"/>
+    /// when nothing was opened (no handler, JS interop unavailable, or the host does not open links).</returns>
+    Task<bool> OpenAsync(Uri uri, CancellationToken cancellationToken = default);
 }

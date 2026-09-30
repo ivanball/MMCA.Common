@@ -50,6 +50,15 @@ Old-to-new map:
 | `IFileStorageService.UploadAsync(..., FileUploadOptions options, ...)` default interface member | abstract; every implementation provides it |
 | `PhysicalDataSource(Key, ConnectionString, SqlServerMigrationsAssembly, CosmosDatabaseName)` plus `SqliteMigrationsAssembly` / `PostgreSQLMigrationsAssembly` init properties | `PhysicalDataSource(Key, ConnectionString, MigrationsAssembly, CosmosDatabaseName)`, one slot for the source's own engine |
 | `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` | `MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService` (namespace move only; the type is unchanged) |
+| `ChangePasswordHandlerBase(unitOfWork, passwordHasher, logger, refreshSessions, timeProvider)` | `ChangePasswordHandlerBase(unitOfWork, passwordHasher, logger, refreshSessions, ILoginProtectionService loginProtection, timeProvider)` (M108) |
+| `ITwoFactorService` (six members) | adds `bool VerifyCode(string secret, string? code, out long matchedStep)` (L56) |
+| `PasswordResetTokenService(cacheService, settings)` | `PasswordResetTokenService(cacheService, settings, IDistributedLock distributedLock)` (L91) |
+| `ICacheService` (seven members) | adds `Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken)` with a default body (L47) |
+| `MarkAllNotificationsReadHandler(unitOfWork, queryableExecutor, timeProvider)` | `MarkAllNotificationsReadHandler(unitOfWork, timeProvider)` (L49) |
+| `ISessionCookieSync.SyncAsync(string, string)` / `ClearAsync()` return `Task` | return `Task<bool>` (M129) |
+| `IExternalLinkService.OpenAsync(Uri, CancellationToken)` returns `Task` | returns `Task<bool>` (L70) |
+| `IAuthUIService` | adds `RevokeAllSessionsAsync(CancellationToken)` (M131) |
+| `CapturingHttpMessageHandler.Requests` (live list) | a snapshot taken at the time of the call (L84) |
 
 The mechanical fix:
 
@@ -75,6 +84,44 @@ The mechanical fix:
    reports it as IDE0005). Re-qualify any fully qualified
    `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` reference. This is the
    namespace-move fix at the top of this file, applied to one type.
+7. **`ChangePasswordHandlerBase` subclasses.** Add an `ILoginProtectionService loginProtection`
+   constructor parameter and pass it to the base before `timeProvider` (it is registered by
+   `AddInfrastructure`). A test that builds the subclass passes a mock whose `CheckLockoutAsync`
+   returns `Result.Success()`.
+8. **`ITwoFactorService` implementations and fakes.** Implement the new overload; a fake that has
+   no time steps sets `matchedStep = 0` and delegates to the two-argument member. The shipped
+   `TotpTwoFactorService` needs nothing.
+9. **`PasswordResetTokenService` constructed by hand.** Pass an `IDistributedLock` (registered by
+   `AddCaching`). Hosts resolving `IPasswordResetTokenService` from DI change nothing.
+10. **`ICacheService` implementations.** Nothing is required: the default body infers presence
+    from a non-null `GetAsync`. A store that can cache a value-type `default(T)` should override
+    `TryGetAsync` with a real presence check, or `GetOrCreateAsync` re-runs the factory for it.
+11. **`MarkAllNotificationsReadHandler` constructed by hand.** Drop the `IQueryableExecutor`
+    argument. A test that verified `SaveChangesAsync` or inspected mutated rows asserts on the
+    predicate and assignments passed to `IRepository.ExecuteUpdateAsync` instead.
+12. **`ISessionCookieSync` and `IExternalLinkService` implementations.** Return `true` when the
+    cookie was written or cleared (M129), or when the URL was opened (L70), `false` otherwise.
+    Callers that only awaited the call keep compiling.
+13. **`IAuthUIService` implementations** (none known in consumers). Add `RevokeAllSessionsAsync`
+    (M131).
+14. **Integration-event contract snapshots.** Regenerate the `ExpectedContract` lines whose members
+    are constructed generics or come from an intermediate base (ADC `AttendeeCheckedIn`:
+    `SessionId:Nullable<Int32>, SponsorId:Nullable<Int32>`; Store `OrderFulfilled`:
+    `Lines:IReadOnlyList<FulfilledLine>`). Run the consumer's `IntegrationEventContractTests` and
+    paste the reported live line (M133).
+15. **bUnit tests.** `BunitComponentTestBase` no longer authorizes every authenticated principal. A
+    test that renders `Roles="..."` content uses a principal in that role (`TestPrincipal.InRole`),
+    and an `AuthorizeView Policy="X"` needs the policy registered
+    (`Services.AddAuthorizationCore(o => o.AddPolicy("X", ...))`) or it throws naming the policy (L81).
+16. **`CapturingHttpMessageHandler.Requests`.** Re-read the property after sending instead of
+    holding the list (L84).
+17. **`Ai:Timeout`.** At most `01:00:00`, written as a TimeSpan (`00:00:30`), since a bare number
+    binds as days (L90).
+18. **AI tools.** A tool whose `mmca.tool.consequential` value is present but not a definite false
+    is now withheld until the request confirms it (M135).
+19. **Profile E2E subclasses.** When the app's snackbar texts differ from "Name updated
+    successfully." / "Address updated successfully." / "Email updated successfully.", override
+    `NameSavedMessage` / `AddressSavedMessage` / `EmailSavedMessage` (M132).
 
 ## [1.207.0] - 2026-09-21
 

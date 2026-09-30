@@ -56,6 +56,20 @@ public sealed class RateLimitPartitionTests
                 Ctx(path: "/api/events", authenticated: true, name: "alice"), 300)
             .PartitionKey.Should().Be("alice");
 
+    // M122: the name claim carries the full name, which two users can share; the subject is unique.
+    [Fact]
+    public void GlobalRateLimitPartition_WithNameAndSubject_PartitionsBySubject() =>
+        WebApplicationBuilderExtensions.GlobalRateLimitPartition(
+                Ctx(path: "/api/events", authenticated: true, name: "John Smith", userId: "u-42"), 300)
+            .PartitionKey.Should().Be("u-42");
+
+    [Fact]
+    public void UserPolicyRateLimitPartition_WithNameAndSubject_PartitionsBySubject() =>
+        WebApplicationBuilderExtensions.UserPolicyRateLimitPartition(
+                Ctx(path: "/api/events", authenticated: true, name: "John Smith", userId: "u-42"),
+                new MMCA.Common.API.RateLimiting.RateLimitingSettings())
+            .PartitionKey.Should().Be("u-42");
+
     [Fact]
     public void GlobalRateLimitPartition_WhenNameMissing_FallsBackToUserIdClaim() =>
         WebApplicationBuilderExtensions.GlobalRateLimitPartition(

@@ -13,6 +13,9 @@ public static partial class ArchitectureRules
     /// BUG rather than a business outcome. A caller cannot recover from passing null, so there is
     /// nothing for a <c>Result</c> to carry.
     /// </summary>
+    /// <summary>The exception the compiler throws from the default arm of a switch expression with no discard.</summary>
+    private const string SwitchExpressionExceptionFullName = "System.Runtime.CompilerServices.SwitchExpressionException";
+
     private static readonly string[] ArgumentGuardExceptionFullNames =
     [
         "System.ArgumentException",
@@ -44,7 +47,8 @@ public static partial class ArchitectureRules
     /// bodies the compiler writes are skipped too: the skeleton members of a C# extension block, and
     /// the explicit interface implementations on a compiler-generated type (the read-only wrappers
     /// emitted for a collection expression, an iterator's Reset). Their NotSupportedException is not
-    /// anyone's code, and a lambda or async body is still read.
+    /// anyone's code, and a lambda or async body is still read. The compiler's own default-arm throw
+    /// of a switch expression (<c>SwitchExpressionException</c>) is exempt for the same reason.
     /// </para>
     /// <para>
     /// <b>Throws it cannot judge.</b> When the thrown value was not constructed in place
@@ -129,7 +133,8 @@ public static partial class ArchitectureRules
             {
                 unverifiable.Add($"  ? {OwnerName(type)}.{method.Name}");
             }
-            else if (!ArgumentGuardExceptionFullNames.Contains(exceptionType, StringComparer.Ordinal))
+            else if (!string.Equals(exceptionType, SwitchExpressionExceptionFullName, StringComparison.Ordinal)
+                && !ArgumentGuardExceptionFullNames.Contains(exceptionType, StringComparer.Ordinal))
             {
                 violations.Add($"  - {OwnerName(type)}.{method.Name} throws {exceptionType}");
             }

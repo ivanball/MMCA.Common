@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -30,12 +31,20 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePassword;
 /// The refresh-session store. A successful change revokes every live session on the account
 /// (ADR-097), so a stolen refresh chain cannot survive the remediation the user just performed.
 /// </param>
+/// <param name="loginProtection">
+/// The failed-attempt counter and exponential lockout (ADR-029). A wrong current password counts
+/// against the account, so the endpoint cannot be used as an unthrottled password oracle by anyone
+/// holding a session. The counter is keyed <c>password-change:{userId}</c> rather than by email:
+/// <see cref="IAuthUser"/> exposes no address, and a separate key keeps a change-password lockout
+/// from locking the owner out of sign-in.
+/// </param>
 /// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
 public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ILogger logger,
     IRefreshSessionStore refreshSessions,
+    ILoginProtectionService loginProtection,
     TimeProvider? timeProvider = null) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IPasswordChangeableUser
     where TCommand : IUserScopedCommand<ChangePasswordRequest>
@@ -76,11 +85,21 @@ public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
                 Error.Unauthorized("Auth.InvalidCurrentPassword", "Current password is incorrect.", HandlerName));
         }
 
+        var protectionKey = ProtectionKey(command.UserId);
+        var lockout = await loginProtection.CheckLockoutAsync(protectionKey, cancellationToken).ConfigureAwait(false);
+        if (lockout.IsFailure)
+        {
+            return lockout;
+        }
+
         if (!passwordHasher.VerifyPassword(command.Request.CurrentPassword, user.PasswordHash, user.PasswordSalt))
         {
+            await loginProtection.IncrementFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
             return Result.Failure(
                 Error.Unauthorized("Auth.InvalidCurrentPassword", "Current password is incorrect.", HandlerName));
         }
+
+        await loginProtection.ResetFailedAttemptsAsync(protectionKey, cancellationToken).ConfigureAwait(false);
 
         var (newHash, newSalt) = passwordHasher.HashPassword(command.Request.NewPassword);
         var result = user.ChangePassword(newHash, newSalt);
@@ -99,4 +118,13 @@ public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
 
         return result;
     }
+
+    /// <summary>
+    /// The failed-attempt counter key for one account: per account, and separate from the sign-in
+    /// counter (which is keyed by email).
+    /// </summary>
+    /// <param name="userId">The account changing its password.</param>
+    /// <returns>The counter key.</returns>
+    private static string ProtectionKey(UserIdentifierType userId) =>
+        $"password-change:{userId.ToString(CultureInfo.InvariantCulture)}";
 }

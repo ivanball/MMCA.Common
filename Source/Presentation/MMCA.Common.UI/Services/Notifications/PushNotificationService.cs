@@ -39,12 +39,16 @@ public sealed class PushNotificationService(
             }
         }
 
+        // The send is retried on a transient failure; without a key, an attempt that reached the
+        // server before failing would broadcast twice. The key rides on every attempt so the
+        // [Idempotent] endpoint collapses the duplicate.
         return await SendRequestAsync<PushNotificationDTO>(
             httpClient => httpClient.PostAsJsonAsync(
                 new Uri(Endpoint, UriKind.Relative),
                 scopedRequest,
                 cancellationToken),
-            cancellationToken);
+            cancellationToken,
+            idempotencyKey: NewIdempotencyKey());
     }
 
     /// <inheritdoc />

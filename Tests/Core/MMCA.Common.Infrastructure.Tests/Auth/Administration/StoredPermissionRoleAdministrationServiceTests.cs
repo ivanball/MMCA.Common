@@ -131,6 +131,45 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
         _invalidator.Verify(x => x.InvalidateAsync("Manager", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // L59: each grant commits on its own, so a set that stops part-way has already written rows the
+    // snapshot must pick up. The invalidation runs on every exit, not only on success.
+    [Fact]
+    public async Task SetStoredPermissionsAsync_WhenTheStoreThrowsPartWay_StillInvalidatesTheSnapshot()
+    {
+        var store = new Mock<IPermissionGrantStore>();
+        store.Setup(s => s.GetPermissionsAsync("Manager", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        store.SetupSequence(s => s.GrantAsync("Manager", It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success())
+            .ThrowsAsync(new InvalidOperationException("connection lost"));
+        var sut = CreateService(
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Read, Export),
+            store: store.Object);
+
+        var act = () => sut.SetStoredPermissionsAsync("Manager", [Read, Export]);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _invalidator.Verify(x => x.InvalidateAsync("Manager", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetStoredPermissionsAsync_WhenAGrantFailsPartWay_StillInvalidatesTheSnapshot()
+    {
+        var store = new Mock<IPermissionGrantStore>();
+        store.Setup(s => s.GetPermissionsAsync("Manager", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        store.SetupSequence(s => s.GrantAsync("Manager", It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success())
+            .ReturnsAsync(Result.Failure(Error.Validation("PermissionGrant.RoleInvalid", "rejected", "test")));
+        var sut = CreateService(
+            compiled: new PermissionRegistryBuilder().Grant("Manager", Read, Export),
+            store: store.Object);
+
+        var result = await sut.SetStoredPermissionsAsync("Manager", [Read, Export]);
+
+        result.IsFailure.Should().BeTrue();
+        _invalidator.Verify(x => x.InvalidateAsync("Manager", It.IsAny<CancellationToken>()), Times.Once);
+    }
     [Fact]
     public async Task SetStoredPermissionsAsync_WithAnEmptySet_RemovesEveryStoredGrant()
     {
@@ -186,14 +225,15 @@ public sealed class StoredPermissionRoleAdministrationServiceTests
 
     private StoredPermissionRoleAdministrationService CreateService(
         PermissionRegistryBuilder compiled,
-        IReadOnlyList<string>? knownRoles = null)
+        IReadOnlyList<string>? knownRoles = null,
+        IPermissionGrantStore? store = null)
     {
         var registry = compiled.Build();
 
         return new StoredPermissionRoleAdministrationService(
             registry,
             registry,
-            _store,
+            store ?? _store,
             _cache,
             _invalidator.Object,
             Options.Create(new PermissionGrantSettings { KnownRoles = knownRoles ?? [] }));

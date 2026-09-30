@@ -150,6 +150,54 @@ public sealed class ChangePasswordHandlerBaseTests
         live.RevokedAt.Should().BeNull("the credential never changed, so nothing had to be evicted");
     }
 
+    [Fact]
+    public async Task HandleAsync_WhenCurrentPasswordWrong_CountsAFailedAttemptAgainstTheAccount()
+    {
+        // M108: a wrong current password feeds the per-account lockout.
+        var (sut, mocks) = CreateSut();
+        ArrangeUser(mocks, new TestIdentityUser { Id = 1 });
+        mocks.PasswordHasher
+            .Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()))
+            .Returns(false);
+
+        await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("wrong", "new")));
+
+        mocks.LoginProtection.Verify(
+            x => x.IncrementFailedAttemptsAsync("password-change:1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheAccountIsLockedOut_ReturnsTheLockoutWithoutVerifying()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeUser(mocks, new TestIdentityUser { Id = 1 });
+        mocks.LoginProtection
+            .Setup(x => x.CheckLockoutAsync("password-change:1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure(Error.Unauthorized("Auth.TooManyAttempts", "Too many attempts.")));
+
+        Result result = await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.TooManyAttempts");
+        mocks.PasswordHasher.Verify(
+            x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenCurrentPasswordCorrect_ResetsTheFailedAttemptCounter()
+    {
+        var (sut, mocks) = CreateSut();
+        ArrangeUser(mocks, new TestIdentityUser { Id = 1 });
+
+        await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
+
+        mocks.LoginProtection.Verify(
+            x => x.ResetFailedAttemptsAsync("password-change:1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static RefreshSession CreateSession(UserIdentifierType userId) =>
         RefreshSession.Create(
             userId,
@@ -166,7 +214,8 @@ public sealed class ChangePasswordHandlerBaseTests
         Mock<IUnitOfWork> UnitOfWork,
         Mock<IRepository<TestIdentityUser, UserIdentifierType>> Repository,
         Mock<IPasswordHasher> PasswordHasher,
-        Mock<IRefreshSessionStore> RefreshSessions);
+        Mock<IRefreshSessionStore> RefreshSessions,
+        Mock<ILoginProtectionService> LoginProtection);
 
     private static (TestChangePasswordHandler Sut, HandlerMocks Mocks) CreateSut()
     {
@@ -187,8 +236,17 @@ public sealed class ChangePasswordHandlerBaseTests
             .Setup(x => x.GetUnrevokedByUserAsync(It.IsAny<UserIdentifierType>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var sut = new TestChangePasswordHandler(unitOfWork.Object, passwordHasher.Object, refreshSessions.Object);
-        return (sut, new HandlerMocks(unitOfWork, repository, passwordHasher, refreshSessions));
+        var loginProtection = new Mock<ILoginProtectionService>();
+        loginProtection
+            .Setup(x => x.CheckLockoutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success());
+
+        var sut = new TestChangePasswordHandler(
+            unitOfWork.Object,
+            passwordHasher.Object,
+            refreshSessions.Object,
+            loginProtection.Object);
+        return (sut, new HandlerMocks(unitOfWork, repository, passwordHasher, refreshSessions, loginProtection));
     }
 }
 
@@ -196,6 +254,7 @@ public sealed class ChangePasswordHandlerBaseTests
 public sealed class TestChangePasswordHandler(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
-    IRefreshSessionStore refreshSessions)
+    IRefreshSessionStore refreshSessions,
+    ILoginProtectionService loginProtection)
     : ChangePasswordHandlerBase<TestIdentityUser, TestChangePasswordCommand>(
-        unitOfWork, passwordHasher, NullLogger.Instance, refreshSessions);
+        unitOfWork, passwordHasher, NullLogger.Instance, refreshSessions, loginProtection);

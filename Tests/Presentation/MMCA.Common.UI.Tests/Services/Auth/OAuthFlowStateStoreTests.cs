@@ -52,6 +52,22 @@ public sealed class OAuthFlowStateStoreTests
     }
 
     [Fact]
+    public async Task TryCompleteAsync_WithAPendingAttemptButNoReturnedState_Refuses()
+    {
+        // M127: omitting the parameter must not bypass the binding.
+        var sut = new OAuthFlowStateStore(_store, _time);
+
+        await sut.BeginAsync(TestContext.Current.CancellationToken);
+        var allowedWithNull = await sut.TryCompleteAsync(null, TestContext.Current.CancellationToken);
+
+        await sut.BeginAsync(TestContext.Current.CancellationToken);
+        var allowedWithEmpty = await sut.TryCompleteAsync(string.Empty, TestContext.Current.CancellationToken);
+
+        allowedWithNull.Should().BeFalse("every legitimate flow round-trips the state");
+        allowedWithEmpty.Should().BeFalse("an empty value carries no binding either");
+    }
+
+    [Fact]
     public async Task TryCompleteAsync_ConsumesTheAttempt_SoAValueIsGoodOnlyOnce()
     {
         var sut = new OAuthFlowStateStore(_store, _time);

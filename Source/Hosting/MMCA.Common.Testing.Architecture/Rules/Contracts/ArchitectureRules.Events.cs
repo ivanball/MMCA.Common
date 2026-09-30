@@ -38,23 +38,65 @@ public static partial class ArchitectureRules
     }
 
     /// <summary>
-    /// Builds the frozen wire-contract snapshot: one line per integration event, declared public
-    /// properties sorted by name, events sorted by full type name. Consumed by the per-repo
-    /// IntegrationEventContractTestsBase, which compares it to a committed <c>ExpectedContract</c>.
+    /// Builds the frozen wire-contract snapshot: one line per integration event, its public
+    /// instance properties below the framework envelope (an intermediate consumer base is
+    /// included; <c>DateOccurred</c>, <c>MessageId</c> and <c>SchemaVersion</c> are not) sorted by
+    /// name with generic arguments spelled out (<c>Nullable&lt;Int32&gt;</c>), events sorted by
+    /// full type name. Consumed by the per-repo IntegrationEventContractTestsBase, which compares
+    /// it to a committed <c>ExpectedContract</c>.
     /// </summary>
     public static List<string> BuildIntegrationEventContract(IArchitectureMap map) =>
         [.. IntegrationEvents(map)
             .OrderBy(t => t.FullName, StringComparer.Ordinal)
             .Select(DescribeIntegrationEvent)];
 
+    private const string FrameworkEnvelopeNamespace = "MMCA.Common.Domain.DomainEvents";
+
     private static string DescribeIntegrationEvent(Type eventType)
     {
         var properties = eventType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => !string.Equals(p.DeclaringType?.Namespace, FrameworkEnvelopeNamespace, StringComparison.Ordinal))
+            .GroupBy(p => p.Name, StringComparer.Ordinal)
+            .Select(g => g.MaxBy(p => InheritanceDepth(p.DeclaringType))!)
             .OrderBy(p => p.Name, StringComparer.Ordinal)
-            .Select(p => $"{p.Name}:{p.PropertyType.Name}");
+            .Select(p => $"{p.Name}:{ContractTypeName(p.PropertyType)}");
 
         return $"{eventType.FullName} {{ {string.Join(", ", properties)} }}";
+    }
+
+    /// <summary>
+    /// The wire-shape name of a property type: the simple name, with generic arguments spelled out
+    /// recursively and arrays suffixed, so a retyped generic argument changes the line. Namespaces
+    /// stay out because the wire carries none.
+    /// </summary>
+    private static string ContractTypeName(Type type)
+    {
+        if (type.IsArray)
+        {
+            return ContractTypeName(type.GetElementType()!) + "[]";
+        }
+
+        if (!type.IsGenericType)
+        {
+            return type.Name;
+        }
+
+        var tick = type.Name.IndexOf('`', StringComparison.Ordinal);
+        var name = tick < 0 ? type.Name : type.Name[..tick];
+        return $"{name}<{string.Join(", ", type.GetGenericArguments().Select(ContractTypeName))}>";
+    }
+
+    /// <summary>How far below <see cref="object"/> a type sits; the most-derived re-declaration wins.</summary>
+    private static int InheritanceDepth(Type? type)
+    {
+        var depth = 0;
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            depth++;
+        }
+
+        return depth;
     }
 
     /// <summary>

@@ -36,13 +36,16 @@ public sealed class IdempotencyFilterTests
         string? routeTemplate = null,
         Mock<ICacheService>? sharedCache = null,
         IDistributedLock? distributedLock = null,
-        string? body = null)
+        string? body = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         var cache = sharedCache ?? new Mock<ICacheService>();
         var services = new ServiceCollection();
         services.AddSingleton(cache.Object);
         if (distributedLock is not null)
             services.AddSingleton(distributedLock);
+
+        configureServices?.Invoke(services);
 
         var serviceProvider = services.BuildServiceProvider();
 
@@ -552,6 +555,114 @@ public sealed class IdempotencyFilterTests
             "a response with no body must not be replayed as application/json content");
         ((StatusCodeResult)context.Result!).StatusCode.Should().Be(204);
         context.HttpContext.Response.Headers["X-Idempotent-Replay"].ToString().Should().Be("true");
+    }
+
+    // -- Replay fidelity (L60, L61) --
+    // The stored body is serialized with the MVC JSON options the original response used, and the
+    // replay carries the empty body and the Location and ETag headers of the original.
+    [Fact]
+    public async Task StoredBody_IsSerializedWithTheMvcJsonOptions()
+    {
+        var record = await StoreAndCaptureAsync(
+            new OkObjectResult(new { Value = new Wrapped("x") }),
+            configureServices: services =>
+            {
+                services.AddOptions();
+                services.Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new WrappedAsStringConverter()));
+            });
+
+        record.ResponseBody.Should().Be("{\"value\":\"x\"}");
+    }
+
+    [Fact]
+    public async Task AcceptedWithNoValue_StoresAnEmptyBodyAndReplaysAsABodylessStatus()
+    {
+        var record = await StoreAndCaptureAsync(new AcceptedResult());
+
+        record.ResponseBody.Should().BeEmpty("a null value is no body, not the JSON literal null");
+
+        var replay = await ReplayAsync(record);
+        replay.Result.Should().BeOfType<StatusCodeResult>();
+        ((StatusCodeResult)replay.Result!).StatusCode.Should().Be(202);
+    }
+
+    [Fact]
+    public async Task CreatedResult_StoresItsLocationAndTheReplayWritesIt()
+    {
+        var record = await StoreAndCaptureAsync(new CreatedResult("/items/5", new { id = 5 }));
+
+        record.Location.Should().Be("/items/5");
+
+        var replay = await ReplayAsync(record);
+        replay.HttpContext.Response.Headers.Location.ToString().Should().Be("/items/5");
+    }
+
+    [Fact]
+    public async Task ETagWrittenByTheAction_IsStoredAndTheReplayWritesIt()
+    {
+        var record = await StoreAndCaptureAsync(
+            new OkObjectResult(new { id = 1 }),
+            onAction: http => http.Response.Headers.ETag = "W/\"abc\"");
+
+        record.ETag.Should().Be("W/\"abc\"");
+
+        var replay = await ReplayAsync(record);
+        replay.HttpContext.Response.Headers.ETag.ToString().Should().Be("W/\"abc\"");
+    }
+
+    /// <summary>Runs one first request through the filter and returns the record it stored.</summary>
+    private static async Task<IdempotencyRecord> StoreAndCaptureAsync(
+        IActionResult result,
+        Action<HttpContext>? onAction = null,
+        Action<IServiceCollection>? configureServices = null)
+    {
+        var (context, cache) = CreateContext($"fidelity-{Guid.NewGuid()}", configureServices: configureServices);
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IdempotencyRecord?)null);
+        IdempotencyRecord? stored = null;
+        cache.Setup(x => x.SetAsync(It.IsAny<string>(), It.IsAny<IdempotencyRecord>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, IdempotencyRecord record, TimeSpan? _, CancellationToken _) => stored = record)
+            .Returns(Task.CompletedTask);
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+        {
+            onAction?.Invoke(context.HttpContext);
+            return Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)
+            {
+                Result = result,
+            });
+        });
+
+        stored.Should().NotBeNull();
+        return stored!;
+    }
+
+    /// <summary>Runs a duplicate request whose key finds <paramref name="record"/> and returns its context.</summary>
+    private static async Task<ActionExecutingContext> ReplayAsync(IdempotencyRecord record)
+    {
+        var (context, cache) = CreateContext($"fidelity-replay-{Guid.NewGuid()}");
+        cache.Setup(x => x.GetAsync<IdempotencyRecord>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(record);
+
+        await CreateSut().OnActionExecutionAsync(context, () =>
+            Task.FromResult(new ActionExecutedContext(
+                new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+                [], null!)));
+
+        return context;
+    }
+
+    private sealed record Wrapped(string Inner);
+
+    private sealed class WrappedAsStringConverter : System.Text.Json.Serialization.JsonConverter<Wrapped>
+    {
+        public override Wrapped Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) =>
+            new(reader.GetString()!);
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, Wrapped value, System.Text.Json.JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.Inner);
     }
 
     // ── Cross-replica duplicates ──

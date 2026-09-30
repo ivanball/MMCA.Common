@@ -40,6 +40,11 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
     private const string DenseMarker = "1";
 
     /// <summary>
+    /// Largest page size a URL may ask for; the same ceiling <c>KeysetPageRequest.MaxPageSize</c> states.
+    /// </summary>
+    private const int MaxPageSize = 1000;
+
+    /// <summary>
     /// Reads list-page state from the current <see cref="NavigationManager.Uri"/>.
     /// </summary>
     public ListPageState ReadCurrent()
@@ -57,9 +62,11 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
     {
         var parsed = QueryHelpers.ParseQuery(queryString ?? string.Empty);
 
-        var page = TryGetInt(parsed, PageKey, defaultValue: 0);
-        var pageSize = TryGetInt(parsed, PageSizeKey, defaultValue: 0);
-        var mobilePage = TryGetInt(parsed, MobilePageKey, defaultValue: 1);
+        // Out-of-range values fall back to their defaults the way an unparsable one does: a hand-edited
+        // or stale link with p=-3 or ps=5000 must not leave the list stuck on a failing fetch.
+        var page = Math.Max(0, TryGetInt(parsed, PageKey, defaultValue: 0));
+        var pageSize = ClampPageSize(TryGetInt(parsed, PageSizeKey, defaultValue: 0));
+        var mobilePage = Math.Max(1, TryGetInt(parsed, MobilePageKey, defaultValue: 1));
 
         string? sortColumn = null;
         if (parsed.TryGetValue(SortKey, out var sortValues))
@@ -208,6 +215,9 @@ public sealed class ListPageQueryStateService(NavigationManager navigation)
         var target = BuildPath(basePath, state);
         navigation.NavigateTo(target, new NavigationOptions { ReplaceHistoryEntry = true });
     }
+
+    /// <summary>A page size outside 1..<see cref="MaxPageSize"/> falls back to 0 (the page default).</summary>
+    private static int ClampPageSize(int pageSize) => pageSize is > 0 and <= MaxPageSize ? pageSize : 0;
 
     private static int TryGetInt(Dictionary<string, StringValues> parsed, string key, int defaultValue)
     {

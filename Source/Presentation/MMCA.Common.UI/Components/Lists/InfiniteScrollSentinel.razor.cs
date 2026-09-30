@@ -36,6 +36,11 @@ public partial class InfiniteScrollSentinel : IAsyncDisposable
     private IJSObjectReference? _module;
     private DotNetObjectReference<InfiniteScrollSentinel>? _dotNetRef;
     private bool _observing;
+
+    // The previous render IsLoading value. When a load finishes the sentinel may still be inside the
+    // viewport, and the observer reports threshold crossings only, so it is re-observed to get a fresh
+    // initial entry (otherwise the list stalls until the user scrolls away and back).
+    private bool _wasLoading;
     private bool _disposed;
 
     /// <summary>
@@ -49,7 +54,10 @@ public partial class InfiniteScrollSentinel : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_disposed)
+        var loadJustFinished = _wasLoading && !IsLoading && _observing;
+        _wasLoading = IsLoading;
+
+        if (!_disposed && (firstRender || loadJustFinished))
         {
             await AttachObserverAsync();
         }

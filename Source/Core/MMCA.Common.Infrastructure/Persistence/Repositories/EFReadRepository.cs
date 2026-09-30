@@ -507,6 +507,10 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     private bool IsCosmosProvider =>
         _context.Database.ProviderName?.Contains("Cosmos", StringComparison.Ordinal) == true;
 
+    /// <summary>PostgreSQL sorts nulls last ascending, the reverse of SQL Server and SQLite.</summary>
+    private bool IsPostgreSql =>
+        _context.Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true;
+
     /// <summary>Gets a tracked queryable over the entity set.</summary>
     public virtual IQueryable<TEntity> Table => Entities;
 
@@ -678,7 +682,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     /// is malformed (bad encoding, wrong version, or values that do not parse as this entity's key
     /// and sort types).
     /// </summary>
-    private static bool TryBuildSeekPredicate(
+    private bool TryBuildSeekPredicate(
         KeysetPageRequest request,
         PropertyInfo? sortProperty,
         out Expression<Func<TEntity, bool>> seek)
@@ -703,7 +707,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         }
 
         seek = KeysetQueryBuilder.BuildSeekPredicate<TEntity, TIdentifierType>(
-            sortProperty, sortValue, typedId, request.Descending);
+            sortProperty, sortValue, typedId, request.Descending, nullsSortFirstAscending: !IsPostgreSql);
 
         return true;
     }

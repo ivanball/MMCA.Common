@@ -116,7 +116,10 @@ public static class PiiRedactor
                 .Where(static p => p.CanRead && p.GetIndexParameters().Length == 0)
                 .Select(static p => new RedactableProperty(
                     p.Name,
-                    p.IsDefined(typeof(PiiAttribute), inherit: false),
+                    // Attribute.IsDefined walks an override back to the base declaration (the
+                    // PropertyInfo instance method ignores inherit for properties), so a derived
+                    // type overriding a [Pii] property without repeating the marker stays redacted.
+                    Attribute.IsDefined(p, typeof(PiiAttribute), inherit: true),
                     p)),
         ]);
 

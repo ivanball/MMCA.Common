@@ -16,12 +16,14 @@ public sealed class BrowserExternalLinkService : IExternalLinkService
     public bool InterceptsLinks => false;
 
     /// <inheritdoc />
-    public async Task OpenAsync(Uri uri, CancellationToken cancellationToken = default)
+    public async Task<bool> OpenAsync(Uri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        await _module
+        // Null when JS interop is unavailable (prerender, a torn-down circuit): nothing was opened.
+        var opened = await _module
             .InvokeOrDefaultAsync<bool?>("openExternal", [uri.ToString()], cancellationToken)
             .ConfigureAwait(false);
+        return opened ?? false;
     }
 }

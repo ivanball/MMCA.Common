@@ -22,6 +22,12 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// holding it. Held channels are re-joined automatically after an automatic reconnect, because
 /// SignalR group membership does not survive a new connection.
 /// </para>
+/// <para>
+/// When the automatic reconnect schedule is exhausted the connection closes with an error; the service
+/// then runs a fresh <see cref="StartAsync"/> (rebuild, backoff retries, channel re-join), so live
+/// notifications do not stay dead for the rest of the session. A close without an error is a deliberate
+/// stop or dispose and is never restarted.
+/// </para>
 /// </summary>
 public sealed partial class NotificationHubService : IAsyncDisposable
 {
@@ -71,6 +77,12 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     internal TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
+    /// Test-only hook that replaces the <see cref="HubConnectionBuilder"/> call, so a test can hand the
+    /// service a connection over an in-memory transport. Null in production.
+    /// </summary>
+    internal Func<HubConnection>? ConnectionFactory { get; set; }
+
+    /// <summary>
     /// Starts the SignalR connection if not already connected. Called after user login.
     /// Retries with exponential backoff if the initial attempt fails.
     /// <para>
@@ -118,12 +130,20 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     private async Task StartCoreAsync()
     {
-        if (_hubConnection is not null)
+        // A connected, connecting or reconnecting connection is left alone. A Disconnected one is dead:
+        // its automatic reconnect schedule gave up, so it is discarded and rebuilt rather than
+        // satisfying the guard forever.
+        if (_hubConnection is { State: not HubConnectionState.Disconnected })
         {
             return;
         }
 
-        _hubConnection = new HubConnectionBuilder()
+        if (_hubConnection is not null)
+        {
+            await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
+        }
+
+        _hubConnection = ConnectionFactory?.Invoke() ?? new HubConnectionBuilder()
             .WithUrl(_hubUrl, options => options.AccessTokenProvider = _tokenStorageService.GetAccessTokenAsync)
             .WithAutomaticReconnect()
             .Build();
@@ -141,6 +161,10 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         // Group membership lives on the server connection; a new connection after an automatic
         // reconnect starts with no groups, so every tracked channel must be re-joined.
         _hubConnection.Reconnected += _ => RejoinChannelsAsync();
+
+        // Raised with an error once the automatic reconnect schedule is exhausted; a null error is a
+        // deliberate StopAsync or dispose and must not restart.
+        _hubConnection.Closed += error => error is null ? Task.CompletedTask : RestartAfterCloseAsync();
 
         var delay = InitialRetryDelay;
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
@@ -318,6 +342,21 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         }
     }
 
+    private async Task RestartAfterCloseAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        LogReconnectExhausted(_hubUrl);
+
+        // The serialized start rebuilds, retries with backoff, re-joins channels on success and
+        // discards on terminal failure. A connection that never started raises no Closed, so the
+        // loop is bounded.
+        await StartAsync().ConfigureAwait(false);
+    }
+
     private async Task DispatchChannelEventAsync(string channelKey, string eventName, string payloadJson)
     {
         ChannelSubscription[] subscriptions;
@@ -390,6 +429,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to connect to notification hub at {HubUrl}")]
     private partial void LogConnectionFailed(Exception exception, string hubUrl);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification hub automatic reconnect gave up, starting a new connection to {HubUrl}")]
+    private partial void LogReconnectExhausted(string hubUrl);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Notification hub connection attempt {Attempt}/{MaxAttempts} failed, retrying in {Delay} — {HubUrl}")]
     private partial void LogRetrying(int attempt, int maxAttempts, TimeSpan delay, string hubUrl);

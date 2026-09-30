@@ -268,6 +268,9 @@ internal sealed class ExecutionLog
 
     /// <summary>Gets or sets an exception the handler throws instead of returning.</summary>
     public Func<Exception>? Throws { get; set; }
+
+    /// <summary>Gets or sets a callback run after each execution is recorded, before the outcome.</summary>
+    public Func<RecordingCommand, Task>? OnExecuted { get; set; }
 }
 
 /// <summary>A command whose executions are recorded, used across the processor tests.</summary>
@@ -287,7 +290,7 @@ internal sealed class RecordingCommandHandler(
     ICurrentUserService currentUserService,
     ITenantContext tenantContext) : ICommandHandler<RecordingCommand, Result>
 {
-    public Task<Result> HandleAsync(RecordingCommand command, CancellationToken cancellationToken = default)
+    public async Task<Result> HandleAsync(RecordingCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -297,11 +300,16 @@ internal sealed class RecordingCommandHandler(
             [.. currentUserService.Roles],
             tenantContext.TenantId));
 
+        if (log.OnExecuted is { } onExecuted)
+        {
+            await onExecuted(command).ConfigureAwait(false);
+        }
+
         if (log.Throws is { } factory)
         {
             throw factory();
         }
 
-        return Task.FromResult(log.Outcome());
+        return log.Outcome();
     }
 }

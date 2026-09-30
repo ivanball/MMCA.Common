@@ -2,6 +2,8 @@ using System.Collections;
 using System.Globalization;
 using System.Reflection;
 using AwesomeAssertions;
+using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Caching;
 using MMCA.Common.Shared.Concurrency;
 
@@ -16,6 +18,39 @@ public sealed class MemoryCacheServiceTests : IDisposable
         _sut = new MemoryCacheService(_cache);
 
     public void Dispose() => _cache.Dispose();
+
+    // -- Default expiration (L57) --
+    // Every other store applies CacheSettings.DefaultDuration to an entry written without an
+    // expiration; the in-memory one must too, or such an entry lives for the life of the process.
+    [Fact]
+    public async Task SetAsync_WithoutAnExpiration_ExpiresAfterTheConfiguredDefaultDuration()
+    {
+        var sut = new MemoryCacheService(_cache, Options.Create(new CacheSettings { DefaultDuration = TimeSpan.FromSeconds(30) }));
+
+        await sut.SetAsync("k", "v");
+        _cache.AdvanceClock(TimeSpan.FromSeconds(31));
+
+        (await sut.GetAsync<string>("k")).Should().BeNull();
+    }
+
+    // -- GetOrCreateAsync with a value type (L47) --
+    // A miss answers default(T) from GetAsync, which for an int is 0 and is not null, so presence has
+    // to come from TryGetAsync or the factory never runs.
+    [Fact]
+    public async Task GetOrCreateAsync_WithAValueTypeOnAMiss_RunsTheFactoryAndCachesItsResult()
+    {
+        var calls = 0;
+
+        var value = await ((ICacheService)_sut).GetOrCreateAsync<int>("int-factory", _ =>
+        {
+            calls++;
+            return Task.FromResult(7);
+        });
+
+        value.Should().Be(7);
+        calls.Should().Be(1);
+        (await _sut.GetAsync<int>("int-factory")).Should().Be(7);
+    }
 
     // ── GetAsync ──
     [Fact]

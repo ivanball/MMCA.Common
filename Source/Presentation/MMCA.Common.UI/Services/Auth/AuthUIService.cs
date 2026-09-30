@@ -87,19 +87,7 @@ public sealed class AuthUIService(
     /// <inheritdoc />
     public async Task LogoutAsync()
     {
-        // Native push (ADR-044): drop this device's installation while the access token is
-        // still valid: the Devices DELETE is authenticated. No-op on web heads. Best-effort:
-        // a failure must never block sign-out.
-        try
-        {
-            await pushRegistration.UnregisterAsync();
-        }
-#pragma warning disable CA1031 // Do not catch general exception types: unregistration is best-effort
-        catch
-#pragma warning restore CA1031
-        {
-            // Ignore errors - we still want to sign out locally.
-        }
+        await UnregisterPushAsync();
 
         using var httpClient = httpClientFactory.CreateClient(ApiClientName);
 
@@ -123,25 +111,31 @@ public sealed class AuthUIService(
             }
         }
 
-        try
+        await SignOutLocallyAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<Result> RevokeAllSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await HttpResultExecutor.ExecuteAsync(
+            async () =>
+            {
+                using var httpClient = await CreateAuthenticatedClientAsync();
+                using var response = await httpClient.PostAsync(
+                    new Uri("auth/revoke", UriKind.Relative), content: null, cancellationToken);
+                return await ProblemDetailsResultReader.ReadAsync(response, cancellationToken);
+            },
+            cancellationToken);
+
+        if (result.IsSuccess)
         {
-            await tokenStorageService.ClearTokensAsync();
-        }
-        catch (InvalidOperationException)
-        {
-            // JS interop not available
+            // Same order as LogoutAsync: the push unregister first, while the access token still
+            // authenticates the Devices DELETE, then the local sign-out.
+            await UnregisterPushAsync();
+            await SignOutLocallyAsync();
         }
 
-        // Everything the previous session read is now another user's data. The scope that holds the
-        // cache outlives the session on WebAssembly and MAUI, so leaving entries behind would show
-        // them to whoever signs in next on this client.
-        readCache?.Clear();
-        await ClearLocalCacheAsync().ConfigureAwait(false);
-
-        if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
-        {
-            jwtProvider.NotifyUserLogout();
-        }
+        return result;
     }
 
     /// <inheritdoc />
@@ -316,6 +310,52 @@ public sealed class AuthUIService(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Native push (ADR-044): drops this device's installation while the access token is still
+    /// valid, since the Devices DELETE is authenticated. No-op on web heads. Best-effort: a failure
+    /// must never block sign-out.
+    /// </summary>
+    private async Task UnregisterPushAsync()
+    {
+        try
+        {
+            await pushRegistration.UnregisterAsync();
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: unregistration is best-effort
+        catch
+#pragma warning restore CA1031
+        {
+            // Ignore errors - we still want to sign out locally.
+        }
+    }
+
+    /// <summary>
+    /// The local half of a sign-out: clears the stored tokens, the read cache and the device-local
+    /// cache, then tells Blazor's auth state.
+    /// </summary>
+    private async Task SignOutLocallyAsync()
+    {
+        try
+        {
+            await tokenStorageService.ClearTokensAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // JS interop not available
+        }
+
+        // Everything the previous session read is now another user's data. The scope that holds the
+        // cache outlives the session on WebAssembly and MAUI, so leaving entries behind would show
+        // them to whoever signs in next on this client.
+        readCache?.Clear();
+        await ClearLocalCacheAsync().ConfigureAwait(false);
+
+        if (authStateProvider is JwtAuthenticationStateProvider jwtProvider)
+        {
+            jwtProvider.NotifyUserLogout();
+        }
     }
 
     /// <summary>

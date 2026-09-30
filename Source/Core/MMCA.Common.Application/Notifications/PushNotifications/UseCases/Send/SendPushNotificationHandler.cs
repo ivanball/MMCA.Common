@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using MMCA.Common.Application.Interfaces.Infrastructure.Notifications;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -21,7 +24,9 @@ namespace MMCA.Common.Application.Notifications.PushNotifications.UseCases.Send;
 /// short-circuit honest, since a committed row is otherwise indistinguishable from a delivered one
 /// and would answer every retry of that key with success. A business failure (no recipients) returns
 /// before the first write, and a delivery that fails is still recorded, because
-/// <c>MarkAsFailed</c> ends in a success result.
+/// <c>MarkAsFailed</c> ends in a success result. The live legs (SignalR and native) run inside the
+/// unit, so a transient fault on the final status save re-runs them under the execution strategy:
+/// delivery is at-least-once for the live channels and exactly-once for the inbox rows.
 /// </para>
 /// </summary>
 public sealed partial class SendPushNotificationHandler(
@@ -38,8 +43,12 @@ public sealed partial class SendPushNotificationHandler(
         CancellationToken cancellationToken = default)
     {
         // Deduplication (opt-in): a retried send carrying the same key must not deliver twice.
-        // Whitespace is treated as absent so a blank header cannot claim the single "empty" key.
-        string? dedupKey = string.IsNullOrWhiteSpace(command.DedupKey) ? null : command.DedupKey;
+        // Whitespace is treated as absent so a blank header cannot claim the single "empty" key. The
+        // persisted key is scoped to the sender, so another caller reusing the same client key can
+        // neither suppress this send nor be handed this sender's notification.
+        string? dedupKey = string.IsNullOrWhiteSpace(command.DedupKey)
+            ? null
+            : SenderScopedDedupKey(command.SentByUserId, command.DedupKey);
         if (dedupKey is not null)
         {
             PushNotification? alreadySent = await FindByDedupKeyAsync(dedupKey, cancellationToken).ConfigureAwait(false);
@@ -165,6 +174,17 @@ public sealed partial class SendPushNotificationHandler(
 
         return Result.Success(dtoMapper.MapToDTO(notification));
     }
+
+    /// <summary>
+    /// Derives the stored deduplication key from the sender and the client key: a hex SHA-256, so it
+    /// is always 64 characters (within the column) whatever the client sent.
+    /// </summary>
+    /// <param name="sentByUserId">The sending user.</param>
+    /// <param name="clientKey">The client-supplied key.</param>
+    /// <returns>The sender-scoped key.</returns>
+    private static string SenderScopedDedupKey(UserIdentifierType sentByUserId, string clientKey) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            string.Create(CultureInfo.InvariantCulture, $"{sentByUserId}:{clientKey}"))));
 
     /// <summary>
     /// Looks up an already-persisted notification by its deduplication key. Uses the read

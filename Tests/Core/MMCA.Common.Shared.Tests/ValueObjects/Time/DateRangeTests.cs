@@ -67,10 +67,29 @@ public class DateRangeTests
         a.Overlaps(b).Should().BeFalse();
     }
 
+    // Inverted (L89): the range is inclusive on both ends, so ranges sharing their boundary day both
+    // contain that day and overlap. It used to assert false under half-open logic.
     [Fact]
-    public void Overlaps_AdjacentRanges_ReturnsFalse()
+    public void Overlaps_RangesSharingTheirBoundaryDay_ReturnsTrue()
     {
         var a = DateRange.Create(Jan1, Jan10).Value!;
+        var b = DateRange.Create(Jan10, Jan20).Value!;
+
+        a.Overlaps(b).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Overlaps_ASingleDayRangeWithItself_ReturnsTrue()
+    {
+        var day = DateRange.Create(Jan10, Jan10).Value!;
+
+        day.Overlaps(day).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Overlaps_RangesThatOnlyTouchAcrossTwoConsecutiveDays_ReturnsFalse()
+    {
+        var a = DateRange.Create(Jan1, Jan10.AddDays(-1)).Value!;
         var b = DateRange.Create(Jan10, Jan20).Value!;
 
         a.Overlaps(b).Should().BeFalse();

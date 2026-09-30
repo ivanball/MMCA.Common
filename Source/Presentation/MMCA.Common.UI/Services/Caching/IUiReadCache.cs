@@ -32,6 +32,14 @@ namespace MMCA.Common.UI.Services.Caching;
 public interface IUiReadCache
 {
     /// <summary>
+    /// Gets the invalidation generation: a counter that moves on every <see cref="InvalidatePrefix"/>
+    /// and <see cref="Clear"/>. A reader captures it before issuing a GET and passes it to
+    /// <see cref="Set{T}(string, T, long)"/>, so a read that was in flight across a write cannot
+    /// re-store the stale value the write just invalidated.
+    /// </summary>
+    long Generation => 0;
+
+    /// <summary>
     /// Reads a cached value that is still within its TTL.
     /// </summary>
     /// <typeparam name="T">The cached value's type; a hit stored under a different type reads as a miss.</typeparam>
@@ -49,6 +57,17 @@ public interface IUiReadCache
     /// <param name="url">The relative request URL (path plus the full query string), used verbatim as the key.</param>
     /// <param name="value">The value to cache. Only ever a success value: failures are not stored.</param>
     void Set<T>(string url, T value);
+
+    /// <summary>
+    /// Stores a successfully read value only when no invalidation happened since
+    /// <paramref name="generation"/> was read from <see cref="Generation"/>; otherwise the value is
+    /// dropped as possibly stale. The default implementation ignores the generation.
+    /// </summary>
+    /// <typeparam name="T">The value's type.</typeparam>
+    /// <param name="url">The relative request URL (path plus the full query string), used verbatim as the key.</param>
+    /// <param name="value">The value to cache. Only ever a success value: failures are not stored.</param>
+    /// <param name="generation">The <see cref="Generation"/> captured before the read was issued.</param>
+    void Set<T>(string url, T value, long generation) => Set(url, value);
 
     /// <summary>
     /// Drops every entry whose key starts with <paramref name="routePrefix"/> (ordinal), which is how

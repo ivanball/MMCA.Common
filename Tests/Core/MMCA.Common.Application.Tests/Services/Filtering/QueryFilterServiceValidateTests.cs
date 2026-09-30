@@ -45,6 +45,36 @@ public sealed class QueryFilterServiceValidateTests
         result.IsSuccess.Should().BeTrue();
     }
 
+    // -- String IN with no usable value (L44) --
+    // Every value-typed strategy refuses an IN list with no item; the string strategy must too, or
+    // the filter fails open and returns the whole set.
+    [Fact]
+    public void ValidateFilters_StringInWithNoUsableValue_ReturnsValueInvalid()
+    {
+        var filters = new Dictionary<string, (string, string)>
+        {
+            ["Name"] = ("IN", ","),
+        };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, EmptyMap);
+
+        result.Errors.Should().ContainSingle(e => e.Code == "Filter.Value.Invalid");
+    }
+
+    // -- Case-insensitive property keys (L45) --
+    [Fact]
+    public void ValidateFilters_PropertyKeyInADifferentCase_ReturnsSuccess()
+    {
+        var filters = new Dictionary<string, (string, string)>
+        {
+            ["name"] = ("EQUALS", "x"),
+        };
+
+        var result = QueryFilterService.ValidateFilters<Product>(filters, EmptyMap);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
     // ── Valid filters ──
     [Fact]
     public void ValidateFilters_ValidStringFilter_ReturnsSuccess()

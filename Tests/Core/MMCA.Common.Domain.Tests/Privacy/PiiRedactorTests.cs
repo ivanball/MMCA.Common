@@ -29,6 +29,27 @@ public sealed class PiiRedactorTests
         public string Name { get; init; } = "public-content";
     }
 
+    private class PiiBase
+    {
+        [Pii]
+        public virtual string Email { get; set; } = "base@example.com";
+    }
+
+    private sealed class PiiOverride : PiiBase
+    {
+        // Overridden WITHOUT repeating [Pii]: the marker on the base declaration must still count.
+        public override string Email { get; set; } = "derived@example.com";
+    }
+
+    // L43
+    [Fact]
+    public void HasPii_IsTrue_ForAnOverrideOfABasePiiPropertyWithoutTheMarker() =>
+        PiiRedactor.HasPii(typeof(PiiOverride)).Should().BeTrue();
+
+    [Fact]
+    public void RedactToString_MasksAnOverrideOfABasePiiProperty() =>
+        PiiRedactor.RedactToString(new PiiOverride()).Should().NotContain("derived@example.com");
+
     [Fact]
     public void Redact_MasksPiiProperties_AndPassesThroughNonPii()
     {

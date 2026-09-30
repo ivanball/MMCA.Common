@@ -6,6 +6,99 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **Breaking:** `ChangePasswordHandlerBase` takes a required `ILoginProtectionService` (before `timeProvider`), `ITwoFactorService` gains `VerifyCode(secret, code, out long matchedStep)`, and `PasswordResetTokenService` takes a required `IDistributedLock`. Map and fix: UPGRADING.md, [Unreleased].
+- Fixed: a wrong second-factor code at sign-in now counts against the account lockout like a wrong password; a missing code still does not (M105).
+- Fixed: an accepted time-based code is remembered per account (`ICacheService`, for the life of the verification window) and a replay inside the window is refused (L56).
+- Fixed: change-password counts a wrong current password against a per-account lockout keyed `password-change:{userId}`, checks the lockout before verifying, and resets it on success (M108).
+- Fixed: `POST /Auth/register` is `[NonIdempotent]`, so its token pair never enters the 24h replay cache (M137).
+- Fixed: password-reset redemption runs under an `IDistributedLock` on the token key, so two concurrent redemptions of one token cannot both succeed (L91).
+- Fixed: the global and "UserPolicy" rate-limit partitions key on the subject claim first, then the name claim, so two users sharing a full name no longer share a bucket (M122).
+- Fixed: `AddCommonRateLimiting(IConfiguration)` registers `RateLimitingSettings` with `ValidateDataAnnotations().ValidateOnStart()`, so an out-of-range value fails at startup (M124).
+- Fixed: a blank `X-Correlation-ID` header is treated as absent and a value over 64 characters is cut to 64, the width of the persisted correlation columns (M121).
+- Fixed: `/culture/set` with a non-local `redirectUri` redirects to `/` instead of answering 500 (L63).
+- Fixed: the named per-route gateway policies (`MMCA.Common.Gateway`) exempt a request the edge limiter (`AddGatewayRateLimiting`) has validated as a trusted internal caller, so Server-circuit sign-ins no longer share the UI replica's per-IP bucket (M177).
+- Documented: `FallbackAuthorizationOptions.ExemptPathPrefixes` is path-based and `AnonymousEndpointTestsBase` is the gate that keeps an undecorated controller from landing under a prefix (L62).
+- Fixed: `OutboxProcessor` delivers each row on a fresh tenant scope, so a later row of a shared-target batch no longer runs under the first row's tenant (H36).
+- Fixed: a malformed internal-command payload dead-letters its row (`payload_invalid`) instead of escaping and stranding the rest of the claimed batch (M114).
+- Fixed: outbox `LastError` is truncated to its 4000-character column, so one long exception message cannot fail the whole batch save (M115).
+- Fixed: `InternalCommandProcessor` renews and re-checks its lease before each row of a claimed batch, so a row another replica took over is skipped rather than run twice, and `LeaseSeconds` bounds one handler (M116).
+- Fixed: a type-unresolvable outbox row is dead-lettered like an exhausted one (`ProcessedOn` null, `RetryCount = MaxRetries`), so outbox administration lists and replays it and cleanup keeps it for the dead-letter window instead of purging it as delivered (M118).
+- Fixed: `ScheduledJobRunner` stamps a completed job's outcome under its own 5-second token, so a graceful stop right after the job returns no longer leaves the schedule unadvanced and the job re-run (M119).
+- Fixed: `IInternalCommandScheduler.ScheduleAsync` outside a transaction signals the processor for a future-dated command too, so the smart wait re-arms and the command runs on time (L54).
+- Fixed: the push-send `DedupKey` is stored and looked up as a SHA-256 of `{SentByUserId}:{key}`, so two senders reusing one client key no longer suppress each other's sends. A retry that spans the upgrade does not match a row stored under the raw key (M106).
+- Fixed: `AddTypedServiceClient` configures its standard resilience handler from `HttpResilienceDefaults` instead of the library defaults (L58).
+- Fixed: `JwtForwardingClientInterceptor` forwards the access token saved on the authentication ticket when the inbound request has no `Authorization` header (a SignalR hub token sent as `?access_token=`); a present header still wins (H39).
+- Documented: `IHasOrderingKey` notes that a key with `BatchSize` or more pending rows fills the fetch window (L55); `SendPushNotificationHandler` notes that its live legs are at-least-once under an execution-strategy retry (M107); `DeleteUserHandlerBase` describes its marker and `afterCommit` tail as post-save, not post-commit, under an `ITransactional` command (L48).
+- **Breaking (C-3):** `ICacheService` gains `TryGetAsync<T>` (a default interface member, so implementations keep compiling) and `MarkAllNotificationsReadHandler` no longer takes an `IQueryableExecutor`. Map and fix: UPGRADING.md, [Unreleased].
+- Fixed: stored permission grants are cached under an upper-cased role key, so a role read with different casing than the stored row still finds its grants (M109).
+- Fixed: a cached permission-grant snapshot lives three refresh intervals instead of one, so it no longer expires in the gap before the next rebuild and survives two failed reloads before stored grants fail closed (M111).
+- Fixed: a concurrent duplicate `IPermissionGrantStore.GrantAsync` that loses the unique-index race answers success and detaches its failed insert instead of throwing (L52).
+- Fixed: `SetStoredPermissionsAsync` invalidates the grant snapshot on every exit, so rows already committed before a mid-sequence failure or exception are visible at once (L59).
+- Fixed: on PostgreSQL and SQLite the audit interceptor writes a fresh 16-byte `RowVersion` on every insert and update, so optimistic concurrency and If-Match actually detect a concurrent writer there (M113).
+- Fixed: keyset paging on PostgreSQL follows its null placement (`ASC NULLS LAST`, `DESC NULLS FIRST`), so a nullable sort key no longer skips the null rows ascending or repeats them descending (M112).
+- Fixed: entity configurations see the engine of the model being built (`EntityTypeConfiguration.EffectiveEngine`), and the notification index filters use it, so a PostgreSQL-only host no longer gets bracketed SQL Server filters (M117).
+- Fixed: under `DatabaseInitStrategy` "None" a tenant's own copy of a migration-less Cosmos, PostgreSQL or SQLite source is created at startup, as the shared copy already was (M123).
+- Fixed: `DbContextFactory` refuses to hand a shared context created before the tenant resolved to a tenant that overrides that source (L53).
+- Fixed: `EFRepository.ExecuteUpdateAsync` with no current user stamps `LastModifiedBy` with the system sentinel instead of leaving the previous editor (L51).
+- Fixed: `MemoryCacheService` applies `Cache:DefaultDuration` to an entry written without an expiration, like the distributed and hybrid stores (L57).
+- Fixed: `ICacheService.GetOrCreateAsync` reads presence through `TryGetAsync`, so a value-type `T` runs the factory on a miss instead of returning `default(T)` (L47).
+- Fixed: mark-all-notifications-read is one set-based `ExecuteUpdateAsync` instead of loading and tracking every unread row (L49).
+- Fixed: the inbox and notification-history pages tie-break on the id after `CreatedOn`, so equal timestamps cannot repeat or skip rows across pages (L50).
+- Fixed: `EntityControllerBase.MaxPageSize` is clamped to the query pipeline's 1000-row ceiling, and the CSV export treats a short page as the last one only when `TotalItemCount` agrees, so `Application:MaxPageSize` above 1000 no longer truncates an export silently (M120).
+- Fixed: a string `IN` filter with no usable value is refused as `Filter.Value.Invalid` instead of returning the whole set (L44).
+- Fixed: filter keys resolve their property case-insensitively, like the sort column and the field contract, and a flat key is applied under the declared property name (L45).
+- Fixed: `DateTime` filter bounds parse as UTC (an offset is honoured and normalized, a bare value is taken as UTC), so the host's time zone no longer shifts which rows match (L46).
+- Fixed: the idempotency replay body is serialized with the MVC `JsonOptions` (the host's converters), and `DataExportControllerBase` uses the same options (L60).
+- Fixed: `IdempotencyRecord` gains optional `Location` and `ETag`; a replay re-emits both, and a result with no value (`Accepted()`) stores and replays an empty body instead of JSON `null`. Records cached by an earlier version read both as null (L61).
+- Fixed: `OperationCanceledExceptionHandler` answers 499 only when the client aborted the request; any other cancellation (a downstream timeout) falls through to the 500 handler and is logged as an error (L64).
+- Fixed: gRPC error trailers percent-encode, as UTF-8, every character outside printable ASCII and `%` in the message, source and target, and `ToErrors` decodes them; plain ASCII values are unchanged on the wire (L65).
+- Fixed: `DateRange.Overlaps` is inclusive on both ends, like `Contains`, so ranges sharing a boundary day overlap and a single-day range overlaps itself (L89).
+- Fixed: the image normalizer decodes only the first frame (`DecoderOptions.MaxFrames = 1`), so a small animated upload cannot expand into one full pixel buffer per frame (L92).
+- Fixed: `SetItems` always snapshots the incoming items, so passing the backing collection itself no longer empties it (L42).
+- Fixed: `[Pii]` is inherited and `PiiRedactor` walks property overrides, so a derived type overriding a `[Pii]` property without repeating the marker stays redacted (L43).
+- Fixed: the audit-trail interceptor detects `[Pii]` through property overrides the same way, so an overriding property without the marker is recorded as the redaction token, never in clear text (L43 sibling).
+- **Breaking (C-5):** `ISessionCookieSync.SyncAsync` / `ClearAsync` return `Task<bool>` (true when the cookie jar was updated); `JsFetchSessionCookieSync` follows. A failed cookie write at login now reports `Auth.TokenStorageUnavailable` (M129). `IExternalLinkService.OpenAsync` returns `Task<bool>` (true when the platform reported the URL opened); `BrowserExternalLinkService`, `NullExternalLinkService` and `MauiExternalLinkService` follow, and `BrowserMapNavigationService.OpenAddressAsync` returns the real outcome. In a browser a blocked popup still reports true, because the link opens with `noopener,noreferrer` (L70).
+- Added: `IAuthUIService.RevokeAllSessionsAsync` reports the server-side revoke; the Sessions page shows the error and stays put when it fails (M131).
+- Added: `IUiReadCache.Generation` and `Set<T>(url, value, generation)` (default-implemented, source-compatible) (L66).
+- Added: `AuthDelegatingHandler.SkipBearer` request option (H37).
+- Fixed: MAUI token refresh no longer deadlocks re-entering the token storage through the APIClient pipeline (H37).
+- Fixed: the notification hub reconnects after SignalR's automatic reconnect gives up (M125).
+- Fixed: push notification send carries an Idempotency-Key, so a retried broadcast is not delivered twice (M126).
+- Fixed: OAuth completion with a pending attempt and no returned state is refused (M127).
+- Fixed: the Blazor circuit transport no longer holds a UI concurrency permit per open circuit (M128).
+- Fixed: Enter/Space on a control inside a ClickableCard no longer activates the card (M130).
+- Fixed: the client read cache drops a read that raced a write invalidation (L66).
+- Fixed: BoundedCircuitHandler no longer releases a permit when a refused circuit closes (L67).
+- Fixed: MauiBackNavigationBridge disposes the JS module it imports (L68).
+- Fixed: one caller's cancellation no longer faults a shared JS module import (L69).
+- Fixed: only one NotificationBell reads the API per push refresh (L71).
+- Fixed: BiometricGate precondition read failures fail open before opt-in and closed after it (L72).
+- Fixed: negative money displays as -$5.00, not $-5.00 (L73).
+- Fixed: NavMenu hides user and admin sections after an in-circuit sign-out (L74).
+- Fixed: infinite-scroll lists keep loading when the sentinel stays in view after an append (L75).
+- Fixed: `NotificationBell:PollInterval` of zero or less disables periodic polling instead of faulting the circuit (L76).
+- Fixed: out-of-range page, page-size and mobile-page URL values fall back to their defaults (L77).
+- Documented: `MauiTextToSpeechService` notes its single dispatcher-bound caller assumption (L78).
+- Fixed: MAUI push registration passes are serialized, so one device cannot register two installation ids (L79).
+- Fixed: the service-default HTTP retry no longer replays POST or PATCH; typed gRPC clients retry only connection failures (L80).
+- **Breaking (C-6, test and configuration surface):** see UPGRADING for the M133 snapshot regeneration, the L81 bUnit authorization change, L84 `Requests` snapshots, the L90 `Ai:Timeout` cap and the M135 consequential-marker default.
+- Fixed: the frozen integration-event contract spells out generic arguments (`Nullable<Int32>`, `IReadOnlyList<FulfilledLine>`) and pins members of an intermediate consumer base, so a retyped generic argument or an inherited member now fails the snapshot; the snapshot parser treats a multi-argument generic as one member (M133).
+- Fixed: `DataResidencyTestsBase` compares region claims as whole tokens, so `westus` no longer matches "West US 2" and `centralus` no longer matches "South Central US"; new `ContainsRegionClaim` helper (M134).
+- Fixed: a tool's `mmca.tool.consequential` marker fails closed: a `JsonElement` true, an unparseable string or any unrecognised shape now reads consequential; only a definite false is harmless (M135).
+- Fixed: `PiiRedactionGuardrail` redacts tool results, the string arguments of tool calls and reasoning text, not only message text (M136).
+- Fixed: `BunitComponentTestBase` uses the real `DefaultAuthorizationService`, so `<AuthorizeView Roles="...">` denies a principal outside the role (L81).
+- Fixed: `SqlServerIntegrationTestFixtureBase` composes its connection strings with `SqlConnectionStringBuilder`, so a `*_TEST_SQL_BASE` without a trailing semicolon works (L82).
+- Documented: `ClickAndVerifyAsync` notes that an effect slower than `timeout / 3` is re-clicked (L83).
+- Fixed: `CapturingHttpMessageHandler` and `ReplayChatClient` record under a lock, so concurrent requests are all captured and counted (L84).
+- Fixed: the proto contract parser no longer drops every declaration after a single-line block comment (L85).
+- Fixed: the stateful-singleton scan judges paths relative to `Source`, catches a registration wrapped across lines, and fails when it scanned no UI file (L86).
+- Fixed: the domain-throw rule no longer flags the compiler's `SwitchExpressionException` default-arm throw (L87).
+- Fixed: the ambient-clock rule flags `DateTime.Today` (L88).
+- Fixed: the profile E2E base waits for each save's snackbar and re-navigates through `GotoProtectedAsync`, so "persisted after reload" is actually read back from a fresh page; new `NameSavedMessage`/`AddressSavedMessage`/`EmailSavedMessage` overrides (M132).
+- Fixed: `Ai:Timeout` above one hour (`AiSettings.MaxTimeout`) fails startup validation instead of throwing on every call; a bare number binds as days (L90).
+
 ## [1.212.0] - 2026-09-29
 
 ### Added

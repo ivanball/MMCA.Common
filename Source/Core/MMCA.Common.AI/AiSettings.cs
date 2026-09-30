@@ -31,6 +31,13 @@ public sealed class AiSettings : IValidatableObject
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// The largest per-call timeout startup validation accepts. A bare number in configuration binds
+    /// as DAYS, and a value above roughly 49.7 days makes every call throw where the timeout is
+    /// armed; one hour rejects every bare-number value while leaving any plausible per-call budget alone.
+    /// </summary>
+    public static readonly TimeSpan MaxTimeout = TimeSpan.FromHours(1);
+
+    /// <summary>
     /// Whether this host talks to a language model at all. <see langword="false"/> by default, and
     /// when it is false <c>AddMmcaChatClient</c> registers no <c>IChatClient</c>: resolving one
     /// yields <see langword="null"/>, so a consumer gates on the service being present rather than
@@ -171,6 +178,13 @@ public sealed class AiSettings : IValidatableObject
         {
             yield return new ValidationResult(
                 $"{SectionName}:{nameof(Timeout)} must be greater than zero.",
+                [nameof(Timeout)]);
+        }
+
+        if (Timeout > MaxTimeout)
+        {
+            yield return new ValidationResult(
+                $"{SectionName}:{nameof(Timeout)} must be at most {MaxTimeout} (a TimeSpan such as 00:00:30; a bare number binds as days).",
                 [nameof(Timeout)]);
         }
     }

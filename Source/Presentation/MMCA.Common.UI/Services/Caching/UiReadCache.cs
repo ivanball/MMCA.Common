@@ -26,6 +26,22 @@ internal sealed class UiReadCache(TimeProvider timeProvider, IOptions<UiReadCach
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     private readonly UiReadCacheOptions _options = (options ?? throw new ArgumentNullException(nameof(options))).Value;
 
+    // Moves on every InvalidatePrefix and Clear, under _sync. One dictionary-wide counter rather than
+    // one per prefix: the cache holds tens of entries, and a global counter also covers Clear.
+    private long _generation;
+
+    /// <inheritdoc />
+    public long Generation
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _generation;
+            }
+        }
+    }
+
     /// <inheritdoc />
     public bool TryGetFresh<T>(string url, out T? value)
     {
@@ -85,12 +101,38 @@ internal sealed class UiReadCache(TimeProvider timeProvider, IOptions<UiReadCach
     }
 
     /// <inheritdoc />
+    public void Set<T>(string url, T value, long generation)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+
+        if (!_options.Enabled || value is null)
+        {
+            return;
+        }
+
+        var storedAt = _timeProvider.GetUtcNow();
+
+        lock (_sync)
+        {
+            // A write invalidated this endpoint (or a sign-out cleared everything) while the read
+            // was in flight: the value may be exactly what the write made stale, so it is dropped.
+            if (generation != _generation)
+            {
+                return;
+            }
+
+            _entries[url] = (value, storedAt);
+        }
+    }
+
+    /// <inheritdoc />
     public void InvalidatePrefix(string routePrefix)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(routePrefix);
 
         lock (_sync)
         {
+            _generation++;
             var doomed = _entries.Keys
                 .Where(key => key.StartsWith(routePrefix, StringComparison.Ordinal))
                 .ToList();
@@ -107,6 +149,7 @@ internal sealed class UiReadCache(TimeProvider timeProvider, IOptions<UiReadCach
     {
         lock (_sync)
         {
+            _generation++;
             _entries.Clear();
         }
     }

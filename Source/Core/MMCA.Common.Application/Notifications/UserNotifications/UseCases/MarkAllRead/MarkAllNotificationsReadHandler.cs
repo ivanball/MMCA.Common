@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.UseCases.Contracts;
 using MMCA.Common.Domain.Notifications.PushNotifications;
@@ -9,9 +10,13 @@ namespace MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkA
 /// <summary>
 /// Handles marking all of a user's unread notifications as read.
 /// </summary>
+/// <remarks>
+/// One set-based UPDATE rather than loading and tracking every unread row: an inbox can hold an
+/// unbounded number of them, and <see cref="UserNotification.MarkAsRead"/> only sets two columns and
+/// raises no domain event, so nothing is lost by bypassing the change tracker.
+/// </remarks>
 public sealed class MarkAllNotificationsReadHandler(
     IUnitOfWork unitOfWork,
-    IQueryableExecutor queryableExecutor,
     TimeProvider timeProvider) : ICommandHandler<MarkAllNotificationsReadCommand, Result>
 {
     /// <inheritdoc />
@@ -21,43 +26,33 @@ public sealed class MarkAllNotificationsReadHandler(
     {
         var repository = unitOfWork.GetRepository<UserNotification, UserNotificationIdentifierType>();
 
-        IQueryable<UserNotification> unreadQuery = repository.Table
-            .Where(un => un.UserId == command.UserId && !un.IsRead);
+        Expression<Func<UserNotification, bool>> unread =
+            un => un.UserId == command.UserId && !un.IsRead;
 
-        // Same conditional join as the unread count, for two reasons: a scoped client must not mark
-        // rows it cannot see as read, and a no-scope command must keep the legacy query exactly as
-        // it was rather than inherit PushNotification's soft-delete global query filter.
+        // Same condition as the unread count, for two reasons: a scoped client must not mark rows it
+        // cannot see as read, and a no-scope command must keep the legacy predicate exactly as it was
+        // rather than inherit PushNotification's soft-delete global query filter. The scope test is
+        // an EXISTS subquery over the push notification set, to which that filter applies exactly as
+        // it did to the former join.
         if (!string.IsNullOrWhiteSpace(command.ScopeKey))
         {
             string scopeKey = command.ScopeKey;
-            var pushNotificationRepo = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>();
+            var pushNotifications = unitOfWork.GetRepository<PushNotification, PushNotificationIdentifierType>().Table;
 
-            // The TRACKED Table is load-bearing here, unlike the read-only handlers that join over
-            // TableNoTracking: an AsNoTracking source anywhere in a composed EF query switches the
-            // WHOLE query to no-tracking, so the UserNotification rows would come back untracked and
-            // the MarkAsRead mutations below would never be persisted by SaveChangesAsync (a scoped
-            // read-all would silently no-op). Projecting `select un` materializes only
-            // UserNotification instances, so no PushNotification is tracked by this join.
-            unreadQuery = from un in unreadQuery
-                          join pn in pushNotificationRepo.Table on un.PushNotificationId equals pn.Id
-                          where pn.ScopeKey == null || pn.ScopeKey == scopeKey
-                          select un;
+            unread = un => un.UserId == command.UserId
+                && !un.IsRead
+                && pushNotifications.Any(pn => pn.Id == un.PushNotificationId
+                    && (pn.ScopeKey == null || pn.ScopeKey == scopeKey));
         }
-
-        List<UserNotification> unread = await queryableExecutor.ToListAsync(
-            unreadQuery,
-            cancellationToken).ConfigureAwait(false);
 
         var readOnUtc = timeProvider.GetUtcNow().UtcDateTime;
-        foreach (UserNotification notification in unread)
-        {
-            notification.MarkAsRead(readOnUtc);
-        }
 
-        if (unread.Count > 0)
-        {
-            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
+        await repository.ExecuteUpdateAsync(
+            unread,
+            setters => setters
+                .Set(un => un.IsRead, true)
+                .Set(un => un.ReadOn, (DateTime?)readOnUtc),
+            cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
     }

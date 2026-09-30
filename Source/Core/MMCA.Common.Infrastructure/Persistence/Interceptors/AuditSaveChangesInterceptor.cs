@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 
@@ -16,6 +17,13 @@ namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
 /// cleared when it goes true to false (<c>Undelete()</c>). A save that touches an
 /// already-deleted row therefore leaves the original delete stamp intact, exactly as
 /// <c>CreatedOn/By</c> survive every later update.
+/// </para>
+/// <para>
+/// On PostgreSQL and SQLite it also manages the <see cref="IRowVersioned.RowVersion"/> concurrency
+/// token: neither engine has a server-generated row version, so every insert and update writes a
+/// fresh random 16-byte value. EF keeps the value the row was loaded with as the original, so the
+/// UPDATE still carries it in its WHERE clause and a concurrent writer is detected. SQL Server's
+/// <c>rowversion</c> column is database-generated and is never touched here.
 /// </para>
 /// </summary>
 /// <param name="timeProvider">Provides UTC timestamps for audit fields.</param>
@@ -48,6 +56,7 @@ public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : Sav
     {
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var resolvedUserId = context.CurrentSaveUserId ?? default;
+        var stampsRowVersion = context.DataSourceKey.Engine is DataSource.PostgreSQL or DataSource.Sqlite;
 
         foreach (var entry in context.ChangeTracker.Entries<IAuditableEntity>())
         {
@@ -62,6 +71,7 @@ public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : Sav
                     // A brand new row has no prior state, so "was deleted" is false by construction:
                     // an entity inserted already soft-deleted still gets its delete stamp.
                     StampSoftDeleteTransition(entry, now, resolvedUserId, wasDeleted: false);
+                    StampRowVersion(entry, stampsRowVersion);
                     break;
                 case EntityState.Modified:
                     entry.Property(nameof(IAuditableEntity.CreatedBy)).IsModified = false;
@@ -70,6 +80,7 @@ public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : Sav
                     entry.Property(nameof(IAuditableEntity.LastModifiedOn)).CurrentValue = now;
 
                     StampSoftDeleteTransition(entry, now, resolvedUserId, WasDeleted(entry));
+                    StampRowVersion(entry, stampsRowVersion);
                     break;
                 case EntityState.Detached:
                 case EntityState.Unchanged:
@@ -77,6 +88,19 @@ public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : Sav
                 default:
                     break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Writes a fresh application-managed concurrency token on an engine with no server-generated
+    /// row version. Setting the current value marks the property modified while EF keeps the loaded
+    /// value as the original for the UPDATE's WHERE clause.
+    /// </summary>
+    private static void StampRowVersion(EntityEntry<IAuditableEntity> entry, bool stampsRowVersion)
+    {
+        if (stampsRowVersion && entry.Metadata.FindProperty(nameof(IRowVersioned.RowVersion)) is not null)
+        {
+            entry.Property(nameof(IRowVersioned.RowVersion)).CurrentValue = Guid.NewGuid().ToByteArray();
         }
     }
 

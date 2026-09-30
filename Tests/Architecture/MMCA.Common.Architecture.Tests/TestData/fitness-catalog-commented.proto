@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package mmca.fitness;
+
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "MMCA.Common.Architecture.Tests.Fitness";
+
+// Fixture only: the pinned fitness-catalog.proto plus block comments in every position the
+// parser must survive (one-line, trailing, inside a line comment, multi-line). Its contract
+// must equal the pinned file's. Not compiled by any project.
+service CatalogService {
+  rpc GetProduct (GetProductRequest) returns (ProductReply);
+  rpc StreamProducts (GetProductRequest) returns (stream ProductReply);
+}
+
+/* one-line block */
+message GetProductRequest {
+  int32 product_id = 1; /* c */
+  // see /* not a block
+  optional string culture = 2;
+}
+
+/* a block that
+   spans two lines */
+message ProductReply {
+  int32 product_id = 1;
+  string name = 2;
+  repeated string tags = 3;
+  Availability availability = 4;
+
+  message Dimensions {
+    double width = 1;
+    double height = 2;
+  }
+
+  enum Availability {
+    AVAILABILITY_UNSPECIFIED = 0;
+    AVAILABILITY_IN_STOCK = 1;
+  }
+}

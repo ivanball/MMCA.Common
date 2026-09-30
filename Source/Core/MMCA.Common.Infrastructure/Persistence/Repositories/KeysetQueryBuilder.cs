@@ -93,10 +93,16 @@ internal static class KeysetQueryBuilder
     /// </para>
     /// <para>
     /// A boundary row whose sort key is <see langword="null"/> is handled explicitly, because SQL
-    /// comparisons against NULL are unknown and would silently drop rows. Ascending, nulls sort
-    /// first, so everything after the boundary is either a later null or any non-null value; that is
-    /// what the predicate says. Descending, nulls sort last, so the remaining rows are the later
-    /// nulls only.
+    /// comparisons against NULL are unknown and would silently drop rows. Where nulls come first in
+    /// the page's traversal order, everything after a null boundary is either a later null or any
+    /// non-null value, and a non-null boundary never reaches a null again. Where nulls come last, a
+    /// null boundary leaves only the later nulls, and a non-null boundary must add every null row
+    /// explicitly because <c>null &gt; v</c> is unknown.
+    /// </para>
+    /// <para>
+    /// Where the nulls fall depends on the engine: SQL Server and SQLite sort nulls first ascending
+    /// and last descending, PostgreSQL the reverse (<c>ASC NULLS LAST</c>, <c>DESC NULLS FIRST</c>).
+    /// <paramref name="nullsSortFirstAscending"/> says which one the query runs on.
     /// </para>
     /// </remarks>
     /// <typeparam name="TEntity">The entity type.</typeparam>
@@ -105,12 +111,16 @@ internal static class KeysetQueryBuilder
     /// <param name="sortValue">The boundary row's sort value (already converted), or <see langword="null"/>.</param>
     /// <param name="lastId">The boundary row's identifier.</param>
     /// <param name="descending">Whether the page descends.</param>
+    /// <param name="nullsSortFirstAscending">
+    /// Whether the engine sorts nulls first in an ascending order (SQL Server, SQLite: true; PostgreSQL: false).
+    /// </param>
     /// <returns>The seek predicate.</returns>
     internal static Expression<Func<TEntity, bool>> BuildSeekPredicate<TEntity, TIdentifierType>(
         PropertyInfo? sortProperty,
         object? sortValue,
         TIdentifierType lastId,
-        bool descending)
+        bool descending,
+        bool nullsSortFirstAscending = true)
         where TEntity : class, IBaseEntity<TIdentifierType>
         where TIdentifierType : notnull
     {
@@ -130,6 +140,9 @@ internal static class KeysetQueryBuilder
         var isNullable = !sortProperty.PropertyType.IsValueType
             || Nullable.GetUnderlyingType(sortProperty.PropertyType) is not null;
 
+        // Whether null keys come BEFORE the non-null ones in this page's traversal order.
+        var nullsFirst = nullsSortFirstAscending ? !descending : descending;
+
         if (sortValue is null)
         {
             if (!isNullable)
@@ -140,11 +153,11 @@ internal static class KeysetQueryBuilder
 
             var isNull = Expression.Equal(sortAccess, Expression.Constant(null, sortProperty.PropertyType));
 
-            Expression nullBoundary = descending
-                ? Expression.AndAlso(isNull, idTieBreak)
-                : Expression.OrElse(
+            Expression nullBoundary = nullsFirst
+                ? Expression.OrElse(
                     Expression.NotEqual(sortAccess, Expression.Constant(null, sortProperty.PropertyType)),
-                    Expression.AndAlso(isNull, idTieBreak));
+                    Expression.AndAlso(isNull, idTieBreak))
+                : Expression.AndAlso(isNull, idTieBreak);
 
             return Expression.Lambda<Func<TEntity, bool>>(nullBoundary, parameter);
         }
@@ -154,9 +167,10 @@ internal static class KeysetQueryBuilder
             Compare(sortAccess, sortConstant, greaterThan: !descending),
             Expression.AndAlso(Expression.Equal(sortAccess, sortConstant), idTieBreak));
 
-        if (isNullable && descending)
+        if (isNullable && !nullsFirst)
         {
-            // Descending puts nulls last, and "null < v" is unknown, so they need saying explicitly.
+            // The nulls come after every non-null key here, and "null < v" is unknown, so they need
+            // saying explicitly.
             body = Expression.OrElse(
                 Expression.Equal(sortAccess, Expression.Constant(null, sortProperty.PropertyType)),
                 body);

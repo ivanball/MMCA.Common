@@ -19,6 +19,7 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
+using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Infrastructure.Tests.MigrationsFixture;
 using Moq;
 
@@ -175,6 +176,53 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
             "the 'None' strategy reports what is pending and applies nothing");
     }
 
+    // M123: a production host ("None") with a tenant override of a migration-less SQLite source must
+    // still create the tenant's copy, exactly as the shared pass creates the shared copy under either
+    // strategy; otherwise the first tenant request hits a database that does not exist.
+    [Fact]
+    public async Task InitializeDatabaseAsync_NoneStrategy_CreatesTheMigrationlessTenantCopy()
+    {
+        var acmePath = Path.Combine(Path.GetTempPath(), $"mmca-init-sqlite-acme-{Guid.NewGuid():N}.db");
+        try
+        {
+            var connectionStrings = new ConnectionStringSettings { SQLServerConnectionString = "Server=unused;" };
+            var dataSources = new DataSourcesSettings(new Dictionary<string, DataSourceEntrySettings>(StringComparer.Ordinal)
+            {
+                ["TestSqlite"] = new() { SqliteConnectionString = $"Data Source={_sqliteDbPath}" },
+            });
+
+            var resolver = new DataSourceResolver(Options.Create(connectionStrings), dataSources, NullLogger<DataSourceResolver>.Instance);
+            var assemblyProvider = new FixedAssemblyProvider();
+            var registry = new EntityDataSourceRegistry(assemblyProvider, resolver);
+
+            var tenancy = new TenancySettings();
+            var acme = new TenantEntrySettings();
+            // Tenant overrides name the PHYSICAL source, which is what "TestSqlite" resolves to.
+            acme.DataSources[resolver.ResolveLogical(DataSource.Sqlite, "TestSqlite").Name] = new TenantDataSourceOverrideSettings
+            {
+                SqliteConnectionString = $"Data Source={acmePath}",
+            };
+            tenancy.Tenants["acme"] = acme;
+
+            await using var provider = BuildProvider(resolver, registry, assemblyProvider, tenancy);
+
+            await provider.InitializeDatabaseAsync(
+                new ApplicationSettings { DatabaseInitStrategy = "None" },
+                new ModuleLoader());
+
+            File.Exists(acmePath).Should().BeTrue("the tenant's copy of a migration-less source has no other creator");
+
+            var options = new DbContextOptionsBuilder().UseSqlite($"Data Source={acmePath}").Options;
+            await using var probe = new DbContext(options);
+            (await CountTablesAsync(probe, nameof(InitTestWidget))).Should().Be(1);
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            TryDelete(acmePath);
+        }
+    }
+
     // The strategy names exactly two behaviours. A value outside that set is a configuration mistake
     // whose only other outcome is a schema nobody touched, discovered as a failing query in
     // production, so startup refuses it before a single database is opened.
@@ -218,9 +266,11 @@ public sealed class DatabaseInitializationExtensionsTests : IDisposable
     private static ServiceProvider BuildProvider(
         DataSourceResolver resolver,
         EntityDataSourceRegistry registry,
-        IEntityConfigurationAssemblyProvider assemblyProvider) =>
+        IEntityConfigurationAssemblyProvider assemblyProvider,
+        TenancySettings? tenancy = null) =>
         new ServiceCollection()
             .AddOptions()
+            .AddSingleton(Options.Create(tenancy ?? new TenancySettings()))
             .AddSingleton(TimeProvider.System)
             .AddSingleton<ILoggerFactory, NullLoggerFactory>()
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))

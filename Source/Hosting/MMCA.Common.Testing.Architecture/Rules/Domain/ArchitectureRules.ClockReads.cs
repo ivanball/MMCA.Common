@@ -21,6 +21,7 @@ public static partial class ArchitectureRules
     [
         ("System.DateTime", "get_UtcNow"),
         ("System.DateTime", "get_Now"),
+        ("System.DateTime", "get_Today"),
         ("System.DateTimeOffset", "get_UtcNow"),
         ("System.DateTimeOffset", "get_Now"),
     ];
@@ -28,7 +29,7 @@ public static partial class ArchitectureRules
     /// <summary>
     /// Domain and Application code takes time as an input (an injected <see cref="TimeProvider"/> in
     /// a handler, an instant passed into an aggregate method) and never reads the ambient clock:
-    /// <c>DateTime.UtcNow</c>, <c>DateTime.Now</c>, <c>DateTimeOffset.UtcNow</c> or
+    /// <c>DateTime.UtcNow</c>, <c>DateTime.Now</c>, <c>DateTime.Today</c>, <c>DateTimeOffset.UtcNow</c> or
     /// <c>DateTimeOffset.Now</c>. A clock read buried in a business rule cannot be driven by a test,
     /// so every expiry, cutoff and "is it overdue yet" branch it guards is either untested or tested
     /// by sleeping. The rule fails on any call to those getters in the map's Domain and Application
@@ -38,7 +39,7 @@ public static partial class ArchitectureRules
     /// <para>
     /// <b>How it looks.</b> IL, through the Mono.Cecil NetArchTest already carries: every method body
     /// of every type (lambdas and async state machines included, since they are nested types of their
-    /// own) is searched for a call to one of the four getters.
+    /// own) is searched for a call to one of the five getters.
     /// </para>
     /// <para>
     /// <b>Allowlist entries</b> are a type full name, a namespace prefix, or one member written as
