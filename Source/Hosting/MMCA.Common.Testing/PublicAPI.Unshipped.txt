@@ -53,6 +53,7 @@ static MMCA.Common.Testing.Support.RateLimiterTestExtensions.NeutralizeGlobalRat
 static MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
 virtual MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.Configure.get -> System.Action<MMCA.Common.API.Startup.Pipeline.MiddlewarePipelineBuilder!>?
 virtual MMCA.Common.Testing.Conformance.MiddlewarePipelineOrderTestsBase.ExpectedStepNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveHealthChecksExpected.get -> bool
 virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeInterval.get -> System.TimeSpan
 virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbePath.get -> string!
 virtual MMCA.Common.Testing.Conformance.MmcaGatewayHardeningTestsBase<TEntryPoint>.ActiveProbeTimeout.get -> System.TimeSpan

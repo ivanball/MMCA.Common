@@ -102,6 +102,51 @@ public sealed class MetricsInstrumentationToggleTests
         exported.Should().Contain("dotnet.gc.collections");
     }
 
+    // The ASP.NET Core family was 73% of both production workspaces' ingestion over 2026-09-22..28
+    // (Store 555 of 756 MB, ADC 777 of 1,063 MB) with no alert reading any of it. The distro adds these
+    // meters itself too, so the same authoritative-View contract applies, one row per meter family the
+    // prefix has to catch.
+    [Theory]
+    [InlineData("Microsoft.AspNetCore.Hosting", "http.server.request.duration")]
+    [InlineData("Microsoft.AspNetCore.Server.Kestrel", "kestrel.active_connections")]
+    [InlineData("Microsoft.AspNetCore.Routing", "aspnetcore.routing.match_attempts")]
+    [InlineData("Microsoft.AspNetCore.RateLimiting", "aspnetcore.rate_limiting.requests")]
+    [InlineData("Microsoft.AspNetCore.MemoryPool", "aspnetcore.memory_pool.rented")]
+    [InlineData("Microsoft.AspNetCore.Http.Connections", "signalr.server.active_connections")]
+    [InlineData("Microsoft.AspNetCore.Components", "aspnetcore.components.navigate")]
+    public void AspNetCoreMetricsDisabled_DropsTheStream_EvenWhenAnotherComponentAddsTheMeter(
+        string meterName,
+        string instrumentName)
+    {
+        var exported = CollectFrom(
+            new() { ["Telemetry:DisableAspNetCoreMetrics"] = "true" },
+            meterName,
+            instrumentName);
+
+        exported.Should().NotContain(instrumentName);
+    }
+
+    [Fact]
+    public void AspNetCoreMetricsEnabled_KeepsTheStream()
+    {
+        var exported = CollectFrom([], "Microsoft.AspNetCore.Hosting", "http.server.request.duration");
+
+        exported.Should().Contain("http.server.request.duration");
+    }
+
+    [Fact]
+    public void AspNetCoreMetricsDisabled_KeepsTheAlertedMeters()
+    {
+        // The circuit-open alert reads resilience.polly.strategy.events; a prefix that reached past
+        // Microsoft.AspNetCore. would blind it.
+        var exported = CollectFrom(
+            new() { ["Telemetry:DisableAspNetCoreMetrics"] = "true" },
+            Extensions.PollyMeterName,
+            Extensions.PollyStrategyEventsInstrument);
+
+        exported.Should().Contain(Extensions.PollyStrategyEventsInstrument);
+    }
+
     /// <summary>
     /// Builds a MeterProvider through the real <c>ConfigureOpenTelemetry()</c> path, has a third party
     /// subscribe <paramref name="meterName"/> exactly the way the Azure Monitor distro does, emits one

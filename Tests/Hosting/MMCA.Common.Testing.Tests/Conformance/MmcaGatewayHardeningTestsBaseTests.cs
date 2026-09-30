@@ -90,6 +90,8 @@ internal abstract class SampleGatewayHardeningTests : MmcaGatewayHardeningTestsB
 
     protected override int NamedPolicyPermitLimit => 30;
 
+    protected override bool ActiveHealthChecksExpected => true;
+
     protected override TimeSpan ActiveProbeInterval => TimeSpan.FromSeconds(30);
 }
 
