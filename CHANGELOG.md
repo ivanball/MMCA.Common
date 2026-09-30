@@ -6,6 +6,8 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.213.0] - 2026-09-30
+
 ### Fixed
 
 - **Breaking:** `ChangePasswordHandlerBase` takes a required `ILoginProtectionService` (before `timeProvider`), `ITwoFactorService` gains `VerifyCode(secret, code, out long matchedStep)`, and `PasswordResetTokenService` takes a required `IDistributedLock`. Map and fix: UPGRADING.md, [Unreleased].
