@@ -6,6 +6,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Added
+
+- **`Telemetry:DisableAspNetCoreMetrics` cost knob (`MMCA.Common.Aspire`, rubric section 31).** Set to
+  `true`, it skips `AddAspNetCoreInstrumentation()` and drops every instrument on a meter named
+  under `Microsoft.AspNetCore.` (`http.server.*`, `kestrel.*`, `aspnetcore.*`, `signalr.server.*`)
+  through a View, so the toggle also holds against the copies the Azure Monitor distro subscribes
+  itself. That family was 73% of both production workspaces' ingestion over 2026-09-22..28 and no
+  alert reads it (request latency and failures alert off AppRequests traces). Unset keeps the
+  instrumentation, so a host that does not opt in sees no change.
+- **Live Metrics off switch, pinned by test.** Live Metrics is on by default in the Azure Monitor
+  distro and keeps an otherwise idle replica above the Container Apps idle-billing line. The switch
+  is the distro's own `AzureMonitor` section (`AzureMonitor__EnableLiveMetrics=false` as an
+  environment variable), which `ConfigureOpenTelemetry()` passes through untouched;
+  `LiveMetricsConfigurationTests` fails if a distro upgrade stops honoring it.
+
 ## [1.211.0] - 2026-09-25
 
 ### Added
