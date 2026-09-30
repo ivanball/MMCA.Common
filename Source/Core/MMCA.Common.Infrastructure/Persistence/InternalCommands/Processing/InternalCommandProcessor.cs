@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -207,6 +208,16 @@ public sealed partial class InternalCommandProcessor(
         var progressed = false;
         foreach (var row in claimed)
         {
+            // The claim lease covers the whole batch, so a slow batch can outlive it and let another
+            // replica start a later row while this one is still busy. Renewing the lease row by row,
+            // and confirming the claim is still ours in the same guarded statement, makes the lease
+            // cover one handler at a time (which is how LeaseSeconds is documented).
+            if (!await RenewClaimAsync(context, row, claimToken, cancellationToken).ConfigureAwait(false))
+            {
+                LogLeaseLostBeforeExecution(logger, row.Id);
+                continue;
+            }
+
             progressed |= await ExecuteClaimedAsync(context, row, sourceName, claimToken, cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -327,6 +338,27 @@ public sealed partial class InternalCommandProcessor(
     }
 
     /// <summary>
+    /// Renews this replica's lease on one claimed row just before it runs, in a statement guarded on
+    /// the claim token, so a row another replica has taken over since the batch claim is skipped
+    /// rather than run a second time. Returns whether the claim is still this replica's.
+    /// </summary>
+    private async Task<bool> RenewClaimAsync(
+        ApplicationDbContext context,
+        InternalCommandMessage row,
+        Guid claimToken,
+        CancellationToken cancellationToken)
+    {
+        var leaseUntil = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(_settings.LeaseSeconds);
+
+        var kept = await context.Set<InternalCommandMessage>()
+            .Where(c => c.Id == row.Id && c.ClaimedBy == claimToken)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.ClaimedUntil, leaseUntil), cancellationToken)
+            .ConfigureAwait(false);
+
+        return kept > 0;
+    }
+
+    /// <summary>
     /// Runs one claimed row and records its outcome. Returns whether the row reached a terminal state
     /// this cycle (completed or dead-lettered), which is what tells the caller a full batch made
     /// progress and is worth re-polling for.
@@ -340,7 +372,22 @@ public sealed partial class InternalCommandProcessor(
     {
         using var activity = StartExecutionActivity(row, sourceName);
 
-        var command = row.DeserializeCommand();
+        IInternalCommand? command;
+        try
+        {
+            command = row.DeserializeCommand();
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            // A payload that no longer fits the type is terminal for the same reason an unresolvable
+            // type is: retrying cannot change the stored bytes. Letting the exception escape stranded
+            // the rest of the claimed batch under this replica's lease and never dead-lettered the row.
+            await DeadLetterAsync(context, row, claimToken, $"Payload cannot be deserialized as {row.CommandType}: {ex.Message}", "payload_invalid", cancellationToken)
+                .ConfigureAwait(false);
+            LogPayloadInvalid(logger, row.Id, row.CommandType, ex);
+            return true;
+        }
+
         if (command is null)
         {
             // Terminal on the first attempt, unlike the outbox: an outbox row's type may simply live
@@ -664,6 +711,12 @@ public sealed partial class InternalCommandProcessor(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Internal command {CommandId} dead-lettered: this host registers no ICommandHandler for {CommandType}. Either the owning module is disabled here, or the row belongs to another service's queue")]
     private static partial void LogHandlerMissing(ILogger logger, Guid commandId, string commandType);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Internal command {CommandId} dead-lettered: its payload cannot be deserialized as {CommandType}")]
+    private static partial void LogPayloadInvalid(ILogger logger, Guid commandId, string commandType, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Internal command {CommandId} was skipped: another replica took over its claim before it ran")]
+    private static partial void LogLeaseLostBeforeExecution(ILogger logger, Guid commandId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Internal command {CommandId} outlived its claim lease; its outcome was discarded because another replica now owns the row")]
     private static partial void LogLeaseLost(ILogger logger, Guid commandId);

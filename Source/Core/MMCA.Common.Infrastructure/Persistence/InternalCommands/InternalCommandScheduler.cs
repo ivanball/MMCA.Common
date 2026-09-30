@@ -121,10 +121,10 @@ internal sealed partial class InternalCommandScheduler(
         // an aggregate root, so the interceptors have nothing to stamp and no events to capture.
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        if (scheduledOn <= now)
-        {
-            signal.Signal();
-        }
+        // Signalled whether or not the row is due yet. A due row runs on the wake; a not-yet-due row
+        // costs one fetch and re-arms the processor's smart wait on its ScheduledOn, which it would
+        // otherwise only learn at the next polling interval and so run late.
+        signal.Signal();
 
         LogScheduled(logger, row.Id, row.CommandType, scheduledOn);
         return Result.Success(row.Id);

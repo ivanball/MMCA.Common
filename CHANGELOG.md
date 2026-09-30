@@ -20,6 +20,17 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: `/culture/set` with a non-local `redirectUri` redirects to `/` instead of answering 500 (L63).
 - Fixed: the named per-route gateway policies (`MMCA.Common.Gateway`) exempt a request the edge limiter (`AddGatewayRateLimiting`) has validated as a trusted internal caller, so Server-circuit sign-ins no longer share the UI replica's per-IP bucket (M177).
 - Documented: `FallbackAuthorizationOptions.ExemptPathPrefixes` is path-based and `AnonymousEndpointTestsBase` is the gate that keeps an undecorated controller from landing under a prefix (L62).
+- Fixed: `OutboxProcessor` delivers each row on a fresh tenant scope, so a later row of a shared-target batch no longer runs under the first row's tenant (H36).
+- Fixed: a malformed internal-command payload dead-letters its row (`payload_invalid`) instead of escaping and stranding the rest of the claimed batch (M114).
+- Fixed: outbox `LastError` is truncated to its 4000-character column, so one long exception message cannot fail the whole batch save (M115).
+- Fixed: `InternalCommandProcessor` renews and re-checks its lease before each row of a claimed batch, so a row another replica took over is skipped rather than run twice, and `LeaseSeconds` bounds one handler (M116).
+- Fixed: a type-unresolvable outbox row is dead-lettered like an exhausted one (`ProcessedOn` null, `RetryCount = MaxRetries`), so outbox administration lists and replays it and cleanup keeps it for the dead-letter window instead of purging it as delivered (M118).
+- Fixed: `ScheduledJobRunner` stamps a completed job's outcome under its own 5-second token, so a graceful stop right after the job returns no longer leaves the schedule unadvanced and the job re-run (M119).
+- Fixed: `IInternalCommandScheduler.ScheduleAsync` outside a transaction signals the processor for a future-dated command too, so the smart wait re-arms and the command runs on time (L54).
+- Fixed: the push-send `DedupKey` is stored and looked up as a SHA-256 of `{SentByUserId}:{key}`, so two senders reusing one client key no longer suppress each other's sends. A retry that spans the upgrade does not match a row stored under the raw key (M106).
+- Fixed: `AddTypedServiceClient` configures its standard resilience handler from `HttpResilienceDefaults` instead of the library defaults (L58).
+- Fixed: `JwtForwardingClientInterceptor` forwards the access token saved on the authentication ticket when the inbound request has no `Authorization` header (a SignalR hub token sent as `?access_token=`); a present header still wins (H39).
+- Documented: `IHasOrderingKey` notes that a key with `BatchSize` or more pending rows fills the fetch window (L55); `SendPushNotificationHandler` notes that its live legs are at-least-once under an execution-strategy retry (M107); `DeleteUserHandlerBase` describes its marker and `afterCommit` tail as post-save, not post-commit, under an `ITransactional` command (L48).
 
 ## [1.212.0] - 2026-09-29
 

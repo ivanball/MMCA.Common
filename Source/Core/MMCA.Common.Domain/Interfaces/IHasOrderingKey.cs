@@ -20,6 +20,11 @@ namespace MMCA.Common.Domain.Interfaces;
 /// aggregate only, while a constant key serializes the whole outbox. An event that does not
 /// implement this interface keeps the unordered, fully parallel behavior.
 /// </para>
+/// <para>
+/// The poll fetches the oldest <c>BatchSize</c> pending rows with no key awareness, so a key with
+/// <c>BatchSize</c> or more pending rows fills the fetch window: a bursty or blocked key delays
+/// unrelated newer rows until the burst drains or the head row dead-letters.
+/// </para>
 /// </summary>
 public interface IHasOrderingKey
 {

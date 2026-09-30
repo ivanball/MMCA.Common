@@ -71,6 +71,14 @@ public sealed partial class ScheduledJobRunner(
     /// <summary>Floor for the computed wait so an overdue row cannot hot-loop the runner.</summary>
     private static readonly TimeSpan MinimumWait = TimeSpan.FromSeconds(1);
 
+    /// <summary>
+    /// Budget for the outcome stamp after a job has returned. The stamp runs under its own bounded
+    /// token rather than the host stopping token (the outbox M8 shape): a completed occurrence must
+    /// always advance its schedule and release its lease, or a graceful stop between the job and the
+    /// stamp re-runs work that already finished once the lease expires.
+    /// </summary>
+    private static readonly TimeSpan StampTimeout = TimeSpan.FromSeconds(5);
+
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -489,6 +497,7 @@ public sealed partial class ScheduledJobRunner(
         // Guarded by the claim token: a replica whose lease expired mid-execution (another replica
         // has since claimed and possibly re-run the row) matches nothing here and silently drops its
         // stale outcome rather than overwriting the current holder's record.
+        using var stampTimeout = new CancellationTokenSource(StampTimeout, _timeProvider);
         var stamped = await context.Set<ScheduledJobEntry>()
             .Where(e => e.JobName == jobName && e.LockToken == lockToken)
             .ExecuteUpdateAsync(
@@ -499,7 +508,7 @@ public sealed partial class ScheduledJobRunner(
                       .SetProperty(e => e.NextRunOn, nextRun)
                       .SetProperty(e => e.LockedUntil, (DateTime?)null)
                       .SetProperty(e => e.LockToken, (Guid?)null),
-                cancellationToken)
+                stampTimeout.Token)
             .ConfigureAwait(false);
 
         if (stamped == 0)

@@ -170,6 +170,56 @@ public class SendPushNotificationHandlerTests
         VerifyNoSend(mocks);
     }
 
+    // M106: the stored key is scoped to the sender, so another sender's notification under the same
+    // raw client key neither suppresses this send nor is returned to this caller.
+    [Fact]
+    public async Task HandleAsync_WithAClientKeyAnotherSenderAlreadyUsed_StillSends()
+    {
+        PushNotification othersSend = CreateExisting("Other Title", "Other Body", "weekly-40");
+        var (sut, mocks) = CreateSut();
+        List<PushNotification> added = ArrangePredicateEvaluatingStore(mocks, othersSend);
+
+        Result<PushNotificationDTO> result = await sut.HandleAsync(
+            new SendPushNotificationCommand(new SendPushNotificationRequest("Mine", "Body"), SentByUserId: 2)
+            {
+                DedupKey = "weekly-40",
+            });
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Title.Should().Be("Mine");
+        mocks.PushNotificationSender.Verify(
+            x => x.SendToUsersAsync(
+                It.IsAny<IEnumerable<UserIdentifierType>>(),
+                "Mine",
+                "Body",
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        added.Should().ContainSingle().Which.DedupKey.Should().NotBe("weekly-40");
+    }
+
+    [Fact]
+    public async Task HandleAsync_TheSameClientKey_MapsToOneStoredKeyPerSender()
+    {
+        var (sut, mocks) = CreateSut();
+        List<PushNotification> added = ArrangePredicateEvaluatingStore(mocks);
+
+        // Sender 1 sends, then retries with the same key (a dedup hit), then sender 2 reuses the key.
+        await sut.HandleAsync(CreateCommand() with { DedupKey = "weekly-40" });
+        await sut.HandleAsync(CreateCommand() with { DedupKey = "weekly-40" });
+        var otherSender = new SendPushNotificationCommand(
+            new SendPushNotificationRequest("Test Title", "Test Body"),
+            SentByUserId: 2)
+        {
+            DedupKey = "weekly-40",
+        };
+        await sut.HandleAsync(otherSender);
+
+        added.Should().HaveCount(2, "the retry deduplicates and the second sender does not");
+        added[0].DedupKey.Should().NotBeNull().And.HaveLength(64).And.NotBe("weekly-40");
+        added[1].DedupKey.Should().NotBe(added[0].DedupKey, "a second sender gets its own key");
+    }
+
     [Fact]
     public async Task HandleAsync_WithUnseenDedupKey_SendsNormally()
     {
@@ -320,6 +370,39 @@ public class SendPushNotificationHandlerTests
         Mock<INotificationRecipientProvider> RecipientProvider,
         Mock<IPushNotificationSender> PushNotificationSender,
         Mock<INativePushSender> NativePushSender);
+
+    /// <summary>
+    /// Replaces the canned dedup lookup with one that evaluates the handler's predicate against an
+    /// in-memory store seeded with <paramref name="seed"/>, and records every notification added.
+    /// </summary>
+    private static List<PushNotification> ArrangePredicateEvaluatingStore(HandlerMocks mocks, params PushNotification[] seed)
+    {
+        List<PushNotification> store = [.. seed];
+        List<PushNotification> added = [];
+        mocks.ReadRepo.Setup(AnyDedupLookup())
+            .Returns((
+                IEnumerable<string> _,
+                Expression<Func<PushNotification, bool>>? where,
+                Expression<Func<PushNotification, string>>? _,
+                Expression<Func<PushNotification, PushNotification>>? _,
+                bool _,
+                bool _,
+                CancellationToken _) =>
+            {
+                Func<PushNotification, bool> predicate = where?.Compile() ?? (_ => true);
+                IReadOnlyCollection<PushNotification> matches = [.. store.Where(predicate)];
+                return Task.FromResult(matches);
+            });
+        mocks.NotificationRepo
+            .Setup(x => x.AddAsync(It.IsAny<PushNotification>(), It.IsAny<CancellationToken>()))
+            .Callback<PushNotification, CancellationToken>((notification, _) =>
+            {
+                added.Add(notification);
+                store.Add(notification);
+            })
+            .Returns(Task.CompletedTask);
+        return added;
+    }
 
     private static PushNotification CreateExisting(string title, string body, string dedupKey) =>
         PushNotification.Create(title, body, sentByUserId: 7, recipientCount: 5, dedupKey: dedupKey).Value!;

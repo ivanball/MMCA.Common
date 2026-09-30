@@ -13,8 +13,12 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// The shared account-erasure workflow: owner-or-privileged-role authorization, soft-delete the
 /// account, irreversibly anonymize its personal data in place (ADR-005), persist, write the shared
 /// soft-deleted marker that revokes the account's already-issued access tokens (ADR-047), then run
-/// whatever post-commit tail the app added. Keeping the row preserves cross-context scalar references
+/// whatever post-save tail the app added. Keeping the row preserves cross-context scalar references
 /// and the audit trail while still satisfying the GDPR/CCPA "delete within 30 days" erasure promise.
+/// Under an <c>ITransactional</c> command the save is not the commit, so the marker (30 s TTL, best
+/// effort) and any <c>afterCommit</c> action run before the transaction commits: enqueue only
+/// idempotent, retry-safe work there, or schedule an internal command inside the unit (as ADC does for
+/// the avatar blob).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,14 +26,14 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// the identical revocation window: without it a deleted account keeps making authenticated requests
 /// until its access token expires, because the API middleware reads
 /// <see cref="SoftDeletedUserCache"/> and only falls back to a database lookup once the marker has
-/// gone. It is written <b>best effort</b>: the erasure is already committed by this point, so a cache
+/// gone. It is written <b>best effort</b>: the erasure is already saved by this point, so a cache
 /// fault must not turn a successful, irreversible deletion into a failure the caller would retry
 /// against an account that no longer holds the personal data. A failed write costs only the
 /// shortening: the token keeps working until it expires, exactly as it did before the marker existed,
 /// and the failure is logged as a warning.
 /// </para>
 /// <para>
-/// It runs <b>before</b> the app's post-commit tail because that tail is unbounded app work (deleting
+/// It runs <b>before</b> the app's post-save tail because that tail is unbounded app work (deleting
 /// a blob, calling out to storage) that can be slow or can throw, and every second it takes is a
 /// second the deleted account's token still works. Revoking first bounds the exposure window to the
 /// cache round-trip regardless of what the app queued behind it.
@@ -42,8 +46,8 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 ///     before <c>Anonymize()</c>, which is the only point where an app can both read personal data
 ///     that anonymization is about to erase (ADC captures the avatar blob name) and enlist further
 ///     aggregates in the same unit of work (an app with a linked profile aggregate cascades to it).
-///     Work that must wait for the commit is enqueued on the <c>afterCommit</c> collection instead of being run
-///     inline, so the override can hand values it captured here to a post-commit closure without
+///     Work that must wait for the save is enqueued on the <c>afterCommit</c> collection instead of being run
+///     inline, so the override can hand values it captured here to a post-save closure without
 ///     parking them in mutable handler state.</item>
 /// </list>
 /// </para>
