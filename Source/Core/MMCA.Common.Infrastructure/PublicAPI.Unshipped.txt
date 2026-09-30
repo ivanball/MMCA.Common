@@ -5,7 +5,7 @@
 *REMOVED*MMCA.Common.Infrastructure.Messaging.MessageBusSettings.EnableInbox.get -> bool
 MMCA.Common.Infrastructure.Auth.PasswordResetTokenService
 MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.IssueAsync(string! email, int userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<string!>!>!
-MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.PasswordResetTokenService(MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings) -> void
+MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.PasswordResetTokenService(MMCA.Common.Application.Interfaces.ICacheService! cacheService, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.PasswordResetSettings!>! settings, MMCA.Common.Application.Interfaces.IDistributedLock! distributedLock) -> void
 MMCA.Common.Infrastructure.Auth.PasswordResetTokenService.ValidateAndConsumeAsync(string! email, string! token, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<int>!>!
 MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionCleanupService
 MMCA.Common.Infrastructure.Persistence.Auth.RefreshSessionModelBuilderExtensions

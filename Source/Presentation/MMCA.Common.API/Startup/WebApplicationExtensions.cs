@@ -137,13 +137,28 @@ public static class WebApplicationExtensions
 #pragma warning restore S3330, S2092
                 }
 
-                var target = string.IsNullOrWhiteSpace(redirectUri) ? "/" : redirectUri;
+                // A non-local target falls back to the root instead of reaching LocalRedirect, whose
+                // result throws at execution for anything that is not local (a 500 on an anonymous
+                // endpoint).
+                var target = IsLocalRedirectTarget(redirectUri) ? redirectUri! : "/";
                 return Results.LocalRedirect(target);
             }).AllowAnonymous();
 
             return app;
         }
     }
+
+    /// <summary>
+    /// The rule <see cref="Results.LocalRedirect(string, bool, bool)"/> enforces, applied before it:
+    /// a single leading slash, not followed by a second slash or a backslash (which browsers treat
+    /// as protocol-relative).
+    /// </summary>
+    /// <param name="url">The requested redirect target.</param>
+    /// <returns><see langword="true"/> when <paramref name="url"/> is a local path.</returns>
+    private static bool IsLocalRedirectTarget(string? url) =>
+        !string.IsNullOrWhiteSpace(url)
+        && url[0] == '/'
+        && !(url.Length > 1 && (url[1] == '/' || url[1] == '\\'));
 
     /// <summary>
     /// Seeds the default steps, lets the host adjust them, validates the load-bearing adjacencies,

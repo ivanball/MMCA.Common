@@ -26,6 +26,17 @@ namespace MMCA.Common.Gateway.RateLimiting;
     Justification = "False positive: with extension(T) blocks, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
 public static class GatewayRoutePolicyExtensions
 {
+    /// <summary>
+    /// The <see cref="HttpContext.Items"/> key the edge limiter of <c>MMCA.Common.Aspire</c>
+    /// (<c>AddGatewayRateLimiting</c>) stamps with <see langword="true"/> once a request has proven
+    /// the trusted-internal-caller secret. The two packages do not reference each other, so the
+    /// literal is repeated there; the edge limiter is the global limiter and runs before the
+    /// route policy in the same middleware, so the stamp is present by the time
+    /// <see cref="Partition"/> runs. A host without the edge limiter never stamps it, and every
+    /// request is then limited exactly as before.
+    /// </summary>
+    internal const string TrustedInternalCallerItemKey = "MMCA.Common.Gateway.TrustedInternalCaller";
+
     extension(IServiceCollection services)
     {
         /// <summary>
@@ -72,7 +83,9 @@ public static class GatewayRoutePolicyExtensions
     /// <summary>
     /// The partition one request falls into under <paramref name="policy"/>: a fixed window keyed by
     /// the policy's partition choice, or no limiter at all when a per-IP policy cannot resolve the
-    /// caller's address.
+    /// caller's address or the edge limiter has already validated the request as a trusted internal
+    /// caller (the same exemption the edge limiter grants; a server-rendered UI's sign-ins all leave
+    /// from one address and would otherwise share one per-IP bucket).
     /// </summary>
     /// <param name="httpContext">The request.</param>
     /// <param name="policy">The named policy's settings.</param>
@@ -82,6 +95,11 @@ public static class GatewayRoutePolicyExtensions
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(policy);
+
+        if (httpContext.Items.TryGetValue(TrustedInternalCallerItemKey, out var trusted) && trusted is true)
+        {
+            return RateLimitPartition.GetNoLimiter(GatewayRoutePolicySettings.GlobalPartitionKey);
+        }
 
         var key = policy.PartitionKey(httpContext.Connection.RemoteIpAddress);
 

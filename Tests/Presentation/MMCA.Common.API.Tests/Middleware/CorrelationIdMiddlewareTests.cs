@@ -93,6 +93,57 @@ public sealed class CorrelationIdMiddlewareTests
             .Should().Be(expectedId);
     }
 
+    // M121: caller-supplied values are normalized.
+    [Fact]
+    public async Task InvokeAsync_WithAnOverlongHeader_KeepsTheFirst64CharactersAndEchoesThem()
+    {
+        string? capturedId = null;
+        var correlationContext = new Mock<ICorrelationContext>();
+        correlationContext.Setup(x => x.SetCorrelationId(It.IsAny<string>()))
+            .Callback<string>(id => capturedId = id);
+
+        Func<object, Task>? registeredCallback = null;
+        object? registeredState = null;
+        var responseFeature = new Mock<IHttpResponseFeature>();
+        responseFeature.SetupGet(x => x.Headers).Returns(new HeaderDictionary());
+        responseFeature.Setup(x => x.OnStarting(It.IsAny<Func<object, Task>>(), It.IsAny<object>()))
+            .Callback<Func<object, Task>, object>((cb, state) =>
+            {
+                registeredCallback = cb;
+                registeredState = state;
+            });
+        var requestFeature = new Mock<IHttpRequestFeature>();
+        requestFeature.SetupGet(x => x.Headers).Returns(new HeaderDictionary
+        {
+            [CorrelationIdMiddleware.HeaderName] = new string('a', 100),
+        });
+        var features = new FeatureCollection();
+        features.Set(requestFeature.Object);
+        features.Set(responseFeature.Object);
+        var httpContext = new DefaultHttpContext(features);
+
+        await new CorrelationIdMiddleware(_ => Task.CompletedTask).InvokeAsync(httpContext, correlationContext.Object);
+        await registeredCallback!(registeredState!);
+
+        capturedId.Should().Be(new string('a', 64), "the persisted correlation columns are 64 characters wide");
+        httpContext.Response.Headers[CorrelationIdMiddleware.HeaderName].ToString().Should().Be(capturedId);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithABlankHeader_GeneratesAnId()
+    {
+        string? capturedId = null;
+        var correlationContext = new Mock<ICorrelationContext>();
+        correlationContext.Setup(x => x.SetCorrelationId(It.IsAny<string>()))
+            .Callback<string>(id => capturedId = id);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers[CorrelationIdMiddleware.HeaderName] = "   ";
+
+        await new CorrelationIdMiddleware(_ => Task.CompletedTask).InvokeAsync(httpContext, correlationContext.Object);
+
+        capturedId.Should().NotBeNullOrWhiteSpace("a blank header is treated as absent, not stored");
+    }
+
     // ── Calls next middleware ──
     [Fact]
     public async Task InvokeAsync_CallsNextMiddleware()

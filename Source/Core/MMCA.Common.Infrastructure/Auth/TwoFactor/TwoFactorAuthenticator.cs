@@ -1,4 +1,7 @@
+using System.Globalization;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
@@ -19,12 +22,22 @@ namespace MMCA.Common.Infrastructure.Auth.TwoFactor;
 /// code single use, so it happens inside the challenge rather than being left to the caller: a
 /// caller that forgot would leave the code live for a second sign-in.
 /// </para>
+/// <para>
+/// <b>A time-based code is accepted once.</b> The matched time step is remembered per account in
+/// <see cref="ICacheService"/> for as long as the verification window can still accept it, and a
+/// code whose step is not newer than the last accepted one is answered as invalid, so a code seen
+/// over someone's shoulder cannot be replayed inside its window.
+/// </para>
 /// </remarks>
 /// <param name="twoFactorService">Verifies codes and matches recovery hashes.</param>
 /// <param name="store">Reads the account's state and spends recovery codes.</param>
+/// <param name="cache">Remembers the last accepted time step per account.</param>
+/// <param name="settings">The bound two-factor settings (period and window size).</param>
 internal sealed class TwoFactorAuthenticator(
     ITwoFactorService twoFactorService,
-    ITwoFactorStore store) : ITwoFactorAuthenticator
+    ITwoFactorStore store,
+    ICacheService cache,
+    IOptions<TwoFactorSettings> settings) : ITwoFactorAuthenticator
 {
     /// <inheritdoc />
     public async Task<Result<TwoFactorOutcome>> ChallengeAsync(
@@ -48,9 +61,10 @@ internal sealed class TwoFactorAuthenticator(
                 TwoFactorErrors.TwoFactorRequired(nameof(ChallengeAsync)));
         }
 
-        if (state.TwoFactorSecret is { Length: > 0 } secret && twoFactorService.VerifyCode(secret, code))
+        if (state.TwoFactorSecret is { Length: > 0 } secret
+            && twoFactorService.VerifyCode(secret, code, out var matchedStep))
         {
-            return Result.Success(TwoFactorOutcome.VerifiedTotp);
+            return await AcceptTimeStepOnceAsync(userId, matchedStep, cancellationToken).ConfigureAwait(false);
         }
 
         if (!twoFactorService.TryMatchRecoveryCode(code, state.TwoFactorRecoveryCodeHashes, out var matchedHash)
@@ -69,5 +83,31 @@ internal sealed class TwoFactorAuthenticator(
         return consumed.IsFailure
             ? Result.Failure<TwoFactorOutcome>(consumed.Errors)
             : Result.Success(TwoFactorOutcome.VerifiedRecoveryCode);
+    }
+
+    /// <summary>
+    /// Accepts a matched time step only when it is newer than the last one accepted for the account,
+    /// then remembers it for as long as the window can still accept it.
+    /// </summary>
+    /// <param name="userId">The account being challenged.</param>
+    /// <param name="matchedStep">The time step the presented code matched.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><see cref="TwoFactorOutcome.VerifiedTotp"/>, or an invalid-code failure for a replay.</returns>
+    private async Task<Result<TwoFactorOutcome>> AcceptTimeStepOnceAsync(
+        UserIdentifierType userId,
+        long matchedStep,
+        CancellationToken cancellationToken)
+    {
+        var key = string.Create(CultureInfo.InvariantCulture, $"twofactor:laststep:{userId}");
+        var last = await cache.GetAsync<long?>(key, cancellationToken).ConfigureAwait(false);
+        if (last is { } lastStep && matchedStep <= lastStep)
+        {
+            return Result.Failure<TwoFactorOutcome>(TwoFactorErrors.TwoFactorInvalid(nameof(ChallengeAsync)));
+        }
+
+        var options = settings.Value;
+        var lifetime = TimeSpan.FromSeconds(options.PeriodSeconds * (2 * options.VerificationWindowSteps + 2));
+        await cache.SetAsync<long?>(key, matchedStep, lifetime, cancellationToken).ConfigureAwait(false);
+        return Result.Success(TwoFactorOutcome.VerifiedTotp);
     }
 }

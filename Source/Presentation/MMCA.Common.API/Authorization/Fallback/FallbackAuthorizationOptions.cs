@@ -56,7 +56,10 @@ public sealed class FallbackAuthorizationOptions
     /// <see cref="DefaultExemptPathPrefixes"/>. Matching is segment-based and case-insensitive, so
     /// <c>/_framework</c> covers <c>/_framework/blazor.web.js</c>. Add a host's own static roots
     /// here; do NOT add application endpoints, which should carry <c>[AllowAnonymous]</c> so the
-    /// anonymous-endpoint fitness gate can see them.
+    /// anonymous-endpoint fitness gate can see them. The exemption is purely path-based: an
+    /// undecorated controller routed under one of these prefixes would pass ungated, and
+    /// <c>AnonymousEndpointTestsBase.Endpoints_DeclareAnAuthorizationDecision</c> is the gate that
+    /// keeps such a controller from landing.
     /// </summary>
     public IList<string> ExemptPathPrefixes { get; } = [.. DefaultExemptPathPrefixes];
 }

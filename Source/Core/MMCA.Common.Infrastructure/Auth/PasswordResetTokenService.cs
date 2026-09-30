@@ -21,13 +21,24 @@ namespace MMCA.Common.Infrastructure.Auth;
 ///     <see cref="PasswordResetSettings.MaxValidationAttempts"/>.</item>
 ///   <item><b>Per-email request throttle</b>: a counter with the request window's TTL caps how often
 ///     one address can trigger an email.</item>
+///   <item><b>Single redemption</b>: the read, compare and remove run under an
+///     <see cref="IDistributedLock"/> on the token key, so two concurrent redemptions of one token
+///     cannot both succeed; a redemption that cannot take the lock is answered as invalid.</item>
 /// </list>
 /// </summary>
+/// <param name="cacheService">Holds the hashed token record and the request counter.</param>
+/// <param name="settings">The bound password-reset settings.</param>
+/// <param name="distributedLock">Serializes redemptions of one token.</param>
 public sealed class PasswordResetTokenService(
     ICacheService cacheService,
-    IOptions<PasswordResetSettings> settings) : IPasswordResetTokenService
+    IOptions<PasswordResetSettings> settings,
+    IDistributedLock distributedLock) : IPasswordResetTokenService
 {
     private const int TokenByteLength = 32;
+
+    private static readonly TimeSpan RedeemLockTimeToLive = TimeSpan.FromSeconds(10);
+
+    private static readonly TimeSpan RedeemLockWait = TimeSpan.FromSeconds(5);
 
     private readonly PasswordResetSettings _settings = settings.Value;
 
@@ -86,6 +97,30 @@ public sealed class PasswordResetTokenService(
         CancellationToken cancellationToken = default)
     {
         string key = TokenKey(email);
+
+        // The read, the compare and the remove below are one critical section: without it, two
+        // callers that both read before either removes would both succeed. A contended redeem is
+        // answered as invalid, never as a second success.
+        var handle = await distributedLock
+            .TryAcquireAsync($"lock:{key}", RedeemLockTimeToLive, RedeemLockWait, cancellationToken)
+            .ConfigureAwait(false);
+        if (handle is null)
+        {
+            return InvalidToken();
+        }
+
+        await using (handle.ConfigureAwait(false))
+        {
+            return await RedeemAsync(email, key, token, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<Result<UserIdentifierType>> RedeemAsync(
+        string email,
+        string key,
+        string token,
+        CancellationToken cancellationToken)
+    {
         var entry = await cacheService.GetAsync<PasswordResetEntry>(key, cancellationToken).ConfigureAwait(false);
         if (entry is null)
         {

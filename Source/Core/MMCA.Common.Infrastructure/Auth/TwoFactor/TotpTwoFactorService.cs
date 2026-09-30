@@ -55,8 +55,12 @@ internal sealed class TotpTwoFactorService(IOptions<TwoFactorSettings> settings)
     }
 
     /// <inheritdoc />
-    public bool VerifyCode(string secret, string? code)
+    public bool VerifyCode(string secret, string? code) => VerifyCode(secret, code, out _);
+
+    /// <inheritdoc />
+    public bool VerifyCode(string secret, string? code, out long matchedStep)
     {
+        matchedStep = 0;
         if (string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(code))
         {
             return false;
@@ -80,7 +84,7 @@ internal sealed class TotpTwoFactorService(IOptions<TwoFactorSettings> settings)
             previous: _settings.VerificationWindowSteps,
             future: _settings.VerificationWindowSteps);
 
-        return totp.VerifyTotp(NormalizeCode(code), out _, window);
+        return totp.VerifyTotp(NormalizeCode(code), out matchedStep, window);
     }
 
     /// <inheritdoc />

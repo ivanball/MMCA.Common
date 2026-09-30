@@ -6,6 +6,21 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+### Fixed
+
+- **Breaking:** `ChangePasswordHandlerBase` takes a required `ILoginProtectionService` (before `timeProvider`), `ITwoFactorService` gains `VerifyCode(secret, code, out long matchedStep)`, and `PasswordResetTokenService` takes a required `IDistributedLock`. Map and fix: UPGRADING.md, [Unreleased].
+- Fixed: a wrong second-factor code at sign-in now counts against the account lockout like a wrong password; a missing code still does not (M105).
+- Fixed: an accepted time-based code is remembered per account (`ICacheService`, for the life of the verification window) and a replay inside the window is refused (L56).
+- Fixed: change-password counts a wrong current password against a per-account lockout keyed `password-change:{userId}`, checks the lockout before verifying, and resets it on success (M108).
+- Fixed: `POST /Auth/register` is `[NonIdempotent]`, so its token pair never enters the 24h replay cache (M137).
+- Fixed: password-reset redemption runs under an `IDistributedLock` on the token key, so two concurrent redemptions of one token cannot both succeed (L91).
+- Fixed: the global and "UserPolicy" rate-limit partitions key on the subject claim first, then the name claim, so two users sharing a full name no longer share a bucket (M122).
+- Fixed: `AddCommonRateLimiting(IConfiguration)` registers `RateLimitingSettings` with `ValidateDataAnnotations().ValidateOnStart()`, so an out-of-range value fails at startup (M124).
+- Fixed: a blank `X-Correlation-ID` header is treated as absent and a value over 64 characters is cut to 64, the width of the persisted correlation columns (M121).
+- Fixed: `/culture/set` with a non-local `redirectUri` redirects to `/` instead of answering 500 (L63).
+- Fixed: the named per-route gateway policies (`MMCA.Common.Gateway`) exempt a request the edge limiter (`AddGatewayRateLimiting`) has validated as a trusted internal caller, so Server-circuit sign-ins no longer share the UI replica's per-IP bucket (M177).
+- Documented: `FallbackAuthorizationOptions.ExemptPathPrefixes` is path-based and `AnonymousEndpointTestsBase` is the gate that keeps an undecorated controller from landing under a prefix (L62).
+
 ## [1.212.0] - 2026-09-29
 
 ### Added

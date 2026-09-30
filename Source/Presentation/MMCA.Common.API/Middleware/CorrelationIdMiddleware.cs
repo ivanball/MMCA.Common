@@ -10,12 +10,18 @@ namespace MMCA.Common.API.Middleware;
 /// otherwise falls back to the current W3C trace ID (from OpenTelemetry/Activity)
 /// or the ASP.NET Core <see cref="HttpContext.TraceIdentifier"/>.
 /// The correlation ID is echoed back in the response header for client-side tracing.
+/// A blank header value is treated as absent, and a value longer than <see cref="MaxLength"/> is
+/// cut to that length (the width of every persisted correlation column), so the id the client sees
+/// echoed is exactly the one stored.
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>
 public sealed class CorrelationIdMiddleware(RequestDelegate next)
 {
     /// <summary>The HTTP header name used for the correlation ID.</summary>
     public const string HeaderName = "X-Correlation-ID";
+
+    /// <summary>The longest correlation id kept: the width of the persisted correlation columns.</summary>
+    internal const int MaxLength = 64;
 
     /// <summary>
     /// Processes the HTTP request by setting the correlation ID on the scoped
@@ -29,9 +35,10 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(correlationContext);
 
-        var correlationId = context.Request.Headers[HeaderName].FirstOrDefault()
-            ?? Activity.Current?.TraceId.ToString()
-            ?? context.TraceIdentifier;
+        var header = context.Request.Headers[HeaderName].FirstOrDefault();
+        var correlationId = string.IsNullOrWhiteSpace(header)
+            ? Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier
+            : Truncate(header);
 
         correlationContext.SetCorrelationId(correlationId);
         context.Response.OnStarting(() =>
@@ -42,4 +49,9 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
 
         await next(context).ConfigureAwait(false);
     }
+
+    /// <summary>Cuts a caller-supplied id to <see cref="MaxLength"/> characters.</summary>
+    /// <param name="value">The header value.</param>
+    /// <returns>The value, at most <see cref="MaxLength"/> characters long.</returns>
+    private static string Truncate(string value) => value.Length > MaxLength ? value[..MaxLength] : value;
 }

@@ -50,6 +50,9 @@ Old-to-new map:
 | `IFileStorageService.UploadAsync(..., FileUploadOptions options, ...)` default interface member | abstract; every implementation provides it |
 | `PhysicalDataSource(Key, ConnectionString, SqlServerMigrationsAssembly, CosmosDatabaseName)` plus `SqliteMigrationsAssembly` / `PostgreSQLMigrationsAssembly` init properties | `PhysicalDataSource(Key, ConnectionString, MigrationsAssembly, CosmosDatabaseName)`, one slot for the source's own engine |
 | `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` | `MMCA.Common.Infrastructure.Hosting.Background.PeriodicBackgroundService` (namespace move only; the type is unchanged) |
+| `ChangePasswordHandlerBase(unitOfWork, passwordHasher, logger, refreshSessions, timeProvider)` | `ChangePasswordHandlerBase(unitOfWork, passwordHasher, logger, refreshSessions, ILoginProtectionService loginProtection, timeProvider)` (M108) |
+| `ITwoFactorService` (six members) | adds `bool VerifyCode(string secret, string? code, out long matchedStep)` (L56) |
+| `PasswordResetTokenService(cacheService, settings)` | `PasswordResetTokenService(cacheService, settings, IDistributedLock distributedLock)` (L91) |
 
 The mechanical fix:
 
@@ -75,6 +78,15 @@ The mechanical fix:
    reports it as IDE0005). Re-qualify any fully qualified
    `MMCA.Common.Infrastructure.Scheduling.PeriodicBackgroundService` reference. This is the
    namespace-move fix at the top of this file, applied to one type.
+7. **`ChangePasswordHandlerBase` subclasses.** Add an `ILoginProtectionService loginProtection`
+   constructor parameter and pass it to the base before `timeProvider` (it is registered by
+   `AddInfrastructure`). A test that builds the subclass passes a mock whose `CheckLockoutAsync`
+   returns `Result.Success()`.
+8. **`ITwoFactorService` implementations and fakes.** Implement the new overload; a fake that has
+   no time steps sets `matchedStep = 0` and delegates to the two-argument member. The shipped
+   `TotpTwoFactorService` needs nothing.
+9. **`PasswordResetTokenService` constructed by hand.** Pass an `IDistributedLock` (registered by
+   `AddCaching`). Hosts resolving `IPasswordResetTokenService` from DI change nothing.
 
 ## [1.207.0] - 2026-09-21
 

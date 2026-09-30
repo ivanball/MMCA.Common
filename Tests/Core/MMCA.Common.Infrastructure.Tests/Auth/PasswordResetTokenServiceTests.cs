@@ -2,10 +2,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Auth;
+using MMCA.Common.Infrastructure.Concurrency;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
@@ -40,6 +42,28 @@ public sealed class PasswordResetTokenServiceTests
             e.Code == "Auth.InvalidResetToken" && e.Type == ErrorType.Unauthorized);
         cache.Values.Should().NotContainKey(TokenKey);
         cache.Values.Should().NotContainKey(RequestKey, "a successful reset clears the request counter too");
+    }
+
+    [Fact]
+    public async Task ValidateAndConsumeAsync_TwoConcurrentRedemptions_OnlyOneSucceeds()
+    {
+        // L91: both callers read the record before either removes it unless the redeem is serialized.
+        var (sut, cache) = CreateSut();
+        Result<string> issued = await sut.IssueAsync(TestEmail, TestUserId);
+        cache.GateTokenReads(TokenKey);
+
+        Task<Result<UserIdentifierType>> first = sut.ValidateAndConsumeAsync(TestEmail, issued.Value!);
+        await cache.FirstGatedReadPending.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Task<Result<UserIdentifierType>> second = sut.ValidateAndConsumeAsync(TestEmail, issued.Value!);
+
+        // Give the second call the chance to reach the read too. Serialized, it never does (it waits
+        // on the lock), so the short timeout is the expected path for the fixed code.
+        await Task.WhenAny(cache.SecondGatedReadPending.Task, Task.Delay(TimeSpan.FromMilliseconds(500)));
+        cache.ReleaseTokenReads();
+        Result<UserIdentifierType>[] results = await Task.WhenAll(first, second);
+
+        results.Count(r => r.IsSuccess).Should().Be(1, "a token redeems exactly once, even under concurrency");
+        results.Should().ContainSingle(r => r.IsFailure && r.Errors.Any(e => e.Code == "Auth.InvalidResetToken"));
     }
 
     [Fact]
@@ -215,30 +239,71 @@ public sealed class PasswordResetTokenServiceTests
             RequestWindowMinutes = requestWindowMinutes,
         };
 
-        return (new PasswordResetTokenService(cache, Options.Create(settings)), cache);
+        var distributedLock = new InProcessDistributedLock(NullLogger<InProcessDistributedLock>.Instance);
+        return (new PasswordResetTokenService(cache, Options.Create(settings), distributedLock), cache);
     }
 
     /// <summary>In-memory <see cref="ICacheService"/> recording every value and TTL written.</summary>
     private sealed class FakeCacheService : ICacheService
     {
+        private readonly Lock _sync = new();
+        private TaskCompletionSource? _readGate;
+        private string? _gatedKey;
+        private int _gatedReads;
+
         public Dictionary<string, object?> Values { get; } = new(StringComparer.Ordinal);
 
         public Dictionary<string, TimeSpan?> Ttls { get; } = new(StringComparer.Ordinal);
 
-        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Values.TryGetValue(key, out object? value) ? (T?)value : default);
+        /// <summary>Completes when the first gated read is parked at the gate.</summary>
+        public TaskCompletionSource FirstGatedReadPending { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Completes when a second gated read is parked at the gate.</summary>
+        public TaskCompletionSource SecondGatedReadPending { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Parks every read of <paramref name="key"/> until <see cref="ReleaseTokenReads"/>.</summary>
+        public void GateTokenReads(string key)
+        {
+            _gatedKey = key;
+            _readGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        public void ReleaseTokenReads() => _readGate?.TrySetResult();
+
+        public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
+        {
+            if (_readGate is { } gate && string.Equals(key, _gatedKey, StringComparison.Ordinal) && !gate.Task.IsCompleted)
+            {
+                int parked = Interlocked.Increment(ref _gatedReads);
+                (parked == 1 ? FirstGatedReadPending : SecondGatedReadPending).TrySetResult();
+                await gate.Task.ConfigureAwait(false);
+            }
+
+            lock (_sync)
+            {
+                return Values.TryGetValue(key, out object? value) ? (T?)value : default;
+            }
+        }
 
         public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
         {
-            Values[key] = value;
-            Ttls[key] = expiration;
+            lock (_sync)
+            {
+                Values[key] = value;
+                Ttls[key] = expiration;
+            }
+
             return Task.CompletedTask;
         }
 
         public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
         {
-            Values.Remove(key);
-            Ttls.Remove(key);
+            lock (_sync)
+            {
+                Values.Remove(key);
+                Ttls.Remove(key);
+            }
+
             return Task.CompletedTask;
         }
 
