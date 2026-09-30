@@ -39,7 +39,7 @@
          package is referenced by MMCA.Common.API, which owns the profiler UI and middleware. -->
     <PackageVersion Include="MiniProfiler.Shared" Version="4.5.4" />
     <PackageVersion Include="MiniProfiler.AspNetCore.Mvc" Version="4.5.4" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.10" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.17.12" />
     <PackageVersion Include="Scrutor" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.4" />
     <!-- Infrastructure -->
@@ -112,7 +112,7 @@
          hand-rolled HttpClient against the Messages API, and the request/response shapes track the
          API from the vendor instead of from this repo. Its only non-BCL dependency is
          Microsoft.Extensions.AI.Abstractions, the same package the entry above already brings. -->
-    <PackageVersion Include="Anthropic" Version="12.51.0" />
+    <PackageVersion Include="Anthropic" Version="12.52.0" />
     <!-- The OpenAI adapter (MMCA.Common.AI.OpenAI): Microsoft.Extensions.AI.OpenAI is Microsoft's
          AsIChatClient adapter over the official OpenAI .NET SDK and tracks the Microsoft.Extensions.AI
          line above, so the two bump together; OpenAI is referenced directly by the adapter project so
@@ -125,9 +125,9 @@
          or by setting the MT_LICENSE/MT_LICENSE_PATH environment variables") and every broker-
          enabled service host crashes. A blanket package-update bumped this to 9.1.2 once before
          and reintroduced the crash — do NOT bump past v8 without configuring a license. -->
-    <PackageVersion Include="MassTransit" Version="8.5.10" />
-    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
-    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.10" />
+    <PackageVersion Include="MassTransit" Version="8.5.11" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.11" />
+    <PackageVersion Include="MassTransit.Azure.ServiceBus.Core" Version="8.5.11" />
     <!-- Service Bus emulator test tier (ServiceBusEmulatorFixtureBase in MMCA.Common.Testing): the two
          clients the MassTransit v8 custom-clients Host() overload takes. 7.20.2 is the first line with
          working emulator admin-plane support (>= 7.20.1 required), and it also lifts the older
@@ -141,7 +141,7 @@
          a commercial license key at build time (enforced by DependencyVersionTests, mirrored in
          the dependabot.yml ignore, same pattern as the MassTransit v8 pin). -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.2" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.0" />
     <!-- HELD at 3.1.12 2026-08-28: the Six Labors Split License is treated as within this
          workspace's commercial-package exclusion (same policy bucket as the MassTransit v8
          ceiling), so ImageSharp is excluded from dependency sweeps outright. -->
@@ -163,9 +163,9 @@
          Key Vault Secrets User role on the vault (samples/deployment/DEPLOYMENT.md, bootstrap step 3). -->
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
     <!-- gRPC -->
-    <PackageVersion Include="Google.Protobuf" Version="3.36.1" />
-    <PackageVersion Include="Grpc.AspNetCore" Version="2.83.0" />
-    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
+    <PackageVersion Include="Google.Protobuf" Version="3.36.2" />
+    <PackageVersion Include="Grpc.AspNetCore" Version="2.84.0" />
+    <PackageVersion Include="Grpc.AspNetCore.Server.Reflection" Version="2.84.0" />
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.84.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.84.0" />
     <!-- Common.UI -->
@@ -192,10 +192,10 @@
     <!-- Common.UI.Maui — must match the Microsoft.Maui.Controls pin the consumer heads use
          (ADC/Store pin the same version); MAUI plugin/toolkit packages bind to the MAUI minor,
          so bump them together, never independently. -->
-    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.101" />
+    <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.110" />
     <!-- Local (on-device) notifications for UI.Maui; majors track MAUI majors — verify the
          net10 TFM set before bumping (14.x is the net10 line). -->
-    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.1" />
+    <PackageVersion Include="Plugin.LocalNotification" Version="14.1.2" />
     <!-- Speech-to-text for UI.Maui; hard-binds to the MAUI minor (requires Controls >= 10.0.60),
          bump together with Microsoft.Maui.Controls. -->
     <PackageVersion Include="CommunityToolkit.Maui" Version="15.0.1" />
@@ -203,7 +203,7 @@
          Pinned to the release built against MAUI 10.0.70's AndroidX train (Fragment 1.8.8.x /
          Lifecycle 2.9.2.x); newer builds (.32+) pull AndroidX versions past the Ktx packages'
          upper bounds and fail restore with NU1608. Bump together with Microsoft.Maui.Controls. -->
-    <!-- HELD at 1.1.0.30 2026-08-28: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
+    <!-- HELD at 1.1.0.30 2026-08-28, re-verified 2026-09-30 on MAUI 10.0.110: 1.1.0.33 still reproduces the NU1608 wave above on MAUI
          10.0.100 (Fragment 1.8.9.3 / Activity 1.13.0.1 / Lifecycle 2.11.0.1 / SavedState 1.5.0.1 /
          Collection.Jvm 1.6.0.1 resolved past the .Ktx packages' upper bounds). -->
     <PackageVersion Include="Xamarin.AndroidX.Biometric" Version="1.1.0.30" />
@@ -211,13 +211,13 @@
          (ADR-044). Bindings track the Google Play services train, not the MAUI one, but they pull
          AndroidX packages: verify a restore of the android TFM after any bump (the Biometric pin
          above is the one that reacts first, with NU1608). -->
-    <!-- HELD at 124.1.2 2026-08-28: 125.1.1 pulls the newer AndroidX train (Lifecycle 2.11.0.1,
+    <!-- HELD at 124.1.2 2026-08-28, re-verified 2026-09-30 on MAUI 10.0.110 with 125.1.3: 125.1.1 pulls the newer AndroidX train (Lifecycle 2.11.0.1,
          Activity 1.13.0.1, Fragment 1.8.9.3, SavedState 1.5.0.1, Collection.Jvm 1.6.0.1) past the
          .Ktx packages' upper bounds and fails the android restore with NU1608. -->
     <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.1.2" />
     <!-- BlazorWebView host support for UI.Maui (Wave 5: MainPageBase / NativeThemeSync);
          versions on the MAUI train, bump together with Microsoft.Maui.Controls. -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.101" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="10.0.110" />
     <!-- Camera barcode/QR scanning for UI.Maui's opt-in IBarcodeScannerService (MIT, by Redth).
          Ships assets for all four MAUI TFMs of this package (net10.0-android36.0 / -ios26.0 /
          -maccatalyst26.0 / -windows10.0.19041) and depends on Microsoft.Maui.Controls, so it
@@ -240,7 +240,7 @@
     <!-- Pin the transitive AngleSharp (pulled by bUnit) to the patched 1.5.2: bUnit 2.7.2 floors it at
          1.4.0, which carries CVE-2026-54570 / GHSA-pgww-w46g-26qg (mXSS via MathML annotation-xml). CPM
          does not pin transitives, so the two bUnit-referencing projects add a direct PackageReference. -->
-    <PackageVersion Include="AngleSharp" Version="1.8.2" />
+    <PackageVersion Include="AngleSharp" Version="1.8.3" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin
          transitives, so a stale-cache restore could otherwise drift it down to 4.7.2 and dirty the lock. -->
@@ -274,7 +274,7 @@
          MessagePack and SQLitePCLRaw pins above), which also carries the fix to consumers of the
          MMCA.Common.Testing package through the published package graph. -->
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.12" />
     <PackageVersion Include="NetArchTest.eNhancedEdition" Version="1.4.5" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
@@ -300,12 +300,12 @@
          Aspire.Hosting 13.5.4 already pulls 7.0.1 into the AppHost graph, so the test-tier pin sits on
          the same major the hosting stack does. -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.0" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
     <!-- Same version as Microsoft.Data.SqlClient: since 7.0 the Entra ID authentication providers live
          here, and MMCA.Common.Infrastructure references it so every consumer host that connects with
          Authentication=Active Directory Managed Identity keeps working (the 2026-09-16 ADC startup
          failure). Bump the two together. -->
-    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.0" />
+    <PackageVersion Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.1" />
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <!-- Health Checks. AspNetCore.HealthChecks.Redis is deliberately absent: its check issues
          CLUSTER INFO against any server StackExchange.Redis 3.x reports as clustered, which Azure
@@ -355,24 +355,24 @@
          carry, so a host that swaps its direct Aspire references for the framework wrapper resolves
          exactly the same assemblies. Microsoft.AspNetCore.OutputCaching.StackExchangeRedis is the
          shared Redis output-cache store the wrapper registers; it ships no health check of its own. -->
-    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.5.4" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.5.4" />
+    <PackageVersion Include="Aspire.StackExchange.Redis" Version="13.6.0" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.6.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OutputCaching.StackExchangeRedis" Version="10.0.12" />
     <!-- Aspire AppHost -->
-    <PackageVersion Include="Aspire.Hosting" Version="13.5.4" />
-    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.5.4" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.5.4" />
-    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.5.4" />
-    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.CosmosDB" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.RabbitMQ" Version="13.6.0" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.0" />
     <!-- AppHost integration testing (MMCA.Common.Testing.Aspire): DistributedApplicationTestingBuilder
          boots a real AppHost in-process. Held at the SAME 13.5.4 as every other Aspire entry on
          purpose: the testing host builds the application model the AppHost package produces, so a
          version split between the two is a model mismatch rather than an upgrade. -->
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.0" />
     <!-- Sample AppHost + sample service behind the apphost-testing CI tier only (the three projects
          under Tests/Hosting that sit OUTSIDE MMCA.Common.slnx). Aspire.Hosting.AppHost brings the DCP
          orchestrator the testing builder starts. -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.5.4" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.0" />
     <!-- Versioning -->
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>

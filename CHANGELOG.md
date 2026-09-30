@@ -6,6 +6,25 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.214.0] - 2026-09-30
+
+### Changed
+
+- **Dependencies (latest stable sweep).** Aspire 13.6.0 (every `Aspire.*` package and the
+  `Aspire.AppHost.Sdk` of the sample AppHost); Microsoft.Maui.Controls and
+  Microsoft.AspNetCore.Components.WebView.Maui 10.0.110; Microsoft.Data.SqlClient and
+  .Extensions.Azure 7.1.1; Microsoft.Extensions.Caching.StackExchangeRedis 10.0.12; Grpc.AspNetCore
+  and .Server.Reflection 2.84.0; Google.Protobuf 3.36.2; Azure.Storage.Blobs 12.30.0;
+  Anthropic 12.52.0; Scalar.AspNetCore 2.17.12; AngleSharp 1.8.3; Plugin.LocalNotification 14.1.2;
+  MassTransit, .RabbitMQ and .Azure.ServiceBus.Core 8.5.11 (the newest v8; v9 is commercial and stays held by
+  `DependencyVersionTests`). A consumer that pins any of these below the new version gets NU1605
+  (package downgrade) on the bump; raise those pins in the same commit as the `MMCA.Common.*` pin.
+- **Held on purpose.** SixLabors.ImageSharp stays on 3.1.12 (4.x ships under the commercial Six
+  Labors Split License) and Microsoft.OpenApi stays on 2.12.2 (Microsoft.AspNetCore.OpenApi 10.0.x
+  requires `[2.12.0, 3.0.0)`, so 3.x cannot resolve beside it). Xamarin.AndroidX.Biometric stays on
+  1.1.0.30 and Xamarin.Firebase.Messaging on 124.1.2: their newer builds still pull an AndroidX train
+  past the upper bounds of MAUI 10.0.110's .Ktx packages (NU1608 on the android TFM).
+
 ## [1.213.1] - 2026-09-30
 
 ### Fixed
