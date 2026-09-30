@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace MMCA.Common.Testing.Architecture;
@@ -252,34 +253,46 @@ public static partial class ArchitectureRules
     /// <returns>The comment-free, trimmed line.</returns>
     private static string StripComments(string rawLine, ref bool inBlockComment)
     {
-        var line = rawLine;
+        // One left-to-right scan: a block comment that closes on the same line resumes the text after
+        // it, and whichever of "//" and "/*" comes first decides what the rest of the line is.
+        var kept = new StringBuilder();
+        var rest = rawLine.AsSpan();
 
-        if (inBlockComment)
+        while (!rest.IsEmpty)
         {
-            var close = line.IndexOf("*/", StringComparison.Ordinal);
-            if (close < 0)
+            if (inBlockComment)
             {
-                return string.Empty;
+                var close = rest.IndexOf("*/", StringComparison.Ordinal);
+                if (close < 0)
+                {
+                    break;
+                }
+
+                inBlockComment = false;
+                rest = rest[(close + 2)..];
+                continue;
             }
 
-            inBlockComment = false;
-            line = line[(close + 2)..];
-        }
+            var lineComment = rest.IndexOf("//", StringComparison.Ordinal);
+            var blockOpen = rest.IndexOf("/*", StringComparison.Ordinal);
+            if (lineComment >= 0 && (blockOpen < 0 || lineComment < blockOpen))
+            {
+                kept.Append(rest[..lineComment]);
+                break;
+            }
 
-        var open = line.IndexOf("/*", StringComparison.Ordinal);
-        if (open >= 0)
-        {
+            if (blockOpen < 0)
+            {
+                kept.Append(rest);
+                break;
+            }
+
+            kept.Append(rest[..blockOpen]).Append(' ');
             inBlockComment = true;
-            line = line[..open];
+            rest = rest[(blockOpen + 2)..];
         }
 
-        var lineComment = line.IndexOf("//", StringComparison.Ordinal);
-        if (lineComment >= 0)
-        {
-            line = line[..lineComment];
-        }
-
-        return line.Trim();
+        return kept.ToString().Trim();
     }
 
     /// <summary>The kinds of proto block this parser tracks.</summary>

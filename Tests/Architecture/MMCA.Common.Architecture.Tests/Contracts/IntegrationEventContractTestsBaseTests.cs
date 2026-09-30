@@ -82,6 +82,37 @@ public sealed class IntegrationEventContractTestsBaseTests
             .Which.Message.Should().Contain("NEW EVENT");
     }
 
+    [Fact]
+    public void Contract_SpellsOutGenericArguments_AndPinsAnIntermediateBase()
+    {
+        var contract = LiveContract();
+
+        contract.Should().Contain(
+            "MMCA.Common.Architecture.Tests.ContractShapeFixtures.IntegrationEvents.FixtureShapedEvent "
+            + "{ Count:Nullable<Int32>, Origin:String, Tags:IReadOnlyList<String> }",
+            "a retyped generic argument and a member of an intermediate consumer base both change the wire shape");
+        contract.Where(l => l.Contains("ContractShapeFixtures", StringComparison.Ordinal))
+            .Should().NotContain(
+                l => l.Contains("SchemaVersion:", StringComparison.Ordinal) || l.Contains("DateOccurred:", StringComparison.Ordinal),
+                "the framework envelope is the framework's contract, not the event's");
+    }
+
+    [Fact]
+    public void Base_Fails_WhenAGenericArgumentOfAMultiArgumentMemberChanges()
+    {
+        var lines = LiveContract();
+        var index = lines.FindIndex(l => l.Contains(".FixtureTallyEvent ", StringComparison.Ordinal));
+        index.Should().BeGreaterThanOrEqualTo(0, "the fixture assembly must declare the multi-argument generic event");
+        lines[index] = lines[index].Replace("<String, Int32>", "<String, Int64>", StringComparison.Ordinal);
+
+        var assert = new ProbeTests(lines).IntegrationEventContracts_ShouldMatch_TheFrozenSnapshot;
+
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain(
+                "member Counts changed type",
+                "a comma inside angle brackets belongs to the member type, not the member list");
+    }
+
     /// <summary>The contract the fixture map really produces, the baseline every case mutates.</summary>
     private static List<string> LiveContract() =>
         ArchitectureRules.BuildIntegrationEventContract(new FixtureMap());
@@ -112,9 +143,27 @@ public sealed class IntegrationEventContractTestsBaseTests
     {
         var open = line.IndexOf('{', StringComparison.Ordinal);
         var close = line.LastIndexOf('}');
-        return (
-            line[..open].Trim(),
-            line[(open + 1)..close].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return (line[..open].Trim(), SplitTopLevel(line[(open + 1)..close]));
+    }
+
+    /// <summary>Splits on the commas outside angle brackets, mirroring the base's own parser.</summary>
+    private static string[] SplitTopLevel(string members)
+    {
+        var parts = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < members.Length; i++)
+        {
+            depth += members[i] switch { '<' => 1, '>' => -1, _ => 0 };
+            if (members[i] == ',' && depth == 0)
+            {
+                parts.Add(members[start..i]);
+                start = i + 1;
+            }
+        }
+
+        parts.Add(members[start..]);
+        return [.. parts.Select(p => p.Trim()).Where(p => p.Length > 0)];
     }
 
     /// <summary>

@@ -373,9 +373,10 @@ public static class PageExtensions
         /// <c>@onclick</c> is silently ignored (see the type-level remarks) and the action never fires. On a
         /// fast host the bare click routinely beats hydration, so a single click is unreliable. This polls:
         /// click, wait a slice of <paramref name="timeout"/> for the effect, and if it has not appeared
-        /// re-assert interactivity and click again. A successful action surfaces its effect well within one
-        /// slice, so a genuinely-applied click is not re-issued (no double submit); only a no-op click is
-        /// retried. Use for create/edit/delete submits that assert on a resulting snackbar or navigation.
+        /// re-assert interactivity and click again. An effect slower than <c>timeout / 3</c> is treated as a
+        /// swallowed click and re-issued, so a non-idempotent submit that can take longer than that must be
+        /// called with a larger <paramref name="timeout"/>. Use for create/edit/delete submits that assert on
+        /// a resulting snackbar or navigation.
         /// </summary>
         public async Task ClickAndVerifyAsync(ILocator expected, float timeout = 15_000)
         {

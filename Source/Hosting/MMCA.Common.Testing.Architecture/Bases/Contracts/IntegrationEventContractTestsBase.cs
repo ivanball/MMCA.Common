@@ -122,7 +122,7 @@ public abstract class IntegrationEventContractTestsBase
             }
 
             var members = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var member in line[(open + 1)..close].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            foreach (var member in SplitTopLevel(line[(open + 1)..close]))
             {
                 var separator = member.LastIndexOf(':');
                 var (name, type) = separator < 0
@@ -135,5 +135,30 @@ public abstract class IntegrationEventContractTestsBase
         }
 
         return events;
+    }
+
+    /// <summary>
+    /// Splits a member list on the commas outside angle brackets, so a multi-argument generic
+    /// member type (<c>IReadOnlyDictionary&lt;String, Int32&gt;</c>) stays one member.
+    /// </summary>
+    /// <param name="members">The text between the braces of one contract line.</param>
+    /// <returns>The trimmed, non-empty member entries.</returns>
+    private static List<string> SplitTopLevel(string members)
+    {
+        var parts = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i < members.Length; i++)
+        {
+            depth += members[i] switch { '<' => 1, '>' => -1, _ => 0 };
+            if (members[i] == ',' && depth == 0)
+            {
+                parts.Add(members[start..i]);
+                start = i + 1;
+            }
+        }
+
+        parts.Add(members[start..]);
+        return [.. parts.Select(p => p.Trim()).Where(p => p.Length > 0)];
     }
 }

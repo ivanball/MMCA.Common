@@ -29,6 +29,12 @@ public sealed class ClockReadTests : ClockReadTestsBase
     }
 
     [Fact]
+    public void DateTimeToday_IsFlagged() =>
+        Report([]).Should().Contain(
+            $"{nameof(TodayReadingFixture)}.Stamp reads DateTime.Today",
+            "DateTime.Today reads the ambient clock exactly as DateTime.Now does");
+
+    [Fact]
     public void ReadsInsideLambdaAndAsyncBodies_AreFlaggedUnderTheirSourceMember()
     {
         var report = Report([]);

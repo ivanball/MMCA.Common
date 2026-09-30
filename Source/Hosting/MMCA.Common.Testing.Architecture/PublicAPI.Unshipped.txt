@@ -162,3 +162,5 @@ static MMCA.Common.Testing.Architecture.ArchitectureRules.DomainAndApplicationDo
 static MMCA.Common.Testing.Architecture.ArchitectureRules.QueryHandlersUseReadRepositories(MMCA.Common.Testing.Architecture.IArchitectureMap! map, System.Collections.Generic.IReadOnlyCollection<string!>! allowedTypesAndNamespaces) -> void
 virtual MMCA.Common.Testing.Architecture.ClockReadTestsBase.AllowedClockReaders.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.AllowedHandlers.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+static MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ContainsRegionClaim(string! policyText, string! regionClaim) -> bool
+static MMCA.Common.Testing.Architecture.StateManagementConventionTestsBase.FindSingletonStateRegistrations(string! sourceDir, out int scannedUiFiles) -> System.Collections.Generic.IReadOnlyList<string!>!

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 
 namespace MMCA.Common.AI.Guardrails;
@@ -41,7 +42,10 @@ public static class ChatToolPolicy
 
     /// <summary>Answers whether a tool declares itself consequential.</summary>
     /// <param name="tool">The tool to read.</param>
-    /// <returns><see langword="true"/> when the tool carries the marker with a true value.</returns>
+    /// <returns>
+    /// <see langword="false"/> when the tool carries no marker or a definite false one; otherwise
+    /// <see langword="true"/>.
+    /// </returns>
     internal static bool IsConsequential(AITool tool)
     {
         if (!tool.AdditionalProperties.TryGetValue(ConsequentialPropertyKey, out var value))
@@ -49,16 +53,22 @@ public static class ChatToolPolicy
             return false;
         }
 
+        // The marker is the whole write-safety gate, so it fails closed: only a definite false is
+        // harmless. Configuration hands a boolean over as text and a JSON-bound bag as a JsonElement,
+        // and a tool declared consequential either way must not read as harmless because of it; a
+        // marker present in a shape this method does not recognise reads as consequential too.
         return value switch
         {
             bool flag => flag,
-
-            // Configuration and JSON both hand a boolean over as text, and a tool declared
-            // consequential in a settings file must not read as harmless because of it.
-            string text => bool.TryParse(text, out var parsed) && parsed,
-            _ => false,
+            string text => ParsedOrConsequential(text),
+            JsonElement { ValueKind: JsonValueKind.False } => false,
+            JsonElement { ValueKind: JsonValueKind.String } element => ParsedOrConsequential(element.GetString()),
+            _ => true,
         };
     }
+
+    private static bool ParsedOrConsequential(string? text) =>
+        !bool.TryParse(text, out var parsed) || parsed;
 
     /// <summary>Reads the tool names the caller confirmed for this request.</summary>
     /// <param name="options">The options for this request.</param>

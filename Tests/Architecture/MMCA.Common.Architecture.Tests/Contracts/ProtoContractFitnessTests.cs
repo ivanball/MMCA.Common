@@ -96,4 +96,16 @@ public sealed class ProtoContractFitnessTests
         contract.Should().NotContain(line => line.Contains("csharp_namespace", StringComparison.Ordinal));
         contract.Should().NotContain(line => line.Contains("timestamp.proto", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void BuildProtoContract_SurvivesBlockCommentsInEveryPosition()
+    {
+        var repoRoot = ArchitectureMapBase.FindRepoRoot(SolutionFileName);
+        var contract = ArchitectureRules.BuildProtoContract(
+            [Path.Combine(repoRoot, $"{TestDataDirectory}/fitness-catalog-commented.proto")]);
+
+        contract.Should().Equal(
+            FrozenContract,
+            "a block comment closed on its own line, a trailing one, one inside a line comment and a multi-line one must not swallow the declarations after them");
+    }
 }
