@@ -203,7 +203,7 @@
       "mmca.common.ai.anthropic": {
         "type": "Project",
         "dependencies": {
-          "Anthropic": "[12.51.0, )",
+          "Anthropic": "[12.52.0, )",
           "MMCA.Common.AI": "[1.0.0, )"
         }
       },
@@ -224,9 +224,9 @@
       },
       "Anthropic": {
         "type": "CentralTransitive",
-        "requested": "[12.51.0, )",
-        "resolved": "12.51.0",
-        "contentHash": "Lf8WgFhsqNzVkfj87LsLxdXpa2KdJ2/JB433eA1MuCN+3lX5gSGjM3oBcdSDgd3SBEI3xsdihBAPijuq5b6FAg==",
+        "requested": "[12.52.0, )",
+        "resolved": "12.52.0",
+        "contentHash": "T8kyP14r9XWteqzEFZnjk3k3vSmhscseJzbd6PeYMTGzUanVNyaZLJsc7NXS47+mdTozaka+7W2pVAu8NjxThQ==",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.5.1"
         }
