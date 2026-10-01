@@ -1,4 +1,8 @@
-.navbar-toggler {
+/* ── Mobile hamburger ──
+   A CSS-only disclosure (a checkbox), so the menu opens even where the layout renders statically
+   with no interactivity; wwwroot/navmenu.js adds Enter/Escape handling and keeps aria-expanded in
+   step. Hidden at >=1024px, where the sidebar is permanent. */
+.nav-toggler {
     appearance: none;
     cursor: pointer;
     width: 3.5rem;
@@ -12,29 +16,58 @@
     z-index: var(--mmca-z-hamburger, 300);
 }
 
-    .navbar-toggler:checked {
+    .nav-toggler:checked {
         background-color: rgba(255, 255, 255, 0.5);
     }
 
+    /* Keyboard focus needs a visible indicator on the dark row (WCAG 2.4.7). */
+    .nav-toggler:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
+    }
+
+/* ── Brand row ──
+   One flex row: the brand on the left, the mobile quick actions on the right, and 4.5rem of right
+   padding reserved for the absolutely positioned hamburger. It never wraps: .top-row-brand is
+   allowed to shrink so the brand truncates with an ellipsis instead of pushing .toprow-actions onto
+   a second row. */
 .top-row {
-    height: 3.5rem;
-    background-color: var(--mmca-sidebar-bg-dark, #141B2D);
-    padding-right: 4.5rem;
-    /* Bootstrap's .navbar defaults to flex-wrap: wrap, which pushes
-       .toprow-actions onto a second row below the brand on mobile.
-       Force a single row; .container-fluid is allowed to shrink
-       (see .top-row .container-fluid below) so the brand truncates
-       via ellipsis instead of wrapping the actions. */
+    position: relative;
+    display: flex;
     flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    height: 3.5rem;
+    padding: 0.5rem 4.5rem 0.5rem 0.75rem;
+    background-color: var(--mmca-sidebar-bg-dark, #141B2D);
     /* Hairline finishing the brand row against the nav body below it. Inset shadow, not a border,
        so the row keeps its exact 3.5rem height (every mobile offset below is measured from it). */
     box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.navbar-brand {
+.top-row-brand {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 1;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.nav-brand {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    margin-right: 1rem;
+    padding-top: 0.3125rem;
+    padding-bottom: 0.3125rem;
+    color: white;
+    text-decoration: none;
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: -0.01em;
@@ -43,70 +76,27 @@
     max-width: calc(100vw - 8rem);
 }
 
+    .nav-brand:hover,
+    .nav-brand:focus {
+        color: white;
+    }
+
 /* Optional decorative logo (Layout:BrandLogoUrl). Fixed height, natural width, never squeezed:
    the brand TEXT is the element that gives way on a narrow row. */
-.navbar-brand-logo {
+.nav-brand-logo {
     height: 28px;
     width: auto;
     flex: 0 0 auto;
     display: block;
 }
 
-.navbar-brand-text {
+.nav-brand-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
 }
 
-.bi {
-    display: inline-block;
-    position: relative;
-    width: 1.25rem;
-    height: 1.25rem;
-    margin-right: 0.75rem;
-    top: -1px;
-    background-size: cover;
-}
-
-.nav-item {
-    font-size: 0.9rem;
-    padding-bottom: 0.5rem;
-}
-
-    .nav-item:first-of-type {
-        padding-top: 1rem;
-    }
-
-    .nav-item:last-of-type {
-        padding-bottom: 1rem;
-    }
-
-    .nav-item ::deep .nav-link {
-        color: rgba(255, 255, 255, 0.72);
-        background: none;
-        border: none;
-        border-radius: 8px;
-        height: 3rem;
-        display: flex;
-        align-items: center;
-        line-height: 3rem;
-        width: 100%;
-        font-weight: 500;
-    }
-
-    /* Same treatment as the MudNavLink rules below, for hosts that render plain Blazor NavLinks. */
-    .nav-item ::deep a.active {
-        background-color: rgba(66, 165, 245, 0.16);
-        box-shadow: inset 3px 0 0 var(--mmca-primary-light, #42A5F5);
-        color: white;
-        font-weight: 600;
-    }
-
-    .nav-item ::deep .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.08);
-        color: white;
-    }
 
 /* ── Mobile Nav: slide animation ── */
 .nav-scrollable {
@@ -125,7 +115,7 @@
     background-color: var(--mmca-sidebar-bg, #1A2035);
 }
 
-.navbar-toggler:checked ~ .nav-scrollable {
+.nav-toggler:checked ~ .nav-scrollable {
     max-height: calc(100vh - 3.5rem);
     max-height: calc(100dvh - 3.5rem);
     overflow-y: auto;
@@ -152,7 +142,7 @@
     cursor: pointer;
 }
 
-.navbar-toggler:checked ~ .nav-backdrop {
+.nav-toggler:checked ~ .nav-backdrop {
     display: block;
 }
 
@@ -256,14 +246,14 @@
     color: white;
     white-space: nowrap;
     /* Never shrink below the actions' own width. .top-row reserves its 4.5rem right padding for
-       the absolutely positioned .navbar-toggler, but a shrinkable actions box (the previous
+       the absolutely positioned .nav-toggler, but a shrinkable actions box (the previous
        min-width: 0 plus the default flex-shrink: 1) gets squeezed by the width:100% brand
        container and spills its nowrap, overflow-visible contents right into that reserve,
        painting the theme icon over the hamburger. The row holds only fixed-width icon buttons in
        every auth state (the signed-in user name lives in the hamburger menu's .nav-auth-section,
        so no ellipsizing text is here to absorb the squeeze), so nothing here can give way and
-       this must stay. The brand is the element meant to give way instead: .top-row
-       .container-fluid is min-width: 0 and .navbar-brand already ellipsizes. */
+       this must stay. The brand is the element meant to give way instead: .top-row-brand is
+       min-width: 0 and .nav-brand already ellipsizes. */
     flex: 0 0 auto;
     /* Prevent the top-row from clipping the badge above the icon */
     overflow: visible;
@@ -296,13 +286,8 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
 }
 
-.top-row .container-fluid {
-    min-width: 0;
-    flex-shrink: 1;
-}
-
 @media (min-width: 1024px) {
-    .navbar-toggler {
+    .nav-toggler {
         display: none;
     }
 
@@ -328,7 +313,7 @@
         padding-right: 0;
     }
 
-    .navbar-brand {
+    .nav-brand {
         max-width: none;
     }
 

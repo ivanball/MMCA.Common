@@ -9,6 +9,8 @@
          project that references it directly, so it is turned on here, which lets the tests observe the
          host-assembly summaries that AddCommonOpenApi() must not lose. -->
     <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />

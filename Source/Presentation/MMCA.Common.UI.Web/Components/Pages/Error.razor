@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Hosting
 @using Microsoft.Extensions.Localization
 @using MMCA.Common.UI.Resources
+@using MudBlazor
 @inject IHostEnvironment Environment
 @inject IStringLocalizer<SharedResource> L
 
@@ -21,28 +22,30 @@
 
 <PageTitle>@L["Error.PageTitle"]</PageTitle>
 
-<h1 class="text-danger">@L["Error.Heading"]</h1>
-<h2 class="text-danger">@L["Error.Message"]</h2>
+@* MudText with explicit HtmlTag keeps the heading outline (h1/h2/h3) while the theme owns the type
+   scale and the error colour, so the page needs no CSS framework of its own. *@
+<MudText Typo="Typo.h4" HtmlTag="h1" Color="Color.Error" Class="mb-2">@L["Error.Heading"]</MudText>
+<MudText Typo="Typo.h6" HtmlTag="h2" Color="Color.Error" Class="mb-4">@L["Error.Message"]</MudText>
 
 @if (ShowRequestId)
 {
-    <p>
+    <MudText Typo="Typo.body1" Class="mb-4">
         <strong>@L["Error.RequestId"]</strong> <code>@RequestId</code>
-    </p>
+    </MudText>
 }
 
 @if (Environment.IsDevelopment())
 {
-    <h3>Development Mode</h3>
-    <p>
+    <MudText Typo="Typo.h6" HtmlTag="h3" Class="mb-2">Development Mode</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
         Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-    </p>
-    <p>
+    </MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
         <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
         It can result in displaying sensitive information from exceptions to end users.
         For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
         and restarting the app.
-    </p>
+    </MudText>
 }
 
 @code{

@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,42 @@ public sealed class RegisterFormTests : BunitTestBase
         _auth.Verify(
             x => x.RegisterAsync(It.IsAny<RegisterRequest>(), It.IsAny<CancellationToken>()),
             Times.Never());
+    }
+
+    [Fact]
+    public void SubmittingEmptyForm_ResolvesTheResourceKeys_RatherThanShowingThem()
+    {
+        // The model declares resource keys (ADR-027); the page's localizing validator must resolve
+        // them, so the raw key never reaches the screen.
+        var cut = RenderUnderTest<Register>(_ => { });
+
+        cut.ClickButtonByText("Create Account");
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Please confirm your password"));
+        cut.Markup.Should().NotContain("Auth.Field.");
+    }
+
+    [Fact]
+    public void SubmittingEmptyForm_InSpanish_ShowsTheSpanishFieldMessages()
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("es-ES");
+        try
+        {
+            var cut = RenderUnderTest<Register>(_ => { });
+
+            cut.Find("button[type='submit']").Click();
+
+            cut.WaitForAssertion(() =>
+            {
+                cut.Markup.Should().Contain("El nombre es obligatorio");
+                cut.Markup.Should().Contain("La contraseña es obligatoria");
+            });
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
     }
 
     [Fact]

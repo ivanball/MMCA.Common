@@ -68,8 +68,6 @@ public sealed class SoftDeleteQueryFilterTests : IDisposable
     {
         public DbSet<SoftDeletableEntity> Entities => Set<SoftDeletableEntity>();
 
-        internal override bool SupportsOutbox => true;
-
         private SoftDeleteTestDbContext(DbContextOptions<SoftDeleteTestDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

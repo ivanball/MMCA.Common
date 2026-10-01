@@ -7,7 +7,6 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
@@ -28,21 +27,17 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration
 /// <param name="scopeFactory">Factory for creating a DI scope per visited target.</param>
 /// <param name="logger">Logger for requeue and purge diagnostics.</param>
 /// <param name="options">Queue settings supplying <c>MaxAttempts</c> and the scheduling target.</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
-/// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
+/// <param name="tableTargets">Decides which databases (and per-tenant copies) hold a queue table this host owns.</param>
 /// <param name="signal">Signal that wakes the processor as soon as a requeue lands.</param>
 /// <param name="timeProvider">Clock behind the purge threshold; injected so tests can drive it
 /// deterministically.</param>
-/// <param name="tenancyOptions">Bound tenancy settings, used to expand per-tenant copies of a source.</param>
 public sealed partial class InternalCommandAdministration(
     IServiceScopeFactory scopeFactory,
     ILogger<InternalCommandAdministration> logger,
     IOptions<InternalCommandsSettings> options,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver,
+    FrameworkTableTargets tableTargets,
     IInternalCommandSignal signal,
-    TimeProvider timeProvider,
-    IOptions<TenancySettings>? tenancyOptions = null) : IInternalCommandAdministration
+    TimeProvider timeProvider) : IInternalCommandAdministration
 {
     /// <summary>Upper bound on one page, so an admin call cannot ask for the whole table at once.</summary>
     private const int MaxPageSize = 500;
@@ -248,19 +243,8 @@ public sealed partial class InternalCommandAdministration(
     /// the same reason the processor recomputes it per cycle: module assemblies can register entities
     /// after startup.
     /// </summary>
-    private List<TenantDataSourceTarget> SelectTargets(string? dataSource)
-    {
-        var targets = TenantDataSourceTargets.ExpandRelational(
-            entityDataSourceRegistry,
-            dataSourceResolver,
-            _settings.DataSource,
-            _settings.DatabaseName,
-            tenancyOptions?.Value);
-
-        return dataSource is null
-            ? targets
-            : [.. targets.Where(t => string.Equals(t.ToString(), dataSource, StringComparison.OrdinalIgnoreCase))];
-    }
+    private IReadOnlyList<TenantDataSourceTarget> SelectTargets(string? dataSource) =>
+        tableTargets.Named(_settings.DataSource, _settings.DatabaseName, dataSource);
 
     /// <summary>
     /// Runs <paramref name="work"/> against one target in its own scope, setting the tenant BEFORE

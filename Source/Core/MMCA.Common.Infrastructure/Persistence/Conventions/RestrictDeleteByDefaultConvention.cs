@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.Conventions;
 
@@ -62,7 +63,7 @@ public sealed class RestrictDeleteByDefaultConvention(DataSource engine) : IMode
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
-        if (engine == DataSource.CosmosDB)
+        if (!DataSourceEngines.For(engine).Capabilities.IsRelational)
         {
             return;
         }

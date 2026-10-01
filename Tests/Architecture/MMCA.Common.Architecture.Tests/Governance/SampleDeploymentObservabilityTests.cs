@@ -18,4 +18,8 @@ public sealed class SampleDeploymentObservabilityTests : ObservabilityConvention
     // The sample provisions failed-requests, server-response-time, availability and ai-token-spend.
     // Raise this with the sample, never to make a red run go green.
     protected override int MinimumAlertSpecs => 4;
+
+    // The sample is the deployment consumers copy, so it must also ship the operator-facing view the
+    // alerts point at (rubric section 13): a workbook or portal dashboard resource in main.bicep.
+    protected override bool RequireWorkbook => true;
 }

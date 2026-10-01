@@ -2,10 +2,12 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -24,7 +26,13 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
     public DomainEventSaveChangesInterceptorTests()
     {
         var outboxSignal = new Mock<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>();
-        _sut = new DomainEventSaveChangesInterceptor(_mockDispatcher.Object, _mockLogger.Object, outboxSignal.Object, timeProvider: TimeProvider.System);
+        // Outbox off: these tests pin the in-process capture-and-dispatch path, not outbox routing.
+        _sut = new DomainEventSaveChangesInterceptor(
+            _mockDispatcher.Object,
+            _mockLogger.Object,
+            outboxSignal.Object,
+            timeProvider: TimeProvider.System,
+            messageBusOptions: Options.Create(new MessageBusSettings { EnableOutbox = false }));
         _dbContext = TestDomainEventDbContext.Create(_sut);
     }
 
@@ -179,8 +187,6 @@ public sealed class DomainEventSaveChangesInterceptorTests : IDisposable
     public sealed class TestDomainEventDbContext : ApplicationDbContext
     {
         public DbSet<TestAggregate> TestAggregates => Set<TestAggregate>();
-
-        internal override bool SupportsOutbox => false;
 
         private TestDomainEventDbContext(DbContextOptions<TestDomainEventDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())

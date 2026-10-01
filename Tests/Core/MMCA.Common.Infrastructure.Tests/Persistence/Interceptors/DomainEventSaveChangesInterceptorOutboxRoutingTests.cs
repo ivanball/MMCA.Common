@@ -20,7 +20,7 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence.Interceptors;
 
 /// <summary>
 /// Routing tests for <see cref="DomainEventSaveChangesInterceptor"/> on an outbox-enabled
-/// context (<c>SupportsOutbox == true</c>): integration events go to the outbox only (rows
+/// context (a relational engine): integration events go to the outbox only (rows
 /// stay unprocessed for the <see cref="OutboxProcessor"/>), local events get the in-process
 /// fast path (rows marked processed), and the sync save path clears events without
 /// dispatching, leaving delivery entirely to the outbox.
@@ -316,8 +316,6 @@ public sealed class DomainEventSaveChangesInterceptorOutboxRoutingTests : IDispo
     public sealed class OutboxRoutingTestDbContext : ApplicationDbContext
     {
         public DbSet<TestAggregate> TestAggregates => Set<TestAggregate>();
-
-        internal override bool SupportsOutbox => true;
 
         /// <summary>When set, the next save aborts after event capture. See <see cref="FailingSaveInterceptor"/>.</summary>
         public bool FailNextSave { get; set; }

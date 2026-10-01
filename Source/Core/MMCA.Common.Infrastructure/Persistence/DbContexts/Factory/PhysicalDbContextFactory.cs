@@ -1,12 +1,15 @@
-using Microsoft.EntityFrameworkCore;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 
 /// <summary>
 /// Singleton <see cref="IPhysicalDbContextFactory"/> that constructs context instances directly,
-/// resolving connection information through <see cref="IDataSourceResolver"/>.
+/// resolving connection information through <see cref="IDataSourceResolver"/>. Each engine builds
+/// its own sealed context (<see cref="IDataSourceEngine.CreateDbContext"/>) over empty options: all
+/// configuration (provider, connection, interceptors, model cache key) happens in each context's
+/// <c>OnConfiguring</c>.
 /// <para>
 /// IMPORTANT: these contexts must never be pooled (<c>AddPooledDbContextFactory</c>) — each
 /// instance carries per-source constructor state (<see cref="PhysicalDataSource"/>), which pooling
@@ -18,21 +21,6 @@ public sealed class PhysicalDbContextFactory(
     IDataSourceResolver resolver,
     IEntityConfigurationAssemblyProvider assemblyProvider) : IPhysicalDbContextFactory
 {
-    // Options are intentionally empty — all configuration (provider, connection, interceptors,
-    // model cache key) happens in each context's OnConfiguring. Matches the empty options the
-    // previous AddDbContextFactory<T>() registrations produced.
-    private static readonly DbContextOptions<SQLServerDbContext> SqlServerOptions =
-        new DbContextOptionsBuilder<SQLServerDbContext>().Options;
-
-    private static readonly DbContextOptions<PostgreSQLDbContext> PostgreSqlOptions =
-        new DbContextOptionsBuilder<PostgreSQLDbContext>().Options;
-
-    private static readonly DbContextOptions<SqliteDbContext> SqliteOptions =
-        new DbContextOptionsBuilder<SqliteDbContext>().Options;
-
-    private static readonly DbContextOptions<CosmosDbContext> CosmosOptions =
-        new DbContextOptionsBuilder<CosmosDbContext>().Options;
-
     /// <inheritdoc />
     public ApplicationDbContext Create(DataSourceKey key) => Create(key, resolver.GetPhysical(key));
 
@@ -41,13 +29,6 @@ public sealed class PhysicalDbContextFactory(
     {
         var physical = physicalDataSource ?? throw new ArgumentNullException(nameof(physicalDataSource));
 
-        return key.Engine switch
-        {
-            DataSource.SQLServer => new SQLServerDbContext(SqlServerOptions, serviceProvider, assemblyProvider, physical),
-            DataSource.PostgreSQL => new PostgreSQLDbContext(PostgreSqlOptions, serviceProvider, assemblyProvider, physical),
-            DataSource.Sqlite => new SqliteDbContext(SqliteOptions, serviceProvider, assemblyProvider, physical),
-            DataSource.CosmosDB => new CosmosDbContext(CosmosOptions, serviceProvider, assemblyProvider, physical),
-            _ => throw new InvalidOperationException($"Invalid DataSource \"{key.Engine}\""),
-        };
+        return DataSourceEngines.For(key.Engine).CreateDbContext(serviceProvider, assemblyProvider, physical);
     }
 }

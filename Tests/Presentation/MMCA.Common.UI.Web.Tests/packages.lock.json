@@ -20,6 +20,16 @@
         "resolved": "3.0.290",
         "contentHash": "vdSXgMEPil67EFwkcicjSCMnB7TdhUNiR1Fjw1P8MN+UeX6yP8wTb7cNT20H/ejHuUxkrxQS1Rz4QcJuMLmCkA=="
       },
+      "Microsoft.AspNetCore.Mvc.Testing": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "OtjgnL8RRLQYaiuS3KzbBbyQ6am1ZrX3dvBdiuXghxL+LQinmT2vMumytveYPbnXLknZSk/aEDKENI6uf7NoNg==",
+        "dependencies": {
+          "Microsoft.AspNetCore.TestHost": "10.0.12",
+          "Microsoft.Extensions.DependencyModel": "10.0.12"
+        }
+      },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
         "requested": "[18.7.23, )",
@@ -186,6 +196,11 @@
         "type": "Transitive",
         "resolved": "10.0.12",
         "contentHash": "+kCyWCOvZteBkqfbpmoi+ejIR1XVJOY4ydDNYrYt1WdXv/ruJS4WjDfCizGZ5lvn/OmRdMuVdh8opopbNveQcw=="
+      },
+      "Microsoft.AspNetCore.TestHost": {
+        "type": "Transitive",
+        "resolved": "10.0.12",
+        "contentHash": "bTHgbcjSrLxlqSasYRDU9BcJ3hDGoqIjtDY0soLNrndOWi3kxtOyddwUMaNZgtoI2Uf6y7ZQs2EuVj0c20B7mA=="
       },
       "Microsoft.Azure.Amqp": {
         "type": "Transitive",
@@ -864,7 +879,9 @@
         "dependencies": {
           "MMCA.Common.API": "[1.0.0, )",
           "MMCA.Common.Aspire": "[1.0.0, )",
-          "MMCA.Common.UI": "[1.0.0, )"
+          "MMCA.Common.UI": "[1.0.0, )",
+          "Microsoft.Extensions.ServiceDiscovery": "[10.10.0, )",
+          "Yarp.ReverseProxy": "[2.3.0, )"
         }
       },
       "Asp.Versioning.Mvc": {
@@ -1501,6 +1518,15 @@
         "contentHash": "J0d5OfFcp920nZxCRIvU14+TZhiSPQR0wvqEMZ3MRiJLPu1VmYlcRNkmcSW0i1DwkB81gAHc+fHUQf/cU64MYg==",
         "dependencies": {
           "xunit.v3.common": "[4.0.1]"
+        }
+      },
+      "Yarp.ReverseProxy": {
+        "type": "CentralTransitive",
+        "requested": "[2.3.0, )",
+        "resolved": "2.3.0",
+        "contentHash": "gxtkN3a+9biu9V9Zd5NaTO6VZWXAnS2mhQ0R/VXmSPoTuiQNZsakKikrKpDtKxrL5nUYzbRsHtl40WNq+ZBKKg==",
+        "dependencies": {
+          "System.IO.Hashing": "8.0.0"
         }
       }
     }

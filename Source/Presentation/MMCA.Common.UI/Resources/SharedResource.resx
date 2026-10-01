@@ -685,4 +685,46 @@
   <data name="Auth.Confirm.EmailAndTokenRequired" xml:space="preserve">
     <value>Enter your email address and the confirmation code.</value>
   </data>
+  <data name="Auth.Field.FirstName.Required" xml:space="preserve">
+    <value>First name is required</value>
+  </data>
+  <data name="Auth.Field.LastName.Required" xml:space="preserve">
+    <value>Last name is required</value>
+  </data>
+  <data name="Auth.Field.Email.Required" xml:space="preserve">
+    <value>Email is required</value>
+  </data>
+  <data name="Auth.Field.Email.Invalid" xml:space="preserve">
+    <value>Enter a valid email address</value>
+  </data>
+  <data name="Auth.Field.Password.Required" xml:space="preserve">
+    <value>Password is required</value>
+  </data>
+  <data name="Auth.Field.Password.MaxLength" xml:space="preserve">
+    <value>Password cannot be longer than 128 characters</value>
+  </data>
+  <data name="Auth.Field.Password.Complexity" xml:space="preserve">
+    <value>Password must be at least 8 characters and include uppercase, lowercase, a digit, and a special character.</value>
+  </data>
+  <data name="Auth.Field.ConfirmPassword.Required" xml:space="preserve">
+    <value>Please confirm your password</value>
+  </data>
+  <data name="Auth.Field.ConfirmPassword.Mismatch" xml:space="preserve">
+    <value>Passwords do not match</value>
+  </data>
+  <data name="Auth.Field.Token.Required" xml:space="preserve">
+    <value>Reset token is required</value>
+  </data>
+  <data name="Auth.Sessions.Revoke.Confirm.Title" xml:space="preserve">
+    <value>Sign out this device?</value>
+  </data>
+  <data name="Auth.Sessions.Revoke.Confirm.Message" xml:space="preserve">
+    <value>{0} will be signed out and will have to sign in again.</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Confirm.Title" xml:space="preserve">
+    <value>Sign out everywhere?</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Confirm.Message" xml:space="preserve">
+    <value>Every device will be signed out, including this one, and you will have to sign in again.</value>
+  </data>
 </root>

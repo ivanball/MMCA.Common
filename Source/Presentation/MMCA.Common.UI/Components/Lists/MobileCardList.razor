@@ -40,7 +40,7 @@ else
 }
 
 @code {
-    [Parameter] public IReadOnlyList<TItem> Items { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<TItem> Items { get; set; } = [];
     [Parameter] public int TotalItems { get; set; }
     [Parameter] public int CurrentPage { get; set; } = 1;
     [Parameter] public int PageSize { get; set; } = 10;

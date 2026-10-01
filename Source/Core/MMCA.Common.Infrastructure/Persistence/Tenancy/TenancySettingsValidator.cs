@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.Tenancy;
 
@@ -23,9 +24,9 @@ namespace MMCA.Common.Infrastructure.Persistence.Tenancy;
 internal sealed class TenancySettingsValidator(IDataSourceResolver? resolver = null)
     : IValidateOptions<TenancySettings>
 {
-    /// <summary>The engines an override can carry a connection string for.</summary>
+    /// <summary>The engines an override can carry a connection string for, in substitution-priority order.</summary>
     private static readonly DataSource[] Engines =
-        [DataSource.SQLServer, DataSource.PostgreSQL, DataSource.Sqlite, DataSource.CosmosDB];
+        [.. DataSourceEngines.All.OrderBy(engine => engine.SubstitutionPriority).Select(engine => engine.Engine)];
 
     /// <inheritdoc />
     public ValidateOptionsResult Validate(string? name, TenancySettings options)
@@ -120,12 +121,5 @@ internal sealed class TenancySettingsValidator(IDataSourceResolver? resolver = n
 
     /// <summary>The override's connection string for one engine, or null when it declares none.</summary>
     internal static string? ConnectionStringFor(DataSource engine, TenantDataSourceOverrideSettings over) =>
-        engine switch
-        {
-            DataSource.SQLServer => over.SQLServerConnectionString,
-            DataSource.PostgreSQL => over.PostgreSQLConnectionString,
-            DataSource.Sqlite => over.SqliteConnectionString,
-            DataSource.CosmosDB => over.CosmosConnectionString,
-            _ => null,
-        };
+        DataSourceEngines.For(engine).GetConnectionString(over);
 }

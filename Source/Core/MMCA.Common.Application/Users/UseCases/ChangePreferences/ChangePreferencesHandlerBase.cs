@@ -20,7 +20,7 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePreferences;
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's change-preferences command record.</typeparam>
-public abstract class ChangePreferencesHandlerBase<TUser, TCommand>(
+public abstract partial class ChangePreferencesHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ILogger logger) : ICommandHandler<TCommand, Result>
     where TUser : AuditableAggregateRootEntity<UserIdentifierType>, IUserPreferences
@@ -56,9 +56,12 @@ public abstract class ChangePreferencesHandlerBase<TUser, TCommand>(
         if (result.IsSuccess)
         {
             await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            UserUseCaseLog.PreferencesChanged(logger, command.UserId);
+            PreferencesChanged(logger, command.UserId);
         }
 
         return result;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} preferences changed")]
+    private static partial void PreferencesChanged(ILogger logger, UserIdentifierType userId);
 }

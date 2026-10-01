@@ -2,11 +2,13 @@ using AwesomeAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -39,7 +41,9 @@ public sealed class DomainEventCaptureExclusionTests : IDisposable
         _dbContext = ExclusionTestDbContext.Create(new DomainEventSaveChangesInterceptor(
             _dispatcherMock.Object,
             NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-            Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
+            Mock.Of<IOutboxSignal>(),
+            timeProvider: TimeProvider.System,
+            messageBusOptions: Options.Create(new MessageBusSettings { EnableOutbox = false })));
     }
 
     public void Dispose() => _dbContext.Dispose();
@@ -150,8 +154,6 @@ public sealed class DomainEventCaptureExclusionTests : IDisposable
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {
         }
-
-        internal override bool SupportsOutbox => false;
 
         public static ExclusionTestDbContext Create(DomainEventSaveChangesInterceptor interceptor)
         {

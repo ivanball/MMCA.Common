@@ -45,7 +45,7 @@ public sealed class MobileNavKeyboardE2ETests : GalleryAxeTestBase
         var reached = await TabUntilTogglerFocusedAsync();
         Assert.True(reached, "Tab never reached the hamburger toggler.");
 
-        var toggler = Page.Locator(".navbar-toggler");
+        var toggler = Page.Locator(".nav-toggler");
         await Expect(toggler).ToHaveAttributeAsync("aria-expanded", "false");
 
         // 2. Enter opens it (Space is the checkbox default and works natively; Enter is the one a
@@ -65,7 +65,7 @@ public sealed class MobileNavKeyboardE2ETests : GalleryAxeTestBase
         await Expect(toggler).ToHaveAttributeAsync("aria-expanded", "false");
 
         var focusBackOnToggler = await Page.EvaluateAsync<bool>(
-            "() => !!document.activeElement && document.activeElement.classList.contains('navbar-toggler')");
+            "() => !!document.activeElement && document.activeElement.classList.contains('nav-toggler')");
         Assert.True(focusBackOnToggler, "Escape did not return focus to the hamburger toggler.");
     }
 
@@ -100,15 +100,15 @@ public sealed class MobileNavKeyboardE2ETests : GalleryAxeTestBase
 
         // Settle before driving or measuring anything: the toggler only behaves once the interactive
         // render has landed.
-        await Expect(Page.Locator(".navbar-toggler")).ToBeVisibleAsync();
+        await Expect(Page.Locator(".nav-toggler")).ToBeVisibleAsync();
     }
 
     /// <summary>Opens the menu the way a pointer user does, then waits for it to actually be shown.</summary>
     private async Task OpenMenuByPointerAsync()
     {
-        await Page.Locator(".navbar-toggler").CheckAsync();
+        await Page.Locator(".nav-toggler").CheckAsync();
         await Expect(Page.Locator("#nav-menu")).ToBeVisibleAsync();
-        await Expect(Page.Locator(".navbar-toggler")).ToHaveAttributeAsync("aria-expanded", "true");
+        await Expect(Page.Locator(".nav-toggler")).ToHaveAttributeAsync("aria-expanded", "true");
 
         // The menu slides in over 0.2s of opacity. Playwright calls it visible the moment it has a
         // box, and axe blends a partially transparent element against whatever is behind it, so a
@@ -129,7 +129,7 @@ public sealed class MobileNavKeyboardE2ETests : GalleryAxeTestBase
             await Page.Keyboard.PressAsync("Tab");
 
             var onToggler = await Page.EvaluateAsync<bool>(
-                "() => !!document.activeElement && document.activeElement.classList.contains('navbar-toggler')");
+                "() => !!document.activeElement && document.activeElement.classList.contains('nav-toggler')");
             if (onToggler)
             {
                 return true;

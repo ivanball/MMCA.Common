@@ -59,7 +59,7 @@ namespace MMCA.Common.Application.Users.UseCases.DeleteUser;
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's delete-user command record.</typeparam>
-public abstract class DeleteUserHandlerBase<TUser, TCommand>(
+public abstract partial class DeleteUserHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     ICacheService cacheService,
     ILogger logger) : ICommandHandler<TCommand, Result>
@@ -149,7 +149,7 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            UserUseCaseLog.SoftDeletedMarkerFailed(logger, command.UserId, ex);
+            SoftDeletedMarkerFailed(logger, command.UserId, ex);
         }
 
         foreach (var action in afterCommit)
@@ -157,7 +157,7 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
             await action(cancellationToken).ConfigureAwait(false);
         }
 
-        UserUseCaseLog.UserErased(logger, command.UserId);
+        UserErased(logger, command.UserId);
 
         return Result.Success();
     }
@@ -192,4 +192,10 @@ public abstract class DeleteUserHandlerBase<TUser, TCommand>(
         ICollection<Func<CancellationToken, Task>> afterCommit,
         CancellationToken cancellationToken) =>
         Task.FromResult(Result.Success());
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} account deleted and personal data anonymized")]
+    private static partial void UserErased(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not write the soft-deleted marker for user {UserId}; the deleted user's existing access token stays usable until it expires")]
+    private static partial void SoftDeletedMarkerFailed(ILogger logger, UserIdentifierType userId, Exception exception);
 }

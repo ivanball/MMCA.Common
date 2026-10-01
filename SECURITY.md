@@ -39,6 +39,7 @@ fix before public disclosure.
   explicit allow-list with `AllowCredentials` (the two are never combined, which browsers reject
   and which is insecure).
 - **Idempotency & rate limiting** primitives are provided for consumers to apply at the edge.
+- **Privacy:** `[Pii]`, erasure in place, redaction, the data-subject export and the fail-closed CSV row scope are described in [PRIVACY.md](PRIVACY.md).
 
 ## Dependency & supply-chain security
 
@@ -78,7 +79,11 @@ executable fitness functions:
 Some invariants still depend on the consuming application's own code and deployment:
 
 - Server-side authorization on every non-public endpoint (UI hiding is not authorization).
-- Secrets in a vault / managed identity, never in source or plain config.
+- Secrets in a vault / managed identity, never in source or plain config. The framework ships
+  `AddCommonKeyVaultConfiguration()` (`MMCA.Common.Aspire`), which layers Azure Key Vault over
+  configuration through `DefaultAzureCredential`, but it is a no-op unless `KeyVault:Uri` is set:
+  the consumer must call it, set that key, and provision the vault plus the identity that can read
+  it (the sample binds its secret by Key Vault URL and a user-assigned identity).
 - A justification recorded beside any `Authentication__JwtBearer__RequireHttpsMetadata=false` in a
   deployment template.
 

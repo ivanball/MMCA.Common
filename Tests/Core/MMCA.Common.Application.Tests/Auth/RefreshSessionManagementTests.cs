@@ -5,6 +5,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
+using MMCA.Common.Application.Auth.Sessions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Auth;
@@ -437,7 +438,11 @@ public sealed class SessionAwareAuthenticationService(
     IRefreshSessionStore refreshSessions,
     IOptions<RefreshSessionSettings> refreshSessionSettings)
     : AuthenticationServiceBase<TestAuthUser>(
-        unitOfWork, tokenService, passwordHasher, loginProtection, timeProvider, validators, refreshSessions, refreshSessionSettings)
+        unitOfWork,
+        passwordHasher,
+        loginProtection,
+        validators,
+        new AuthSessionIssuer(tokenService, refreshSessions, refreshSessionSettings, timeProvider))
 {
     /// <summary>The user the login lookup returns.</summary>
     public TestAuthUser? UntrackedUser { get; set; }

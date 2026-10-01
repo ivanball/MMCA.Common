@@ -148,5 +148,18 @@ public sealed class SessionCookieEndpointsTests
             HttpContext context,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(result);
+
+        public Task<SessionRefreshOutcome> ValidateOrRefreshAsync(
+            HttpContext context,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Outcome());
+
+        public Task<SessionRefreshOutcome> RefreshAsync(
+            HttpContext context,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Outcome());
+
+        private SessionRefreshOutcome Outcome() =>
+            result is { } session ? SessionRefreshOutcome.Refreshed(session) : SessionRefreshOutcome.Rejected();
     }
 }

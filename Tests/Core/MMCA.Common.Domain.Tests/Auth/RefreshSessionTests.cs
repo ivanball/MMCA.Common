@@ -114,6 +114,33 @@ public sealed class RefreshSessionTests
     }
 
     [Fact]
+    public void Anonymize_ClearsTheClientMetadataAndKeepsTheSessionUsable()
+    {
+        var session = RefreshSession.Create(7, "token", Now, Now.AddDays(7), "203.0.113.9", "Mozilla/5.0").Value!;
+
+        Result result = session.Anonymize();
+
+        result.IsSuccess.Should().BeTrue();
+        session.IpAddress.Should().BeNull();
+        session.UserAgent.Should().BeNull();
+        session.TokenHash.Should().Be(RefreshSession.HashToken("token"), "reuse detection still needs the hash");
+        session.IsActiveAt(Now).Should().BeTrue("erasing personal data is not a sign-out");
+    }
+
+    [Fact]
+    public void Anonymize_IsIdempotent()
+    {
+        var session = RefreshSession.Create(7, "token", Now, Now.AddDays(7), "203.0.113.9", "Mozilla/5.0").Value!;
+        session.Anonymize();
+
+        Result second = session.Anonymize();
+
+        second.IsSuccess.Should().BeTrue();
+        session.IpAddress.Should().BeNull();
+        session.UserAgent.Should().BeNull();
+    }
+
+    [Fact]
     public void IsActiveAt_IsFalseOnceExpired()
     {
         var session = RefreshSession.Create(7, "token", Now, Now.AddDays(7)).Value!;

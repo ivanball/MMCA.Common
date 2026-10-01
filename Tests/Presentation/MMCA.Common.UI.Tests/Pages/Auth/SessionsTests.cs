@@ -46,6 +46,7 @@ public sealed class SessionsTests : BunitTestBase
 
     private readonly Mock<IAuthUIService> _auth = new();
     private readonly Mock<IToastService> _toast = new();
+    private readonly Mock<IAppDialogService> _dialogs = new();
 
     public SessionsTests()
     {
@@ -53,6 +54,11 @@ public sealed class SessionsTests : BunitTestBase
         // Registered after the base class's default facade so this wins, and the page's toasts can
         // be counted without rendering a snackbar provider.
         Services.AddSingleton<IToastService>(_toast.Object);
+        // Both revoke paths ask first. The double confirms by default so the revoke tests below
+        // exercise the action itself; the confirm tests decline explicitly.
+        Services.AddSingleton<IAppDialogService>(_dialogs.Object);
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(true);
 
         _auth.Setup(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Loaded(CurrentDevice(), OtherDevice()));
@@ -288,7 +294,80 @@ public sealed class SessionsTests : BunitTestBase
             IsDisabled(cut.Find(OtherDeviceButtonSelector)).Should().BeFalse());
     }
 
+    [Fact]
+    public void ClickingARowsRevokeButton_AsksForConfirmationNamingTheDevice()
+    {
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        cut.Find(OtherDeviceButtonSelector).Click();
+
+        cut.WaitForAssertion(() => _dialogs.Verify(
+            d => d.ConfirmAsync(
+                "Sign out this device?",
+                "Firefox on macOS will be signed out and will have to sign in again.",
+                "Sign out",
+                "Cancel"),
+            Times.Once()));
+    }
+
+    [Fact]
+    public void WhenARowsRevokeIsCancelled_NothingIsRevoked()
+    {
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        cut.Find(OtherDeviceButtonSelector).Click();
+
+        cut.WaitForAssertion(() => _dialogs.Verify(
+            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once()));
+        _auth.Verify(a => a.RevokeSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never());
+        _auth.Verify(a => a.GetSessionsAsync(It.IsAny<CancellationToken>()), Times.Once());
+        IsDisabled(cut.Find(OtherDeviceButtonSelector)).Should().BeFalse();
+    }
+
     // ==================== Account-wide sign-out ====================
+    [Fact]
+    public void ClickingSignOutEverywhere_AsksForConfirmationFirst()
+    {
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+
+        cut.Find(SignOutEverywhereSelector).Click();
+
+        cut.WaitForAssertion(() => _dialogs.Verify(
+            d => d.ConfirmAsync(
+                "Sign out everywhere?",
+                "Every device will be signed out, including this one, and you will have to sign in again.",
+                "Sign out everywhere",
+                "Cancel"),
+            Times.Once()));
+    }
+
+    [Fact]
+    public void WhenSignOutEverywhereIsCancelled_NothingIsRevokedAndThePageStays()
+    {
+        _dialogs.Setup(d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        var cut = RenderSessions();
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+        var uriBefore = navigation.Uri;
+
+        cut.Find(SignOutEverywhereSelector).Click();
+
+        cut.WaitForAssertion(() => _dialogs.Verify(
+            d => d.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once()));
+        _auth.Verify(a => a.RevokeAllSessionsAsync(It.IsAny<CancellationToken>()), Times.Never());
+        navigation.Uri.Should().Be(uriBefore);
+    }
+
     [Fact]
     public void ClickingSignOutEverywhere_SignsOutThroughTheAuthServiceAndReturnsToLogin()
     {

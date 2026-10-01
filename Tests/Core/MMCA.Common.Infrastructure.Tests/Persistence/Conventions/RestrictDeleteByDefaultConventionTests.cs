@@ -141,8 +141,6 @@ public sealed class RestrictDeleteByDefaultConventionTests : IDisposable
         private readonly SqliteConnection _connection;
         private readonly IServiceProvider _services;
 
-        internal override bool SupportsOutbox => true;
-
         private DeleteBehaviorTestDbContext(
             DbContextOptions<DeleteBehaviorTestDbContext> options,
             IServiceProvider serviceProvider,

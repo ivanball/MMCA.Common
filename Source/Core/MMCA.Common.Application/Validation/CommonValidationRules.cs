@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using FluentValidation;
 using MMCA.Common.Domain.Invariants;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.Application.Validation;
 
@@ -183,6 +184,8 @@ public class PasswordRules<T> : AbstractValidator<T>
 /// <summary>
 /// Reusable validation rules for a password field with strong complexity requirements:
 /// required, min 8, max 128, must contain uppercase, lowercase, digit, and special character.
+/// The lengths and the four character classes come from <see cref="PasswordComplexity"/>, the one
+/// Unicode-aware definition the client form attribute also evaluates, so the two cannot disagree.
 /// </summary>
 /// <typeparam name="T">The parent type containing the field.</typeparam>
 public class StrongPasswordRules<T> : AbstractValidator<T>
@@ -190,10 +193,10 @@ public class StrongPasswordRules<T> : AbstractValidator<T>
     public StrongPasswordRules(Expression<Func<T, string>> selector, string? errorCode = null)
         => RuleFor(selector)
             .NotEmpty().WithMessage("Password is required.").WithOptionalErrorCode(errorCode)
-            .MinimumLength(8).WithMessage("Password must be at least 8 characters.").WithOptionalErrorCode(errorCode)
-            .MaximumLength(128).WithMessage("Password cannot be longer than 128 characters.").WithOptionalErrorCode(errorCode)
-            .Matches("[A-Z]").WithMessage("Password must contain at least one uppercase letter.").WithOptionalErrorCode(errorCode)
-            .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter.").WithOptionalErrorCode(errorCode)
-            .Matches("\\d").WithMessage("Password must contain at least one digit.").WithOptionalErrorCode(errorCode)
-            .Matches("[^a-zA-Z\\d]").WithMessage("Password must contain at least one special character.").WithOptionalErrorCode(errorCode);
+            .MinimumLength(PasswordComplexity.MinimumLength).WithMessage("Password must be at least 8 characters.").WithOptionalErrorCode(errorCode)
+            .MaximumLength(PasswordComplexity.MaximumLength).WithMessage("Password cannot be longer than 128 characters.").WithOptionalErrorCode(errorCode)
+            .Matches(PasswordComplexity.Uppercase).WithMessage("Password must contain at least one uppercase letter.").WithOptionalErrorCode(errorCode)
+            .Matches(PasswordComplexity.Lowercase).WithMessage("Password must contain at least one lowercase letter.").WithOptionalErrorCode(errorCode)
+            .Matches(PasswordComplexity.Digit).WithMessage("Password must contain at least one digit.").WithOptionalErrorCode(errorCode)
+            .Matches(PasswordComplexity.SpecialCharacter).WithMessage("Password must contain at least one special character.").WithOptionalErrorCode(errorCode);
 }

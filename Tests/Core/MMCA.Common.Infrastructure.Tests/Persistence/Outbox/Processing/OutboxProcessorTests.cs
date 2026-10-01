@@ -114,8 +114,7 @@ public sealed class OutboxProcessorTests : IDisposable
             logger ?? NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>(),
-            _registry,
-            _resolver,
+            new FrameworkTableTargets(_registry, _resolver),
             timeProvider ?? TimeProvider.System);
 
     public void Dispose()
@@ -350,8 +349,7 @@ public sealed class OutboxProcessorTests : IDisposable
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>(),
-            registry.Object,
-            resolver.Object,
+            new FrameworkTableTargets(registry.Object, resolver.Object),
             timeProvider);
     }
 
@@ -1136,8 +1134,6 @@ public sealed class OutboxProcessorTests : IDisposable
         IEntityConfigurationAssemblyProvider assemblyProvider)
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
-        internal override bool SupportsOutbox => true;
-
         /// <summary>When set, every save fails, standing in for a connection lost at shutdown.</summary>
         public bool FailSaves { get; set; }
 

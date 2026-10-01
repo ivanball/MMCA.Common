@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
+using MMCA.Common.Shared.Auth;
 
 namespace MMCA.Common.UI.Pages.Auth;
 
 /// <summary>
 /// Client-side password-complexity rule for the Register form: at least 8 characters with an
-/// uppercase, a lowercase, a digit, and a special (non-alphanumeric) character. Mirrors the server's
-/// rule so the EditForm gives the same verdict the API would (rubric §24 validation parity). Empty
-/// input is left to <see cref="RequiredAttribute"/> so the field shows one clear message, not two.
+/// uppercase, a lowercase, a digit, and a special (non-alphanumeric) character. It evaluates
+/// <see cref="PasswordComplexity"/>, the same Unicode-aware definition the server's
+/// <c>StrongPasswordRules</c> uses, so the EditForm gives the verdict the API would (rubric section 24
+/// validation parity). Empty input is left to <see cref="RequiredAttribute"/> so the field shows one
+/// clear message, not two.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 public sealed class PasswordComplexityAttribute : ValidationAttribute
@@ -18,23 +21,14 @@ public sealed class PasswordComplexityAttribute : ValidationAttribute
 
     protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
-        if (value is not string password || string.IsNullOrEmpty(password))
+        if (value is not string password || string.IsNullOrEmpty(password) || PasswordComplexity.Evaluate(password))
         {
             return ValidationResult.Success;
         }
 
-        var isValid = password.Length >= 8
-            && password.Any(char.IsUpper)
-            && password.Any(char.IsLower)
-            && password.Any(char.IsDigit)
-            && password.Any(c => !char.IsLetterOrDigit(c));
-
-        if (isValid)
-        {
-            return ValidationResult.Success;
-        }
-
-        var members = validationContext.MemberName is { } member ? new[] { member } : null;
+        // The context is null when the attribute is called through the context-free IsValid(object)
+        // overload, which the base class routes here; there is then no member to attach the error to.
+        var members = validationContext?.MemberName is { } member ? new[] { member } : null;
         return new ValidationResult(ErrorMessage, members);
     }
 }

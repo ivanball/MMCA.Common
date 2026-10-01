@@ -2,8 +2,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Web.SameOriginProxy;
 
 namespace MMCA.Common.UI.Web.ClientConfig;
 
@@ -65,7 +67,7 @@ public static class ClientConfigEndpointExtensions
                     // members, so the document keeps the shape an anonymous-object payload produced.
                     var document = new Dictionary<string, object?>(StringComparer.Ordinal)
                     {
-                        [JsonNamingPolicy.CamelCase.ConvertName(ApiSectionName)] = new { ApiEndpoint = wasmApiEndpoint },
+                        [JsonNamingPolicy.CamelCase.ConvertName(ApiSectionName)] = BuildApiSection(context, wasmApiEndpoint),
                     };
 
                     foreach (var (name, value) in builder.Sections)
@@ -77,5 +79,23 @@ public static class ClientConfigEndpointExtensions
                 })
                 .AllowAnonymous()
                 .ExcludeFromDescription();
+    }
+
+    /// <summary>
+    /// The framework's <c>Api</c> section. A host running the same-origin API proxy
+    /// (<c>AddCommonSameOriginApiProxy</c>) also serves <c>sameOriginApiEndpoint</c>, the proxy's
+    /// origin-relative base (for example <c>/api/</c>), which the WASM bootstrap resolves against the
+    /// page's own origin; <c>apiEndpoint</c> stays the gateway for full-page navigations. Every other
+    /// host serves the section exactly as before.
+    /// </summary>
+    private static object BuildApiSection(HttpContext context, string wasmApiEndpoint)
+    {
+        if (context.RequestServices.GetService<SameOriginApiProxyMarker>() is null)
+        {
+            return new { ApiEndpoint = wasmApiEndpoint };
+        }
+
+        var prefix = context.RequestServices.GetRequiredService<IOptions<SameOriginApiProxySettings>>().Value.PathPrefix;
+        return new { ApiEndpoint = wasmApiEndpoint, SameOriginApiEndpoint = prefix + "/" };
     }
 }

@@ -1,4 +1,5 @@
 ﻿@page "/register"
+@using MMCA.Common.UI.Validation
 @using MMCA.Common.Shared.Abstractions
 @using MMCA.Common.Shared.Auth
 @using MMCA.Common.Shared.Auth.Requests
@@ -29,7 +30,7 @@
 
     <MudCard Elevation="1">
         <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
-            <DataAnnotationsValidator />
+            <LocalizedDataAnnotationsValidator />
             <MudCardContent Class="pa-6">
                 @if (_emailAlreadyRegistered)
                 {

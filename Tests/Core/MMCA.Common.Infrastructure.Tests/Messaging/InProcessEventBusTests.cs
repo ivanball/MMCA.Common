@@ -112,15 +112,14 @@ public sealed class InProcessEventBusTests : IDisposable
     // ── Test helpers ──
 
     /// <summary>
-    /// A minimal <see cref="ApplicationDbContext"/> subclass with outbox support disabled,
+    /// A minimal <see cref="ApplicationDbContext"/> subclass keyed to the Cosmos engine (no outbox support,
+    /// while the store underneath is SQLite),
     /// used to test the non-outbox dispatch path of <see cref="InProcessEventBus"/>.
     /// </summary>
     private sealed class TestNonOutboxContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => false;
-
         private TestNonOutboxContext(DbContextOptions<TestNonOutboxContext> options, IServiceProvider serviceProvider)
-            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
+            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Cosmos())
         {
         }
 

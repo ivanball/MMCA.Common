@@ -1,10 +1,8 @@
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Entities;
-using MMCA.Common.Domain.Extensions;
-using MMCA.Common.Infrastructure.Persistence.ValueGenerators;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 
@@ -72,49 +70,10 @@ public abstract class EntityTypeConfiguration<TEntity, TIdentifierType>
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        var isIdValueGenerated = typeof(TEntity).IsIdValueGenerated;
-
-        switch (engine)
-        {
-            // One branch for both server engines, deliberately: PostgreSQL takes the SQL Server
-            // mapping unchanged, module schema and PascalCase identifiers included, so an entity
-            // moves between the two by changing its configuration base class and nothing else.
-            // PostgreSQL house style (snake_case, the public schema) is a consumer's
-            // naming-convention plugin, not a framework decision (ADR-113).
-            case DataSource.SQLServer:
-            case DataSource.PostgreSQL:
-                builder.ToTable(typeof(TEntity).Name, NamespaceConventions.GetModuleName(typeof(TEntity)) ?? "dbo");
-                builder.HasKey(p => p.Id);
-                if (isIdValueGenerated)
-                    builder.Property(p => p.Id).ValueGeneratedOnAdd();
-                else
-                    builder.Property(p => p.Id).ValueGeneratedNever();
-                break;
-
-            case DataSource.Sqlite:
-                builder.ToTable(typeof(TEntity).Name);
-                builder.HasKey(p => p.Id);
-                if (isIdValueGenerated)
-                    builder.Property(p => p.Id).ValueGeneratedOnAdd().UseIdentityColumn(1, 1);
-                else
-                    builder.Property(p => p.Id).ValueGeneratedNever();
-                break;
-
-            case DataSource.CosmosDB:
-                // All of a module's entities share one container (segment before "Domain"), so their
-                // relationships and the navigation populators work; the entity Id is the partition key.
-                builder
-                    .ToContainer(NamespaceConventions.GetModuleName(typeof(TEntity)) ?? typeof(TEntity).Name)
-                    .HasPartitionKey(p => p.Id);
-                builder.HasKey(p => p.Id);
-                if (isIdValueGenerated)
-                    builder.Property(p => p.Id).HasValueGenerator<CosmosIntIdValueGenerator>();
-                else
-                    builder.Property(p => p.Id).ValueGeneratedNever();
-                break;
-
-            default:
-                throw new InvalidOperationException($"DataSource \"{engine}\" not implemented.");
-        }
+        // Each engine owns its mapping (IDataSourceEngine.ApplyKeyAndTableMapping). PostgreSQL takes
+        // the SQL Server mapping unchanged, module schema and PascalCase identifiers included, so an
+        // entity moves between the two by changing its configuration base class and nothing else
+        // (ADR-113); Cosmos puts all of a module's entities in one container, partitioned by Id.
+        DataSourceEngines.For(engine).ApplyKeyAndTableMapping<TEntity, TIdentifierType>(builder);
     }
 }

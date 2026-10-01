@@ -1,0 +1,78 @@
+name: Load tests
+
+# Weekly load tier (rubric "load/stress at realistic volumes"). Runs
+# Tests/Performance/MMCA.Common.LoadTests against the framework's real persistence stack over a
+# temp-file SQLite database: 10,000 outbox messages drained by the real OutboxProcessor, paged dynamic
+# queries over 100,000 rows, and 50 concurrent paged reads. Each scenario asserts correctness plus a
+# throughput floor or latency ceiling (measured locally, about 3x headroom; the constants carry the
+# measurements).
+#
+# Deliberately NOT part of ci.yml and NOT a required check: the project sits outside MMCA.Common.slnx,
+# so the solution-wide `dotnet test --solution` never discovers it, and a timing tier on shared
+# runners is a trend signal, not a merge gate. Schedule plus manual dispatch only.
+on:
+  schedule:
+    # Sunday 04:17 UTC: off-peak, and off the top of the hour when scheduled runs queue up.
+    - cron: '17 4 * * 0'
+  workflow_dispatch:
+
+# Least privilege, same posture as ci.yml: this workflow only reads the repo and uploads an artifact.
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: load-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  load-tests:
+    name: Load tier (outbox throughput + paged queries at volume)
+    runs-on: ubuntu-latest
+    # A local full run takes about 15s plus the build; this bounds a hung processor or restore.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+          # Same cache key as ci.yml: the committed lock files plus Directory.Packages.props.
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Restore load project (locked)
+        run: dotnet restore Tests/Performance/MMCA.Common.LoadTests/MMCA.Common.LoadTests.csproj --locked-mode
+
+      - name: Build load project
+        # Outside MMCA.Common.slnx, so build by csproj path, like the redis/postgresql/sqlserver tiers.
+        run: dotnet build Tests/Performance/MMCA.Common.LoadTests/MMCA.Common.LoadTests.csproj -c Release --no-restore
+
+      - name: Run load tests
+        env:
+          MMCA_LOAD_RESULTS_DIR: ${{ github.workspace }}/load-results
+        run: Tests/Performance/MMCA.Common.LoadTests/bin/Release/net10.0/MMCA.Common.LoadTests
+
+      - name: Verify every scenario reported
+        # Each of the three scenarios writes its own JSON summary before asserting, so a run that
+        # discovered fewer tests than expected fails here instead of passing as a no-op.
+        run: |
+          count=$(find load-results -name '*.json' | wc -l)
+          echo "scenario summaries: $count"
+          test "$count" -eq 3
+
+      - name: Upload load results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: load-test-results
+          path: load-results/
+          if-no-files-found: warn
+          retention-days: 90

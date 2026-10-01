@@ -62,8 +62,7 @@ public sealed class OutboxAdministrationTests : IDisposable
             _scopeServices.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<OutboxAdministration>.Instance,
             Options.Create(new OutboxSettings { MaxRetries = MaxRetries, DataSource = DataSource.Sqlite }),
-            registry.Object,
-            resolver.Object,
+            new FrameworkTableTargets(registry.Object, resolver.Object),
             _signal.Object);
     }
 
@@ -237,8 +236,6 @@ public sealed class OutboxAdministrationTests : IDisposable
     /// <summary>A test <see cref="ApplicationDbContext"/> mapping <see cref="OutboxMessage"/> only.</summary>
     private sealed class AdminTestContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private AdminTestContext(DbContextOptions<AdminTestContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NoAssemblies(), TestPhysicalDataSources.Sqlite())
         {

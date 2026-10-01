@@ -1,4 +1,5 @@
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 
@@ -28,7 +29,7 @@ public sealed class DataSourceService(IEntityDataSourceRegistry registry) : IDat
     /// on a relational engine. Cosmos DB does not support cross-document includes.
     /// </remarks>
     public bool HaveIncludeSupport(DataSourceKey first, DataSourceKey second)
-        => first == second && first.Engine != DataSource.CosmosDB;
+        => first == second && DataSourceEngines.For(first.Engine).Capabilities.IsRelational;
 
     /// <inheritdoc />
     public bool HaveIncludeSupport(string firstEntityFullName, string secondEntityFullName)

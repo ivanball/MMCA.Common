@@ -38,7 +38,7 @@ namespace MMCA.Common.Application.Users.UseCases.ResetPassword;
 /// (ADR-097), so the reset actually evicts whoever else was signed in.
 /// </param>
 /// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
-public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
+public abstract partial class ResetPasswordHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     IPasswordResetTokenService tokenService,
@@ -78,7 +78,7 @@ public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
             .ConfigureAwait(false);
         if (consumed.IsFailure)
         {
-            UserUseCaseLog.PasswordResetRejected(logger, "token rejected");
+            PasswordResetRejected(logger, "token rejected");
             return Result.Failure(InvalidToken());
         }
 
@@ -87,7 +87,7 @@ public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
         var user = await repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
-            UserUseCaseLog.PasswordResetRejected(logger, "account no longer resolvable");
+            PasswordResetRejected(logger, "account no longer resolvable");
             return Result.Failure(InvalidToken());
         }
 
@@ -109,7 +109,7 @@ public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
         // A user who reset the password because of a lockout must not stay locked out.
         await loginProtection.ResetFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
 
-        UserUseCaseLog.PasswordResetCompleted(logger, userId);
+        PasswordResetCompleted(logger, userId);
         return result;
     }
 
@@ -118,4 +118,12 @@ public abstract class ResetPasswordHandlerBase<TUser, TCommand>(
             "Auth.InvalidResetToken",
             "The reset link is invalid or has expired. Please request a new one.",
             HandlerName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Password reset completed for user {UserId}")]
+    private static partial void PasswordResetCompleted(ILogger logger, UserIdentifierType userId);
+
+    // No address and no account id: the reset endpoints answer identically whether or not the
+    // address exists, and the log must not become the enumeration oracle the responses are not.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Password reset request not actioned ({Reason})")]
+    private static partial void PasswordResetRejected(ILogger logger, string reason);
 }

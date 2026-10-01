@@ -1,3 +1,7 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
 namespace MMCA.Common.UI.Common.Settings;
 
 /// <summary>
@@ -82,8 +86,56 @@ public static class MmcaClientConfigBootstrap
             bytes = await client.GetByteArrayAsync(configUri, cancellationToken).ConfigureAwait(false);
         }
 
-        return new MemoryStream(bytes, writable: false);
+        return new MemoryStream(ResolveSameOriginApiEndpoint(bytes, client.BaseAddress), writable: false);
     }
+
+    /// <summary>
+    /// A host running the same-origin API proxy serves <c>api.sameOriginApiEndpoint</c> as an
+    /// origin-relative path (the server cannot know the public origin a browser used behind ingress), and
+    /// the <c>"APIClient"</c> needs an absolute base address, so the path is resolved here against the
+    /// address the document was fetched from. Any other document is returned byte for byte.
+    /// </summary>
+    internal static byte[] ResolveSameOriginApiEndpoint(byte[] document, Uri? baseAddress)
+    {
+        if (baseAddress is null || !baseAddress.IsAbsoluteUri)
+        {
+            return document;
+        }
+
+        JsonNode? root;
+        try
+        {
+            root = JsonNode.Parse(document, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (JsonException)
+        {
+            // Not ours to judge: configuration binding reports a malformed document with its own error.
+            return document;
+        }
+
+        if (root is not JsonObject rootObject
+            || rootObject[ApiSettings.SectionName] is not JsonObject api
+            || api[nameof(ApiSettings.SameOriginApiEndpoint)] is not JsonValue value
+            || !value.TryGetValue<string>(out var path)
+            || string.IsNullOrWhiteSpace(path)
+            || IsHttpAbsolute(path))
+        {
+            return document;
+        }
+
+        api[nameof(ApiSettings.SameOriginApiEndpoint)] = new Uri(baseAddress, path).AbsoluteUri;
+        return Encoding.UTF8.GetBytes(rootObject.ToJsonString());
+    }
+
+    /// <summary>
+    /// True only for an absolute http(s) address. A bare <c>Uri.TryCreate(..., UriKind.Absolute, ...)</c>
+    /// is not enough: on Unix-like runtimes, browser WebAssembly included, <c>"/api/"</c> parses as the
+    /// absolute <c>file:///api/</c>, so the origin-relative path would be left unresolved and the
+    /// <c>"APIClient"</c> would send every request to <c>file:///api/...</c>.
+    /// </summary>
+    internal static bool IsHttpAbsolute(string path) =>
+        Uri.TryCreate(path, UriKind.Absolute, out var absolute)
+        && (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps);
 
     // HttpClient reports its own timeout as a TaskCanceledException; the caller's cancellation looks
     // the same, so only the one the caller did not ask for is retried.

@@ -30,7 +30,7 @@ namespace MMCA.Common.Application.Users.UseCases.EmailConfirmation;
 /// <param name="unitOfWork">The unit of work the user aggregate is loaded and saved through.</param>
 /// <param name="tokenService">Redeems the single-use confirmation token.</param>
 /// <param name="logger">Logger for the confirmation audit lines.</param>
-public abstract class ConfirmEmailHandlerBase<TUser, TCommand>(
+public abstract partial class ConfirmEmailHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IEmailConfirmationTokenService tokenService,
     ILogger logger) : ICommandHandler<TCommand, Result>
@@ -58,7 +58,7 @@ public abstract class ConfirmEmailHandlerBase<TUser, TCommand>(
             .ConfigureAwait(false);
         if (consumed.IsFailure)
         {
-            UserUseCaseLog.EmailConfirmationRejected(logger, "token rejected");
+            EmailConfirmationRejected(logger, "token rejected");
             return Result.Failure(EmailConfirmationErrors.InvalidToken(HandlerName));
         }
 
@@ -67,7 +67,7 @@ public abstract class ConfirmEmailHandlerBase<TUser, TCommand>(
         var user = await repository.GetByIdAsync(userId, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
-            UserUseCaseLog.EmailConfirmationRejected(logger, "account no longer resolvable");
+            EmailConfirmationRejected(logger, "account no longer resolvable");
             return Result.Failure(EmailConfirmationErrors.InvalidToken(HandlerName));
         }
 
@@ -76,7 +76,7 @@ public abstract class ConfirmEmailHandlerBase<TUser, TCommand>(
         // duplicate this feature has.
         if (user.IsEmailConfirmed)
         {
-            UserUseCaseLog.EmailConfirmed(logger, userId);
+            EmailConfirmed(logger, userId);
             return Result.Success();
         }
 
@@ -88,7 +88,15 @@ public abstract class ConfirmEmailHandlerBase<TUser, TCommand>(
 
         await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        UserUseCaseLog.EmailConfirmed(logger, userId);
+        EmailConfirmed(logger, userId);
         return result;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email address confirmed for user {UserId}")]
+    private static partial void EmailConfirmed(ILogger logger, UserIdentifierType userId);
+
+    // No address and no account id, for the reason the password-reset rejection carries neither: the
+    // confirmation endpoints answer identically whether or not the address exists.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email confirmation request not actioned ({Reason})")]
+    private static partial void EmailConfirmationRejected(ILogger logger, string reason);
 }

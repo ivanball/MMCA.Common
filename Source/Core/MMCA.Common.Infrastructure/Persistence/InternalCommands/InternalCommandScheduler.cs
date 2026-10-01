@@ -1,8 +1,5 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MMCA.Common.Application.Interfaces;
-using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.InternalCommands;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -29,9 +26,7 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands;
 /// <param name="dbContextFactory">Scoped factory whose context the row is written on.</param>
 /// <param name="dataSourceResolver">Resolves the configured logical target to a physical source.</param>
 /// <param name="options">Bound queue settings naming the target source.</param>
-/// <param name="currentUserService">Supplies the principal captured on the row.</param>
-/// <param name="tenantContext">Supplies the tenant captured on the row.</param>
-/// <param name="correlationContext">Supplies the correlation id captured on the row.</param>
+/// <param name="originCapture">Snapshots the scheduling user, tenant and correlation onto the row.</param>
 /// <param name="signal">Wakes the processor when a due row was saved outright.</param>
 /// <param name="logger">Logger for scheduling diagnostics.</param>
 /// <param name="timeProvider">Clock stamping <c>CreatedOn</c> and resolving a relative delay;
@@ -40,9 +35,7 @@ internal sealed partial class InternalCommandScheduler(
     IDbContextFactory dbContextFactory,
     IDataSourceResolver dataSourceResolver,
     IOptions<InternalCommandsSettings> options,
-    ICurrentUserService currentUserService,
-    ITenantContext tenantContext,
-    ICorrelationContext correlationContext,
+    InternalCommandOriginCapture originCapture,
     IInternalCommandSignal signal,
     ILogger<InternalCommandScheduler> logger,
     TimeProvider timeProvider) : IInternalCommandScheduler
@@ -90,7 +83,7 @@ internal sealed partial class InternalCommandScheduler(
         InternalCommandMessage row;
         try
         {
-            row = InternalCommandMessage.FromCommand(command, scheduledOn, now, CaptureOrigin());
+            row = InternalCommandMessage.FromCommand(command, scheduledOn, now, originCapture.Capture());
         }
         catch (NotSupportedException ex)
         {
@@ -129,24 +122,6 @@ internal sealed partial class InternalCommandScheduler(
 
         LogScheduled(logger, row.Id, row.CommandType, scheduledOn);
         return Result.Success(row.Id);
-    }
-
-    /// <summary>
-    /// Snapshots the principal, tenant and correlation identifiers to restore around the deferred
-    /// execution. Roles are flattened through the shared <see cref="AmbientOrigin"/> helper, which
-    /// the outbox capture uses too, so the two hops store the same shape.
-    /// </summary>
-    private InternalCommandOrigin CaptureOrigin()
-    {
-        var activity = Activity.Current;
-
-        return new InternalCommandOrigin(
-            currentUserService.UserId,
-            AmbientOrigin.FlattenRoles(currentUserService.Roles),
-            tenantContext.TenantId,
-            correlationContext.CorrelationId,
-            activity?.TraceId.ToString(),
-            activity?.SpanId.ToString());
     }
 
     private static Error SerializationError(string commandType) =>

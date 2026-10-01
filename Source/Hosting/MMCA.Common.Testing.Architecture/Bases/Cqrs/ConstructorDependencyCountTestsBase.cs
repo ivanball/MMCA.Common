@@ -15,7 +15,13 @@ namespace MMCA.Common.Testing.Architecture;
 /// next class cannot silently grow past it, raises it only as a recorded deliberate decision, and
 /// lowers it the moment remediation makes a lower number true.
 /// </para>
-/// Repos without business modules (MMCA.Common itself) have nothing to scan and do not subclass this.
+/// <para>
+/// The three populations and the constructors measured on each type are virtual extension points
+/// (<see cref="ScannedServices"/>, <see cref="ScannedControllers"/>, <see cref="ScannedHandlers"/>,
+/// <see cref="MeasuredConstructors"/>). Their defaults are the module populations described above and
+/// the public constructors, so a consumer that overrides nothing scans exactly what it always did. A
+/// repo without business modules (MMCA.Common itself) overrides them to scan its framework assemblies.
+/// </para>
 /// </summary>
 public abstract class ConstructorDependencyCountTestsBase
 {
@@ -48,30 +54,50 @@ public abstract class ConstructorDependencyCountTestsBase
     /// </summary>
     protected abstract int MaxHandlerConstructorDependencies { get; }
 
+    /// <summary>
+    /// Gets the classes the Application-service ceiling measures. Defaults to every concrete class whose
+    /// name ends in <c>Service</c> in the map's module Application assemblies.
+    /// </summary>
+    protected virtual IEnumerable<Type> ScannedServices =>
+        Map.ModuleApplication()
+            .SelectMany(static a => a.GetTypes())
+            .Where(static t => t is { IsClass: true, IsAbstract: false }
+                && t.Name.EndsWith("Service", StringComparison.Ordinal));
+
+    /// <summary>
+    /// Gets the classes the controller ceiling measures. Defaults to every concrete, non-nested
+    /// <c>ControllerBase</c>-derived class in the map's API assemblies.
+    /// </summary>
+    protected virtual IEnumerable<Type> ScannedControllers => Scan(Map.Api(), IsController);
+
+    /// <summary>
+    /// Gets the classes the handler ceiling measures. Defaults to every concrete, non-nested
+    /// <c>ICommandHandler&lt;,&gt;</c> / <c>IQueryHandler&lt;,&gt;</c> implementation in the map's module
+    /// Application assemblies.
+    /// </summary>
+    protected virtual IEnumerable<Type> ScannedHandlers => Scan(Map.ModuleApplication(), IsCommandOrQueryHandler);
+
+    /// <summary>
+    /// The constructors whose parameter count is measured for a scanned type; the widest one is the
+    /// type's dependency count. Defaults to the public instance constructors.
+    /// </summary>
+    /// <param name="type">A type from one of the scanned populations.</param>
+    /// <returns>The constructors to measure.</returns>
+    protected virtual IEnumerable<ConstructorInfo> MeasuredConstructors(Type type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        return type.GetConstructors();
+    }
+
     [Fact]
     public void ApplicationServices_DoNotExceedConstructorDependencyCeiling()
     {
-        var services = Map.ModuleApplication()
-            .SelectMany(static a => a.GetTypes())
-            .Where(static t => t is { IsClass: true, IsAbstract: false }
-                && t.Name.EndsWith("Service", StringComparison.Ordinal))
-            .ToList();
+        var services = ScannedServices.ToList();
 
         services.Should().NotBeEmpty(
             "the guard must scan at least one Application service (otherwise it passes vacuously)");
 
-        var offenders = services
-            .Select(static t => new
-            {
-                Type = t,
-                MaxParameters = t.GetConstructors()
-                    .Select(static c => c.GetParameters().Length)
-                    .DefaultIfEmpty(0)
-                    .Max(),
-            })
-            .Where(x => x.MaxParameters > MaxConstructorDependencies)
-            .Select(static x => $"{x.Type.FullName} ({x.MaxParameters} ctor dependencies)")
-            .ToList();
+        var offenders = Offenders(services, MaxConstructorDependencies);
 
         offenders.Should().BeEmpty(
             $"Application service constructors must stay within {MaxConstructorDependencies} dependencies "
@@ -89,7 +115,7 @@ public abstract class ConstructorDependencyCountTestsBase
     [Fact]
     public void Controllers_DoNotExceedConstructorDependencyCeiling()
     {
-        var controllers = Scan(Map.Api(), IsController);
+        var controllers = ScannedControllers.ToList();
 
         controllers.Should().NotBeEmpty(
             "the guard must scan at least one API controller (otherwise it passes vacuously)");
@@ -113,7 +139,7 @@ public abstract class ConstructorDependencyCountTestsBase
     [Fact]
     public void Handlers_DoNotExceedConstructorDependencyCeiling()
     {
-        var handlers = Scan(Map.ModuleApplication(), IsCommandOrQueryHandler);
+        var handlers = ScannedHandlers.ToList();
 
         handlers.Should().NotBeEmpty(
             "the guard must scan at least one command/query handler (otherwise it passes vacuously)");
@@ -139,13 +165,13 @@ public abstract class ConstructorDependencyCountTestsBase
             .Where(static t => !t.IsNested && !t.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false))
             .Where(isInPopulation)];
 
-    /// <summary>Formats the types whose widest constructor exceeds the ceiling.</summary>
-    private static List<string> Offenders(IEnumerable<Type> types, int ceiling) =>
+    /// <summary>Formats the types whose widest measured constructor exceeds the ceiling.</summary>
+    private List<string> Offenders(IEnumerable<Type> types, int ceiling) =>
         [.. types
-            .Select(static t => new
+            .Select(t => new
             {
                 Type = t,
-                MaxParameters = t.GetConstructors()
+                MaxParameters = MeasuredConstructors(t)
                     .Select(static c => c.GetParameters().Length)
                     .DefaultIfEmpty(0)
                     .Max(),

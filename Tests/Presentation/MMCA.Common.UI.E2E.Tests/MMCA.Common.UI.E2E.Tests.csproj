@@ -10,6 +10,8 @@
          E2ETestConfiguration.BaseUrl); CA1054/CA1056 (prefer System.Uri) are noise for E2E
          test infra — the shipped MMCA.Common.Testing.E2E package suppresses them for the same reason. -->
     <NoWarn>$(NoWarn);CA1054;CA1056</NoWarn>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

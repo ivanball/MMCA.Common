@@ -115,11 +115,6 @@ public sealed class CosmosDbContext(
             && uri.IsLoopback;
     }
 
-    /// <summary>
-    /// Cosmos DB does not support relational outbox tables; events are dispatched in-process only.
-    /// </summary>
-    internal override bool SupportsOutbox => false;
-
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

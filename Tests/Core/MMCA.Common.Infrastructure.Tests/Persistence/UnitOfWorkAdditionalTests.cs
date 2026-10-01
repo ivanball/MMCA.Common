@@ -26,13 +26,13 @@ public sealed class UnitOfWorkAdditionalTests
     }
 
     [Fact]
-    public void RequestIdentityInsert_DelegatesToDbContextFactory()
+    public void RequestExplicitKeyInsert_DelegatesToDbContextFactory()
     {
         var (sut, mocks) = CreateSut();
 
-        sut.RequestIdentityInsert();
+        sut.RequestExplicitKeyInsert();
 
-        mocks.DbContextFactory.Verify(x => x.RequestIdentityInsert(), Times.Once);
+        mocks.DbContextFactory.Verify(x => x.RequestExplicitKeyInsert(), Times.Once);
     }
 
     [Fact]

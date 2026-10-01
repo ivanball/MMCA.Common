@@ -48,7 +48,7 @@ public sealed class MobileTopRowE2ETests : GalleryAxeTestBase
         // host is anonymous, which is exactly the state that used to overlap: signed in, the user-name
         // span absorbs the squeeze by ellipsizing and hides the defect.
         var themeToggle = Page.Locator(".toprow-actions").GetByTitle("Toggle light/dark theme");
-        var hamburger = Page.Locator(".navbar-toggler");
+        var hamburger = Page.Locator(".nav-toggler");
 
         // Settle both before measuring: BoundingBoxAsync does not auto-wait, so reading it straight
         // after the navigation returns null whenever the interactive render has not landed yet.
@@ -108,7 +108,7 @@ public sealed class MobileTopRowE2ETests : GalleryAxeTestBase
 
         // Opening the menu is what surfaces the name to the user: .nav-scrollable is collapsed to
         // max-height 0 until the toggler is checked.
-        await Page.Locator(".navbar-toggler").CheckAsync();
+        await Page.Locator(".nav-toggler").CheckAsync();
         await Expect(Page.Locator(".nav-user-identity")).ToBeVisibleAsync();
         await Expect(Page.Locator(".nav-user-identity")).ToContainTextAsync("Gallery Visitor");
     }

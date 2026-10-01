@@ -44,13 +44,13 @@ public sealed class DbContextFactoryAdditionalTests
         await act.Should().NotThrowAsync();
     }
 
-    // -- RequestIdentityInsert --
+    // -- RequestExplicitKeyInsert --
     [Fact]
-    public async Task RequestIdentityInsert_WithNoContexts_SaveReturnsZero()
+    public async Task RequestExplicitKeyInsert_WithNoContexts_SaveReturnsZero()
     {
         await using var sut = CreateSut();
 
-        sut.RequestIdentityInsert();
+        sut.RequestExplicitKeyInsert();
         var result = await sut.SaveChangesAsync();
 
         result.Should().Be(0);

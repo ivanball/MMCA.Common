@@ -157,6 +157,7 @@ public static partial class DependencyInjection
 
         // Scoped: the row is written on the SAME context factory the calling handler's
         // repositories use, which is what makes scheduling atomic with the aggregate change.
+        services.TryAddScoped<Persistence.InternalCommands.InternalCommandOriginCapture>();
         services.TryAddScoped<Application.InternalCommands.IInternalCommandScheduler,
             Persistence.InternalCommands.InternalCommandScheduler>();
 

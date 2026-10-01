@@ -73,8 +73,7 @@ public sealed class OutboxCleanupServiceTests
             logger.Object,
             Options.Create(outboxSettings),
             Options.Create(messageBusSettings ?? new MessageBusSettings()),
-            registry.Object,
-            resolver.Object, timeProvider: TimeProvider.System);
+            new FrameworkTableTargets(registry.Object, resolver.Object), timeProvider: TimeProvider.System);
 
         return (sut, new Mocks(scopeFactory, logger, registry, resolver));
     }
@@ -505,8 +504,7 @@ public sealed class OutboxCleanupServiceTests
             logger.Object,
             Options.Create(settings),
             Options.Create(messageBusSettings ?? new MessageBusSettings()),
-            registry.Object,
-            resolver.Object,
+            new FrameworkTableTargets(registry.Object, resolver.Object),
             timeProvider);
 
         return (sut, sweepObserved.Task, logger, scopeServices);
@@ -558,8 +556,6 @@ public sealed class OutboxCleanupServiceTests
     /// </summary>
     private sealed class CleanupTestContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private CleanupTestContext(DbContextOptions<CleanupTestContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

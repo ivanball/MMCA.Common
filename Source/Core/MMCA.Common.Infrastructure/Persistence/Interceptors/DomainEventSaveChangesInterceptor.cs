@@ -124,7 +124,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
     {
         if (_outboxEnabled
-            && eventData.Context is ApplicationDbContext { SupportsOutbox: true } context
+            && eventData.Context is ApplicationDbContext { Engine.Capabilities.IsRelational: true } context
             && StateTable.TryGetValue(context, out var state))
         {
             StateTable.Remove(context);
@@ -233,7 +233,7 @@ public sealed partial class DomainEventSaveChangesInterceptor(
         var hasIntegrationEvents = false;
         var localOutboxEntries = new List<OutboxMessage>(domainEvents.Length);
 
-        if (context.SupportsOutbox && outboxEnabled)
+        if (context.Engine.Capabilities.IsRelational && outboxEnabled)
         {
             // Integration events get outbox rows but no in-process dispatch: the rows stay
             // unprocessed and the OutboxProcessor publishes them via IMessageBus. Local events

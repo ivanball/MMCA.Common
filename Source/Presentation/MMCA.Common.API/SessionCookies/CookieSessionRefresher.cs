@@ -1,10 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Concurrency;
@@ -35,6 +37,26 @@ public interface ICookieSessionRefresher
     /// <see langword="null"/> when there is no valid session.
     /// </summary>
     Task<SessionTokenResult?> GetOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// <see cref="GetOrRefreshAsync"/> with the failure kept apart:
+    /// <see cref="SessionRefreshStatus.Rejected"/> when there is no refresh cookie or the identity
+    /// endpoint refused it (the session is over), <see cref="SessionRefreshStatus.Unavailable"/> when
+    /// the refresh could not be decided right now (5xx, 429, timeout, network), so a caller that
+    /// clears cookies on failure does so only for a session that is really dead.
+    /// </summary>
+    Task<SessionRefreshOutcome> ValidateOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exchanges the refresh cookie for a new token pair even when the access cookie still looks valid
+    /// (the API rejected it: revoked, or signed with a rotated key), writing the rotated cookies as a
+    /// side effect. Single-flighted exactly like <see cref="GetOrRefreshAsync"/>: concurrent callers
+    /// holding the same refresh cookie share one rotation. The outcome is
+    /// <see cref="SessionRefreshStatus.Rejected"/> when there is no refresh cookie or the identity
+    /// endpoint refused it, and <see cref="SessionRefreshStatus.Unavailable"/> when the exchange failed
+    /// for a transient reason.
+    /// </summary>
+    Task<SessionRefreshOutcome> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -54,7 +76,8 @@ internal sealed partial class CookieSessionRefresher(
     IMemoryCache cache,
     IWebHostEnvironment environment,
     ILogger<CookieSessionRefresher> logger,
-    TimeProvider timeProvider) : ICookieSessionRefresher
+    TimeProvider timeProvider,
+    IOptions<SessionCookieSettings> cookieSettings) : ICookieSessionRefresher
 {
     internal const string RefreshClientName = "SessionCookieRefreshClient";
 
@@ -63,42 +86,68 @@ internal sealed partial class CookieSessionRefresher(
 
     private readonly KeyedSemaphoreStripe _refreshLocks = new();
 
-    public async Task<SessionTokenResult?> GetOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
+    public async Task<SessionTokenResult?> GetOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default) =>
+        (await ValidateOrRefreshAsync(context, cancellationToken).ConfigureAwait(false)).Session;
+
+    public async Task<SessionRefreshOutcome> ValidateOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var accessToken = context.Request.Cookies[SessionCookieEndpoints.AccessTokenCookieName];
         if (TryReadValidExpiry(accessToken, out var expiry))
         {
-            return new SessionTokenResult(accessToken!, expiry);
+            return SessionRefreshOutcome.Refreshed(new SessionTokenResult(accessToken!, expiry));
         }
 
+        return await RefreshFromCookiesAsync(context, accessToken, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<SessionRefreshOutcome> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var accessToken = context.Request.Cookies[SessionCookieEndpoints.AccessTokenCookieName];
+        return await RefreshFromCookiesAsync(context, accessToken, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Maps a non-success status from <c>auth/refresh</c>: 400, 401 and 403 are the identity endpoint
+    /// refusing the refresh token, so the session is over. Anything else (5xx, 429, 408, a 404 from a
+    /// misrouted gateway) says nothing about the token, so the session is kept for a later retry.
+    /// </summary>
+    internal static SessionRefreshStatus ClassifyFailure(HttpStatusCode statusCode) =>
+        statusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+            ? SessionRefreshStatus.Rejected
+            : SessionRefreshStatus.Unavailable;
+
+    private async Task<SessionRefreshOutcome> RefreshFromCookiesAsync(HttpContext context, string? accessToken, CancellationToken cancellationToken)
+    {
         var refreshToken = context.Request.Cookies[SessionCookieEndpoints.RefreshTokenCookieName];
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
-            return null;
+            return SessionRefreshOutcome.Rejected();
         }
 
-        var refreshed = await RefreshAsync(accessToken ?? string.Empty, refreshToken, cancellationToken).ConfigureAwait(false);
-        if (refreshed is null || string.IsNullOrWhiteSpace(refreshed.Value.AccessToken))
+        var (auth, failure) = await RefreshAsync(accessToken ?? string.Empty, refreshToken, cancellationToken).ConfigureAwait(false);
+        if (auth is null)
         {
-            return null;
+            return failure!;
         }
 
-        var auth = refreshed.Value;
-        SessionCookieJar.Append(context, auth.AccessToken, auth.RefreshToken, environment);
+        SessionCookieJar.Append(context, auth.Value.AccessToken, auth.Value.RefreshToken, environment, cookieSettings.Value.SameSite);
 
         // Make the freshly-minted access token visible to this request's SSR authentication, which reads
         // via CookieTokenReader (the Set-Cookie above only affects subsequent requests).
-        context.Items[CookieTokenReader.FreshAccessTokenItemKey] = auth.AccessToken;
-        return new SessionTokenResult(auth.AccessToken, auth.AccessTokenExpiry);
+        context.Items[CookieTokenReader.FreshAccessTokenItemKey] = auth.Value.AccessToken;
+        return SessionRefreshOutcome.Refreshed(new SessionTokenResult(auth.Value.AccessToken, auth.Value.AccessTokenExpiry));
     }
 
-    private async Task<AuthenticationResponse?> RefreshAsync(string accessToken, string refreshToken, CancellationToken cancellationToken)
+    private async Task<(AuthenticationResponse? Auth, SessionRefreshOutcome? Failure)> RefreshAsync(
+        string accessToken, string refreshToken, CancellationToken cancellationToken)
     {
         if (cache.TryGetValue(CacheKey(refreshToken), out AuthenticationResponse cached))
         {
-            return cached;
+            return (cached, null);
         }
 
         using var releaser = await _refreshLocks.AcquireAsync(CacheKey(refreshToken), cancellationToken).ConfigureAwait(false);
@@ -106,22 +155,23 @@ internal sealed partial class CookieSessionRefresher(
         // Double-check: a request we were queued behind may have just rotated this same token.
         if (cache.TryGetValue(CacheKey(refreshToken), out cached))
         {
-            return cached;
+            return (cached, null);
         }
 
         return await CallRefreshAsync(accessToken, refreshToken).ConfigureAwait(false);
     }
 
-    private async Task<AuthenticationResponse?> CallRefreshAsync(string accessToken, string refreshToken)
+    private async Task<(AuthenticationResponse? Auth, SessionRefreshOutcome? Failure)> CallRefreshAsync(string accessToken, string refreshToken)
     {
         var client = httpClientFactory.CreateClient(RefreshClientName);
 
         // A transport failure or a malformed body means "no session right now", not a broken request:
         // this runs during SSR, so an escaping exception turned a signed-in user's navigation into a
-        // 500 instead of an anonymous render. The failure is deliberately NOT cached (only a
-        // successful rotation reaches cache.Set below), so the next navigation retries. A missing
-        // BaseAddress raises InvalidOperationException and is left to propagate: that is a host
-        // configuration error, not a runtime condition.
+        // 500 instead of an anonymous render. It is Unavailable, not Rejected: nothing said the
+        // refresh token is dead, so a caller that clears cookies must keep them. The failure is
+        // deliberately NOT cached (only a successful rotation reaches cache.Set below), so the next
+        // navigation retries. A missing BaseAddress raises InvalidOperationException and is left to
+        // propagate: that is a host configuration error, not a runtime condition.
         try
         {
             // CancellationToken.None: once we hold the lock the refresh must complete (and write its cookies)
@@ -133,24 +183,51 @@ internal sealed partial class CookieSessionRefresher(
 
             if (!response.IsSuccessStatusCode)
             {
-                return null;
+                return ClassifyFailure(response.StatusCode) == SessionRefreshStatus.Rejected
+                    ? (null, SessionRefreshOutcome.Rejected())
+                    : (null, SessionRefreshOutcome.Unavailable(ReadRetryAfter(response)));
             }
 
             var auth = await response.Content.ReadFromJsonAsync<AuthenticationResponse>(CancellationToken.None).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(auth.AccessToken))
             {
-                return null;
+                return (null, SessionRefreshOutcome.Unavailable());
             }
 
             // Cache by the OLD refresh token so a slightly-late sibling request gets the same rotated pair.
             cache.Set(CacheKey(refreshToken), auth, RotationGrace);
-            return auth;
+            return (auth, null);
         }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or NotSupportedException)
+        // Polly.ExecutionRejectedException covers the resilience pipeline's own refusals (a timed-out
+        // attempt, an open circuit, a rate-limited call): with the gateway down the standard handler
+        // throws TimeoutRejectedException, which is neither of the transport exceptions above.
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or NotSupportedException
+            or Polly.ExecutionRejectedException)
         {
             LogRefreshCallFailed(logger, ex);
+            return (null, SessionRefreshOutcome.Unavailable());
+        }
+    }
+
+    private TimeSpan? ReadRetryAfter(HttpResponseMessage response)
+    {
+        if (response.Headers.RetryAfter is not { } retryAfter)
+        {
             return null;
         }
+
+        if (retryAfter.Delta is { } delta)
+        {
+            return delta < TimeSpan.Zero ? TimeSpan.Zero : delta;
+        }
+
+        if (retryAfter.Date is { } date)
+        {
+            var remaining = date - timeProvider.GetUtcNow();
+            return remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
+        }
+
+        return null;
     }
 
     private bool TryReadValidExpiry(string? token, out DateTime expiry)

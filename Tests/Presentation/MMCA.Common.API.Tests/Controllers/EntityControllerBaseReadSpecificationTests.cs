@@ -23,8 +23,8 @@ namespace MMCA.Common.API.Tests.Controllers;
 
 /// <summary>
 /// The read-scoping hook: every read action (both list overloads, lookup, by-id and export) asks
-/// <c>GetReadSpecificationAsync</c> for the rows this caller may see, and a controller that
-/// overrides nothing queries exactly as unscoped as it always did.
+/// <c>GetReadSpecificationAsync</c> for the rows this caller may see. A controller that overrides
+/// nothing queries its JSON reads unscoped, while its export is refused (fail-closed).
 /// </summary>
 public sealed class EntityControllerBaseReadSpecificationTests : IDisposable
 {
@@ -120,16 +120,18 @@ public sealed class EntityControllerBaseReadSpecificationTests : IDisposable
     }
 
     [Fact]
-    public async Task ExportAsync_WithNoOverride_QueriesUnscoped()
+    public async Task ExportAsync_WithNoOverride_IsRefusedAndQueriesNothing()
     {
         var queryService = new RecordingQueryService(1, 2, 3);
         UnscopedReadController sut = Create(
             (q, l) => new UnscopedReadController(q, l), queryService, maxPageSize: 10);
 
-        await sut.ExportAsync(cancellationToken: CancellationToken.None);
+        IActionResult result = await sut.ExportAsync(cancellationToken: CancellationToken.None);
 
-        queryService.SpecificationsSeen.Should().AllSatisfy(seen => seen.Should().BeNull());
-        BodyLines().Should().HaveCount(4, because: "a header row plus all three unscoped rows");
+        result.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden,
+            because: "the export is fail-closed: unlike the JSON reads, no scope and no opt-in serves no rows");
+        queryService.SpecificationsSeen.Should().BeEmpty(because: "a refused export never queries");
+        BodyLines().Should().BeEmpty();
     }
 
     // ── Overridden async hook: the scope reaches all five actions ──

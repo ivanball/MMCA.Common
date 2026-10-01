@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 
@@ -14,20 +15,25 @@ namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 /// </summary>
 public sealed partial class DataSourceResolver : IDataSourceResolver
 {
-    private static readonly DataSource[] AllEngines =
-        [DataSource.CosmosDB, DataSource.PostgreSQL, DataSource.Sqlite, DataSource.SQLServer];
+    /// <summary>
+    /// The engine every framework-owned table asks for by default (the default value of
+    /// <c>Outbox:DataSource</c>, <c>Scheduler:DataSource</c>, <c>AuditTrail:DataSource</c>). A policy
+    /// constant, not an engine capability.
+    /// </summary>
+    private const DataSource FrameworkDefaultEngine = DataSource.SQLServer;
 
     /// <summary>
     /// Engine preference used to pick the substitute engine for a request naming an engine the host
-    /// does not configure. Relational first, because every table the framework owns (outbox, inbox,
-    /// scheduled jobs, audit trail, refresh sessions) is relational, and SQL Server ahead of the
-    /// others so a host that configures SQL Server at all keeps exactly the routing it had before.
-    /// PostgreSQL sits ahead of SQLite for the same reason SQL Server sits ahead of both: a host that
-    /// configures a server engine means it to serve the framework's own tables, and SQLite is the
-    /// lightweight fallback rather than the intended target.
+    /// does not configure: each engine's <see cref="IDataSourceEngine.SubstitutionPriority"/>, lowest
+    /// first. Relational first, because every table the framework owns (outbox, inbox, scheduled
+    /// jobs, audit trail, refresh sessions) is relational, and SQL Server ahead of the others so a
+    /// host that configures SQL Server at all keeps exactly the routing it had before. PostgreSQL sits
+    /// ahead of SQLite for the same reason SQL Server sits ahead of both: a host that configures a
+    /// server engine means it to serve the framework's own tables, and SQLite is the lightweight
+    /// fallback rather than the intended target.
     /// </summary>
     private static readonly DataSource[] EnginePreference =
-        [DataSource.SQLServer, DataSource.PostgreSQL, DataSource.Sqlite, DataSource.CosmosDB];
+        [.. DataSourceEngines.All.OrderBy(engine => engine.SubstitutionPriority).Select(engine => engine.Engine)];
 
     /// <summary>Per-engine map of logical name → physical key (collapse already applied).</summary>
     private readonly Dictionary<(DataSource Engine, string LogicalName), DataSourceKey> _logicalToPhysical = [];
@@ -36,7 +42,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     private readonly Dictionary<DataSourceKey, PhysicalDataSource> _physicalSources = [];
 
     /// <summary>Engines carrying at least one connection string (top-level or on a named entry).</summary>
-    private readonly HashSet<DataSource> _configuredEngines = [];
+    private readonly HashSet<DataSource> _configuredEngines;
 
     /// <summary>
     /// The engine a request for an unconfigured engine is served from, or <see langword="null"/>
@@ -65,22 +71,15 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
 
         var connectionStrings = connectionStringOptions.Value;
 
-        foreach (var engine in AllEngines)
+        foreach (var engine in DataSourceEngines.All.Select(registered => registered.Engine))
         {
             BuildEngineMap(engine, connectionStrings, dataSources, logger);
-
-            if (HasAnyConnectionString(engine, connectionStrings, dataSources))
-            {
-                _configuredEngines.Add(engine);
-            }
         }
 
-        _substituteEngine = EnginePreference
-            .Where(_configuredEngines.Contains)
-            .Cast<DataSource?>()
-            .FirstOrDefault();
+        _configuredEngines = ConfiguredEngines(connectionStrings, dataSources);
+        _substituteEngine = PickSubstituteEngine(_configuredEngines);
 
-        if (_substituteEngine is { } substitute && substitute != DataSource.SQLServer)
+        if (_substituteEngine is { } substitute && substitute != FrameworkDefaultEngine)
         {
             // Worth one startup line: the framework's own tables (outbox, inbox, scheduled jobs,
             // audit trail) default to SQL Server in settings, and this is where a host that
@@ -127,6 +126,46 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// <returns>The requested engine, or the substitute when it is unconfigured.</returns>
     private DataSource SubstituteUnconfiguredEngine(DataSource engine) =>
         _configuredEngines.Contains(engine) ? engine : _substituteEngine ?? engine;
+
+    /// <summary>
+    /// Computes, straight from configuration and without building a resolver, the engine the
+    /// framework's default source resolves to: what <c>ResolveLogical(SQLServer, "Default").Engine</c>
+    /// answers once the resolver exists. Registration code reads it to decide which services an
+    /// engine can back (raw SQL is registered only where the default engine is relational).
+    /// </summary>
+    /// <param name="connectionStrings">The top-level connection strings.</param>
+    /// <param name="dataSources">The named data source entries.</param>
+    /// <returns>The engine the framework's default source is served from.</returns>
+    internal static DataSource ResolveFrameworkDefaultEngine(
+        ConnectionStringSettings connectionStrings,
+        DataSourcesSettings dataSources)
+    {
+        ArgumentNullException.ThrowIfNull(connectionStrings);
+        ArgumentNullException.ThrowIfNull(dataSources);
+
+        var configured = ConfiguredEngines(connectionStrings, dataSources);
+        return configured.Contains(FrameworkDefaultEngine)
+            ? FrameworkDefaultEngine
+            : PickSubstituteEngine(configured) ?? FrameworkDefaultEngine;
+    }
+
+    /// <summary>The engines carrying at least one connection string anywhere in configuration.</summary>
+    private static HashSet<DataSource> ConfiguredEngines(
+        ConnectionStringSettings connectionStrings,
+        DataSourcesSettings dataSources) =>
+        [.. DataSourceEngines.All
+            .Select(registered => registered.Engine)
+            .Where(engine => HasAnyConnectionString(engine, connectionStrings, dataSources))];
+
+    /// <summary>
+    /// The most preferred configured engine (see <see cref="EnginePreference"/>), or
+    /// <see langword="null"/> when the host configures no database at all.
+    /// </summary>
+    private static DataSource? PickSubstituteEngine(HashSet<DataSource> configuredEngines) =>
+        EnginePreference
+            .Where(configuredEngines.Contains)
+            .Cast<DataSource?>()
+            .FirstOrDefault();
 
     /// <summary>
     /// Reports whether the engine carries a connection string anywhere in configuration: the
@@ -244,14 +283,8 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// <param name="engine">The engine whose top-level value is being read.</param>
     /// <param name="connectionStrings">The top-level connection strings.</param>
     /// <returns>The declared assembly name, or an empty string.</returns>
-    private static string TopLevelMigrationsAssembly(DataSource engine, ConnectionStringSettings connectionStrings) => engine switch
-    {
-        DataSource.SQLServer => connectionStrings.SQLServerMigrationsAssembly,
-        DataSource.PostgreSQL => connectionStrings.PostgreSQLMigrationsAssembly,
-        DataSource.Sqlite => string.Empty,
-        DataSource.CosmosDB => string.Empty,
-        _ => string.Empty,
-    };
+    private static string TopLevelMigrationsAssembly(DataSource engine, ConnectionStringSettings connectionStrings) =>
+        DataSourceEngines.For(engine).GetTopLevelMigrationsAssembly(connectionStrings);
 
     /// <summary>The Cosmos database an entry uses: its own name, or the top-level one.</summary>
     private static string CosmosDatabaseNameOf(DataSourceEntrySettings entry, ConnectionStringSettings connectionStrings) =>
@@ -357,7 +390,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         AddExplicitMigrationsAssemblies(engine, explicitValues, members);
 
         var migrationsAssembly = ResolveMigrationsAssembly(engine, key, explicitValues);
-        if (engine == DataSource.SQLServer && migrationsAssembly is null)
+        if (DataSourceEngines.For(engine).Capabilities.Migrations == MigrationPolicy.Always && migrationsAssembly is null)
         {
             // Falling back to the Default migrations assembly is almost always a mistake for a
             // separate database (its snapshot describes a different schema) — surface it.
@@ -414,21 +447,15 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         new(
             key,
             connectionString,
-            engine == DataSource.CosmosDB ? null : migrationsAssembly,
+            DataSourceEngines.For(engine).Capabilities.Migrations == MigrationPolicy.Never ? null : migrationsAssembly,
             cosmosDatabaseName);
 
     /// <summary>
     /// The per-engine migrations assembly declared on one <c>DataSources</c> entry. Only the
     /// relational engines have one; Cosmos migrates nothing.
     /// </summary>
-    private static string GetMigrationsAssembly(DataSource engine, DataSourceEntrySettings entry) => engine switch
-    {
-        DataSource.CosmosDB => string.Empty,
-        DataSource.PostgreSQL => entry.PostgreSQLMigrationsAssembly,
-        DataSource.Sqlite => entry.SqliteMigrationsAssembly,
-        DataSource.SQLServer => entry.SQLServerMigrationsAssembly,
-        _ => string.Empty,
-    };
+    private static string GetMigrationsAssembly(DataSource engine, DataSourceEntrySettings entry) =>
+        DataSourceEngines.For(engine).GetMigrationsAssembly(entry);
 
     /// <summary>
     /// Picks the single explicit migrations assembly for a physical source, throwing when logical
@@ -439,7 +466,8 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         DataSourceKey key,
         List<(string LogicalName, string Assembly)> explicitValues)
     {
-        if (engine == DataSource.CosmosDB || explicitValues.Count == 0)
+        var registered = DataSourceEngines.For(engine);
+        if (registered.Capabilities.Migrations == MigrationPolicy.Never || explicitValues.Count == 0)
         {
             return null;
         }
@@ -447,14 +475,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
         var distinct = explicitValues.Select(v => v.Assembly).Distinct(StringComparer.Ordinal).ToList();
         if (distinct.Count > 1)
         {
-            var settingName = engine switch
-            {
-                DataSource.Sqlite => "SqliteMigrationsAssembly",
-                DataSource.PostgreSQL => "PostgreSQLMigrationsAssembly",
-                DataSource.SQLServer => "SQLServerMigrationsAssembly",
-                DataSource.CosmosDB => "SQLServerMigrationsAssembly",
-                _ => "SQLServerMigrationsAssembly",
-            };
+            var settingName = registered.MigrationsAssemblySettingName;
             var declarations = string.Join("; ", explicitValues.Select(v => $"\"{v.LogicalName}\" → \"{v.Assembly}\""));
             throw new InvalidOperationException(
                 $"Data sources collapsing to the same physical database \"{key}\" declare conflicting " +
@@ -471,27 +492,15 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
     /// connection strings deliberately do not collapse.
     /// </summary>
     private static string GetIdentity(DataSource engine, string connectionString, string cosmosDatabaseName) =>
-        engine == DataSource.CosmosDB
+        DataSourceEngines.For(engine).ConnectionIdentityIncludesDatabaseName
             ? string.Concat(connectionString, "\n", cosmosDatabaseName)
             : connectionString;
 
-    private static string GetConnectionString(DataSource engine, ConnectionStringSettings settings) => engine switch
-    {
-        DataSource.CosmosDB => settings.CosmosConnectionString,
-        DataSource.PostgreSQL => settings.PostgreSQLConnectionString,
-        DataSource.Sqlite => settings.SqliteConnectionString,
-        DataSource.SQLServer => settings.SQLServerConnectionString,
-        _ => throw new InvalidOperationException($"DataSource \"{engine}\" not implemented."),
-    };
+    private static string GetConnectionString(DataSource engine, ConnectionStringSettings settings) =>
+        DataSourceEngines.For(engine).GetConnectionString(settings);
 
-    private static string GetConnectionString(DataSource engine, DataSourceEntrySettings entry) => engine switch
-    {
-        DataSource.CosmosDB => entry.CosmosConnectionString,
-        DataSource.PostgreSQL => entry.PostgreSQLConnectionString,
-        DataSource.Sqlite => entry.SqliteConnectionString,
-        DataSource.SQLServer => entry.SQLServerConnectionString,
-        _ => throw new InvalidOperationException($"DataSource \"{engine}\" not implemented."),
-    };
+    private static string GetConnectionString(DataSource engine, DataSourceEntrySettings entry) =>
+        DataSourceEngines.For(engine).GetConnectionString(entry);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "No SQL Server connection string is configured; data sources requesting an unconfigured engine (including the framework's own outbox, inbox, scheduled-job, and audit-trail tables) resolve to {SubstituteEngine}.")]
     private static partial void LogSubstituteEngine(ILogger logger, DataSource substituteEngine);

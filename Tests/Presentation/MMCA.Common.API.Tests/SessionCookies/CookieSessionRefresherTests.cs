@@ -96,6 +96,34 @@ public sealed class CookieSessionRefresherTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    // ── Forced refresh (the same-origin proxy's 401 replay) ──
+    [Fact]
+    public async Task RefreshAsync_RotatesEvenWhenTheAccessCookieStillLooksValid()
+    {
+        string stillValid = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+        var context = CreateContext(accessToken: stillValid, refreshToken: "old-refresh");
+
+        SessionTokenResult? result = (await harness.Sut.RefreshAsync(context)).Session;
+
+        result!.Value.AccessToken.Should().Be("new-access");
+        harness.Handler.CallCount.Should().Be(1, "the upstream rejected the valid-looking token, so only a rotation helps");
+        context.Response.Headers.SetCookie.ToString().Should().Contain("new-refresh");
+    }
+
+    [Fact]
+    public async Task RefreshAsync_SiblingsHoldingTheSameRefreshCookie_ShareOneRotation()
+    {
+        string stillValid = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+
+        await harness.Sut.RefreshAsync(CreateContext(accessToken: stillValid, refreshToken: "old-refresh"));
+        SessionTokenResult? sibling = (await harness.Sut.RefreshAsync(CreateContext(accessToken: stillValid, refreshToken: "old-refresh"))).Session;
+
+        sibling!.Value.AccessToken.Should().Be("new-access");
+        harness.Handler.CallCount.Should().Be(1);
+    }
+
     // ── Refresh flow ──
     [Fact]
     public async Task GetOrRefreshAsync_WhenAccessExpiredAndRefreshPresent_RotatesViaAuthRefresh()
@@ -280,6 +308,186 @@ public sealed class CookieSessionRefresherTests
         results[1]!.Value.AccessToken.Should().Be("new-access");
     }
 
+    // ── Outcome mapping (the same-origin proxy clears cookies only on Rejected) ──
+    public static TheoryData<HttpStatusCode> RefusalStatuses =>
+        [HttpStatusCode.BadRequest, HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden];
+
+    public static TheoryData<HttpStatusCode> TransientStatuses =>
+        [
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.BadGateway,
+            HttpStatusCode.ServiceUnavailable,
+            HttpStatusCode.GatewayTimeout,
+            HttpStatusCode.TooManyRequests,
+            HttpStatusCode.RequestTimeout,
+        ];
+
+    [Theory]
+    [MemberData(nameof(RefusalStatuses))]
+    public async Task ValidateOrRefreshAsync_IdentityEndpointRefusesTheRefreshToken_IsRejected(HttpStatusCode status)
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(RespondWith(status));
+        var context = CreateContext(accessToken: expired, refreshToken: "old-refresh");
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(context);
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Rejected);
+        outcome.Session.Should().BeNull();
+        context.Response.Headers.SetCookie.Count.Should().Be(0);
+    }
+
+    [Theory]
+    [MemberData(nameof(RefusalStatuses))]
+    public async Task RefreshAsync_IdentityEndpointRefusesTheRefreshToken_IsRejected(HttpStatusCode status)
+    {
+        using var harness = CreateSut(RespondWith(status));
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(
+            CreateContext(accessToken: CreateJwt(DateTime.UtcNow.AddMinutes(10)), refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Rejected);
+    }
+
+    [Theory]
+    [MemberData(nameof(TransientStatuses))]
+    public async Task ValidateOrRefreshAsync_IdentityEndpointCannotDecide_IsUnavailable_AndWritesNoCookies(HttpStatusCode status)
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(RespondWith(status));
+        var context = CreateContext(accessToken: expired, refreshToken: "old-refresh");
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(context);
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable, "a {0} says nothing about whether the refresh token is still good", status);
+        outcome.Session.Should().BeNull();
+        outcome.RetryAfter.Should().BeNull();
+        context.Response.Headers.SetCookie.Count.Should().Be(0);
+    }
+
+    [Theory]
+    [MemberData(nameof(TransientStatuses))]
+    public async Task RefreshAsync_IdentityEndpointCannotDecide_IsUnavailable(HttpStatusCode status)
+    {
+        using var harness = CreateSut(RespondWith(status));
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(
+            CreateContext(accessToken: CreateJwt(DateTime.UtcNow.AddMinutes(10)), refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_NetworkFailure_IsUnavailable()
+    {
+        using var harness = CreateSut(_ => throw new HttpRequestException("connection refused"));
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(CreateContext(accessToken: null, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+    }
+
+    // With the gateway down the standard resilience handler throws its own rejections, not a transport
+    // exception; found live, where the TimeoutRejectedException escaped as a 500 after 30 seconds.
+    public static TheoryData<string> ResilienceRejections => ["timeout", "circuit"];
+
+    [Theory]
+    [MemberData(nameof(ResilienceRejections))]
+    public async Task RefreshAsync_ResiliencePipelineRejection_IsUnavailable(string kind)
+    {
+        Exception rejection = kind == "timeout"
+            ? new Polly.Timeout.TimeoutRejectedException("attempt timed out")
+            : new Polly.CircuitBreaker.BrokenCircuitException("circuit open");
+        using var harness = CreateSut(_ => throw rejection);
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(CreateContext(accessToken: null, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+    }
+
+    [Fact]
+    public async Task ValidateOrRefreshAsync_Timeout_IsUnavailable()
+    {
+        string expired = CreateJwt(DateTime.UtcNow.AddMinutes(-5));
+        using var harness = CreateSut(_ => throw new TaskCanceledException("HttpClient.Timeout elapsed", new TimeoutException()));
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(CreateContext(accessToken: expired, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_UnavailableWithRetryAfterDelta_CarriesTheDelay()
+    {
+        using var harness = CreateSut(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+            response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(30));
+            return response;
+        });
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(CreateContext(accessToken: null, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+        outcome.RetryAfter.Should().Be(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_UnavailableWithRetryAfterDate_CarriesTheDelayFromTheInjectedClock()
+    {
+        var fixedNow = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        using var harness = CreateSut(
+            _ =>
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+                response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(fixedNow.AddMinutes(2));
+                return response;
+            },
+            new FakeTimeProvider(fixedNow));
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(CreateContext(accessToken: null, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+        outcome.RetryAfter.Should().Be(TimeSpan.FromMinutes(2));
+    }
+
+    [Fact]
+    public async Task ValidateOrRefreshAsync_NoRefreshCookie_IsRejected_WithoutHttpCall()
+    {
+        using var harness = CreateSut(RespondWith(HttpStatusCode.InternalServerError));
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(
+            CreateContext(accessToken: CreateJwt(DateTime.UtcNow.AddMinutes(-5)), refreshToken: null));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Rejected);
+        harness.Handler.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ValidateOrRefreshAsync_ValidAccessCookie_IsRefreshed_WithoutHttpCall()
+    {
+        string valid = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        using var harness = CreateSut(RespondWith(HttpStatusCode.InternalServerError));
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(CreateContext(accessToken: valid, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Refreshed);
+        outcome.Session!.Value.AccessToken.Should().Be(valid);
+        harness.Handler.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ValidateOrRefreshAsync_SuccessfulRotation_IsRefreshed()
+    {
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+
+        SessionRefreshOutcome outcome = await harness.Sut.ValidateOrRefreshAsync(
+            CreateContext(accessToken: CreateJwt(DateTime.UtcNow.AddMinutes(-5)), refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Refreshed);
+        outcome.Session!.Value.AccessToken.Should().Be("new-access");
+    }
+
     // ── Helpers ──
     private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(30);
 
@@ -367,7 +575,8 @@ public sealed class CookieSessionRefresherTests
                 _cache,
                 environment.Object,
                 NullLogger<CookieSessionRefresher>.Instance,
-                timeProvider ?? TimeProvider.System);
+                timeProvider ?? TimeProvider.System,
+                Microsoft.Extensions.Options.Options.Create(new SessionCookieSettings()));
         }
 
         public CookieSessionRefresher Sut { get; }

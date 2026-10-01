@@ -685,4 +685,46 @@
   <data name="Auth.Confirm.EmailAndTokenRequired" xml:space="preserve">
     <value>Escriba su dirección de correo y el código de confirmación.</value>
   </data>
+  <data name="Auth.Field.FirstName.Required" xml:space="preserve">
+    <value>El nombre es obligatorio</value>
+  </data>
+  <data name="Auth.Field.LastName.Required" xml:space="preserve">
+    <value>El apellido es obligatorio</value>
+  </data>
+  <data name="Auth.Field.Email.Required" xml:space="preserve">
+    <value>El correo electrónico es obligatorio</value>
+  </data>
+  <data name="Auth.Field.Email.Invalid" xml:space="preserve">
+    <value>Introduzca una dirección de correo electrónico válida</value>
+  </data>
+  <data name="Auth.Field.Password.Required" xml:space="preserve">
+    <value>La contraseña es obligatoria</value>
+  </data>
+  <data name="Auth.Field.Password.MaxLength" xml:space="preserve">
+    <value>La contraseña no puede tener más de 128 caracteres</value>
+  </data>
+  <data name="Auth.Field.Password.Complexity" xml:space="preserve">
+    <value>La contraseña debe tener al menos 8 caracteres e incluir mayúsculas, minúsculas, un dígito y un carácter especial.</value>
+  </data>
+  <data name="Auth.Field.ConfirmPassword.Required" xml:space="preserve">
+    <value>Confirme su contraseña</value>
+  </data>
+  <data name="Auth.Field.ConfirmPassword.Mismatch" xml:space="preserve">
+    <value>Las contraseñas no coinciden</value>
+  </data>
+  <data name="Auth.Field.Token.Required" xml:space="preserve">
+    <value>El código de restablecimiento es obligatorio</value>
+  </data>
+  <data name="Auth.Sessions.Revoke.Confirm.Title" xml:space="preserve">
+    <value>¿Cerrar la sesión de este dispositivo?</value>
+  </data>
+  <data name="Auth.Sessions.Revoke.Confirm.Message" xml:space="preserve">
+    <value>Se cerrará la sesión en {0} y tendrá que volver a iniciar sesión.</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Confirm.Title" xml:space="preserve">
+    <value>¿Cerrar sesión en todas partes?</value>
+  </data>
+  <data name="Auth.Sessions.RevokeAll.Confirm.Message" xml:space="preserve">
+    <value>Se cerrará la sesión en todos los dispositivos, incluido este, y tendrá que volver a iniciar sesión.</value>
+  </data>
 </root>

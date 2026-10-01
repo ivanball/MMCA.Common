@@ -2,6 +2,8 @@
   <PropertyGroup>
     <PackageId>MMCA.Common.Application</PackageId>
     <Description>MMCA framework: CQRS handlers, decorators, module system, query service</Description>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MMCA.Common.Application.Tests" />

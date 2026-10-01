@@ -1,4 +1,5 @@
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
 
@@ -38,11 +39,23 @@ public sealed record PhysicalDataSource(
     /// Cosmos never does: the provider has no migrations pipeline.
     /// </para>
     /// </summary>
-    public bool UsesMigrations => Key.Engine switch
+    public bool UsesMigrations => DataSourceEngines.For(Key.Engine).Capabilities.Migrations switch
     {
-        DataSource.SQLServer => true,
-        DataSource.PostgreSQL or DataSource.Sqlite => !string.IsNullOrEmpty(MigrationsAssembly),
-        DataSource.CosmosDB => false,
+        MigrationPolicy.Always => true,
+        MigrationPolicy.WhenAssemblyConfigured => !string.IsNullOrEmpty(MigrationsAssembly),
+        MigrationPolicy.Never => false,
         _ => false,
     };
+
+    /// <summary>
+    /// Gets a value indicating whether startup applies (or, under the <c>None</c> strategy, checks)
+    /// migrations for this source: it <see cref="UsesMigrations"/>, and it is not an optional source
+    /// left without a connection string. Only an engine whose sources require a connection string
+    /// (SQL Server) stays a target with an empty one, so that misconfiguration fails loudly at startup
+    /// instead of being skipped. The context factory and the startup initializer share this one rule.
+    /// </summary>
+    public bool IsMigrationTarget =>
+        UsesMigrations
+        && (DataSourceEngines.For(Key.Engine).Capabilities.ConnectionStringRequired
+            || !string.IsNullOrEmpty(ConnectionString));
 }

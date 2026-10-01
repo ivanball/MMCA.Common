@@ -37,7 +37,7 @@ namespace MMCA.Common.Application.Users.UseCases.EmailConfirmation;
 /// <param name="emailSender">Sends the confirmation email.</param>
 /// <param name="settings">The bound email-confirmation settings.</param>
 /// <param name="logger">Logger for the confirmation audit lines.</param>
-public abstract class SendEmailConfirmationHandlerBase<TUser, TCommand>(
+public abstract partial class SendEmailConfirmationHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IEmailConfirmationTokenService tokenService,
     IEmailSender emailSender,
@@ -60,7 +60,7 @@ public abstract class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         var emailResult = Email.Create(command.Request.Email);
         if (emailResult.IsFailure)
         {
-            UserUseCaseLog.EmailConfirmationRejected(logger, "malformed address");
+            EmailConfirmationRejected(logger, "malformed address");
             return Result.Success();
         }
 
@@ -68,7 +68,7 @@ public abstract class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         var user = await FindUntrackedByEmailAsync(email, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
-            UserUseCaseLog.EmailConfirmationRejected(logger, "no account for the address");
+            EmailConfirmationRejected(logger, "no account for the address");
             return Result.Success();
         }
 
@@ -76,14 +76,14 @@ public abstract class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         // use to the owner and is one more redeemable secret in flight.
         if (IsAlreadyConfirmed(user))
         {
-            UserUseCaseLog.EmailConfirmationRejected(logger, "address already confirmed");
+            EmailConfirmationRejected(logger, "address already confirmed");
             return Result.Success();
         }
 
         var tokenResult = await tokenService.IssueAsync(email.Value, user.Id, cancellationToken).ConfigureAwait(false);
         if (tokenResult.IsFailure)
         {
-            UserUseCaseLog.EmailConfirmationRejected(logger, "request throttled");
+            EmailConfirmationRejected(logger, "request throttled");
             return Result.Success();
         }
 
@@ -102,11 +102,11 @@ public abstract class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         {
             // The token is already issued and still valid, so the user can retry. Reporting the send
             // failure to the caller would be an oracle.
-            UserUseCaseLog.EmailConfirmationEmailFailed(logger, ex, user.Id);
+            EmailConfirmationEmailFailed(logger, ex, user.Id);
             return Result.Success();
         }
 
-        UserUseCaseLog.EmailConfirmationRequested(logger, user.Id);
+        EmailConfirmationRequested(logger, user.Id);
         return Result.Success();
     }
 
@@ -172,4 +172,15 @@ public abstract class SendEmailConfirmationHandlerBase<TUser, TCommand>(
         string.IsNullOrWhiteSpace(Settings.ConfirmationUrl)
             ? null
             : $"{Settings.ConfirmationUrl}#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email confirmation requested for user {UserId}; confirmation email sent")]
+    private static partial void EmailConfirmationRequested(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Email confirmation could not be sent for user {UserId}; the issued token stays valid")]
+    private static partial void EmailConfirmationEmailFailed(ILogger logger, Exception exception, UserIdentifierType userId);
+
+    // No address and no account id, for the reason the password-reset rejection carries neither: the
+    // confirmation endpoints answer identically whether or not the address exists.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Email confirmation request not actioned ({Reason})")]
+    private static partial void EmailConfirmationRejected(ILogger logger, string reason);
 }

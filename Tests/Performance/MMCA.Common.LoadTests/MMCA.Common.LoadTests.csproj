@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Load tier (rubric "load/stress at realistic volumes"): drives the framework's REAL persistence
+         stack (AddInfrastructure + AddApplication over a temp-file SQLite database) at volume and asserts
+         correctness plus a throughput floor or latency ceiling per scenario. NOT shipped and deliberately
+         NOT in MMCA.Common.slnx: it seeds 100,000 rows and drains 10,000 outbox messages, which the fast
+         solution-wide unit loop must not pay for. It runs weekly (and on demand) in its own workflow,
+         .github/workflows/load-tests.yml, built and run by csproj path like the other out-of-slnx tiers.
+
+         Each scenario writes a JSON summary to $MMCA_LOAD_RESULTS_DIR (default: load-results/ next to
+         the test exe), which the workflow uploads as an artifact. -->
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="AwesomeAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Source\Core\MMCA.Common.Infrastructure\MMCA.Common.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

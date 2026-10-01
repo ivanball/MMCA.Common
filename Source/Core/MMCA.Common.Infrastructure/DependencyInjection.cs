@@ -24,6 +24,7 @@ using MMCA.Common.Infrastructure.Notifications.Push;
 using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
@@ -83,11 +84,16 @@ public static partial class DependencyInjection
 
             // Named data sources for database-per-microservice routing. A root-level dictionary
             // section does not bind through the options pipeline — build the settings directly.
-            services.TryAddSingleton(new DataSourcesSettings(
+            var dataSourcesSettings = new DataSourcesSettings(
                 configuration.GetSection(DataSourcesSettings.SectionName)
-                    .Get<Dictionary<string, DataSourceEntrySettings>>()));
+                    .Get<Dictionary<string, DataSourceEntrySettings>>());
+            services.TryAddSingleton(dataSourcesSettings);
             services.TryAddSingleton<IDataSourceResolver, DataSourceResolver>();
             services.TryAddSingleton<IEntityDataSourceRegistry, EntityDataSourceRegistry>();
+
+            // Which databases the framework table sweeps visit (outbox, internal commands, audit
+            // trail), shared by every processor, cleanup service and operator surface over them.
+            services.TryAddSingleton<FrameworkTableTargets>();
 
             services.AddOptions<SmtpSettings>()
                 .Bind(configuration.GetSection(SmtpSettings.SectionName))
@@ -107,7 +113,7 @@ public static partial class DependencyInjection
             // Sibling of the queryable executor for the reads LINQ cannot express. Scoped, not
             // singleton: it reaches the scope's own context through IDbContextFactory, so a statement
             // shares the caller's connection and any transaction an ITransactional command opened.
-            services.TryAddScoped<IRawSqlQueryExecutor, EFRawSqlQueryExecutor>();
+            AddRawSqlQueryExecutor(services, configuration, dataSourcesSettings);
 
             // Stateless classifier for a save rejected by a unique index, so a handler that lost an
             // insert race can answer with its own conflict instead of a raw 500. TryAdd, so a host
@@ -164,6 +170,10 @@ public static partial class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
             services.TryAddScoped<Application.Auth.IRefreshSessionStore, Persistence.Auth.EFRefreshSessionStore>();
+
+            // Issues, rotates and revokes the token pair over that store; AuthenticationServiceBase
+            // delegates every session decision to it. Scoped for the same reason as the store.
+            services.TryAddScoped<Application.Auth.Sessions.IAuthSessionIssuer, Application.Auth.Sessions.AuthSessionIssuer>();
 
             // Retention sweep, gated on the same flag that maps the table. Registering it
             // unconditionally would start an hourly sweep in every service of a modular host, all but
@@ -375,6 +385,30 @@ public static partial class DependencyInjection
             services.TryAddSingleton(registry);
 
             return services;
+        }
+    }
+
+    /// <summary>
+    /// Registers <see cref="IRawSqlQueryExecutor"/> only when the host's default source, the one the
+    /// executor runs every statement on, is on an engine that can run raw SQL (a relational one). A
+    /// Cosmos-default host gets no registration, so a service that injects the executor there fails
+    /// when the container validates rather than on its first statement.
+    /// </summary>
+    /// <param name="services">The collection being configured.</param>
+    /// <param name="configuration">Application configuration carrying the <c>ConnectionStrings</c> section.</param>
+    /// <param name="dataSources">The named data sources already bound from the same configuration.</param>
+    internal static void AddRawSqlQueryExecutor(
+        IServiceCollection services,
+        IConfiguration configuration,
+        DataSourcesSettings dataSources)
+    {
+        var connectionStrings = configuration.GetSection(ConnectionStringSettings.SectionName).Get<ConnectionStringSettings>()
+            ?? new ConnectionStringSettings();
+        var defaultEngine = DataSourceResolver.ResolveFrameworkDefaultEngine(connectionStrings, dataSources);
+
+        if (DataSourceEngines.For(defaultEngine).Capabilities.IsRelational)
+        {
+            services.TryAddScoped<IRawSqlQueryExecutor, EFRawSqlQueryExecutor>();
         }
     }
 }

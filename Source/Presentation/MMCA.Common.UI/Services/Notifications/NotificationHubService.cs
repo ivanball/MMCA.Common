@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MMCA.Common.UI.Common.Settings;
+using MMCA.Common.UI.Services.Auth;
 using MMCA.Common.UI.Services.Auth.Tokens;
 
 namespace MMCA.Common.UI.Services.Notifications;
@@ -38,6 +40,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private const string LeaveChannelMethodName = "LeaveChannel";
     private readonly ITokenStorageService _tokenStorageService;
     private readonly string _hubUrl;
+    private readonly string? _sameOriginProxyEndpoint;
     private readonly ILogger<NotificationHubService> _logger;
     private readonly Lock _channelSync = new();
 
@@ -63,9 +66,21 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     {
         _tokenStorageService = tokenStorageService;
         _logger = logger;
-        string endpoint = apiSettings?.Value.ApiEndpoint ?? throw new ArgumentNullException(nameof(apiSettings));
+        ArgumentNullException.ThrowIfNull(apiSettings);
+
+        // Same-origin proxy (WebAssembly client of an opted-in host): the hub is reached through the UI
+        // host's /api path, whose proxy attaches the bearer from the HttpOnly session cookie on the
+        // negotiate POST and on the WebSocket upgrade, so the connection carries no client-held token.
+        _sameOriginProxyEndpoint = apiSettings.Value.SameOriginApiEndpoint;
+        string endpoint = _sameOriginProxyEndpoint ?? apiSettings.Value.ApiEndpoint ?? throw new ArgumentNullException(nameof(apiSettings));
         _hubUrl = endpoint.TrimEnd('/') + "/hubs/notifications";
     }
+
+    /// <summary>
+    /// Gets a value indicating whether the connection goes through the same-origin API proxy
+    /// (<see cref="ApiSettings.SameOriginApiEndpoint"/>), in which case it sends no access token.
+    /// </summary>
+    internal bool UsesSameOriginProxy => _sameOriginProxyEndpoint is not null;
 
     /// <summary>Gets a value indicating whether the hub connection is active.</summary>
     public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
@@ -144,7 +159,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         }
 
         _hubConnection = ConnectionFactory?.Invoke() ?? new HubConnectionBuilder()
-            .WithUrl(_hubUrl, options => options.AccessTokenProvider = _tokenStorageService.GetAccessTokenAsync)
+            .WithUrl(_hubUrl, ConfigureConnection)
             .WithAutomaticReconnect()
             .Build();
 
@@ -331,6 +346,27 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// field null so the next <see cref="StartAsync"/> builds a fresh one. Tolerates
     /// <see cref="StopAsync"/> having already cleared the field.
     /// </summary>
+    /// <summary>
+    /// Applies the transport options: a client-held access token for a direct gateway connection, or,
+    /// through the same-origin proxy, no token at all plus the proxy's CSRF header (the negotiate call
+    /// is a POST, and the proxy refuses an unsafe method without it; the browser cannot add headers to
+    /// the WebSocket upgrade, a GET over HTTP/1.1 or an extended CONNECT over HTTP/2, which the proxy
+    /// instead accepts only with the page's own
+    /// <c>Origin</c>, which a same-origin browser connection always sends).
+    /// </summary>
+    internal void ConfigureConnection(HttpConnectionOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (UsesSameOriginProxy)
+        {
+            options.Headers[SameOriginProxyHeaders.CsrfHeaderName] = SameOriginProxyHeaders.CsrfHeaderValue;
+            return;
+        }
+
+        options.AccessTokenProvider = _tokenStorageService.GetAccessTokenAsync;
+    }
+
     private async Task DiscardUnstartedConnectionAsync()
     {
         HubConnection? failed = _hubConnection;

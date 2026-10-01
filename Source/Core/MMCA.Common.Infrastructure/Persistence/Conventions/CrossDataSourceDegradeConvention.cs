@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.Conventions;
 
@@ -62,7 +63,7 @@ public sealed class CrossDataSourceDegradeConvention(
         // 1) Degrade FKs declared on LOCAL dependents that point at foreign principals
         //    (keep declared scalar FK columns + a compensating index). FKs declared on foreign
         //    dependents disappear together with the foreign entity type in step 3.
-        var addCompensatingIndex = contextKey.Engine != DataSource.CosmosDB;
+        var addCompensatingIndex = DataSourceEngines.For(contextKey.Engine).Capabilities.IsRelational;
         foreach (var entityType in localEntityTypes)
         {
             foreach (var foreignKey in entityType.GetDeclaredForeignKeys()

@@ -268,4 +268,43 @@ public sealed class DependencyInjectionInfrastructureTests
             ServiceLifetime.Singleton,
             "the detector holds nothing between calls and reads only the exception handed to it");
     }
+
+    [Fact]
+    public void AddInfrastructure_RelationalDefaultEngine_RegistersTheRawSqlQueryExecutor()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:SqliteConnectionString"] = "DataSource=:memory:",
+            })
+            .Build();
+
+        services.AddInfrastructure(config);
+
+        ServiceDescriptor? descriptor = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IRawSqlQueryExecutor));
+
+        descriptor.Should().NotBeNull(
+            "the host's default source resolves to SQLite, a relational engine that can run raw SQL");
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Scoped);
+    }
+
+    [Fact]
+    public void AddInfrastructure_CosmosDefaultEngine_DoesNotRegisterTheRawSqlQueryExecutor()
+    {
+        var services = new ServiceCollection();
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:CosmosConnectionString"] = "AccountEndpoint=https://localhost:8081/;AccountKey=dGVzdA==",
+            })
+            .Build();
+
+        services.AddInfrastructure(config);
+
+        services.Should().NotContain(
+            d => d.ServiceType == typeof(IRawSqlQueryExecutor),
+            "a Cosmos-default host has no SQL command surface, so injecting the executor must fail at container validation instead of on the first statement");
+    }
 }

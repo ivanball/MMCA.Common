@@ -45,9 +45,11 @@ public static class UiRateLimitingExtensions
     /// from, and <c>/hubs</c>. The hub prefix mirrors the Gateway's own
     /// <c>GatewayRateLimiting:BypassPathPrefixes</c>: a SignalR connection is long-lived and its
     /// negotiate and reconnect traffic must never be throttled, so a host that ever fronts a hub on
-    /// this origin is covered by declaration rather than by accident.
+    /// this origin is covered by declaration rather than by accident. <c>/api/hubs</c> is the same hub
+    /// traffic arriving through the same-origin API proxy at its default prefix: without it every open
+    /// hub WebSocket would hold a concurrency lease for its whole lifetime and exhaust the ceiling.
     /// </summary>
-    private static readonly string[] ExemptPrefixes = ["/health", "/alive", "/_framework", "/_content", "/hubs"];
+    private static readonly string[] ExemptPrefixes = ["/health", "/alive", "/_framework", "/_content", "/hubs", "/api/hubs"];
 
     /// <summary>
     /// Whether this request is exempt from both limiters.

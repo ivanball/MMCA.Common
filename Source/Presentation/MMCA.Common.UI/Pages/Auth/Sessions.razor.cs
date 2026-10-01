@@ -28,6 +28,7 @@ public partial class Sessions : IDisposable
     [Inject] private IAuthUIService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private IToastService Toast { get; set; } = default!;
+    [Inject] private IAppDialogService Dialogs { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     private const string LoginRoute = "/login";
@@ -103,11 +104,23 @@ public partial class Sessions : IDisposable
     /// <summary>
     /// Signs one other device out, then reloads the list from the server rather than removing the
     /// row locally: the server is the authority on what is still live, and a reload also catches a
-    /// session that expired while the page was open.
+    /// session that expired while the page was open. The user confirms first: the device loses its
+    /// session at once and has to sign in again.
     /// </summary>
     private async Task RevokeSessionAsync(RefreshSessionSummaryResponse session)
     {
         if (IsBusy || session.IsCurrent)
+        {
+            return;
+        }
+
+        var confirmed = await Dialogs.ConfirmAsync(
+            L["Auth.Sessions.Revoke.Confirm.Title"],
+            L["Auth.Sessions.Revoke.Confirm.Message", DescribeDevice(session)],
+            L["Auth.Sessions.Revoke"],
+            L["Common.Button.Cancel"]);
+
+        if (!confirmed || IsBusy)
         {
             return;
         }
@@ -151,11 +164,22 @@ public partial class Sessions : IDisposable
     /// the account-wide revoke, then (on success) the local sign-out that keeps the app from sitting
     /// on a revoked session. A failed revoke is shown and the page stays put: the button promises that
     /// every device is signed out, and a best-effort logout would claim that even when the server
-    /// refused.
+    /// refused. The user confirms first, because this also ends the session they are using.
     /// </summary>
     private async Task RevokeAllAsync()
     {
         if (IsBusy)
+        {
+            return;
+        }
+
+        var confirmed = await Dialogs.ConfirmAsync(
+            L["Auth.Sessions.RevokeAll.Confirm.Title"],
+            L["Auth.Sessions.RevokeAll.Confirm.Message"],
+            L["Auth.Sessions.RevokeAll"],
+            L["Common.Button.Cancel"]);
+
+        if (!confirmed || IsBusy)
         {
             return;
         }

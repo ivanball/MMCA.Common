@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 
@@ -32,7 +31,10 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// </para>
 /// </remarks>
 /// <param name="dbContextFactory">Scoped factory for the context of each data source being swept.</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
+/// <param name="tableTargets">
+/// Decides which databases hold a trail table, including each tenant whose own database holds its
+/// own copy (which the shared sweep never reaches).
+/// </param>
 /// <param name="logger">Logger for sweep diagnostics.</param>
 /// <param name="options">Bound audit-trail settings (the retention window).</param>
 /// <param name="timeProvider">Clock abstraction for the retention cutoff.</param>
@@ -40,18 +42,13 @@ namespace MMCA.Common.Infrastructure.Persistence.AuditTrail;
 /// Creates the per-tenant scope a database-per-tenant sweep needs. Defaulted: a host without
 /// tenancy never leaves the job's own scope.
 /// </param>
-/// <param name="tenancyOptions">
-/// Bound tenancy settings, used only to discover tenants whose own database holds its own trail
-/// table (which the shared sweep never reaches).
-/// </param>
 internal sealed partial class AuditTrailCleanupJob(
     IDbContextFactory dbContextFactory,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
+    FrameworkTableTargets tableTargets,
     ILogger<AuditTrailCleanupJob> logger,
     IOptions<AuditTrailSettings> options,
     TimeProvider timeProvider,
-    IServiceScopeFactory? scopeFactory = null,
-    IOptions<TenancySettings>? tenancyOptions = null) : IScheduledJob
+    IServiceScopeFactory? scopeFactory = null) : IScheduledJob
 {
     /// <summary>The number of rows removed per statement.</summary>
     internal const int BatchSize = 1000;
@@ -75,7 +72,7 @@ internal sealed partial class AuditTrailCleanupJob(
 
         var cutoff = timeProvider.GetUtcNow().UtcDateTime.Subtract(TimeSpan.FromDays(_settings.RetentionDays));
 
-        foreach (var target in TenantDataSourceTargets.ExpandRelational(entityDataSourceRegistry, tenancyOptions?.Value))
+        foreach (var target in tableTargets.Relational())
         {
             await PurgeTargetAsync(target, cutoff, cancellationToken).ConfigureAwait(false);
         }

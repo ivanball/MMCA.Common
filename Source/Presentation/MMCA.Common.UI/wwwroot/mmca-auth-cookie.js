@@ -57,3 +57,43 @@ window.mmcaAuthSession = {
         }
     }
 };
+
+// Same-origin API proxy hosts (AddCommonSameOriginApiProxy, MMCA.Common.UI.Web). The Blazor Server
+// circuit holds its tokens in server memory and must never pass them through this page, so these two
+// helpers only ever carry an opaque, server-encrypted, short-lived handoff string: JS can neither read
+// a token out of it nor use it against any API. Both send the proxy's fixed CSRF header.
+window.mmcaAuthHandoff = {
+    // Seeds the HttpOnly session cookies from a protected token pair the circuit produced.
+    setCookie: async function (handoff) {
+        try {
+            const response = await fetch('/auth/session-cookie/handoff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF': '1' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ handoff: handoff })
+            });
+            return response.ok;
+        } catch (e) {
+            console.warn('mmcaAuthHandoff.setCookie failed', e);
+            return false;
+        }
+    },
+    // Validate-or-refresh from the session cookies; returns a protected access token for the circuit,
+    // or null when there is no valid session.
+    getToken: async function () {
+        try {
+            const response = await fetch('/auth/session/handoff', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-CSRF': '1' }
+            });
+            if (!response.ok) {
+                return null;
+            }
+            const data = await response.json();
+            return data && data.handoff ? data.handoff : null;
+        } catch (e) {
+            return null;
+        }
+    }
+};

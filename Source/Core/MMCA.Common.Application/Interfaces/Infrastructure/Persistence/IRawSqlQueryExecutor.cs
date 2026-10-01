@@ -15,9 +15,10 @@ namespace MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 /// so the server can reuse its plan.
 /// </para>
 /// <para>
-/// <b>Relational only.</b> The implementation targets the host's default physical data source. A
-/// host whose default source is Cosmos DB gets a <see cref="NotSupportedException"/> naming the
-/// engine: Cosmos speaks its own query language and has no SQL command surface to parameterize.
+/// <b>Relational only.</b> The implementation targets the host's default physical data source and
+/// is registered only when that source is on a relational engine. A host whose default source is
+/// Cosmos DB (its own query language, no SQL command surface to parameterize) has no registration,
+/// so a service that injects this interface there fails when the container is validated.
 /// </para>
 /// </summary>
 public interface IRawSqlQueryExecutor
@@ -27,7 +28,6 @@ public interface IRawSqlQueryExecutor
     /// <param name="sql">The interpolated SQL statement; every hole becomes a command parameter.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The materialized rows, empty when the statement selects none.</returns>
-    /// <exception cref="NotSupportedException">The host's default data source is not a relational engine.</exception>
     Task<IReadOnlyList<T>> QueryAsync<T>(FormattableString sql, CancellationToken cancellationToken = default);
 
     /// <summary>Runs an interpolated SQL query expected to select at most one row.</summary>
@@ -36,6 +36,5 @@ public interface IRawSqlQueryExecutor
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The single row, or the default of <typeparamref name="T"/> when the statement selects none.</returns>
     /// <exception cref="InvalidOperationException">The statement selected more than one row.</exception>
-    /// <exception cref="NotSupportedException">The host's default data source is not a relational engine.</exception>
     Task<T?> QuerySingleOrDefaultAsync<T>(FormattableString sql, CancellationToken cancellationToken = default);
 }

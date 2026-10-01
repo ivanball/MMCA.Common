@@ -78,8 +78,6 @@ public sealed class WrappedIdSqliteContext : ApplicationDbContext
 
     public DbSet<WrappedSpeaker> Speakers => Set<WrappedSpeaker>();
 
-    internal override bool SupportsOutbox => false;
-
     /// <summary>Creates the context over a fresh in-memory database.</summary>
     /// <returns>An open context whose schema has been created.</returns>
     public static WrappedIdSqliteContext Create()
@@ -110,8 +108,6 @@ public sealed class WrappedIdBareSqliteContext : ApplicationDbContext
     {
     }
 
-    internal override bool SupportsOutbox => false;
-
     /// <summary>Creates the context. Reading its model is what throws.</summary>
     /// <returns>The context.</returns>
     public static WrappedIdBareSqliteContext Create()
@@ -135,8 +131,6 @@ public sealed class WrappedIdSqlServerContext : ApplicationDbContext
     {
     }
 
-    internal override bool SupportsOutbox => false;
-
     /// <summary>Creates the context over an unreachable connection string; only its model is read.</summary>
     /// <returns>The context.</returns>
     public static WrappedIdSqlServerContext Create()
@@ -159,8 +153,6 @@ public sealed class WrappedIdPostgresContext : ApplicationDbContext
         : base(options, serviceProvider, new WrappedIdContextServices.NoAssemblies(), TestPhysicalDataSources.Postgres())
     {
     }
-
-    internal override bool SupportsOutbox => false;
 
     /// <summary>Creates the context over an unreachable connection string; only its model is read.</summary>
     /// <returns>The context.</returns>

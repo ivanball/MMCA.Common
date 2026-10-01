@@ -50,6 +50,32 @@ public abstract partial class ObservabilityConventionTestsBase
     /// </summary>
     protected virtual Assembly ResourceAssembly => GetType().Assembly;
 
+    /// <summary>
+    /// Whether the consumer's bicep must provision a monitoring view (an Azure Monitor workbook or a
+    /// portal dashboard) next to its alerts. Off by default, so a consumer that does not opt in keeps
+    /// exactly the alert-to-runbook checks it had.
+    /// </summary>
+    protected virtual bool RequireWorkbook => false;
+
+    /// <summary>
+    /// When <see cref="RequireWorkbook"/> is on, the bicep declares at least one
+    /// <c>Microsoft.Insights/workbooks</c> or <c>Microsoft.Portal/dashboards</c> resource, so the
+    /// signals the alerts fire on also have a place an operator can look at them.
+    /// </summary>
+    [Fact]
+    public void MonitoringWorkbookOrDashboard_IsProvisioned_WhenRequired()
+    {
+        if (!RequireWorkbook)
+        {
+            return;
+        }
+
+        var bicep = ReadEmbedded(BicepResource);
+
+        MonitoringViewResourceRegex.IsMatch(bicep).Should().BeTrue(
+            because: "a deployment that opts into RequireWorkbook must declare a Microsoft.Insights/workbooks or Microsoft.Portal/dashboards resource in its bicep, so the SLO signals have an operator-facing view (rubric section 13)");
+    }
+
     [Fact]
     public void SloAlertSpecs_AreDiscovered_GateIsNotVacuous()
     {
@@ -144,4 +170,7 @@ public abstract partial class ObservabilityConventionTestsBase
 
     [GeneratedRegex(@"^###\s+.*$", RegexOptions.Multiline, matchTimeoutMilliseconds: 2000)]
     private static partial Regex RunbookHeadingRegex { get; }
+
+    [GeneratedRegex(@"^\s*resource\s+\w+\s+'Microsoft\.(Insights/workbooks|Portal/dashboards)@[^']+'", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 2000)]
+    private static partial Regex MonitoringViewResourceRegex { get; }
 }

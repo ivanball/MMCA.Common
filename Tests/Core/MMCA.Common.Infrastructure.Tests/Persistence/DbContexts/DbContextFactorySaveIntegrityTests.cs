@@ -11,6 +11,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Messaging;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
@@ -147,10 +148,6 @@ public sealed class DbContextFactorySaveIntegrityTests : IDisposable
         {
         }
 
-        // No outbox: this fixture is about the save loop, not about event routing, and the local
-        // events then dispatch in-process on every save (which is what materializes the defect).
-        internal override bool SupportsOutbox => false;
-
         public static IntegrityTestDbContext Create(
             SqliteConnection connection,
             IDomainEventDispatcher dispatcher,
@@ -158,10 +155,14 @@ public sealed class DbContextFactorySaveIntegrityTests : IDisposable
         {
             var services = new ServiceCollection();
             services.AddSingleton(new AuditSaveChangesInterceptor(TimeProvider.System));
+            // No outbox: this fixture is about the save loop, not about event routing, and the local
+            // events then dispatch in-process on every save (which is what materializes the defect).
             services.AddSingleton(new DomainEventSaveChangesInterceptor(
                 dispatcher,
                 NullLogger<DomainEventSaveChangesInterceptor>.Instance,
-                Mock.Of<IOutboxSignal>(), timeProvider: TimeProvider.System));
+                Mock.Of<IOutboxSignal>(),
+                timeProvider: TimeProvider.System,
+                messageBusOptions: Options.Create(new MessageBusSettings { EnableOutbox = false })));
             services.AddSingleton<IEntityDataSourceRegistry>(new EmptyEntityDataSourceRegistry());
             IServiceProvider sp = services.BuildServiceProvider();
 

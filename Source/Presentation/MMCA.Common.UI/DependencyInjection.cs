@@ -92,8 +92,14 @@ public static class DependencyInjection
             services.AddTransient<AuthDelegatingHandler>();
             services.AddTransient<CultureDelegatingHandler>();
 
+            // Same-origin API proxy (TD-08 Option A): only a WebAssembly client whose Server host opted in
+            // receives Api:SameOriginApiEndpoint through /client-config, so every other host (Server, MAUI,
+            // a WASM client of a host that did not opt in) keeps the pipeline below unchanged.
+            var usesSameOriginProxy = !string.IsNullOrWhiteSpace(
+                configuration.GetSection(ApiSettings.SectionName)[nameof(ApiSettings.SameOriginApiEndpoint)]);
+
             // Named HttpClient used by all EntityServiceBase-derived services
-            services.AddHttpClient("APIClient", (serviceProvider, client) =>
+            var apiClient = services.AddHttpClient("APIClient", (serviceProvider, client) =>
             {
                 // No endpoint guard here: resolving IOptions<ApiSettings>.Value runs the
                 // ValidateDataAnnotations rules registered above, so a missing [Required] ApiEndpoint
@@ -103,7 +109,9 @@ public static class DependencyInjection
                 var apiSettings = serviceProvider.GetRequiredService<IOptions<ApiSettings>>().Value;
 
                 // Null-forgiving: the [Required] annotation above is what guarantees this is populated.
-                client.BaseAddress = new Uri(apiSettings.ApiEndpoint!, UriKind.Absolute);
+                // The same-origin proxy base, when the host serves one, replaces the gateway URL for data
+                // calls; the bootstrap has already resolved it to an absolute address.
+                client.BaseAddress = new Uri(apiSettings.SameOriginApiEndpoint ?? apiSettings.ApiEndpoint!, UriKind.Absolute);
 
                 // HttpClient's own default is 100s, chosen by the BCL with no knowledge of the
                 // resilience budget: it would cut a call off mid-policy at an arbitrary point.
@@ -115,6 +123,14 @@ public static class DependencyInjection
             })
                 .AddHttpMessageHandler<AuthDelegatingHandler>()
                 .AddHttpMessageHandler<CultureDelegatingHandler>();
+
+            if (usesSameOriginProxy)
+            {
+                // Innermost, so it sees (and strips) every Authorization header the outer handlers or a
+                // service's DefaultRequestHeaders attached, and stamps the proxy's CSRF header.
+                services.AddTransient<SameOriginProxyRequestHandler>();
+                apiClient.AddHttpMessageHandler<SameOriginProxyRequestHandler>();
+            }
 
             // Toast and confirm-dialog facades, factored out so a bUnit harness can register exactly
             // these two without pulling in the whole shared-UI surface.

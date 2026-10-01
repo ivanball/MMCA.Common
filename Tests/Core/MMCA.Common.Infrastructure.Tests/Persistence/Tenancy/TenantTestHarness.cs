@@ -84,8 +84,6 @@ public sealed class TenantTestContext : ApplicationDbContext
 
     public DbSet<AuditTrailEntry> TrailRows => Set<AuditTrailEntry>();
 
-    internal override bool SupportsOutbox => false;
-
     /// <summary>
     /// Creates a context over <paramref name="connection"/> whose tenant is whatever
     /// <paramref name="tenantAccessor"/> answers at the moment a query or save runs.

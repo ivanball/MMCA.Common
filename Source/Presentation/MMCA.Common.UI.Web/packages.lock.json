@@ -14,6 +14,15 @@
         "resolved": "5.6.0",
         "contentHash": "W4kJGezNIKLzo0Ak5FAQDFvkMf2U7DtGL4THmHyRSApfKsKt5V+eX/bU0ZLKAt/uf9Bb2o1bi0YDKj/GRB/vYQ=="
       },
+      "Microsoft.Extensions.ServiceDiscovery": {
+        "type": "Direct",
+        "requested": "[10.10.0, )",
+        "resolved": "10.10.0",
+        "contentHash": "YdTl+XNxLiy8OYCFsYuSKkTGE9VyBaJlL+hlN+g9fSLwn77z37mkkdsjMnw3JhUZLd5nHotl9yQMI4s57FX1Dw==",
+        "dependencies": {
+          "Microsoft.Extensions.ServiceDiscovery.Abstractions": "10.10.0"
+        }
+      },
       "Microsoft.VisualStudio.Threading.Analyzers": {
         "type": "Direct",
         "requested": "[18.7.23, )",
@@ -45,6 +54,15 @@
         "contentHash": "llRPgmA1fhC0I0QyFLEcjvtM2239QzKr/tcnbsjArLMJxJlu0AA5G7Fft0OI30pHF3MW63Gf4aSSsjc5m82J1Q==",
         "dependencies": {
           "StyleCop.Analyzers.Unstable": "1.2.0.556"
+        }
+      },
+      "Yarp.ReverseProxy": {
+        "type": "Direct",
+        "requested": "[2.3.0, )",
+        "resolved": "2.3.0",
+        "contentHash": "gxtkN3a+9biu9V9Zd5NaTO6VZWXAnS2mhQ0R/VXmSPoTuiQNZsakKikrKpDtKxrL5nUYzbRsHtl40WNq+ZBKKg==",
+        "dependencies": {
+          "System.IO.Hashing": "8.0.0"
         }
       },
       "Apache.Arrow": {
@@ -1107,15 +1125,6 @@
         "dependencies": {
           "Microsoft.Extensions.Http.Diagnostics": "10.10.0",
           "Microsoft.Extensions.Resilience": "10.10.0"
-        }
-      },
-      "Microsoft.Extensions.ServiceDiscovery": {
-        "type": "CentralTransitive",
-        "requested": "[10.10.0, )",
-        "resolved": "10.10.0",
-        "contentHash": "YdTl+XNxLiy8OYCFsYuSKkTGE9VyBaJlL+hlN+g9fSLwn77z37mkkdsjMnw3JhUZLd5nHotl9yQMI4s57FX1Dw==",
-        "dependencies": {
-          "Microsoft.Extensions.ServiceDiscovery.Abstractions": "10.10.0"
         }
       },
       "Microsoft.FeatureManagement": {

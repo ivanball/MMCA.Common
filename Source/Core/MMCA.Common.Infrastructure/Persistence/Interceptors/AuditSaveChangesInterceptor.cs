@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 
 namespace MMCA.Common.Infrastructure.Persistence.Interceptors;
@@ -56,7 +56,7 @@ public sealed class AuditSaveChangesInterceptor(TimeProvider timeProvider) : Sav
     {
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var resolvedUserId = context.CurrentSaveUserId ?? default;
-        var stampsRowVersion = context.DataSourceKey.Engine is DataSource.PostgreSQL or DataSource.Sqlite;
+        var stampsRowVersion = context.Engine.Capabilities.RowVersion == RowVersionStrategy.ClientStamped;
 
         foreach (var entry in context.ChangeTracker.Entries<IAuditableEntity>())
         {

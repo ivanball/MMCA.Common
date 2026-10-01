@@ -26,7 +26,7 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// <param name="authenticator">Runs the challenge, spending a recovery code when one is presented.</param>
 /// <param name="store">Clears the account's two-factor state.</param>
 /// <param name="logger">Logger for the audit line.</param>
-public abstract class DisableTwoFactorHandlerBase<TCommand>(
+public abstract partial class DisableTwoFactorHandlerBase<TCommand>(
     ITwoFactorAuthenticator authenticator,
     ITwoFactorStore store,
     ILogger logger) : ICommandHandler<TCommand, Result>
@@ -65,8 +65,11 @@ public abstract class DisableTwoFactorHandlerBase<TCommand>(
             return disabled;
         }
 
-        UserUseCaseLog.TwoFactorDisabled(logger, command.UserId);
+        TwoFactorDisabled(logger, command.UserId);
 
         return Result.Success();
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor authentication disabled for user {UserId}")]
+    private static partial void TwoFactorDisabled(ILogger logger, UserIdentifierType userId);
 }

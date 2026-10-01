@@ -164,8 +164,6 @@ public sealed class EFRepositoryAuditStampTests : IDisposable
         {
         }
 
-        internal override bool SupportsOutbox => false;
-
         public static StampTestDbContext Create(SqliteConnection connection)
         {
             var services = new ServiceCollection();

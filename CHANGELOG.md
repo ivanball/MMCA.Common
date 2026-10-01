@@ -4,6 +4,65 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.218.0] - 2026-10-01
+
+### Breaking
+
+- **Breaking:** constructor changes on `AuthenticationServiceBase<TUser>` and six infrastructure services, a renamed unit-of-work member, a conditional `IRawSqlQueryExecutor` registration, a SQLite index-filter change, a fail-closed CSV export, `RefreshSession` setters, the bundled Bootstrap CSS removed, two `[EditorRequired]` parameters and two new `ICookieSessionRefresher` members. Map and fix: UPGRADING.md, [1.218.0].
+  - `AuthenticationServiceBase<TUser>` takes `(IUnitOfWork, IPasswordHasher, ILoginProtectionService, AuthenticationValidators, IAuthSessionIssuer, ITwoFactorAuthenticator? = null, IOptions<EmailConfirmationSettings>? = null)`. `ITokenService`, `TimeProvider`, `IRefreshSessionStore` and `IOptions<RefreshSessionSettings>` moved to the new `IAuthSessionIssuer` / `AuthSessionIssuer` (`MMCA.Common.Application.Auth.Sessions`, registered scoped by `AddInfrastructure`), which owns refresh-session issue, BR-205 rotation, BR-206 reuse detection, the per-user cap, sign-out, session listing and revoke-by-id. The protected members `TimeProvider`, `RefreshSessions`, `AccessTokenLifetime`, `RefreshTokenLifetime` and `MaxActiveSessionsPerUser` are removed; `TokenService`, `UnitOfWork` and `Repository` stay.
+  - `IUnitOfWork.RequestIdentityInsert()` is renamed `RequestExplicitKeyInsert()` (also on `IDbContextFactory` and `DbContextFactory`). No alias.
+  - `IRawSqlQueryExecutor` is registered only when the host's default data source is on a relational engine. A Cosmos-default host that injects it fails at container validation instead of throwing `NotSupportedException` on the first statement.
+  - SQLite filtered-index predicates quote identifiers with double quotes, matching the SQLite soft-delete filter: the outbox (`ProcessedOn`, `OrderingKey`), internal-command (`ProcessedOn`, `DeadLetteredOn`) and push-notification (`DedupKey`) index filters change from `[Column]` to `"Column"`. A SQLite consumer with migrations sees a model diff.
+  - `OutboxProcessor`, `InternalCommandProcessor`, `OutboxCleanupService`, `InternalCommandCleanupService`, `OutboxAdministration` and `InternalCommandAdministration` take the new `FrameworkTableTargets` (registered singleton) in place of `IEntityDataSourceRegistry` + `IDataSourceResolver` + `IOptions<TenancySettings>?`.
+  - `EntityControllerBase.ExportAsync` is fail-closed: when `GetReadSpecificationAsync` resolves to null and the controller does not override `AllowUnscopedExport`, the export answers 403 `Export.RowScopeRequired` (`ExportRowScopeRequiredErrorCode`) without querying.
+  - `RefreshSession.IpAddress` and `UserAgent` move from `init` to `private set` (both carry `[Pii]`; `RefreshSession` implements `IAnonymizable`).
+  - `MMCA.Common.UI` no longer ships `wwwroot/lib/bootstrap`; the CSS-only hamburger class `.navbar-toggler` is renamed `.nav-toggler`.
+  - `PageHeader.Title` and `MobileCardList.Items` are `[EditorRequired]` (RZ2012 is an error under `TreatWarningsAsErrors`).
+  - `ICookieSessionRefresher` gains `RefreshAsync(HttpContext, CancellationToken)`, a forced refresh that ignores the current access token's expiry, and `ValidateOrRefreshAsync(HttpContext, CancellationToken)`, the validate-or-refresh step; both return a `SessionRefreshOutcome` whose `SessionRefreshStatus` separates `Refreshed`, `Rejected` (no refresh cookie, or the identity endpoint answered 400/401/403) and `Unavailable` (5xx, 429, timeout, network; carries the upstream `Retry-After`). `GetOrRefreshAsync` is unchanged.
+
+### Added
+
+- Opt-in same-origin API proxy for Blazor Web hosts (`MMCA.Common.UI.Web.SameOriginProxy`): `AddCommonSameOriginApiProxy(configuration)` plus `MapCommonSameOriginApiProxy()` serve `/api/**` on the UI host's own origin and forward to the gateway through YARP's `IHttpForwarder`, attaching the bearer from the HttpOnly session cookie server-side, so the browser never holds a usable token. The proxy serves only same-origin browser traffic: a request whose `Origin` is not the host's own origin (scheme, host and port as the app sees them after `UseCommonUiForwardedHeaders`), or whose `Sec-Fetch-Site` is not `same-origin` (`none` allowed on GET/HEAD), is refused 403 before forwarding, a WebSocket upgrade must carry the host's own `Origin`, and `OPTIONS` is answered locally (204, no CORS grant) and never forwarded. Unsafe methods also need `X-CSRF: 1` (403 otherwise); a safe method answered 401 gets one forced refresh and replay; a refresh refused by the identity endpoint clears the cookies and answers 401, while one that could not be decided (5xx, 429, timeout) keeps them and answers 503 with `Retry-After`; login, register and OAuth exchange responses reach the browser with an unsigned claims-only access token (`SessionClaimsToken`) and an empty refresh token; refresh is answered locally and revoke clears the cookies. Opted-in hosts get `SameSite=Strict`, claims-only session cookies (`SessionCookieSettings`) and protected one-minute handoffs for the Blazor Server circuit. `/client-config` adds `api.sameOriginApiEndpoint` (`ApiSettings.SameOriginApiEndpoint`), and the WebAssembly `APIClient`, the notification hub and `ApiFileDownloadButton` target the proxy. Settings section `SameOriginApiProxy` (`PathPrefix` `/api`, `GatewayAddress` defaulting to `Api:ApiEndpoint`, `SessionCookieSameSite` `Strict`, `AdditionalTokenIssuingPaths`, `RefreshPath`, `RevokePath`). Hosts that do not opt in are unchanged.
+- `ISessionCookieStore` (`Write`, `Clear`) and `SessionClaimsToken.Create` in `MMCA.Common.API.SessionCookies`.
+- `.github/actions/wasm-payload-budget`: composite action that publishes a Blazor WebAssembly head, sums the `*.br` files under `wwwroot/_framework`, writes a step-summary table (total, budget, headroom, ten largest files) and fails over `budget-kb`. Fails closed on a failed publish, a missing `_framework` folder or no `.br` files. No consumer wiring here.
+- `IAuthSessionIssuer` / `AuthSessionIssuer` and `FrameworkTableTargets` (see Breaking); `PhysicalDataSource.IsMigrationTarget`, the one migration-target rule shared by `DbContextFactory` and the API startup initializer.
+- `PasswordComplexity` (`MMCA.Common.Shared.Auth`): the one Unicode-aware strong-password definition (`\p{Lu}`, `\p{Ll}`, `\p{Nd}`, `[^\p{L}\p{Nd}]`, 8 to 128 characters) that `StrongPasswordRules` and `PasswordComplexityAttribute` both evaluate.
+- `LocalizedDataAnnotationsValidator` (`MMCA.Common.UI.Validation`): drop-in for the stock `DataAnnotationsValidator` that resolves model attributes declaring resource keys; the Register, Login, ForgotPassword and ResetPassword forms use it (`Auth.Field.*` keys, Spanish translations added, English wording unchanged).
+- `RefreshSession.Anonymize()`: clears `IpAddress` and `UserAgent`, keeps the hashes and the revocation chain; idempotent.
+- `EntityControllerBase.AllowUnscopedExport` (virtual, read per request) and `ExportRowScopeRequiredErrorCode`.
+- `PRIVACY.md`: what the framework provides and what the consumer owns for personal data; linked from README.md and SECURITY.md.
+- `BrandColors`: every hex in `MMCATheme` (light and dark) is a named constant.
+- Sample deployment: `samples/deployment/main.bicep` provisions an SLO workbook (`Microsoft.Insights/workbooks`) on the alerts' Log Analytics workspace, one tile per `sloAlertSpecs` entry running that spec's own KQL; OPERATIONS.md points operators at it.
+- Weekly load tier: out-of-slnx `Tests/Performance/MMCA.Common.LoadTests` (outbox drain of 10,000 events at >= 500 msg/s, paged queries at 100,000 rows, 50 concurrent paged reads at p95 <= 750 ms) run by `load-tests.yml` on Sunday 04:17 UTC and on `workflow_dispatch`.
+- Testing.Architecture: `ObservabilityConventionTestsBase.RequireWorkbook` (default false) with `MonitoringWorkbookOrDashboard_IsProvisioned_WhenRequired`; `ConstructorDependencyCountTestsBase` gains virtual `ScannedServices`, `ScannedControllers`, `ScannedHandlers` and `MeasuredConstructors`. Defaults leave consumer subclasses unchanged.
+- Gates in this repository: `FrameworkConstructorDependencyTests` (services ceiling 7 over Application and Infrastructure, positional records excluded), `EntityConventionTests` / `ImmutabilityTests` / `TenantEntityConventionTests` over the framework assemblies, `PiiConventionTests`, `PasswordRuleParityTests`, `EditorRequiredParameterConventionTests`, the workbook requirement on `SampleDeploymentObservabilityTests`, and `DataSourceBranchingFitnessTests`, which fails on a concrete `DataSource` value or engine context type named outside an allow-list of 24 files (ADR-130).
+
+### Changed
+
+- Engine-specific behavior reads the per-engine `IDataSourceEngine` (internal, `DataSourceEngines.For`) instead of branching on the `DataSource` enum or sniffing the EF provider name: resolver, physical sources, include support, tenant sweep targets, context creation, model building, soft-delete filter, conventions, audit row-version stamp, read repository, transactions, migration targets and the startup initializer (ADR-130). The SQL Server identity-insert path is that engine's `IExplicitKeyInsertDialect`.
+- Constructor width: `OutboxProcessor` 8 to 6, `InternalCommandProcessor` 8 to 6, `InternalCommandScheduler` 9 to 7 (origin snapshot moved to an internal `InternalCommandOriginCapture`), `OutboxCleanupService` 8 to 6, `InternalCommandAdministration` 8 to 6, `OutboxAdministration` 7 to 5, `InternalCommandCleanupService` 7 to 5, `AuditTrailCleanupJob` 7 to 6, `AuthenticationServiceBase` 10 to 7.
+- **Behavior change:** the server and the client form now apply the same password rule. An accented or CJK letter counts as a letter, never as the special character, so a new password whose only special character was a non-ASCII letter is now rejected by both; a non-ASCII uppercase, lowercase or digit now satisfies its class. Existing password hashes are unaffected.
+- The per-device sign-out and "Sign out everywhere" on the Sessions page ask for confirmation first; declining revokes nothing.
+- NavMenu: the brand row is a plain flex row styled by `NavMenu.razor.css` instead of Bootstrap's `navbar` classes; the CSS-only hamburger shows a focus-visible ring. `app.css` drops the Bootstrap template rules and reads the sidebar background, focus ring, input states and heading colour from the MudBlazor palette variables; the undefined `--mmca-accent` fallback is replaced by `--mmca-primary-light`. The UI.Web Error page uses `MudText`.
+- User use-case log messages live on the handler bases that emit them; `UserUseCaseLog` is deleted. Method names, levels and templates are unchanged, so every EventId and EventName is unchanged.
+- `build/LocalSource/MMCA.Common.LocalSource.targets` also swaps the `MMCA.Common` metapackage: the `MMCA.Common.*.csproj` glob missed the bare name, so the swap list now has 22 entries.
+- CS1591 (missing XML doc) is suppressed per project instead of repo-wide (FR-7 ratchet): each project that still emits it carries its own commented `NoWarn`, so a fully documented project cannot regress.
+- Web vitals E2E ceilings tighten to the good band (LCP 2500, FCP 1800, TTFB 800, CLS 0.1, INP 200), and an INP sample within 200 ms is required on `/login`, `/components` and `/grid`.
+- SECURITY.md names `AddCommonKeyVaultConfiguration()` and its `KeyVault:Uri` gate in the consumer duties.
+
+### Fixed
+
+- Fixed: `ApiFileDownloadButton` links through the same-origin proxy on the WebAssembly client of an opted-in host. A plain anchor carries cookies but never an `Authorization` header, so the gateway link could not authenticate there; hosts that did not opt in render the same gateway URL as before.
+- Fixed: `PasswordComplexityAttribute` no longer throws `NullReferenceException` from the context-free `IsValid(object)` overload.
+- Fixed: SQLite `QuoteColumn` quotes identifiers with double quotes, matching its soft-delete filter (see Breaking for the model diff).
+
+### Removed
+
+- `MMCA.Common.UI/wwwroot/lib/bootstrap` (see Breaking).
+- `AuthenticationServiceBase` protected members `TimeProvider`, `RefreshSessions`, `AccessTokenLifetime`, `RefreshTokenLifetime`, `MaxActiveSessionsPerUser` (see Breaking).
+- `IUnitOfWork.RequestIdentityInsert()` / `IDbContextFactory.RequestIdentityInsert()` (renamed, see Breaking).
+- The internal `ApplicationDbContext.SupportsOutbox` (outbox support is the engine's relational capability) and the internal `UserUseCaseLog`. No public API impact.
+
 ## [1.217.0] - 2026-10-01
 
 ### Breaking

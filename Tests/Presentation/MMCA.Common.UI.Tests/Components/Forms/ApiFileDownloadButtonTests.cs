@@ -50,6 +50,37 @@ public sealed class ApiFileDownloadButtonTests : BunitTestBase
     }
 
     [Fact]
+    public void OnWeb_WhenTheHostRunsTheSameOriginProxy_LinksThroughTheProxy()
+    {
+        // A plain anchor carries cookies, never an Authorization header, and an opted-in browser holds
+        // only a claims copy of the token: the download must reach the proxy, which attaches the real
+        // bearer from the HttpOnly session cookie.
+        ArrangeWebHead();
+        Services.AddSingleton(Options.Create(new ApiSettings
+        {
+            ApiEndpoint = "https://gateway.test/",
+            SameOriginApiEndpoint = "https://app.test/api/",
+        }));
+
+        var cut = RenderButton();
+
+        cut.Find("a").GetAttribute("href").Should().Be("https://app.test/api/Sessions/42/ics");
+    }
+
+    [Fact]
+    public void OnWeb_WhenTheHostDoesNotRunTheProxy_LinksStraightToTheGateway()
+    {
+        // The WASM client of a host that did not opt in: no SameOriginApiEndpoint, so the anchor keeps
+        // the gateway URL exactly as before.
+        ArrangeWebHead();
+        Services.AddSingleton(Options.Create(new ApiSettings { ApiEndpoint = "https://gateway.test/" }));
+
+        var cut = RenderButton();
+
+        cut.Find("a").GetAttribute("href").Should().Be("https://gateway.test/Sessions/42/ics");
+    }
+
+    [Fact]
     public void OnWeb_WithoutAnAriaLabel_FallsBackToTheLocalizedDefault()
     {
         ArrangeWebHead();

@@ -104,10 +104,8 @@ public sealed class TenantDataSourceTargetTests
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(new OutboxSettings()),
             Mock.Of<IOutboxSignal>(),
-            RegistryWith(Default),
-            ResolverFor(Default),
-            TimeProvider.System,
-            Options.Create(TenancyOverriding("Default")));
+            new FrameworkTableTargets(RegistryWith(Default), ResolverFor(Default), Options.Create(TenancyOverriding("Default"))),
+            TimeProvider.System);
 
         processor.GetOutboxTargets().Should().Equal(
             new TenantDataSourceTarget(Default, null),
@@ -122,10 +120,8 @@ public sealed class TenantDataSourceTargetTests
             NullLogger<OutboxCleanupService>.Instance,
             Options.Create(new OutboxSettings()),
             Options.Create(new MessageBusSettings()),
-            RegistryWith(Default),
-            ResolverFor(Default),
-            TimeProvider.System,
-            Options.Create(TenancyOverriding("Default")));
+            new FrameworkTableTargets(RegistryWith(Default), ResolverFor(Default), Options.Create(TenancyOverriding("Default"))),
+            TimeProvider.System);
 
         cleanup.GetRelationalTargets().Should().Equal(
             new TenantDataSourceTarget(Default, null),
@@ -140,8 +136,7 @@ public sealed class TenantDataSourceTargetTests
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(new OutboxSettings()),
             Mock.Of<IOutboxSignal>(),
-            RegistryWith(Default),
-            ResolverFor(Default),
+            new FrameworkTableTargets(RegistryWith(Default), ResolverFor(Default)),
             TimeProvider.System);
 
         processor.GetOutboxTargets().Should().Equal(new TenantDataSourceTarget(Default, null));
