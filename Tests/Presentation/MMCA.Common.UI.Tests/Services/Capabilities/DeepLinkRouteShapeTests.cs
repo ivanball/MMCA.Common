@@ -69,4 +69,24 @@ public sealed class DeepLinkRouteShapeTests
     [InlineData("/ok", true)]
     public void IsAppRelativeRoute_IsHostileInputTolerant(string? route, bool expected)
         => DeepLinkDispatcher.IsAppRelativeRoute(route).Should().Be(expected);
+
+    // [NotNullWhen(true)]: a native head checks a nullable route and hands it straight to Publish
+    // (a non-nullable parameter) with no separate null check and no '!'. Without the attribute this
+    // call site does not compile warning-free, so the compiler is the regression test.
+    [Fact]
+    public void IsAppRelativeRoute_True_ProvesTheRouteIsNotNull()
+    {
+        var sut = new DeepLinkDispatcher();
+        string? route = PlatformRoute();
+
+        if (DeepLinkDispatcher.IsAppRelativeRoute(route))
+        {
+            sut.Publish(route);
+        }
+
+        sut.TryConsumePending(out var pending).Should().BeTrue();
+        pending.Should().Be("/happening-now");
+    }
+
+    private static string? PlatformRoute() => "/happening-now";
 }

@@ -12,7 +12,9 @@ namespace MMCA.Common.Application.UseCases.Decorators;
 /// On success the transaction is committed; on any exception it is rolled back before
 /// the exception propagates. This ensures atomicity for multi-step mutations (e.g. creating
 /// an order with inventory reservations) without requiring explicit transaction management
-/// in each handler.
+/// in each handler. The handler still saves its own work; at commit, only an internal-command row
+/// scheduled after its last save is flushed, and any other unsaved change fails the command (see
+/// <see cref="IUnitOfWork.ExecuteInTransactionAsync{TResult}"/>).
 /// </para>
 /// </summary>
 /// <typeparam name="TCommand">The command type.</typeparam>

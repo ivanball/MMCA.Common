@@ -34,6 +34,22 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.215.0] - 2026-09-30
+
+**Behavior change: a transactional unit no longer commits while changes are left unsaved.** At the
+end of an `ITransactional` command or an explicit `IUnitOfWork.ExecuteInTransactionAsync`, the
+pipeline now inspects what is still tracked before committing:
+
+- An internal-command row scheduled after the handler's last save is saved there, inside the
+  transaction, so it commits with the aggregate change. Before, it was silently discarded.
+- Any OTHER tracked change still unsaved throws `InvalidOperationException` and rolls the whole unit
+  back. Before, the commit silently discarded it while the command reported success.
+
+Mechanical fix for a handler that now throws: save before returning (`await
+unitOfWork.SaveChangesAsync(ct)` after the last mutation). A save you added only to flush a
+scheduled internal command (the workaround for the dropped row) is no longer needed and can be
+removed.
+
 ## [1.213.0] - 2026-09-30
 
 **Bug-hunt 2026-09-30 remediation: new required constructor parameters, three interface members and

@@ -10,6 +10,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
@@ -611,6 +612,9 @@ public sealed class DbContextFactory(
                 return (result, null);
             }
 
+            // A throw from here is caught below and rolls the whole unit back.
+            await FlushEnrolledCommandsBeforeCommitAsync(cancellationToken).ConfigureAwait(false);
+
             var commitFailure = TryCommit();
             if (commitFailure is not null)
                 return (result, commitFailure);
@@ -648,6 +652,44 @@ public sealed class DbContextFactory(
             RollbackTransaction();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Applies the commit rule to whatever the operation left tracked but unsaved. An internal
+    /// command scheduled while the transaction is open is only ENROLLED on the context (it commits
+    /// with the caller's change or not at all), so when every pending entry is such an enrolled row
+    /// the unit is saved here, inside the transaction, and the row commits with the rest. Any other
+    /// unsaved change throws: committing would silently discard it while the unit reports success,
+    /// the same loss <see cref="SaveChangesAsync"/> already refuses at the end of a save.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>A task representing the flush.</returns>
+    private async Task FlushEnrolledCommandsBeforeCommitAsync(CancellationToken cancellationToken)
+    {
+        var dirty = _dbContexts
+            .Where(entry => entry.Value.ChangeTracker.HasChanges())
+            .ToArray();
+
+        if (dirty.Length == 0)
+            return;
+
+        var unsavedOther = dirty
+            .SelectMany(entry => entry.Value.ChangeTracker.Entries()
+                .Where(e => e.State is not EntityState.Unchanged and not EntityState.Detached
+                    && !(e.State == EntityState.Added && e.Entity is InternalCommandMessage))
+                .Select(e => $"{entry.Key}: {e.Metadata.ClrType.Name} ({e.State})"))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (unsavedOther.Length > 0)
+        {
+            throw new InvalidOperationException(
+                "The transactional unit finished with unsaved changes still tracked: "
+                + string.Join(", ", unsavedOther)
+                + ". Committing would have discarded them while reporting success; save them before the operation returns.");
+        }
+
+        await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

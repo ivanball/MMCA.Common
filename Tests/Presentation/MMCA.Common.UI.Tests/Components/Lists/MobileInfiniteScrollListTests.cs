@@ -200,6 +200,39 @@ public sealed class MobileInfiniteScrollListTests : BunitTestBase
         page2Attempts.Should().Be(2, "the retry must re-fetch the page that failed");
     }
 
+    // The first page failing used to fall through to the empty state (the inline error and its Retry
+    // only rendered once some items existed), leaving a mobile reader with "no records" and no way to
+    // recover short of leaving the page.
+    [Fact]
+    public async Task WhenTheFirstPageFails_ShowsAnInlineRetry_ThenRecoversOnRetry()
+    {
+        var page1Attempts = 0;
+
+        Task<Result<(IReadOnlyList<string> Items, int TotalItems)>> Fetch(int page, int pageSize, CancellationToken ct)
+        {
+            page1Attempts++;
+            return page1Attempts == 1
+                ? Task.FromResult(Result.Failure<(IReadOnlyList<string>, int)>(
+                    Error.NotFoundError("Catalog.Unavailable", "The catalog is unavailable.")))
+                : Task.FromResult(Result.Success<(IReadOnlyList<string>, int)>((["Alpha"], 1)));
+        }
+
+        var cut = RenderUnderTest<MobileInfiniteScrollList<string>>(p => p
+            .Add(c => c.CardTemplate, item => item)
+            .Add(c => c.FetchPageResult, Fetch)
+            .Add(c => c.EmptyMessage, "Nothing here"));
+
+        cut.Markup.Should().Contain("The catalog is unavailable.")
+            .And.NotContain("Nothing here", "a failed load is not an empty list");
+        cut.Find("[role=alert]").Should().NotBeNull();
+
+        await cut.FindButtonByText("Retry").ClickAsync(new MouseEventArgs());
+
+        await cut.WaitForAssertionAsync(() => cut.Markup.Should().Contain("Alpha"));
+        cut.Markup.Should().NotContain("The catalog is unavailable.");
+        page1Attempts.Should().Be(2, "the retry must re-fetch the first page");
+    }
+
     [Fact]
     public async Task WhenFetchIsCancelled_RendersNoErrorState()
     {
