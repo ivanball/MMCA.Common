@@ -32,6 +32,115 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
+## [1.218.0] - 2026-10-01
+
+**Constructor changes on `AuthenticationServiceBase<TUser>` and six infrastructure services, a
+renamed unit-of-work member, a conditional `IRawSqlQueryExecutor` registration, a SQLite
+index-filter change, a fail-closed CSV export, `RefreshSession` setters, the bundled Bootstrap CSS
+removed, two `[EditorRequired]` parameters and a new `ICookieSessionRefresher` member.** A host that
+resolves the framework services from DI changes nothing for the six infrastructure constructors;
+every other item is listed with its own fix. The same-origin API proxy is new and opt-in; its wiring
+closes this section.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `AuthenticationServiceBase<TUser>(unitOfWork, tokenService, passwordHasher, loginProtection, timeProvider, validators, refreshSessions, refreshSessionSettings, twoFactor = null, emailConfirmationSettings = null)` | `AuthenticationServiceBase<TUser>(unitOfWork, passwordHasher, loginProtection, validators, IAuthSessionIssuer sessionIssuer, twoFactor = null, emailConfirmationSettings = null)` |
+| protected `TimeProvider`, `RefreshSessions`, `AccessTokenLifetime`, `RefreshTokenLifetime`, `MaxActiveSessionsPerUser` | removed (internal to `AuthSessionIssuer`); `TokenService`, `UnitOfWork`, `Repository` stay |
+| `IUnitOfWork.RequestIdentityInsert()` (also `IDbContextFactory`, `DbContextFactory`) | `RequestExplicitKeyInsert()` |
+| `IRawSqlQueryExecutor` always registered; throws `NotSupportedException` on a Cosmos default | registered only when the default data source is relational |
+| SQLite filtered-index predicates on `OutboxMessages` (`ProcessedOn`, `OrderingKey`), `InternalCommands` (`ProcessedOn`, `DeadLetteredOn`) and push notifications (`DedupKey`) quote `[Column]` | quote `"Column"`, for example `"DedupKey" IS NOT NULL` |
+| `OutboxProcessor`, `InternalCommandProcessor`, `OutboxCleanupService`, `InternalCommandCleanupService`, `OutboxAdministration`, `InternalCommandAdministration` take `IEntityDataSourceRegistry`, `IDataSourceResolver`, `IOptions<TenancySettings>? = null` | take one `FrameworkTableTargets tableTargets` in their place |
+| `ExportAsync` with a null read specification streams the whole table | 403 `Export.RowScopeRequired` unless `AllowUnscopedExport` is overridden to `true` |
+| `RefreshSession.IpAddress { get; init; }`, `UserAgent { get; init; }` | `{ get; private set; }` |
+| `_content/MMCA.Common.UI/lib/bootstrap/dist/css/bootstrap.min.css` | removed |
+| `.navbar-toggler` | `.nav-toggler` |
+| `PageHeader.Title`, `MobileCardList.Items` optional | `[EditorRequired]` |
+| `ICookieSessionRefresher { GetOrRefreshAsync }` | `+ Task<SessionTokenResult?> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)` |
+
+The mechanical fix:
+
+1. **`AuthenticationServiceBase<TUser>` subclasses.** Change the primary constructor to take
+   `IAuthSessionIssuer sessionIssuer` (`using MMCA.Common.Application.Auth.Sessions;`) in place of
+   `ITokenService`, `TimeProvider`, `IRefreshSessionStore` and `IOptions<RefreshSessionSettings>`, and
+   pass `(unitOfWork, passwordHasher, loginProtection, validators, sessionIssuer, twoFactor,
+   emailConfirmationSettings)` to the base. `AddInfrastructure` registers `IAuthSessionIssuer`
+   scoped, so a DI-resolved subclass needs nothing else. A subclass that read the removed members
+   injects what it needs itself (`TimeProvider`, `IRefreshSessionStore`) or calls the issuer
+   (`ListActiveAsync`, `RevokeSessionAsync`, `SignOutAsync`, `SignOutEverywhereAsync`). An override of
+   the token lifetimes or the session cap becomes configuration: `Jwt:AccessTokenExpirationMinutes`,
+   `Jwt:RefreshTokenExpirationDays`, `RefreshSessions:MaxActiveSessionsPerUser`. A hand-built
+   subclass (tests) constructs `new AuthSessionIssuer(tokenService, refreshSessions,
+   refreshSessionSettings, timeProvider)` and passes it.
+2. **`RequestIdentityInsert()`.** Replace every call with `RequestExplicitKeyInsert()`; behavior is
+   unchanged (SET IDENTITY_INSERT on SQL Server, a no-op on the engines that need none).
+3. **`IRawSqlQueryExecutor` on a Cosmos default.** A host whose default source is Cosmos and that
+   injects `IRawSqlQueryExecutor` now fails at container validation. Remove the dependency, or
+   resolve it optionally (`serviceProvider.GetService<IRawSqlQueryExecutor>()`) where a relational
+   source may be absent. Relational hosts change nothing.
+4. **SQLite consumers with migrations.** The filtered outbox, internal-command and
+   push-notification `DedupKey` index predicates now quote with double quotes. Add a migration per
+   SQLite source (`dotnet ef migrations add QuoteSqliteIndexFilters -- --datasource <Name>`) and
+   apply it, or regenerate the model snapshot where the source is not migrated. The index columns
+   and semantics are unchanged.
+   SQL Server, PostgreSQL and Cosmos sources change nothing.
+5. **Hand-built outbox and internal-command services (tests, custom composition).** Replace the
+   three arguments `entityDataSourceRegistry, dataSourceResolver, tenancyOptions` with
+   `new FrameworkTableTargets(entityDataSourceRegistry, dataSourceResolver, tenancyOptions)`
+   (`using MMCA.Common.Infrastructure.Persistence.DataSources;`), in the parameter position the map
+   above shows. `AddInfrastructure` registers it singleton.
+6. **CSV export (fail-closed).** A controller whose `GetReadSpecificationAsync` returns null and that
+   intends a whole-table export adds `protected override bool AllowUnscopedExport => true;` (read per
+   request, so it may depend on the principal). Every other controller either returns a scoping
+   specification or accepts the 403 `Export.RowScopeRequired`; a client calling the export should
+   handle that 403.
+7. **`RefreshSession.IpAddress` / `UserAgent`.** Code that set them in an object initializer passes
+   them to `RefreshSession.Create(...)` instead; clearing them is `Anonymize()`.
+8. **Bootstrap CSS.** Delete the `<link>` to `_content/MMCA.Common.UI/lib/bootstrap/dist/css/bootstrap.min.css`
+   from the Blazor Web `App.razor` and from the MAUI and WebAssembly `index.html`. Rename any CSS
+   override, script or E2E selector targeting `.navbar-toggler` to `.nav-toggler`. A consumer page
+   that still uses Bootstrap utility or component classes either restyles with MudBlazor or ships
+   its own Bootstrap copy.
+9. **`[EditorRequired]` parameters.** Pass `Title` on every `<PageHeader>` and `Items` on every
+   `<MobileCardList>`; an omission is RZ2012, an error under `TreatWarningsAsErrors`. Every
+   first-party usage already passes both.
+10. **`ICookieSessionRefresher` implementations** (test fakes): add `RefreshAsync`, a forced
+    refresh that ignores the current access token's expiry and returns null when the session cannot
+    be refreshed.
+11. **Password rule (behavior change, no code change).** The server and the client form evaluate the
+    same Unicode-aware `PasswordComplexity`: a new password whose only special character is a
+    non-ASCII letter is now rejected. Update any help text or seeded test password that relied on
+    it. Existing hashes are unaffected.
+
+**Opting in to the same-origin API proxy (optional, Blazor Web hosts).** In the UI host's
+`Program.cs`:
+
+1. Register `AddCommonSameOriginApiProxy(builder.Configuration)` (`using
+   MMCA.Common.UI.Web.SameOriginProxy;`) AFTER `AddServerAuthSessionCookie(...)`,
+   `AddClientAuthSessionCookieSync()`, `AddCommonServerTokenStorage()` and any host
+   `ITokenRefresher` registration: it replaces the Server circuit's `ITokenRefresher` and
+   `ISessionCookieSync`, and `MapCommonSameOriginApiProxy()` fails the boot naming the registration
+   that displaced them.
+2. Map `app.MapCommonSameOriginApiProxy();` next to `app.MapSessionCookieEndpoints();`, after
+   `UseAuthorization`.
+3. Configure the `SameOriginApiProxy` section only where a default does not fit: `PathPrefix`
+   (`/api`), `GatewayAddress` (defaults to `Api:ApiEndpoint`, service-discovery names included),
+   `SessionCookieSameSite` (`Strict`), `AdditionalTokenIssuingPaths` (for example `auth/2fa/verify`),
+   `RefreshPath` (`auth/refresh`), `RevokePath` (`auth/revoke`).
+4. Expect the session cookies to become `SameSite=Strict` and claims-only toward script:
+   `/auth/session/token` returns an unsigned claims copy, `POST /auth/session-cookie` ignores
+   script-supplied tokens, and `/client-config` adds `api.sameOriginApiEndpoint`, which switches the
+   WebAssembly `APIClient`, the notification hub and `ApiFileDownloadButton` to the proxy. Client
+   code that sends its own requests to the proxy adds `X-CSRF: 1` on every unsafe method
+   (`SameOriginProxyHeaders`); the `APIClient` does it already. Client code that decoded the
+   browser-held access token keeps working for claims but can no longer present it to the gateway.
+5. Optionally gate the WebAssembly download size in CI with the composite action
+   `uses: ivanball/MMCA.Common/.github/actions/wasm-payload-budget@main` (inputs `project`, `budget-kb`,
+   optional `configuration`, `output-dir`).
+
+A host that does not call `AddCommonSameOriginApiProxy` is unchanged.
+
 ## [1.217.0] - 2026-10-01
 
 **`AddCommonOpenApi()` no longer registers an OpenAPI document; the host registers it with its own
