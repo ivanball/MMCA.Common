@@ -283,6 +283,73 @@ resource sloAlerts 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' =
   }
 ]
 
+// SLO workbook (§13): the operator-facing view of the same four signals. Every tile is generated
+// from sloAlertSpecs and runs that spec's own KQL against the same workspace the rules scope to, so
+// adding an alert adds its tile and a tile cannot drift from the query that pages. The time range
+// defaults to the 15-minute window the rules evaluate; widen it in the portal to see the trend.
+var sloWorkbookTiles = [
+  for spec in sloAlertSpecs: {
+    type: 3
+    name: 'slo-${spec.key}'
+    content: {
+      version: 'KqlItem/1.0'
+      title: '${prefix}-alert-${spec.key} (sev ${spec.severity}): fires when ${spec.timeAggregation} > ${spec.threshold}'
+      query: spec.query
+      size: 1
+      queryType: 0
+      resourceType: 'microsoft.operationalinsights/workspaces'
+      timeContextFromParameter: 'TimeRange'
+      visualization: 'table'
+    }
+  }
+]
+
+var sloWorkbookContent = {
+  version: 'Notebook/1.0'
+  items: concat(
+    [
+      {
+        type: 9
+        name: 'parameters'
+        content: {
+          version: 'KqlParameterItem/1.0'
+          parameters: [
+            {
+              id: 'slo-time-range'
+              version: 'KqlParameterItem/1.0'
+              name: 'TimeRange'
+              type: 4
+              isRequired: true
+              value: { durationMs: 900000 }
+              typeSettings: { selectableValues: [ { durationMs: 900000 }, { durationMs: 3600000 }, { durationMs: 86400000 }, { durationMs: 604800000 } ] }
+            }
+          ]
+          style: 'pills'
+          queryType: 0
+          resourceType: 'microsoft.operationalinsights/workspaces'
+        }
+      }
+    ],
+    sloWorkbookTiles
+  )
+  fallbackResourceIds: [ logAnalytics.id ]
+}
+
+resource sloWorkbook 'Microsoft.Insights/workbooks@2023-06-01' = {
+  // A workbook's resource name must be a GUID; deriving it keeps redeploys updating the same one.
+  name: guid(resourceGroup().id, prefix, 'slo-workbook')
+  location: location
+  tags: commonTags
+  kind: 'shared'
+  properties: {
+    displayName: '${prefix} SLO alerts'
+    category: 'workbook'
+    version: '1.0'
+    sourceId: logAnalytics.id
+    serializedData: string(sloWorkbookContent)
+  }
+}
+
 // FinOps (§31): a budget so the bill cannot surprise you. 80% actual + 100% forecasted alerts.
 resource budget 'Microsoft.Consumption/budgets@2023-11-01' = if (monthlyBudgetAmount > 0) {
   name: '${prefix}-monthly'

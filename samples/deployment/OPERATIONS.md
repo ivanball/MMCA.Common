@@ -17,6 +17,17 @@ Before triaging anything, check whether a deployment is in flight. A rolling rev
 failure counts and response times on its own, and a single-sample window during a restart is not an
 incident.
 
+## SLO workbook
+
+`main.bicep` also provisions an Azure Monitor workbook, `<prefix> SLO alerts` (Azure portal, Monitor >
+Workbooks, or the resource group's workbook resource). It has one tile per `sloAlertSpecs` entry,
+titled with the rule name, severity and threshold, and each tile runs that alert's own KQL against
+the same Log Analytics workspace the rules scope to, so what the tile shows is what the rule
+evaluated. Open it first when any alert below fires: the time range defaults to the 15-minute
+window the rules use, and widening it to an hour or a day shows whether the breach is a spike or a
+trend. Adding an alert to `sloAlertSpecs` adds its tile on the next deploy; there is nothing to edit
+by hand.
+
 ## Alert runbooks
 
 ### `<prefix>-alert-failed-requests` (sev 2): more than 10 failed HTTP requests in 15 minutes
