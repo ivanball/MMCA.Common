@@ -1,1 +1,9 @@
 ﻿#nullable enable
+MMCA.Common.Shared.Auth.PasswordComplexity
+const MMCA.Common.Shared.Auth.PasswordComplexity.MaximumLength = 128 -> int
+const MMCA.Common.Shared.Auth.PasswordComplexity.MinimumLength = 8 -> int
+static MMCA.Common.Shared.Auth.PasswordComplexity.Digit.get -> System.Text.RegularExpressions.Regex!
+static MMCA.Common.Shared.Auth.PasswordComplexity.Evaluate(string? password) -> bool
+static MMCA.Common.Shared.Auth.PasswordComplexity.Lowercase.get -> System.Text.RegularExpressions.Regex!
+static MMCA.Common.Shared.Auth.PasswordComplexity.SpecialCharacter.get -> System.Text.RegularExpressions.Regex!
+static MMCA.Common.Shared.Auth.PasswordComplexity.Uppercase.get -> System.Text.RegularExpressions.Regex!

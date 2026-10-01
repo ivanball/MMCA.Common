@@ -1,1 +1,4 @@
 ﻿#nullable enable
+MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator
+MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator.Dispose() -> void
+MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator.LocalizedDataAnnotationsValidator() -> void
