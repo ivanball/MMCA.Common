@@ -58,6 +58,23 @@ public sealed class StronglyTypedIdTypeConverterTests
     }
 
     [Fact]
+    public void Register_AfterTheNullableConverterWasAlreadyResolved_StillConvertsTheNullableWrapper()
+    {
+        // Something (another host in the process, a library scanning types) asks for the NULLABLE
+        // wrapper's converter before registration. TypeDescriptor caches a NullableConverter that
+        // captured the default struct converter, so without a refresh MVC keeps treating
+        // ProbeOrderId? as a complex type and an optional wrapped id in a query string answers 500.
+        _ = TypeDescriptor.GetConverter(typeof(LateRegisteredId?));
+
+        StronglyTypedIdTypeConverters.Register(typeof(LateRegisteredId));
+
+        var converter = TypeDescriptor.GetConverter(typeof(LateRegisteredId?));
+        converter.CanConvertFrom(context: null, typeof(string)).Should().BeTrue();
+        converter.ConvertFrom(context: null, CultureInfo.InvariantCulture, "5")
+            .Should().Be(LateRegisteredId.From(5));
+    }
+
+    [Fact]
     public void Register_RejectsATypeThatIsNotAnIdentifier()
     {
         var act = () => StronglyTypedIdTypeConverters.Register(typeof(int));
@@ -75,4 +92,11 @@ public sealed class StronglyTypedIdTypeConverterTests
             .ConvertFrom(context: null, CultureInfo.InvariantCulture, "SKU-4")
             .Should().Be(SkuId.From("SKU-4"));
     }
+}
+
+/// <summary>An identifier used only by the late-registration test, so no other test resolves it first.</summary>
+public readonly record struct LateRegisteredId(int Value) : IStronglyTypedId<LateRegisteredId, int>
+{
+    /// <summary>Wraps a primitive key.</summary>
+    public static LateRegisteredId From(int value) => new(value);
 }

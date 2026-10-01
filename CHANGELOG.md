@@ -34,6 +34,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Fixed: the OAuth exchange code, password-reset token, email-confirmation token and the 2FA last-accepted step read through `GetFromSharedStoreAsync`, so a record consumed on one replica can no longer be redeemed from another replica's local cache for 30s.
 - Fixed: `ModuleLoader` keeps the loadable types of a `ReflectionTypeLoadException` and logs Error with every loader exception; any other scan failure logs Error, so a module no longer vanishes behind a Warning.
 - Fixed: `CosmosDbContext` bypasses certificate validation only for the emulator key AND a loopback endpoint; Gateway mode still follows the key alone.
+- Fixed: `StronglyTypedIdTypeConverters.Register` refreshes the cached converter of `Nullable<TId>`, so an optional wrapped identifier bound from a query string no longer answers 500 when anything resolved that converter before registration.
 - Fixed: `TokenService.GetPrincipalFromExpiredToken` logs an unexpected failure as one Warning instead of swallowing it.
 - Fixed: `DbContextFactory` opens the connection before `SET IDENTITY_INSERT` and closes it only if it opened it, so the SET and the insert share a session.
 - Fixed: the Spanish singular `Notif.Send.SentTo.One` carries its accent like its base and `.Other` siblings.

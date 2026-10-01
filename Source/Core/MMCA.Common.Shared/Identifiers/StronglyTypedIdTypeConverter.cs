@@ -98,6 +98,17 @@ public static class StronglyTypedIdTypeConverters
         var converterType = typeof(StronglyTypedIdTypeConverter<,>).MakeGenericType(identifierType, valueType);
 
         TypeDescriptor.AddAttributes(identifierType, new TypeConverterAttribute(converterType));
+
+        // MVC binds an optional wrapper (TId? from a query string) through Nullable<TId>'s converter,
+        // and TypeDescriptor caches that NullableConverter with the underlying converter it saw first.
+        // If anything resolved it before this registration (another host in the process, a library
+        // scanning types), the cached one still wraps the default struct converter, which cannot read
+        // a string, so MVC treats TId? as a complex type and the request answers 500. Refreshing the
+        // nullable type drops that cache so the next lookup sees the converter registered above.
+        if (identifierType.IsValueType)
+        {
+            TypeDescriptor.Refresh(typeof(Nullable<>).MakeGenericType(identifierType));
+        }
     }
 
     /// <summary>
