@@ -6,8 +6,8 @@ namespace MMCA.Common.UI.Web.Tests.SameOriginProxy;
 
 /// <summary>
 /// The proxy's CSRF gate: every unsafe method must carry <c>X-CSRF: 1</c> (a header a cross-site page
-/// cannot add without a preflight the proxy never grants) or it is refused with 403 before anything
-/// reaches the gateway; safe methods need no header.
+/// cannot add without a preflight, which the proxy answers itself without a CORS grant) or it is
+/// refused with 403 before anything reaches the gateway; safe methods need no header.
 /// </summary>
 public sealed class SameOriginApiProxyCsrfTests : IAsyncLifetime
 {

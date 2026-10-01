@@ -37,7 +37,7 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 **Constructor changes on `AuthenticationServiceBase<TUser>` and six infrastructure services, a
 renamed unit-of-work member, a conditional `IRawSqlQueryExecutor` registration, a SQLite
 index-filter change, a fail-closed CSV export, `RefreshSession` setters, the bundled Bootstrap CSS
-removed, two `[EditorRequired]` parameters and a new `ICookieSessionRefresher` member.** A host that
+removed, two `[EditorRequired]` parameters and two new `ICookieSessionRefresher` members.** A host that
 resolves the framework services from DI changes nothing for the six infrastructure constructors;
 every other item is listed with its own fix. The same-origin API proxy is new and opt-in; its wiring
 closes this section.
@@ -57,7 +57,7 @@ Old-to-new map:
 | `_content/MMCA.Common.UI/lib/bootstrap/dist/css/bootstrap.min.css` | removed |
 | `.navbar-toggler` | `.nav-toggler` |
 | `PageHeader.Title`, `MobileCardList.Items` optional | `[EditorRequired]` |
-| `ICookieSessionRefresher { GetOrRefreshAsync }` | `+ Task<SessionTokenResult?> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)` |
+| `ICookieSessionRefresher { GetOrRefreshAsync }` | `+ Task<SessionRefreshOutcome> ValidateOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default)`, `+ Task<SessionRefreshOutcome> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)` |
 
 The mechanical fix:
 
@@ -105,9 +105,11 @@ The mechanical fix:
 9. **`[EditorRequired]` parameters.** Pass `Title` on every `<PageHeader>` and `Items` on every
    `<MobileCardList>`; an omission is RZ2012, an error under `TreatWarningsAsErrors`. Every
    first-party usage already passes both.
-10. **`ICookieSessionRefresher` implementations** (test fakes): add `RefreshAsync`, a forced
-    refresh that ignores the current access token's expiry and returns null when the session cannot
-    be refreshed.
+10. **`ICookieSessionRefresher` implementations** (test fakes): add `ValidateOrRefreshAsync` (the
+    validate-or-refresh step) and `RefreshAsync` (a forced refresh that ignores the current access
+    token's expiry). Both return a `SessionRefreshOutcome`: `SessionRefreshOutcome.Refreshed(token)`,
+    `Rejected()` when there is no refresh cookie or the identity endpoint refused it, and
+    `Unavailable(retryAfter)` when the refresh could not be decided right now.
 11. **Password rule (behavior change, no code change).** The server and the client form evaluate the
     same Unicode-aware `PasswordComplexity`: a new password whose only special character is a
     non-ASCII letter is now rejected. Update any help text or seeded test password that relied on
@@ -133,7 +135,12 @@ The mechanical fix:
    script-supplied tokens, and `/client-config` adds `api.sameOriginApiEndpoint`, which switches the
    WebAssembly `APIClient`, the notification hub and `ApiFileDownloadButton` to the proxy. Client
    code that sends its own requests to the proxy adds `X-CSRF: 1` on every unsafe method
-   (`SameOriginProxyHeaders`); the `APIClient` does it already. Client code that decoded the
+   (`SameOriginProxyHeaders`); the `APIClient` does it already. The proxy refuses (403) any request
+   whose `Origin` or `Sec-Fetch-Site` names another origin, including a sibling subdomain, and every
+   WebSocket upgrade without the host's own `Origin`; it compares against the request's scheme, host
+   and port as the app sees them, so a host behind a TLS-terminating proxy or ingress must call
+   `app.UseCommonUiForwardedHeaders()` first, or every browser POST is refused. `OPTIONS` is answered
+   locally and never reaches the gateway. Client code that decoded the
    browser-held access token keeps working for claims but can no longer present it to the gateway.
 5. Optionally gate the WebAssembly download size in CI with the composite action
    `uses: ivanball/MMCA.Common/.github/actions/wasm-payload-budget@main` (inputs `project`, `budget-kb`,

@@ -19,7 +19,8 @@ namespace MMCA.Common.UI.Web.Tests.SameOriginProxy;
 /// <summary>
 /// SignalR through the proxy: the negotiate POST (TestServer) and a real WebSocket upgrade (two
 /// loopback Kestrel servers, since an upgrade needs a real connection) both reach the hub carrying the
-/// bearer the proxy took from the HttpOnly cookie, with nothing token-shaped sent by the client.
+/// bearer the proxy took from the HttpOnly cookie, with nothing token-shaped sent by the client. The
+/// upgrade carries the page's own <c>Origin</c>, as a browser always does; one without it is refused.
 /// </summary>
 public sealed class SameOriginApiProxyHubTests : IAsyncLifetime
 {
@@ -46,7 +47,7 @@ public sealed class SameOriginApiProxyHubTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WebSocketUpgrade_IsForwarded_WithTheBearerAttachedServerSide()
+    public async Task WebSocketUpgrade_FromTheOwnOrigin_IsForwarded_WithTheBearerAttachedServerSide()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var access = Jwt.Create(DateTime.UtcNow.AddMinutes(10));
@@ -84,6 +85,7 @@ public sealed class SameOriginApiProxyHubTests : IAsyncLifetime
 
         using var socket = new ClientWebSocket();
         socket.Options.SetRequestHeader("Cookie", $"{SessionCookieEndpoints.AccessTokenCookieName}={access}; {SessionCookieEndpoints.RefreshTokenCookieName}=refresh-1");
+        socket.Options.SetRequestHeader("Origin", Address(proxy));
         await socket.ConnectAsync(new Uri(Address(proxy).Replace("http://", "ws://", StringComparison.Ordinal) + "/api/hubs/notifications"), cancellationToken);
 
         var buffer = new byte[8192];
@@ -100,6 +102,42 @@ public sealed class SameOriginApiProxyHubTests : IAsyncLifetime
         seenUpstream[1].Should().Be($"Bearer {access}", "the upgrade carries the bearer the proxy attached");
         seenUpstream[2].Should().NotContain(SessionCookieEndpoints.AccessTokenCookieName);
         seenUpstream[3].Should().Be("127.0.0.1", "the gateway still sees the caller for its per-IP rate limiter");
+    }
+
+    [Fact]
+    public async Task WebSocketUpgrade_FromAnotherOrigin_IsRefused_AndNeverReachesTheHub()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var upstreamHits = 0;
+
+        await using var upstream = await StartKestrelAsync(
+            _ => { },
+            app => app.Run(context =>
+            {
+                Interlocked.Increment(ref upstreamHits);
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return Task.CompletedTask;
+            }));
+        var upstreamAddress = Address(upstream);
+
+        await using var proxy = await StartKestrelAsync(
+            builder =>
+            {
+                builder.Configuration["Api:ApiEndpoint"] = upstreamAddress;
+                builder.Services.AddRouting();
+                builder.Services.AddServerAuthSessionCookie(upstreamAddress);
+                builder.Services.AddCommonSameOriginApiProxy(builder.Configuration);
+            },
+            app => app.MapCommonSameOriginApiProxy());
+
+        using var socket = new ClientWebSocket();
+        socket.Options.SetRequestHeader("Cookie", $"{SessionCookieEndpoints.AccessTokenCookieName}={Jwt.Create(DateTime.UtcNow.AddMinutes(10))}");
+        socket.Options.SetRequestHeader("Origin", "https://evil.example.com");
+        Func<Task> connect = () => socket.ConnectAsync(
+            new Uri(Address(proxy).Replace("http://", "ws://", StringComparison.Ordinal) + "/api/hubs/notifications"), cancellationToken);
+
+        (await connect.Should().ThrowAsync<WebSocketException>()).Which.Message.Should().Contain("403");
+        Volatile.Read(ref upstreamHits).Should().Be(0);
     }
 
     private static string Address(WebApplication app) =>

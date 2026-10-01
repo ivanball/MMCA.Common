@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Builder;
@@ -52,6 +53,12 @@ internal sealed class FakeGateway : IAsyncDisposable
 
     public bool FailRefresh { get; set; }
 
+    /// <summary>When set, <c>auth/refresh</c> answers this status (a transient failure, or a refusal).</summary>
+    public HttpStatusCode? RefreshFailureStatus { get; set; }
+
+    /// <summary>The <c>Retry-After</c> value sent with <see cref="RefreshFailureStatus"/>, if any.</summary>
+    public string? RefreshRetryAfter { get; set; }
+
     public TimeSpan RefreshDelay { get; set; } = TimeSpan.Zero;
 
     public string LoginAccessToken { get; } = Jwt.Create(DateTime.UtcNow.AddMinutes(10), "login-user");
@@ -85,10 +92,20 @@ internal sealed class FakeGateway : IAsyncDisposable
     {
         endpoints.MapPost("/auth/login", () => Results.Json(new AuthenticationResponse(LoginAccessToken, LoginRefreshToken, DateTime.UtcNow.AddMinutes(10))));
 
-        endpoints.MapPost("/auth/refresh", async () =>
+        endpoints.MapPost("/auth/refresh", async (HttpContext context) =>
         {
             Interlocked.Increment(ref _refreshCalls);
             await Task.Delay(RefreshDelay);
+            if (RefreshFailureStatus is { } status)
+            {
+                if (RefreshRetryAfter is { } retryAfter)
+                {
+                    context.Response.Headers.RetryAfter = retryAfter;
+                }
+
+                return Results.StatusCode((int)status);
+            }
+
             return FailRefresh
                 ? Results.Unauthorized()
                 : Results.Json(new AuthenticationResponse(RotatedAccessToken, RotatedRefreshToken, DateTime.UtcNow.AddMinutes(15)));
@@ -137,7 +154,8 @@ internal static class ProxyHost
         bool optIn = true,
         IDictionary<string, string?>? configuration = null,
         Action<IServiceCollection>? beforeOptIn = null,
-        Action<IServiceCollection>? afterOptIn = null)
+        Action<IServiceCollection>? afterOptIn = null,
+        Action<IApplicationBuilder>? beforeRouting = null)
     {
         var settings = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
         {
@@ -174,6 +192,7 @@ internal static class ProxyHost
                 })
                 .Configure(app =>
                 {
+                    beforeRouting?.Invoke(app);
                     app.UseRouting();
                     app.UseEndpoints(endpoints =>
                     {

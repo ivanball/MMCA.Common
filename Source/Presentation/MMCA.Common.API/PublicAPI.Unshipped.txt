@@ -9,7 +9,19 @@ MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.get -> Microsoft.A
 MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.get -> bool
 MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.set -> void
 MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.set -> void
-MMCA.Common.API.SessionCookies.ICookieSessionRefresher.RefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionTokenResult?>!
+MMCA.Common.API.SessionCookies.ICookieSessionRefresher.RefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionRefreshOutcome!>!
+MMCA.Common.API.SessionCookies.ICookieSessionRefresher.ValidateOrRefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionRefreshOutcome!>!
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome.RetryAfter.get -> System.TimeSpan?
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Session.get -> MMCA.Common.API.SessionCookies.SessionTokenResult?
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Status.get -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus.Refreshed = 0 -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus.Rejected = 1 -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus.Unavailable = 2 -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+static MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Refreshed(MMCA.Common.API.SessionCookies.SessionTokenResult session) -> MMCA.Common.API.SessionCookies.SessionRefreshOutcome!
+static MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Rejected() -> MMCA.Common.API.SessionCookies.SessionRefreshOutcome!
+static MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Unavailable(System.TimeSpan? retryAfter = null) -> MMCA.Common.API.SessionCookies.SessionRefreshOutcome!
 MMCA.Common.API.SessionCookies.ISessionCookieStore.Write(Microsoft.AspNetCore.Http.HttpContext! context, string! accessToken, string! refreshToken) -> void
 MMCA.Common.API.SessionCookies.ISessionCookieStore.Clear(Microsoft.AspNetCore.Http.HttpContext! context) -> void
 static MMCA.Common.API.SessionCookies.SessionClaimsToken.Create(string? accessToken) -> string?

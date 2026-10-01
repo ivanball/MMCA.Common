@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -11,13 +12,16 @@ using Yarp.ReverseProxy.Forwarder;
 namespace MMCA.Common.UI.Web.SameOriginProxy;
 
 /// <summary>
-/// The request delegate behind <c>{PathPrefix}/{**path}</c>. In order: the CSRF gate (unsafe methods
-/// must carry <c>X-CSRF: 1</c>), the locally answered refresh, the session step (validate-or-refresh
-/// the cookie's access token, single-flighted per session by <see cref="ICookieSessionRefresher"/>; a
-/// session that can no longer refresh is cleared and answered 401), the forward through YARP with the
-/// bearer attached server-side, and, for a safe method answered 401, one forced refresh and replay.
-/// Token-issuing and sign-out endpoints get their response treatment from
-/// <see cref="SameOriginProxyTransformer"/>.
+/// The request delegate behind <c>{PathPrefix}/{**path}</c>. In order: the same-origin gate (a foreign
+/// <c>Origin</c> or <c>Sec-Fetch-Site</c> is refused, and a WebSocket upgrade must carry this host's own
+/// <c>Origin</c>), the local answer to <c>OPTIONS</c> (never forwarded, never a CORS grant), the CSRF
+/// gate (unsafe methods must carry <c>X-CSRF: 1</c>), the locally answered refresh, the session step
+/// (validate-or-refresh the cookie's access token, single-flighted per session by
+/// <see cref="ICookieSessionRefresher"/>; a session whose refresh token was refused is cleared and
+/// answered 401, while a refresh that could not be decided right now keeps the cookies and is answered
+/// 503 with <c>Retry-After</c>), the forward through YARP with the bearer attached server-side, and,
+/// for a safe method answered 401, one forced refresh and replay. Token-issuing and sign-out endpoints
+/// get their response treatment from <see cref="SameOriginProxyTransformer"/>.
 /// </summary>
 internal sealed partial class SameOriginApiProxyEndpoint(
     IHttpForwarder forwarder,
@@ -28,12 +32,17 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     ILogger<SameOriginApiProxyEndpoint> logger)
 {
     // HTTP/1.1 upstream: WebSocket upgrades forward as plain upgrades, and nothing here needs HTTP/2.
+    private const string SecFetchSiteHeaderName = "Sec-Fetch-Site";
+
     private static readonly ForwarderRequestConfig RequestConfig = new()
     {
         ActivityTimeout = TimeSpan.FromSeconds(100),
         Version = HttpVersion.Version11,
         VersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
     };
+
+    // Used when the identity endpoint gave no Retry-After of its own.
+    private static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromSeconds(5);
 
     private readonly SameOriginApiProxySettings _settings = settings.Value;
     private readonly HashSet<string> _tokenIssuingPaths = new(
@@ -53,10 +62,8 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             statusCodePages.Enabled = false;
         }
 
-        if (!IsSafeMethod(context.Request.Method) && !HasCsrfHeader(context.Request))
+        if (await TryAnswerBeforeForwardingAsync(context).ConfigureAwait(false))
         {
-            LogCsrfRejected(logger, context.Request.Method);
-            await WriteErrorAsync(context, StatusCodes.Status403Forbidden, "csrf_header_required").ConfigureAwait(false);
             return;
         }
 
@@ -72,14 +79,14 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         // A sign-in is anonymous by definition, so a stale session must not block it.
         if (mode != ProxyResponseMode.TokenIssuing && HasSessionCookie(context.Request))
         {
-            var session = await refresher.GetOrRefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
-            if (session is null)
+            var outcome = await refresher.ValidateOrRefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
+            if (outcome.Session is not { } session)
             {
-                await EndSessionAsync(context).ConfigureAwait(false);
+                await FailRefreshAsync(context, outcome).ConfigureAwait(false);
                 return;
             }
 
-            bearer = session.Value.AccessToken;
+            bearer = session.AccessToken;
         }
 
         var first = CreateTransformer(bearer, mode.Value, captureUnauthorized: bearer is not null && IsReplayable(context.Request));
@@ -99,6 +106,84 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         && value.Count == 1
         && string.Equals(value[0], SameOriginProxyHeaders.CsrfHeaderValue, StringComparison.Ordinal);
 
+    /// <summary>
+    /// The proxy serves only this host's own pages, so it refuses anything a browser marks as coming
+    /// from elsewhere, before the CSRF gate and before anything is forwarded. Returns why a request is
+    /// refused, or <see langword="null"/> to let it through:
+    /// <list type="bullet">
+    /// <item>an <c>Origin</c> header that is not exactly this host's origin (a same-site sibling such
+    /// as another subdomain is still another origin);</item>
+    /// <item>a WebSocket upgrade without an <c>Origin</c> (browsers always send one, and an upgrade is
+    /// not CORS-protected, so the origin is the only proof of who opened it);</item>
+    /// <item>a <c>Sec-Fetch-Site</c> other than <c>same-origin</c>, except <c>none</c> (a user-initiated
+    /// navigation, such as a pasted download link) on a plain GET or HEAD.</item>
+    /// </list>
+    /// A request with neither header (a same-origin GET, a non-browser caller) passes; unsafe methods
+    /// still need the CSRF header after this.
+    /// </summary>
+    internal static string? CrossOriginRejection(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var upgrade = IsUpgrade(context);
+        return OriginRejection(context.Request, upgrade) ?? FetchSiteRejection(context.Request, upgrade);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="origin"/> is this host's own origin: the request's scheme, host and port
+    /// as the app sees them, which is after <c>UseForwardedHeaders</c> (<c>UseCommonUiForwardedHeaders</c>)
+    /// has applied <c>X-Forwarded-Proto</c>/<c>X-Forwarded-Host</c> behind a reverse proxy. Default ports
+    /// compare equal to an omitted port; anything that is not a bare origin (a path, user info, the
+    /// opaque origin a browser serializes as the string "null") does not match.
+    /// </summary>
+    internal static bool IsOwnOrigin(HttpRequest request, string? origin)
+    {
+        if (string.IsNullOrEmpty(origin)
+            || !request.Host.HasValue
+            || !Uri.TryCreate(origin, UriKind.Absolute, out var candidate)
+            || candidate.UserInfo.Length != 0
+            || candidate.PathAndQuery != "/"
+            || candidate.Fragment.Length != 0
+            || !Uri.TryCreate(request.Scheme + Uri.SchemeDelimiter + request.Host.ToUriComponent(), UriKind.Absolute, out var own))
+        {
+            return false;
+        }
+
+        return Uri.Compare(candidate, own, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
+    }
+
+    private static bool IsUpgrade(HttpContext context) =>
+        context.WebSockets.IsWebSocketRequest || context.Request.Headers.ContainsKey(HeaderNames.Upgrade);
+
+    private static string? OriginRejection(HttpRequest request, bool upgrade)
+    {
+        if (!request.Headers.TryGetValue(HeaderNames.Origin, out var origin))
+        {
+            return upgrade ? "WebSocket upgrade without Origin" : null;
+        }
+
+        return origin.Count == 1 && IsOwnOrigin(request, origin[0]) ? null : "foreign Origin";
+    }
+
+    private static string? FetchSiteRejection(HttpRequest request, bool upgrade)
+    {
+        if (!request.Headers.TryGetValue(SecFetchSiteHeaderName, out var fetchSite))
+        {
+            return null;
+        }
+
+        var value = fetchSite.Count == 1 ? fetchSite[0] : null;
+        if (string.Equals(value, "same-origin", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var userInitiatedNavigation = string.Equals(value, "none", StringComparison.Ordinal)
+            && !upgrade
+            && (HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method));
+        return userInitiatedNavigation ? null : "Sec-Fetch-Site " + (value ?? "(multiple)");
+    }
+
     private static bool HasSessionCookie(HttpRequest request) =>
         !string.IsNullOrEmpty(request.Cookies[SessionCookieEndpoints.AccessTokenCookieName])
         || !string.IsNullOrEmpty(request.Cookies[SessionCookieEndpoints.RefreshTokenCookieName]);
@@ -117,11 +202,62 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         return context.Response.WriteAsJsonAsync(new { error }, context.RequestAborted);
     }
 
+    /// <summary>
+    /// The gates and local answers that run before anything is forwarded, in order: the same-origin
+    /// gate, <c>OPTIONS</c>, the CSRF gate. Returns <see langword="true"/> when the response is written.
+    /// </summary>
+    private async Task<bool> TryAnswerBeforeForwardingAsync(HttpContext context)
+    {
+        if (CrossOriginRejection(context) is { } rejection)
+        {
+            LogCrossOriginRejected(logger, context.Request.Method, rejection);
+            await WriteErrorAsync(context, StatusCodes.Status403Forbidden, "cross_origin_rejected").ConfigureAwait(false);
+            return true;
+        }
+
+        // Never forwarded: a same-origin page needs no preflight, and a cross-origin one was refused
+        // above, so the gateway's CORS policy is never consulted on the proxy's behalf. No CORS grant.
+        if (HttpMethods.IsOptions(context.Request.Method))
+        {
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
+            context.Response.Headers.CacheControl = "no-store";
+            return true;
+        }
+
+        if (!IsSafeMethod(context.Request.Method) && !HasCsrfHeader(context.Request))
+        {
+            LogCsrfRejected(logger, context.Request.Method);
+            await WriteErrorAsync(context, StatusCodes.Status403Forbidden, "csrf_header_required").ConfigureAwait(false);
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>A session that can no longer be refreshed: clear its cookies and answer 401.</summary>
     private Task EndSessionAsync(HttpContext context)
     {
         cookieStore.Clear(context);
         return WriteErrorAsync(context, StatusCodes.Status401Unauthorized, "session_expired");
+    }
+
+    /// <summary>
+    /// A refresh that produced no token. Only a refused refresh token ends the session; a refresh that
+    /// could not be decided (identity endpoint down, throttled, timed out) keeps the cookies, forwards
+    /// and replays nothing, and answers 503 with the upstream's <c>Retry-After</c> (or a short default),
+    /// so a blip at the identity endpoint does not sign the user out.
+    /// </summary>
+    private Task FailRefreshAsync(HttpContext context, SessionRefreshOutcome outcome)
+    {
+        if (outcome.Status == SessionRefreshStatus.Rejected)
+        {
+            return EndSessionAsync(context);
+        }
+
+        LogRefreshUnavailable(logger);
+        var retryAfter = outcome.RetryAfter ?? DefaultRetryAfter;
+        context.Response.Headers.RetryAfter = ((long)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+        return WriteErrorAsync(context, StatusCodes.Status503ServiceUnavailable, "session_refresh_unavailable");
     }
 
     /// <summary>
@@ -158,14 +294,14 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     private async Task RefreshAndReplayAsync(HttpContext context, ProxyResponseMode mode)
     {
         context.Response.StatusCode = StatusCodes.Status200OK;
-        var refreshed = await refresher.RefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
-        if (refreshed is null)
+        var outcome = await refresher.RefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
+        if (outcome.Session is not { } refreshed)
         {
-            await EndSessionAsync(context).ConfigureAwait(false);
+            await FailRefreshAsync(context, outcome).ConfigureAwait(false);
             return;
         }
 
-        await ForwardAsync(context, CreateTransformer(refreshed.Value.AccessToken, mode, captureUnauthorized: false)).ConfigureAwait(false);
+        await ForwardAsync(context, CreateTransformer(refreshed.AccessToken, mode, captureUnauthorized: false)).ConfigureAwait(false);
     }
 
     private string RemainingPath(HttpContext context) =>
@@ -195,10 +331,10 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     /// </summary>
     private async Task RefreshLocallyAsync(HttpContext context)
     {
-        var refreshed = await refresher.RefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
-        if (refreshed is null)
+        var outcome = await refresher.RefreshAsync(context, context.RequestAborted).ConfigureAwait(false);
+        if (outcome.Session is not { } refreshed)
         {
-            await EndSessionAsync(context).ConfigureAwait(false);
+            await FailRefreshAsync(context, outcome).ConfigureAwait(false);
             return;
         }
 
@@ -206,15 +342,21 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         await context.Response.WriteAsJsonAsync(
             new
             {
-                AccessToken = SessionClaimsToken.Create(refreshed.Value.AccessToken) ?? string.Empty,
+                AccessToken = SessionClaimsToken.Create(refreshed.AccessToken) ?? string.Empty,
                 RefreshToken = string.Empty,
-                refreshed.Value.AccessTokenExpiry,
+                refreshed.AccessTokenExpiry,
             },
             context.RequestAborted).ConfigureAwait(false);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Same-origin API proxy rejected a {Method} request without the CSRF header")]
     private static partial void LogCsrfRejected(ILogger logger, string method);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Same-origin API proxy rejected a cross-origin {Method} request ({Reason})")]
+    private static partial void LogCrossOriginRejected(ILogger logger, string method, string reason);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Same-origin API proxy could not refresh the session right now; the cookies are kept and the request is answered 503")]
+    private static partial void LogRefreshUnavailable(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Same-origin API proxy could not forward the request to the gateway: {Error}")]
     private static partial void LogForwardFailed(ILogger logger, ForwarderError error, Exception? exception);
