@@ -34,6 +34,36 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+**`AddCommonOpenApi()` no longer registers an OpenAPI document; the host registers it with its own
+`services.AddOpenApi()`.** The host call has to live in the host project: the OpenAPI XML-comment
+source generator attaches the host's controller summaries by intercepting the `AddOpenApi` call
+sites of the project being compiled. With no strongly typed identifiers the document is exactly the
+one plain `AddOpenApi()` produces.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `AddCommonOpenApi()` registers one document per API version (`AddApiVersioning().AddOpenApi()`) | registers no document; configures every document the host registers (strongly-typed-identifier transformers, backfill guard) |
+| Host calls `AddCommonOpenApi()` alone | Host calls `services.AddOpenApi();` then `services.AddCommonOpenApi();` |
+| `MapCommonOpenApi()` maps `MapOpenApi().WithDocumentPerVersion().AllowAnonymous()` | maps `MapOpenApi().AllowAnonymous()`; outside Production throws `InvalidOperationException` when no `v1` document is registered |
+| `info.title` `<entry assembly> \| v1`, `info.version` `1.0`, `enum: ["1.0"]` on `api-version`, `deprecated` from API-version deprecation, `<host>_v2.json` per extra version | the plain `AddOpenApi()` values: `<application name> \| v1`, `1.0.0`, no `enum`, no versioning-derived `deprecated`, one `v1` document |
+
+The mechanical fix:
+
+1. **Hosts calling `AddCommonOpenApi()`.** Add `services.AddOpenApi();` in the host's own
+   `Program.cs` (either order relative to `AddCommonOpenApi()`). Without it, `MapCommonOpenApi()`
+   throws at startup outside Production, naming the missing call.
+2. **Hosts with a hand-written registration** (`services.AddOpenApi();` plus
+   `app.MapOpenApi().AllowAnonymous()` outside Production) may adopt the framework pair: keep
+   `services.AddOpenApi();`, add `services.AddCommonOpenApi();`, and replace the hand-written mapping
+   with `app.MapCommonOpenApi();` (`using MMCA.Common.API.Startup.Endpoints;`). The committed
+   build-time documents do not change.
+3. **A host that wants the document behind a token** outside Production maps it itself:
+   `app.MapOpenApi().RequireAuthorization();`.
+4. **A host that relied on per-version documents** (`/openapi/v2.json`) registers each one itself
+   with `services.AddOpenApi("v2")` (no first-party host uses more than v1.0).
+
 ## [1.216.0] - 2026-09-30
 
 **Required constructor arguments on four DI-resolved types, one security-relevant default, the

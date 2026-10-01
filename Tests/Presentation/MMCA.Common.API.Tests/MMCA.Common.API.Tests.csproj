@@ -3,6 +3,12 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
+    <!-- The OpenAPI XML-comment source generator (Microsoft.AspNetCore.OpenApi, reaching this project
+         through MMCA.Common.API) intercepts the AddOpenApi() calls of the OpenAPI probe hosts exactly as
+         it does in a consumer service host. The package turns its interceptor namespace on only in a
+         project that references it directly, so it is turned on here, which lets the tests observe the
+         host-assembly summaries that AddCommonOpenApi() must not lose. -->
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />

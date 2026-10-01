@@ -15,11 +15,11 @@ namespace MMCA.Common.API.Tests.OpenApi;
 
 /// <summary>
 /// Contract-snapshot gate over the framework-owned OpenAPI surface: the document that
-/// <c>AddCommonApiVersioning</c> + <c>AddCommonOpenApi</c> + <c>MapCommonOpenApi</c> generate is fetched
-/// from a real in-memory host, normalized, and diffed against the committed
+/// <c>AddCommonApiVersioning</c> + host <c>AddOpenApi</c> + <c>AddCommonOpenApi</c> + <c>MapCommonOpenApi</c>
+/// generate is fetched from a real in-memory host, normalized, and diffed against the committed
 /// <c>openapi-baseline.v1.json</c>. Anything that moves the generated contract (an SDK or
-/// <c>Asp.Versioning.OpenApi</c> bump, a change to the framework's OpenAPI registration, the
-/// unbound-route-token backfill, the versioned document naming convention, or the generated
+/// <c>Microsoft.AspNetCore.OpenApi</c> bump, a change to the framework's OpenAPI configuration, the
+/// unbound-route-token backfill, the host XML-comment summaries, or the generated
 /// <c>ProblemDetails</c> error schema) fails this test instead of reaching consumers unnoticed.
 /// <para>
 /// The probe controllers stand in for a consumer's real controllers deliberately: this test guards the
