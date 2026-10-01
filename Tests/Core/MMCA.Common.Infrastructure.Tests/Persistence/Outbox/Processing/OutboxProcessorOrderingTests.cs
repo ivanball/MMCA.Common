@@ -83,8 +83,7 @@ public sealed class OutboxProcessorOrderingTests : IDisposable
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(new OutboxSettings { MaxRetries = 3 }),
             Mock.Of<IOutboxSignal>(),
-            registry.Object,
-            resolver.Object,
+            new FrameworkTableTargets(registry.Object, resolver.Object),
             _timeProvider);
     }
 

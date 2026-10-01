@@ -103,8 +103,7 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(new OutboxSettings { ProcessingDelaySeconds = 0 }),
             Mock.Of<IOutboxSignal>(),
-            registry.Object,
-            resolver.Object, timeProvider: TimeProvider.System);
+            new FrameworkTableTargets(registry.Object, resolver.Object), timeProvider: TimeProvider.System);
     }
 
     public void Dispose()

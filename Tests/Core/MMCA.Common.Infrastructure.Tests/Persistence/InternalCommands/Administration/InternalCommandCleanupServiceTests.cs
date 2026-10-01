@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
@@ -108,8 +109,7 @@ public sealed class InternalCommandCleanupServiceTests : IDisposable
             _services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<InternalCommandCleanupService>.Instance,
             Options.Create(settings),
-            new EmptyEntityDataSourceRegistry(),
-            new DefaultDataSourceResolver(),
+            new FrameworkTableTargets(new EmptyEntityDataSourceRegistry(), new DefaultDataSourceResolver()),
             _clock);
     }
 

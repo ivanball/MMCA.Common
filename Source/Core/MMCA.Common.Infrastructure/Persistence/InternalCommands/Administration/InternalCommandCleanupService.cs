@@ -6,7 +6,6 @@ using MMCA.Common.Infrastructure.Hosting.Background;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 
@@ -35,20 +34,15 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration
 /// <param name="scopeFactory">Factory for creating a DI scope per sweep.</param>
 /// <param name="logger">Logger for cleanup diagnostics.</param>
 /// <param name="options">Configurable queue settings (retention plus sweep interval).</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
-/// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
+/// <param name="tableTargets">Decides which databases (and per-tenant copies) hold a queue table this host sweeps.</param>
 /// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff;
 /// injected so tests can drive the hour-scale loop.</param>
-/// <param name="tenancyOptions">Bound tenancy settings, used to discover tenants that keep their own
-/// copy of a source, whose queue table the shared sweep never reaches.</param>
 public sealed partial class InternalCommandCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<InternalCommandCleanupService> logger,
     IOptions<InternalCommandsSettings> options,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver,
-    TimeProvider timeProvider,
-    IOptions<TenancySettings>? tenancyOptions = null)
+    FrameworkTableTargets tableTargets,
+    TimeProvider timeProvider)
     : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly InternalCommandsSettings _settings = options.Value;
@@ -163,13 +157,8 @@ public sealed partial class InternalCommandCleanupService(
     /// The relational physical sources whose queue tables this host owns: the same set the
     /// <c>InternalCommandProcessor</c> drains, expanded per tenant that keeps its own copy.
     /// </summary>
-    internal List<TenantDataSourceTarget> GetTargets() =>
-        TenantDataSourceTargets.ExpandRelational(
-            entityDataSourceRegistry,
-            dataSourceResolver,
-            _settings.DataSource,
-            _settings.DatabaseName,
-            tenancyOptions?.Value);
+    internal IReadOnlyList<TenantDataSourceTarget> GetTargets() =>
+        tableTargets.Relational(_settings.DataSource, _settings.DatabaseName);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Internal command cleanup disabled: InternalCommands:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);

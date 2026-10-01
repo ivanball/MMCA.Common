@@ -7,7 +7,6 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
@@ -28,18 +27,14 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 /// <param name="scopeFactory">Factory for creating a DI scope per visited target.</param>
 /// <param name="logger">Logger for replay diagnostics.</param>
 /// <param name="outboxOptions">Outbox settings supplying <c>MaxRetries</c> and the publish target.</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
-/// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
+/// <param name="tableTargets">Decides which databases (and per-tenant copies) hold an outbox table this host owns.</param>
 /// <param name="outboxSignal">Signal that wakes the processor as soon as a replay lands.</param>
-/// <param name="tenancyOptions">Bound tenancy settings, used to expand per-tenant copies of a source.</param>
 public sealed partial class OutboxAdministration(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxAdministration> logger,
     IOptions<OutboxSettings> outboxOptions,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver,
-    IOutboxSignal outboxSignal,
-    IOptions<TenancySettings>? tenancyOptions = null) : IOutboxAdministration
+    FrameworkTableTargets tableTargets,
+    IOutboxSignal outboxSignal) : IOutboxAdministration
 {
     /// <summary>Upper bound on one page, so an admin call cannot ask for the whole table at once.</summary>
     private const int MaxPageSize = 500;
@@ -204,19 +199,8 @@ public sealed partial class OutboxAdministration(
     /// the same reason the processor recomputes it per cycle: module assemblies can register
     /// entities after startup.
     /// </summary>
-    private List<TenantDataSourceTarget> SelectTargets(string? dataSource)
-    {
-        var targets = TenantDataSourceTargets.ExpandRelational(
-            entityDataSourceRegistry,
-            dataSourceResolver,
-            _settings.DataSource,
-            _settings.DatabaseName,
-            tenancyOptions?.Value);
-
-        return dataSource is null
-            ? targets
-            : [.. targets.Where(t => string.Equals(t.ToString(), dataSource, StringComparison.OrdinalIgnoreCase))];
-    }
+    private IReadOnlyList<TenantDataSourceTarget> SelectTargets(string? dataSource) =>
+        tableTargets.Named(_settings.DataSource, _settings.DatabaseName, dataSource);
 
     /// <summary>
     /// Runs <paramref name="work"/> against one target in its own scope, setting the tenant BEFORE

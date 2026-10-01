@@ -69,8 +69,7 @@ public sealed class OutboxProcessorExecuteAsyncTests
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             outboxSignal.Object,
-            CreateEmptyRegistryMock().Object,
-            CreateResolverMock().Object,
+            new FrameworkTableTargets(CreateEmptyRegistryMock().Object, CreateResolverMock().Object),
             timeProvider);
 
         await sut.StartAsync(CancellationToken.None);
@@ -102,8 +101,7 @@ public sealed class OutboxProcessorExecuteAsyncTests
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             outboxSignal.Object,
-            CreateEmptyRegistryMock().Object,
-            CreateResolverMock().Object,
+            new FrameworkTableTargets(CreateEmptyRegistryMock().Object, CreateResolverMock().Object),
             timeProvider);
 
         using var cts = new CancellationTokenSource();
@@ -160,8 +158,7 @@ public sealed class OutboxProcessorExecuteAsyncTests
             mockLogger.Object,
             Options.Create(settings),
             outboxSignal.Object,
-            CreateEmptyRegistryMock().Object,
-            CreateResolverMock().Object,
+            new FrameworkTableTargets(CreateEmptyRegistryMock().Object, CreateResolverMock().Object),
             timeProvider);
 
         await sut.StartAsync(CancellationToken.None);

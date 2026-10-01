@@ -6,6 +6,7 @@ using FluentValidation.Results;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Auth.EmailConfirmation;
+using MMCA.Common.Application.Auth.Sessions;
 using MMCA.Common.Application.Auth.TwoFactor;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
@@ -364,13 +365,10 @@ public sealed class ConfirmableAuthenticationService(
     IOptions<EmailConfirmationSettings>? emailConfirmationSettings)
     : AuthenticationServiceBase<ConfirmableAuthUser>(
         unitOfWork,
-        tokenService,
         passwordHasher,
         loginProtection,
-        timeProvider,
         validators,
-        refreshSessions,
-        refreshSessionSettings,
+        new AuthSessionIssuer(tokenService, refreshSessions, refreshSessionSettings, timeProvider),
         twoFactor,
         emailConfirmationSettings)
 {

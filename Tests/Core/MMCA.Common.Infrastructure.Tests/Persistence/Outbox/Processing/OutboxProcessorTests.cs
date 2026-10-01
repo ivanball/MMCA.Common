@@ -114,8 +114,7 @@ public sealed class OutboxProcessorTests : IDisposable
             logger ?? NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>(),
-            _registry,
-            _resolver,
+            new FrameworkTableTargets(_registry, _resolver),
             timeProvider ?? TimeProvider.System);
 
     public void Dispose()
@@ -350,8 +349,7 @@ public sealed class OutboxProcessorTests : IDisposable
             NullLogger<OutboxProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<MMCA.Common.Infrastructure.Persistence.Outbox.Processing.IOutboxSignal>(),
-            registry.Object,
-            resolver.Object,
+            new FrameworkTableTargets(registry.Object, resolver.Object),
             timeProvider);
     }
 

@@ -9,7 +9,6 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 
@@ -34,23 +33,19 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 /// <param name="logger">Logger for cleanup diagnostics.</param>
 /// <param name="outboxOptions">Configurable outbox settings (retention + sweep interval).</param>
 /// <param name="messageBusOptions">Message-bus settings; used to gate inbox purging on <c>EnableInbox</c>.</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
-/// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
+/// <param name="tableTargets">
+/// Decides which databases hold an outbox (and inbox) table this host sweeps, including the
+/// per-tenant copies the shared sweep would never reach.
+/// </param>
 /// <param name="timeProvider">Clock abstraction for the sweep interval and the retention cutoff;
 /// injected so tests can drive the hour-scale loop deterministically.</param>
-/// <param name="tenancyOptions">
-/// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
-/// such database has its own outbox and inbox tables, which the shared sweep never reaches.
-/// </param>
 public sealed partial class OutboxCleanupService(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxCleanupService> logger,
     IOptions<OutboxSettings> outboxOptions,
     IOptions<MessageBusSettings> messageBusOptions,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver,
-    TimeProvider timeProvider,
-    IOptions<TenancySettings>? tenancyOptions = null)
+    FrameworkTableTargets tableTargets,
+    TimeProvider timeProvider)
     : PeriodicBackgroundService(timeProvider, logger)
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
@@ -194,13 +189,8 @@ public sealed partial class OutboxCleanupService(
     /// has no outbox table) against the shared database, plus one extra unit per tenant that keeps
     /// its own copy of a source (whose outbox and inbox tables live in a database nothing else opens).
     /// </summary>
-    internal List<TenantDataSourceTarget> GetRelationalTargets() =>
-        TenantDataSourceTargets.ExpandRelational(
-            entityDataSourceRegistry,
-            dataSourceResolver,
-            _settings.DataSource,
-            _settings.DatabaseName,
-            tenancyOptions?.Value);
+    internal IReadOnlyList<TenantDataSourceTarget> GetRelationalTargets() =>
+        tableTargets.Relational(_settings.DataSource, _settings.DatabaseName);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox cleanup disabled: Outbox:RetentionDays is 0")]
     private static partial void LogCleanupDisabled(ILogger logger);

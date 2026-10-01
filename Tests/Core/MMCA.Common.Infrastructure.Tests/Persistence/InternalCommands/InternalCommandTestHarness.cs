@@ -91,8 +91,7 @@ internal static class InternalCommandTestHarness
             NullLogger<InternalCommandProcessor>.Instance,
             Options.Create(settings),
             Mock.Of<IInternalCommandSignal>(),
-            new EmptyEntityDataSourceRegistry(),
-            new DefaultDataSourceResolver(),
+            new FrameworkTableTargets(new EmptyEntityDataSourceRegistry(), new DefaultDataSourceResolver()),
             timeProvider);
 
         return (processor, scopeServices);
@@ -131,9 +130,10 @@ internal static class InternalCommandTestHarness
             dbContextFactory.Object,
             new DefaultDataSourceResolver(),
             Options.Create(settings),
-            currentUser ?? new AnonymousCurrentUserService(),
-            tenantContext ?? new TenantContext(),
-            new CorrelationContext(),
+            new InternalCommandOriginCapture(
+                currentUser ?? new AnonymousCurrentUserService(),
+                tenantContext ?? new TenantContext(),
+                new CorrelationContext()),
             signal,
             NullLogger<InternalCommandScheduler>.Instance,
             timeProvider);

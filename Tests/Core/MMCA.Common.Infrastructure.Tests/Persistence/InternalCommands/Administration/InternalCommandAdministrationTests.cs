@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
@@ -45,8 +46,7 @@ public sealed class InternalCommandAdministrationTests : IDisposable
             _services.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<InternalCommandAdministration>.Instance,
             Options.Create(InternalCommandTestHarness.Settings()),
-            new EmptyEntityDataSourceRegistry(),
-            new DefaultDataSourceResolver(),
+            new FrameworkTableTargets(new EmptyEntityDataSourceRegistry(), new DefaultDataSourceResolver()),
             _signal.Object,
             _clock);
     }

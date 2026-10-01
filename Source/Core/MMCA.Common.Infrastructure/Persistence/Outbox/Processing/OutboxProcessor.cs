@@ -14,7 +14,6 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
 using MMCA.Common.Infrastructure.Persistence.Polling;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Resilience;
 using Polly;
 using Polly.CircuitBreaker;
@@ -45,24 +44,19 @@ namespace MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 /// <param name="logger">Logger for processing diagnostics.</param>
 /// <param name="outboxOptions">Configurable outbox processing settings.</param>
 /// <param name="outboxSignal">Signal to wait on between polling cycles for immediate wakeup.</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
-/// <param name="dataSourceResolver">Resolver for the configured outbox publish target.</param>
+/// <param name="tableTargets">
+/// Decides which databases hold an outbox table this host drains, including each tenant that keeps
+/// its own copy of a source (whose outbox nothing else would drain).
+/// </param>
 /// <param name="timeProvider">Clock abstraction for the startup delay and lease/eligibility timestamps;
 /// injected so tests can drive the loop deterministically.</param>
-/// <param name="tenancyOptions">
-/// Bound tenancy settings, used only to discover tenants that keep their own copy of a source: each
-/// such database has its own outbox table that nothing else would drain. Defaulted, so a host
-/// without tenancy keeps the previous constructor shape and behavior.
-/// </param>
 public sealed partial class OutboxProcessor(
     IServiceScopeFactory scopeFactory,
     ILogger<OutboxProcessor> logger,
     IOptions<OutboxSettings> outboxOptions,
     IOutboxSignal outboxSignal,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver,
-    TimeProvider timeProvider,
-    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
+    FrameworkTableTargets tableTargets,
+    TimeProvider timeProvider) : BackgroundService
 {
     private readonly OutboxSettings _settings = outboxOptions.Value;
     private readonly TimeProvider _timeProvider = timeProvider;
@@ -144,13 +138,8 @@ public sealed partial class OutboxProcessor(
     /// database has its own <c>OutboxMessages</c> table, and nothing else opens that database, so
     /// without this its events would sit undelivered forever.
     /// </summary>
-    internal List<TenantDataSourceTarget> GetOutboxTargets() =>
-        TenantDataSourceTargets.ExpandRelational(
-            entityDataSourceRegistry,
-            dataSourceResolver,
-            _settings.DataSource,
-            _settings.DatabaseName,
-            tenancyOptions?.Value);
+    internal IReadOnlyList<TenantDataSourceTarget> GetOutboxTargets() =>
+        tableTargets.Relational(_settings.DataSource, _settings.DatabaseName);
 
     /// <summary>
     /// Drains every outbox source once and aggregates the per-source results: any source with

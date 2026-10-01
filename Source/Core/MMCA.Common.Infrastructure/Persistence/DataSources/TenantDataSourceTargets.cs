@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
-using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -82,48 +81,6 @@ public static class TenantDataSourceTargets
     }
 
     /// <summary>
-    /// The targets a sweep over the framework's own relational tables visits: every relational
-    /// physical source backing a registered entity (Cosmos has none of these tables), deduplicated,
-    /// then expanded per tenant that keeps its own copy.
-    /// </summary>
-    /// <param name="registry">The entity-to-source registry.</param>
-    /// <param name="tenancy">Bound tenancy settings, or null when tenancy was never registered.</param>
-    /// <returns>The targets to sweep, in a deterministic order.</returns>
-    /// <remarks>Recomputed per call by every caller: cheap, and tolerant of module assemblies loading after startup.</remarks>
-    internal static List<TenantDataSourceTarget> ExpandRelational(
-        IEntityDataSourceRegistry registry,
-        TenancySettings? tenancy) =>
-        Expand(RelationalSourcesInUse(registry).Distinct(), tenancy);
-
-    /// <summary>
-    /// As <see cref="ExpandRelational(IEntityDataSourceRegistry, TenancySettings?)"/>, plus the
-    /// source the caller's own settings name as its table's home (the outbox publish target, the
-    /// internal-command scheduling target), unless that setting names Cosmos.
-    /// </summary>
-    /// <param name="registry">The entity-to-source registry.</param>
-    /// <param name="resolver">Resolves the configured logical source to its physical one.</param>
-    /// <param name="configuredEngine">The engine the caller's settings name.</param>
-    /// <param name="configuredDatabaseName">The logical database name the caller's settings name.</param>
-    /// <param name="tenancy">Bound tenancy settings, or null when tenancy was never registered.</param>
-    /// <returns>The targets to sweep, in a deterministic order.</returns>
-    internal static List<TenantDataSourceTarget> ExpandRelational(
-        IEntityDataSourceRegistry registry,
-        IDataSourceResolver resolver,
-        DataSource configuredEngine,
-        string configuredDatabaseName,
-        TenancySettings? tenancy)
-    {
-        var sources = RelationalSourcesInUse(registry);
-
-        if (DataSourceEngines.For(configuredEngine).Capabilities.IsRelational)
-        {
-            sources = sources.Append(resolver.ResolveLogical(configuredEngine, configuredDatabaseName));
-        }
-
-        return Expand(sources.Distinct(), tenancy);
-    }
-
-    /// <summary>
     /// Creates a DI scope for one target and, when the target is a tenant's own database, sets that
     /// tenant on the scope. Call it BEFORE asking the scope for a context: the tenant is what routes
     /// the scoped context factory to the tenant's connection string, and it is also what the query
@@ -144,7 +101,4 @@ public static class TenantDataSourceTargets
 
         return scope;
     }
-
-    private static IEnumerable<DataSourceKey> RelationalSourcesInUse(IEntityDataSourceRegistry registry) =>
-        registry.GetPhysicalSourcesInUse().Where(key => DataSourceEngines.For(key.Engine).Capabilities.IsRelational);
 }

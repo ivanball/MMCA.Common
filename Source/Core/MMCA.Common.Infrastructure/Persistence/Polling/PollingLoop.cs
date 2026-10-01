@@ -133,7 +133,7 @@ internal static class PollingLoop
     /// <param name="cancellationToken">Cancels the cycle; a cancellation it caused is rethrown.</param>
     /// <returns>The aggregated result and the total backlog observed.</returns>
     internal static async Task<(bool HasMoreWork, DateTime? EarliestUpcoming, long PendingDepth)> DrainAllAsync(
-        List<TenantDataSourceTarget> targets,
+        IReadOnlyList<TenantDataSourceTarget> targets,
         Func<TenantDataSourceTarget, CancellationToken, Task<(bool HasMoreWork, DateTime? EarliestUpcoming, long PendingDepth)>> drainSource,
         Action<string, Exception> onSourceError,
         CancellationToken cancellationToken)

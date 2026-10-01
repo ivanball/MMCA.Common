@@ -98,7 +98,7 @@ public sealed class AuditTrailCleanupJobTests : IDisposable
         var dbContextFactory = new Mock<IDbContextFactory>();
         var job = new AuditTrailCleanupJob(
             dbContextFactory.Object,
-            registry.Object,
+            new FrameworkTableTargets(registry.Object, Mock.Of<IDataSourceResolver>()),
             NullLogger<AuditTrailCleanupJob>.Instance,
             Options.Create(new AuditTrailSettings { Enabled = true }),
             _timeProvider);
@@ -122,7 +122,7 @@ public sealed class AuditTrailCleanupJobTests : IDisposable
 
         return new AuditTrailCleanupJob(
             dbContextFactory.Object,
-            registry.Object,
+            new FrameworkTableTargets(registry.Object, Mock.Of<IDataSourceResolver>()),
             NullLogger<AuditTrailCleanupJob>.Instance,
             Options.Create(settings),
             _timeProvider);

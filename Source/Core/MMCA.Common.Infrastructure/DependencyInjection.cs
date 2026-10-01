@@ -91,6 +91,10 @@ public static partial class DependencyInjection
             services.TryAddSingleton<IDataSourceResolver, DataSourceResolver>();
             services.TryAddSingleton<IEntityDataSourceRegistry, EntityDataSourceRegistry>();
 
+            // Which databases the framework table sweeps visit (outbox, internal commands, audit
+            // trail), shared by every processor, cleanup service and operator surface over them.
+            services.TryAddSingleton<FrameworkTableTargets>();
+
             services.AddOptions<SmtpSettings>()
                 .Bind(configuration.GetSection(SmtpSettings.SectionName))
                 .ValidateDataAnnotations()
@@ -166,6 +170,10 @@ public static partial class DependencyInjection
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
             services.TryAddScoped<Application.Auth.IRefreshSessionStore, Persistence.Auth.EFRefreshSessionStore>();
+
+            // Issues, rotates and revokes the token pair over that store; AuthenticationServiceBase
+            // delegates every session decision to it. Scoped for the same reason as the store.
+            services.TryAddScoped<Application.Auth.Sessions.IAuthSessionIssuer, Application.Auth.Sessions.AuthSessionIssuer>();
 
             // Retention sweep, gated on the same flag that maps the table. Registering it
             // unconditionally would start an hourly sweep in every service of a modular host, all but

@@ -13,7 +13,6 @@ using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands.Administration;
 using MMCA.Common.Infrastructure.Persistence.Polling;
-using MMCA.Common.Infrastructure.Persistence.Tenancy;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
@@ -38,21 +37,16 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 /// <param name="logger">Logger for processing diagnostics.</param>
 /// <param name="options">Configurable queue settings.</param>
 /// <param name="signal">Signal to wait on between cycles for immediate wake-up.</param>
-/// <param name="entityDataSourceRegistry">Registry enumerating the physical data sources in use.</param>
-/// <param name="dataSourceResolver">Resolver for the configured scheduling target.</param>
+/// <param name="tableTargets">Decides which databases (and per-tenant copies) hold a queue table this host drains.</param>
 /// <param name="timeProvider">Clock abstraction for the startup delay and every lease, backoff and
 /// eligibility timestamp; injected so tests can drive the loop deterministically.</param>
-/// <param name="tenancyOptions">Bound tenancy settings, used to discover tenants that keep their own
-/// copy of a source: each such database has its own queue table that nothing else would drain.</param>
 public sealed partial class InternalCommandProcessor(
     IServiceScopeFactory scopeFactory,
     ILogger<InternalCommandProcessor> logger,
     IOptions<InternalCommandsSettings> options,
     IInternalCommandSignal signal,
-    IEntityDataSourceRegistry entityDataSourceRegistry,
-    IDataSourceResolver dataSourceResolver,
-    TimeProvider timeProvider,
-    IOptions<TenancySettings>? tenancyOptions = null) : BackgroundService
+    FrameworkTableTargets tableTargets,
+    TimeProvider timeProvider) : BackgroundService
 {
     /// <summary>
     /// Name of the per-cycle poll activity wrapping the queue fetch. Must stay in sync with
@@ -117,13 +111,8 @@ public sealed partial class InternalCommandProcessor(
     /// the shared database, plus one extra unit per tenant that keeps its own copy of a source, whose
     /// queue table nothing else opens.
     /// </summary>
-    internal List<TenantDataSourceTarget> GetTargets() =>
-        TenantDataSourceTargets.ExpandRelational(
-            entityDataSourceRegistry,
-            dataSourceResolver,
-            _settings.DataSource,
-            _settings.DatabaseName,
-            tenancyOptions?.Value);
+    internal IReadOnlyList<TenantDataSourceTarget> GetTargets() =>
+        tableTargets.Relational(_settings.DataSource, _settings.DatabaseName);
 
     /// <summary>
     /// Drains every target once and aggregates the per-source results: any source with more due work
