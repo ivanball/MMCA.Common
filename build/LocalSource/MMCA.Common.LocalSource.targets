@@ -10,7 +10,8 @@
          <Import Project="$(LocalMMCAPath)..\build\LocalSource\MMCA.Common.LocalSource.targets" Condition="'$(UseLocalMMCA)' == 'true'" />
 
        The package-to-project map is DERIVED from Common's own Source tree (every
-       Source\**\MMCA.Common.*.csproj, keyed by its file name, which equals its PackageId), so a new
+       Source\**\MMCA.Common.*.csproj plus the MMCA.Common metapackage, keyed by its file name,
+       which equals its PackageId), so a new
        package is swapped the day it exists, with no list to keep in step in each consumer.
 
        Only packages the project actually references are swapped: a project that never named
@@ -24,8 +25,11 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(UseLocalMMCA)' == 'true'">
-    <!-- Every MMCA.Common.* project under Common's Source tree, carrying its full path. -->
-    <_MMCALocalSourceProject Include="$(_MMCALocalSourceRoot)**\MMCA.Common.*.csproj"
+    <!-- Every MMCA.Common.* project under Common's Source tree, plus the MMCA.Common metapackage
+         itself, each carrying its full path. The two globs are disjoint by construction (the first
+         needs a segment after "MMCA.Common.", the second matches the bare name only), so nothing
+         is included twice. -->
+    <_MMCALocalSourceProject Include="$(_MMCALocalSourceRoot)**\MMCA.Common.*.csproj;$(_MMCALocalSourceRoot)**\MMCA.Common.csproj"
                              Exclude="$(_MMCALocalSourceRoot)**\bin\**;$(_MMCALocalSourceRoot)**\obj\**">
       <MMCALocalProjectPath>%(FullPath)</MMCALocalProjectPath>
     </_MMCALocalSourceProject>
