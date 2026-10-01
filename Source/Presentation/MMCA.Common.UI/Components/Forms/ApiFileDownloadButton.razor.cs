@@ -83,14 +83,19 @@ public partial class ApiFileDownloadButton
 
     private string AccessibleLabel => AriaLabel ?? L["Button.Download.Aria"].Value;
 
-    // Browsers need the EXTERNAL gateway URL: WasmApiEndpoint on the Server head (its
-    // ApiEndpoint may be container-internal in prod), ApiEndpoint on the WASM head (already
-    // the browser-reachable value fetched from /client-config).
+    // The anchor is a plain top-level navigation, so it carries cookies but never an Authorization
+    // header. On a WebAssembly client of a host running the same-origin API proxy the link targets
+    // the proxy (the same base the "APIClient" uses): the browser sends the HttpOnly session cookie
+    // and the proxy attaches the real bearer server-side, so an authenticated download works without
+    // a token in script. Everywhere else browsers need the EXTERNAL gateway URL: WasmApiEndpoint on
+    // the Server head (its ApiEndpoint may be container-internal in prod), ApiEndpoint on the WASM
+    // head (already the browser-reachable value fetched from /client-config).
     private string BrowserDownloadUrl
     {
         get
         {
-            var baseUrl = ApiOptions.Value.WasmApiEndpoint ?? ApiOptions.Value.ApiEndpoint;
+            var settings = ApiOptions.Value;
+            var baseUrl = settings.SameOriginApiEndpoint ?? settings.WasmApiEndpoint ?? settings.ApiEndpoint;
             return string.IsNullOrWhiteSpace(baseUrl)
                 ? RelativeApiPath
                 : new Uri(new Uri(baseUrl), RelativeApiPath).OriginalString;
