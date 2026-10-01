@@ -3,7 +3,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.UI.Common;
-using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Components.PageState;
 using MMCA.Common.UI.Resources;
 using MudBlazor;
@@ -21,7 +20,6 @@ namespace MMCA.Common.UI.Components.Lists;
 public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
-    [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
 
     [Parameter]
@@ -207,7 +205,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
             {
                 // A failure Result raises the error state and its inline Retry button; the page
                 // counter never advanced, so there is nothing to compensate back.
-                SetLoadFailed(isInitial, fetched);
+                SetLoadFailed(fetched);
                 return;
             }
 
@@ -234,7 +232,7 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
                 return;
             }
 
-            SetLoadFailed(isInitial, failure: null);
+            SetLoadFailed(failure: null);
         }
         finally
         {
@@ -269,24 +267,18 @@ public partial class MobileInfiniteScrollList<TItem> : IAsyncDisposable
 
     /// <summary>
     /// Raises the error state both failure signals share: the inline message plus its Retry button,
-    /// and on the very first load a snackbar as well (the initial failure renders as an empty state,
-    /// so the snackbar is the only thing the user would otherwise see).
+    /// rendered in place of the list (first page) or below it (a later page). The alert is announced
+    /// on its own, so no toast is raised on top of it.
     /// </summary>
-    /// <param name="isInitial">Whether this was the initial load.</param>
     /// <param name="failure">
     /// The failed result whose localized message is shown, or <see langword="null"/> for an
     /// exception, whose raw text is neither translatable nor safe to surface (ADR-027 / rubric §24)
     /// and which therefore falls back to the generic resource string.
     /// </param>
-    private void SetLoadFailed(bool isInitial, Result? failure)
+    private void SetLoadFailed(Result? failure)
     {
         _loadError = true;
         _loadErrorMessage = failure?.LocalizedErrorMessage(L);
-
-        if (isInitial)
-        {
-            Toast.Error(_loadErrorMessage ?? L["Grid.Snackbar.LoadFailed"].Value);
-        }
     }
 
     /// <summary>

@@ -33,7 +33,10 @@ public interface IInternalCommandScheduler
     /// </returns>
     /// <remarks>
     /// <b>When the write is persisted.</b> With a transaction active on the target data source the
-    /// row is only enrolled, and the caller's commit persists it. With no transaction active the row
+    /// row is only enrolled: the caller's next save writes it, and when none follows (a command
+    /// scheduled after the handler's last save), the transactional pipeline saves it just before the
+    /// commit, so it still commits with the aggregate change. That pipeline refuses to commit any
+    /// OTHER change left unsaved, so a handler cannot rely on it to save its own work. With no transaction active the row
     /// is saved immediately, which flushes anything else pending on that context exactly as calling
     /// the unit of work's own save would. Schedule inside an <c>ITransactional</c> command, or after
     /// your own save, when that distinction matters.

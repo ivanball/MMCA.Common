@@ -110,9 +110,10 @@ internal sealed partial class InternalCommandScheduler(
 
         if (context.Database.CurrentTransaction is not null)
         {
-            // Enrolled only. The caller's commit persists the row atomically with its aggregate
-            // change, and the processor discovers it on its next poll; signalling now would only buy
-            // a query against a transaction that has not committed.
+            // Enrolled only. The caller's next save writes the row, or the transactional pipeline
+            // saves it just before the commit when no save follows, so it commits atomically with
+            // the aggregate change. The processor discovers it on its next poll; signalling now would
+            // only buy a query against a transaction that has not committed.
             LogEnrolled(logger, row.Id, row.CommandType, scheduledOn);
             return Result.Success(row.Id);
         }

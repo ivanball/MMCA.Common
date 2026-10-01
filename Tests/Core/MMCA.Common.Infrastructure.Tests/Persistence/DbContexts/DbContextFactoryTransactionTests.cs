@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -15,9 +16,12 @@ using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.DbContexts.Factory;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
+using MMCA.Common.Infrastructure.Persistence.InternalCommands;
+using MMCA.Common.Infrastructure.Persistence.InternalCommands.Processing;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Processing;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
+using MMCA.Common.Infrastructure.Tests.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Tests.TestDoubles;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
@@ -229,6 +233,97 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
             Times.Never);
     }
 
+    // ── Commit rule: enrolled internal-command rows are flushed, any other unsaved change fails ──
+    // The scheduler only ENROLLS its row while a transaction is open; before this rule the commit
+    // never saved, so a command scheduled after the handler's last save was silently dropped (Store's
+    // AddVariantHandler, bug-hunt L109).
+    [Fact]
+    public async Task ExecuteInTransactionAsync_CommandScheduledAfterTheLastSave_IsFlushedAndCommitted()
+    {
+        var scheduler = CreateScheduler();
+
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                context.Set<TestAggregate>().Add(new TestAggregate { Id = 1, Name = "Test" });
+                await _sut.SaveChangesAsync(ct);
+
+                var scheduled = await scheduler.ScheduleAsync(new RecordingCommand("after-save"), runAt: null, ct);
+                return scheduled.IsSuccess ? Result.Success() : Result.Failure(scheduled.Errors);
+            });
+
+        result.IsSuccess.Should().BeTrue();
+        (await _dbContext.Set<TestAggregate>().AsNoTracking().CountAsync()).Should().Be(1);
+        (await _dbContext.Set<InternalCommandMessage>().AsNoTracking().CountAsync())
+            .Should().Be(1, "the enrolled row must commit with the aggregate, not be discarded at commit");
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_CommandScheduledBeforeTheSave_PersistsOneRow()
+    {
+        var scheduler = CreateScheduler();
+
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                context.Set<TestAggregate>().Add(new TestAggregate { Id = 1, Name = "Test" });
+                await scheduler.ScheduleAsync(new RecordingCommand("before-save"), runAt: null, ct);
+                await _sut.SaveChangesAsync(ct);
+                return Result.Success();
+            });
+
+        result.IsSuccess.Should().BeTrue();
+        (await _dbContext.Set<InternalCommandMessage>().AsNoTracking().CountAsync()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_CommandScheduledThenFailure_RollsTheRowBack()
+    {
+        var scheduler = CreateScheduler();
+
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                await scheduler.ScheduleAsync(new RecordingCommand("doomed"), runAt: null, ct);
+                return Result.Failure(Error.Validation("Invariant.Failed", "a later invariant failed"));
+            });
+
+        result.IsFailure.Should().BeTrue();
+        (await _dbContext.Set<InternalCommandMessage>().AsNoTracking().CountAsync())
+            .Should().Be(0, "a business failure must not flush the enrolled row");
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_OtherChangeLeftUnsaved_ThrowsAndRollsEverythingBack()
+    {
+        var act = async () => await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                context.Set<TestAggregate>().Add(new TestAggregate { Id = 1, Name = "Saved" });
+                await _sut.SaveChangesAsync(ct);
+
+                // Never saved: before the commit rule this was silently discarded while the unit
+                // still reported success.
+                context.Set<TestAggregate>().Add(new TestAggregate { Id = 2, Name = "Forgotten" });
+                return Result.Success();
+            });
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*unsaved*");
+        (await _dbContext.Set<TestAggregate>().AsNoTracking().CountAsync())
+            .Should().Be(0, "the unit fails closed, so the earlier saved work rolls back too");
+    }
+
+    private InternalCommandScheduler CreateScheduler() =>
+        InternalCommandTestHarness.CreateScheduler(
+            _dbContext,
+            InternalCommandTestHarness.Settings(),
+            new FakeTimeProvider(InternalCommandTestHarness.Epoch),
+            Mock.Of<IInternalCommandSignal>());
+
     // ── Test doubles ──
     public sealed record TestLocalEvent : BaseDomainEvent;
 
@@ -282,6 +377,15 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
                 entity.Property(e => e.EventType).IsRequired().HasMaxLength(500);
                 entity.Property(e => e.Payload).IsRequired();
                 entity.Property(e => e.LastError).HasMaxLength(4000);
+            });
+            modelBuilder.Entity<InternalCommandMessage>(entity =>
+            {
+                entity.ToTable("InternalCommands");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CommandType).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Payload).IsRequired();
+                entity.Property(e => e.LastError).HasMaxLength(4000);
+                entity.Property(e => e.UserRoles).HasMaxLength(512);
             });
         }
     }

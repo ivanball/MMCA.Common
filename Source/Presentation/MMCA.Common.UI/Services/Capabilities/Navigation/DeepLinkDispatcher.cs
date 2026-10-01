@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace MMCA.Common.UI.Services.Capabilities.Navigation;
 
 /// <summary>
@@ -25,6 +27,8 @@ public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
     /// <returns>
     /// <see langword="true"/> only when the route starts with a single <c>/</c> followed by a
     /// non-slash character, carries no backslash and no control character, and names no scheme.
+    /// A <see langword="true"/> result also proves <paramref name="route"/> is not null, so a caller
+    /// can pass it straight to <see cref="Publish"/> without a separate check.
     /// </returns>
     /// <remarks>
     /// <para>
@@ -42,7 +46,7 @@ public sealed class DeepLinkDispatcher : IDeepLinkDispatcher
     /// may never name its own origin or protocol.
     /// </para>
     /// </remarks>
-    public static bool IsAppRelativeRoute(string? route)
+    public static bool IsAppRelativeRoute([NotNullWhen(true)] string? route)
     {
         if (string.IsNullOrWhiteSpace(route))
         {

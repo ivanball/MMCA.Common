@@ -6,6 +6,14 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.215.0] - 2026-09-30
+
+### Fixed
+
+- **Behavior change:** at commit, a transactional unit (`ITransactional` command or `IUnitOfWork.ExecuteInTransactionAsync`) saves any internal-command row scheduled after the handler's last save, so it commits with the aggregate change instead of being silently discarded (the root shape of the 2026-09-30 L109 bug). Any other change still unsaved at that point now throws `InvalidOperationException` and rolls the unit back, where it was silently discarded before. See UPGRADING.
+- Fixed: `MobileInfiniteScrollList` renders the inline failure message and its Retry button when the FIRST page fails, instead of the empty state; Retry re-fetches page 1. The first-load toast is gone, because the inline `role="alert"` already announces the failure.
+- Fixed: `DeepLinkDispatcher.IsAppRelativeRoute` carries `[NotNullWhen(true)]`, so a caller can pass a route it just checked straight to `Publish` without a separate null check.
+
 ## [1.214.0] - 2026-09-30
 
 ### Changed

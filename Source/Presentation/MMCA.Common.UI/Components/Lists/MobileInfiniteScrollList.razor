@@ -12,6 +12,12 @@
                            aria-label="@L["Loading.Label"]" />
     </div>
 }
+else if (_items.Count == 0 && _loadError)
+{
+    @* A failed first page is not an empty list: show the failure and its Retry, which re-fetches
+       page 1 because the page counter never advanced. *@
+    @LoadFailedAlert
+}
 else if (_items.Count == 0)
 {
     <EmptyState Message="@EmptyMessage" Icon="@EmptyIcon" />
@@ -44,12 +50,15 @@ else
 
     @if (_loadError && _hasMore)
     {
-        @* role="alert": the failure arrives without the user having done anything, so it has to be
-           announced rather than waited for (the same treatment ListNoRecordsContent's error branch
-           gets). *@
-        <div class="d-flex flex-column align-center pa-4 gap-2" role="alert">
-            <MudText Typo="Typo.body2" Color="Color.Error">@(_loadErrorMessage ?? L["Grid.LoadMoreFailed"].Value)</MudText>
-            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">@L["Common.Button.Retry"]</MudButton>
-        </div>
+        @LoadFailedAlert
     }
+}
+
+@code {
+    // role="alert": the failure arrives without the user having done anything, so it has to be
+    // announced rather than waited for (the same treatment ListNoRecordsContent's error branch gets).
+    private RenderFragment LoadFailedAlert => @<div class="d-flex flex-column align-center pa-4 gap-2" role="alert">
+        <MudText Typo="Typo.body2" Color="Color.Error">@(_loadErrorMessage ?? L["Grid.LoadMoreFailed"].Value)</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">@L["Common.Button.Retry"]</MudButton>
+    </div>;
 }

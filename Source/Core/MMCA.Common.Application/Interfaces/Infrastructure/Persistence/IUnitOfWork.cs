@@ -50,6 +50,12 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     /// <c>SqlServerRetryingExecutionStrategy</c>) can retry the entire transaction as a
     /// single retriable unit. On success the transaction is committed; on exception it is
     /// rolled back before the exception propagates.
+    /// <para>
+    /// The commit does not save the operation's work: save it before returning. The one exception is
+    /// an internal-command row scheduled after the last save, which is saved just before the commit.
+    /// Any other change still tracked at that point throws <see cref="InvalidOperationException"/>
+    /// and rolls the unit back, because committing would silently discard it.
+    /// </para>
     /// </summary>
     /// <typeparam name="TResult">The type returned by the operation.</typeparam>
     /// <param name="operation">The work to execute inside the transaction.</param>
