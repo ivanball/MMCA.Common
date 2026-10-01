@@ -198,7 +198,11 @@ internal sealed partial class CookieSessionRefresher(
             cache.Set(CacheKey(refreshToken), auth, RotationGrace);
             return (auth, null);
         }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or NotSupportedException)
+        // Polly.ExecutionRejectedException covers the resilience pipeline's own refusals (a timed-out
+        // attempt, an open circuit, a rate-limited call): with the gateway down the standard handler
+        // throws TimeoutRejectedException, which is neither of the transport exceptions above.
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or NotSupportedException
+            or Polly.ExecutionRejectedException)
         {
             LogRefreshCallFailed(logger, ex);
             return (null, SessionRefreshOutcome.Unavailable());

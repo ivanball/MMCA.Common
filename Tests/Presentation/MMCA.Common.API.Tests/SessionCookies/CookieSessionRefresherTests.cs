@@ -387,6 +387,24 @@ public sealed class CookieSessionRefresherTests
         outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
     }
 
+    // With the gateway down the standard resilience handler throws its own rejections, not a transport
+    // exception; found live, where the TimeoutRejectedException escaped as a 500 after 30 seconds.
+    public static TheoryData<string> ResilienceRejections => ["timeout", "circuit"];
+
+    [Theory]
+    [MemberData(nameof(ResilienceRejections))]
+    public async Task RefreshAsync_ResiliencePipelineRejection_IsUnavailable(string kind)
+    {
+        Exception rejection = kind == "timeout"
+            ? new Polly.Timeout.TimeoutRejectedException("attempt timed out")
+            : new Polly.CircuitBreaker.BrokenCircuitException("circuit open");
+        using var harness = CreateSut(_ => throw rejection);
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(CreateContext(accessToken: null, refreshToken: "old-refresh"));
+
+        outcome.Status.Should().Be(SessionRefreshStatus.Unavailable);
+    }
+
     [Fact]
     public async Task ValidateOrRefreshAsync_Timeout_IsUnavailable()
     {
