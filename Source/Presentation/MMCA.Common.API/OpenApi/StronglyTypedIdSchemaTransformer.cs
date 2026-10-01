@@ -17,8 +17,8 @@ namespace MMCA.Common.API.OpenApi;
 /// carried, so the document says what the endpoint really accepts.
 /// </para>
 /// <para>
-/// Registered once by <c>AddCommonOpenApi()</c> across every versioned document. It is inert in a
-/// host that declares no wrappers.
+/// Registered once by <c>AddCommonOpenApi()</c> across every document the host registers with
+/// <c>AddOpenApi()</c>. It is inert in a host that declares no wrappers.
 /// </para>
 /// </summary>
 public sealed class StronglyTypedIdSchemaTransformer : IOpenApiSchemaTransformer

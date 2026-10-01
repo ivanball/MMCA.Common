@@ -72,6 +72,7 @@ public sealed class MapCommonOpenApiAuthorizationTests
         builder.Logging.ClearProviders();
         builder.Services.AddControllers();
         builder.Services.AddCommonApiVersioning();
+        builder.Services.AddOpenApi();
         builder.Services.AddCommonOpenApi();
 
         if (withFallbackPolicy)

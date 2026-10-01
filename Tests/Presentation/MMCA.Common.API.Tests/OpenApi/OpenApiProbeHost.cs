@@ -13,7 +13,7 @@ namespace MMCA.Common.API.Tests.OpenApi;
 
 /// <summary>
 /// Boots a started in-memory <see cref="WebApplication"/> over the real MVC + <c>AddCommonApiVersioning</c>
-/// + <c>AddCommonOpenApi</c> + <c>MapCommonOpenApi</c> pipeline, so <c>/openapi/v1.json</c> is served by the
+/// + host <c>AddOpenApi</c> + <c>AddCommonOpenApi</c> + <c>MapCommonOpenApi</c> pipeline, so <c>/openapi/v1.json</c> is served by the
 /// same code path a service host runs. Controller discovery is restricted to an explicit probe list: the
 /// default feature providers would otherwise sweep in every controller in the test assembly (and in
 /// MMCA.Common.API itself), which would make each caller's document depend on unrelated test files.
@@ -37,6 +37,7 @@ internal static class OpenApiProbeHost
 
         builder.Services.AddControllers();
         builder.Services.AddCommonApiVersioning();
+        builder.Services.AddOpenApi();
         builder.Services.AddCommonOpenApi();
 
         // Restricting discovery has to happen AFTER the framework registrations: the API-versioning

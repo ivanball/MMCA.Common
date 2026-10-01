@@ -79,24 +79,26 @@ public static partial class WebApplicationBuilderExtensions
         }
 
         /// <summary>
-        /// Registers OpenAPI document generation through the API-versioning builder, which creates
-        /// one document per discovered API version named by the API explorer's
-        /// <c>GroupNameFormat</c> (<c>'v'VVV</c>, so v1.0 is the <c>v1</c> document). Pair with
-        /// <c>MapCommonOpenApi()</c> so each service serves <c>/openapi/v1.json</c> the same way.
-        /// The parameterless <c>AddApiVersioning()</c> call only returns the builder; the options
-        /// configured by <c>AddCommonApiVersioning</c> accumulate independently of call order.
-        /// Also installs <see cref="ApiParameterDescriptorBackfillProvider"/>, so a host that opts
-        /// into OpenAPI without calling <c>AddCommonApiVersioning</c> is guarded too.
+        /// Adds the framework's OpenAPI behavior to the document(s) the host registers itself with
+        /// ASP.NET Core's <c>services.AddOpenApi()</c>. It registers no document: the host MUST make
+        /// that call in its own project, because the OpenAPI XML-comment source generator attaches
+        /// the host's controller summaries by intercepting the <c>AddOpenApi</c> call sites of the
+        /// project being compiled, and a registration made inside this assembly carries none of them.
+        /// Register as <c>services.AddOpenApi(); services.AddCommonOpenApi();</c> (either order) and
+        /// map with <c>MapCommonOpenApi()</c>, which fails at startup outside Production when no
+        /// <c>v1</c> document was registered. Configures every registered document with the
+        /// strongly-typed-identifier schema and parameter transformers (ADR-115; inert in a host that
+        /// declares no wrappers) and installs <see cref="ApiParameterDescriptorBackfillProvider"/>, so
+        /// a host that opts into OpenAPI without calling <c>AddCommonApiVersioning</c> is guarded too.
+        /// With no wrappers the document is exactly the one plain <c>AddOpenApi()</c> produces.
         /// </summary>
         public IServiceCollection AddCommonOpenApi()
         {
-            services.AddApiVersioning().AddOpenApi();
             services.AddApiParameterDescriptorBackfill();
 
             // Strongly typed identifiers document as the primitive they wrap (ADR-115). ConfigureAll
-            // rather than a named document, because AddOpenApi above creates one OpenApiOptions per
-            // discovered API version and the wire shape is identical in all of them. Inert in a host
-            // that declares no wrappers.
+            // rather than a named document, so whatever document names the host registers are all
+            // covered. Inert in a host that declares no wrappers.
             services.ConfigureAll<Microsoft.AspNetCore.OpenApi.OpenApiOptions>(options =>
             {
                 options.AddSchemaTransformer(new StronglyTypedIdSchemaTransformer());

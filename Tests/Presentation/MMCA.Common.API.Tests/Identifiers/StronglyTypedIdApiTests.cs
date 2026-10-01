@@ -175,6 +175,7 @@ public sealed class StronglyTypedIdApiTests
         builder.Services.AddScoped(_ => Mock.Of<ICacheService>());
 
         builder.Services.AddCommonApiVersioning();
+        builder.Services.AddOpenApi();
         builder.Services.AddCommonOpenApi();
 
         builder.Services.AddControllers().ConfigureApplicationPartManager(manager =>
