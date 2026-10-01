@@ -4,8 +4,8 @@
          deliberately NOT in MMCA.Common.slnx — it exists only so MMCA.Common.UI.E2E.Tests can
          self-host the real shared UI pages in-process for the axe a11y + render-smoke gate. -->
     <IsPackable>false</IsPackable>
-    <!-- The shared layout/pages have unannotated members; the repo-wide CS1591 NoWarn covers docs,
-         but this host has no public API surface worth documenting. -->
+    <!-- The shared layout/pages have unannotated members, but this host has no public API surface
+         worth documenting, so it emits no XML doc file (and therefore no CS1591). -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 

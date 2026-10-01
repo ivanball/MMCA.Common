@@ -2,6 +2,8 @@
   <PropertyGroup>
     <PackageId>MMCA.Common.Domain</PackageId>
     <Description>MMCA framework: DDD base entities, aggregate roots, domain events, specifications</Description>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <!-- The Application layer's CrossSourceSpecification builds its criteria with the same

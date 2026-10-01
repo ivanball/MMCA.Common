@@ -2,6 +2,8 @@
   <PropertyGroup>
     <PackageId>MMCA.Common.API</PackageId>
     <Description>MMCA framework: base controllers, middleware, idempotency, error-to-HTTP mapping</Description>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" />

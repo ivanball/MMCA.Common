@@ -7,6 +7,8 @@
          @(ProjectReference) and the EnforceUIWebLayerBoundary guard cannot tell a deliberate direct
          reference from transitive plumbing. -->
     <DisableTransitiveProjectReferences>true</DisableTransitiveProjectReferences>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

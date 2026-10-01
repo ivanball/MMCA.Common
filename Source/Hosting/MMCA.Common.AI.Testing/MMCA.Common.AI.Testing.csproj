@@ -12,6 +12,8 @@
       only recognizes a call into an assertion library.
     -->
     <NoWarn>$(NoWarn);CA1707;S2699;SA1600;SA1601;SA1602;SA1611;SA1615;SA1618;SA1623;SA1629;SA1642;SA1649;MA0076;MA0127;RCS1112</NoWarn>
+    <!-- CS1591 ratchet (FR-7): remove when this project is fully documented -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MinVer">

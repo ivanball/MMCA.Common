@@ -24,7 +24,10 @@
          nullable-annotated and is not ours to annotate. Suppressed HERE rather than in .editorconfig
          for the same reason as S8970 above: a `dotnet_diagnostic` severity does not reach generated
          code. The two rules that make the public API gate a gate, RS0016 and RS0017, stay at error. -->
-    <NoWarn>$(NoWarn);CS1591;RMG020;S8970;RS0041</NoWarn>
+    <!-- CS1591 (missing XML comment on a public member) is NOT suppressed here: it is ratcheted per
+         project (FR-7), so a project not yet fully documented carries its own NoWarn line and a
+         clean project cannot regress. -->
+    <NoWarn>$(NoWarn);RMG020;S8970;RS0041</NoWarn>
   </PropertyGroup>
 
   <!-- Suppress xUnit1051 (CancellationToken propagation) in test projects -->
