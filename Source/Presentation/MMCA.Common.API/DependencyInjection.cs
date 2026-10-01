@@ -185,6 +185,11 @@ public static class DependencyInjection
             // Singleton: the refresher's in-flight map must be shared across requests for single-flight to work.
             services.TryAddSingleton<ICookieSessionRefresher, CookieSessionRefresher>();
 
+            // Cookie options (SameSite, claims-only browser tokens) default to the long-standing
+            // behavior; the same-origin API proxy in MMCA.Common.UI.Web tightens them when opted in.
+            services.AddOptions<SessionCookieSettings>();
+            services.TryAddSingleton<ISessionCookieStore, SessionCookieStore>();
+
             // The refresher judges access-token expiry against the injected clock. A Blazor Web host
             // calling only this method has no AddServices registration, so register the system
             // clock here; TryAdd never displaces a host's own.

@@ -33,3 +33,8 @@ const MMCA.Common.UI.Theme.BrandColors.LightTextPrimary = "#212121" -> string!
 const MMCA.Common.UI.Theme.BrandColors.LightTextSecondary = "#616161" -> string!
 const MMCA.Common.UI.Theme.BrandColors.LightWarning = "#A85D00" -> string!
 const MMCA.Common.UI.Theme.BrandColors.LightWarningContrastText = "#FFFFFF" -> string!
+const MMCA.Common.UI.Services.Auth.SameOriginProxyHeaders.CsrfHeaderValue = "1" -> string!
+MMCA.Common.UI.Services.Auth.SameOriginProxyHeaders
+const MMCA.Common.UI.Services.Auth.SameOriginProxyHeaders.CsrfHeaderName = "X-CSRF" -> string!
+MMCA.Common.UI.Common.Settings.ApiSettings.SameOriginApiEndpoint.get -> string?
+MMCA.Common.UI.Common.Settings.ApiSettings.SameOriginApiEndpoint.init -> void

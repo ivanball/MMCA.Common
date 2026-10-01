@@ -96,6 +96,34 @@ public sealed class CookieSessionRefresherTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    // ── Forced refresh (the same-origin proxy's 401 replay) ──
+    [Fact]
+    public async Task RefreshAsync_RotatesEvenWhenTheAccessCookieStillLooksValid()
+    {
+        string stillValid = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+        var context = CreateContext(accessToken: stillValid, refreshToken: "old-refresh");
+
+        SessionTokenResult? result = await harness.Sut.RefreshAsync(context);
+
+        result!.Value.AccessToken.Should().Be("new-access");
+        harness.Handler.CallCount.Should().Be(1, "the upstream rejected the valid-looking token, so only a rotation helps");
+        context.Response.Headers.SetCookie.ToString().Should().Contain("new-refresh");
+    }
+
+    [Fact]
+    public async Task RefreshAsync_SiblingsHoldingTheSameRefreshCookie_ShareOneRotation()
+    {
+        string stillValid = CreateJwt(DateTime.UtcNow.AddMinutes(10));
+        using var harness = CreateSut(RespondWithTokens("new-access", "new-refresh", DateTime.UtcNow.AddMinutes(15)));
+
+        await harness.Sut.RefreshAsync(CreateContext(accessToken: stillValid, refreshToken: "old-refresh"));
+        SessionTokenResult? sibling = await harness.Sut.RefreshAsync(CreateContext(accessToken: stillValid, refreshToken: "old-refresh"));
+
+        sibling!.Value.AccessToken.Should().Be("new-access");
+        harness.Handler.CallCount.Should().Be(1);
+    }
+
     // ── Refresh flow ──
     [Fact]
     public async Task GetOrRefreshAsync_WhenAccessExpiredAndRefreshPresent_RotatesViaAuthRefresh()
@@ -367,7 +395,8 @@ public sealed class CookieSessionRefresherTests
                 _cache,
                 environment.Object,
                 NullLogger<CookieSessionRefresher>.Instance,
-                timeProvider ?? TimeProvider.System);
+                timeProvider ?? TimeProvider.System,
+                Microsoft.Extensions.Options.Options.Create(new SessionCookieSettings()));
         }
 
         public CookieSessionRefresher Sut { get; }

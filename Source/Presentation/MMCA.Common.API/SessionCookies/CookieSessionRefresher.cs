@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Shared.Auth.Requests;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Concurrency;
@@ -35,6 +36,15 @@ public interface ICookieSessionRefresher
     /// <see langword="null"/> when there is no valid session.
     /// </summary>
     Task<SessionTokenResult?> GetOrRefreshAsync(HttpContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exchanges the refresh cookie for a new token pair even when the access cookie still looks valid
+    /// (the API rejected it: revoked, or signed with a rotated key), writing the rotated cookies as a
+    /// side effect. Single-flighted exactly like <see cref="GetOrRefreshAsync"/>: concurrent callers
+    /// holding the same refresh cookie share one rotation. Returns <see langword="null"/> when there is
+    /// no refresh cookie or the exchange fails.
+    /// </summary>
+    Task<SessionTokenResult?> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -54,7 +64,8 @@ internal sealed partial class CookieSessionRefresher(
     IMemoryCache cache,
     IWebHostEnvironment environment,
     ILogger<CookieSessionRefresher> logger,
-    TimeProvider timeProvider) : ICookieSessionRefresher
+    TimeProvider timeProvider,
+    IOptions<SessionCookieSettings> cookieSettings) : ICookieSessionRefresher
 {
     internal const string RefreshClientName = "SessionCookieRefreshClient";
 
@@ -73,6 +84,19 @@ internal sealed partial class CookieSessionRefresher(
             return new SessionTokenResult(accessToken!, expiry);
         }
 
+        return await RefreshFromCookiesAsync(context, accessToken, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<SessionTokenResult?> RefreshAsync(HttpContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var accessToken = context.Request.Cookies[SessionCookieEndpoints.AccessTokenCookieName];
+        return await RefreshFromCookiesAsync(context, accessToken, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<SessionTokenResult?> RefreshFromCookiesAsync(HttpContext context, string? accessToken, CancellationToken cancellationToken)
+    {
         var refreshToken = context.Request.Cookies[SessionCookieEndpoints.RefreshTokenCookieName];
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -86,7 +110,7 @@ internal sealed partial class CookieSessionRefresher(
         }
 
         var auth = refreshed.Value;
-        SessionCookieJar.Append(context, auth.AccessToken, auth.RefreshToken, environment);
+        SessionCookieJar.Append(context, auth.AccessToken, auth.RefreshToken, environment, cookieSettings.Value.SameSite);
 
         // Make the freshly-minted access token visible to this request's SSR authentication, which reads
         // via CookieTokenReader (the Set-Cookie above only affects subsequent requests).

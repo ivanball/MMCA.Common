@@ -148,5 +148,10 @@ public sealed class SessionCookieEndpointsTests
             HttpContext context,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(result);
+
+        public Task<SessionTokenResult?> RefreshAsync(
+            HttpContext context,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(result);
     }
 }

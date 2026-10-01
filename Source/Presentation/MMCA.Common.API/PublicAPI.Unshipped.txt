@@ -1,3 +1,15 @@
 ﻿#nullable enable
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowScopeRequiredErrorCode = "Export.RowScopeRequired" -> string!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.AllowUnscopedExport.get -> bool
+MMCA.Common.API.SessionCookies.SessionClaimsToken
+MMCA.Common.API.SessionCookies.ISessionCookieStore
+MMCA.Common.API.SessionCookies.SessionCookieSettings
+MMCA.Common.API.SessionCookies.SessionCookieSettings.SessionCookieSettings() -> void
+MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.get -> Microsoft.AspNetCore.Http.SameSiteMode
+MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.get -> bool
+MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.set -> void
+MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.set -> void
+MMCA.Common.API.SessionCookies.ICookieSessionRefresher.RefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionTokenResult?>!
+MMCA.Common.API.SessionCookies.ISessionCookieStore.Write(Microsoft.AspNetCore.Http.HttpContext! context, string! accessToken, string! refreshToken) -> void
+MMCA.Common.API.SessionCookies.ISessionCookieStore.Clear(Microsoft.AspNetCore.Http.HttpContext! context) -> void
+static MMCA.Common.API.SessionCookies.SessionClaimsToken.Create(string? accessToken) -> string?

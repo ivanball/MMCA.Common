@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 
 namespace MMCA.Common.API.SessionCookies;
 
@@ -31,15 +32,22 @@ public static class SessionCookieEndpoints
                 .ExcludeFromDescription()
                 .AllowAnonymous();
 
-            group.MapPost(string.Empty, (SessionCookieRequest request, HttpContext httpContext, IWebHostEnvironment env) =>
+            group.MapPost(string.Empty, (SessionCookieRequest request, HttpContext httpContext, IWebHostEnvironment env, IOptions<SessionCookieSettings> settings) =>
             {
-                SessionCookieJar.Append(httpContext, request.AccessToken, request.RefreshToken, env);
+                // Claims-only hosts (the same-origin API proxy) never take tokens from the browser: the
+                // server is the only writer of the cookies, and the browser holds nothing worth posting.
+                // 204 rather than an error, so a client written for the default mode still signs in.
+                if (!settings.Value.ClaimsOnlyBrowserTokens)
+                {
+                    SessionCookieJar.Append(httpContext, request.AccessToken, request.RefreshToken, env, settings.Value.SameSite);
+                }
+
                 return Results.NoContent();
             }).DisableAntiforgery();
 
-            group.MapDelete(string.Empty, (HttpContext httpContext, IWebHostEnvironment env) =>
+            group.MapDelete(string.Empty, (HttpContext httpContext, IWebHostEnvironment env, IOptions<SessionCookieSettings> settings) =>
             {
-                SessionCookieJar.Delete(httpContext, env);
+                SessionCookieJar.Delete(httpContext, env, settings.Value.SameSite);
                 return Results.NoContent();
             }).DisableAntiforgery();
 
@@ -48,7 +56,7 @@ public static class SessionCookieEndpoints
             // 401 (JSON) when there is no valid session. AllowAnonymous (it authenticates via the cookies),
             // antiforgery disabled (no token cookie), CSRF-guarded by POST + SameSite=Lax + Sec-Fetch-Site.
             endpoints.MapPost("/auth/session/token", async (
-                HttpContext httpContext, ICookieSessionRefresher refresher, CancellationToken cancellationToken) =>
+                HttpContext httpContext, ICookieSessionRefresher refresher, IOptions<SessionCookieSettings> settings, CancellationToken cancellationToken) =>
             {
                 if (IsCrossSite(httpContext.Request))
                 {
@@ -56,9 +64,16 @@ public static class SessionCookieEndpoints
                 }
 
                 var result = await refresher.GetOrRefreshAsync(httpContext, cancellationToken).ConfigureAwait(false);
-                return result is null
-                    ? Results.Json(new { error = "no_session" }, statusCode: StatusCodes.Status401Unauthorized)
-                    : Results.Json(new SessionTokenResponse(result.Value.AccessToken, result.Value.AccessTokenExpiry));
+                if (result is null)
+                {
+                    return Results.Json(new { error = "no_session" }, statusCode: StatusCodes.Status401Unauthorized);
+                }
+
+                // Claims-only hosts hand the browser an unsigned copy of the claims, never the credential.
+                var browserToken = settings.Value.ClaimsOnlyBrowserTokens
+                    ? SessionClaimsToken.Create(result.Value.AccessToken) ?? string.Empty
+                    : result.Value.AccessToken;
+                return Results.Json(new SessionTokenResponse(browserToken, result.Value.AccessTokenExpiry));
             })
             .ExcludeFromDescription()
             .AllowAnonymous()

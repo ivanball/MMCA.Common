@@ -24,6 +24,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
+    <!-- The opt-in same-origin API proxy (AddCommonSameOriginApiProxy): YARP's IHttpForwarder carries
+         the browser's /api calls and WebSocket upgrades to the gateway, and service discovery resolves
+         the gateway the same way the host's own HttpClients do. Same pins as MMCA.Common.Gateway and
+         MMCA.Common.Aspire. -->
+    <PackageReference Include="Yarp.ReverseProxy" />
+    <PackageReference Include="Microsoft.Extensions.ServiceDiscovery" />
   </ItemGroup>
 
   <ItemGroup>
