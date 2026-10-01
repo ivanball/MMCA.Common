@@ -86,3 +86,6 @@ MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RoleTable.get -> Microsoft.Pla
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.RowByRole(string! role) -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SaveButton.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RoleAdminPage.SetPermissionAsync(string! permission, bool granted) -> System.Threading.Tasks.Task!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.AddressSavedMessage.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.EmailSavedMessage.get -> string!
+virtual MMCA.Common.Testing.E2E.Workflows.Identity.ProfileManagementTestsBase.NameSavedMessage.get -> string!

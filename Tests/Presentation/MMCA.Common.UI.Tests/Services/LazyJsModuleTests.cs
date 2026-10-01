@@ -111,4 +111,36 @@ public sealed class LazyJsModuleTests
 
         js.VerifyNoOtherCalls();
     }
+
+    [Fact]
+    public async Task OneCallersCancellation_DoesNotFaultTheSharedImportForTheOthers()
+    {
+        // L69: the shared import used to run on the FIRST caller's token, so that caller cancelling
+        // faulted the import for everyone awaiting it.
+        var gate = new TaskCompletionSource<IJSObjectReference>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var module = Mock.Of<IJSObjectReference>();
+        var js = new Mock<IJSRuntime>();
+        js.Setup(r => r.InvokeAsync<IJSObjectReference>("import", It.IsAny<CancellationToken>(), It.IsAny<object?[]>()))
+            .Returns((string _, CancellationToken ct, object?[] _) => new ValueTask<IJSObjectReference>(gate.Task.WaitAsync(ct)));
+
+        var sut = new LazyJsModule(js.Object, ModulePath);
+        using var callerA = new CancellationTokenSource();
+
+        var first = sut.GetOrImportAsync(callerA.Token);
+        var second = sut.GetOrImportAsync(CancellationToken.None);
+        await callerA.CancelAsync();
+
+        var firstOutcome = async () => await first;
+        await firstOutcome.Should().ThrowAsync<OperationCanceledException>();
+
+        // A caller arriving after A gave up must join the same import, not start a second one.
+        var third = sut.GetOrImportAsync(CancellationToken.None);
+        gate.SetResult(module);
+
+        (await second).Should().BeSameAs(module);
+        (await third).Should().BeSameAs(module);
+        js.Verify(
+            r => r.InvokeAsync<IJSObjectReference>("import", It.IsAny<CancellationToken>(), It.IsAny<object?[]>()),
+            Times.Once());
+    }
 }

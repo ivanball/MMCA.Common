@@ -26,7 +26,6 @@ public sealed class BrowserMapNavigationService : IMapNavigationService
         ArgumentException.ThrowIfNullOrWhiteSpace(address);
 
         var uri = new Uri(MapsSearchUrl + Uri.EscapeDataString(address));
-        await _externalLinkService.OpenAsync(uri, cancellationToken).ConfigureAwait(false);
-        return true;
+        return await _externalLinkService.OpenAsync(uri, cancellationToken).ConfigureAwait(false);
     }
 }

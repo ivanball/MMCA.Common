@@ -162,28 +162,36 @@ internal sealed class StoredPermissionRoleAdministrationService(
         var current = await store.GetPermissionsAsync(role, cancellationToken).ConfigureAwait(false);
         var existing = new HashSet<string>(current, StringComparer.Ordinal);
 
-        foreach (var permission in desired.Except(existing, StringComparer.Ordinal))
+        // Each grant and revoke commits on its own, so a failure or a throw part-way through leaves
+        // earlier rows already written. The invalidation therefore runs on every exit, not only on
+        // success, or this process would keep serving the pre-edit snapshot until the next refresh.
+        try
         {
-            var granted = await store
-                .GrantAsync(role, permission, changedBy, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (granted.IsFailure)
+            foreach (var permission in desired.Except(existing, StringComparer.Ordinal))
             {
-                return Result.Failure<RolePermissionsResponse>(granted.Errors);
+                var granted = await store
+                    .GrantAsync(role, permission, changedBy, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (granted.IsFailure)
+                {
+                    return Result.Failure<RolePermissionsResponse>(granted.Errors);
+                }
+            }
+
+            foreach (var permission in existing.Except(desired, StringComparer.Ordinal))
+            {
+                var revoked = await store.RevokeAsync(role, permission, cancellationToken).ConfigureAwait(false);
+                if (revoked.IsFailure)
+                {
+                    return Result.Failure<RolePermissionsResponse>(revoked.Errors);
+                }
             }
         }
-
-        foreach (var permission in existing.Except(desired, StringComparer.Ordinal))
+        finally
         {
-            var revoked = await store.RevokeAsync(role, permission, cancellationToken).ConfigureAwait(false);
-            if (revoked.IsFailure)
-            {
-                return Result.Failure<RolePermissionsResponse>(revoked.Errors);
-            }
+            await invalidator.InvalidateAsync(role, cancellationToken).ConfigureAwait(false);
         }
-
-        await invalidator.InvalidateAsync(role, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<string> stored = [.. desired.Order(StringComparer.Ordinal)];
 

@@ -257,6 +257,24 @@ public sealed class NavMenuTests : BunitTestBase
     }
 
     [Fact]
+    public void WhenTheUserSignsOutInsideTheCircuit_TheAdminSectionDisappears()
+    {
+        // L74: a failed silent refresh signs the user out without a reload; the sections computed
+        // from the user must be recomputed, not left showing admin links to a signed-out visitor.
+        RegisterModule(
+            new NavItem("Manage Items", "/items", "icon", typeof(SharedResource), Section: NavSection.Admin));
+
+        RenderMudProviders();
+        var cut = RenderAs<NavMenu>(TestPrincipal.AuthenticatedUser(), _ => { });
+        cut.Markup.Should().Contain("Manage Items");
+
+        SetUser(Anonymous);
+
+        cut.WaitForAssertion(() => cut.Markup.Should().NotContain("Manage Items"));
+        cut.Markup.Should().NotContain("Administration");
+    }
+
+    [Fact]
     public void WithoutBrandLogoUrl_RendersTheTextOnlyBrand()
     {
         RenderMudProviders();

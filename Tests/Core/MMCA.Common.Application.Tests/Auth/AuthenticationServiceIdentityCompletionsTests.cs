@@ -118,6 +118,32 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
     }
 
     [Fact]
+    public async Task LoginAsync_WithAWrongCode_CountsAFailedAttemptAgainstTheAccount()
+    {
+        // M105: a wrong code must feed the same per-account lockout a wrong password does.
+        var harness = new Harness(twoFactor: TwoFactorStub.Rejecting());
+
+        await harness.Sut.LoginAsync(new LoginRequest("user@example.com", "pw") { TwoFactorCode = "000000" });
+
+        harness.LoginProtection.Verify(
+            x => x.IncrementFailedAttemptsAsync("user@example.com", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithAnEnrolledAccountAndNoCode_DoesNotCountAFailedAttempt()
+    {
+        // The code-missing leg is the ordinary first half of the challenge, not a guess.
+        var harness = new Harness(twoFactor: TwoFactorStub.Requiring());
+
+        await harness.Sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
+
+        harness.LoginProtection.Verify(
+            x => x.IncrementFailedAttemptsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task LoginAsync_WithAValidTimeBasedCode_MintsTheMultiFactorClaim()
     {
         var harness = new Harness(twoFactor: TwoFactorStub.Verifying(TwoFactorOutcome.VerifiedTotp));
@@ -237,8 +263,7 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
                 .Setup(x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()))
                 .Returns(passwordVerifies);
 
-            var loginProtection = new Mock<ILoginProtectionService>();
-            loginProtection
+            LoginProtection
                 .Setup(x => x.CheckLockoutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Result.Success());
 
@@ -251,7 +276,7 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
                 unitOfWork.Object,
                 TokenService.Object,
                 passwordHasher.Object,
-                loginProtection.Object,
+                LoginProtection.Object,
                 new FixedClock(FixedNow),
                 validators,
                 Sessions,
@@ -262,6 +287,8 @@ public sealed class AuthenticationServiceIdentityCompletionsTests
                 UntrackedUser = user,
             };
         }
+
+        public Mock<ILoginProtectionService> LoginProtection { get; } = new();
 
         public Mock<ITokenService> TokenService { get; } = new();
 

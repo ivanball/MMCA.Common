@@ -218,7 +218,7 @@ public abstract class AuthenticationServiceBase<TUser>(
             return Result.Failure<AuthenticationResponse>(confirmationResult.Errors);
         }
 
-        var secondFactor = await ChallengeSecondFactorAsync(untracked.Id, request.TwoFactorCode, cancellationToken)
+        var secondFactor = await ChallengeSecondFactorCountingFailuresAsync(untracked.Id, request, cancellationToken)
             .ConfigureAwait(false);
         if (secondFactor.IsFailure)
         {
@@ -669,6 +669,31 @@ public abstract class AuthenticationServiceBase<TUser>(
         twoFactor is null
             ? Task.FromResult(Result.Success(TwoFactorOutcome.NotEnrolled))
             : twoFactor.ChallengeAsync(userId, code, cancellationToken);
+
+    /// <summary>
+    /// Runs the second-factor challenge and counts a wrong code against the account exactly like a
+    /// wrong password, so the lockout at the top of <see cref="LoginAsync"/> throttles code guessing
+    /// per account. A missing code (<see cref="TwoFactorErrors.TwoFactorRequiredCode"/>) is the
+    /// ordinary first leg of the challenge and is not counted.
+    /// </summary>
+    /// <param name="userId">The account that passed the password check.</param>
+    /// <param name="request">The login request (email for the counter, the presented code).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The challenge result, unchanged.</returns>
+    private async Task<Result<TwoFactorOutcome>> ChallengeSecondFactorCountingFailuresAsync(
+        UserIdentifierType userId,
+        LoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var secondFactor = await ChallengeSecondFactorAsync(userId, request.TwoFactorCode, cancellationToken)
+            .ConfigureAwait(false);
+        if (secondFactor.IsFailure && secondFactor.Errors.Any(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode))
+        {
+            await loginProtection.IncrementFailedAttemptsAsync(request.Email, cancellationToken).ConfigureAwait(false);
+        }
+
+        return secondFactor;
+    }
 
     /// <summary>
     /// Maps a challenge outcome onto the value the <c>mfa</c> claim carries, or null when nothing was

@@ -91,7 +91,7 @@ public abstract class AuthControllerBase(
     /// Override in derived controllers to pass additional context (e.g., client IP).
     /// </summary>
     [HttpPost("register")]
-    [Idempotent]
+    [NonIdempotent("Register issues a token pair. A replayed response would hand a retrying client tokens minted for an earlier call, and would keep serving them after the session was revoked; a retry hits the email-exists 409 instead, which is the correct answer.")]
     [AllowAnonymous]
     [EnableRateLimiting(WebApplicationBuilderExtensions.RateLimitPolicyAuthIp)]
     [ProducesResponseType(typeof(AuthenticationResponse), StatusCodes.Status201Created)]

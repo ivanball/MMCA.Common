@@ -68,6 +68,27 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
         entity.LastModifiedBy.Should().Be(99);
     }
 
+    // -- Application-managed RowVersion (M113) --
+    // SQLite and PostgreSQL have no server-generated row version, so unless the interceptor writes a
+    // fresh token on every insert and update the WHERE clause always matches and optimistic
+    // concurrency (and If-Match) is silently inert.
+    [Fact]
+    public async Task SavingChangesAsync_OnSqlite_StampsAFreshRowVersionOnInsertAndOnEveryUpdate()
+    {
+        var entity = new TestAuditEntity { Id = 1 };
+        _dbContext.TestEntities.Add(entity);
+        await _dbContext.SaveChangesAsync();
+
+        entity.RowVersion.Should().HaveCount(16);
+        var afterInsert = entity.RowVersion.ToArray();
+
+        _dbContext.Entry(entity).State = EntityState.Modified;
+        await _dbContext.SaveChangesAsync();
+
+        entity.RowVersion.Should().HaveCount(16);
+        entity.RowVersion.Should().NotEqual(afterInsert);
+    }
+
     // ── Deleted entries ──
     [Fact]
     public async Task SavingChangesAsync_DeletedEntry_DoesNotStampAuditFields()

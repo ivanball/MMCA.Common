@@ -9,6 +9,7 @@ using MMCA.Common.Application.Messaging;
 using MMCA.Common.Infrastructure.Configuration;
 using MMCA.Common.Infrastructure.Http;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Shared.Resilience;
 
 namespace MMCA.Common.Infrastructure;
 
@@ -133,6 +134,12 @@ public static partial class DependencyInjection
         /// gRPC is preferred for service-to-service contracts; see
         /// <c>MMCA.Common.Grpc.AddTypedGrpcClient&lt;T&gt;</c>.
         /// </para>
+        /// <para>
+        /// The client's standard resilience handler takes its timeouts and retry budget from
+        /// <see cref="HttpResilienceDefaults"/>, the values the Aspire host defaults apply, rather than
+        /// the library defaults (the gRPC sibling had the same drift fixed). The host defaults still
+        /// stack one retry on top, so the worst case is 4 attempts, not 8.
+        /// </para>
         /// </summary>
         /// <typeparam name="TInterface">The contract interface that consumer code depends on.</typeparam>
         /// <typeparam name="TImplementation">The class implementing the interface, taking <see cref="HttpClient"/> in its constructor.</typeparam>
@@ -153,7 +160,13 @@ public static partial class DependencyInjection
                 .AddHttpMessageHandler<JwtForwardingDelegatingHandler>();
 #pragma warning restore S5332
 
-            builder.AddStandardResilienceHandler();
+            builder.AddStandardResilienceHandler(options =>
+            {
+                options.AttemptTimeout.Timeout = HttpResilienceDefaults.AttemptTimeout;
+                options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
+                options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
+                options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
+            });
             return builder;
         }
     }

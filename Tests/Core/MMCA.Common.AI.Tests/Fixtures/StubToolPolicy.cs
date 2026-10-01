@@ -25,13 +25,27 @@ internal sealed class StubToolPolicy(ToolAuthorization authorization = ToolAutho
 /// </summary>
 internal sealed class StubTool(string name, bool consequential = false) : AITool
 {
+    private IReadOnlyDictionary<string, object?>? _markedProperties;
+
     public override string Name => name;
 
     public override IReadOnlyDictionary<string, object?> AdditionalProperties =>
-        consequential
+        _markedProperties ?? (consequential
             ? new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 [ChatToolPolicy.ConsequentialPropertyKey] = true,
             }
-            : new Dictionary<string, object?>(StringComparer.Ordinal);
+            : new Dictionary<string, object?>(StringComparer.Ordinal));
+
+    /// <summary>
+    /// A tool whose consequential marker carries <paramref name="marker"/> as-is, so the policy layer
+    /// can be driven with the shapes a settings file or a JSON-bound bag hands over.
+    /// </summary>
+    public static StubTool WithMarker(string name, object? marker) => new(name)
+    {
+        _markedProperties = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            [ChatToolPolicy.ConsequentialPropertyKey] = marker,
+        },
+    };
 }

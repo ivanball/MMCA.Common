@@ -35,6 +35,7 @@ public sealed class GetNotificationHistoryHandler(
         IReadOnlyCollection<PushNotification> paged = await queryableExecutor.ToListAsync(
             repository.TableNoTracking
                 .OrderByDescending(n => n.CreatedOn)
+                .ThenByDescending(n => n.Id) // total order: equal timestamps cannot repeat or skip across pages
                 .Skip(skip)
                 .Take(take),
             cancellationToken).ConfigureAwait(false);

@@ -246,4 +246,26 @@ public sealed class CapturingHttpMessageHandlerTests
         handler.RequestsFor(HttpMethod.Delete, "/orders/42").Should().ContainSingle();
         handler.RequestsFor(HttpMethod.Put, "/orders/42").Should().BeEmpty();
     }
+
+    // Concurrency
+    [Fact]
+    public async Task Capture_RecordsEveryRequest_WhenRequestsArriveConcurrently()
+    {
+        using var handler = new CapturingHttpMessageHandler();
+        handler.SetResponse(HttpMethod.Get, "/ping", HttpStatusCode.OK);
+        using var client = CreateClient(handler);
+
+        // 8 workers x 2,000 requests over one handler: an unsynchronized List<T>.Add loses entries
+        // (or throws) under this load, which is the fan-out a Task.WhenAll in a service produces.
+        var workers = Enumerable.Range(0, 8).Select(_ => Task.Run(async () =>
+        {
+            for (var i = 0; i < 2_000; i++)
+            {
+                using var response = await client.GetAsync(new Uri("/ping", UriKind.Relative));
+            }
+        }));
+        await Task.WhenAll(workers);
+
+        handler.Requests.Should().HaveCount(16_000);
+    }
 }

@@ -122,7 +122,8 @@ public static partial class WebApplicationBuilderExtensions
     }
 
     /// <summary>Global rate-limit partition: bypasses infrastructure traffic and anonymous requests,
-    /// and limits authenticated callers per user (name → subject claim → IP).</summary>
+    /// and limits authenticated callers per user (subject claim, then name, then IP). The subject claim leads
+    /// because it is unique per account; the name claim carries the full name, which two users can share.</summary>
     /// <remarks>Internal (not private) so the partition-key selection is unit-testable via
     /// <c>InternalsVisibleTo</c>.</remarks>
     internal static RateLimitPartition<string> GlobalRateLimitPartition(HttpContext httpContext, int globalPermitLimit) =>
@@ -145,8 +146,8 @@ public static partial class WebApplicationBuilderExtensions
             return AnonymousPartition(httpContext, settings);
         }
 
-        var partitionKey = httpContext.User.Identity.Name
-            ?? httpContext.User.FindUserIdValue()
+        var partitionKey = httpContext.User.FindUserIdValue()
+            ?? httpContext.User.Identity.Name
             ?? httpContext.Connection.RemoteIpAddress?.ToString()
             ?? "authenticated";
 
@@ -161,8 +162,8 @@ public static partial class WebApplicationBuilderExtensions
     }
 
     /// <summary>
-    /// Partition selector for the opt-in "UserPolicy" limiter: one bucket per authenticated user,
-    /// falling back to the client IP and then to a shared anonymous bucket.
+    /// Partition selector for the opt-in "UserPolicy" limiter: one bucket per authenticated user
+    /// (subject claim, then name), falling back to the client IP and then to a shared anonymous bucket.
     /// </summary>
     /// <remarks>
     /// Extracted from the inline lambda it used to be so the key selection is unit-testable via
@@ -170,7 +171,8 @@ public static partial class WebApplicationBuilderExtensions
     /// </remarks>
     internal static RateLimitPartition<string> UserPolicyRateLimitPartition(HttpContext httpContext, RateLimitingSettings settings)
     {
-        var partitionKey = httpContext.User?.Identity?.Name
+        var partitionKey = httpContext.User?.FindUserIdValue()
+            ?? httpContext.User?.Identity?.Name
             ?? httpContext.Connection.RemoteIpAddress?.ToString()
             ?? "anonymous";
 
@@ -345,8 +347,12 @@ public static partial class WebApplicationBuilderExtensions
         {
             ArgumentNullException.ThrowIfNull(configuration);
 
-            var settings = configuration.GetSection(RateLimitingSettings.SectionName).Get<RateLimitingSettings>()
-                ?? new RateLimitingSettings();
+            // Validated like the gateway sibling: a [Range] violation fails at startup instead of
+            // building a limiter that throws on every authenticated request.
+            var section = configuration.GetSection(RateLimitingSettings.SectionName);
+            services.AddOptions<RateLimitingSettings>().Bind(section).ValidateDataAnnotations().ValidateOnStart();
+
+            var settings = section.Get<RateLimitingSettings>() ?? new RateLimitingSettings();
 
             return services.AddCommonRateLimiting(settings);
         }

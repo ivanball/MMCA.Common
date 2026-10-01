@@ -153,6 +153,37 @@ public sealed class UiReadCacheTests
 
     // == Invalidation ==
     [Fact]
+    public void Set_WithAGenerationOlderThanTheLastInvalidation_IsDropped()
+    {
+        // L66: a read that captured the generation before a write invalidated the endpoint must not
+        // re-store what the write made stale.
+        var (sut, _) = CreateSut();
+        var before = sut.Generation;
+
+        sut.InvalidatePrefix("products");
+        sut.Set("products?page=1", "stale-page", before);
+
+        sut.TryGetFresh<string>("products?page=1", out _).Should().BeFalse();
+
+        sut.Set("products?page=1", "fresh-page", sut.Generation);
+
+        sut.TryGetFresh<string>("products?page=1", out var value).Should().BeTrue();
+        value.Should().Be("fresh-page");
+    }
+
+    [Fact]
+    public void Set_WithAGenerationOlderThanAClear_IsDropped()
+    {
+        var (sut, _) = CreateSut();
+        var before = sut.Generation;
+
+        sut.Clear();
+        sut.Set("products?page=1", "previous-account", before);
+
+        sut.TryGetFresh<string>("products?page=1", out _).Should().BeFalse();
+    }
+
+    [Fact]
     public void InvalidatePrefix_RemovesOnlyTheMatchingKeys()
     {
         var (sut, _) = CreateSut();

@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using AwesomeAssertions;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using MMCA.Common.Grpc.Interceptors;
 using Moq;
@@ -43,6 +45,19 @@ public sealed class JwtForwardingClientInterceptorTests
         return context;
     }
 
+    private static DefaultHttpContext CreateHttpContextWithSavedToken(string accessToken)
+    {
+        var properties = new AuthenticationProperties();
+        properties.StoreTokens([new AuthenticationToken { Name = "access_token", Value = accessToken }]);
+        var ticket = new AuthenticationTicket(
+            new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "42")], "Bearer")),
+            properties,
+            "Bearer");
+        var context = new DefaultHttpContext();
+        context.Features.Set<IAuthenticateResultFeature>(new AuthenticateResultFeatureStub(AuthenticateResult.Success(ticket)));
+        return context;
+    }
+
     private static ClientInterceptorContext<FakeRequest, FakeResponse> CreateContext(Metadata? headers = null) =>
         new(TestMethod, host: null, new CallOptions(headers));
 
@@ -77,6 +92,48 @@ public sealed class JwtForwardingClientInterceptorTests
         var headers = captured.Value.Options.Headers;
         headers.Should().NotBeNull("the interceptor must attach metadata carrying the forwarded token");
         headers.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+    }
+
+    // H39: the token arrived by query string (SignalR), so there is no header to copy.
+    [Fact]
+    public void AsyncUnaryCall_WithNoHeaderButASavedAccessToken_ForwardsTheSavedToken()
+    {
+        var sut = CreateSut(CreateHttpContextWithSavedToken("test-token-123"));
+        ClientInterceptorContext<FakeRequest, FakeResponse>? captured = null;
+
+        using var call = sut.AsyncUnaryCall(
+            new FakeRequest(),
+            CreateContext(),
+            (_, ctx) =>
+            {
+                captured = ctx;
+                return CreateAsyncUnaryCall();
+            });
+
+        captured.Should().NotBeNull();
+        var headers = captured.Value.Options.Headers;
+        headers.Should().NotBeNull("the token the request authenticated with must reach the downstream call");
+        headers.GetValue(AuthorizationHeader).Should().Be(BearerToken);
+    }
+
+    [Fact]
+    public void AsyncUnaryCall_WithBothAHeaderAndASavedToken_ForwardsTheHeader()
+    {
+        var httpContext = CreateHttpContextWithSavedToken("saved-token");
+        httpContext.Request.Headers.Authorization = BearerToken;
+        var sut = CreateSut(httpContext);
+        ClientInterceptorContext<FakeRequest, FakeResponse>? captured = null;
+
+        using var call = sut.AsyncUnaryCall(
+            new FakeRequest(),
+            CreateContext(),
+            (_, ctx) =>
+            {
+                captured = ctx;
+                return CreateAsyncUnaryCall();
+            });
+
+        captured!.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
 
     // ── AsyncUnaryCall: no ambient HttpContext ──
@@ -274,6 +331,12 @@ public sealed class JwtForwardingClientInterceptorTests
         captured.Should().NotBeNull();
         captured.Value.Options.Headers!.GetValue(AuthorizationHeader).Should().Be(BearerToken);
     }
+}
+
+/// <summary>Carries an authenticate result the way the authentication middleware does.</summary>
+internal sealed class AuthenticateResultFeatureStub(AuthenticateResult result) : IAuthenticateResultFeature
+{
+    public AuthenticateResult? AuthenticateResult { get; set; } = result;
 }
 
 // ── Test message/stream stand-ins (marshaller and stream behavior is never exercised) ──

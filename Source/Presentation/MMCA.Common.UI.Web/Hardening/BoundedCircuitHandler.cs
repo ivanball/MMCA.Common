@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.Logging;
@@ -30,8 +31,11 @@ namespace MMCA.Common.UI.Web.Hardening;
 /// <para>
 /// <b>Registered as a singleton</b> so ONE count spans the replica
 /// (<c>AddBoundedBlazorCircuits()</c> does this). Circuit handlers are resolved from each circuit's
-/// own scope, so a scoped registration would count to one and cap nothing. The type keeps no
-/// per-circuit state: every callback receives its <see cref="Circuit"/>.
+/// own scope, so a scoped registration would count to one and cap nothing. The only per-circuit
+/// state is the set of admitted circuits, keyed by reference (the framework hands the same
+/// <see cref="Circuit"/> instance to the open and the close callbacks, and no member of it is read).
+/// It exists because a refused circuit is still torn down through <see cref="OnCircuitClosedAsync"/>:
+/// without the set, that close would release a permit some other circuit holds.
 /// </para>
 /// </remarks>
 /// <param name="settings">The bound circuit limits.</param>
@@ -40,6 +44,8 @@ public sealed partial class BoundedCircuitHandler(
     IOptions<BlazorCircuitLimitSettings> settings,
     ILogger<BoundedCircuitHandler> logger) : CircuitHandler
 {
+    private readonly ConcurrentDictionary<Circuit, byte> _admitted = new(ReferenceEqualityComparer.Instance);
+
     private int _activeCircuits;
 
     /// <summary>
@@ -57,6 +63,8 @@ public sealed partial class BoundedCircuitHandler(
     /// <inheritdoc />
     public override Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(circuit);
+
         var ceiling = settings.Value.MaxActiveCircuits;
 
         // Increment first and roll back on refusal: reading then incrementing would let two
@@ -72,15 +80,25 @@ public sealed partial class BoundedCircuitHandler(
                 $"The site is holding its maximum of {ceiling} interactive sessions on this instance. Please retry in a moment.")));
         }
 
+        _admitted[circuit] = 0;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
     {
-        // Floor at zero rather than trusting the pairing: a close without a counted open (a circuit
-        // torn down before this handler ran) would otherwise drive the count negative and hand out
-        // permits forever.
+        ArgumentNullException.ThrowIfNull(circuit);
+
+        // Only a circuit this handler admitted releases a permit. The framework closes a refused
+        // circuit too (its teardown calls every handler's close unconditionally), and that close
+        // must not release a permit another circuit holds.
+        if (!_admitted.TryRemove(circuit, out _))
+        {
+            return Task.CompletedTask;
+        }
+
+        // Floor at zero rather than trusting the pairing, as a last line of defence against a
+        // count driven negative handing out permits forever.
         var active = Interlocked.Decrement(ref _activeCircuits);
         if (active < 0)
         {

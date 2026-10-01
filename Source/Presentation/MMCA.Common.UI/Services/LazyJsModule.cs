@@ -29,8 +29,11 @@ internal sealed class LazyJsModule(IJSRuntime js, string modulePath) : IAsyncDis
 
     /// <summary>
     /// Returns the imported module, importing it on first use. Concurrent callers share one import.
+    /// The shared import runs without any caller token; each caller only stops waiting for it when its
+    /// own token fires. Binding the import to the first caller's token would let that one caller's
+    /// cancellation fault the import for every concurrent awaiter.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token for the import call.</param>
+    /// <param name="cancellationToken">Cancels this caller's wait, never the shared import.</param>
     public async Task<IJSObjectReference> GetOrImportAsync(CancellationToken cancellationToken = default)
     {
         if (_module is { } cached)
@@ -43,19 +46,21 @@ internal sealed class LazyJsModule(IJSRuntime js, string modulePath) : IAsyncDis
         Task<IJSObjectReference> inFlight;
         lock (_sync)
         {
-            _inFlight ??= ImportAsync(cancellationToken);
+            _inFlight ??= ImportAsync();
             inFlight = _inFlight;
         }
 
         try
         {
-            return await inFlight.ConfigureAwait(false);
+            return await inFlight.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             // Only clear a FAILED task, and only our own: clearing unconditionally could drop a
-            // newer import started after this one completed, splitting the next set of callers.
-            if (!inFlight.IsCompletedSuccessfully)
+            // newer import started after this one completed, splitting the next set of callers. A
+            // caller that stopped waiting on its own token leaves the import still running, not
+            // failed, so it stays cached for the others.
+            if (inFlight is { IsCompleted: true, IsCompletedSuccessfully: false })
             {
                 lock (_sync)
                 {
@@ -68,10 +73,10 @@ internal sealed class LazyJsModule(IJSRuntime js, string modulePath) : IAsyncDis
         }
     }
 
-    private async Task<IJSObjectReference> ImportAsync(CancellationToken cancellationToken)
+    private async Task<IJSObjectReference> ImportAsync()
     {
         var module = await js
-            .InvokeAsync<IJSObjectReference>("import", cancellationToken, modulePath)
+            .InvokeAsync<IJSObjectReference>("import", CancellationToken.None, modulePath)
             .ConfigureAwait(false);
 
         _module = module;

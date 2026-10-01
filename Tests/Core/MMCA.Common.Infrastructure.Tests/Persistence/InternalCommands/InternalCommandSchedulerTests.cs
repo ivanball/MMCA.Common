@@ -100,8 +100,11 @@ public sealed class InternalCommandSchedulerTests : IDisposable
         _signal.Verify(s => s.Signal(), Times.Once);
     }
 
+    // L54 (inverted from ScheduleAsync_WithAFutureInstant_StoresItAndDoesNotSignal): the signal
+    // re-arms the processor's smart wait on the new row, so it runs on time instead of up to one
+    // polling interval late.
     [Fact]
-    public async Task ScheduleAsync_WithAFutureInstant_StoresItAndDoesNotSignal()
+    public async Task ScheduleAsync_WithAFutureInstant_StoresItAndSignals()
     {
         var sut = CreateScheduler();
         var runAt = InternalCommandTestHarness.Epoch.AddMinutes(30);
@@ -111,7 +114,7 @@ public sealed class InternalCommandSchedulerTests : IDisposable
         _context.ChangeTracker.Clear();
         var row = await _context.Set<InternalCommandMessage>().SingleAsync(TestContext.Current.CancellationToken);
         row.ScheduledOn.Should().Be(runAt.UtcDateTime);
-        _signal.Verify(s => s.Signal(), Times.Never, "nothing is due yet, so there is nothing to wake for");
+        _signal.Verify(s => s.Signal(), Times.Once, "the wake re-arms the smart wait on the not-yet-due row");
     }
 
     [Fact]

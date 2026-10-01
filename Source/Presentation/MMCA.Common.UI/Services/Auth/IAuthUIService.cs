@@ -79,4 +79,14 @@ public interface IAuthUIService
     /// <param name="sessionId">The session to revoke.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<Result> RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Signs out of every device via <c>auth/revoke</c> and returns the server's answer. Unlike
+    /// <see cref="LogoutAsync"/> this reports a failed revoke instead of hiding it, and on failure
+    /// leaves the local session in place so the caller can say so and let the user retry. On success
+    /// it also performs the local sign-out <see cref="LogoutAsync"/> does.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The outcome of the server-side revoke.</returns>
+    Task<Result> RevokeAllSessionsAsync(CancellationToken cancellationToken = default);
 }

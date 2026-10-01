@@ -9,6 +9,7 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Messaging;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Messaging;
+using MMCA.Common.Infrastructure.Persistence.Conversions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
 using MMCA.Common.Infrastructure.Persistence.DbContexts;
 using MMCA.Common.Infrastructure.Persistence.Outbox.Administration;
@@ -79,6 +80,9 @@ public sealed partial class OutboxProcessor(
     /// makes <c>IsAuthenticated</c> true, and it names the hop the identity came back from.
     /// </summary>
     internal const string OutboxPrincipalAuthenticationType = "Outbox";
+
+    /// <summary>Width of the <c>LastError</c> column; longer failure text is truncated to fit (the siblings' constant).</summary>
+    private const int MaxErrorLength = 4000;
 
     /// <summary>
     /// Budget for the best-effort save that flushes ProcessedOn stamps when a batch is cancelled
@@ -189,8 +193,6 @@ public sealed partial class OutboxProcessor(
 
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<DbContexts.Factory.IDbContextFactory>();
         var context = dbContextFactory.GetDbContext(source);
-        var dispatcher = scope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
-        var messageBus = scope.ServiceProvider.GetRequiredService<IMessageBus>();
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var cutoff = now.Subtract(TimeSpan.FromSeconds(_settings.ProcessingDelaySeconds));
@@ -234,9 +236,7 @@ public sealed partial class OutboxProcessor(
         bool processedAny;
         try
         {
-            processedAny = await DispatchMessagesAsync(
-                toProcess, source, scope.ServiceProvider, dispatcher, messageBus, cancellationToken)
-                .ConfigureAwait(false);
+            processedAny = await DispatchMessagesAsync(toProcess, target, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -478,33 +478,32 @@ public sealed partial class OutboxProcessor(
                     && p.OccurredOn < m.OccurredOn));
 
     /// <summary>
-    /// Dispatches each eligible message, marking successes and dead-letters as processed and
-    /// incrementing retry counts on failure. Returns whether any message made progress
+    /// Dispatches each eligible message, marking successes as processed, dead-lettering terminal
+    /// failures (retry budget spent, <c>ProcessedOn</c> left null) and incrementing retry counts on
+    /// failure. Returns whether any message made progress
     /// (dispatched or dead-lettered) this cycle.
     /// </summary>
     /// <remarks>
-    /// Each row's captured context (user, roles, tenant, correlation id) is restored onto the
-    /// cycle's scope BEFORE the row is published or dispatched, and overwritten again for the next
-    /// row, so one row's identity can never answer for another's. That is what carries the original
-    /// request's identity across the hop: <c>BrokerMessageBus</c> reads the restored values through
-    /// the same scoped services when it stamps its headers, and the in-process path
-    /// (<c>InProcessMessageBus</c> to <see cref="IDomainEventDispatcher"/>) gets the right ambient
-    /// context for free.
+    /// Each row's captured context (user, roles, tenant, correlation id) is restored onto a FRESH
+    /// scope per row, created for the batch's target, BEFORE the row is published or dispatched, so
+    /// one row's identity can never answer for another's. A fresh scope is what lets the tenant
+    /// change between rows: the tenant context refuses a change once resolved, so on one shared
+    /// scope every later row of a shared-target batch ran under the first row's tenant. The row
+    /// scope carries the original request's identity across the hop: <c>BrokerMessageBus</c> reads
+    /// the restored values through the row scope's services when it stamps its headers, and the
+    /// in-process path (<c>InProcessMessageBus</c> to <see cref="IDomainEventDispatcher"/>) gets the
+    /// right ambient context for free. The cycle scope's context keeps tracking the rows for the
+    /// batch save; only delivery moves to the row scope.
     /// </remarks>
     /// <param name="messages">The claimed rows to deliver.</param>
-    /// <param name="source">The physical source the batch was claimed from.</param>
-    /// <param name="scopeServices">The cycle's scope, onto which each row's context is restored.</param>
-    /// <param name="dispatcher">In-process dispatcher for pure domain events.</param>
-    /// <param name="messageBus">Transport for integration events.</param>
+    /// <param name="target">The target the batch was claimed from; each row scope is created for it.</param>
     /// <param name="cancellationToken">Cancels the batch.</param>
     private async Task<bool> DispatchMessagesAsync(
         IEnumerable<OutboxMessage> messages,
-        DataSourceKey source,
-        IServiceProvider scopeServices,
-        IDomainEventDispatcher dispatcher,
-        IMessageBus messageBus,
+        TenantDataSourceTarget target,
         CancellationToken cancellationToken)
     {
+        var source = target.Source;
         var processedAny = false;
 
         // Log-once latch for this batch: an open circuit rejects every remaining row in the same
@@ -515,12 +514,16 @@ public sealed partial class OutboxProcessor(
         foreach (var message in messages)
         {
             using var activity = StartOutboxActivity(message, source);
+
+            // Tenant-owned targets keep their tenant; the shared target starts unresolved, so the
+            // restore below can set this row's tenant (or leave it unset for a tenantless row).
+            using var rowScope = scopeFactory.CreateTenantScope(target);
             try
             {
                 // Before anything reads the scope: the publish path stamps headers from these
                 // services and the in-process path hands them to the handlers.
                 Context.AmbientOrigin.Restore(
-                    scopeServices,
+                    rowScope.ServiceProvider,
                     message.UserId,
                     message.UserRoles,
                     message.TenantId,
@@ -539,6 +542,8 @@ public sealed partial class OutboxProcessor(
                 // determines delivery. Pure domain events keep the legacy in-process dispatch.
                 if (domainEvent is IIntegrationEvent integrationEvent)
                 {
+                    var messageBus = rowScope.ServiceProvider.GetRequiredService<IMessageBus>();
+
                     // Only the broker hop is wrapped. The in-process dispatcher branch below is a
                     // direct method call into this same process: it has no transport to be dead,
                     // so a breaker there would only add a way to reject work that would have
@@ -551,6 +556,7 @@ public sealed partial class OutboxProcessor(
                 }
                 else
                 {
+                    var dispatcher = rowScope.ServiceProvider.GetRequiredService<IDomainEventDispatcher>();
                     await dispatcher.DispatchAsync([domainEvent], cancellationToken).ConfigureAwait(false);
                 }
 
@@ -581,7 +587,7 @@ public sealed partial class OutboxProcessor(
             catch (Exception ex)
             {
                 message.RetryCount++;
-                message.LastError = ex.Message;
+                message.LastError = ColumnWidth.Truncate(ex.Message, MaxErrorLength);
 
                 // Re-lease the row for an explicit backoff instead of leaving this cycle's claim on
                 // it. The claim is not cleared outright: the fetch skips leased rows, so a failure
@@ -642,6 +648,10 @@ public sealed partial class OutboxProcessor(
     /// type may simply not be loaded yet (a module assembly resolved lazily, a host still coming up),
     /// and a name that resolves one cycle later was never a dead letter. Only the second attempt is
     /// terminal, which is also the point at which an operator has had a Warning naming the row.
+    /// The terminal attempt dead-letters the row the way exhausted retries do (<c>ProcessedOn</c>
+    /// stays null and <c>RetryCount</c> is set to <c>MaxRetries</c>), so it leaves the poll but is
+    /// listed and replayable by the outbox administration and kept for the dead-letter retention
+    /// window, instead of being purged as delivered.
     /// </summary>
     /// <param name="message">The row that could not be deserialized.</param>
     /// <returns>
@@ -663,7 +673,8 @@ public sealed partial class OutboxProcessor(
             return false;
         }
 
-        message.ProcessedOn = _timeProvider.GetUtcNow().UtcDateTime;
+        message.RetryCount = _settings.MaxRetries;
+        message.LockedUntil = null;
         OutboxMetrics.DeadLetterCounter.Add(
             1,
             new KeyValuePair<string, object?>("event_type", message.EventType),

@@ -69,7 +69,7 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
         _serverBase = Environment.GetEnvironmentVariable(SqlBaseEnvironmentVariable)
             ?? @"Server=(localdb)\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True;";
         _databaseName = $"{DatabaseNamePrefix}_{Guid.NewGuid():N}";
-        ConnectionString = $"{_serverBase}Database={_databaseName};";
+        ConnectionString = CrossServiceFixtureBase.ComposeConnectionString(_serverBase, _databaseName);
 
         // ASPNETCORE_ENVIRONMENT=Testing so appsettings.Development.json (localhost DataSources) is skipped.
         SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
@@ -169,7 +169,7 @@ public abstract class SqlServerIntegrationTestFixtureBase<TEntryPoint> : IAsyncL
         // Release pooled connections so the database is free to drop.
         SqlConnection.ClearAllPools();
 
-        var connection = new SqlConnection($"{_serverBase}Database=master;");
+        var connection = new SqlConnection(CrossServiceFixtureBase.ComposeConnectionString(_serverBase, "master"));
         await using (connection.ConfigureAwait(false))
         {
             await connection.OpenAsync().ConfigureAwait(false);

@@ -13,6 +13,7 @@
 @inject IOptions<LayoutSettings> LayoutSettingsOptions
 @inject IStringLocalizer<SharedResource> L
 @inject IStringLocalizerFactory LocalizerFactory
+@implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -179,6 +180,7 @@
     private List<NavItem> _userItems = [];
     private List<NavItem> _adminItems = [];
     private bool _showSessionsLink;
+    private bool _subscribed;
 
     // ADR-027: Title and Group are resource keys resolved at render time against the item's
     // TitleResource resx pair, so the menu follows the active culture; a key the resource type does
@@ -208,13 +210,44 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
+        await RebuildFromAuthStateAsync(AuthStateProvider.GetAuthenticationStateAsync());
+
+        // The sections are computed from the user, so an in-circuit sign-out (a failed silent refresh
+        // raises AuthenticationStateChanged without a reload) must recompute them, or the admin and
+        // user sections stay visible to a signed-out visitor.
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        _subscribed = true;
+    }
+
+    // Event-handler signature; the rebuild task observes its own teardown race, so the explicit
+    // discard is safe and avoids the async-void crash-the-process mode (VSTHRD100).
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask) =>
+        _ = RefreshFromAuthStateAsync(authStateTask);
+
+    private async Task RefreshFromAuthStateAsync(Task<AuthenticationState> authStateTask)
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await RebuildFromAuthStateAsync(authStateTask);
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // Renderer torn down between the auth-state event and the dispatch.
+        }
+    }
+
+    private async Task RebuildFromAuthStateAsync(Task<AuthenticationState> authStateTask)
+    {
+        var authState = await authStateTask;
         _user = authState.User;
 
         var sessionsRole = LayoutSettingsOptions.Value.SessionsNavRequiredRole;
         _showSessionsLink = string.IsNullOrWhiteSpace(sessionsRole) || _user?.IsInRole(sessionsRole) == true;
-
-        _appBarComponents = UIModules.SelectMany(m => m.AppBarComponentTypes).ToList();
 
         var allItems = UIModules
             .SelectMany(m => m.NavItems)
@@ -226,5 +259,25 @@
         _generalItems = allItems.Where(i => i.Section is NavSection.General).ToList();
         _userItems = allItems.Where(i => i.Section is NavSection.User).ToList();
         _adminItems = allItems.Where(i => i.Section is NavSection.Admin).ToList();
+    }
+
+    /// <summary>Unsubscribes from auth-state changes; safe to call more than once.</summary>
+    /// <param name="disposing">Whether managed state is being released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing || !_subscribed)
+        {
+            return;
+        }
+
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        _subscribed = false;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

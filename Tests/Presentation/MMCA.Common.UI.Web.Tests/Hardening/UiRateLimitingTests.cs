@@ -105,6 +105,25 @@ public sealed class UiRateLimitingTests
             .Should().NotBe(UiRateLimitingExtensions.ConcurrencyPartition(page, settings).PartitionKey);
     }
 
+    /// <summary>
+    /// M128: the circuit WebSocket holds its lease for the whole circuit lifetime, so the Blazor
+    /// transport must stay out of the concurrency ceiling while remaining inside the per-IP window.
+    /// </summary>
+    [Theory]
+    [InlineData("/_blazor")]
+    [InlineData("/_blazor/negotiate")]
+    public void BlazorTransport_IsMeteredPerIp_ButHoldsNoConcurrencyPermit(string transportPath)
+    {
+        var settings = new UiRateLimitingSettings();
+        var transport = ContextFor(transportPath, "203.0.113.7");
+        var page = ContextFor("/", "203.0.113.7");
+
+        UiRateLimitingExtensions.ConcurrencyPartition(transport, settings).PartitionKey
+            .Should().NotBe(UiRateLimitingExtensions.ConcurrencyPartition(page, settings).PartitionKey);
+        UiRateLimitingExtensions.ClientIpPartition(transport, settings).PartitionKey
+            .Should().Be(UiRateLimitingExtensions.ClientIpPartition(page, settings).PartitionKey);
+    }
+
     private static RateLimiterOptions ResolveLimiterOptions(bool enabled)
     {
         var configuration = new ConfigurationBuilder()

@@ -242,7 +242,7 @@ public static partial class Extensions
     /// <param name="configuration">Configuration carrying the cost knobs.</param>
     private static void ConfigureMetrics(MeterProviderBuilder metrics, IConfiguration configuration)
     {
-        metrics.AddAspNetCoreInstrumentation();
+        ConfigureAspNetCoreMetrics(metrics, configuration);
 
         // Cost control (rubric §31): HttpClient connection/request metrics
         // (http.client.open_connections / active_requests / request.duration) are the single
@@ -337,6 +337,33 @@ public static partial class Extensions
                     || string.Equals(instrument.Name, PollyPipelineDurationInstrument, StringComparison.Ordinal))
                     ? MetricStreamConfiguration.Drop
                     : null);
+        }
+    }
+
+    /// <summary>
+    /// The <c>Telemetry:DisableAspNetCoreMetrics</c> cost knob (rubric §31). The ASP.NET Core meter
+    /// family (<c>http.server.*</c>, <c>kestrel.*</c>, <c>aspnetcore.*</c>, <c>signalr.server.*</c>) was
+    /// 73% of both production workspaces' ingestion over 2026-09-22..28, mostly gauges re-emitted every
+    /// export interval on replicas serving no traffic, and no alert reads any of it: request latency
+    /// and failures alert off AppRequests traces. Unset keeps the instrumentation.
+    /// </summary>
+    /// <param name="metrics">The meter provider being configured.</param>
+    /// <param name="configuration">Configuration carrying the knob.</param>
+    private static void ConfigureAspNetCoreMetrics(MeterProviderBuilder metrics, IConfiguration configuration)
+    {
+        if (IsInstrumentationDisabled(configuration, "Telemetry:DisableAspNetCoreMetrics"))
+        {
+            // Same reasoning as the HttpClient knob: the Azure Monitor distro adds these meters on
+            // its own, so only a View makes the toggle authoritative. Every meter in the family is
+            // named under the Microsoft.AspNetCore. prefix, so one prefix covers it.
+            metrics.AddView(instrument =>
+                instrument.Meter.Name.StartsWith("Microsoft.AspNetCore.", StringComparison.Ordinal)
+                    ? MetricStreamConfiguration.Drop
+                    : null);
+        }
+        else
+        {
+            metrics.AddAspNetCoreInstrumentation();
         }
     }
 }

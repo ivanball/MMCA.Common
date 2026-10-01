@@ -5,7 +5,6 @@ using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Notifications.UserNotifications.UseCases.MarkAllRead;
 using MMCA.Common.Domain.Notifications.PushNotifications;
 using MMCA.Common.Domain.Notifications.UserNotifications;
-using MMCA.Common.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.Repositories;
 using MMCA.Common.Shared.Abstractions;
 using Moq;
@@ -14,11 +13,10 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 
 /// <summary>
 /// Runs the REAL <see cref="MarkAllNotificationsReadHandler"/> against a real EF Core context
-/// (SQLite in-memory, real <see cref="EFRepository{TEntity, TIdentifierType}"/> pair, real
-/// <see cref="EFQueryableExecutor"/>), because the mock-based Application tests cannot observe
-/// change tracking at all: their in-memory queryables have no change tracker, so a scoped
-/// mark-all that composes over an <c>AsNoTracking()</c> source still looks correct there while
-/// persisting nothing. Every assertion re-queries through a FRESH context, so only what actually
+/// (SQLite in-memory, real <see cref="EFRepository{TEntity, TIdentifierType}"/> pair), because the
+/// mock-based Application tests only evaluate the captured predicate in memory: whether the
+/// set-based update (and its scope subquery) actually translates and reaches the database is only
+/// observable here. Every assertion re-queries through a FRESH context, so only what actually
 /// reached the database counts.
 /// </summary>
 public sealed class MarkAllNotificationsReadHandlerTrackingTests : IDisposable
@@ -51,7 +49,7 @@ public sealed class MarkAllNotificationsReadHandlerTrackingTests : IDisposable
         unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken token) => _context.SaveChangesAsync(token));
 
-        _sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, new EFQueryableExecutor(), TimeProvider.System);
+        _sut = new MarkAllNotificationsReadHandler(unitOfWork.Object, TimeProvider.System);
     }
 
     public void Dispose()

@@ -47,8 +47,20 @@ public abstract class EntityTypeConfiguration<TEntity, TIdentifierType>
                 $"Configuration '{GetType().Name}' must be annotated with [UseDataSource(...)] " +
                 "(directly or via a provider base class) so its target engine is known.");
 
+        EffectiveEngine = builder.Metadata.Model.FindAnnotation(DbContexts.ApplicationDbContext.EngineAnnotation)?.Value as DataSource?
+            ?? engine;
+
         ApplyEngineConventions(builder, engine);
     }
+
+    /// <summary>
+    /// Gets the engine of the model being built. It equals the engine the configuration declares
+    /// except when the host substitutes an unconfigured engine (for example a SQL Server
+    /// configuration applied to a PostgreSQL-only host), so hand-written SQL such as an index
+    /// filter must be produced for this engine, not for the declared one. Valid inside
+    /// <see cref="Configure(EntityTypeBuilder{TEntity})"/> after the base call.
+    /// </summary>
+    protected DataSource EffectiveEngine { get; private set; }
 
     /// <summary>
     /// Applies the engine-specific table/container mapping and key generation. Extracted as a

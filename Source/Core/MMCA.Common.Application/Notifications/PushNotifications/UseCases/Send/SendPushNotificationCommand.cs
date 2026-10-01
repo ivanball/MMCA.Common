@@ -27,7 +27,10 @@ public sealed record SendPushNotificationCommand(
     /// <c>Idempotency-Key</c> header). When present, a send whose key has already been seen
     /// returns the existing notification instead of creating a second one and sending again,
     /// so a retried request cannot deliver the same notification twice. When null (the default,
-    /// which is what every existing caller gets) the send behaves exactly as before.
+    /// which is what every existing caller gets) the send behaves exactly as before. The key is
+    /// scoped to the sender: the handler stores and looks up a SHA-256 of <c>{SentByUserId}:{key}</c>,
+    /// so two senders reusing one client key never collide (and the stored value always fits the
+    /// column).
     /// </summary>
     public string? DedupKey { get; init; }
 }

@@ -35,13 +35,13 @@ internal sealed class UserNotificationConfiguration
 
         builder.Property(p => p.ReadOn);
 
-        // Unique: one inbox entry per user per notification (among non-deleted)
+        // Unique: one inbox entry per user per notification (among non-deleted). The soft-delete
+        // predicate comes from SoftDeleteUniqueIndexConvention, in the syntax of the model's engine.
         builder.HasIndex(p => new { p.UserId, p.PushNotificationId })
-            .IsUnique()
-            .HasFilter("[IsDeleted] = 0");
+            .IsUnique();
 
         // Fast lookup for user's unread notifications
         builder.HasIndex(p => new { p.UserId, p.IsRead })
-            .HasFilter("[IsDeleted] = 0");
+            .HasSoftDeleteFilter(EffectiveEngine);
     }
 }

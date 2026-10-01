@@ -120,6 +120,10 @@ public sealed class DbContextFactory(
         {
             // A routed context is bound to one tenant's database; hand it back only to that tenant.
             GuardRoutedTenantUnchanged(dataSourceKey);
+
+            // And a shared context created before the tenant resolved must not be handed to a
+            // tenant that overrides this source.
+            GuardSharedContextNotRoutable(dataSourceKey);
         }
 
         return context;
@@ -209,6 +213,25 @@ public sealed class DbContextFactory(
             dataSourceKey,
             creationTenant ?? "<none>",
             current ?? "<none>"));
+    }
+
+    /// <summary>
+    /// Refuses to hand back a context bound to the SHARED database once the scope's tenant turns out
+    /// to override this source. That happens when a repository call runs before the tenant is
+    /// resolved (the context is created shared) and the tenant is set afterwards: serving it would
+    /// read and write the shared database for a tenant that owns its own.
+    /// </summary>
+    private void GuardSharedContextNotRoutable(DataSourceKey dataSourceKey)
+    {
+        if (_routedContextTenants.ContainsKey(dataSourceKey) || ResolveTenantOverride(dataSourceKey) is null)
+            return;
+
+        throw new InvalidOperationException(string.Format(
+            CultureInfo.InvariantCulture,
+            "The context for \"{0}\" was created before tenant \"{1}\" was resolved and is bound to the shared database, "
+            + "but this tenant overrides the source. Resolve the tenant before the first repository call or use a fresh scope.",
+            dataSourceKey,
+            tenantContext.TenantId));
     }
 
     /// <inheritdoc />

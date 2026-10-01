@@ -69,4 +69,19 @@ public sealed class AuthDelegatingHandlerTests
         inner.CallCount.Should().Be(1);
         tokenStorage.Verify(s => s.GetAccessTokenAsync(), Times.Once);
     }
+
+    [Fact]
+    public async Task SendAsync_WithSkipBearerOption_PassesThroughWithoutReadingTheTokenStorage()
+    {
+        // H37: the token refresh POST opts out, so the refresh never re-enters the storage awaiting it.
+        var (invoker, inner, tokenStorage) = CreateSut("stored-access-token");
+        using var request = CreateRequest();
+        request.Options.Set(AuthDelegatingHandler.SkipBearer, true);
+
+        using var response = await invoker.SendAsync(request, TestContext.Current.CancellationToken);
+
+        inner.CallCount.Should().Be(1);
+        inner.LastRequest.Authorization.Should().BeNull();
+        tokenStorage.Verify(s => s.GetAccessTokenAsync(), Times.Never);
+    }
 }

@@ -59,6 +59,26 @@ public sealed class ResultGrpcExtensionsTests
         exception.Errors[0].Code.Should().Be("Test.NotFound");
     }
 
+    // L65: gRPC text metadata is printable ASCII only. A message with an accented letter and a
+    // newline must reach the wire escaped, and still decode back to the original text.
+    [Fact]
+    public void ToRpcException_WithANonAsciiMultiLineMessage_WritesPrintableAsciiTrailersThatRoundTrip()
+    {
+        const string message = "Caf\u00e9 not found\nsecond line";
+        IReadOnlyList<Error> errors =
+        [
+            Error.NotFoundError("Test.NotFound", message, source: "Svc\u00e9", target: "Na\nme"),
+        ];
+
+        var exception = errors.ToRpcException();
+
+        exception.Trailers.Should().OnlyContain(entry => entry.Value.All(c => c >= ' ' && c <= '~'));
+        var decoded = exception.Trailers.ToErrors();
+        decoded[0].Message.Should().Be(message);
+        decoded[0].Source.Should().Be("Svc\u00e9");
+        decoded[0].Target.Should().Be("Na\nme");
+    }
+
     [Fact]
     public void ToRpcException_PopulatesStatusAndTrailersFromMostSevereError()
     {

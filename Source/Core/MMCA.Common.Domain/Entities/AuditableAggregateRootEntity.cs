@@ -66,7 +66,9 @@ public abstract class AuditableAggregateRootEntity<TIdentifierType> : AuditableB
         ArgumentNullException.ThrowIfNull(items);
 
         // Materialize once to avoid multiple enumeration and allow validation to inspect the list.
-        var itemsList = items as IList<TChildEntity> ?? [.. items];
+        // Always a copy: the caller may pass the backing collection itself (or a read-only view over
+        // it), which the Clear() below would empty before AddRange could read it.
+        List<TChildEntity> itemsList = [.. items];
         ValidateSetItems(collection, itemsList);
 
         collection.Clear();

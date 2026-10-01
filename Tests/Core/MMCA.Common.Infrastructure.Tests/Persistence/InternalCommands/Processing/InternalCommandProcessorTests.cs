@@ -181,6 +181,65 @@ public sealed class InternalCommandProcessorTests : IDisposable
         _log.Executions.Should().BeEmpty();
     }
 
+    // M114: a payload that no longer deserializes dead-letters its row and the rest of the batch runs.
+    [Fact]
+    public async Task Cycle_ARowWhosePayloadCannotBeDeserialized_IsDeadLetteredAndTheBatchContinues()
+    {
+        var broken = Seed(new RecordingCommand("broken"), InternalCommandTestHarness.EpochUtc.AddSeconds(-10));
+        var healthy = Seed(new RecordingCommand("healthy"), InternalCommandTestHarness.EpochUtc);
+        await _context.Set<InternalCommandMessage>()
+            .Where(c => c.Id == broken.Id)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(c => c.Payload, "{\"Value\":"),
+                TestContext.Current.CancellationToken);
+        _context.ChangeTracker.Clear();
+
+        var processor = CreateProcessor();
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        var storedBroken = await ReloadAsync(broken.Id);
+        storedBroken.DeadLetteredOn.Should().Be(InternalCommandTestHarness.EpochUtc);
+        storedBroken.LastError.Should().Contain("deserialized");
+        storedBroken.ClaimedBy.Should().BeNull();
+        _log.Executions.Should().ContainSingle().Which.Value.Should().Be("healthy");
+        var storedHealthy = await ReloadAsync(healthy.Id);
+        storedHealthy.ProcessedOn.Should().Be(InternalCommandTestHarness.EpochUtc);
+    }
+
+    // M116: the lease is renewed and re-checked row by row, so a row another replica took over while
+    // an earlier row of the batch was running is not run a second time.
+    [Fact]
+    public async Task Cycle_ARowAnotherReplicaReclaimedMidBatch_IsNotRun()
+    {
+        var first = Seed(new RecordingCommand("first"), InternalCommandTestHarness.EpochUtc.AddSeconds(-10));
+        var second = Seed(new RecordingCommand("second"), InternalCommandTestHarness.EpochUtc);
+        var foreignReplica = Guid.NewGuid();
+        _log.OnExecuted = async command =>
+        {
+            if (command.Value == "first")
+            {
+                await _context.Set<InternalCommandMessage>()
+                    .Where(c => c.Id == second.Id)
+                    .ExecuteUpdateAsync(
+                        s => s.SetProperty(c => c.ClaimedBy, foreignReplica)
+                            .SetProperty(c => c.ClaimedUntil, InternalCommandTestHarness.EpochUtc.AddMinutes(5)),
+                        TestContext.Current.CancellationToken);
+            }
+        };
+
+        var processor = CreateProcessor();
+
+        await processor.ProcessDueCommandsAsync(TestContext.Current.CancellationToken);
+
+        _log.Executions.Should().ContainSingle().Which.Value.Should().Be("first");
+        var storedFirst = await ReloadAsync(first.Id);
+        storedFirst.ProcessedOn.Should().Be(InternalCommandTestHarness.EpochUtc);
+        var storedSecond = await ReloadAsync(second.Id);
+        storedSecond.ClaimedBy.Should().Be(foreignReplica);
+        storedSecond.ProcessedOn.Should().BeNull();
+    }
+
     [Fact]
     public async Task Cycle_ARowWhoseCommandTypeCannotBeResolved_IsDeadLetteredImmediately()
     {

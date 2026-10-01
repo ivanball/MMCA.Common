@@ -74,6 +74,17 @@ internal static class SoftDeleteFilterSql
             || normalized.Contains(Normalize($"{column} = false"), StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Quotes one column name the way <paramref name="engine"/> expects inside a filtered-index
+    /// predicate. SQL Server and SQLite both accept the bracketed form; PostgreSQL rejects brackets
+    /// and takes the SQL-standard double-quoted form.
+    /// </summary>
+    /// <param name="engine">The engine of the model being built.</param>
+    /// <param name="column">The column name to quote.</param>
+    /// <returns>The quoted identifier.</returns>
+    internal static string QuoteColumn(DataSource engine, string column) =>
+        engine == DataSource.PostgreSQL ? $"\"{column}\"" : $"[{column}]";
+
     private static string ColumnName(IReadOnlyEntityType entityType) =>
         entityType.FindProperty(nameof(IAuditableEntity.IsDeleted))?.GetColumnName()
             ?? nameof(IAuditableEntity.IsDeleted);

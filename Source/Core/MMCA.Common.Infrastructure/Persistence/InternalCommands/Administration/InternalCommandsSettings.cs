@@ -62,7 +62,8 @@ public sealed class InternalCommandsSettings
     /// rows with an unexpired lease, so a command never runs on two replicas at once; if a replica
     /// dies mid-execution, its rows become claimable again once the lease expires. Set it comfortably
     /// above the longest expected handler duration, because a handler that outlives its lease can be
-    /// started again elsewhere while it is still running.
+    /// started again elsewhere while it is still running. The lease is renewed before each row of a
+    /// claimed batch runs, so it bounds one handler, not the whole batch.
     /// </summary>
     [Range(10, 3600)]
     public int LeaseSeconds { get; init; } = 300;

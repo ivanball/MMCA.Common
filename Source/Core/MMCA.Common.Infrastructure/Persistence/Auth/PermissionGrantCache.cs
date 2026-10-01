@@ -79,7 +79,12 @@ internal sealed class PermissionGrantCache(
                     group => group.Select(grant => grant.Permission).ToFrozenSet(StringComparer.Ordinal),
                     StringComparer.OrdinalIgnoreCase);
 
-            var lifetime = TimeSpan.FromSeconds(_settings.CacheSeconds);
+            // Three refresh intervals, not one, for two reasons. The next rebuild starts one interval
+            // AFTER this one finishes, so an entry living exactly one interval would expire before it
+            // is rewritten and every cycle would open a window with no stored grants. And when the
+            // refresh keeps failing, the snapshot must still stop answering eventually (a revoke must
+            // not grant forever on a dead database), so the bound is three intervals.
+            var lifetime = TimeSpan.FromSeconds(_settings.CacheSeconds * 3);
 
             foreach (var pair in byRole)
             {
@@ -120,5 +125,7 @@ internal sealed class PermissionGrantCache(
     /// </remarks>
     public void Dispose() => _rebuildLock.Dispose();
 
-    private static string CacheKey(string role) => $"permgrant:role:{role}";
+    // Upper-cased so the key matches however the caller or the stored row cased the role: role names
+    // compare case-insensitively everywhere they are read, and IMemoryCache compares keys ordinally.
+    private static string CacheKey(string role) => $"permgrant:role:{role.ToUpperInvariant()}";
 }

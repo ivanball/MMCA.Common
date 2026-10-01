@@ -159,6 +159,35 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         _messageBus.Observations[1].CorrelationId.Should().Be("correlation-2");
     }
 
+    // H36: the tenant context refuses a change once resolved, so a shared scope ran every later row
+    // under the first row's tenant. Each row now gets a fresh scope.
+    [Fact]
+    public async Task DispatchMessages_RunsEachRowUnderItsOwnTenant()
+    {
+        Seed(
+            Row(new OutboxOrigin(1, null, "tenant-a", "c-1")),
+            Row(new OutboxOrigin(2, null, "tenant-b", "c-2")));
+
+        await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        _messageBus.Observations.Should().HaveCount(2);
+        _messageBus.Observations[0].TenantId.Should().Be("tenant-a");
+        _messageBus.Observations[1].TenantId.Should().Be("tenant-b");
+    }
+
+    [Fact]
+    public async Task DispatchMessages_DoesNotLeakATenantIntoATenantlessRow()
+    {
+        Seed(
+            Row(new OutboxOrigin(1, null, "tenant-a", "c-1")),
+            Row(new OutboxOrigin(2, null, null, "c-2")));
+
+        await _sut.ProcessPendingMessagesAsync(CancellationToken.None);
+
+        _messageBus.Observations.Should().HaveCount(2);
+        _messageBus.Observations[1].TenantId.Should().BeNull();
+    }
+
     [Fact]
     public async Task DispatchMessages_LeavesTheScopeDefaultsAlone_ForARowThatCapturedNothing()
     {

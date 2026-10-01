@@ -86,17 +86,7 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
         var contents = new List<AIContent>(message.Contents.Count);
         foreach (var content in message.Contents)
         {
-            if (content is TextContent text && !string.IsNullOrEmpty(text.Text))
-            {
-                contents.Add(new TextContent(RedactText(text.Text)));
-            }
-            else
-            {
-                // Images, function calls and provider-specific content pass through untouched: this
-                // guardrail understands text, and silently dropping what it does not understand
-                // would be a far worse failure than leaving it alone.
-                contents.Add(content);
-            }
+            contents.Add(RedactContent(content));
         }
 
         return new ChatMessage(message.Role, contents)
@@ -106,6 +96,31 @@ public sealed partial class PiiRedactionGuardrail : IChatRequestRedactor, IChatG
             AdditionalProperties = message.AdditionalProperties,
         };
     }
+
+    /// <summary>
+    /// Rewrites the text a content item carries: message text, reasoning text, a string tool result
+    /// and the string arguments of a tool call. A tool's output is exactly where contact details
+    /// turn up (a customer lookup, a directory search), so it is scrubbed like any other text.
+    /// </summary>
+    private static AIContent RedactContent(AIContent content) => content switch
+    {
+        TextContent { Text: { Length: > 0 } text } => new TextContent(RedactText(text)),
+        TextReasoningContent { Text: { Length: > 0 } reasoning } => new TextReasoningContent(RedactText(reasoning)),
+        FunctionResultContent { Result: string result } call => new FunctionResultContent(call.CallId, RedactText(result)),
+        FunctionCallContent { Arguments: { } arguments } call => new FunctionCallContent(
+            call.CallId,
+            call.Name,
+            arguments.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value is string value ? RedactText(value) : pair.Value,
+                StringComparer.Ordinal)),
+
+        // Binary and other non-text content (images, non-string tool results and arguments,
+        // provider-specific items) passes through untouched: this guardrail understands text, and
+        // silently dropping what it does not understand would be a far worse failure than leaving
+        // it alone.
+        _ => content,
+    };
 
     private static string RedactText(string value) =>
         PhonePattern.Replace(EmailPattern.Replace(value, EmailPlaceholder), PhonePlaceholder);

@@ -69,9 +69,24 @@ public sealed class GetNotificationHistoryHandlerTests
         result.Value.PaginationMetadata.PageSize.Should().Be(10);
     }
 
+    // -- Total order (L50) --
+    // Equal CreatedOn values need an id tie-break or two OFFSET pages can repeat or skip a row; an
+    // in-memory sort is stable, so the ordering expression is what the assertion reads.
+    [Fact]
+    public async Task HandleAsync_OrdersThePageByCreatedOnThenById()
+    {
+        IQueryable<PushNotification>? page = null;
+        var (sut, _) = CreateSut(totalCount: 3, pageItems: 3, onPage: source => page = source);
+
+        await sut.HandleAsync(new GetNotificationHistoryQuery(PageNumber: 1, PageSize: 10));
+
+        page.Should().NotBeNull();
+        page!.Expression.ToString().Should().Contain("ThenByDescending(n => n.Id)");
+    }
+
     // ── Helpers ──
     private static (GetNotificationHistoryHandler Sut, Mock<IUnitOfWork> UnitOfWork) CreateSut(
-        int totalCount, int pageItems)
+        int totalCount, int pageItems, Action<IQueryable<PushNotification>>? onPage = null)
     {
         var unitOfWork = new Mock<IUnitOfWork>();
         var repository = new Mock<IRepository<PushNotification, PushNotificationIdentifierType>>();
@@ -96,6 +111,7 @@ public sealed class GetNotificationHistoryHandlerTests
             .Returns(notifications.AsQueryable());
 
         queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<PushNotification>>(), It.IsAny<CancellationToken>()))
+            .Callback((IQueryable<PushNotification> source, CancellationToken _) => onPage?.Invoke(source))
             .ReturnsAsync(notifications);
 
         var dtoMapper = new PushNotificationDTOMapper();

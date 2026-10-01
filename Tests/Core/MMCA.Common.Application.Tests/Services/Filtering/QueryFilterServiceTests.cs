@@ -55,6 +55,12 @@ public class QueryFilterServiceTests
     public void String_Contains_FiltersCorrectly() =>
         Filter("Name", "CONTAINS", "Widget").Should().HaveCount(2);
 
+    // L45: a caller that skips validation still gets the filter applied under a differently cased key,
+    // instead of having it silently dropped and every row returned.
+    [Fact]
+    public void String_KeyInADifferentCase_StillFilters() =>
+        Filter("name", "EQUALS", "Widget").Should().ContainSingle();
+
     [Fact]
     public void String_NotContains_ExcludesMatches() =>
         Filter("Name", "NOT CONTAINS", "Widget").Should().HaveCount(2);
@@ -249,6 +255,21 @@ public class QueryFilterServiceTests
         var result = QueryFilterService.ApplyFilters(Products(), filters, map).ToList();
 
         result.Should().ContainSingle().Which.Name.Should().Be("Widget");
+    }
+
+    // A server-authored entry is applied verbatim even when its key also names an entity property.
+    // ADC maps Speaker "FullName" to "(FirstName + \" \" + LastName)" because the entity's own
+    // FullName is computed and unmapped; the L45 casing normalization replaced the expression with
+    // the property name, and EF could not translate the result.
+    [Fact]
+    public void ApplyFilters_MappedToAnExpression_UnderAnExistingPropertyName_AppliesTheExpression()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Name"] = "(Name + \" Deluxe\")" };
+        var filters = new Dictionary<string, (string, string)> { ["Name"] = ("EQUALS", "Gadget Deluxe") };
+
+        var result = QueryFilterService.ApplyFilters(Products(), filters, map).ToList();
+
+        result.Should().ContainSingle().Which.Name.Should().Be("Gadget");
     }
 
     [Fact]

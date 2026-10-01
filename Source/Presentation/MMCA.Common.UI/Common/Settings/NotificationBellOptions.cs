@@ -17,7 +17,8 @@ public sealed class NotificationBellOptions
     /// <summary>
     /// How often the single active bell re-reads the authoritative unread count. The periodic read is
     /// the backstop behind the real-time push, not the primary path, so this is the budget for "how
-    /// long a missed push may go unnoticed".
+    /// long a missed push may go unnoticed". Zero or a negative value disables periodic polling; the
+    /// push refresh and the navigation refresh keep working.
     /// </summary>
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(30);
 

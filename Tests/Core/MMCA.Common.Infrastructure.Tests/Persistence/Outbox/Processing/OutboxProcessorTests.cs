@@ -255,8 +255,11 @@ public sealed class OutboxProcessorTests : IDisposable
         retried.LockedUntil.Should().NotBeNull("the row is re-leased for its backoff like any other retry");
     }
 
+    // M118 (inverted from DeadLettersUnresolvableTypes_SetsProcessedOnAndLastError): a terminal
+    // unresolvable row is dead-lettered like an exhausted one, so administration can list and replay
+    // it and cleanup keeps it for the dead-letter window instead of purging it as delivered.
     [Fact]
-    public async Task DeadLettersUnresolvableTypes_SetsProcessedOnAndLastError()
+    public async Task DeadLettersUnresolvableTypes_ExhaustsRetriesAndLeavesProcessedOnNull()
     {
         // Arrange: EventType references a type that does not exist, and the row has already spent
         // its one transient attempt, so THIS cycle is the terminal one.
@@ -270,8 +273,19 @@ public sealed class OutboxProcessorTests : IDisposable
 
         // Assert
         OutboxMessage deadLettered = await _dbContext.Set<OutboxMessage>().SingleAsync();
-        deadLettered.ProcessedOn.Should().NotBeNull("dead-lettered messages are marked as processed");
+        deadLettered.ProcessedOn.Should().BeNull("a dead letter was never delivered");
+        deadLettered.RetryCount.Should().Be(new OutboxSettings().MaxRetries);
         deadLettered.LastError.Should().Contain("Cannot resolve type");
+
+        // A later cycle must not pick the row up again, even once its type would resolve.
+        await _dbContext.Set<OutboxMessage>()
+            .Where(m => m.Id == deadLettered.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.EventType, typeof(TestDomainEvent).AssemblyQualifiedName!));
+        _dbContext.ChangeTracker.Clear();
+        await InvokeProcessPendingMessagesAsync();
+
+        OutboxMessage afterSecondCycle = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        afterSecondCycle.ProcessedOn.Should().BeNull("the dead letter left the poll");
     }
 
     [Fact]
@@ -408,6 +422,25 @@ public sealed class OutboxProcessorTests : IDisposable
         retried.ProcessedOn.Should().BeNull("failed messages should not be marked as processed");
         retried.RetryCount.Should().Be(1);
         retried.LastError.Should().Be("Dispatch failed");
+    }
+
+    // M115: LastError is a 4000-character column; an oversize message would fail the whole batch save.
+    [Fact]
+    public async Task IncrementsRetryOnDispatchFailure_TruncatesAnOversizeErrorToTheColumnWidth()
+    {
+        _dispatcherMock
+            .Setup(d => d.DispatchAsync(It.IsAny<IEnumerable<IDomainEvent>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(new string('x', 5000)));
+
+        OutboxMessage message = CreateEligibleMessage();
+        _dbContext.Set<OutboxMessage>().Add(message);
+        await _dbContext.SaveChangesAsync();
+
+        await InvokeProcessPendingMessagesAsync();
+
+        OutboxMessage retried = await _dbContext.Set<OutboxMessage>().SingleAsync();
+        retried.LastError!.Length.Should().Be(4000);
+        retried.RetryCount.Should().Be(1);
     }
 
     [Fact]
@@ -663,9 +696,9 @@ public sealed class OutboxProcessorTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
             .Callback(new InvocationAction(invocation =>
             {
-                var formatter = (Delegate)invocation.Arguments[4];
+                var formatter = (Delegate)invocation.Arguments[4]!;
                 logged.Add((
-                    (LogLevel)invocation.Arguments[0],
+                    (LogLevel)invocation.Arguments[0]!,
                     (string)formatter.DynamicInvoke(invocation.Arguments[2], invocation.Arguments[3])!));
             }));
 

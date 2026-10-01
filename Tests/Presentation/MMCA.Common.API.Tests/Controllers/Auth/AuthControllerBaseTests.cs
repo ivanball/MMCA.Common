@@ -334,6 +334,17 @@ public sealed class AuthControllerBaseTests
         action.GetCustomAttribute<NonIdempotentAttribute>().Should().NotBeNull(
             "a replayed 204 would report success for a revoke that never reached the store");
     }
+
+    [Fact]
+    public void RegisterAsync_DeclaresItselfNonIdempotent()
+    {
+        // M137: register returns a token pair, which must never land in the replay cache.
+        MethodInfo action = typeof(AuthControllerBase).GetMethod(nameof(AuthControllerBase.RegisterAsync))!;
+
+        action.GetCustomAttribute<NonIdempotentAttribute>().Should().NotBeNull(
+            "a replayed 201 would hand out cached tokens, even after the session was revoked");
+        action.GetCustomAttribute<IdempotentAttribute>().Should().BeNull();
+    }
 }
 
 internal sealed class TestAuthController(

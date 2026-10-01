@@ -28,17 +28,17 @@ internal sealed class DateTimeFilterStrategy : IFilterStrategy
     public IQueryable<T> Apply<T>(IQueryable<T> query, string property, string op, string value)
         => op switch
         {
-            "IS" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
+            "IS" when ParseDateTime(value) is { } dt
                 => query.Where(DynamicQueryConfig.Parameterized, $"{property} == @0", dt),
-            "IS NOT" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
+            "IS NOT" when ParseDateTime(value) is { } dt
                 => query.Where(DynamicQueryConfig.Parameterized, $"{property} != @0", dt),
-            "IS AFTER" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
+            "IS AFTER" when ParseDateTime(value) is { } dt
                 => query.Where(DynamicQueryConfig.Parameterized, $"{property} > @0", dt),
-            "IS ON OR AFTER" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
+            "IS ON OR AFTER" when ParseDateTime(value) is { } dt
                 => query.Where(DynamicQueryConfig.Parameterized, $"{property} >= @0", dt),
-            "IS BEFORE" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
+            "IS BEFORE" when ParseDateTime(value) is { } dt
                 => query.Where(DynamicQueryConfig.Parameterized, $"{property} < @0", dt),
-            "IS ON OR BEFORE" when DateTime.TryParse(value, FormatProvider, DateTimeStyles.None, out var dt)
+            "IS ON OR BEFORE" when ParseDateTime(value) is { } dt
                 => query.Where(DynamicQueryConfig.Parameterized, $"{property} <= @0", dt),
             "IS EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} == null"),
             "IS NOT EMPTY" => query.Where(DynamicQueryConfig.Parameterized, $"{property} != null"),
@@ -69,6 +69,14 @@ internal sealed class DateTimeFilterStrategy : IFilterStrategy
             : query;
     }
 
-    private static DateTime? ParseDateTime(string s) =>
-        DateTime.TryParse(s, FormatProvider, DateTimeStyles.None, out var dt) ? dt : null;
+    /// <summary>
+    /// Parses one filter bound as a UTC instant, the way the framework stores every
+    /// <see cref="DateTime"/>: an offset or <c>Z</c> is honoured and normalized to UTC, and a bare
+    /// value is taken as UTC. The host's local time zone never enters the result, so the same filter
+    /// selects the same rows on every server.
+    /// </summary>
+    /// <param name="s">The bound as sent by the client.</param>
+    /// <returns>The UTC instant (<see cref="DateTimeKind.Utc"/>), or <see langword="null"/> when it does not parse.</returns>
+    internal static DateTime? ParseDateTime(string s) =>
+        DateTime.TryParse(s, FormatProvider, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var dt) ? dt : null;
 }

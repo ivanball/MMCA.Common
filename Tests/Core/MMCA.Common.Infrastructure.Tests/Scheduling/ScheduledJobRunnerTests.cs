@@ -179,6 +179,41 @@ public sealed class ScheduledJobRunnerTests
         earliest.Should().Be(EpochUtc.AddHours(2), "the smart wait targets the next occurrence");
     }
 
+    // M119: a job that completed is stamped even when the host starts stopping right after.
+    [Fact]
+    public async Task RunCycleAsync_HostStopsAfterTheJobReturned_StillStampsTheOutcomeAndAdvances()
+    {
+        var timeProvider = new FakeTimeProvider(Epoch);
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var context = SchedulerTestContext.Create(connection);
+        using var hostStopping = new CancellationTokenSource();
+
+        // The job completes normally, then the host stopping token fires before the stamp runs.
+        var job = new DelegateScheduledJob("nightly", HourlyCron, _ => hostStopping.CancelAsync());
+
+        var (runner, scopeServices, _) = CreateRunner(context, EnabledSettings(), timeProvider, job);
+        await using var scope = scopeServices;
+        using var service = runner;
+
+        await runner.RunCycleAsync(TestContext.Current.CancellationToken);   // registers, nothing due
+        timeProvider.Advance(TimeSpan.FromHours(1));                          // 01:00:00, the occurrence
+        try
+        {
+            await runner.RunCycleAsync(hostStopping.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The cycle may stop after the stamp; what matters is what the stamp wrote.
+        }
+
+        job.ExecutionCount.Should().Be(1);
+        var row = await LoadAsync(context, "nightly");
+        row.LastOutcome.Should().Be("Succeeded");
+        row.NextRunOn.Should().Be(EpochUtc.AddHours(2), "a completed occurrence always advances its schedule");
+        row.LockToken.Should().BeNull("the lease is released, so the finished job is not re-run");
+    }
+
     // ── Execution: a failing job is recorded, truncated, and still advanced ──
     [Fact]
     public async Task RunCycleAsync_FailingJob_RecordsFailedWithTruncatedErrorAndStillAdvances()

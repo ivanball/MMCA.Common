@@ -15,5 +15,5 @@ namespace MMCA.Common.Domain.Attributes;
 /// content that merely happens to contain a name (e.g. a conference speaker profile sourced from a
 /// public agenda, whose erasure obligation — if any — flows through the linked user account).
 /// </summary>
-[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
 public sealed class PiiAttribute : Attribute;

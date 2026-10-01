@@ -54,6 +54,12 @@ public abstract class ApplicationDbContext(
     public DataSourceKey DataSourceKey => physicalDataSource.Key;
 
     /// <summary>
+    /// The model annotation that carries the engine of the model being built while entity
+    /// configurations are applied (read by <c>EntityTypeConfiguration.EffectiveEngine</c>).
+    /// </summary>
+    internal const string EngineAnnotation = "MMCA:Engine";
+
+    /// <summary>
     /// Whether the <c>ScheduledJobs</c> table belongs in THIS context's model. Resolved once in
     /// <see cref="OnConfiguring"/> from the root provider (the same place the interceptors are
     /// resolved) and read by <see cref="ConfigureScheduler"/>, because <c>OnModelCreating</c> must
@@ -573,9 +579,9 @@ public abstract class ApplicationDbContext(
     /// non-owned entity type that inherits from <see cref="AuditableBaseEntity{TId}"/>.
     /// SQL Server maps this to <c>rowversion</c> (auto-incremented by the database, so the
     /// property is database-generated); the other relational providers (PostgreSQL, SQLite) have no equivalent
-    /// server-generated type — the property is mapped as a plain application-managed concurrency
-    /// token there, so EF includes the entity's value in INSERTs instead of expecting the
-    /// database to generate one.
+    /// server-generated type, so the property is mapped as a plain concurrency token there and
+    /// <see cref="Interceptors.AuditSaveChangesInterceptor"/> manages it, writing a fresh value on
+    /// every insert and update so the UPDATE's WHERE clause actually detects a concurrent writer.
     /// EF Core automatically includes the token in UPDATE/DELETE WHERE clauses and throws
     /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> on conflicts.
     /// </summary>
@@ -611,7 +617,7 @@ public abstract class ApplicationDbContext(
     /// <param name="column">The column name to quote.</param>
     /// <returns>The quoted identifier.</returns>
     private static string QuoteColumn(DataSource engine, string column) =>
-        engine == DataSource.PostgreSQL ? $"\"{column}\"" : $"[{column}]";
+        SoftDeleteFilterSql.QuoteColumn(engine, column);
 
     /// <summary>
     /// Declares the non-key columns an index carries along (SQL Server <c>INCLUDE</c>, PostgreSQL
@@ -965,15 +971,28 @@ public abstract class ApplicationDbContext(
         // included in the Default model but are not routable via the unit of work (legacy behavior).
         var registry = serviceProvider.GetRequiredService<IEntityDataSourceRegistry>();
 
-        foreach (var assembly in assemblyProvider.GetConfigurationAssemblies())
+        // A configuration declared for one engine can be applied to another engine's model when the
+        // host substitutes an unconfigured engine, so it cannot trust its own attribute for SQL text.
+        // The effective engine rides on a model annotation for the duration of the pass (Configure
+        // runs synchronously inside it) and is removed afterwards, so the finished model and every
+        // migration snapshot stay exactly as they were.
+        modelBuilder.Model.SetAnnotation(EngineAnnotation, DataSourceKey.Engine);
+        try
         {
-            modelBuilder.ApplyAllConfigurations(
-                serviceProvider,
-                assembly,
-                configType,
-                entityType => registry.TryGetDataSourceKey(entityType.FullName!, out var key)
-                    ? key == DataSourceKey
-                    : DataSourceKey.Name == DataSourceKey.DefaultName);
+            foreach (var assembly in assemblyProvider.GetConfigurationAssemblies())
+            {
+                modelBuilder.ApplyAllConfigurations(
+                    serviceProvider,
+                    assembly,
+                    configType,
+                    entityType => registry.TryGetDataSourceKey(entityType.FullName!, out var key)
+                        ? key == DataSourceKey
+                        : DataSourceKey.Name == DataSourceKey.DefaultName);
+            }
+        }
+        finally
+        {
+            modelBuilder.Model.RemoveAnnotation(EngineAnnotation);
         }
     }
 }

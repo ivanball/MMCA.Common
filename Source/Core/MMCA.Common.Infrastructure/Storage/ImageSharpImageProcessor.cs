@@ -2,6 +2,7 @@ using System.Globalization;
 using MMCA.Common.Application.Interfaces.Infrastructure.Storage;
 using MMCA.Common.Shared.Abstractions;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
@@ -59,10 +60,13 @@ public sealed class ImageSharpImageProcessor : IImageProcessor
                 content.Position = startPosition;
             }
 
-            using var image = await Image.LoadAsync(content, cancellationToken).ConfigureAwait(false);
+            // One frame only: the output is a single JPEG built from the first frame, and decoding
+            // every frame of an animated file is how a small upload becomes hundreds of megabytes of
+            // pixel buffers. MaxFrames is what bounds the multi-frame case.
+            using var image = await Image.LoadAsync(new DecoderOptions { MaxFrames = 1 }, content, cancellationToken).ConfigureAwait(false);
 
-            // Second gate, on the DECODED frame. A format whose header understates its real size (or
-            // a multi-frame file) would otherwise slip past the header check.
+            // Second gate, on the DECODED frame. A format whose header understates its real size
+            // would otherwise slip past the header check.
             if (TooLargeToDecode(image.Width, image.Height))
             {
                 return Result.Failure<byte[]>(Error.Validation(

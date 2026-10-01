@@ -300,7 +300,8 @@ public sealed class ExceptionHandlerTests
             problemDetailsService.Object,
             NullLogger<OperationCanceledExceptionHandler>.Instance);
 
-        var httpContext = new DefaultHttpContext();
+        // 499 is the client-disconnect answer, so the request is aborted (L64).
+        var httpContext = new DefaultHttpContext { RequestAborted = new CancellationToken(canceled: true) };
         var exception = new OperationCanceledException();
 
         bool handled = await sut.TryHandleAsync(httpContext, exception, CancellationToken.None);
@@ -399,7 +400,9 @@ public sealed class ExceptionHandlerTests
             NullLogger<OperationCanceledExceptionHandler>.Instance);
 
         await sut.TryHandleAsync(
-            new DefaultHttpContext(), new OperationCanceledException(), CancellationToken.None);
+            new DefaultHttpContext { RequestAborted = new CancellationToken(canceled: true) },
+            new OperationCanceledException(),
+            CancellationToken.None);
 
         capturedContext.Should().NotBeNull();
         capturedContext!.ProblemDetails.Title.Should().Be("Operation Canceled Exception");

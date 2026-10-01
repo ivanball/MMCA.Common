@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using MMCA.Common.Aspire.Warmup;
 using MMCA.Common.Shared.Resilience;
 
@@ -51,6 +52,13 @@ public static partial class Extensions
                     options.CircuitBreaker.SamplingDuration = HttpResilienceDefaults.CircuitBreakerSamplingDuration;
                     options.TotalRequestTimeout.Timeout = HttpResilienceDefaults.TotalRequestTimeout;
                     options.Retry.MaxRetryAttempts = HttpResilienceDefaults.MaxRetryAttempts;
+
+                    // Never replay a POST or PATCH: an attempt that timed out may still be running
+                    // server-side, and a server-to-server hop carries no idempotency key. GET, PUT,
+                    // DELETE and the other idempotent verbs keep their one retry, which is why this
+                    // names the two verbs rather than using DisableForUnsafeHttpMethods (that helper
+                    // also switches the retry off for PUT and DELETE).
+                    options.Retry.DisableFor(HttpMethod.Post, HttpMethod.Patch);
                 });
                 http.AddServiceDiscovery();
 

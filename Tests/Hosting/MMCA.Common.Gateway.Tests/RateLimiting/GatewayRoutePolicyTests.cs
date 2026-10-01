@@ -112,6 +112,36 @@ public sealed class GatewayRoutePolicyTests
         third.IsAcquired.Should().BeFalse();
     }
 
+    // M177: a request the edge limiter validated as a trusted internal caller is not limited by the
+    // named route policy either; everything else still is.
+    [Fact]
+    public async Task Partition_ForARequestTheEdgeMarkedAsATrustedCaller_AppliesNoLimiter()
+    {
+        var policy = new GatewayRoutePolicySettings { PermitLimit = 1, WindowSeconds = 60 };
+        await using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
+            httpContext => GatewayRoutePolicyExtensions.Partition(httpContext, policy));
+        var context = ContextFor(IPAddress.Parse("198.51.100.4"));
+        context.Items["MMCA.Common.Gateway.TrustedInternalCaller"] = true;
+
+        using var first = await limiter.AcquireAsync(context, 1, CancellationToken.None);
+        using var second = await limiter.AcquireAsync(context, 1, CancellationToken.None);
+
+        GatewayRoutePolicyExtensions.Partition(context, policy).PartitionKey
+            .Should().Be(GatewayRoutePolicySettings.GlobalPartitionKey);
+        first.IsAcquired.Should().BeTrue();
+        second.IsAcquired.Should().BeTrue(because: "the trusted caller is exempt from the per-IP window");
+    }
+
+    [Fact]
+    public void Partition_WithoutTheTrustedCallerMark_StillKeysOnTheCallerAddress()
+    {
+        var context = ContextFor(IPAddress.Parse("198.51.100.4"));
+        context.Items["MMCA.Common.Gateway.TrustedInternalCaller"] = "true";
+
+        GatewayRoutePolicyExtensions.Partition(context, new GatewayRoutePolicySettings())
+            .PartitionKey.Should().Be("198.51.100.4", because: "only the boolean the edge stamps counts");
+    }
+
     [Fact]
     public void Settings_DefaultsAreTheEdgeShape()
     {

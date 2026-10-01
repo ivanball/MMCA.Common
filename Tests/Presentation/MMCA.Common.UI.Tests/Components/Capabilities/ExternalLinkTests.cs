@@ -65,10 +65,10 @@ public sealed class ExternalLinkTests : BunitTestBase
 
         public bool InterceptsLinks => true;
 
-        public Task OpenAsync(Uri uri, CancellationToken cancellationToken = default)
+        public Task<bool> OpenAsync(Uri uri, CancellationToken cancellationToken = default)
         {
             Opened.Add(uri);
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
     }
 }

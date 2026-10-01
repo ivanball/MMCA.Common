@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -381,6 +382,15 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
         LogReplayServed(cacheKey, cached.StatusCode);
 
         context.HttpContext.Response.Headers.Append(IdempotencyHeaders.IdempotentReplay, "true");
+
+        // The headers a client may act on travel with the stored body, so a replayed 201 still says
+        // where the resource is and a replayed read still carries its concurrency token.
+        if (!string.IsNullOrEmpty(cached.Location))
+            context.HttpContext.Response.Headers.Location = cached.Location;
+
+        if (!string.IsNullOrEmpty(cached.ETag))
+            context.HttpContext.Response.Headers.ETag = cached.ETag;
+
         context.Result = string.IsNullOrEmpty(cached.ResponseBody)
             ? new StatusCodeResult(cached.StatusCode)
             : new ContentResult
@@ -420,7 +430,12 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
         string requestBodyHash,
         ActionExecutedContext executedContext)
     {
-        var record = BuildRecord(executedContext.Result, requestBodyHash);
+        // The MVC JSON options, not JsonSerializerOptions.Web: the replayed body must be byte-shaped
+        // exactly like the original response, which MVC wrote with the host's converters.
+        var json = context.HttpContext.RequestServices.GetService<IOptions<JsonOptions>>()?.Value.JsonSerializerOptions
+            ?? JsonSerializerOptions.Web;
+
+        var record = BuildRecord(executedContext, requestBodyHash, json);
         if (record is null)
             return;
 
@@ -445,28 +460,67 @@ public sealed partial class IdempotencyFilter(ILogger<IdempotencyFilter> logger)
     /// Builds the cacheable snapshot of a result, or <see langword="null"/> when the result is not
     /// one this record shape can represent.
     /// </summary>
-    private static IdempotencyRecord? BuildRecord(IActionResult? result, string requestBodyHash)
+    private static IdempotencyRecord? BuildRecord(
+        ActionExecutedContext executedContext,
+        string requestBodyHash,
+        JsonSerializerOptions json)
     {
-        switch (result)
+        var etag = executedContext.HttpContext.Response.Headers.ETag.ToString();
+        var storedETag = string.IsNullOrEmpty(etag) ? null : etag;
+
+        switch (executedContext.Result)
         {
+            // A null value (Accepted() with no payload) stores the empty body, so the replay is a
+            // body-less status like the original rather than a JSON "null".
             case ObjectResult objectResult:
                 var objectStatus = objectResult.StatusCode ?? StatusCodes.Status200OK;
+                if (!IsSuccess(objectStatus))
+                    return null;
+
 #pragma warning disable VSTHRD103 // JsonSerializer.Serialize to a string is correctly synchronous; SerializeAsync is only for writing to a stream.
-                return IsSuccess(objectStatus)
-                    ? new IdempotencyRecord(
-                        objectStatus,
-                        JsonSerializer.Serialize(objectResult.Value, JsonSerializerOptions.Web),
-                        requestBodyHash)
-                    : null;
+                var body = objectResult.Value is null ? string.Empty : JsonSerializer.Serialize(objectResult.Value, json);
 #pragma warning restore VSTHRD103
+                return new IdempotencyRecord(
+                    objectStatus,
+                    body,
+                    requestBodyHash,
+                    ResolveLocation(executedContext, objectResult),
+                    storedETag);
 
             // NoContentResult and OkResult are StatusCodeResults, and so is anything from
             // StatusCode(int). The record's body is non-nullable, so a body-less response stores
             // the empty string and TryReplayAsync replays it without a content type.
             case StatusCodeResult statusCodeResult:
                 return IsSuccess(statusCodeResult.StatusCode)
-                    ? new IdempotencyRecord(statusCodeResult.StatusCode, string.Empty, requestBodyHash)
+                    ? new IdempotencyRecord(statusCodeResult.StatusCode, string.Empty, requestBodyHash, ETag: storedETag)
                     : null;
+
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// The <c>Location</c> a created result will write. It is set when the RESULT executes, after
+    /// this filter has run, so it is computed here the same way the result computes it.
+    /// </summary>
+    private static string? ResolveLocation(ActionContext context, ObjectResult result)
+    {
+        switch (result)
+        {
+            case CreatedResult created:
+                return created.Location;
+
+            case CreatedAtRouteResult atRoute:
+                return context.HttpContext.RequestServices.GetService<IUrlHelperFactory>()?
+                    .GetUrlHelper(context)
+                    .Link(atRoute.RouteName, atRoute.RouteValues);
+
+            case CreatedAtActionResult atAction:
+                var request = context.HttpContext.Request;
+                return context.HttpContext.RequestServices.GetService<IUrlHelperFactory>()?
+                    .GetUrlHelper(context)
+                    .Action(atAction.ActionName, atAction.ControllerName, atAction.RouteValues, request.Scheme, request.Host.ToUriComponent());
 
             default:
                 return null;

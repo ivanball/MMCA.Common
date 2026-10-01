@@ -64,6 +64,25 @@ public sealed class CultureEndpointTests
         response.Headers.TryGetValues("Set-Cookie", out _).Should().BeFalse();
     }
 
+    // L63: a non-local redirectUri falls back to the root instead of throwing a 500.
+    [Theory]
+    [InlineData("https%3A%2F%2Fevil.example")]
+    [InlineData("%2F%2Fevil.example")]
+    [InlineData("%2F%5Cevil.example")]
+    public async Task MapCultureEndpoint_WithANonLocalRedirectUri_RedirectsToTheRootAndStillWritesTheCookie(string redirectUri)
+    {
+        await using var app = await StartAsync(static app => app.MapCultureEndpoint());
+        using var client = app.GetTestClient();
+
+        using var response = await client.GetAsync(
+            new Uri($"/culture/set?culture=es&redirectUri={redirectUri}", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location!.OriginalString.Should().Be("/");
+        CultureCookie(response).Should().Contain("c%3Des%7Cuic%3Des");
+    }
+
     private static string CultureCookie(HttpResponseMessage response) =>
         response.Headers.GetValues("Set-Cookie").Single(v => v.StartsWith(CultureCookieName, StringComparison.Ordinal));
 

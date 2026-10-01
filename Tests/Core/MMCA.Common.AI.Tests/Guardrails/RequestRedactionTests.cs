@@ -92,6 +92,42 @@ public sealed class RequestRedactionTests
     }
 
     [Fact]
+    public void ThePiiGuardrail_RedactsAToolResult_AndKeepsItsCallId()
+    {
+        var redacted = new PiiRedactionGuardrail().Redact(
+            [new ChatMessage(ChatRole.Tool, [new FunctionResultContent("call-1", "reach me at jane@example.com or 404-555-0100")])]);
+
+        var result = redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<FunctionResultContent>().Subject;
+        result.Result.Should().Be("reach me at [redacted-email] or [redacted-phone]", "a tool's output reaches the provider like any other text");
+        result.CallId.Should().Be("call-1");
+    }
+
+    [Fact]
+    public void ThePiiGuardrail_RedactsTheStringArgumentsOfAToolCall()
+    {
+        var redacted = new PiiRedactionGuardrail().Redact(
+            [new ChatMessage(
+                ChatRole.Assistant,
+                [new FunctionCallContent("call-2", "email_user", new Dictionary<string, object?> { ["to"] = "jane@example.com", ["count"] = 3 })])]);
+
+        var call = redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<FunctionCallContent>().Subject;
+        call.CallId.Should().Be("call-2");
+        call.Name.Should().Be("email_user");
+        call.Arguments!["to"].Should().Be("[redacted-email]");
+        call.Arguments["count"].Should().Be(3, "a non-string argument passes through");
+    }
+
+    [Fact]
+    public void ThePiiGuardrail_RedactsReasoningText()
+    {
+        var redacted = new PiiRedactionGuardrail().Redact(
+            [new ChatMessage(ChatRole.Assistant, [new TextReasoningContent("the user is ada@example.com")])]);
+
+        redacted[0].Contents.Should().ContainSingle().Which.Should().BeOfType<TextReasoningContent>()
+            .Which.Text.Should().Be("the user is [redacted-email]");
+    }
+
+    [Fact]
     // Copied verbatim from the ADC scorer, narrow on purpose: prose legitimately carries years, team
     // sizes and throughput figures, and redacting those would cost the model its evidence.
     public void ThePiiGuardrail_LeavesOrdinaryNumbersAlone()

@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Shared.Abstractions;
@@ -70,6 +71,22 @@ public sealed class TwoFactorAuthenticatorTests
     }
 
     [Fact]
+    public async Task ChallengeAsync_ReplayingAnAcceptedTimeBasedCode_IsRefused()
+    {
+        // L56: the matched time step is remembered, so the same code cannot sign in twice inside its window.
+        var (sut, _, secret) = CreateSut(enabled: true);
+        string code = CodeAt(secret);
+
+        Result<TwoFactorOutcome> first = await sut.ChallengeAsync(TestUserId, code);
+        Result<TwoFactorOutcome> second = await sut.ChallengeAsync(TestUserId, code);
+
+        first.IsSuccess.Should().BeTrue();
+        first.Value.Should().Be(TwoFactorOutcome.VerifiedTotp);
+        second.IsFailure.Should().BeTrue("a time-based code is accepted once");
+        second.Errors.Should().ContainSingle(e => e.Code == TwoFactorErrors.TwoFactorInvalidCode);
+    }
+
+    [Fact]
     public async Task ChallengeAsync_WithAWrongCode_Fails()
     {
         var (sut, store, _) = CreateSut(enabled: true);
@@ -127,11 +144,42 @@ public sealed class TwoFactorAuthenticatorTests
             store.Seed(enabled, secret, set);
         }
 
-        return (new TwoFactorAuthenticator(service, store), store, secret);
+        return (new TwoFactorAuthenticator(service, store, new FakeCacheService(), settings), store, secret);
     }
 
     private static string CodeAt(string secret) =>
         new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp(DateTime.UtcNow);
+
+    /// <summary>In-memory <see cref="ICacheService"/> holding the last accepted time step.</summary>
+    private sealed class FakeCacheService : ICacheService
+    {
+        private readonly Dictionary<string, object?> _values = new(StringComparer.Ordinal);
+
+        public Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_values.TryGetValue(key, out object? value) ? (T?)value : default);
+
+        public Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+        {
+            _values[key] = value;
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
+        {
+            _values.Remove(key);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+        {
+            foreach (string key in _values.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            {
+                _values.Remove(key);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
 
     /// <summary>In-memory <see cref="ITwoFactorStore"/> recording which recovery hashes were spent.</summary>
     private sealed class FakeTwoFactorStore : ITwoFactorStore

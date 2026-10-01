@@ -190,6 +190,22 @@ public sealed class KeysetQueryBuilderSqlTests : IDisposable
             + "page silently drops every remaining row");
     }
 
+    // M112: the null placement follows the engine. SQL Server / SQLite (the default) keep the shape
+    // they always had; the PostgreSQL placement adds the null rows to an ascending non-null seek.
+    [Fact]
+    public void BuildSeekPredicate_AscendingNonNullBoundary_AddsTheNullRowsOnlyForThePostgreSqlPlacement()
+    {
+        var categoryProperty = typeof(SpecTestEntity).GetProperty(nameof(SpecTestEntity.Category))!;
+
+        var sqlServer = Statement(Source.Where(KeysetQueryBuilder.BuildSeekPredicate<SpecTestEntity, int>(
+            categoryProperty, sortValue: "b", lastId: 7, descending: false)).ToQueryString());
+        var postgreSql = Statement(Source.Where(KeysetQueryBuilder.BuildSeekPredicate<SpecTestEntity, int>(
+            categoryProperty, sortValue: "b", lastId: 7, descending: false, nullsSortFirstAscending: false)).ToQueryString());
+
+        sqlServer.Should().NotContain("IS NULL", "nulls sort first ascending there, so they are all behind the boundary");
+        postgreSql.Should().Contain("\"Category\" IS NULL", "PostgreSQL sorts nulls last ascending, so they are all still ahead");
+    }
+
     // ── Parameterization ──
     [Fact]
     public void BuildSeekPredicate_KeepsTheBoundaryValuesOutOfTheStatement()

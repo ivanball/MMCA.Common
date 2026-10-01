@@ -77,7 +77,7 @@ public sealed partial class DataSourceResolver : IDataSourceResolver
 
         _substituteEngine = EnginePreference
             .Where(_configuredEngines.Contains)
-            .Select(engine => (DataSource?)engine)
+            .Cast<DataSource?>()
             .FirstOrDefault();
 
         if (_substituteEngine is { } substitute && substitute != DataSource.SQLServer)

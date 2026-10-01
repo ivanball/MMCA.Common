@@ -282,6 +282,13 @@ public sealed class StubTwoFactorService(int recoveryCodeCount) : ITwoFactorServ
         !string.IsNullOrWhiteSpace(code) && string.Equals(code, CodeFor(secret), StringComparison.Ordinal);
 
     /// <inheritdoc />
+    public bool VerifyCode(string secret, string? code, out long matchedStep)
+    {
+        matchedStep = 0;
+        return VerifyCode(secret, code);
+    }
+
+    /// <inheritdoc />
     public RecoveryCodeSet GenerateRecoveryCodes()
     {
         List<string> codes = [];

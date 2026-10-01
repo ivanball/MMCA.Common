@@ -61,7 +61,8 @@ public static class DatabaseInitializationExtensions
             // neither does a PostgreSQL or SQLite source with no migrations assembly configured, so
             // all three are created via EnsureCreated up front, independent of the migration-oriented
             // DatabaseInitStrategy below. This is the ONLY path that creates them; without it such a
-            // source in use is never created and the first repository call fails.
+            // source in use is never created and the first repository call fails. The per-tenant pass
+            // below repeats it for a tenant's own copy of such a source, under either strategy.
             //
             // A PostgreSQL or SQLite source WITH a migrations assembly is deliberately excluded here:
             // EnsureCreated writes the tables without an __EFMigrationsHistory row, after which every
@@ -161,7 +162,7 @@ public static class DatabaseInitializationExtensions
 
                     break;
                 case "None":
-                    await ThrowIfTenantPendingMigrationsAsync(database, target, usesMigrations, cancellationToken)
+                    await ApplyNoneStrategyToTenantAsync(database, target, usesMigrations, cancellationToken)
                         .ConfigureAwait(false);
                     break;
                 default:
@@ -191,6 +192,27 @@ public static class DatabaseInitializationExtensions
     /// <returns>The exception to throw.</returns>
     private static InvalidOperationException UnknownStrategy(string? strategy) =>
         new($"Unknown DatabaseInitStrategy: '{strategy}'. Valid values are: Migrate, None.");
+
+    /// <summary>
+    /// The <c>"None"</c> strategy for one tenant database. A migration-less Cosmos, PostgreSQL or
+    /// SQLite tenant copy is created here, mirroring the shared pass, because nothing else ever
+    /// creates it; every other copy is checked for pending migrations.
+    /// </summary>
+    private static async Task ApplyNoneStrategyToTenantAsync(
+        DatabaseFacade database,
+        TenantDataSourceTarget target,
+        bool usesMigrations,
+        CancellationToken cancellationToken)
+    {
+        if (!usesMigrations && target.Source.Engine is DataSource.CosmosDB or DataSource.PostgreSQL or DataSource.Sqlite)
+        {
+            await database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await ThrowIfTenantPendingMigrationsAsync(database, target, usesMigrations, cancellationToken)
+            .ConfigureAwait(false);
+    }
 
     /// <summary>
     /// Production guard for a tenant database under the <c>"None"</c> strategy: a tenant left

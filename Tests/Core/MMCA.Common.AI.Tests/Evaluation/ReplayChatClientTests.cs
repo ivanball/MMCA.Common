@@ -39,6 +39,27 @@ public sealed class ReplayChatClientTests
     }
 
     [Fact]
+    public async Task ConcurrentCalls_AreAllCounted()
+    {
+        using var client = new ReplayChatClient([Recorded("first"), Recorded("second")]);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // 8 workers x 2,000 calls: an unsynchronized read-then-increment loses counts under this load.
+        var workers = Enumerable.Range(0, 8).Select(_ => Task.Run(
+            async () =>
+            {
+                for (var i = 0; i < 2_000; i++)
+                {
+                    await client.GetResponseAsync(Prompt, options: null, cancellationToken);
+                }
+            },
+            cancellationToken));
+        await Task.WhenAll(workers);
+
+        client.CallCount.Should().Be(16_000);
+    }
+
+    [Fact]
     public async Task Serves_RecordedResponsesInOrder_AndRepeatsTheLast()
     {
         using var client = new ReplayChatClient([Recorded("first"), Recorded("second")]);

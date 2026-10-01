@@ -384,7 +384,7 @@ public sealed class RefreshSessionCleanupServiceTests
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
                 .Callback(new InvocationAction(invocation =>
                 {
-                    if (string.Equals(((EventId)invocation.Arguments[1]).Name, observedLogEvent, StringComparison.Ordinal))
+                    if (string.Equals(((EventId)invocation.Arguments[1]!).Name, observedLogEvent, StringComparison.Ordinal))
                     {
                         sweepObserved.TrySetResult();
                     }

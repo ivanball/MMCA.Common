@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Shared.Concurrency;
 
@@ -15,8 +16,14 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// the table. See the invariant note on <see cref="SetAsync{T}"/>.
 /// </para>
 /// </summary>
-internal sealed class MemoryCacheService(IMemoryCache cache) : ICacheService
+internal sealed class MemoryCacheService(IMemoryCache cache, IOptions<CacheSettings>? settings = null) : ICacheService
 {
+    /// <summary>
+    /// Bound <c>Cache</c> section, or the framework defaults when a host builds this service without
+    /// one. Supplies the expiration of an entry written without one, as every other store does.
+    /// </summary>
+    private readonly CacheSettings _settings = settings?.Value ?? new CacheSettings();
+
     /// <summary>
     /// Tracks active cache keys. <see cref="IMemoryCache"/> has no key enumeration API,
     /// so this dictionary enables prefix-based bulk removal. Keys are removed here again by the
@@ -52,6 +59,11 @@ internal sealed class MemoryCacheService(IMemoryCache cache) : ICacheService
     }
 
     /// <inheritdoc />
+    public Task<(bool Found, T? Value)> TryGetAsync<T>(string key, CancellationToken cancellationToken = default) =>
+        Task.FromResult<(bool Found, T? Value)>(
+            cache.TryGetValue(key, out var stored) && stored is T typed ? (true, typed) : (false, default));
+
+    /// <inheritdoc />
     /// <remarks>
     /// Establishes the invariant the whole class rests on: the cache entry and its tracking record
     /// are written under the key's stripe, cache first and <c>_keys</c> second, and every other
@@ -67,12 +79,10 @@ internal sealed class MemoryCacheService(IMemoryCache cache) : ICacheService
         TimeSpan? expiration = null,
         CancellationToken cancellationToken = default)
     {
-        MemoryCacheEntryOptions options = new();
-
-        if (expiration.HasValue)
+        MemoryCacheEntryOptions options = new()
         {
-            options.AbsoluteExpirationRelativeToNow = expiration;
-        }
+            AbsoluteExpirationRelativeToNow = expiration ?? _settings.DefaultDuration,
+        };
 
         // Identity of THIS entry's tracking record, handed to the callback as its state.
         var token = new object();

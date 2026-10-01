@@ -69,6 +69,22 @@ public sealed class GetMyNotificationsHandlerTests
         result.Value.PaginationMetadata.PageSize.Should().Be(20);
     }
 
+    // -- Total order (L50) --
+    // Two notifications created in the same instant have no defined relative order between two
+    // OFFSET queries, so the page query must tie-break on the id. An in-memory sort is stable, so
+    // the ordering expression handed to the executor is the honest observable.
+    [Fact]
+    public async Task HandleAsync_OrdersThePageByCreatedOnThenById()
+    {
+        IQueryable<UserNotificationDTO>? page = null;
+        GetMyNotificationsHandler sut = CreateFilteringSut(source => page = source);
+
+        await sut.HandleAsync(new GetMyNotificationsQuery(UserId: 1));
+
+        page.Should().NotBeNull();
+        page!.Expression.ToString().Should().MatchRegex(@"ThenByDescending\([^)]*\.un\.Id\)");
+    }
+
     // ── Scope filtering ──
     [Fact]
     public async Task HandleAsync_WithoutScope_ReturnsEveryNotificationWhateverItsScope()
@@ -127,7 +143,7 @@ public sealed class GetMyNotificationsHandlerTests
     /// inbox, with an executor that actually enumerates the composed query. Unlike
     /// <see cref="CreateSut"/>, which mocks the results outright, this pins the scope predicate itself.
     /// </summary>
-    private static GetMyNotificationsHandler CreateFilteringSut()
+    private static GetMyNotificationsHandler CreateFilteringSut(Action<IQueryable<UserNotificationDTO>>? onPage = null)
     {
         List<PushNotification> pushNotifications =
         [
@@ -154,7 +170,11 @@ public sealed class GetMyNotificationsHandlerTests
         queryableExecutor.Setup(x => x.CountAsync(It.IsAny<IQueryable<UserNotificationDTO>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IQueryable<UserNotificationDTO> source, CancellationToken _) => source.Count());
         queryableExecutor.Setup(x => x.ToListAsync(It.IsAny<IQueryable<UserNotificationDTO>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IQueryable<UserNotificationDTO> source, CancellationToken _) => source.ToList());
+            .ReturnsAsync((IQueryable<UserNotificationDTO> source, CancellationToken _) =>
+            {
+                onPage?.Invoke(source);
+                return source.ToList();
+            });
 
         return new GetMyNotificationsHandler(unitOfWork.Object, queryableExecutor.Object);
     }

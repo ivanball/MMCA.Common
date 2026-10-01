@@ -49,6 +49,21 @@ public sealed class AuditedThing : IAuditedEntity
     public int Quantity { get; set; }
 }
 
+/// <summary>An unmapped base that marks a personal-data property.</summary>
+public abstract class PiiBaseThing
+{
+    [Pii]
+    public virtual string Email { get; set; } = string.Empty;
+}
+
+/// <summary>An opted-in entity that overrides the base's personal-data property without repeating the marker.</summary>
+public sealed class OverridingPiiThing : PiiBaseThing, IAuditedEntity
+{
+    public int Id { get; set; }
+
+    public override string Email { get; set; } = string.Empty;
+}
+
 /// <summary>An entity that never opted in; nothing it does may reach the trail.</summary>
 public sealed class PlainThing
 {
@@ -79,6 +94,8 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
     }
 
     public DbSet<AuditedThing> AuditedThings => Set<AuditedThing>();
+
+    public DbSet<OverridingPiiThing> OverridingPiiThings => Set<OverridingPiiThing>();
 
     public DbSet<PlainThing> PlainThings => Set<PlainThing>();
 
@@ -137,6 +154,12 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
         modelBuilder.Entity<AuditedThing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<OverridingPiiThing>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedOnAdd();

@@ -51,14 +51,17 @@ public abstract class EntityControllerBase<
 
     /// <summary>
     /// Gets the maximum page size from application settings, falling back to 500.
-    /// Resolved per-request from DI to support runtime configuration changes.
+    /// Resolved per-request from DI to support runtime configuration changes. Clamped to the query
+    /// pipeline's own ceiling (<see cref="Application.Services.Query.EntityQueryPipeline.MaxUnboundedResultLimit"/>),
+    /// which caps every page anyway, so the pagination metadata and the export loop never assume a
+    /// page size the pipeline does not serve.
     /// </summary>
     protected int MaxPageSize
     {
         get
         {
             var settings = HttpContext.RequestServices.GetService<IOptions<ApplicationSettings>>()?.Value;
-            return settings?.MaxPageSize ?? 500;
+            return Math.Clamp(settings?.MaxPageSize ?? 500, 1, Application.Services.Query.EntityQueryPipeline.MaxUnboundedResultLimit);
         }
     }
 

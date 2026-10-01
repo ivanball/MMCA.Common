@@ -11,6 +11,12 @@ namespace MMCA.Common.UI.Maui.Services;
 /// 401 the user experiences as a random sign-out. Reading through the expiry check instead refreshes
 /// proactively, <see cref="ExpirySkew"/> ahead of the actual expiry.
 /// <para>
+/// The refresh must never read this storage again: <c>DirectApiTokenRefresher</c> posts through the
+/// <c>APIClient</c> pipeline, whose <c>AuthDelegatingHandler</c> would otherwise ask this type for a bearer
+/// and await the very hydrate that is waiting for the refresh, so that request opts out with
+/// <c>AuthDelegatingHandler.SkipBearer</c>.
+/// </para>
+/// <para>
 /// Register with <c>AddCommonMauiTokenStorage()</c>, which wires the raw store alongside it; the
 /// browser-host siblings are <c>WasmTokenStorageService</c> (MMCA.Common.UI) and
 /// <c>ServerTokenStorageService</c> (MMCA.Common.UI.Web).
