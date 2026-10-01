@@ -1,0 +1,118 @@
+name: WASM payload budget (compressed _framework size gate)
+description: >-
+  Publishes a Blazor WebAssembly head and fails when the Brotli-compressed size of its
+  wwwroot/_framework folder (the sum of every *.br file: runtime, assemblies, ICU data) exceeds a
+  budget in kilobytes. The .br files are what a browser actually downloads from a host that serves
+  precompressed assets, so their total is the first-load payload the budget protects (rubric
+  section 23). Writes a step summary with the total, the budget and the ten largest files. Fails
+  CLOSED: a failed publish, a missing _framework folder or a publish with no .br files (compression
+  turned off) is an error, never a pass. The caller sets up the .NET SDK first. Shared by the
+  consumers' workflows so the gate has one implementation (ADR-038).
+
+inputs:
+  project:
+    description: Path to the Blazor WebAssembly project (.csproj) to publish.
+    required: true
+  budget-kb:
+    description: Maximum total size, in kilobytes (1 KB = 1024 bytes), of the *.br files under wwwroot/_framework.
+    required: true
+  configuration:
+    description: Build configuration passed to dotnet publish.
+    required: false
+    default: Release
+  output-dir:
+    description: Publish output folder. Empty uses a folder under the runner's temp directory.
+    required: false
+    default: ''
+
+outputs:
+  total-kb:
+    description: Measured Brotli-compressed _framework total, in kilobytes (rounded up).
+    value: ${{ steps.measure.outputs.total-kb }}
+  file-count:
+    description: Number of *.br files counted.
+    value: ${{ steps.measure.outputs.file-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Publish and measure the compressed WASM payload
+      id: measure
+      shell: bash
+      # Every input reaches the script through env, never spliced into the script text.
+      env:
+        WPB_PROJECT: ${{ inputs.project }}
+        WPB_BUDGET_KB: ${{ inputs.budget-kb }}
+        WPB_CONFIGURATION: ${{ inputs.configuration }}
+        WPB_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        set -euo pipefail
+
+        if ! [[ "$WPB_BUDGET_KB" =~ ^[1-9][0-9]*$ ]]; then
+          echo "::error::budget-kb must be a positive whole number of kilobytes, got '$WPB_BUDGET_KB'"; exit 1
+        fi
+        if [ ! -f "$WPB_PROJECT" ]; then
+          echo "::error::project '$WPB_PROJECT' does not exist"; exit 1
+        fi
+
+        out="$WPB_OUTPUT_DIR"
+        if [ -z "$out" ]; then
+          out="${RUNNER_TEMP:-/tmp}/wasm-payload-budget"
+        fi
+        rm -rf "$out"
+
+        if ! dotnet publish "$WPB_PROJECT" -c "$WPB_CONFIGURATION" -o "$out" --nologo; then
+          echo "::error::dotnet publish failed for $WPB_PROJECT: the payload budget did not run, so it fails closed"; exit 1
+        fi
+
+        fw="$out/wwwroot/_framework"
+        if [ ! -d "$fw" ]; then
+          echo "::error::$fw does not exist: $WPB_PROJECT is not a Blazor WebAssembly head, or its publish layout changed"; exit 1
+        fi
+
+        listing="$(mktemp)"
+        total=0
+        count=0
+        while IFS= read -r -d '' file; do
+          size=$(wc -c < "$file" | tr -d '[:space:]')
+          total=$((total + size))
+          count=$((count + 1))
+          printf '%s\t%s\n' "$size" "${file#"$fw"/}" >> "$listing"
+        done < <(find "$fw" -type f -name '*.br' -print0)
+
+        if [ "$count" -eq 0 ]; then
+          echo "::error::no *.br files under $fw: publish compression is off, so the compressed payload cannot be measured"; exit 1
+        fi
+
+        total_kb=$(( (total + 1023) / 1024 ))
+        echo "total-kb=$total_kb" >> "$GITHUB_OUTPUT"
+        echo "file-count=$count" >> "$GITHUB_OUTPUT"
+
+        if [ "$total_kb" -le "$WPB_BUDGET_KB" ]; then
+          verdict="within budget"
+        else
+          verdict="OVER budget"
+        fi
+        headroom=$((WPB_BUDGET_KB - total_kb))
+
+        {
+          echo "### WASM payload budget: $WPB_PROJECT"
+          echo ""
+          echo "| Compressed _framework (.br) | Budget | Headroom | Files | Result |"
+          echo "| ---: | ---: | ---: | ---: | --- |"
+          echo "| ${total_kb} KB | ${WPB_BUDGET_KB} KB | ${headroom} KB | ${count} | ${verdict} |"
+          echo ""
+          echo "Largest files:"
+          echo ""
+          echo "| File | Size (KB) |"
+          echo "| --- | ---: |"
+          sort -t "$(printf '\t')" -k1,1nr "$listing" | head -n 10 | while IFS="$(printf '\t')" read -r size name; do
+            echo "| \`$name\` | $(( (size + 1023) / 1024 )) |"
+          done
+        } >> "$GITHUB_STEP_SUMMARY"
+        rm -f "$listing"
+
+        echo "Compressed _framework payload: ${total_kb} KB across ${count} .br files (budget ${WPB_BUDGET_KB} KB)."
+        if [ "$total_kb" -gt "$WPB_BUDGET_KB" ]; then
+          echo "::error::Compressed WASM payload ${total_kb} KB exceeds the ${WPB_BUDGET_KB} KB budget for $WPB_PROJECT"; exit 1
+        fi
