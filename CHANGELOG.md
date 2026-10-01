@@ -4,6 +4,12 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [1.218.1] - 2026-10-01
+
+### Fixed
+
+- `MMCA.Common.Testing.E2E`: `E2ETestBase.SignOutAsync` also tolerates WebKit's "Navigation canceled by policy check" when the app's redirect to `/login` supersedes the sign-out navigation, as it already did for Firefox's `NS_BINDING_ABORTED`. Since 1.218.0 routes sign-out through the same-origin API proxy, WebKit surfaces the superseded navigation and the shared ProfileManagement sign-out step failed 3/3 on WebKit while chromium and firefox passed. Test-helper only; no runtime change.
+
 ## [1.218.0] - 2026-10-01
 
 ### Breaking
