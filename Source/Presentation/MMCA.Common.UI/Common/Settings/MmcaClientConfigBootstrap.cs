@@ -41,6 +41,7 @@ public static class MmcaClientConfigBootstrap
     /// <returns>The document, buffered, ready for <c>AddJsonStream</c>.</returns>
     /// <exception cref="HttpRequestException">Both attempts failed.</exception>
     /// <exception cref="TaskCanceledException">Both attempts timed out, or the caller cancelled.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static async Task<Stream> LoadAsync(Uri baseAddress, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(baseAddress);

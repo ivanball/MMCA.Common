@@ -10,6 +10,9 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # About 2x the slowest of the last five tag runs (4m38s-6m28s, measured 2026-09-30), so a hung
+    # restore, test or push fails the job instead of holding a runner for the 6-hour default.
+    timeout-minutes: 15
     # Deployment gate for an IRREVERSIBLE action (SEC-Common-64): nuget.org versions can never be
     # withdrawn (ADR-053), so the publish waits on the `release` environment's protection rules
     # (required reviewer + a deployment policy limited to v* tags), configured in repo settings.
@@ -69,8 +72,19 @@ jobs:
       - name: Build
         run: dotnet build MMCA.Common.slnx -c Release --no-restore -p:MinVerSkip=true -p:Version=${{ steps.version.outputs.VERSION }}
 
+      # The same gate ci.yml build-and-test runs, re-run on the tag build: the graph that gets packed
+      # is restored from the lock files here, and an advisory published between the PR run and the
+      # tag must stop an irreversible nuget.org push. Same composite action, same accept-list
+      # (NuGetAuditSuppress in Directory.Build.props), fails closed (SEC-Common-62, ADR-038).
+      - name: Audit dependencies (fail on known vulnerabilities)
+        uses: ./.github/actions/nuget-vulnerability-audit
+        with:
+          solution: MMCA.Common.slnx
+
       - name: Test
-        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build
+        # Same floor as ci.yml build-and-test: a discovery/filter regression that silently drops
+        # thousands of tests must fail the release, not publish behind a near-empty green run.
+        run: dotnet test --solution MMCA.Common.slnx -c Release --no-build --minimum-expected-tests 2000
 
       - name: Pack
         run: dotnet pack MMCA.Common.slnx -c Release --no-build -o ./nupkgs -p:MinVerSkip=true -p:PackageVersion=${{ steps.version.outputs.VERSION }}
@@ -129,6 +143,9 @@ jobs:
   # scoped to this project.
   publish-maui:
     runs-on: windows-latest
+    # Kept at 40, not cut to 2x the slowest recent run (11m40s-14m57s, measured 2026-09-30): this
+    # job publishes after the main package set is already on nuget.org, so a timeout here leaves a
+    # half-published release. No MAUI workload cache on this job, unlike ci.yml build-maui.
     timeout-minutes: 40
     # Same irreversible-publish gate as the `publish` job (SEC-Common-64); both jobs push to
     # nuget.org, so both wait on the `release` environment.

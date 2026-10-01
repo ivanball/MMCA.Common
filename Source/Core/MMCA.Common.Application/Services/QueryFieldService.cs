@@ -180,6 +180,7 @@ public sealed class QueryFieldService
     /// <param name="defaultSort">Fallback sort expression when no valid sort column is specified.</param>
     /// <param name="tieBreakProperty">Server-supplied final ascending key; see the other overload.</param>
     /// <returns>The sorted queryable.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static IQueryable<TEntity> ApplySorting<TEntity>(
         IQueryable<TEntity> query,
         string? sortColumn,
@@ -363,6 +364,7 @@ public sealed class QueryFieldService
     /// <param name="fields">Comma-separated field names to validate.</param>
     /// <param name="allowWriteableFields">If false, rejects read-only properties.</param>
     /// <returns>A success result, or a failure with validation errors.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Grandfathered public overload shipped before v1.152 (RS0026/RS0027 baseline)")]
     public static Result Validate<TEntity>(string? fields, bool allowWriteableFields = false)
         => ValidateFields<TEntity>(fields, dtoToEntityPropertyMap: null, allowWriteableFields);
 
@@ -398,6 +400,7 @@ public sealed class QueryFieldService
     /// <param name="dtoToEntityPropertyMap">DTO-to-entity property name mapping (server-authored; entries may be navigation paths or expressions).</param>
     /// <param name="allowWriteableFields">If false, rejects read-only properties.</param>
     /// <returns>A success result, or a failure with validation errors.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Grandfathered public overload shipped before v1.152 (RS0026/RS0027 baseline)")]
     public static Result Validate<TEntity>(
         string? fields,
         IReadOnlyDictionary<string, string> dtoToEntityPropertyMap,

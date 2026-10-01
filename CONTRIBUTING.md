@@ -157,6 +157,13 @@ Do **not** bump versions in a feature PR. A release is cut after merge by the ma
 then a follow-up FACTS-regen PR and one lockstep version-bump PR per consumer. See
 [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html).
 
+The release also promotes the public API baseline: the last commit before the tag (the release PR
+that lands on `main`) runs `pwsh build/publicapi/Promote-PublicApi.ps1`, which moves every
+`PublicAPI.Unshipped.txt` entry into its sibling `PublicAPI.Shipped.txt` (applying the `*REMOVED*`
+entries and sorting ordinally) and resets each Unshipped file to its `#nullable enable` header, so
+Unshipped always means "changed since the last release". Preview it with `-WhatIf` first. Feature
+PRs never run it.
+
 ## Branch protection (maintainer, run once)
 
 The ruleset lives in GitHub settings, not in the repo. To reproduce it with the CLI (a repo admin,

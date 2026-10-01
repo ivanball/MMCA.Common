@@ -130,6 +130,7 @@ public interface IEntityQuerier<TEntity, TIdentifierType>
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The first matching entity, or <see langword="null"/>.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     Task<TEntity?> FirstOrDefaultAsync(
         Expression<Func<TEntity, bool>> where,
         IEnumerable<string>? includes = null,
@@ -145,6 +146,7 @@ public interface IEntityQuerier<TEntity, TIdentifierType>
     /// <param name="specification">The specification describing the read.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The first matching entity, or <see langword="null"/>.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     Task<TEntity?> FirstOrDefaultAsync(
         ISpecification<TEntity, TIdentifierType> specification,
         CancellationToken cancellationToken = default);
