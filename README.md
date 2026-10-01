@@ -55,6 +55,7 @@ The full reference library is published at **<https://ivanball.github.io/docs/>*
 - **[Onboarding guide](https://ivanball.github.io/docs/onboarding/)**: a chapter-per-subsystem walkthrough of every first-party type.
 - **[Architecture scorecard](https://ivanball.github.io/docs/governance/common-ArchitectureScorecard.html)**: the framework graded against the 34-category rubric, with every score citing the code that earns it.
 - **[Article series](https://ivanball.github.io/writing.html)**: long-form deep dives on the patterns above, each one grounded in this source.
+- **[PRIVACY.md](PRIVACY.md)**: the privacy and data-protection building blocks the framework provides, and what the consuming application owns.
 
 ## Packages
 

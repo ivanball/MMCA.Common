@@ -228,11 +228,14 @@ public abstract class EntityControllerBase<
     /// validation failure, not a silent omission.
     /// </para>
     /// <para>
-    /// <b>Row scoping.</b> The rows queried here are whatever
+    /// <b>Row scoping is fail-closed.</b> The rows queried here are whatever
     /// <see cref="GetReadSpecificationAsync"/> allows, which is the same hook the list endpoints
-    /// read, so an export can no longer drift wider than the list it mirrors. The default returns
-    /// <see cref="GetExportSpecification"/>, itself null by default, so an export is unscoped unless
-    /// the concrete controller overrides one of the two.
+    /// read, so an export can no longer drift wider than the list it mirrors. When that hook resolves
+    /// to <see langword="null"/> (the default, since <see cref="GetExportSpecification"/> is itself
+    /// null by default) the export is REFUSED with a 403 carrying
+    /// <see cref="ExportRowScopeRequiredErrorCode"/> and nothing is queried, unless the controller has
+    /// deliberately opted in to whole-table exports through <see cref="AllowUnscopedExport"/>. A
+    /// controller that forgot to scope its export therefore serves no rows rather than every row.
     /// </para>
     /// </remarks>
     /// <param name="includeFKs">When true, eagerly loads foreign key navigation properties.</param>
@@ -244,10 +247,12 @@ public abstract class EntityControllerBase<
     /// <param name="filters">Query string filters parsed by <see cref="QueryFilterModelBinder"/>.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An empty result: the CSV has already been written to the response body. A failure on
-    /// the FIRST page (before any byte is written) returns Problem Details instead.</returns>
+    /// the FIRST page (before any byte is written), or an unscoped export the controller has not opted
+    /// in to, returns Problem Details instead.</returns>
     [HttpGet("export")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
+    [ProducesResponseType(StatusCodes.Status403Forbidden, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(ProblemDetails))]
     public virtual async Task<IActionResult> ExportAsync(
         bool includeFKs = false,
@@ -263,6 +268,10 @@ public abstract class EntityControllerBase<
 
         // Resolved once, so every page of the loop is filtered by the same instance.
         var specification = await GetReadSpecificationAsync(cancellationToken).ConfigureAwait(false);
+
+        // Fail-closed: no scope and no deliberate opt-in means no rows, never the whole table.
+        if (specification is null && !AllowUnscopedExport)
+            return HandleFailure([UnscopedExportRefused()]);
 
         var maxExportRows = MaxExportRows;
         var pageSize = Math.Max(1, MaxPageSize);
@@ -472,6 +481,33 @@ public abstract class EntityControllerBase<
     public const string ExportRowLimitHeaderName = "X-Export-Row-Limit";
 
     /// <summary>
+    /// Error code of the 403 <see cref="ExportAsync"/> answers when the read specification resolves to
+    /// <see langword="null"/> and the controller has not opted in through <see cref="AllowUnscopedExport"/>.
+    /// </summary>
+    public const string ExportRowScopeRequiredErrorCode = "Export.RowScopeRequired";
+
+    /// <summary>
+    /// Gets a value indicating whether <see cref="ExportAsync"/> may stream the WHOLE table when
+    /// <see cref="GetReadSpecificationAsync"/> resolves to <see langword="null"/>. Defaults to
+    /// <see langword="false"/>: the export is fail-closed, so a controller that never declared a row scope
+    /// refuses the export instead of handing every caller every row.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Override it to <see langword="true"/> only on a controller whose rows are genuinely visible to
+    /// every caller allowed to reach the endpoint (reference data, a catalog, an admin-only table
+    /// already behind a role gate). It is read per request, so it may depend on the principal, for
+    /// example <c>User.IsInRole("Admin")</c> when the read hook returns <see langword="null"/> for an
+    /// administrator and a specification for everyone else.
+    /// </para>
+    /// <para>
+    /// A non-null specification is always honored and never consults this property: a scoped export
+    /// needs no opt-in.
+    /// </para>
+    /// </remarks>
+    protected virtual bool AllowUnscopedExport => false;
+
+    /// <summary>
     /// Gets the file name stem for an export download: the routed controller name (so
     /// <c>ProductsController</c> downloads <c>Products-...csv</c>), falling back to the entity type
     /// name in the degenerate case of a controller class named nothing else.
@@ -500,8 +536,9 @@ public abstract class EntityControllerBase<
     /// Gets the specification every read action applies: both <see cref="GetAllAsync(string, bool, bool, CancellationToken)"/>
     /// overloads, <see cref="GetAllForLookupAsync"/>, <see cref="GetByIdAsync"/> and
     /// <see cref="ExportAsync"/>. Returns <see cref="GetExportSpecification"/> by default, itself
-    /// <see langword="null"/>, so a controller that overrides neither queries unscoped exactly as
-    /// these endpoints always have.
+    /// <see langword="null"/>, so a controller that overrides neither queries its JSON read endpoints
+    /// unscoped exactly as they always have, while its export is refused unless
+    /// <see cref="AllowUnscopedExport"/> opts in.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The specification the read is filtered by, or <see langword="null"/> for an unscoped read.</returns>
@@ -537,9 +574,10 @@ public abstract class EntityControllerBase<
 
     /// <summary>
     /// Gets the specification <see cref="ExportAsync"/> applies to every page it streams. Returns
-    /// <see langword="null"/> by default, which queries unscoped exactly as the endpoint always has.
+    /// <see langword="null"/> by default, which leaves the JSON read endpoints unscoped and makes the
+    /// export refuse (fail-closed) unless <see cref="AllowUnscopedExport"/> opts in.
     /// </summary>
-    /// <returns>The specification every export page is filtered by, or <see langword="null"/> for an unscoped export.</returns>
+    /// <returns>The specification every export page is filtered by, or <see langword="null"/> for no scope.</returns>
     /// <remarks>
     /// <para>
     /// The synchronous half of <see cref="GetReadSpecificationAsync"/>, which returns this by
@@ -552,7 +590,7 @@ public abstract class EntityControllerBase<
     /// A controller whose list endpoints row-scope reads (an ownership specification, a tenancy
     /// predicate, anything that decides which rows this caller may see) MUST override one of the two,
     /// so <c>/export</c> shows exactly what the list shows. Leaving both at the default on such a
-    /// controller hands every caller the whole table in one request.
+    /// controller makes the export refuse (fail-closed) rather than hand every caller the whole table.
     /// </para>
     /// <para>
     /// A controller that overrides this can then relax any privileged-role gate it put on the export
@@ -561,6 +599,18 @@ public abstract class EntityControllerBase<
     /// </para>
     /// </remarks>
     protected virtual Specification<TEntity, TIdentifierType>? GetExportSpecification() => null;
+
+    /// <summary>
+    /// Builds the fail-closed refusal <see cref="ExportAsync"/> returns when no row scope resolved and the
+    /// controller has not opted in through <see cref="AllowUnscopedExport"/>.
+    /// </summary>
+    /// <returns>A <see cref="ErrorType.Forbidden"/> error carrying <see cref="ExportRowScopeRequiredErrorCode"/>.</returns>
+    private Error UnscopedExportRefused() =>
+        Error.Forbidden(
+            ExportRowScopeRequiredErrorCode,
+            $"Export of {EntityName} is refused: the controller declares no row scope. Override GetReadSpecificationAsync or GetExportSpecification to scope the rows, or AllowUnscopedExport to export the whole table deliberately.",
+            nameof(ExportAsync),
+            EntityName);
 
     /// <summary>
     /// Sets the response status headers for an export, before the first body byte goes out.

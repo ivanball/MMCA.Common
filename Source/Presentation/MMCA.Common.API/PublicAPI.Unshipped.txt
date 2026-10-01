@@ -1,1 +1,3 @@
 ﻿#nullable enable
+const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowScopeRequiredErrorCode = "Export.RowScopeRequired" -> string!
+virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.AllowUnscopedExport.get -> bool

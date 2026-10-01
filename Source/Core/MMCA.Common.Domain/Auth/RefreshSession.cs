@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using MMCA.Common.Domain.Attributes;
+using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Shared.Abstractions;
 
 namespace MMCA.Common.Domain.Auth;
@@ -27,8 +29,14 @@ namespace MMCA.Common.Domain.Auth;
 /// (<c>ApplyRefreshSessionConfiguration</c>), because sessions belong to the Identity module's
 /// database rather than to every data source.
 /// </para>
+/// <para>
+/// <b>Personal data.</b> <see cref="IpAddress"/> and <see cref="UserAgent"/> identify the data subject's
+/// device and network, so both carry <c>[Pii]</c> and <see cref="Anonymize"/> clears them for an erasure
+/// request (ADR-005). The token hashes, timestamps and revocation chain carry no personal data and are kept,
+/// so reuse detection still works on an anonymized row.
+/// </para>
 /// </summary>
-public sealed class RefreshSession
+public sealed class RefreshSession : IAnonymizable
 {
     /// <summary>Length of a hex-encoded SHA-256 digest, and so the exact width of <see cref="TokenHash"/>.</summary>
     public const int TokenHashLength = 64;
@@ -86,10 +94,15 @@ public sealed class RefreshSession
     /// identifies a session in a "your devices" list and gives an audit trail for a revocation. It is
     /// never part of a validation decision, so a mobile client changing networks is not signed out.
     /// </summary>
-    public string? IpAddress { get; init; }
+    [Pii]
+    public string? IpAddress { get; private set; }
 
-    /// <summary>Gets the client user-agent recorded at issue time, when the caller supplied one.</summary>
-    public string? UserAgent { get; init; }
+    /// <summary>
+    /// Gets the client user-agent recorded at issue time, when the caller supplied one. Marked <c>[Pii]</c>:
+    /// alongside <see cref="IpAddress"/> it fingerprints the data subject's device.
+    /// </summary>
+    [Pii]
+    public string? UserAgent { get; private set; }
 
     /// <summary>Gets a value indicating whether the session has been revoked.</summary>
     public bool IsRevoked => RevokedAt is not null;
@@ -185,6 +198,19 @@ public sealed class RefreshSession
         ReasonRevoked = Truncate(reason, ReasonRevokedMaxLength);
         ReplacedByTokenHash = replacedByTokenHash;
 
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Erases the client metadata captured at issue time (<see cref="IpAddress"/> and
+    /// <see cref="UserAgent"/>). Idempotent: an already-anonymized session stays as it is and the call
+    /// succeeds. The session's validity is untouched; revoking it is the sign-out path's job.
+    /// </summary>
+    /// <returns>A success result.</returns>
+    public Result Anonymize()
+    {
+        IpAddress = null;
+        UserAgent = null;
         return Result.Success();
     }
 

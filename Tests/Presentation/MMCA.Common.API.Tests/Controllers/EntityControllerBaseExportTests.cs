@@ -404,9 +404,40 @@ public sealed class EntityControllerBaseExportTests : IDisposable
             "the export must query exactly what the paged endpoint would, at the max page size");
     }
 
-    // ── Scoping hook ──
+    // ── Scoping hook (fail-closed) ──
     [Fact]
-    public async Task ExportAsync_DefaultHook_QueriesUnscopedAndWritesTheSameBytes()
+    public async Task ExportAsync_NoScopeAndNoOptIn_IsRefusedAndQueriesNothing()
+    {
+        var sut = new DefaultExportTestController(_queryServiceMock.Object, _loggerMock.Object)
+        {
+            ControllerContext = CreateControllerContext(maxPageSize: 10, maxExportRows: 100)
+        };
+
+        IActionResult result = await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        var objectResult = result.Should().BeAssignableTo<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        objectResult.Value.Should().BeOfType<ProblemDetails>();
+        _body.ToArray().Should().BeEmpty(because: "a refused export writes no header row and no data");
+        _queryServiceMock.Verify(
+            q => q.GetAllAsync(
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Specification<ExportTestEntity, int>?>(),
+                It.IsAny<Dictionary<string, (string, string)>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never,
+            "fail-closed means the unscoped query is never issued, not issued and discarded");
+    }
+
+    [Fact]
+    public async Task ExportAsync_ExplicitlyUnscoped_QueriesUnscopedAndWritesEveryRow()
     {
         SetupPages().ReturnsAsync(Result.Success(Page([Dto(1, "Ada"), Dto(2, "Grace")], totalItemCount: 2)));
         ExportTestController sut = CreateController(maxPageSize: 10);
@@ -417,7 +448,7 @@ public sealed class EntityControllerBaseExportTests : IDisposable
             "﻿id,name,isActive,createdOn\r\n"
             + "1,Ada,true,2026-01-01T00:00:00.0000000Z\r\n"
             + "2,Grace,true,2026-01-01T00:00:00.0000000Z\r\n",
-            because: "a controller that overrides nothing must produce the byte-identical file it produced before the hook existed");
+            because: "a controller that opts in through AllowUnscopedExport exports the whole table");
         _queryServiceMock.Verify(
             q => q.GetAllAsync(
                 It.IsAny<bool>(),
@@ -432,7 +463,7 @@ public sealed class EntityControllerBaseExportTests : IDisposable
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once,
-            "the default hook returns null, which is the unscoped query the endpoint always issued");
+            "with the opt-in, a null specification is the deliberate whole-table query");
     }
 
     [Fact]
@@ -491,7 +522,20 @@ public sealed class EntityControllerBaseExportTests : IDisposable
     }
 }
 
+/// <summary>
+/// A controller that deliberately opts in to whole-table exports, so the format tests exercise the
+/// explicit-unscoped path.
+/// </summary>
 public sealed class ExportTestController(
+    IEntityQueryService<ExportTestEntity, ExportTestDTO, int> queryService,
+    ILogger<EntityControllerBase<ExportTestEntity, ExportTestDTO, int>> logger)
+    : EntityControllerBase<ExportTestEntity, ExportTestDTO, int>(queryService, logger)
+{
+    protected override bool AllowUnscopedExport => true;
+}
+
+/// <summary>A controller that overrides nothing: no row scope and no opt-in, so its export is refused.</summary>
+public sealed class DefaultExportTestController(
     IEntityQueryService<ExportTestEntity, ExportTestDTO, int> queryService,
     ILogger<EntityControllerBase<ExportTestEntity, ExportTestDTO, int>> logger)
     : EntityControllerBase<ExportTestEntity, ExportTestDTO, int>(queryService, logger);
@@ -603,7 +647,10 @@ public sealed class SpecificationHonoringQueryService(IEnumerable<int> ids)
 public sealed class ExportShapeTestController(
     IEntityQueryService<ExportTestEntity, ExportShapeTestDTO, int> queryService,
     ILogger<EntityControllerBase<ExportTestEntity, ExportShapeTestDTO, int>> logger)
-    : EntityControllerBase<ExportTestEntity, ExportShapeTestDTO, int>(queryService, logger);
+    : EntityControllerBase<ExportTestEntity, ExportShapeTestDTO, int>(queryService, logger)
+{
+    protected override bool AllowUnscopedExport => true;
+}
 
 public sealed class ExportTestEntity : AuditableBaseEntity<int>;
 

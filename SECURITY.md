@@ -39,6 +39,7 @@ fix before public disclosure.
   explicit allow-list with `AllowCredentials` (the two are never combined, which browsers reject
   and which is insecure).
 - **Idempotency & rate limiting** primitives are provided for consumers to apply at the edge.
+- **Privacy:** `[Pii]`, erasure in place, redaction, the data-subject export and the fail-closed CSV row scope are described in [PRIVACY.md](PRIVACY.md).
 
 ## Dependency & supply-chain security
 
