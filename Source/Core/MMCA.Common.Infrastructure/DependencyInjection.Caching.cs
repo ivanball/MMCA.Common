@@ -180,5 +180,35 @@ public static partial class DependencyInjection
 
             return services;
         }
+
+        /// <summary>
+        /// Calls <see cref="AddCommonHybridCache"/> only when the Redis connection string is
+        /// configured, and otherwise leaves the host's cache registration untouched.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="AddCommonHybridCache"/> has no guard of its own, and with no Redis L2 the hybrid
+        /// tier degrades to a plain in-memory cache, which is exactly what the
+        /// <see cref="MemoryCacheService"/> fallback already provides. Pair it with
+        /// <c>AddRedisCaching()</c> (MMCA.Common.Aspire), which registers the distributed cache and
+        /// the <see cref="IConnectionMultiplexer"/> the hybrid tier evicts through under the same
+        /// connection name. Order-independent with <c>AddInfrastructure</c>, as
+        /// <see cref="AddCommonHybridCache"/> is.
+        /// </remarks>
+        /// <param name="configuration">The host configuration holding the connection string.</param>
+        /// <param name="connectionName">The connection-string name of the Redis resource. Defaults to <c>redis</c>, the name every MMCA host uses.</param>
+        /// <returns>The service collection for chaining.</returns>
+        public IServiceCollection AddCommonHybridCacheWhenRedisConfigured(
+            IConfiguration configuration,
+            string connectionName = "redis")
+        {
+            ArgumentNullException.ThrowIfNull(configuration);
+
+            if (!string.IsNullOrEmpty(configuration.GetConnectionString(connectionName)))
+            {
+                services.AddCommonHybridCache();
+            }
+
+            return services;
+        }
     }
 }

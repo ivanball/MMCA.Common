@@ -30,6 +30,12 @@ public abstract class AuthenticatedServiceBase(
     private readonly ITokenStorageService _tokenStorageService = tokenStorageService ?? throw new ArgumentNullException(nameof(tokenStorageService));
 
     /// <summary>
+    /// <see cref="RetryPolicy"/> for <see cref="IdempotentReadRetry"/>, which reuses this exact
+    /// instance without inheriting from this class.
+    /// </summary>
+    internal static AsyncRetryPolicy<HttpResponseMessage> SharedRetryPolicy => RetryPolicy;
+
+    /// <summary>
     /// Creates a fresh idempotency key for one logical write operation.
     /// </summary>
     /// <remarks>

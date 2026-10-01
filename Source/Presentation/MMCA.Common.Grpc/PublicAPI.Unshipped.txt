@@ -7,3 +7,11 @@ MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!).ToResul
 static MMCA.Common.Grpc.ResultGrpcExtensions.ToErrors(this Grpc.Core.Metadata? trailers) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
 static MMCA.Common.Grpc.ResultGrpcExtensions.ToResult(this Grpc.Core.RpcException! exception, string! source = "") -> MMCA.Common.Shared.Abstractions.Result!
 static MMCA.Common.Grpc.ResultGrpcExtensions.ToResult<T>(this Grpc.Core.RpcException! exception, string! source = "") -> MMCA.Common.Shared.Abstractions.Result<T>!
+MMCA.Common.Grpc.GrpcWireFormat
+static MMCA.Common.Grpc.GrpcWireFormat.FormatDecimal(decimal value) -> string!
+static MMCA.Common.Grpc.GrpcWireFormat.FormatUtc(System.DateTime value) -> string!
+static MMCA.Common.Grpc.GrpcWireFormat.FormatUtcOrEmpty(System.DateTime? value) -> string!
+static MMCA.Common.Grpc.GrpcWireFormat.ParseDecimal(string! value) -> decimal
+static MMCA.Common.Grpc.GrpcWireFormat.ParseUtc(string! value) -> System.DateTime
+static MMCA.Common.Grpc.GrpcWireFormat.ParseUtcOrNull(string? value) -> System.DateTime?
+static MMCA.Common.Grpc.GrpcWireFormat.TryParseDecimal(string? value, out decimal result) -> bool

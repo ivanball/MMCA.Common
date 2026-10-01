@@ -30,12 +30,20 @@ public static class OpenApiEndpointExtensions
         /// API-versioning convention so the route resolves one document per discovered API version
         /// (<c>/openapi/v1.json</c> for v1.0). Requires <c>AddCommonOpenApi()</c> to have been
         /// called during service registration. No-op in Production.
+        /// <para>
+        /// The document is mapped <b>anonymous</b>. The framework's fallback authorization policy
+        /// (SEC-Common-16, <c>AddAuthorizationPolicies</c>) gates every endpoint that states nothing,
+        /// and <c>/openapi</c> is not one of its exempt prefixes, so an undeclared mapping answers 401
+        /// to the contract-snapshot tests and API tooling. The contract is the same shape every caller
+        /// already reads from the controllers it describes, it must answer before a client holds a
+        /// token, and it is never mapped in Production.
+        /// </para>
         /// </summary>
         public WebApplication MapCommonOpenApi()
         {
             if (!app.Environment.IsProduction())
             {
-                app.MapOpenApi().WithDocumentPerVersion();
+                app.MapOpenApi().WithDocumentPerVersion().AllowAnonymous();
             }
 
             return app;

@@ -584,3 +584,9 @@ MMCA.Common.UI.Services.Capabilities.Interop.NullExternalLinkService.OpenAsync(S
 MMCA.Common.UI.Services.Capabilities.Interop.IExternalLinkService.OpenAsync(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 MMCA.Common.UI.Layout.NavMenu.Dispose() -> void
 virtual MMCA.Common.UI.Layout.NavMenu.Dispose(bool disposing) -> void
+MMCA.Common.UI.Services.Api.IdempotentReadRetry
+static MMCA.Common.UI.Services.Api.IdempotentReadRetry.GetAsync(System.Net.Http.HttpClient! httpClient, System.Uri! requestUri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage!>!
+MMCA.Common.UI.Services.Api.PagedReadAll
+const MMCA.Common.UI.Services.Api.PagedReadAll.PageSize = 500 -> int
+static MMCA.Common.UI.Services.Api.PagedReadAll.LookupPageUrl(string! entity, int pageNumber) -> string!
+static MMCA.Common.UI.Services.Api.PagedReadAll.ReadAllAsync<T>(System.Func<int, System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Abstractions.PagedCollectionResult<T>!>!>!>! fetchPage, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<System.Collections.Generic.List<T>!>!>!

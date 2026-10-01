@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
@@ -144,4 +145,70 @@ public sealed class AddCommonHybridCacheTests
 
         provider.GetService<HybridCache>().Should().NotBeNull();
     }
+
+    // ── AddCommonHybridCacheWhenRedisConfigured ──
+    // The guard every ADC and Store service host wrapped around AddCommonHybridCache by hand:
+    // the two-level cache is registered only when the Redis connection string is configured,
+    // because AddCommonHybridCache has no guard of its own and with no L2 the hybrid tier is just
+    // the in-memory cache the MemoryCacheService fallback already provides.
+    [Fact]
+    public void AddCommonHybridCacheWhenRedisConfigured_WithTheRedisConnectionString_RegistersTheHybridCache()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddCaching();
+
+        services.AddCommonHybridCacheWhenRedisConfigured(Configuration(("ConnectionStrings:redis", "localhost:6379")));
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<ICacheService>().Should().BeOfType<HybridCacheService>();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void AddCommonHybridCacheWhenRedisConfigured_WithoutTheRedisConnectionString_LeavesTheHostUntouched(string? connectionString)
+    {
+        var services = new ServiceCollection();
+        services.AddCaching();
+        var before = services.Count;
+
+        services.AddCommonHybridCacheWhenRedisConfigured(Configuration(("ConnectionStrings:redis", connectionString)));
+
+        services.Count.Should().Be(before, "a host with no Redis keeps exactly its memory-cache registration");
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<ICacheService>().Should().BeOfType<MemoryCacheService>();
+    }
+
+    [Fact]
+    public void AddCommonHybridCacheWhenRedisConfigured_HonoursANamedConnection()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddCaching();
+
+        services.AddCommonHybridCacheWhenRedisConfigured(
+            Configuration(("ConnectionStrings:cache", "localhost:6379")),
+            "cache");
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<ICacheService>().Should().BeOfType<HybridCacheService>();
+    }
+
+    [Fact]
+    public void AddCommonHybridCacheWhenRedisConfigured_NullConfiguration_Throws()
+    {
+        var services = new ServiceCollection();
+
+        Action act = () => services.AddCommonHybridCacheWhenRedisConfigured(null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    private static IConfiguration Configuration(params (string Key, string? Value)[] values) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(values.Select(v => new KeyValuePair<string, string?>(v.Key, v.Value)))
+            .Build();
 }
