@@ -32,9 +32,11 @@ namespace MMCA.Common.Infrastructure.Auth;
 /// </remarks>
 /// <param name="cacheService">The cache the token records live in.</param>
 /// <param name="settings">The bound email-confirmation settings.</param>
+/// <param name="timeProvider">Clock for the record expiry stamp and the remaining-lifetime check.</param>
 public sealed class EmailConfirmationTokenService(
     ICacheService cacheService,
-    IOptions<EmailConfirmationSettings> settings) : IEmailConfirmationTokenService
+    IOptions<EmailConfirmationSettings> settings,
+    TimeProvider timeProvider) : IEmailConfirmationTokenService
 {
     private const int TokenByteLength = 32;
 
@@ -68,7 +70,7 @@ public sealed class EmailConfirmationTokenService(
             Convert.ToBase64String(HashToken(token)),
             userId,
             FailedAttempts: 0,
-            DateTimeOffset.UtcNow.Add(lifetime).ToUnixTimeSeconds());
+            timeProvider.GetUtcNow().Add(lifetime).ToUnixTimeSeconds());
 
         await cacheService.SetAsync(TokenKey(email), entry, lifetime, cancellationToken).ConfigureAwait(false);
 
@@ -82,7 +84,10 @@ public sealed class EmailConfirmationTokenService(
         CancellationToken cancellationToken = default)
     {
         string key = TokenKey(email);
-        var entry = await cacheService.GetAsync<EmailConfirmationEntry>(key, cancellationToken).ConfigureAwait(false);
+
+        // Shared-store read: a token consumed on another replica must be a miss here, never a stale
+        // local copy that would let it be redeemed twice.
+        var entry = await cacheService.GetFromSharedStoreAsync<EmailConfirmationEntry>(key, cancellationToken).ConfigureAwait(false);
         if (entry is null)
         {
             return InvalidToken();
@@ -135,7 +140,7 @@ public sealed class EmailConfirmationTokenService(
         CancellationToken cancellationToken)
     {
         int attempts = entry.FailedAttempts + 1;
-        long remainingSeconds = entry.ExpiresAtUnixSeconds - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long remainingSeconds = entry.ExpiresAtUnixSeconds - timeProvider.GetUtcNow().ToUnixTimeSeconds();
 
         if (attempts >= _settings.MaxValidationAttempts || remainingSeconds <= 0)
         {

@@ -87,6 +87,9 @@ jobs:
   build-and-test:
     needs: changes
     runs-on: ubuntu-latest
+    # About 2x the slowest of four recent code PR runs (5m11s-6m36s, measured 2026-09-30), so a
+    # hung restore or test host fails the job instead of holding a runner for the 6-hour default.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -400,6 +403,9 @@ jobs:
     needs: [changes, build-and-test, ui-e2e]
     if: always()
     runs-on: ubuntu-latest
+    # Recent runs take 19s-27s (measured 2026-09-30), so 2x is under a minute; 5 matches the
+    # smallest timeout in this file (`changes`) and still bounds a hung tool install or download.
+    timeout-minutes: 5
     steps:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
@@ -482,6 +488,11 @@ jobs:
       # reads HELPDESK_TICKETS_SQL and falls back to a Trusted_Connection localhost string, which
       # cannot work on a Linux runner, so the apply step below overrides it.
       HELPDESK_TICKETS_DB: HelpdeskMigrationCanary
+      # Pinned to a specific 2022 cumulative update instead of 2022-latest, so a new CU cannot change
+      # what this required gate runs without a reviewed diff. Newest 2022-CU*-ubuntu-22.04 tag in
+      # https://mcr.microsoft.com/v2/mssql/server/tags/list, checked 2026-09-30. The
+      # sqlserver-integration tier (SQLServerPersistenceTests.cs) pins the same tag; bump both.
+      SQLSERVER_IMAGE: mcr.microsoft.com/mssql/server:2022-CU27-ubuntu-22.04
     steps:
       - name: Checkout MMCA.Common (this PR)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -552,7 +563,7 @@ jobs:
             -e MSSQL_SA_PASSWORD="$MSSQL_SA_PASSWORD" \
             -e MSSQL_PID=Developer \
             -p 1433:1433 \
-            mcr.microsoft.com/mssql/server:2022-latest
+            "$SQLSERVER_IMAGE"
 
       - name: Build Helpdesk against Common source (UseLocalMMCA)
         if: needs.changes.outputs.code == 'true'
@@ -570,11 +581,24 @@ jobs:
 
       # go-sqlcmd (the Go rewrite) rather than the mssql-tools deb: a single static binary with no
       # apt source and no EULA prompt. Used by the readiness poll and by the post-apply assertions.
+      # Pinned to one release and verified against its sha256 before anything is extracted as root:
+      # releases/latest piped straight into `sudo tar` ran whatever the newest upload was, unchecked.
+      # v1.10.0 is the newest release as of 2026-09-30; the digest is the one GitHub publishes for the
+      # sqlcmd-linux-amd64.tar.bz2 asset (`gh release view v1.10.0 --repo microsoft/go-sqlcmd --json
+      # assets`), re-computed with sha256sum over a downloaded copy. Bump the version and the digest
+      # together.
       - name: Install sqlcmd
         if: needs.changes.outputs.code == 'true'
+        env:
+          SQLCMD_VERSION: v1.10.0
+          SQLCMD_SHA256: 92516d98c63d99b0994de5b61350c91f6915f9b76f139a59039fbcb225c2e987
         run: |
-          curl -sL https://github.com/microsoft/go-sqlcmd/releases/latest/download/sqlcmd-linux-amd64.tar.bz2 \
-            | sudo tar -xjC /usr/local/bin/
+          set -euo pipefail
+          tarball="$RUNNER_TEMP/sqlcmd-linux-amd64.tar.bz2"
+          curl -fsSL -o "$tarball" \
+            "https://github.com/microsoft/go-sqlcmd/releases/download/$SQLCMD_VERSION/sqlcmd-linux-amd64.tar.bz2"
+          echo "$SQLCMD_SHA256  $tarball" | sha256sum -c -
+          sudo tar -xjf "$tarball" -C /usr/local/bin/
 
       # The container reports "running" long before the engine accepts logins, so poll a real query
       # rather than docker state. 30 x 5s covers a cold image pull on a slow runner.
@@ -849,7 +873,10 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like ui-e2e does.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release
+        # Floor = the exact [Fact] count in the project (5 DistributedCacheService + 10
+        # HybridCacheService, 2026-09-30): a tier that silently discovers fewer tests fails here.
+        # Adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.Redis.Tests/MMCA.Common.Infrastructure.Redis.Tests.csproj -c Release --minimum-expected-tests 15
 
   postgresql-integration:
     name: PostgreSQL integration (Testcontainers)
@@ -884,7 +911,49 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
         # loop must not require), so build/run this project directly by path, like redis-integration.
-        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release
+        # Floor = the exact [Fact] count in PostgreSQLPersistenceTests.cs (7, 2026-09-30); adding a
+        # test means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.PostgreSQL.Tests/MMCA.Common.Infrastructure.PostgreSQL.Tests.csproj -c Release --minimum-expected-tests 7
+
+  sqlserver-integration:
+    name: SQL Server integration (Testcontainers)
+    needs: changes
+    runs-on: ubuntu-latest
+    # The PostgreSQL tier's 15 plus headroom for the larger SQL Server image pull and its slower
+    # engine start (the tier starts one container per test, three in all).
+    timeout-minutes: 20
+    # The SQL Server provider is the engine where SESSION state and server-generated values matter,
+    # and neither a mock nor SQLite can express them: SET IDENTITY_INSERT holds only on the session
+    # that ran it, a rowversion is issued by the server on every write, and the outbox row must reach
+    # the database in the same SaveChanges as its aggregate. This tier runs the shipped
+    # SQLServerDbContext and DbContextFactory against a real SQL Server. Ubuntu runners ship a Docker
+    # daemon, so Testcontainers works with no extra setup. Not a required check (yet): promoting it
+    # is a branch-protection setting.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # MinVer needs full history
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+          # Same cache posture and the same reasons as the redis-integration job above.
+          cache: ${{ needs.changes.outputs.code == 'true' }}
+          cache-dependency-path: |
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Run SQL Server integration tests
+        # Code-guarded like every other heavy job: a docs-only PR must not pull a SQL Server image and
+        # start a container. The JOB still runs (and posts its context green) so adding this check to
+        # branch protection stays safe on docs-only PRs, matching the pattern the other jobs use.
+        if: needs.changes.outputs.code == 'true'
+        # Deliberately outside MMCA.Common.slnx (it needs Docker, which the fast solution-wide unit
+        # loop must not require), so build/run this project directly by path, like
+        # postgresql-integration. Floor = the exact [Fact] count in SQLServerPersistenceTests.cs (3,
+        # 2026-09-30); adding a test means raising this number in the same PR.
+        run: dotnet test Tests/Core/MMCA.Common.Infrastructure.SQLServer.Tests/MMCA.Common.Infrastructure.SQLServer.Tests.csproj -c Release --minimum-expected-tests 3
 
   apphost-testing:
     name: AppHost integration (Aspire.Hosting.Testing)

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Caching;
 using StackExchange.Redis;
 using Testcontainers.Redis;
@@ -181,6 +182,24 @@ public sealed class HybridCacheServiceRedisTests : IAsyncLifetime
         (await replicaB.IncrementAsync(key, ttl, TestContext.Current.CancellationToken)).Should().Be(2);
         (await replicaA.IncrementAsync(key, ttl, TestContext.Current.CancellationToken)).Should().Be(3);
         (await replicaB.IncrementAsync(key, ttl, TestContext.Current.CancellationToken)).Should().Be(4);
+    }
+
+    [Fact]
+    public async Task GetFromSharedStoreAsync_AfterAnotherInstanceRemovedTheKey_IsAMissDespiteTheLocalCopy()
+    {
+        // Single-use records (exchange codes, reset tokens): replica B holds the record in its L1,
+        // replica A consumes and removes it, and B's single-use read must see the removal.
+        var replicaA = CreateSut();
+        var replicaB = CreateSut();
+        var key = $"oauth-exchange:{Guid.NewGuid():N}";
+
+        await replicaA.SetAsync(key, "token-pair", TimeSpan.FromMinutes(2), TestContext.Current.CancellationToken);
+        (await replicaB.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().Be("token-pair");
+
+        await replicaA.RemoveAsync(key, TestContext.Current.CancellationToken);
+
+        var read = await ((ICacheService)replicaB).GetFromSharedStoreAsync<string>(key, TestContext.Current.CancellationToken);
+        read.Should().BeNull("the record was consumed on another replica; only B's local copy still holds it");
     }
 
     [Fact]

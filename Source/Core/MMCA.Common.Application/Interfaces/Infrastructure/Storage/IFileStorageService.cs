@@ -33,6 +33,7 @@ public interface IFileStorageService
     /// <param name="options">The response headers to store with the blob; <see cref="FileUploadOptions.None"/> stores none.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The blob's absolute URI, or a failure result.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     Task<Result<Uri>> UploadAsync(string blobName, Stream content, string contentType, FileUploadOptions options, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes a blob; unknown names succeed (idempotent).</summary>

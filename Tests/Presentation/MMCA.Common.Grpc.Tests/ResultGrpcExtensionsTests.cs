@@ -32,6 +32,33 @@ public sealed class ResultGrpcExtensionsTests
         actual.Should().Be(expected);
     }
 
+    public static TheoryData<ErrorType> AllErrorTypes => [.. Enum.GetValues<ErrorType>()];
+
+    /// <summary>
+    /// Exhaustiveness pin: the map is private and its fallback (<see cref="StatusCode.InvalidArgument"/>)
+    /// is also a legitimate explicit answer, so "explicit" is asserted as: every value maps somewhere
+    /// other than the fallback, except the three that deliberately map there (Validation, Invariant,
+    /// Failure, mirroring the 400 they get over HTTP). A new ErrorType left unmapped fails here.
+    /// </summary>
+    /// <param name="errorType">Each value of the enum.</param>
+    [Theory]
+    [MemberData(nameof(AllErrorTypes))]
+    public void EveryErrorType_MapsExplicitly_NotThroughTheFallback(ErrorType errorType)
+    {
+        ErrorType[] legitimatelyInvalidArgument = [ErrorType.Validation, ErrorType.Invariant, ErrorType.Failure];
+
+        var actual = errorType.ToGrpcStatusCode();
+
+        if (legitimatelyInvalidArgument.Contains(errorType))
+        {
+            actual.Should().Be(StatusCode.InvalidArgument);
+        }
+        else
+        {
+            actual.Should().NotBe(StatusCode.InvalidArgument, "only an unmapped ErrorType reaches the fallback");
+        }
+    }
+
     [Fact]
     public void ThrowIfFailure_OnSuccess_DoesNotThrow()
     {

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -23,11 +24,12 @@ namespace MMCA.Common.Infrastructure.Auth;
 /// <see cref="JwtSettings.SecretForKey"/> (Base64-encoded HMAC key).
 /// </para>
 /// </summary>
-public sealed class TokenService : ITokenService, IDisposable
+public sealed partial class TokenService : ITokenService, IDisposable
 {
     private readonly JwtSettings _jwtSettings;
     private readonly IPermissionRegistry _permissionRegistry;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<TokenService> _logger;
     private readonly SigningCredentials _signingCredentials;
     private readonly SecurityKey _validationKey;
     private readonly string _validationAlgorithm;
@@ -54,6 +56,12 @@ public sealed class TokenService : ITokenService, IDisposable
     /// Clock used for token timestamps (<c>iat</c>, <c>nbf</c>, <c>exp</c>); resolved from the container
     /// <c>AddServices</c> registers it in, so a test passes its own.
     /// </param>
+    /// <param name="logger">
+    /// Records the one validation failure that is not an ordinary rejection: anything other than a
+    /// <see cref="SecurityTokenException"/> or an <see cref="ArgumentException"/> during
+    /// <see cref="GetPrincipalFromExpiredToken"/>, which is still answered with <see langword="null"/>
+    /// but is logged at warning level so a fault in the validation path stays visible.
+    /// </param>
     /// <param name="jwksSettings">
     /// The bound <see cref="JwksSettings"/>, whose <see cref="JwksSettings.KeyId"/> becomes the
     /// <c>kid</c> header of every RS256 token this service signs, so a validator reading the
@@ -64,14 +72,17 @@ public sealed class TokenService : ITokenService, IDisposable
         IOptions<JwtSettings> jwtOptions,
         IPermissionRegistry permissionRegistry,
         TimeProvider timeProvider,
+        ILogger<TokenService> logger,
         IOptions<JwksSettings>? jwksSettings = null)
     {
         ArgumentNullException.ThrowIfNull(jwtOptions);
         ArgumentNullException.ThrowIfNull(permissionRegistry);
+        ArgumentNullException.ThrowIfNull(logger);
         var jwtSettings = jwtOptions.Value;
         _jwtSettings = jwtSettings;
         _permissionRegistry = permissionRegistry;
         _timeProvider = timeProvider;
+        _logger = logger;
 
         if (jwtSettings.SigningAlgorithm == JwtSigningAlgorithm.RS256)
         {
@@ -190,8 +201,17 @@ public sealed class TokenService : ITokenService, IDisposable
 
             return principal;
         }
-        catch
+        catch (Exception ex) when (ex is SecurityTokenException or ArgumentException)
         {
+            // The ordinary rejections (bad signature, wrong issuer or audience, malformed input):
+            // a client presenting a bad token is not an event worth a log line.
+            return null;
+        }
+        catch (Exception ex)
+        {
+            // Anything else is a fault in the validation path rather than a bad token. Still a
+            // refusal (fail closed), but logged so it does not hide behind an ordinary 401.
+            LogUnexpectedValidationFailure(_logger, ex);
             return null;
         }
     }
@@ -273,4 +293,7 @@ public sealed class TokenService : ITokenService, IDisposable
             throw;
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Expired-token validation failed with an unexpected exception; the token is refused as if it were invalid.")]
+    private static partial void LogUnexpectedValidationFailure(ILogger logger, Exception exception);
 }

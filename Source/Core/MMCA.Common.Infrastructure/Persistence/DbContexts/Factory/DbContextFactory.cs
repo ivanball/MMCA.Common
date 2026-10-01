@@ -1,3 +1,4 @@
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
@@ -336,6 +337,49 @@ public sealed class DbContextFactory(
         int result = 0;
         var allIdentityEntries = identityInsertGroups.SelectMany(g => g.Entries).ToHashSet();
 
+        // SET IDENTITY_INSERT is SESSION state. With no ambient transaction EF opens and closes the
+        // connection around every command, so nothing guarantees the INSERT runs on the session
+        // that ran the SET (the connection goes back to the pool in between). Pin one session for
+        // the whole save by opening the connection here; an already-open connection (an ambient
+        // transaction, or a caller that opened it) is left exactly as it was found.
+        var openedConnection = false;
+        if (context.Database.GetDbConnection().State != ConnectionState.Open)
+        {
+            await context.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            openedConnection = true;
+        }
+
+        try
+        {
+            result += await SaveIdentityInsertGroupsAsync(context, identityInsertGroups, allIdentityEntries, cancellationToken).ConfigureAwait(false);
+
+            // Final save for any remaining changes (non-identity entities, updates, etc.)
+            if (context.ChangeTracker.HasChanges())
+            {
+                result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            if (openedConnection)
+                await context.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Saves each identity-insert group in its own round with <c>SET IDENTITY_INSERT ON/OFF</c>.
+    /// The caller pins the connection so every round's SET and INSERT share one session.
+    /// </summary>
+    private async Task<int> SaveIdentityInsertGroupsAsync(
+        ApplicationDbContext context,
+        List<IdentityInsertGroup> identityInsertGroups,
+        HashSet<EntityEntry> allIdentityEntries,
+        CancellationToken cancellationToken)
+    {
+        int result = 0;
+
         foreach (var group in identityInsertGroups)
         {
             // Temporarily hide entries from OTHER identity-insert tables so they
@@ -387,12 +431,6 @@ public sealed class DbContextFactory(
                 foreach (var (entry, originalState) in savedStates)
                     entry.State = originalState;
             }
-        }
-
-        // Final save for any remaining changes (non-identity entities, updates, etc.)
-        if (context.ChangeTracker.HasChanges())
-        {
-            result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
         }
 
         return result;

@@ -39,7 +39,8 @@ public sealed partial class EfInboxStore(
     IDbContextFactory dbContextFactory,
     IDataSourceResolver dataSourceResolver,
     IOptions<OutboxSettings> outboxOptions,
-    ILogger<EfInboxStore> logger) : IInboxStore
+    ILogger<EfInboxStore> logger,
+    TimeProvider timeProvider) : IInboxStore
 {
     /// <summary>
     /// Rows staged by <see cref="TryBeginAsync"/> and not yet closed out, keyed by message id. A
@@ -121,7 +122,7 @@ public sealed partial class EfInboxStore(
         {
             MessageId = messageId,
             EventType = eventType,
-            ProcessedOn = DateTime.UtcNow,
+            ProcessedOn = timeProvider.GetUtcNow().UtcDateTime,
         });
 #pragma warning restore VSTHRD103
     }

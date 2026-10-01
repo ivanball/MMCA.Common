@@ -223,6 +223,7 @@ public static class ResultUiExtensions
     /// result.OnFailureSetError(message =&gt; _errorMessage = message, L);
     /// </code>
     /// </example>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static Result OnFailureSetError(this Result result, Action<string?> setError, IStringLocalizer? localizer = null)
     {
         ArgumentNullException.ThrowIfNull(result);
@@ -234,6 +235,7 @@ public static class ResultUiExtensions
 
     /// <inheritdoc cref="OnFailureSetError(Result, Action{string}, IStringLocalizer)"/>
     /// <typeparam name="T">The success value type.</typeparam>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static Result<T> OnFailureSetError<T>(this Result<T> result, Action<string?> setError, IStringLocalizer? localizer = null)
     {
         OnFailureSetError((Result)result, setError, localizer);
@@ -262,6 +264,7 @@ public static class ResultUiExtensions
     /// (await Service.AddAsync(dto, _cts.Token)).NotifyOnFailure(Toast, L);
     /// </code>
     /// </example>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static Result NotifyOnFailure(
         this Result result,
         IToastService toast,
@@ -282,6 +285,7 @@ public static class ResultUiExtensions
 
     /// <inheritdoc cref="NotifyOnFailure(Result, IToastService, IStringLocalizer, ToastSeverity)"/>
     /// <typeparam name="T">The success value type.</typeparam>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static Result<T> NotifyOnFailure<T>(
         this Result<T> result,
         IToastService toast,

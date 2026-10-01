@@ -34,6 +34,48 @@ The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the
 
 ## [Unreleased]
 
+## [1.216.0] - 2026-09-30
+
+**Required constructor arguments on four DI-resolved types, one security-relevant default, the
+contract-snapshot format and an analyzer severity.** A host that resolves the framework types from DI changes nothing
+for the first item; the other items are listed with their own fix.
+
+Old-to-new map:
+
+| Old | New |
+|-----|-----|
+| `TokenService(jwtOptions, permissionRegistry, timeProvider, jwksSettings = null)` | `TokenService(jwtOptions, permissionRegistry, timeProvider, ILogger<TokenService> logger, jwksSettings = null)` |
+| `PasswordResetTokenService(cacheService, settings, distributedLock)` | `PasswordResetTokenService(cacheService, settings, distributedLock, TimeProvider timeProvider)` |
+| `EmailConfirmationTokenService(cacheService, settings)` | `EmailConfirmationTokenService(cacheService, settings, TimeProvider timeProvider)` |
+| `EfInboxStore(dbContextFactory, dataSourceResolver, outboxOptions, logger)` | `EfInboxStore(dbContextFactory, dataSourceResolver, outboxOptions, logger, TimeProvider timeProvider)` |
+| `CookieSessionRefresher` (internal) | takes a `TimeProvider` (no consumer impact) |
+| `MapCommonOpenApi()` outside Production: `/openapi/*` under the fallback authorization policy | mapped `AllowAnonymous()` outside Production; Production still maps nothing |
+| Contract line `Full.Type.Name { Member:String, ... }` | `EventNameValue { Member:String?, ... }` (keyed on `[EventName]` when declared; `?` on a nullable reference annotation, including generic arguments) |
+| RS0026/RS0027 off in this repository | RS0026/RS0027 at error in this repository (contributors only) |
+
+The mechanical fix:
+
+1. **Hand-built auth and inbox services (tests, custom composition).** Pass the new argument:
+   `NullLogger<TokenService>.Instance` or a mock logger for `TokenService`, and `TimeProvider.System`
+   (or a `FakeTimeProvider` in a test) for the other three. DI-resolved hosts change nothing:
+   `AddInfrastructure` registers `TimeProvider` and logging.
+2. **`MapCommonOpenApi()` (security-relevant default).** Nothing to do if your host already marked
+   the document anonymous (every first-party host did). A host that wants the document behind a
+   token in a non-Production environment stops calling `MapCommonOpenApi()` there and maps it
+   itself: `app.MapOpenApi().WithDocumentPerVersion().RequireAuthorization();`.
+3. **Committed integration-event contracts (`IntegrationEventContractTestsBase` subclasses).** The
+   contract fact fails until the snapshot is regenerated. Set `MMCA_CONTRACT_SNAPSHOT_OUT` to a file
+   path and run the contract test once, for example
+   `MMCA_CONTRACT_SNAPSHOT_OUT=contract.txt dotnet test --project Tests/Architecture/<Repo>.Architecture.Tests -- --filter-class "*IntegrationEventContractTests"`
+   (or run the test project's `.exe` with `-class "*IntegrationEventContractTests"` where
+   `dotnet test` discovers nothing). The run still fails, and the file holds one ready-to-paste
+   literal per event; replace the body of `ExpectedContract` with it, keep any explanatory comments,
+   re-run, and review the diff: a `?` that appears is a member that may now be null on the wire.
+4. **RS0026/RS0027 (contributors to MMCA.Common only).** A new public overload pair with optional
+   parameters fails the build. Give the new overload no optional parameters, or put the new
+   parameter on a new member name; an overload already released keeps its targeted
+   `SuppressMessage` at the declaration.
+
 ## [1.215.0] - 2026-09-30
 
 **Behavior change: a transactional unit no longer commits while changes are left unsaved.** At the

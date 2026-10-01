@@ -41,6 +41,7 @@ public interface IInternalCommandScheduler
     /// the unit of work's own save would. Schedule inside an <c>ITransactional</c> command, or after
     /// your own save, when that distinction matters.
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     Task<Result<Guid>> ScheduleAsync(
         IInternalCommand command,
         DateTimeOffset? runAt = null,
@@ -54,6 +55,7 @@ public interface IInternalCommandScheduler
     /// <param name="delay">How long from now the command becomes eligible to run.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The id of the scheduled row on success; a failure when the row cannot be written.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     Task<Result<Guid>> ScheduleAsync(
         IInternalCommand command,
         TimeSpan delay,

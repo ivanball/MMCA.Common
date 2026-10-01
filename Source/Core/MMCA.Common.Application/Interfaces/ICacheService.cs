@@ -37,6 +37,31 @@ public interface ICacheService
         return (value is not null, value);
     }
 
+    /// <summary>
+    /// Reads a key from the shared backing store, bypassing any process-local copy. For single-use
+    /// records (an OAuth exchange code, a password-reset or email-confirmation token, a second-factor
+    /// time step) whose consumption on one replica must be visible to every other replica at once.
+    /// </summary>
+    /// <typeparam name="T">The cached value type.</typeparam>
+    /// <param name="key">The cache key.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The value held by the shared store, or <see langword="null"/> if the key does not exist.</returns>
+    /// <remarks>
+    /// <para>
+    /// Use it when the record is consumed or invalidated after one use, so a stale local copy would
+    /// let it be used twice: read the record through this member, then remove it. Use
+    /// <see cref="GetAsync{T}"/> for everything else; a value that is read many times (a query
+    /// result, a replay cache, a flag) loses only the local hit rate by coming here.
+    /// </para>
+    /// <para>
+    /// The default implementation calls <see cref="GetAsync{T}"/>, which is exact for a store with no
+    /// process-local tier and keeps this a compatible addition for hand-written implementations. A
+    /// store with a process-local tier (<c>HybridCacheService</c>) overrides it.
+    /// </para>
+    /// </remarks>
+    Task<T?> GetFromSharedStoreAsync<T>(string key, CancellationToken cancellationToken = default) =>
+        GetAsync<T>(key, cancellationToken);
+
     /// <summary>Stores a value in the cache with an optional expiration.</summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="key">The cache key.</param>

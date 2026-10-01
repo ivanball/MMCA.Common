@@ -28,6 +28,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          # Nothing in this job needs the checkout's token on disk: claude-code-action removes it and
+          # authenticates git with its own app token (replaceCheckoutCredentials in its git-config.ts),
+          # and the workflow token here is read-only anyway.
+          persist-credentials: false
           fetch-depth: 1
 
       - name: Run Claude Code

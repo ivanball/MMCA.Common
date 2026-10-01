@@ -220,6 +220,7 @@ public static class ProblemDetailsResultReader
     /// <param name="cancellationToken">Token used to cancel reading the body.</param>
     /// <returns>A success <see cref="Result"/>, or a failure carrying the parsed errors.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="response"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static async Task<Result> ReadAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken = default)
@@ -254,6 +255,7 @@ public static class ProblemDetailsResultReader
     /// <param name="cancellationToken">Token used to cancel reading the body.</param>
     /// <returns>A success <see cref="Result{T}"/> carrying the deserialized value, or a failure.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="response"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static async Task<Result<T>> ReadAsync<T>(
         HttpResponseMessage response,
         JsonSerializerOptions? options = null,

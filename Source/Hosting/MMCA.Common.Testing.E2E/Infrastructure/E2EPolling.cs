@@ -35,6 +35,7 @@ public static class E2EPolling
     /// <param name="interval">Delay between probes. Defaults to <see cref="DefaultInterval"/>.</param>
     /// <param name="cancellationToken">Cancels the wait between probes.</param>
     /// <returns>The last probed value.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static async Task<T> PollUntilAsync<T>(
         Func<Task<T>> probe,
         Func<T, bool> isSatisfied,
@@ -67,6 +68,7 @@ public static class E2EPolling
     /// <param name="interval">Delay between probes. Defaults to <see cref="DefaultInterval"/>.</param>
     /// <param name="cancellationToken">Cancels the wait between probes.</param>
     /// <returns><see langword="true"/> when the probe succeeded within the budget.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Grandfathered public overload released after the v1.152 baseline while RS0026/RS0027 were off; changing its signature is a breaking change (RS0026/RS0027 baseline)")]
     public static Task<bool> PollUntilAsync(
         Func<Task<bool>> probe,
         TimeSpan? timeout = null,

@@ -63,15 +63,28 @@ public sealed class StronglyTypedIdApiTests
         await using var app = await CreateHostAsync();
         using var client = app.GetTestClient();
 
-        var withParent = await client.GetFromJsonAsync<JsonElement>(
-            new Uri("wrapped?parentId=7", UriKind.Relative),
-            TestContext.Current.CancellationToken);
+        var withParent = await GetOkJsonAsync(client, "wrapped?parentId=7");
         withParent.GetProperty("parentId").GetInt32().Should().Be(7);
 
-        var withoutParent = await client.GetFromJsonAsync<JsonElement>(
-            new Uri("wrapped", UriKind.Relative),
-            TestContext.Current.CancellationToken);
+        var withoutParent = await GetOkJsonAsync(client, "wrapped");
         withoutParent.GetProperty("parentId").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// GETs a probe URI and requires 200, putting the response body in the failure message: the host
+    /// runs in Development, so a 500 carries the developer exception page, which is the only place the
+    /// server-side cause is visible (logging is cleared).
+    /// </summary>
+    private static async Task<JsonElement> GetOkJsonAsync(HttpClient client, string relativeUri)
+    {
+        using var response = await client.GetAsync(
+            new Uri(relativeUri, UriKind.Relative),
+            TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using var document = JsonDocument.Parse(body);
+        return document.RootElement.Clone();
     }
 
     [Fact]

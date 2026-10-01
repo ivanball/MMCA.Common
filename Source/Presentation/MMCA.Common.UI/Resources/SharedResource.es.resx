@@ -464,7 +464,7 @@
     <value>Notificación enviada a {0} destinatarios.</value>
   </data>
   <data name="Notif.Send.SentTo.One" xml:space="preserve">
-    <value>Notificacion enviada a {0} destinatario.</value>
+    <value>Notificación enviada a {0} destinatario.</value>
   </data>
   <data name="Notif.Send.SentTo.Other" xml:space="preserve">
     <value>Notificación enviada a {0} destinatarios.</value>

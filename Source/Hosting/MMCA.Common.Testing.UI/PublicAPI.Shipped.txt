@@ -1,6 +1,7 @@
 #nullable enable
 MMCA.Common.Testing.UI.BunitComponentTestBase
 MMCA.Common.Testing.UI.BunitComponentTestBase.BunitComponentTestBase() -> void
+MMCA.Common.Testing.UI.BunitComponentTestBase.ConfigureDataGridListPageHost(bool isInteractive = true, string! rendererName = "Server", bool stubViewport = true) -> void
 MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles
 MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.<Clone>$() -> MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles!
 MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Deconstruct(out Bunit.IRenderedComponent<MudBlazor.MudPopoverProvider!>! Popover, out Bunit.IRenderedComponent<MudBlazor.MudDialogProvider!>! Dialog, out Bunit.IRenderedComponent<MudBlazor.MudSnackbarProvider!>! Snackbar) -> void
@@ -30,6 +31,8 @@ MMCA.Common.Testing.UI.CapturedRequest.Body.init -> void
 MMCA.Common.Testing.UI.CapturedRequest.CapturedRequest(System.Net.Http.HttpMethod! Method, System.Uri? Uri, string! Path, string! PathAndQuery, string? Authorization, string? Body) -> void
 MMCA.Common.Testing.UI.CapturedRequest.Deconstruct(out System.Net.Http.HttpMethod! Method, out System.Uri? Uri, out string! Path, out string! PathAndQuery, out string? Authorization, out string? Body) -> void
 MMCA.Common.Testing.UI.CapturedRequest.Equals(MMCA.Common.Testing.UI.CapturedRequest? other) -> bool
+MMCA.Common.Testing.UI.CapturedRequest.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+MMCA.Common.Testing.UI.CapturedRequest.Headers.init -> void
 MMCA.Common.Testing.UI.CapturedRequest.Method.get -> System.Net.Http.HttpMethod!
 MMCA.Common.Testing.UI.CapturedRequest.Method.init -> void
 MMCA.Common.Testing.UI.CapturedRequest.Path.get -> string!
@@ -44,6 +47,9 @@ MMCA.Common.Testing.UI.CapturingHttpMessageHandler.CapturingHttpMessageHandler(S
 MMCA.Common.Testing.UI.CapturingHttpMessageHandler.Requests.get -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.UI.CapturedRequest!>!
 MMCA.Common.Testing.UI.CapturingHttpMessageHandler.RequestsFor(System.Net.Http.HttpMethod! method, string! absolutePath) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Testing.UI.CapturedRequest!>!
 MMCA.Common.Testing.UI.CapturingHttpMessageHandler.SetResponse(System.Net.Http.HttpMethod! method, string! absolutePath, System.Net.HttpStatusCode statusCode, object? body = null) -> void
+MMCA.Common.Testing.UI.ErrorSummaryExtensions
+MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!)
+MMCA.Common.Testing.UI.ErrorSummaryExtensions.extension<TComponent>(Bunit.IRenderedComponent<TComponent>!).ErrorSummaryMessages() -> System.Collections.Generic.IReadOnlyList<string!>!
 MMCA.Common.Testing.UI.FreshApiClientFactory
 MMCA.Common.Testing.UI.FreshApiClientFactory.CreateClient(string! name) -> System.Net.Http.HttpClient!
 MMCA.Common.Testing.UI.FreshApiClientFactory.FreshApiClientFactory(System.Net.Http.HttpMessageHandler! handler, System.Uri! baseAddress) -> void
@@ -58,6 +64,31 @@ MMCA.Common.Testing.UI.MarkupSnapshotResult.MarkupSnapshotResult() -> void
 MMCA.Common.Testing.UI.MarkupSnapshotResult.MarkupSnapshotResult(bool IsMatch, string! Message) -> void
 MMCA.Common.Testing.UI.MarkupSnapshotResult.Message.get -> string!
 MMCA.Common.Testing.UI.MarkupSnapshotResult.Message.init -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.ConfirmEmailPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Confirmation.get -> Moq.Mock<MMCA.Common.UI.Services.Auth.IEmailConfirmationUIService!>!
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.RenderPage(string? email, string? token) -> Bunit.IRenderedComponent<MMCA.Common.UI.Pages.Auth.ConfirmEmail!>!
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.ResendWithNoAddress_DoesNotCallTheService() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Resend_AsksForAFreshLinkAndSaysSoWithoutConfirmingTheAccountExists() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.SubmittingWithoutAToken_ExplainsWhatIsMissingAndDoesNotCallTheService() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithACompleteLink_ConfirmsOnceAndReportsSuccess() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithARefusedToken_ShowsTheApisMessage_AndKeepsTheFormWithAResend() -> void
+MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.WithNoToken_DoesNotCallTheServiceAndShowsTheForm() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.ACompiledPermission_IsLocked_AndAnEditableOneIsNot() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RenderEditor() -> Bunit.IRenderedComponent<TPage>!
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleAdminEditPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.Roles.get -> Moq.Mock<MMCA.Common.UI.Services.Administration.IRoleAdminUIService!>!
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.ThePage_LinksBackToTheRoleRoster() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.TheRouteRole_ReachesTheComponentAndItsCatalogRenders() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.TickingAPermissionAndSaving_SubmitsItAsTheStoredSet() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.EachRow_LinksToTheRoleEditorRoute() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.RendersOneRowPerRoleWithItsCompiledAndStoredCounts() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.RoleAdminListPageTestsBase() -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.Roles.get -> Moq.Mock<MMCA.Common.UI.Services.Administration.IRoleAdminUIService!>!
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.SetupRoles(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Auth.Responses.RolePermissionsResponse!>! roles) -> void
+MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.WhenTheFetchFails_RendersNoRoleRows() -> void
 MMCA.Common.Testing.UI.StubTokenStorageService
 MMCA.Common.Testing.UI.StubTokenStorageService.AccessToken.get -> string?
 MMCA.Common.Testing.UI.StubTokenStorageService.AccessToken.set -> void
@@ -79,6 +110,15 @@ MMCA.Common.Testing.UI.UiHttpServiceHarness.Handler.get -> MMCA.Common.Testing.U
 MMCA.Common.Testing.UI.UiHttpServiceHarness.TokenStorage.get -> MMCA.Common.Testing.UI.StubTokenStorageService!
 MMCA.Common.Testing.UI.UiHttpServiceHarness.UiHttpServiceHarness(System.Func<System.Net.Http.HttpRequestMessage!, System.Net.Http.HttpResponseMessage!>! respond, string? accessToken = "test-token", System.Uri? baseAddress = null) -> void
 MMCA.Common.Testing.UI.UiHttpServiceHarness.UiHttpServiceHarness(string? accessToken = "test-token", System.Uri? baseAddress = null) -> void
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.CompiledPermission.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.EditedRole.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.OtherRole.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RosterRoute.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.StoredPermission.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.EditRoute(string! role) -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.FirstRole.get -> string!
+abstract MMCA.Common.Testing.UI.Pages.RoleAdminListPageTestsBase<TPage>.SecondRole.get -> string!
+const MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryTitleClass = "mmca-error-summary-title" -> string!
 override MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.Equals(object? obj) -> bool
 override MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.GetHashCode() -> int
 override MMCA.Common.Testing.UI.BunitComponentTestBase.MudProviderHandles.ToString() -> string!
@@ -93,6 +133,7 @@ static MMCA.Common.Testing.UI.BunitInteractionExtensions.FindButtonByText<TCompo
 static MMCA.Common.Testing.UI.BunitInteractionExtensions.HasText<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut, string! text) -> bool
 static MMCA.Common.Testing.UI.CapturedRequest.operator !=(MMCA.Common.Testing.UI.CapturedRequest? left, MMCA.Common.Testing.UI.CapturedRequest? right) -> bool
 static MMCA.Common.Testing.UI.CapturedRequest.operator ==(MMCA.Common.Testing.UI.CapturedRequest? left, MMCA.Common.Testing.UI.CapturedRequest? right) -> bool
+static MMCA.Common.Testing.UI.ErrorSummaryExtensions.ErrorSummaryMessages<TComponent>(this Bunit.IRenderedComponent<TComponent>! cut) -> System.Collections.Generic.IReadOnlyList<string!>!
 static MMCA.Common.Testing.UI.HttpTestDoubles.ClientFactory(System.Net.Http.HttpMessageHandler! handler, System.Uri? baseAddress = null) -> System.Net.Http.IHttpClientFactory!
 static MMCA.Common.Testing.UI.HttpTestDoubles.EmptyResponse(System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.NoContent) -> System.Net.Http.HttpResponseMessage!
 static MMCA.Common.Testing.UI.HttpTestDoubles.JsonResponse<T>(T payload, System.Net.HttpStatusCode statusCode = System.Net.HttpStatusCode.OK) -> System.Net.Http.HttpResponseMessage!
@@ -102,9 +143,11 @@ static MMCA.Common.Testing.UI.MarkupSnapshot.Match(string! markup, string! snaps
 static MMCA.Common.Testing.UI.MarkupSnapshotResult.operator !=(MMCA.Common.Testing.UI.MarkupSnapshotResult left, MMCA.Common.Testing.UI.MarkupSnapshotResult right) -> bool
 static MMCA.Common.Testing.UI.MarkupSnapshotResult.operator ==(MMCA.Common.Testing.UI.MarkupSnapshotResult left, MMCA.Common.Testing.UI.MarkupSnapshotResult right) -> bool
 static MMCA.Common.Testing.UI.TestPrincipal.AuthenticatedUser(string! userId = "1", string! name = "Test User", params string![]! roles) -> System.Security.Claims.ClaimsPrincipal!
-static MMCA.Common.Testing.UI.TestPrincipal.Organizer(string! userId = "1") -> System.Security.Claims.ClaimsPrincipal!
+static MMCA.Common.Testing.UI.TestPrincipal.InRole(string! role, string! userId = "1") -> System.Security.Claims.ClaimsPrincipal!
 static readonly MMCA.Common.Testing.UI.BunitComponentTestBase.Anonymous -> System.Security.Claims.ClaimsPrincipal!
 static readonly MMCA.Common.Testing.UI.HttpTestDoubles.BaseAddress -> System.Uri!
 static readonly MMCA.Common.Testing.UI.UiHttpServiceHarness.DefaultBaseAddress -> System.Uri!
+virtual MMCA.Common.Testing.UI.Pages.ConfirmEmailPageTestsBase.Email.get -> string!
+virtual MMCA.Common.Testing.UI.Pages.RoleAdminEditPageTestsBase<TPage>.RoleParameterName.get -> string!
 ~override MMCA.Common.Testing.UI.MarkupSnapshotResult.Equals(object obj) -> bool
 ~override MMCA.Common.Testing.UI.MarkupSnapshotResult.ToString() -> string

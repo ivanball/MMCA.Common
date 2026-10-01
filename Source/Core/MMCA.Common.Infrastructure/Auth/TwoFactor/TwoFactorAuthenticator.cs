@@ -99,7 +99,10 @@ internal sealed class TwoFactorAuthenticator(
         CancellationToken cancellationToken)
     {
         var key = string.Create(CultureInfo.InvariantCulture, $"twofactor:laststep:{userId}");
-        var last = await cache.GetAsync<long?>(key, cancellationToken).ConfigureAwait(false);
+
+        // Shared-store read: a step accepted on another replica must be seen here, or a replayed code
+        // would pass against a stale local copy inside its window.
+        var last = await cache.GetFromSharedStoreAsync<long?>(key, cancellationToken).ConfigureAwait(false);
         if (last is { } lastStep && matchedStep <= lastStep)
         {
             return Result.Failure<TwoFactorOutcome>(TwoFactorErrors.TwoFactorInvalid(nameof(ChallengeAsync)));

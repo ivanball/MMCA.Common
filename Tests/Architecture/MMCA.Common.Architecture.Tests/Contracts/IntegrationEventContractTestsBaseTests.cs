@@ -113,6 +113,87 @@ public sealed class IntegrationEventContractTestsBaseTests
                 "a comma inside angle brackets belongs to the member type, not the member list");
     }
 
+    [Fact]
+    public void Contract_Differs_WhenTheOnlyChangeIsIntToNullableInt()
+    {
+        var contract = LiveContract();
+
+        MembersOf(contract, ".FixtureNullableCountEvent ").Should().NotBe(
+            MembersOf(contract, ".FixtureCountEvent "),
+            "an int retyped to int? changes what a consumer must accept, so the snapshot must see it");
+    }
+
+    [Fact]
+    public void Contract_Differs_WhenTheOnlyChangeIsANullableReferenceAnnotation()
+    {
+        var contract = LiveContract();
+
+        MembersOf(contract, ".FixtureNullableLabelEvent ").Should().Be(
+            "{ Label:String?, Notes:IReadOnlyList<String?> }",
+            "a string? member and a string? generic argument are both part of the wire promise");
+        MembersOf(contract, ".FixtureLabelEvent ").Should().Be(
+            "{ Label:String, Notes:IReadOnlyList<String> }",
+            "the non-nullable twin must render differently from the nullable one");
+    }
+
+    [Fact]
+    public void Base_Fails_WhenOnlyAMembersNullabilityChanges()
+    {
+        var lines = LiveContract();
+        var index = lines.FindIndex(l => l.Contains(".FixtureNullableLabelEvent ", StringComparison.Ordinal));
+        index.Should().BeGreaterThanOrEqualTo(0, "the fixture assembly must declare the nullable-reference event");
+        lines[index] = lines[index].Replace("Label:String?", "Label:String", StringComparison.Ordinal);
+
+        var assert = new ProbeTests(lines).IntegrationEventContracts_ShouldMatch_TheFrozenSnapshot;
+
+        assert.Should().Throw<Exception>()
+            .Which.Message.Should().Contain(
+                "member Label changed type",
+                "a member that may now be null breaks a consumer that relied on it never being null");
+    }
+
+    [Fact]
+    public void Contract_KeysAnEventOnItsEventName_WhenItDeclaresOne()
+    {
+        var contract = LiveContract();
+
+        contract.Should().Contain(
+            "Fixture.Named.v1 { Value:Int32 }",
+            "the [EventName] value is the wire identity the outbox stores, so a CLR rename must not churn the snapshot");
+        contract.Should().NotContain(
+            l => l.Contains("FixtureNamedEvent", StringComparison.Ordinal),
+            "an event with a declared wire identity is not keyed by its CLR type name");
+    }
+
+    [Fact]
+    public void Base_WritesTheLiveContractAsLiterals_WhenTheSnapshotOutputVariableIsSet()
+    {
+        // Only this class invokes the fact, and xUnit runs one class's tests sequentially, so the
+        // process-wide variable cannot leak into a concurrent run of the same fact.
+        var path = Path.Combine(Path.GetTempPath(), $"contract-{Guid.NewGuid():N}.txt");
+        Environment.SetEnvironmentVariable(IntegrationEventContractTestsBase.SnapshotOutputVariable, path);
+        try
+        {
+            new ProbeTests(LiveContract()).IntegrationEventContracts_ShouldMatch_TheFrozenSnapshot();
+
+            File.ReadAllLines(path).Should().Equal(
+                LiveContract().Select(l => $"\"{l}\","),
+                "a consumer regenerating its snapshot pastes these lines into ExpectedContract");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(IntegrationEventContractTestsBase.SnapshotOutputVariable, null);
+            File.Delete(path);
+        }
+    }
+
+    /// <summary>The member block (from the opening brace) of the one line containing <paramref name="marker"/>.</summary>
+    private static string MembersOf(List<string> contract, string marker)
+    {
+        var line = contract.Single(l => l.Contains(marker, StringComparison.Ordinal));
+        return line[line.IndexOf('{', StringComparison.Ordinal)..];
+    }
+
     /// <summary>The contract the fixture map really produces, the baseline every case mutates.</summary>
     private static List<string> LiveContract() =>
         ArchitectureRules.BuildIntegrationEventContract(new FixtureMap());

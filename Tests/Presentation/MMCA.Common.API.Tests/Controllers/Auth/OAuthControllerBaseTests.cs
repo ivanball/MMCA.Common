@@ -608,7 +608,7 @@ public sealed class OAuthControllerBaseTests
     {
         var (sut, mocks) = CreateSut();
         mocks.CacheService
-            .Setup(x => x.GetAsync<AuthenticationResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetFromSharedStoreAsync<AuthenticationResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(AuthenticationResponse));
 
         var result = await sut.ExchangeAsync(new OAuthCodeExchangeRequest("UNKNOWN"), CancellationToken.None);
@@ -626,7 +626,7 @@ public sealed class OAuthControllerBaseTests
         AuthenticationResponse authResponse = CreateAuthResponse();
         const string code = "ABCDEF0123456789";
         mocks.CacheService
-            .Setup(x => x.GetAsync<AuthenticationResponse>(
+            .Setup(x => x.GetFromSharedStoreAsync<AuthenticationResponse>(
                 ExchangeCodePrefix + code, It.IsAny<CancellationToken>()))
             .ReturnsAsync(authResponse);
 
@@ -637,6 +637,27 @@ public sealed class OAuthControllerBaseTests
             x => x.RemoveAsync(ExchangeCodePrefix + code, It.IsAny<CancellationToken>()),
             Times.Once,
             "the code is single-use: a replayed code must not mint a second token pair");
+    }
+
+    [Fact]
+    public async Task ExchangeAsync_ReadsTheCodeFromTheSharedStore_NeverThroughGetAsync()
+    {
+        // GetAsync may answer from a replica's in-process copy of a code another replica already
+        // burned, which would mint the token pair twice.
+        var (sut, mocks) = CreateSut();
+        AuthenticationResponse authResponse = CreateAuthResponse();
+        const string code = "ABCDEF0123456789";
+        mocks.CacheService
+            .Setup(x => x.GetFromSharedStoreAsync<AuthenticationResponse>(
+                ExchangeCodePrefix + code, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(authResponse);
+
+        var result = await sut.ExchangeAsync(new OAuthCodeExchangeRequest(code), CancellationToken.None);
+
+        mocks.CacheService.Verify(
+            x => x.GetAsync<AuthenticationResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(authResponse);
     }
 
     // ── Test double: minimal request-services provider for the authentication extensions ──

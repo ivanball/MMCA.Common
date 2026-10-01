@@ -74,6 +74,10 @@ public static partial class DependencyInjection
             // Scoped, matching the password-reset token service it shares a cache and a shape with.
             services.TryAddScoped<IEmailConfirmationTokenService, EmailConfirmationTokenService>();
 
+            // The token service stamps expiries from the injected clock. AddServices registers it
+            // too; TryAdd keeps this call self-sufficient without displacing a host's own clock.
+            services.TryAddSingleton(TimeProvider.System);
+
             return services;
         }
 

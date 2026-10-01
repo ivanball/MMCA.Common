@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Caching;
 
 namespace MMCA.Common.Infrastructure.Tests.Caching;
@@ -259,6 +260,29 @@ public sealed class HybridCacheServiceTests
         l2.Clear();
 
         (await sut.GetAsync<long?>(key, TestContext.Current.CancellationToken)).Should().BeNull();
+    }
+
+    // ── GetFromSharedStoreAsync: single-use records never answered from L1 ──
+    [Fact]
+    public async Task GetFromSharedStoreAsync_AfterAnotherReplicaRemovedTheKey_IsAMissEvenWithALocalCopy()
+    {
+        // Two replicas over one shared L2. Replica B holds the record in its L1; replica A consumes
+        // and removes it. A single-use read on B must see the removal, not B's local copy.
+        var l2 = new RecordingDistributedCache();
+        await using var providerA = BuildProvider(l2);
+        await using var providerB = BuildProvider(l2);
+        var replicaA = new HybridCacheService(providerA.GetRequiredService<HybridCache>(), NullLogger<HybridCacheService>.Instance);
+        var replicaB = new HybridCacheService(providerB.GetRequiredService<HybridCache>(), NullLogger<HybridCacheService>.Instance);
+        var key = "pwdreset:token:user@example.com";
+
+        await replicaA.SetAsync(key, "record", TimeSpan.FromMinutes(30), TestContext.Current.CancellationToken);
+        (await replicaB.GetAsync<string>(key, TestContext.Current.CancellationToken)).Should().Be("record");
+
+        await replicaA.RemoveAsync(key, TestContext.Current.CancellationToken);
+
+        var read = await ((ICacheService)replicaB)
+            .GetFromSharedStoreAsync<string>(key, TestContext.Current.CancellationToken);
+        read.Should().BeNull("the record was consumed on another replica; only B's stale local copy still holds it");
     }
 
     // ── GetOrCreateAsync override ──

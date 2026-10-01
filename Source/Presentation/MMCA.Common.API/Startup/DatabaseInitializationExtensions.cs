@@ -1,6 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Modules;
@@ -17,8 +21,15 @@ namespace MMCA.Common.API.Startup;
 /// Operates per <b>physical data source</b>: every database in use by the host's registered
 /// entities is initialized (migrated/created) independently.
 /// </summary>
+[SuppressMessage(
+    "Naming",
+    "CA1708:Identifiers should differ by more than case",
+    Justification = "False positive: with multiple extension(T) blocks in one static class, CA1708 flags the compiler-generated grouping members as case-colliding. No user-visible identifier differs only by case.")]
 public static class DatabaseInitializationExtensions
 {
+    /// <summary>The configuration switch build-time OpenAPI generation sets on the host it starts.</summary>
+    private const string OpenApiDesignTimeKey = "MmcaOpenApiDesignTime";
+
     extension(IServiceProvider services)
     {
         /// <summary>
@@ -109,6 +120,43 @@ public static class DatabaseInitializationExtensions
             // "which seeders apply", which no module declares today, and running it twice against a
             // shared database is worse than not running it per tenant at all.
             await moduleLoader.SeedAllAsync(scope.ServiceProvider, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    extension(WebApplication app)
+    {
+        /// <summary>
+        /// Runs <c>InitializeDatabaseAsync</c> with the host's bound settings and module loader,
+        /// except during build-time OpenAPI document generation.
+        /// </summary>
+        /// <remarks>
+        /// Build-time generation (<c>MmcaGenerateOpenApiDocument</c>) builds and starts the host with
+        /// no database reachable and sets the <c>MmcaOpenApiDesignTime</c> configuration switch. The
+        /// schema step is the one startup action that throws rather than logs when it cannot connect,
+        /// so it is skipped for that run and nowhere else. The switch is honoured only in Development,
+        /// so a host in any other environment can never be talked out of initializing its schema
+        /// (ADR-122: dev-only relaxations fail closed).
+        /// </remarks>
+        /// <param name="moduleHost">The context <c>AddModuleHost</c> returned.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task that completes when initialization has run or been skipped.</returns>
+        /// <exception cref="InvalidOperationException">Initialization ran and failed (see <c>InitializeDatabaseAsync</c>).</exception>
+        public Task InitializeDatabaseUnlessDesignTimeAsync(
+            ModuleHostContext moduleHost,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(app);
+            ArgumentNullException.ThrowIfNull(moduleHost);
+
+            if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>(OpenApiDesignTimeKey))
+            {
+                return Task.CompletedTask;
+            }
+
+            return app.Services.InitializeDatabaseAsync(
+                moduleHost.ApplicationSettings,
+                moduleHost.ModuleLoader,
+                cancellationToken);
         }
     }
 

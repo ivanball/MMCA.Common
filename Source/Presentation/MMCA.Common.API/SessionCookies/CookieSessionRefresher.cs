@@ -53,7 +53,8 @@ internal sealed partial class CookieSessionRefresher(
     IHttpClientFactory httpClientFactory,
     IMemoryCache cache,
     IWebHostEnvironment environment,
-    ILogger<CookieSessionRefresher> logger) : ICookieSessionRefresher
+    ILogger<CookieSessionRefresher> logger,
+    TimeProvider timeProvider) : ICookieSessionRefresher
 {
     internal const string RefreshClientName = "SessionCookieRefreshClient";
 
@@ -152,7 +153,7 @@ internal sealed partial class CookieSessionRefresher(
         }
     }
 
-    private static bool TryReadValidExpiry(string? token, out DateTime expiry)
+    private bool TryReadValidExpiry(string? token, out DateTime expiry)
     {
         expiry = default;
         if (string.IsNullOrWhiteSpace(token))
@@ -169,7 +170,7 @@ internal sealed partial class CookieSessionRefresher(
         try
         {
             var jwt = handler.ReadJwtToken(token);
-            if (jwt.ValidTo <= DateTime.UtcNow + ClockSkew)
+            if (jwt.ValidTo <= timeProvider.GetUtcNow().UtcDateTime + ClockSkew)
             {
                 return false;
             }

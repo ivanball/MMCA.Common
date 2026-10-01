@@ -32,6 +32,14 @@ namespace MMCA.Common.Infrastructure.Caching;
 /// process's L1 is cleared. That is the accepted cost of the L1 hit rate, and it is the same order
 /// as the delayed re-invalidation the caching command decorator already performs.
 /// </para>
+/// <para>
+/// <b>The exception is a single-use record</b> (an OAuth exchange code, a password-reset or
+/// email-confirmation token, the last accepted second-factor time step). Those are read through
+/// <see cref="GetFromSharedStoreAsync{T}"/>, which never answers from L1 and never promotes into
+/// it, so a record consumed on one replica is a miss on every other replica at once rather than
+/// usable a second time for up to the local expiration. Counters get the same treatment in
+/// <see cref="IncrementAsync"/>.
+/// </para>
 /// </remarks>
 internal sealed partial class HybridCacheService(
     HybridCache hybrid,
@@ -65,10 +73,13 @@ internal sealed partial class HybridCacheService(
     };
 
     /// <summary>
-    /// The read leg of <see cref="IncrementAsync"/>: the read-only flags plus a full L1 bypass. See
-    /// the remarks on <see cref="IncrementAsync"/> for why a counter must not touch L1.
+    /// A read answered by L2 alone: the read-only flags plus a full L1 bypass (no L1 read, no L1
+    /// promotion). Shared by the two reads whose correctness depends on every replica seeing the
+    /// same value: the read leg of <see cref="IncrementAsync"/> (a counter) and
+    /// <see cref="GetFromSharedStoreAsync{T}"/> (a single-use record). See the remarks on each for
+    /// why neither may touch L1.
     /// </summary>
-    private static readonly HybridCacheEntryOptions CounterReadOptions = new()
+    private static readonly HybridCacheEntryOptions SharedStoreReadOptions = new()
     {
         Flags = HybridCacheEntryFlags.DisableUnderlyingData
             | HybridCacheEntryFlags.DisableLocalCacheRead
@@ -110,6 +121,42 @@ internal sealed partial class HybridCacheService(
                 fullKey,
                 static _ => ValueTask.FromResult<T?>(default),
                 ReadOnlyOptions,
+                tags: null,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogReadFailed(logger, key, ex);
+            await SelfHealAsync(fullKey, cancellationToken).ConfigureAwait(false);
+            return default;
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Overrides the interface default (which calls <see cref="GetAsync{T}"/>) because this service
+    /// has a process-local tier: the read disables both the L1 read and the L1 write, so the answer
+    /// always comes from L2 and nothing is promoted into this replica's memory. A removal on another
+    /// replica is therefore seen immediately, which is what keeps a single-use record single-use.
+    /// </para>
+    /// <para>
+    /// Fail-soft exactly like <see cref="GetAsync{T}"/>: a fault is logged at warning level,
+    /// answered as a miss (for a single-use record, a refusal, which is the safe direction) and the
+    /// offending entry is dropped best-effort. <see cref="OperationCanceledException"/> still
+    /// surfaces as cancellation.
+    /// </para>
+    /// </remarks>
+    public async Task<T?> GetFromSharedStoreAsync<T>(string key, CancellationToken cancellationToken = default)
+    {
+        var fullKey = HybridKey(key);
+
+        try
+        {
+            return await hybrid.GetOrCreateAsync(
+                fullKey,
+                static _ => ValueTask.FromResult<T?>(default),
+                SharedStoreReadOptions,
                 tags: null,
                 cancellationToken).ConfigureAwait(false);
         }
@@ -210,7 +257,7 @@ internal sealed partial class HybridCacheService(
         var current = await hybrid.GetOrCreateAsync(
             fullKey,
             static _ => ValueTask.FromResult<long?>(null),
-            CounterReadOptions,
+            SharedStoreReadOptions,
             tags: null,
             cancellationToken).ConfigureAwait(false) ?? 0;
 

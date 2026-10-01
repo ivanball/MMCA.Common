@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Interfaces.Events;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -267,7 +268,23 @@ public sealed class EfInboxStoreTests : IDisposable
         (await _contextA.Set<InboxMessage>().CountAsync(m => m.MessageId == messageId)).Should().Be(1);
     }
 
-    private static EfInboxStore CreateStore(ApplicationDbContext context)
+    // ── Injected clock ──
+    [Fact]
+    public async Task TryBegin_StampsProcessedOnFromTheInjectedClock()
+    {
+        var fixedNow = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var store = CreateStore(_contextA, new FakeTimeProvider(fixedNow));
+        var messageId = Guid.NewGuid();
+
+        await store.TryBeginAsync(messageId, "OrderPlaced", CancellationToken.None);
+
+        var staged = _contextA.ChangeTracker.Entries<InboxMessage>().Single(e => e.Entity.MessageId == messageId);
+        staged.Entity.ProcessedOn.Should().Be(
+            fixedNow.UtcDateTime,
+            "the processed-on stamp is the injected clock's instant");
+    }
+
+    private static EfInboxStore CreateStore(ApplicationDbContext context, TimeProvider? timeProvider = null)
     {
         var factory = new Mock<IDbContextFactory>();
         factory.Setup(f => f.GetDbContext(It.IsAny<DataSourceKey>())).Returns(context);
@@ -281,7 +298,8 @@ public sealed class EfInboxStoreTests : IDisposable
             factory.Object,
             resolver.Object,
             Options.Create(new OutboxSettings()),
-            NullLogger<EfInboxStore>.Instance);
+            NullLogger<EfInboxStore>.Instance,
+            timeProvider ?? TimeProvider.System);
     }
 
     private InboxTestDbContext CreateContext()

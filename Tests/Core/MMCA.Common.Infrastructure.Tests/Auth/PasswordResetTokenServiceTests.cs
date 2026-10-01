@@ -4,11 +4,13 @@ using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Infrastructure.Concurrency;
 using MMCA.Common.Shared.Abstractions;
+using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
 
@@ -222,12 +224,59 @@ public sealed class PasswordResetTokenServiceTests
         roundTripped.Should().Be(entry);
     }
 
+    // ── Single-use read: the shared store, never a process-local copy ──
+    [Fact]
+    public async Task ValidateAndConsumeAsync_ReadsTheTokenRecordFromTheSharedStore_NeverThroughGetAsync()
+    {
+        // GetAsync may answer from a replica's in-process copy of a token another replica already
+        // consumed; a single-use record must be read from the shared store.
+        const string token = "issued-token";
+        var entry = new PasswordResetEntry(
+            Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token))),
+            TestUserId,
+            FailedAttempts: 0,
+            DateTimeOffset.UtcNow.AddMinutes(30).ToUnixTimeSeconds());
+        var cache = new Mock<ICacheService>();
+        cache
+            .Setup(c => c.GetFromSharedStoreAsync<PasswordResetEntry>(TokenKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        var settings = new PasswordResetSettings { ResetUrl = "https://app.example.com/reset-password" };
+        var sut = new PasswordResetTokenService(
+            cache.Object,
+            Options.Create(settings),
+            new InProcessDistributedLock(NullLogger<InProcessDistributedLock>.Instance),
+            TimeProvider.System);
+
+        Result<UserIdentifierType> result = await sut.ValidateAndConsumeAsync(TestEmail, token);
+
+        cache.Verify(
+            c => c.GetAsync<PasswordResetEntry>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.IsSuccess.Should().BeTrue("the record read from the shared store redeems the token");
+    }
+
+    // ── Injected clock ──
+    [Fact]
+    public async Task IssueAsync_StampsTheRecordExpiryFromTheInjectedClock()
+    {
+        var fixedNow = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var (sut, cache) = CreateSut(tokenLifetimeMinutes: 30, timeProvider: new FakeTimeProvider(fixedNow));
+
+        await sut.IssueAsync(TestEmail, TestUserId);
+
+        var entry = (PasswordResetEntry)cache.Values[TokenKey]!;
+        entry.ExpiresAtUnixSeconds.Should().Be(
+            fixedNow.AddMinutes(30).ToUnixTimeSeconds(),
+            "the expiry is the injected clock's instant plus the configured lifetime");
+    }
+
     // ── Helpers ──
     private static (PasswordResetTokenService Sut, FakeCacheService Cache) CreateSut(
         int tokenLifetimeMinutes = 30,
         int maxValidationAttempts = 5,
         int maxRequestsPerEmail = 100,
-        int requestWindowMinutes = 60)
+        int requestWindowMinutes = 60,
+        TimeProvider? timeProvider = null)
     {
         var cache = new FakeCacheService();
         var settings = new PasswordResetSettings
@@ -240,7 +289,7 @@ public sealed class PasswordResetTokenServiceTests
         };
 
         var distributedLock = new InProcessDistributedLock(NullLogger<InProcessDistributedLock>.Instance);
-        return (new PasswordResetTokenService(cache, Options.Create(settings), distributedLock), cache);
+        return (new PasswordResetTokenService(cache, Options.Create(settings), distributedLock, timeProvider ?? TimeProvider.System), cache);
     }
 
     /// <summary>In-memory <see cref="ICacheService"/> recording every value and TTL written.</summary>

@@ -1,39 +1,55 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using MMCA.Common.UI.Common.Interfaces
 @using MMCA.Common.UI.Pages
+@using Microsoft.Extensions.Options
+@using MMCA.Common.UI.Common.Settings
+@using MMCA.Common.UI.Notifications
 @inject IEnumerable<IUIModule> UIModules
 @inject IStringLocalizer<SharedResource> L
+@inject IOptions<LayoutSettings> LayoutOptions
 
 <CascadingAuthenticationState>
     <Router AppAssembly="typeof(Layout.MainLayout).Assembly"
             AdditionalAssemblies="UIModules.Select(m => m.Assembly)"
             NotFoundPage="typeof(Pages.NotFound)">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-                <Authorizing>
-                    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center mt-16">
-                        @* Same live-region shape as PageLoadingState: role="status" carries the
-                           announcement (a bare div may not take aria-label) and the spinner carries
-                           the accessible name, so the progressbar is never anonymous. *@
-                        <div role="status" aria-live="polite" aria-busy="true">
-                            <MudProgressCircular Indeterminate="true" aria-label="@L["Routes.CheckingAuthorization"]" />
-                        </div>
-                    </MudContainer>
-                </Authorizing>
-                <NotAuthorized>
-                    @if (context.User.Identity?.IsAuthenticated != true)
-                    {
-                        <RedirectToLogin />
-                    }
-                    else
-                    {
-                        @* Authenticated but lacking the required role/permission → a dedicated 403
-                           page rendered in the app shell (rubric §25), not a bare alert. *@
-                        <Forbidden />
-                    }
-                </NotAuthorized>
-            </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            @if (NotificationPageGate.Hides(routeData.PageType, LayoutOptions.Value, UIModules))
+            {
+                @* Opt-in (Layout:HideNotificationPagesWhenUnregistered): a host that never called
+                   AddNotificationUI() answers the notification routes with the not-found page rather
+                   than serving pages whose services it never registered. *@
+                <LayoutView Layout="typeof(Layout.MainLayout)">
+                    <MMCA.Common.UI.Pages.NotFound />
+                </LayoutView>
+            }
+            else
+            {
+                <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                    <Authorizing>
+                        <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center mt-16">
+                            @* Same live-region shape as PageLoadingState: role="status" carries the
+                               announcement (a bare div may not take aria-label) and the spinner carries
+                               the accessible name, so the progressbar is never anonymous. *@
+                            <div role="status" aria-live="polite" aria-busy="true">
+                                <MudProgressCircular Indeterminate="true" aria-label="@L["Routes.CheckingAuthorization"]" />
+                            </div>
+                        </MudContainer>
+                    </Authorizing>
+                    <NotAuthorized>
+                        @if (context.User.Identity?.IsAuthenticated != true)
+                        {
+                            <RedirectToLogin />
+                        }
+                        else
+                        {
+                            @* Authenticated but lacking the required role/permission → a dedicated 403
+                               page rendered in the app shell (rubric §25), not a bare alert. *@
+                            <Forbidden />
+                        }
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            }
         </Found>
     </Router>
 </CascadingAuthenticationState>

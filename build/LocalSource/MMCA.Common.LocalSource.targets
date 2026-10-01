@@ -1,0 +1,47 @@
+<Project>
+  <!-- Local source mode for MMCA.Common consumers: swaps every MMCA.Common.* PackageReference a
+       project declares for a ProjectReference to the matching project in a sibling MMCA.Common
+       checkout, so Common and the consumer can be changed together without publishing packages.
+
+       A consumer imports this file from its Directory.Build.targets, after its local.props has set
+       UseLocalMMCA=true and LocalMMCAPath (the path of MMCA.Common's Source\ folder, with a
+       trailing separator):
+
+         <Import Project="$(LocalMMCAPath)..\build\LocalSource\MMCA.Common.LocalSource.targets" Condition="'$(UseLocalMMCA)' == 'true'" />
+
+       The package-to-project map is DERIVED from Common's own Source tree (every
+       Source\**\MMCA.Common.*.csproj, keyed by its file name, which equals its PackageId), so a new
+       package is swapped the day it exists, with no list to keep in step in each consumer.
+
+       Only packages the project actually references are swapped: a project that never named
+       MMCA.Common.API does not gain a reference to it, which keeps the ASP.NET Core packages out of
+       MAUI and Blazor WebAssembly projects. Every swapped reference carries
+       IsAspireProjectResource=false, because an MMCA.Common project is always a library and never
+       an Aspire project resource of an AppHost that references it. -->
+
+  <PropertyGroup Condition="'$(UseLocalMMCA)' == 'true'">
+    <_MMCALocalSourceRoot>$([MSBuild]::EnsureTrailingSlash('$(LocalMMCAPath)'))</_MMCALocalSourceRoot>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(UseLocalMMCA)' == 'true'">
+    <!-- Every MMCA.Common.* project under Common's Source tree, carrying its full path. -->
+    <_MMCALocalSourceProject Include="$(_MMCALocalSourceRoot)**\MMCA.Common.*.csproj"
+                             Exclude="$(_MMCALocalSourceRoot)**\bin\**;$(_MMCALocalSourceRoot)**\obj\**">
+      <MMCALocalProjectPath>%(FullPath)</MMCALocalProjectPath>
+    </_MMCALocalSourceProject>
+
+    <!-- Re-keyed by package id (the project file name); the transform keeps MMCALocalProjectPath. -->
+    <_MMCALocalSourcePackage Include="@(_MMCALocalSourceProject->'%(Filename)')" />
+
+    <!-- The packages this project references that Common's Source tree provides: the
+         intersection, computed as (all local packages) minus (local packages NOT referenced). -->
+    <_MMCALocalSourceUnreferenced Include="@(_MMCALocalSourcePackage)" Exclude="@(PackageReference)" />
+    <_MMCALocalSourceSwap Include="@(_MMCALocalSourcePackage)" Exclude="@(_MMCALocalSourceUnreferenced)" />
+
+    <!-- The swap itself. -->
+    <PackageReference Remove="@(_MMCALocalSourceSwap)" />
+    <ProjectReference Include="@(_MMCALocalSourceSwap->'%(MMCALocalProjectPath)')"
+                      RemoveMetadata="MMCALocalProjectPath"
+                      IsAspireProjectResource="false" />
+  </ItemGroup>
+</Project>

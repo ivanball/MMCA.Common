@@ -3,10 +3,12 @@ using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.Application.Auth.EmailConfirmation;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
+using Moq;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
 
@@ -190,12 +192,55 @@ public sealed class EmailConfirmationTokenServiceTests
         roundTripped.Should().Be(entry);
     }
 
+    // ── Single-use read: the shared store, never a process-local copy ──
+    [Fact]
+    public async Task ValidateAndConsumeAsync_ReadsTheTokenRecordFromTheSharedStore_NeverThroughGetAsync()
+    {
+        // GetAsync may answer from a replica's in-process copy of a token another replica already
+        // consumed; a single-use record must be read from the shared store.
+        const string token = "issued-token";
+        var entry = new EmailConfirmationEntry(
+            Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token))),
+            TestUserId,
+            FailedAttempts: 0,
+            DateTimeOffset.UtcNow.AddMinutes(60).ToUnixTimeSeconds());
+        var cache = new Mock<ICacheService>();
+        cache
+            .Setup(c => c.GetFromSharedStoreAsync<EmailConfirmationEntry>(TokenKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        var settings = new EmailConfirmationSettings { ConfirmationUrl = "https://app.example.com/confirm-email" };
+        var sut = new EmailConfirmationTokenService(cache.Object, Options.Create(settings), TimeProvider.System);
+
+        Result<UserIdentifierType> result = await sut.ValidateAndConsumeAsync(TestEmail, token);
+
+        cache.Verify(
+            c => c.GetAsync<EmailConfirmationEntry>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.IsSuccess.Should().BeTrue("the record read from the shared store redeems the token");
+    }
+
+    // ── Injected clock ──
+    [Fact]
+    public async Task IssueAsync_StampsTheRecordExpiryFromTheInjectedClock()
+    {
+        var fixedNow = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var (sut, cache) = CreateSut(tokenLifetimeMinutes: 1440, timeProvider: new FakeTimeProvider(fixedNow));
+
+        await sut.IssueAsync(TestEmail, TestUserId);
+
+        var entry = (EmailConfirmationEntry)cache.Values[TokenKey]!;
+        entry.ExpiresAtUnixSeconds.Should().Be(
+            fixedNow.AddMinutes(1440).ToUnixTimeSeconds(),
+            "the expiry is the injected clock's instant plus the configured lifetime");
+    }
+
     // ── Helpers ──
     private static (EmailConfirmationTokenService Sut, FakeConfirmationCacheService Cache) CreateSut(
         int tokenLifetimeMinutes = 1440,
         int maxValidationAttempts = 5,
         int maxRequestsPerEmail = 100,
-        int requestWindowMinutes = 60)
+        int requestWindowMinutes = 60,
+        TimeProvider? timeProvider = null)
     {
         var cache = new FakeConfirmationCacheService();
         var settings = new EmailConfirmationSettings
@@ -207,7 +252,7 @@ public sealed class EmailConfirmationTokenServiceTests
             RequestWindowMinutes = requestWindowMinutes,
         };
 
-        return (new EmailConfirmationTokenService(cache, Options.Create(settings)), cache);
+        return (new EmailConfirmationTokenService(cache, Options.Create(settings), timeProvider ?? TimeProvider.System), cache);
     }
 
     /// <summary>In-memory <see cref="ICacheService"/> recording every value and TTL written.</summary>

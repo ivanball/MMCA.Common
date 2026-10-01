@@ -123,6 +123,23 @@ checked in and is in source mode by default, which is what lets the CI canary bu
 
 To go back to package mode, delete (or rename) `local.props` and restore.
 
+### The swap itself ships from this repo
+
+The package-to-project swap lives here, in `build/LocalSource/MMCA.Common.LocalSource.targets`, so a
+consumer never keeps its own list of `MMCA.Common.*` packages (a hand-kept list is how a new package
+such as `MMCA.Common.Testing.Aspire` silently stays on NuGet in source mode). The targets file derives
+the map from this repo's `Source/**/MMCA.Common.*.csproj` and swaps only the packages a project
+actually references, so ASP.NET Core packages never leak into a MAUI or WebAssembly project. A
+consumer's `Directory.Build.targets` needs exactly one line in place of its two swap `ItemGroup`s:
+
+```xml
+<Import Project="$(LocalMMCAPath)..\build\LocalSource\MMCA.Common.LocalSource.targets" Condition="'$(UseLocalMMCA)' == 'true'" />
+```
+
+A wrong `LocalMMCAPath` fails the import (`MSB4019`) instead of quietly falling back to package mode.
+To see what a project swaps, evaluate it:
+`dotnet msbuild <project> -getItem:ProjectReference -p:UseLocalMMCA=true -p:LocalMMCAPath=<path to MMCA.Common/Source/>`.
+
 ### Rebuild Common in Debug first
 
 **Symptom:** you add a member to a framework type, rebuild only the consumer, and the compiler
@@ -156,6 +173,13 @@ Do **not** bump versions in a feature PR. A release is cut after merge by the ma
 `/push-release` flow: tag `vX.Y.Z` on the merged `main` (publishes every package in lockstep),
 then a follow-up FACTS-regen PR and one lockstep version-bump PR per consumer. See
 [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html).
+
+The release also promotes the public API baseline: the last commit before the tag (the release PR
+that lands on `main`) runs `pwsh build/publicapi/Promote-PublicApi.ps1`, which moves every
+`PublicAPI.Unshipped.txt` entry into its sibling `PublicAPI.Shipped.txt` (applying the `*REMOVED*`
+entries and sorting ordinally) and resets each Unshipped file to its `#nullable enable` header, so
+Unshipped always means "changed since the last release". Preview it with `-WhatIf` first. Feature
+PRs never run it.
 
 ## Branch protection (maintainer, run once)
 

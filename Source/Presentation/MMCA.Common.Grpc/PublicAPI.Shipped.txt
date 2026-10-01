@@ -9,11 +9,17 @@ MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException() -> v
 MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException(System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> void
 MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException(string! message) -> void
 MMCA.Common.Grpc.Exceptions.ResultFailureException.ResultFailureException(string! message, System.Exception! innerException) -> void
+MMCA.Common.Grpc.GrpcWireFormat
 MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor
 MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor.GrpcResultExceptionInterceptor(Microsoft.Extensions.Logging.ILogger<MMCA.Common.Grpc.Interceptors.GrpcResultExceptionInterceptor!>! logger) -> void
 MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor
 MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.JwtForwardingClientInterceptor(Microsoft.AspNetCore.Http.IHttpContextAccessor! httpContextAccessor) -> void
 MMCA.Common.Grpc.ResultGrpcExtensions
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.Metadata?)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.Metadata?).ToErrors() -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!)
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!).ToResult(string! source = "") -> MMCA.Common.Shared.Abstractions.Result!
+MMCA.Common.Grpc.ResultGrpcExtensions.extension(Grpc.Core.RpcException!).ToResult<T>(string! source = "") -> MMCA.Common.Shared.Abstractions.Result<T>!
 MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.ErrorType)
 MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.ErrorType).ToGrpcStatusCode() -> Grpc.Core.StatusCode
 MMCA.Common.Grpc.ResultGrpcExtensions.extension(MMCA.Common.Shared.Abstractions.Result!)
@@ -33,7 +39,17 @@ override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.AsyncUnary
 override MMCA.Common.Grpc.Interceptors.JwtForwardingClientInterceptor.BlockingUnaryCall<TRequest, TResponse>(TRequest! request, Grpc.Core.Interceptors.ClientInterceptorContext<TRequest!, TResponse!> context, Grpc.Core.Interceptors.Interceptor.BlockingUnaryCallContinuation<TRequest!, TResponse!>! continuation) -> TResponse!
 static MMCA.Common.Grpc.DependencyInjection.AddGrpcServiceDefaults(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Grpc.DependencyInjection.AddTypedGrpcClient<TClient>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! serviceName) -> Microsoft.Extensions.DependencyInjection.IHttpClientBuilder!
+static MMCA.Common.Grpc.GrpcWireFormat.FormatDecimal(decimal value) -> string!
+static MMCA.Common.Grpc.GrpcWireFormat.FormatUtc(System.DateTime value) -> string!
+static MMCA.Common.Grpc.GrpcWireFormat.FormatUtcOrEmpty(System.DateTime? value) -> string!
+static MMCA.Common.Grpc.GrpcWireFormat.ParseDecimal(string! value) -> decimal
+static MMCA.Common.Grpc.GrpcWireFormat.ParseUtc(string! value) -> System.DateTime
+static MMCA.Common.Grpc.GrpcWireFormat.ParseUtcOrNull(string? value) -> System.DateTime?
+static MMCA.Common.Grpc.GrpcWireFormat.TryParseDecimal(string? value, out decimal result) -> bool
 static MMCA.Common.Grpc.ResultGrpcExtensions.ThrowIfFailure(this MMCA.Common.Shared.Abstractions.Result! result) -> void
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToErrors(this Grpc.Core.Metadata? trailers) -> System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>!
 static MMCA.Common.Grpc.ResultGrpcExtensions.ToGrpcStatusCode(this MMCA.Common.Shared.Abstractions.ErrorType errorType) -> Grpc.Core.StatusCode
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToResult(this Grpc.Core.RpcException! exception, string! source = "") -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Grpc.ResultGrpcExtensions.ToResult<T>(this Grpc.Core.RpcException! exception, string! source = "") -> MMCA.Common.Shared.Abstractions.Result<T>!
 static MMCA.Common.Grpc.ResultGrpcExtensions.ToRpcException(this System.Collections.Generic.IReadOnlyList<MMCA.Common.Shared.Abstractions.Error!>! errors) -> Grpc.Core.RpcException!
 static MMCA.Common.Grpc.ResultGrpcExtensions.UnwrapOrThrow<T>(this MMCA.Common.Shared.Abstractions.Result<T>! result) -> T
