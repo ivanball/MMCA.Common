@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence.Conventions;
 
@@ -39,7 +40,7 @@ public sealed class SoftDeleteUniqueIndexConvention(DataSource engine) : IModelF
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
 
-        if (engine == DataSource.CosmosDB)
+        if (!DataSourceEngines.For(engine).Capabilities.IsRelational)
             return;
 
         var softDeletableTypes = modelBuilder.Metadata.GetEntityTypes()

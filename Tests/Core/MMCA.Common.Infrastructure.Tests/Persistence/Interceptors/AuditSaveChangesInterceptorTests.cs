@@ -260,8 +260,6 @@ public sealed class AuditSaveChangesInterceptorTests : IDisposable
     {
         public DbSet<TestAuditEntity> TestEntities => Set<TestAuditEntity>();
 
-        internal override bool SupportsOutbox => false;
-
         private TestAuditDbContext(DbContextOptions<TestAuditDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

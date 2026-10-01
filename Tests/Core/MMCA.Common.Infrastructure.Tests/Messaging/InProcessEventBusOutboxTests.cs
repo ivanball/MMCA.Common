@@ -144,8 +144,6 @@ public sealed class InProcessEventBusOutboxTests : IDisposable
     /// </summary>
     private sealed class TestOutboxContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private TestOutboxContext(DbContextOptions<TestOutboxContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

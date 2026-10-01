@@ -67,7 +67,7 @@ public sealed class BrokerEventBus(
         var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
         var context = dbContextFactory.GetDbContext(target);
 
-        if (!context.SupportsOutbox)
+        if (!context.Engine.Capabilities.IsRelational)
         {
             // No outbox support (e.g., Cosmos DB) — broker mode is incompatible with this
             // datasource. Throwing here surfaces the misconfiguration loudly rather than

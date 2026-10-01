@@ -7,6 +7,7 @@ using MMCA.Common.Application.Services.Query;
 using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Domain.Specifications;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Shared.Abstractions;
 using MMCA.Common.Shared.DTOs;
 
@@ -487,29 +488,39 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
     }
 
     /// <summary>
-    /// Existence check, provider-aware.
+    /// Existence check, engine-aware.
     /// </summary>
     /// <remarks>
-    /// Cosmos DB needs <c>CountAsync</c>: its provider generates invalid SQL (unresolved 'root'
-    /// identifier) when translating a predicated <c>AnyAsync</c> into a subquery. Every other
-    /// provider gets <c>AnyAsync</c>, which short-circuits at the first match; <c>CountAsync</c>
-    /// reads every matching row, so on a predicate that matches a wide set the workaround cost
-    /// O(matches) on providers that never needed it.
+    /// The non-relational engine (Cosmos DB) needs <c>CountAsync</c>: its provider generates invalid
+    /// SQL (unresolved 'root' identifier) when translating a predicated <c>AnyAsync</c> into a
+    /// subquery. Every relational engine gets <c>AnyAsync</c>, which short-circuits at the first
+    /// match; <c>CountAsync</c> reads every matching row, so on a predicate that matches a wide set
+    /// the workaround cost O(matches) on engines that never needed it.
     /// </remarks>
     private async Task<bool> AnyAsync(
         IQueryable<TEntity> query,
         Expression<Func<TEntity, bool>> where,
         CancellationToken cancellationToken)
-        => IsCosmosProvider
-            ? await query.CountAsync(where, cancellationToken).ConfigureAwait(false) > 0
-            : await query.AnyAsync(where, cancellationToken).ConfigureAwait(false);
+        => TranslatesAny
+            ? await query.AnyAsync(where, cancellationToken).ConfigureAwait(false)
+            : await query.CountAsync(where, cancellationToken).ConfigureAwait(false) > 0;
 
-    private bool IsCosmosProvider =>
-        _context.Database.ProviderName?.Contains("Cosmos", StringComparison.Ordinal) == true;
+    /// <summary>
+    /// Gets the capabilities of the engine behind the context, or <see langword="null"/> for a plain
+    /// <see cref="DbContext"/> that is not a framework context (a directly-constructed test double),
+    /// which is read as a relational engine that sorts nulls first.
+    /// </summary>
+    private DataSourceEngineCapabilities? EngineCapabilities =>
+        (_context as DbContexts.ApplicationDbContext)?.Engine.Capabilities;
 
-    /// <summary>PostgreSQL sorts nulls last ascending, the reverse of SQL Server and SQLite.</summary>
-    private bool IsPostgreSql =>
-        _context.Database.ProviderName?.Contains("Npgsql", StringComparison.Ordinal) == true;
+    /// <summary>Gets a value indicating whether the engine's LINQ provider translates a predicated <c>Any</c>.</summary>
+    private bool TranslatesAny => EngineCapabilities?.IsRelational ?? true;
+
+    /// <summary>
+    /// Gets a value indicating whether the engine sorts nulls first ascending (SQL Server, SQLite);
+    /// PostgreSQL sorts them last.
+    /// </summary>
+    private bool NullsSortFirstAscending => EngineCapabilities?.NullsSortFirstAscending ?? true;
 
     /// <summary>Gets a tracked queryable over the entity set.</summary>
     public virtual IQueryable<TEntity> Table => Entities;
@@ -707,7 +718,7 @@ internal class EFReadRepository<TEntity, TIdentifierType>(
         }
 
         seek = KeysetQueryBuilder.BuildSeekPredicate<TEntity, TIdentifierType>(
-            sortProperty, sortValue, typedId, request.Descending, nullsSortFirstAscending: !IsPostgreSql);
+            sortProperty, sortValue, typedId, request.Descending, nullsSortFirstAscending: NullsSortFirstAscending);
 
         return true;
     }

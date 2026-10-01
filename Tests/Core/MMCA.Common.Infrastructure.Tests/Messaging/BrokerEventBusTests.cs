@@ -237,8 +237,6 @@ public sealed class BrokerEventBusTests
     /// </summary>
     private sealed class TestOutboxContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         /// <summary>Number of saves the bus issued, so a batch can assert it cost exactly one.</summary>
         public int SaveCount { get; private set; }
 
@@ -287,15 +285,14 @@ public sealed class BrokerEventBusTests
     }
 
     /// <summary>
-    /// A test <see cref="ApplicationDbContext"/> subclass with outbox support disabled,
+    /// A test <see cref="ApplicationDbContext"/> subclass keyed to the Cosmos engine (no outbox support,
+    /// while the store underneath is SQLite),
     /// used to exercise the misconfiguration guard in <see cref="BrokerEventBus"/>.
     /// </summary>
     private sealed class TestNonOutboxContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => false;
-
         private TestNonOutboxContext(DbContextOptions<TestNonOutboxContext> options, IServiceProvider serviceProvider)
-            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
+            : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Cosmos())
         {
         }
 

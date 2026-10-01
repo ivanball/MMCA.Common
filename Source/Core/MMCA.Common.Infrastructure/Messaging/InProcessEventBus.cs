@@ -78,7 +78,7 @@ public sealed class InProcessEventBus(
         var target = dataSourceResolver.ResolveLogical(outboxOptions.Value.DataSource, outboxOptions.Value.DatabaseName);
         var context = dbContextFactory.GetDbContext(target);
 
-        if (!context.SupportsOutbox || !_outboxEnabled)
+        if (!context.Engine.Capabilities.IsRelational || !_outboxEnabled)
         {
             await domainEventDispatcher.DispatchAsync(events, cancellationToken).ConfigureAwait(false);
             return;

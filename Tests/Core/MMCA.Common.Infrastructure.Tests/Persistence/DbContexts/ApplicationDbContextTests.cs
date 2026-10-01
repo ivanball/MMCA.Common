@@ -51,16 +51,9 @@ public sealed class ApplicationDbContextTests : IDisposable
     }
 
     [Fact]
-    public void SupportsOutbox_DefaultsToTrue()
-    {
-        // Access the internal property via reflection
-        PropertyInfo? prop = typeof(ApplicationDbContext)
-            .GetProperty("SupportsOutbox", BindingFlags.NonPublic | BindingFlags.Instance);
-        prop.Should().NotBeNull();
-
-        var value = (bool)prop!.GetValue(_dbContext)!;
-        value.Should().BeTrue();
-    }
+    public void Engine_OfARelationalContext_HostsTheOutbox() =>
+        _dbContext.Engine.Capabilities.IsRelational.Should().BeTrue(
+            "the outbox lives wherever the context's engine is relational; no separate per-context flag has to agree with the engine");
 
     [Fact]
     public void Set_ReturnsDbSetForEntity()

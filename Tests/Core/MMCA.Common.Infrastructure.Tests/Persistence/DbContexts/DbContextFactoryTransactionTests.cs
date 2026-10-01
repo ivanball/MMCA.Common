@@ -334,8 +334,6 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
 
     public sealed class TransactionTestDbContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private TransactionTestDbContext(DbContextOptions<TransactionTestDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

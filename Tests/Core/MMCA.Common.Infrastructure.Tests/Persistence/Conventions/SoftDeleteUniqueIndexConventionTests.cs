@@ -155,8 +155,6 @@ public sealed class SoftDeleteUniqueIndexConventionTests : IDisposable
     {
         public DbSet<UniqueNamedEntity> Entities => Set<UniqueNamedEntity>();
 
-        internal override bool SupportsOutbox => true;
-
         private UniqueIndexTestDbContext(DbContextOptions<UniqueIndexTestDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

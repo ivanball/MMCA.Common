@@ -280,8 +280,6 @@ public sealed class OutboxProcessorContextRestoreTests : IDisposable
         IEntityConfigurationAssemblyProvider assemblyProvider)
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
-        internal override bool SupportsOutbox => true;
-
         protected override void OnModelCreating(ModelBuilder modelBuilder) =>
             modelBuilder.Entity<OutboxMessage>(entity =>
             {

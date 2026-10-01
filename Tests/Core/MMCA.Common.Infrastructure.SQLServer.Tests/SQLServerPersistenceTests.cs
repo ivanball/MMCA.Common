@@ -126,7 +126,7 @@ public sealed class SQLServerPersistenceTests : IAsyncLifetime
             context.Database.CurrentTransaction.Should().BeNull("this path must work with no ambient transaction");
 
             context.Add(new SqlThing { Id = explicitId, Code = code });
-            factory.RequestIdentityInsert();
+            factory.RequestExplicitKeyInsert();
 
             await factory.SaveChangesAsync(TestContext.Current.CancellationToken);
         }

@@ -1136,8 +1136,6 @@ public sealed class OutboxProcessorTests : IDisposable
         IEntityConfigurationAssemblyProvider assemblyProvider)
         : ApplicationDbContext(options, serviceProvider, assemblyProvider, TestPhysicalDataSources.Sqlite())
     {
-        internal override bool SupportsOutbox => true;
-
         /// <summary>When set, every save fails, standing in for a connection lost at shutdown.</summary>
         public bool FailSaves { get; set; }
 

@@ -107,8 +107,6 @@ public sealed class QueryParameterizationTests : IDisposable
     {
         public DbSet<Product> Products => Set<Product>();
 
-        internal override bool SupportsOutbox => false;
-
         private QueryShapeTestDbContext(DbContextOptions<QueryShapeTestDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

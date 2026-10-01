@@ -70,6 +70,19 @@ public sealed class InternalCommandModelTests
             "\"DeadLetteredOn\" IS NOT NULL");
     }
 
+    // SQLite quotes with SQL-standard double quotes, the same form its soft-delete filter uses, so a
+    // SQLite model never mixes bracketed and double-quoted identifiers.
+    [Fact]
+    public void SqliteModel_DoubleQuotesTheQueueIndexPredicates()
+    {
+        using var context = ModelTestContext.Create("QueueModel", DataSource.Sqlite);
+
+        QueueFilters(context).Should().BeEquivalentTo(
+            "\"ProcessedOn\" IS NULL AND \"DeadLetteredOn\" IS NULL",
+            "\"ProcessedOn\" IS NOT NULL",
+            "\"DeadLetteredOn\" IS NOT NULL");
+    }
+
     [Fact]
     public void SqlServerModel_KeepsTheBracketedQueueIndexPredicates()
     {

@@ -103,8 +103,6 @@ public sealed class AuditTrailTestContext : ApplicationDbContext
 
     public DbSet<AuditTrailEntry> TrailRows => Set<AuditTrailEntry>();
 
-    internal override bool SupportsOutbox => false;
-
     /// <summary>When set, the next save aborts after the trail has staged its rows.</summary>
     public bool FailNextSave { get; set; }
 

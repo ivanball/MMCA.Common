@@ -13,9 +13,9 @@ using MMCA.Common.Domain.Entities;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Persistence.AuditTrail;
 using MMCA.Common.Infrastructure.Persistence.Auth;
-using MMCA.Common.Infrastructure.Persistence.Configuration.EntityTypeConfiguration;
 using MMCA.Common.Infrastructure.Persistence.Conventions;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Infrastructure.Persistence.Inbox;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
@@ -52,6 +52,13 @@ public abstract class ApplicationDbContext(
 {
     /// <summary>Gets the physical data source key (engine + database name) this context targets.</summary>
     public DataSourceKey DataSourceKey => physicalDataSource.Key;
+
+    /// <summary>
+    /// Gets the engine this context targets: what it can do (for example whether it hosts the
+    /// framework's relational tables, so the transactional outbox, which Cosmos DB does not) and how
+    /// its SQL and keys are shaped.
+    /// </summary>
+    internal IDataSourceEngine Engine => DataSourceEngines.For(physicalDataSource.Key.Engine);
 
     /// <summary>
     /// The model annotation that carries the engine of the model being built while entity
@@ -168,14 +175,6 @@ public abstract class ApplicationDbContext(
     /// origin when no scope supplied one.
     /// </summary>
     internal Outbox.OutboxOrigin CurrentOutboxOrigin => OutboxOriginAccessor?.Invoke() ?? default;
-
-    /// <summary>
-    /// Indicates whether this context supports the transactional outbox pattern.
-    /// Cosmos DB does not support relational tables, so outbox is only used with
-    /// the relational contexts (SQL Server, PostgreSQL, SQLite). Read by
-    /// <see cref="DomainEventSaveChangesInterceptor"/>.
-    /// </summary>
-    internal virtual bool SupportsOutbox => true;
 
     /// <summary>
     /// The current user's ID for audit stamps, set before <c>base.SaveChangesAsync</c> and
@@ -541,7 +540,7 @@ public abstract class ApplicationDbContext(
             // widened to (TenantId, IsDeleted) so it matches that composed predicate rather than
             // handing back the deleted rows for the server to discard afterwards. A tenant entity
             // that is not auditable has no second conjunct, so it keeps the single-column index.
-            if (physicalDataSource.Key.Engine != DataSource.CosmosDB)
+            if (Engine.Capabilities.IsRelational)
             {
                 if (typeof(IAuditableEntity).IsAssignableFrom(clrType))
                 {
@@ -577,18 +576,19 @@ public abstract class ApplicationDbContext(
     /// <summary>
     /// Configures the <c>RowVersion</c> property as an optimistic concurrency token on every
     /// non-owned entity type that inherits from <see cref="AuditableBaseEntity{TId}"/>.
-    /// SQL Server maps this to <c>rowversion</c> (auto-incremented by the database, so the
-    /// property is database-generated); the other relational providers (PostgreSQL, SQLite) have no equivalent
-    /// server-generated type, so the property is mapped as a plain concurrency token there and
-    /// <see cref="Interceptors.AuditSaveChangesInterceptor"/> manages it, writing a fresh value on
-    /// every insert and update so the UPDATE's WHERE clause actually detects a concurrent writer.
-    /// EF Core automatically includes the token in UPDATE/DELETE WHERE clauses and throws
+    /// An engine with a store-generated row version (<see cref="RowVersionStrategy.StoreGenerated"/>,
+    /// SQL Server's <c>rowversion</c>) maps it as database-generated; the other relational engines
+    /// (PostgreSQL, SQLite) have no equivalent server-generated type, so the property is mapped as a
+    /// plain concurrency token there and <see cref="Interceptors.AuditSaveChangesInterceptor"/>
+    /// manages it, writing a fresh value on every insert and update so the UPDATE's WHERE clause
+    /// actually detects a concurrent writer. EF Core automatically includes the token in
+    /// UPDATE/DELETE WHERE clauses and throws
     /// <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/> on conflicts.
     /// </summary>
     protected void ConfigureConcurrencyTokens(ModelBuilder modelBuilder)
     {
         ArgumentNullException.ThrowIfNull(modelBuilder);
-        var isSqlServer = Database.ProviderName?.Contains("SqlServer", StringComparison.OrdinalIgnoreCase) == true;
+        var storeGeneratedRowVersion = Engine.Capabilities.RowVersion == RowVersionStrategy.StoreGenerated;
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes()
             .Where(et => typeof(IAuditableEntity).IsAssignableFrom(et.ClrType) && !et.IsOwned()))
@@ -596,7 +596,7 @@ public abstract class ApplicationDbContext(
             var property = modelBuilder.Entity(entityType.ClrType)
                 .Property(nameof(AuditableBaseEntity<>.RowVersion));
 
-            if (isSqlServer)
+            if (storeGeneratedRowVersion)
             {
                 property.IsRowVersion();
             }
@@ -609,9 +609,8 @@ public abstract class ApplicationDbContext(
 
     /// <summary>
     /// Quotes one column name the way <paramref name="engine"/> expects inside a filtered-index
-    /// predicate. SQL Server and SQLite both accept the bracketed form, so they keep the literal
-    /// they have always produced; PostgreSQL rejects brackets and takes the SQL-standard
-    /// double-quoted form.
+    /// predicate (<see cref="IDataSourceEngine.QuoteColumn"/>): brackets on SQL Server, SQL-standard
+    /// double quotes on PostgreSQL and SQLite.
     /// </summary>
     /// <param name="engine">The engine of the model being built.</param>
     /// <param name="column">The column name to quote.</param>
@@ -622,8 +621,8 @@ public abstract class ApplicationDbContext(
     /// <summary>
     /// Declares the non-key columns an index carries along (SQL Server <c>INCLUDE</c>, PostgreSQL
     /// <c>INCLUDE</c>). Both providers expose an <c>IncludeProperties</c> extension with the same
-    /// signature, so calling it unqualified is ambiguous once both are referenced; this picks the
-    /// one that belongs to the model being built.
+    /// signature, so calling it unqualified is ambiguous once both are referenced; the engine of the
+    /// model being built picks its own (<see cref="IDataSourceEngine.IncludeColumns"/>).
     /// </summary>
     /// <param name="engine">The engine of the model being built.</param>
     /// <param name="index">The index being configured.</param>
@@ -646,9 +645,7 @@ public abstract class ApplicationDbContext(
         DataSource engine,
         IndexBuilder index,
         params string[] propertyNames) =>
-        engine == DataSource.PostgreSQL
-            ? NpgsqlIndexBuilderExtensions.IncludeProperties(index, propertyNames)
-            : SqlServerIndexBuilderExtensions.IncludeProperties(index, propertyNames);
+        DataSourceEngines.For(engine).IncludeColumns(index, propertyNames);
 
     /// <summary>
     /// Configures the <see cref="OutboxMessage"/> entity in the model. Called from
@@ -955,14 +952,7 @@ public abstract class ApplicationDbContext(
     /// <param name="modelBuilder">The model builder to apply configurations to.</param>
     protected void ApplyConfigurationsForEntitiesInContext(DataSource dataSource, ModelBuilder modelBuilder)
     {
-        var configType = dataSource switch
-        {
-            DataSource.CosmosDB => typeof(IEntityTypeConfigurationCosmos<,>),
-            DataSource.PostgreSQL => typeof(IEntityTypeConfigurationPostgreSQL<,>),
-            DataSource.Sqlite => typeof(IEntityTypeConfigurationSqlite<,>),
-            DataSource.SQLServer => typeof(IEntityTypeConfigurationSQLServer<,>),
-            _ => throw new InvalidOperationException($"DataSource \"{dataSource}\" not implemented."),
-        };
+        var configType = DataSourceEngines.For(dataSource).EntityConfigurationInterface;
 
         // The registry derives keys from the same attributes/namespaces as the configurations
         // themselves, so model contents and runtime routing agree by construction. Entities whose

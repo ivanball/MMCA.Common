@@ -558,8 +558,6 @@ public sealed class OutboxCleanupServiceTests
     /// </summary>
     private sealed class CleanupTestContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private CleanupTestContext(DbContextOptions<CleanupTestContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

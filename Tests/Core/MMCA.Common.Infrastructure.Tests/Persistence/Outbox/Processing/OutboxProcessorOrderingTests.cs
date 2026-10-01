@@ -251,8 +251,6 @@ public sealed class OutboxProcessorOrderingTests : IDisposable
     /// </summary>
     private sealed class OrderingTestContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private OrderingTestContext(DbContextOptions<OrderingTestContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NoAssemblies(), TestPhysicalDataSources.Sqlite())
         {

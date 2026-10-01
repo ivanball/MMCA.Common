@@ -237,8 +237,6 @@ public sealed class OutboxAdministrationTests : IDisposable
     /// <summary>A test <see cref="ApplicationDbContext"/> mapping <see cref="OutboxMessage"/> only.</summary>
     private sealed class AdminTestContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private AdminTestContext(DbContextOptions<AdminTestContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NoAssemblies(), TestPhysicalDataSources.Sqlite())
         {

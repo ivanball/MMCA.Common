@@ -36,13 +36,13 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Signals that the next <see cref="SaveChangesAsync"/> may include entities with
-    /// explicit values for database-generated identity columns (e.g., imported from an
-    /// external system). The save pipeline will wrap such inserts with
-    /// <c>SET IDENTITY_INSERT ON/OFF</c> per table as needed. The flag is automatically
-    /// cleared after the save completes.
+    /// Signals that the next <see cref="SaveChangesAsync"/> may include entities that carry
+    /// explicit values for store-generated keys (e.g., rows imported from an external system).
+    /// On an engine that refuses such a value unless it is switched on per table, the save
+    /// pipeline does that around those inserts; on every other engine the save runs unchanged.
+    /// The flag is automatically cleared after the save completes.
     /// </summary>
-    void RequestIdentityInsert();
+    void RequestExplicitKeyInsert();
 
     /// <summary>
     /// Executes <paramref name="operation"/> inside a database transaction, wrapped by the

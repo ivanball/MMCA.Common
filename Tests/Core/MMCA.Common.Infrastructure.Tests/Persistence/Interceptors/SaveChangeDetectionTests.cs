@@ -106,8 +106,6 @@ public sealed class SaveChangeDetectionTests : IDisposable
     {
         public DbSet<Widget> Entities => Set<Widget>();
 
-        internal override bool SupportsOutbox => false;
-
         private DetectionTestDbContext(DbContextOptions<DetectionTestDbContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NullAssemblyProvider(), TestPhysicalDataSources.Sqlite())
         {

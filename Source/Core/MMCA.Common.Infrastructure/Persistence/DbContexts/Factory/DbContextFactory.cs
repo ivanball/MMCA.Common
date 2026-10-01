@@ -3,13 +3,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Infrastructure.Context;
 using MMCA.Common.Infrastructure.Persistence.DataSources;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Infrastructure.Persistence.Interceptors;
 using MMCA.Common.Infrastructure.Persistence.InternalCommands;
 using MMCA.Common.Infrastructure.Persistence.Outbox;
@@ -86,11 +86,11 @@ public sealed class DbContextFactory(
     private bool _transactionActive;
 
     /// <summary>
-    /// When <see langword="true"/>, <see cref="SaveChangesAsync"/> scans the change tracker
-    /// for Added entities with explicit identity values and handles
-    /// <c>SET IDENTITY_INSERT ON/OFF</c> per table. Reset after each save.
+    /// When <see langword="true"/>, <see cref="SaveChangesAsync"/> lets each context's engine find
+    /// the Added entities carrying explicit store-generated key values and switch its explicit-key
+    /// toggle on per table where the engine needs one. Reset after each save.
     /// </summary>
-    private bool _identityInsertRequested;
+    private bool _explicitKeyInsertRequested;
 
     private volatile bool _disposed;
 
@@ -260,16 +260,17 @@ public sealed class DbContextFactory(
     /// <inheritdoc />
     /// <remarks>
     /// Iterates all cached contexts and saves each with the current user's ID for audit stamping.
-    /// When <see cref="RequestIdentityInsert"/> has been called, scans the change tracker for
-    /// entities with explicit identity values and splits the save into multiple rounds with
-    /// <c>SET IDENTITY_INSERT ON/OFF</c> per table.
+    /// When <see cref="RequestExplicitKeyInsert"/> has been called and a context's engine has an
+    /// explicit-key insert dialect (SQL Server: <c>SET IDENTITY_INSERT ON/OFF</c>), scans that
+    /// context's change tracker for entities with explicit store-generated key values and splits the
+    /// save into one round per table with the toggle switched on.
     /// </remarks>
     [SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities",
         Justification = "Table and schema names are derived from EF model metadata, not user input.")]
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var identityInsertRequested = _identityInsertRequested;
-        _identityInsertRequested = false;
+        var explicitKeyInsertRequested = _explicitKeyInsertRequested;
+        _explicitKeyInsertRequested = false;
 
         var result = 0;
         var saved = new HashSet<ApplicationDbContext>();
@@ -288,9 +289,9 @@ public sealed class DbContextFactory(
             {
                 saved.Add(context);
 
-                result += !identityInsertRequested || context is not SQLServerDbContext
-                    ? await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false)
-                    : await SaveWithIdentityInsertAsync(context, cancellationToken).ConfigureAwait(false);
+                result += explicitKeyInsertRequested && context.Engine.ExplicitKeyInsert is { } dialect
+                    ? await SaveWithExplicitKeyInsertAsync(context, dialect, cancellationToken).ConfigureAwait(false)
+                    : await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -317,29 +318,30 @@ public sealed class DbContextFactory(
     }
 
     /// <inheritdoc />
-    public void RequestIdentityInsert() => _identityInsertRequested = true;
+    public void RequestExplicitKeyInsert() => _explicitKeyInsertRequested = true;
 
     /// <summary>
-    /// Saves changes for a SQL Server context that may contain entities with explicit
-    /// identity values. Groups such entities by table and saves each group separately
-    /// with <c>SET IDENTITY_INSERT ON/OFF</c>, respecting SQL Server's constraint that
-    /// only one table may have <c>IDENTITY_INSERT ON</c> at a time per session.
+    /// Saves changes for a context whose engine needs a per-table toggle before it accepts explicit
+    /// values for a store-generated key. Groups such entities by table and saves each group
+    /// separately with the toggle on, respecting SQL Server's constraint that only one table may have
+    /// <c>IDENTITY_INSERT ON</c> at a time per session.
     /// </summary>
-    private async Task<int> SaveWithIdentityInsertAsync(
+    private async Task<int> SaveWithExplicitKeyInsertAsync(
         ApplicationDbContext context,
+        IExplicitKeyInsertDialect dialect,
         CancellationToken cancellationToken)
     {
-        var identityInsertGroups = GetIdentityInsertGroups(context);
+        var explicitKeyGroups = dialect.FindGroups(context);
 
-        if (identityInsertGroups.Count == 0)
+        if (explicitKeyGroups.Count == 0)
             return await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
 
         int result = 0;
-        var allIdentityEntries = identityInsertGroups.SelectMany(g => g.Entries).ToHashSet();
+        var allExplicitKeyEntries = explicitKeyGroups.SelectMany(g => g.Entries).ToHashSet();
 
-        // SET IDENTITY_INSERT is SESSION state. With no ambient transaction EF opens and closes the
+        // The toggle is SESSION state. With no ambient transaction EF opens and closes the
         // connection around every command, so nothing guarantees the INSERT runs on the session
-        // that ran the SET (the connection goes back to the pool in between). Pin one session for
+        // that ran the toggle (the connection goes back to the pool in between). Pin one session for
         // the whole save by opening the connection here; an already-open connection (an ambient
         // transaction, or a caller that opened it) is left exactly as it was found.
         var openedConnection = false;
@@ -351,9 +353,9 @@ public sealed class DbContextFactory(
 
         try
         {
-            result += await SaveIdentityInsertGroupsAsync(context, identityInsertGroups, allIdentityEntries, cancellationToken).ConfigureAwait(false);
+            result += await SaveExplicitKeyGroupsAsync(context, dialect, explicitKeyGroups, allExplicitKeyEntries, cancellationToken).ConfigureAwait(false);
 
-            // Final save for any remaining changes (non-identity entities, updates, etc.)
+            // Final save for any remaining changes (entities without explicit keys, updates, etc.)
             if (context.ChangeTracker.HasChanges())
             {
                 result += await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
@@ -369,22 +371,23 @@ public sealed class DbContextFactory(
     }
 
     /// <summary>
-    /// Saves each identity-insert group in its own round with <c>SET IDENTITY_INSERT ON/OFF</c>.
-    /// The caller pins the connection so every round's SET and INSERT share one session.
+    /// Saves each explicit-key group in its own round with the engine's toggle switched on, then
+    /// off. The caller pins the connection so every round's toggle and INSERT share one session.
     /// </summary>
-    private async Task<int> SaveIdentityInsertGroupsAsync(
+    private async Task<int> SaveExplicitKeyGroupsAsync(
         ApplicationDbContext context,
-        List<IdentityInsertGroup> identityInsertGroups,
-        HashSet<EntityEntry> allIdentityEntries,
+        IExplicitKeyInsertDialect dialect,
+        IReadOnlyList<ExplicitKeyInsertGroup> explicitKeyGroups,
+        HashSet<EntityEntry> allExplicitKeyEntries,
         CancellationToken cancellationToken)
     {
         int result = 0;
 
-        foreach (var group in identityInsertGroups)
+        foreach (var group in explicitKeyGroups)
         {
-            // Temporarily hide entries from OTHER identity-insert tables so they
-            // are not included in this round's batch (avoids the one-table-at-a-time constraint).
-            var savedStates = allIdentityEntries.Except(group.Entries)
+            // Temporarily hide entries from OTHER explicit-key tables so they are not included in
+            // this round's batch (avoids the one-table-at-a-time constraint).
+            var savedStates = allExplicitKeyEntries.Except(group.Entries)
                 .Where(e => e.State == EntityState.Added)
                 .Select(e => (Entry: e, OriginalState: e.State))
                 .ToList();
@@ -402,14 +405,14 @@ public sealed class DbContextFactory(
                 context,
                 [.. savedStates.Select(s => s.Entry.Entity)]);
 
-            // try/finally: a failed save must not leave IDENTITY_INSERT ON on the pooled
-            // connection, nor leave the hidden entries stuck in the Unchanged state (they
-            // would be silently dropped from any retried save).
+            // try/finally: a failed save must not leave the toggle on for the pooled connection,
+            // nor leave the hidden entries stuck in the Unchanged state (they would be silently
+            // dropped from any retried save).
             try
             {
-#pragma warning disable S2077 // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and SET IDENTITY_INSERT cannot take a parameterized identifier
+#pragma warning disable S2077 // Schema/table identifiers come from EF model metadata (entityType.GetSchema()/GetTableName()), not user input, and the toggle statement cannot take a parameterized identifier
                 await context.Database.ExecuteSqlRawAsync(
-                    string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] ON"),
+                    dialect.BuildToggleSql(group.Schema, group.Table, enable: true),
                     cancellationToken).ConfigureAwait(false);
 
                 try
@@ -419,7 +422,7 @@ public sealed class DbContextFactory(
                 finally
                 {
                     await context.Database.ExecuteSqlRawAsync(
-                        string.Concat("SET IDENTITY_INSERT [", group.Schema, "].[", group.Table, "] OFF"),
+                        dialect.BuildToggleSql(group.Schema, group.Table, enable: false),
                         CancellationToken.None).ConfigureAwait(false);
                 }
 #pragma warning restore S2077
@@ -435,55 +438,6 @@ public sealed class DbContextFactory(
 
         return result;
     }
-
-    /// <summary>
-    /// Scans the change tracker for Added entities with identity columns that have
-    /// explicit (non-default) values, grouped by their target table.
-    /// </summary>
-    private static List<IdentityInsertGroup> GetIdentityInsertGroups(ApplicationDbContext context)
-    {
-        var groups = new Dictionary<(string Schema, string Table), List<EntityEntry>>(2);
-
-        foreach (var entry in context.ChangeTracker.Entries())
-        {
-            if (entry.State != EntityState.Added)
-                continue;
-
-            var entityType = entry.Metadata;
-            var pk = entityType.FindPrimaryKey();
-            if (pk is null || pk.Properties.Count != 1)
-                continue;
-
-            var idProp = pk.Properties[0];
-            if (SqlServerPropertyExtensions.GetValueGenerationStrategy(idProp)
-                != SqlServerValueGenerationStrategy.IdentityColumn)
-            {
-                continue;
-            }
-
-            // EF Core assigns temporary negative values to identity columns for entities
-            // with default (0) IDs. Only entities with explicitly set (non-temporary) values
-            // need IDENTITY_INSERT — those are the ones imported from an external system.
-            if (entry.Property(idProp.Name).IsTemporary)
-                continue;
-
-            var schema = entityType.GetSchema() ?? "dbo";
-            var table = entityType.GetTableName()!;
-            var key = (schema, table);
-
-            if (!groups.TryGetValue(key, out var entries))
-            {
-                entries = [];
-                groups[key] = entries;
-            }
-
-            entries.Add(entry);
-        }
-
-        return [.. groups.Select(g => new IdentityInsertGroup(g.Key.Schema, g.Key.Table, g.Value))];
-    }
-
-    private sealed record IdentityInsertGroup(string Schema, string Table, List<EntityEntry> Entries);
 
     /// <inheritdoc />
     public int SaveChanges()
@@ -813,11 +767,12 @@ public sealed class DbContextFactory(
 
     /// <summary>
     /// The sources this host migrates: every source in use whose resolved
-    /// <see cref="PhysicalDataSource.UsesMigrations"/> says a migrations pipeline owns its schema
-    /// (every SQL Server source, plus a SQLite source with a configured migrations assembly).
+    /// <see cref="PhysicalDataSource.IsMigrationTarget"/> says a migrations pipeline owns its schema
+    /// (every SQL Server source, plus a SQLite or PostgreSQL source with a configured migrations
+    /// assembly).
     /// <para>
-    /// A migration target that resolves no connection string is skipped unless it is SQL Server,
-    /// which keeps two behaviours intact: an optional SQLite source a test host leaves unconfigured
+    /// A migration target that resolves no connection string is skipped unless its engine requires
+    /// one (SQL Server), which keeps two behaviours intact: an optional SQLite source a test host leaves unconfigured
     /// stays silently absent (exactly as <see cref="EnsureCreatedAsync"/> treats it), while a SQL
     /// Server source with no connection string still fails loudly at startup rather than being
     /// quietly skipped, because for SQL Server that is a misconfiguration, not an option.
@@ -830,12 +785,7 @@ public sealed class DbContextFactory(
 
         foreach (var key in GetSourcesInUse())
         {
-            var physical = _dataSourceResolver.GetPhysical(key);
-
-            if (!physical.UsesMigrations)
-                continue;
-
-            if (key.Engine != DataSource.SQLServer && string.IsNullOrEmpty(physical.ConnectionString))
+            if (!_dataSourceResolver.GetPhysical(key).IsMigrationTarget)
                 continue;
 
             targets.Add(key);
@@ -871,11 +821,11 @@ public sealed class DbContextFactory(
     }
 
     /// <summary>
-    /// Cosmos DB does not support multi-document transactions via the EF provider;
-    /// transaction operations are skipped for Cosmos contexts.
+    /// Only a relational engine supports database transactions through the EF provider (Cosmos DB
+    /// has no multi-document transactions); transaction operations are skipped for the others.
     /// </summary>
     private static bool SupportsTransactions(ApplicationDbContext context) =>
-        context is not CosmosDbContext;
+        context.Engine.Capabilities.IsRelational;
 
     private static bool HasActiveTransaction(ApplicationDbContext context) =>
         context.Database.CurrentTransaction is not null;

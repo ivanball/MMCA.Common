@@ -1,1 +1,3 @@
 ﻿#nullable enable
+MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork.RequestExplicitKeyInsert() -> void
+*REMOVED*MMCA.Common.Application.Interfaces.Infrastructure.Persistence.IUnitOfWork.RequestIdentityInsert() -> void

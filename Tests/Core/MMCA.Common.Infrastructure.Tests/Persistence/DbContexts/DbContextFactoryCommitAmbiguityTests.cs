@@ -287,8 +287,6 @@ public sealed class DbContextFactoryCommitAmbiguityTests : IDisposable
 
         public override DatabaseFacade Database => _databaseFacade ??= new FailingDatabaseFacade(this);
 
-        internal override bool SupportsOutbox => true;
-
         public static CommitFailingDbContext Create(SqliteConnection connection, IDomainEventDispatcher dispatcher)
         {
             var services = new ServiceCollection();

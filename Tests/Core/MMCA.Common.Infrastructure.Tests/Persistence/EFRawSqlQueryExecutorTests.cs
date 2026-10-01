@@ -21,8 +21,8 @@ namespace MMCA.Common.Infrastructure.Tests.Persistence;
 /// <summary>
 /// Tests for <c>EFRawSqlQueryExecutor</c>, the Application layer's parameterized raw-SQL surface,
 /// against a real SQLite database: a DTO shape, a scalar shape, the parameterization the
-/// <see cref="FormattableString"/>-only signature exists to guarantee, and the refusal a Cosmos host
-/// gets instead of a statement it cannot run.
+/// <see cref="FormattableString"/>-only signature exists to guarantee. A Cosmos-default host never
+/// gets the executor at all; <c>DependencyInjectionInfrastructureTests</c> pins that registration.
 /// </summary>
 public sealed class EFRawSqlQueryExecutorTests : IDisposable
 {
@@ -101,15 +101,6 @@ public sealed class EFRawSqlQueryExecutorTests : IDisposable
                 + "costs the server its cached plan");
     }
 
-    [Fact]
-    public async Task CosmosHost_IsRefused_WithAReasonRatherThanAFailedStatement()
-    {
-        var act = async () => await Executor(DataSource.CosmosDB).QueryAsync<WidgetRow>($"SELECT 1 AS Value");
-
-        (await act.Should().ThrowAsync<NotSupportedException>())
-            .WithMessage("*Cosmos*");
-    }
-
     // -- Test doubles --
     public sealed class Widget : AuditableBaseEntity<int>
     {
@@ -135,9 +126,9 @@ public sealed class EFRawSqlQueryExecutorTests : IDisposable
 
         public int SaveChanges() => 0;
 
-        public void RequestIdentityInsert()
+        public void RequestExplicitKeyInsert()
         {
-            // No identity-insert path in these tests.
+            // No explicit-key insert path in these tests.
         }
 
         public void BeginTransaction()
@@ -183,8 +174,6 @@ public sealed class EFRawSqlQueryExecutorTests : IDisposable
 
     public sealed class WidgetContext : ApplicationDbContext
     {
-        internal override bool SupportsOutbox => true;
-
         private WidgetContext(DbContextOptions<WidgetContext> options, IServiceProvider serviceProvider)
             : base(options, serviceProvider, new NoModuleAssemblies(), TestPhysicalDataSources.Sqlite())
         {

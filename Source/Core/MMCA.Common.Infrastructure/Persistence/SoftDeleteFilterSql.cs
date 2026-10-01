@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Domain.Interfaces;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 
 namespace MMCA.Common.Infrastructure.Persistence;
 
@@ -24,31 +25,14 @@ internal static class SoftDeleteFilterSql
     /// The predicate SQL, or <see langword="null"/> for an engine with no filtered-index support
     /// (Cosmos), where the caller must leave the index untouched.
     /// </returns>
-    internal static string? Build(DataSource engine, IReadOnlyEntityType entityType)
-    {
-        if (engine == DataSource.CosmosDB)
-            return null;
-
-        var isDeletedColumn = ColumnName(entityType);
-
-        return engine switch
-        {
-            DataSource.SQLServer => $"[{isDeletedColumn}] = 0",
-
-            // PostgreSQL maps the flag to a real boolean column and refuses to compare one with an
-            // integer, so the predicate that works everywhere else ("... = 0") is a type error
-            // there. This is the only place the soft-delete filter differs by engine beyond quoting.
-            DataSource.PostgreSQL => $"\"{isDeletedColumn}\" = false",
-
-            DataSource.Sqlite => $"\"{isDeletedColumn}\" = 0",
-
-            // Unreachable: the Cosmos early-return above answers null before the switch is entered.
-            // Listed anyway because the switch must name every engine (IDE0072).
-            DataSource.CosmosDB => null,
-
-            _ => $"\"{isDeletedColumn}\" = 0",
-        };
-    }
+    /// <remarks>
+    /// The predicate itself is the engine's (<see cref="IDataSourceEngine.BuildSoftDeleteFilter"/>).
+    /// PostgreSQL maps the flag to a real boolean column and refuses to compare one with an integer,
+    /// so it answers <c>= false</c> where every other relational engine answers <c>= 0</c>; that is
+    /// the only place the soft-delete filter differs by engine beyond quoting.
+    /// </remarks>
+    internal static string? Build(DataSource engine, IReadOnlyEntityType entityType) =>
+        DataSourceEngines.For(engine).BuildSoftDeleteFilter(ColumnName(entityType));
 
     /// <summary>
     /// Determines whether an existing index filter already constrains the soft-delete column, so the
@@ -76,14 +60,14 @@ internal static class SoftDeleteFilterSql
 
     /// <summary>
     /// Quotes one column name the way <paramref name="engine"/> expects inside a filtered-index
-    /// predicate. SQL Server and SQLite both accept the bracketed form; PostgreSQL rejects brackets
-    /// and takes the SQL-standard double-quoted form.
+    /// predicate (<see cref="IDataSourceEngine.QuoteColumn"/>): brackets on SQL Server, the
+    /// SQL-standard double-quoted form on PostgreSQL (which rejects brackets) and SQLite.
     /// </summary>
     /// <param name="engine">The engine of the model being built.</param>
     /// <param name="column">The column name to quote.</param>
     /// <returns>The quoted identifier.</returns>
     internal static string QuoteColumn(DataSource engine, string column) =>
-        engine == DataSource.PostgreSQL ? $"\"{column}\"" : $"[{column}]";
+        DataSourceEngines.For(engine).QuoteColumn(column);
 
     private static string ColumnName(IReadOnlyEntityType entityType) =>
         entityType.FindProperty(nameof(IAuditableEntity.IsDeleted))?.GetColumnName()

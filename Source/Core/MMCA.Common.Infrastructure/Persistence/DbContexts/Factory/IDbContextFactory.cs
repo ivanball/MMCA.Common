@@ -32,12 +32,12 @@ public interface IDbContextFactory : IDisposable, IAsyncDisposable
     int SaveChanges();
 
     /// <summary>
-    /// Signals that the next <see cref="SaveChangesAsync"/> may include entities with
-    /// explicit values for database-generated identity columns. The save pipeline will
-    /// handle <c>SET IDENTITY_INSERT ON/OFF</c> per table as needed. The flag is
-    /// automatically cleared after the save completes.
+    /// Signals that the next <see cref="SaveChangesAsync"/> may include entities that carry
+    /// explicit values for store-generated keys. Each context's engine decides whether those
+    /// inserts need a per-table toggle (its explicit-key insert dialect); an engine with none
+    /// saves unchanged. The flag is automatically cleared after the save completes.
     /// </summary>
-    void RequestIdentityInsert();
+    void RequestExplicitKeyInsert();
 
     /// <summary>
     /// Begins a database transaction on all active contexts that support transactions.

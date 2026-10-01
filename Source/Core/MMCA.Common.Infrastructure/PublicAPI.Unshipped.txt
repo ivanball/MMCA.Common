@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Infrastructure.Persistence.DataSources.PhysicalDataSource.IsMigrationTarget.get -> bool
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.RequestExplicitKeyInsert() -> void
+MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.RequestExplicitKeyInsert() -> void
+*REMOVED*MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.DbContextFactory.RequestIdentityInsert() -> void
+*REMOVED*MMCA.Common.Infrastructure.Persistence.DbContexts.Factory.IDbContextFactory.RequestIdentityInsert() -> void

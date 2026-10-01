@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
+using MMCA.Common.Infrastructure.Persistence.DataSources.Engines;
 using MMCA.Common.Infrastructure.Persistence.Tenancy;
 
 namespace MMCA.Common.Infrastructure.Persistence.DataSources;
@@ -114,7 +115,7 @@ public static class TenantDataSourceTargets
     {
         var sources = RelationalSourcesInUse(registry);
 
-        if (configuredEngine != DataSource.CosmosDB)
+        if (DataSourceEngines.For(configuredEngine).Capabilities.IsRelational)
         {
             sources = sources.Append(resolver.ResolveLogical(configuredEngine, configuredDatabaseName));
         }
@@ -145,5 +146,5 @@ public static class TenantDataSourceTargets
     }
 
     private static IEnumerable<DataSourceKey> RelationalSourcesInUse(IEntityDataSourceRegistry registry) =>
-        registry.GetPhysicalSourcesInUse().Where(key => key.Engine != DataSource.CosmosDB);
+        registry.GetPhysicalSourcesInUse().Where(key => DataSourceEngines.For(key.Engine).Capabilities.IsRelational);
 }

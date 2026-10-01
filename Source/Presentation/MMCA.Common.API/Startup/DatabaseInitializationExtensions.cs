@@ -78,8 +78,10 @@ public static class DatabaseInitializationExtensions
             // A PostgreSQL or SQLite source WITH a migrations assembly is deliberately excluded here:
             // EnsureCreated writes the tables without an __EFMigrationsHistory row, after which every
             // migration is both pending and un-appliable (its CREATE TABLE hits an existing table).
-            foreach (var migrationlessKey in sourcesInUse
-                .Where(k => k.Engine is DataSource.CosmosDB or DataSource.PostgreSQL or DataSource.Sqlite))
+            //
+            // No engine filter is needed: a source whose engine always migrates (SQL Server) answers
+            // UsesMigrations and is skipped below, so only a migration-less source reaches EnsureCreated.
+            foreach (var migrationlessKey in sourcesInUse)
             {
                 var physical = resolver.GetPhysical(migrationlessKey);
 
@@ -252,7 +254,7 @@ public static class DatabaseInitializationExtensions
         bool usesMigrations,
         CancellationToken cancellationToken)
     {
-        if (!usesMigrations && target.Source.Engine is DataSource.CosmosDB or DataSource.PostgreSQL or DataSource.Sqlite)
+        if (!usesMigrations)
         {
             await database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
             return;
@@ -290,17 +292,6 @@ public static class DatabaseInitializationExtensions
     }
 
     /// <summary>
-    /// Mirrors the context factory's own migration-target rule so the breakdown this file prints
-    /// names exactly the sources the factory checked: a source a migrations pipeline owns, minus an
-    /// optional non-SQL-Server source left without a connection string.
-    /// </summary>
-    /// <param name="physical">The resolved source.</param>
-    /// <returns><see langword="true"/> when migrations are applied to this source.</returns>
-    private static bool IsMigrationTarget(PhysicalDataSource physical) =>
-        physical.UsesMigrations
-        && (physical.Key.Engine == DataSource.SQLServer || !string.IsNullOrEmpty(physical.ConnectionString));
-
-    /// <summary>
     /// Production guard for the <c>"None"</c> strategy: throws with a per-source breakdown when
     /// any migrated data source in use has migrations that have not been applied. The breakdown
     /// covers exactly the sources the factory migrates, so a SQLite source with a migrations
@@ -318,7 +309,7 @@ public static class DatabaseInitializationExtensions
         }
 
         var pendingPerSource = new List<string>();
-        foreach (var migratedKey in sourcesInUse.Where(k => IsMigrationTarget(resolver.GetPhysical(k))))
+        foreach (var migratedKey in sourcesInUse.Where(k => resolver.GetPhysical(k).IsMigrationTarget))
         {
             var pending = await dbContextFactory.GetDbContext(migratedKey).Database
                 .GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
