@@ -2,7 +2,7 @@ namespace MMCA.Common.Testing.Architecture;
 
 /// <summary>
 /// Fitness function: Domain and Application code takes time as an input and never reads the ambient
-/// clock (<c>DateTime.UtcNow</c>, <c>DateTime.Now</c>, <c>DateTimeOffset.UtcNow</c>,
+/// clock (<c>DateTime.UtcNow</c>, <c>DateTime.Now</c>, <c>DateTime.Today</c>, <c>DateTimeOffset.UtcNow</c>,
 /// <c>DateTimeOffset.Now</c>). A handler injects <see cref="TimeProvider"/> and passes the instant into
 /// the domain method, so a test can drive every expiry, cutoff and overdue branch without sleeping.
 /// The framework's <c>BaseDomainEvent</c> occurrence stamp is always exempt.

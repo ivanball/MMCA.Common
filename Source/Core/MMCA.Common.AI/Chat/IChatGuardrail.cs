@@ -6,10 +6,11 @@ namespace MMCA.Common.AI.Chat;
 /// The extension point an application implements to inspect what goes to the model and what comes
 /// back, and to refuse either.
 /// <para>
-/// The framework ships the extension point and no policy (ADR-120). What counts as a prompt
-/// injection, a leaked secret, an off-topic answer or a disallowed topic is an application decision
-/// that depends on the data the application holds and the jurisdiction it operates in, so a content
-/// rule baked into a shared package would be wrong somewhere by construction. Register one
+/// The framework ships the extension point, two opt-in domain-neutral guardrails
+/// (<c>AddPiiRedactionGuardrail</c>, <c>AddContentPolicyGuardrail</c>) and no domain policy (ADR-120).
+/// What counts as an off-topic answer or a disallowed topic is an application decision that depends on
+/// the data the application holds and the jurisdiction it operates in, so such a rule baked into a
+/// shared package would be wrong somewhere by construction. Register one
 /// implementation per concern; every registered guardrail runs, and the first block stops the call.
 /// </para>
 /// </summary>

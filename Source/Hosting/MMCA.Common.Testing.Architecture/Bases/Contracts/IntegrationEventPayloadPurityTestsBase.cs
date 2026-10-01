@@ -26,8 +26,8 @@ namespace MMCA.Common.Testing.Architecture;
 /// </item>
 /// </list>
 /// <para>
-/// Both rules are vacuous for a module-less map (the framework itself): MMCA.Common is not a module,
-/// and its own events are governed by its public API baseline instead.
+/// Only the residency rule is vacuous for a module-less map (the framework itself, which is not a
+/// module). The payload rule still walks the framework's own integration events.
 /// </para>
 /// </summary>
 public abstract class IntegrationEventPayloadPurityTestsBase

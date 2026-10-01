@@ -198,12 +198,12 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Reads an optional boolean metrics cost knob (rubric §31) at the given configuration key, e.g.
-    /// <c>Telemetry:DisableRuntimeMetrics</c> or <c>Telemetry:DisableHttpClientMetrics</c>. Returns true
-    /// (drop that instrumentation) only when the value parses as boolean <see langword="true"/>; absent, blank, or
-    /// unparseable falls back to false (keep the instrumentation) so a typo can never silently blind a
-    /// whole metric family. These two families are the dominant AppMetrics ingestion volume on a
-    /// low-traffic multi-service deployment and carry no end-user-visible signal.
+    /// Reads an optional boolean metrics cost knob (rubric §31) at the given configuration key:
+    /// <c>Telemetry:DisableRuntimeMetrics</c>, <c>Telemetry:DisableHttpClientMetrics</c> or
+    /// <c>Telemetry:DisableAspNetCoreMetrics</c>. Returns true (drop that instrumentation) only when the value
+    /// parses as boolean <see langword="true"/>; absent, blank, or unparseable falls back to false (keep the
+    /// instrumentation) so a typo can never silently blind a whole metric family. Each family is a large
+    /// share of AppMetrics ingestion on a low-traffic multi-service deployment, hence its own off switch.
     /// </summary>
     internal static bool IsInstrumentationDisabled(IConfiguration configuration, string configKey)
         => bool.TryParse(configuration[configKey], out var disabled) && disabled;
