@@ -252,6 +252,7 @@ MMCA.Common.Testing.Architecture.NamingConventionTestsBase.Validators_ShouldHave
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.EveryProvisionedSloAlert_HasASeverityCorrectRunbookSection() -> void
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.EveryRunbookAlertSection_MapsToAProvisionedAlert() -> void
+MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.MonitoringWorkbookOrDashboard_IsProvisioned_WhenRequired() -> void
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ObservabilityConventionTestsBase() -> void
 MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.SloAlertSpecs_AreDiscovered_GateIsNotVacuous() -> void
 MMCA.Common.Testing.Architecture.PiiConventionTestsBase
@@ -514,6 +515,10 @@ virtual MMCA.Common.Testing.Architecture.CascadeSoftDeleteConventionTestsBase.Al
 virtual MMCA.Common.Testing.Architecture.ClockReadTestsBase.AllowedClockReaders.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.AllowedUnvalidatedCommands.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.CommandValidatorCoverageTestsBase.MinimumCommands.get -> int
+virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.MeasuredConstructors(System.Type! type) -> System.Collections.Generic.IEnumerable<System.Reflection.ConstructorInfo!>!
+virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ScannedControllers.get -> System.Collections.Generic.IEnumerable<System.Type!>!
+virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ScannedHandlers.get -> System.Collections.Generic.IEnumerable<System.Type!>!
+virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ScannedServices.get -> System.Collections.Generic.IEnumerable<System.Type!>!
 virtual MMCA.Common.Testing.Architecture.ContractImplementationTestsBase.AllowedPublicImplementations.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 virtual MMCA.Common.Testing.Architecture.ControllerConventionTestsBase.ControllersExemptFromApiControllerBase.get -> System.Collections.Generic.IEnumerable<string!>!
 virtual MMCA.Common.Testing.Architecture.DataResidencyTestsBase.ForbiddenResidencyClaims.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -547,6 +552,7 @@ virtual MMCA.Common.Testing.Architecture.ModuleConformanceTestsBase<TModule>.Exp
 virtual MMCA.Common.Testing.Architecture.NamespaceCycleTestsBase.AllowedCycleNamespaces.get -> System.Collections.Generic.IReadOnlyList<string!>!
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.BicepResource.get -> string!
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.MinimumAlertSpecs.get -> int
+virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RequireWorkbook.get -> bool
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.ResourceAssembly.get -> System.Reflection.Assembly!
 virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RunbookResource.get -> string!
 virtual MMCA.Common.Testing.Architecture.QueryHandlerReadRepositoryTestsBase.AllowedHandlers.get -> System.Collections.Generic.IReadOnlyCollection<string!>!

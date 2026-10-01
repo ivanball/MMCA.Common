@@ -1,7 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.MonitoringWorkbookOrDashboard_IsProvisioned_WhenRequired() -> void
-virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.MeasuredConstructors(System.Type! type) -> System.Collections.Generic.IEnumerable<System.Reflection.ConstructorInfo!>!
-virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ScannedControllers.get -> System.Collections.Generic.IEnumerable<System.Type!>!
-virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ScannedHandlers.get -> System.Collections.Generic.IEnumerable<System.Type!>!
-virtual MMCA.Common.Testing.Architecture.ConstructorDependencyCountTestsBase.ScannedServices.get -> System.Collections.Generic.IEnumerable<System.Type!>!
-virtual MMCA.Common.Testing.Architecture.ObservabilityConventionTestsBase.RequireWorkbook.get -> bool

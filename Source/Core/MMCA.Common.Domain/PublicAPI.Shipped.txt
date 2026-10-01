@@ -42,6 +42,7 @@ MMCA.Common.Domain.Auth.PermissionGrant.PermissionGrant() -> void
 MMCA.Common.Domain.Auth.PermissionGrant.Role.get -> string!
 MMCA.Common.Domain.Auth.PermissionGrant.Role.init -> void
 MMCA.Common.Domain.Auth.RefreshSession
+MMCA.Common.Domain.Auth.RefreshSession.Anonymize() -> MMCA.Common.Shared.Abstractions.Result!
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.get -> System.DateTime
 MMCA.Common.Domain.Auth.RefreshSession.CreatedAt.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.get -> System.DateTime
@@ -49,7 +50,6 @@ MMCA.Common.Domain.Auth.RefreshSession.ExpiresAt.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.Id.get -> System.Guid
 MMCA.Common.Domain.Auth.RefreshSession.Id.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.IpAddress.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.IpAddress.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.IsActiveAt(System.DateTime utcNow) -> bool
 MMCA.Common.Domain.Auth.RefreshSession.IsRevoked.get -> bool
 MMCA.Common.Domain.Auth.RefreshSession.ReasonRevoked.get -> string?
@@ -60,7 +60,6 @@ MMCA.Common.Domain.Auth.RefreshSession.RevokedAt.get -> System.DateTime?
 MMCA.Common.Domain.Auth.RefreshSession.TokenHash.get -> string!
 MMCA.Common.Domain.Auth.RefreshSession.TokenHash.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.UserAgent.get -> string?
-MMCA.Common.Domain.Auth.RefreshSession.UserAgent.init -> void
 MMCA.Common.Domain.Auth.RefreshSession.UserId.get -> int
 MMCA.Common.Domain.Auth.RefreshSession.UserId.init -> void
 MMCA.Common.Domain.ClassReference

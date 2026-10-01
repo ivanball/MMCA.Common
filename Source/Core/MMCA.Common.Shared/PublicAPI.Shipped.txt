@@ -103,6 +103,7 @@ MMCA.Common.Shared.Auth.Administration.IUserAdminDTO.UserId.get -> int
 MMCA.Common.Shared.Auth.AuthClaimTypes
 MMCA.Common.Shared.Auth.AuthErrorCodes
 MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions
+MMCA.Common.Shared.Auth.PasswordComplexity
 MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions
 MMCA.Common.Shared.Auth.Permissions.IPermissionCatalog
 MMCA.Common.Shared.Auth.Permissions.IPermissionCatalog.Permissions.get -> System.Collections.Generic.IReadOnlyList<string!>!
@@ -587,6 +588,8 @@ const MMCA.Common.Shared.Auth.AuthClaimTypes.Permission = "permission" -> string
 const MMCA.Common.Shared.Auth.AuthClaimTypes.SessionId = "sid" -> string!
 const MMCA.Common.Shared.Auth.AuthClaimTypes.Subject = "sub" -> string!
 const MMCA.Common.Shared.Auth.AuthErrorCodes.EmailAlreadyExists = "Auth.EmailAlreadyExists" -> string!
+const MMCA.Common.Shared.Auth.PasswordComplexity.MaximumLength = 128 -> int
+const MMCA.Common.Shared.Auth.PasswordComplexity.MinimumLength = 8 -> int
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageRoles = "roles:manage" -> string!
 const MMCA.Common.Shared.Auth.Permissions.AdministrationPermissions.ManageUsers = "users:manage" -> string!
 const MMCA.Common.Shared.Concurrency.KeyedSemaphoreStripe.DefaultWidth = 256 -> int
@@ -808,6 +811,11 @@ static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.GetUserId(this System.S
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasMultiFactor(this System.Security.Claims.ClaimsPrincipal? principal) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasPermissionClaim(this System.Security.Claims.ClaimsPrincipal? principal, string! permission) -> bool
 static MMCA.Common.Shared.Auth.ClaimsPrincipalExtensions.HasRole(this System.Security.Claims.ClaimsPrincipal? principal, string! role) -> bool
+static MMCA.Common.Shared.Auth.PasswordComplexity.Digit.get -> System.Text.RegularExpressions.Regex!
+static MMCA.Common.Shared.Auth.PasswordComplexity.Evaluate(string? password) -> bool
+static MMCA.Common.Shared.Auth.PasswordComplexity.Lowercase.get -> System.Text.RegularExpressions.Regex!
+static MMCA.Common.Shared.Auth.PasswordComplexity.SpecialCharacter.get -> System.Text.RegularExpressions.Regex!
+static MMCA.Common.Shared.Auth.PasswordComplexity.Uppercase.get -> System.Text.RegularExpressions.Regex!
 static MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest left, MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest.operator ==(MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest left, MMCA.Common.Shared.Auth.Requests.ChangePasswordRequest right) -> bool
 static MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest.operator !=(MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? left, MMCA.Common.Shared.Auth.Requests.ChangePreferencesRequest? right) -> bool

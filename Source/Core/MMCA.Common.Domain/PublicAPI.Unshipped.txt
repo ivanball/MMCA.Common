@@ -1,4 +1,1 @@
 #nullable enable
-MMCA.Common.Domain.Auth.RefreshSession.Anonymize() -> MMCA.Common.Shared.Abstractions.Result!
-*REMOVED*MMCA.Common.Domain.Auth.RefreshSession.IpAddress.init -> void
-*REMOVED*MMCA.Common.Domain.Auth.RefreshSession.UserAgent.init -> void

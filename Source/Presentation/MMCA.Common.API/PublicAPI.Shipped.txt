@@ -295,6 +295,12 @@ MMCA.Common.API.SessionCookies.CookieTokenReader.ReadAccessToken() -> string?
 MMCA.Common.API.SessionCookies.CookieTokenReader.ReadRefreshToken() -> string?
 MMCA.Common.API.SessionCookies.ICookieSessionRefresher
 MMCA.Common.API.SessionCookies.ICookieSessionRefresher.GetOrRefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionTokenResult?>!
+MMCA.Common.API.SessionCookies.ICookieSessionRefresher.RefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionRefreshOutcome!>!
+MMCA.Common.API.SessionCookies.ICookieSessionRefresher.ValidateOrRefreshAsync(Microsoft.AspNetCore.Http.HttpContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.API.SessionCookies.SessionRefreshOutcome!>!
+MMCA.Common.API.SessionCookies.ISessionCookieStore
+MMCA.Common.API.SessionCookies.ISessionCookieStore.Clear(Microsoft.AspNetCore.Http.HttpContext! context) -> void
+MMCA.Common.API.SessionCookies.ISessionCookieStore.Write(Microsoft.AspNetCore.Http.HttpContext! context, string! accessToken, string! refreshToken) -> void
+MMCA.Common.API.SessionCookies.SessionClaimsToken
 MMCA.Common.API.SessionCookies.SessionCookieAuthenticationExtensions
 MMCA.Common.API.SessionCookies.SessionCookieAuthenticationExtensions.extension(Microsoft.AspNetCore.Authentication.AuthenticationBuilder!)
 MMCA.Common.API.SessionCookies.SessionCookieAuthenticationExtensions.extension(Microsoft.AspNetCore.Authentication.AuthenticationBuilder!).AddSessionCookieAuthentication() -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
@@ -312,6 +318,20 @@ MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest.Refre
 MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest.SessionCookieRequest(string! AccessToken, string! RefreshToken) -> void
 MMCA.Common.API.SessionCookies.SessionCookieEndpoints.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!)
 MMCA.Common.API.SessionCookies.SessionCookieEndpoints.extension(Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!).MapSessionCookieEndpoints() -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+MMCA.Common.API.SessionCookies.SessionCookieSettings
+MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.get -> bool
+MMCA.Common.API.SessionCookies.SessionCookieSettings.ClaimsOnlyBrowserTokens.set -> void
+MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.get -> Microsoft.AspNetCore.Http.SameSiteMode
+MMCA.Common.API.SessionCookies.SessionCookieSettings.SameSite.set -> void
+MMCA.Common.API.SessionCookies.SessionCookieSettings.SessionCookieSettings() -> void
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome.RetryAfter.get -> System.TimeSpan?
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Session.get -> MMCA.Common.API.SessionCookies.SessionTokenResult?
+MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Status.get -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus.Refreshed = 0 -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus.Rejected = 1 -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
+MMCA.Common.API.SessionCookies.SessionRefreshStatus.Unavailable = 2 -> MMCA.Common.API.SessionCookies.SessionRefreshStatus
 MMCA.Common.API.SessionCookies.SessionTokenResponse
 MMCA.Common.API.SessionCookies.SessionTokenResponse.<Clone>$() -> MMCA.Common.API.SessionCookies.SessionTokenResponse!
 MMCA.Common.API.SessionCookies.SessionTokenResponse.AccessToken.get -> string!
@@ -427,6 +447,7 @@ const MMCA.Common.API.Controllers.Administration.UsersAdminControllerBase<TUserD
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.CsvContentType = "text/csv; charset=utf-8" -> string!
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.DefaultMaxExportRows = 100000 -> int
 const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowLimitHeaderName = "X-Export-Row-Limit" -> string!
+const MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportRowScopeRequiredErrorCode = "Export.RowScopeRequired" -> string!
 const MMCA.Common.API.Controllers.Privacy.DataExportControllerBase<TQuery>.ExportContentType = "application/json" -> string!
 const MMCA.Common.API.Middleware.CorrelationIdMiddleware.HeaderName = "X-Correlation-ID" -> string!
 const MMCA.Common.API.ModelBinders.QueryFilterModelBinder.MaxFilters = 50 -> int
@@ -516,10 +537,14 @@ static MMCA.Common.API.Idempotency.IdempotencyRecord.operator !=(MMCA.Common.API
 static MMCA.Common.API.Idempotency.IdempotencyRecord.operator ==(MMCA.Common.API.Idempotency.IdempotencyRecord? left, MMCA.Common.API.Idempotency.IdempotencyRecord? right) -> bool
 static MMCA.Common.API.Notifications.DependencyInjection.AddNotificationControllers(this Microsoft.Extensions.DependencyInjection.IMvcBuilder! builder) -> Microsoft.Extensions.DependencyInjection.IMvcBuilder!
 static MMCA.Common.API.SessionCookies.CookieSessionRefreshMiddlewareExtensions.UseCookieSessionRefresh(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+static MMCA.Common.API.SessionCookies.SessionClaimsToken.Create(string? accessToken) -> string?
 static MMCA.Common.API.SessionCookies.SessionCookieAuthenticationExtensions.AddSessionCookieAuthentication(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static MMCA.Common.API.SessionCookies.SessionCookieEndpoints.MapSessionCookieEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 static MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest.operator !=(MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest? left, MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest? right) -> bool
 static MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest.operator ==(MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest? left, MMCA.Common.API.SessionCookies.SessionCookieEndpoints.SessionCookieRequest? right) -> bool
+static MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Refreshed(MMCA.Common.API.SessionCookies.SessionTokenResult session) -> MMCA.Common.API.SessionCookies.SessionRefreshOutcome!
+static MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Rejected() -> MMCA.Common.API.SessionCookies.SessionRefreshOutcome!
+static MMCA.Common.API.SessionCookies.SessionRefreshOutcome.Unavailable(System.TimeSpan? retryAfter = null) -> MMCA.Common.API.SessionCookies.SessionRefreshOutcome!
 static MMCA.Common.API.SessionCookies.SessionTokenResponse.operator !=(MMCA.Common.API.SessionCookies.SessionTokenResponse? left, MMCA.Common.API.SessionCookies.SessionTokenResponse? right) -> bool
 static MMCA.Common.API.SessionCookies.SessionTokenResponse.operator ==(MMCA.Common.API.SessionCookies.SessionTokenResponse? left, MMCA.Common.API.SessionCookies.SessionTokenResponse? right) -> bool
 static MMCA.Common.API.SessionCookies.SessionTokenResult.operator !=(MMCA.Common.API.SessionCookies.SessionTokenResult left, MMCA.Common.API.SessionCookies.SessionTokenResult right) -> bool
@@ -581,6 +606,7 @@ virtual MMCA.Common.API.Controllers.AuthControllerBase.RegisterAsync(MMCA.Common
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.AuthControllerBase.RevokeSessionAsync(System.Guid sessionId, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult!>!
 virtual MMCA.Common.API.Controllers.CrudEntityControllerBase<TEntity, TEntityDTO, TIdentifierType, TCreateRequest, TUpdateRequest>.UpdateAsync(TIdentifierType id, TUpdateRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<TEntityDTO>!>!
+virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.AllowUnscopedExport.get -> bool
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.BuildExportFileName(System.DateTimeOffset timestamp) -> string!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportAsync(bool includeFKs = false, string? sortColumn = null, string? sortDirection = null, string? fields = null, System.Collections.Generic.Dictionary<string!, (string! Operator, string! Value)>? filters = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 virtual MMCA.Common.API.Controllers.EntityControllerBase<TEntity, TEntityDTO, TIdentifierType>.ExportFileNamePrefix.get -> string!
