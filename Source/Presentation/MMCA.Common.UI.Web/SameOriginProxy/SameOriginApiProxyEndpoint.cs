@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
@@ -15,7 +16,9 @@ namespace MMCA.Common.UI.Web.SameOriginProxy;
 /// The request delegate behind <c>{PathPrefix}/{**path}</c>. In order: the same-origin gate (a foreign
 /// <c>Origin</c> or <c>Sec-Fetch-Site</c> is refused, and a WebSocket upgrade must carry this host's own
 /// <c>Origin</c>), the local answer to <c>OPTIONS</c> (never forwarded, never a CORS grant), the CSRF
-/// gate (unsafe methods must carry <c>X-CSRF: 1</c>), the locally answered refresh, the session step
+/// gate (unsafe methods must carry <c>X-CSRF: 1</c>; the one exemption is a WebSocket opened over
+/// HTTP/2, an RFC 8441 extended <c>CONNECT</c> to which a browser cannot add headers, and which the
+/// same-origin gate has already held to this host's own <c>Origin</c>), the locally answered refresh, the session step
 /// (validate-or-refresh the cookie's access token, single-flighted per session by
 /// <see cref="ICookieSessionRefresher"/>; a session whose refresh token was refused is cleared and
 /// answered 401, while a refresh that could not be decided right now keeps the cookies and is answered
@@ -31,9 +34,12 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     IOptions<SameOriginApiProxySettings> settings,
     ILogger<SameOriginApiProxyEndpoint> logger)
 {
-    // HTTP/1.1 upstream: WebSocket upgrades forward as plain upgrades, and nothing here needs HTTP/2.
     private const string SecFetchSiteHeaderName = "Sec-Fetch-Site";
+    private const string WebSocketProtocol = "websocket";
 
+    // HTTP/1.1 upstream, and nothing here needs HTTP/2: an HTTP/1.1 WebSocket upgrade forwards as a
+    // plain upgrade, and an HTTP/2 one (an extended CONNECT from the browser) is turned by YARP into an
+    // HTTP/1.1 GET upgrade to the gateway, which this version cap is what permits.
     private static readonly ForwarderRequestConfig RequestConfig = new()
     {
         ActivityTimeout = TimeSpan.FromSeconds(100),
@@ -89,7 +95,7 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             bearer = session.AccessToken;
         }
 
-        var first = CreateTransformer(bearer, mode.Value, captureUnauthorized: bearer is not null && IsReplayable(context.Request));
+        var first = CreateTransformer(bearer, mode.Value, captureUnauthorized: bearer is not null && IsReplayable(context));
         await ForwardAsync(context, first).ConfigureAwait(false);
 
         if (first.UnauthorizedCaptured)
@@ -114,7 +120,8 @@ internal sealed partial class SameOriginApiProxyEndpoint(
     /// <item>an <c>Origin</c> header that is not exactly this host's origin (a same-site sibling such
     /// as another subdomain is still another origin);</item>
     /// <item>a WebSocket upgrade without an <c>Origin</c> (browsers always send one, and an upgrade is
-    /// not CORS-protected, so the origin is the only proof of who opened it);</item>
+    /// not CORS-protected, so the origin is the only proof of who opened it), whether it is an HTTP/1.1
+    /// GET upgrade or an HTTP/2 extended <c>CONNECT</c> (<see cref="IsWebSocketExtendedConnect"/>);</item>
     /// <item>a <c>Sec-Fetch-Site</c> other than <c>same-origin</c>, except <c>none</c> (a user-initiated
     /// navigation, such as a pasted download link) on a plain GET or HEAD.</item>
     /// </list>
@@ -152,8 +159,23 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         return Uri.Compare(candidate, own, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
     }
 
+    /// <summary>
+    /// Whether the request is a browser opening a WebSocket over HTTP/2: an RFC 8441 extended
+    /// <c>CONNECT</c> with <c>:protocol websocket</c> and no <c>Upgrade</c> header. It is treated like the
+    /// HTTP/1.1 GET upgrade everywhere: same-origin <c>Origin</c> required, exempt from the CSRF header
+    /// (a browser cannot add one to a WebSocket), never replayed. Any other <c>CONNECT</c> is an
+    /// ordinary unsafe method.
+    /// </summary>
+    internal static bool IsWebSocketExtendedConnect(HttpContext context) =>
+        HttpMethods.IsConnect(context.Request.Method)
+        && context.Features.Get<IHttpExtendedConnectFeature>() is { IsExtendedConnect: true } connect
+        && string.Equals(connect.Protocol, WebSocketProtocol, StringComparison.OrdinalIgnoreCase);
+
+    // An HTTP/1.1 upgrade (with or without UseWebSockets registered) or an HTTP/2 extended CONNECT.
     private static bool IsUpgrade(HttpContext context) =>
-        context.WebSockets.IsWebSocketRequest || context.Request.Headers.ContainsKey(HeaderNames.Upgrade);
+        context.WebSockets.IsWebSocketRequest
+        || context.Request.Headers.ContainsKey(HeaderNames.Upgrade)
+        || IsWebSocketExtendedConnect(context);
 
     private static string? OriginRejection(HttpRequest request, bool upgrade)
     {
@@ -188,10 +210,11 @@ internal sealed partial class SameOriginApiProxyEndpoint(
         !string.IsNullOrEmpty(request.Cookies[SessionCookieEndpoints.AccessTokenCookieName])
         || !string.IsNullOrEmpty(request.Cookies[SessionCookieEndpoints.RefreshTokenCookieName]);
 
-    // GET/HEAD/OPTIONS carry no body to replay; an upgrade has already handed its connection over.
-    private static bool IsReplayable(HttpRequest request) =>
-        (HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method) || HttpMethods.IsOptions(request.Method))
-        && !request.Headers.ContainsKey(HeaderNames.Upgrade);
+    // GET/HEAD/OPTIONS carry no body to replay; an upgrade (HTTP/1.1 or HTTP/2) has already handed its
+    // connection over.
+    private static bool IsReplayable(HttpContext context) =>
+        (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method) || HttpMethods.IsOptions(context.Request.Method))
+        && !IsUpgrade(context);
 
     private static string Normalize(string path) => path.Trim('/');
 
@@ -224,7 +247,8 @@ internal sealed partial class SameOriginApiProxyEndpoint(
             return true;
         }
 
-        if (!IsSafeMethod(context.Request.Method) && !HasCsrfHeader(context.Request))
+        // An HTTP/2 WebSocket cannot carry the header; the same-origin gate above required its Origin.
+        if (!IsSafeMethod(context.Request.Method) && !IsWebSocketExtendedConnect(context) && !HasCsrfHeader(context.Request))
         {
             LogCsrfRejected(logger, context.Request.Method);
             await WriteErrorAsync(context, StatusCodes.Status403Forbidden, "csrf_header_required").ConfigureAwait(false);

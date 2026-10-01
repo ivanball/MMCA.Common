@@ -350,7 +350,8 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// Applies the transport options: a client-held access token for a direct gateway connection, or,
     /// through the same-origin proxy, no token at all plus the proxy's CSRF header (the negotiate call
     /// is a POST, and the proxy refuses an unsafe method without it; the browser cannot add headers to
-    /// the WebSocket upgrade, a GET which the proxy instead accepts only with the page's own
+    /// the WebSocket upgrade, a GET over HTTP/1.1 or an extended CONNECT over HTTP/2, which the proxy
+    /// instead accepts only with the page's own
     /// <c>Origin</c>, which a same-origin browser connection always sends).
     /// </summary>
     internal void ConfigureConnection(HttpConnectionOptions options)
