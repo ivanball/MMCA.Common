@@ -12,7 +12,7 @@ public static class MMCATheme
     {
         PaletteLight = new PaletteLight
         {
-            // Brand palette sourced from BrandColors (the single C# source of truth). The CSS
+            // Every hex value in both palettes comes from BrandColors (the single C# source of truth). The CSS
             // tokens --mmca-primary / --mmca-primary-dark in wwwroot/app.css must mirror these.
             // BrandColorTokenTests asserts the two stay in sync.
             Primary = BrandColors.Primary,
@@ -22,9 +22,9 @@ public static class MMCATheme
             Secondary = BrandColors.Secondary,
             SecondaryDarken = BrandColors.SecondaryDark,
             SecondaryLighten = BrandColors.SecondaryLight,
-            Tertiary = "#7B1FA2",
-            Info = "#1976D2",
-            Success = "#2E7D32",
+            Tertiary = BrandColors.LightTertiary,
+            Info = BrandColors.LightInfo,
+            Success = BrandColors.LightSuccess,
             // Amber 900 rather than the Material amber (#F57F17): the palette colour is used as TEXT
             // and as a border as often as it is used as a fill (Color.Warning on MudText/MudLink/
             // MudIcon and on outlined chips/buttons), and #F57F17 is only ~2.65:1 on Surface #FFFFFF,
@@ -32,26 +32,26 @@ public static class MMCATheme
             // Surface and 4.79:1 on Background #FAFBFC, and it is dark enough that white becomes the
             // correct on-colour label: 4.96:1 (dark text would be only ~3.2:1 on it, so the two values
             // must move together). Info/Success/Error already pass with white.
-            Warning = "#A85D00",
-            WarningContrastText = "#FFFFFF",
-            Error = "#C62828",
+            Warning = BrandColors.LightWarning,
+            WarningContrastText = BrandColors.LightWarningContrastText,
+            Error = BrandColors.LightError,
             // Outlined-field borders are non-text UI, so they answer to the 3:1 floor (WCAG 1.4.11).
             // MudBlazor's default rgba(0,0,0,0.42) is 3.03:1 on Surface and 3.01:1 on Background: it
             // passes with no margin at all, and any host that nudges Background darker drops it below.
             // rgba(0,0,0,0.45) is 3.36:1 / 3.33:1 and keeps the same hairline weight.
             LinesInputs = "rgba(0,0,0,0.45)",
-            AppbarBackground = "#1A2035",
-            AppbarText = "#FFFFFF",
-            Background = "#FAFBFC",
-            Surface = "#FFFFFF",
-            DrawerBackground = "#1A2035",
-            DrawerText = "#FFFFFFB3",
-            DrawerIcon = "#FFFFFFB3",
-            TextPrimary = "#212121",
-            TextSecondary = "#616161",
-            ActionDefault = "#757575",
-            Divider = "#E0E0E0",
-            DividerLight = "#F5F5F5",
+            AppbarBackground = BrandColors.ChromeBackground,
+            AppbarText = BrandColors.ChromeText,
+            Background = BrandColors.LightBackground,
+            Surface = BrandColors.LightSurface,
+            DrawerBackground = BrandColors.ChromeBackground,
+            DrawerText = BrandColors.ChromeTextMuted,
+            DrawerIcon = BrandColors.ChromeTextMuted,
+            TextPrimary = BrandColors.LightTextPrimary,
+            TextSecondary = BrandColors.LightTextSecondary,
+            ActionDefault = BrandColors.LightActionDefault,
+            Divider = BrandColors.LightDivider,
+            DividerLight = BrandColors.LightDividerLight,
         },
         PaletteDark = new PaletteDark
         {
@@ -59,14 +59,14 @@ public static class MMCATheme
             // backgrounds. Enables dark mode via MudThemeProvider's IsDarkMode (rubric §20).
             Primary = BrandColors.PrimaryLight,
             PrimaryDarken = BrandColors.Primary,
-            PrimaryLighten = "#90CAF9",
+            PrimaryLighten = BrandColors.DarkPrimaryLighten,
             // Material dark-theme treatment: a lightened primary takes DARK on-color text. The default
             // white label is ~2.65:1 on #42A5F5 and fails the WCAG 2.1 AA 4.5:1 floor on every filled
             // primary button (caught by the gated dark-mode axe scan); dark text is ~6.6:1.
             PrimaryContrastText = "rgba(0,0,0,0.87)",
             Secondary = BrandColors.SecondaryLight,
-            SecondaryDarken = "#00897B",
-            SecondaryLighten = "#80CBC4",
+            SecondaryDarken = BrandColors.DarkSecondaryDarken,
+            SecondaryLighten = BrandColors.DarkSecondaryLighten,
             // Every lightened dark-mode accent takes the same Material treatment as Primary above:
             // white on it is far below the 4.5:1 floor once it is used as a FILL (2.44:1 on Secondary
             // #4DB6AC, 2.39:1 on Tertiary #CE93D8, 2.65:1 on Info #42A5F5, 2.36:1 on Success #66BB6A),
@@ -74,20 +74,20 @@ public static class MMCATheme
             // as TEXT on Surface #27303A too (5.48 / 5.60 / 5.05 / 5.66:1), so only the on-colour
             // label needed fixing.
             SecondaryContrastText = "rgba(0,0,0,0.87)",
-            Tertiary = "#CE93D8",
+            Tertiary = BrandColors.DarkTertiary,
             TertiaryContrastText = "rgba(0,0,0,0.87)",
-            Info = "#42A5F5",
+            Info = BrandColors.DarkInfo,
             InfoContrastText = "rgba(0,0,0,0.87)",
-            Success = "#66BB6A",
+            Success = BrandColors.DarkSuccess,
             SuccessContrastText = "rgba(0,0,0,0.87)",
-            Warning = "#FFA726",
+            Warning = BrandColors.DarkWarning,
             // Same fix as the light palette: white on #FFA726 is ~2.0:1; dark text is ~10.8:1.
             WarningContrastText = "rgba(0,0,0,0.87)",
             // Red 200 rather than Red 400 (#EF5350): as TEXT on Surface #27303A the darker red is only
             // 3.84:1, below the 4.5:1 floor wherever Color.Error is a label rather than a fill (inline
             // validation copy, outlined error chips, the mobile load-failure line). #FF8A80 reads
             // 5.86:1 on Surface and 7.19:1 on Background #1A2027.
-            Error = "#FF8A80",
+            Error = BrandColors.DarkError,
             // Same treatment as Primary: white on a lightened dark-mode error fails AA on the filled
             // error alert's message text; rgba(0,0,0,0.87) on #FF8A80 is 7.94:1.
             ErrorContrastText = "rgba(0,0,0,0.87)",
@@ -96,18 +96,18 @@ public static class MMCATheme
             // are effectively invisible to a low-vision user; rgba(255,255,255,0.5) is 4.59:1 on
             // Surface and 5.10:1 on Background without turning the hairline into a hard outline.
             LinesInputs = "rgba(255,255,255,0.5)",
-            AppbarBackground = "#1A2035",
-            AppbarText = "#FFFFFF",
-            Background = "#1A2027",
-            Surface = "#27303A",
-            DrawerBackground = "#1A2035",
-            DrawerText = "#FFFFFFB3",
-            DrawerIcon = "#FFFFFFB3",
-            TextPrimary = "#ECEFF1",
-            TextSecondary = "#B0BEC5",
-            ActionDefault = "#B0BEC5",
-            Divider = "#37474F",
-            DividerLight = "#2A3640",
+            AppbarBackground = BrandColors.ChromeBackground,
+            AppbarText = BrandColors.ChromeText,
+            Background = BrandColors.DarkBackground,
+            Surface = BrandColors.DarkSurface,
+            DrawerBackground = BrandColors.ChromeBackground,
+            DrawerText = BrandColors.ChromeTextMuted,
+            DrawerIcon = BrandColors.ChromeTextMuted,
+            TextPrimary = BrandColors.DarkTextPrimary,
+            TextSecondary = BrandColors.DarkTextSecondary,
+            ActionDefault = BrandColors.DarkActionDefault,
+            Divider = BrandColors.DarkDivider,
+            DividerLight = BrandColors.DarkDividerLight,
         },
         Typography = new Typography
         {

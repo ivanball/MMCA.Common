@@ -1,6 +1,6 @@
 (function () {
     function getToggler() {
-        return document.querySelector('.navbar-toggler');
+        return document.querySelector('.nav-toggler');
     }
 
     function closeMenu(returnFocus) {
@@ -38,7 +38,7 @@
 
     // Body scroll lock + aria-expanded sync on checkbox change
     document.addEventListener('change', function (e) {
-        if (e.target && e.target.classList.contains('navbar-toggler')) {
+        if (e.target && e.target.classList.contains('nav-toggler')) {
             document.body.style.overflow = e.target.checked ? 'hidden' : '';
             e.target.setAttribute('aria-expanded', e.target.checked ? 'true' : 'false');
         }

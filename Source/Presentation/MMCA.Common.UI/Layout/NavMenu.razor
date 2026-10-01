@@ -15,17 +15,20 @@
 @inject IStringLocalizerFactory LocalizerFactory
 @implements IDisposable
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="@RoutePaths.Home" aria-label="@L["Nav.BrandHome.Aria", LayoutSettingsOptions.Value.BrandName]">
+@* The brand row is a plain flex row styled by NavMenu.razor.css (no CSS framework classes): the
+   brand link on the left, the mobile quick actions on the right, and the right padding reserved
+   for the absolutely positioned hamburger. *@
+<div class="top-row">
+    <div class="top-row-brand">
+        <a class="nav-brand" href="@RoutePaths.Home" aria-label="@L["Nav.BrandHome.Aria", LayoutSettingsOptions.Value.BrandName]">
             @* Decorative logo: alt="" keeps it out of the accessibility tree, because the link
                already announces itself through its aria-label (axe image-redundant-alt). Rendered
                only when the host configures Layout:BrandLogoUrl, so the text-only brand is unchanged. *@
             @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.BrandLogoUrl))
             {
-                <img class="navbar-brand-logo" src="@LayoutSettingsOptions.Value.BrandLogoUrl" alt="" aria-hidden="true" />
+                <img class="nav-brand-logo" src="@LayoutSettingsOptions.Value.BrandLogoUrl" alt="" aria-hidden="true" />
             }
-            <span class="navbar-brand-text">@LayoutSettingsOptions.Value.BrandName</span>
+            <span class="nav-brand-text">@LayoutSettingsOptions.Value.BrandName</span>
         </a>
     </div>
     @* Mobile-only quick actions (CSS hides this row at >=1024px, where the MudAppBar takes over; the
@@ -56,7 +59,7 @@
    a screen reader reading "checkbox, not checked" for a menu toggle. aria-expanded is kept in step
    with the checked state (and re-synced after enhanced navigation) by wwwroot/navmenu.js, which also
    drives Enter, closes the menu on Escape, and returns focus here. *@
-<input type="checkbox" title="@L["Nav.ToggleMenu.Aria"]" class="navbar-toggler"
+<input type="checkbox" title="@L["Nav.ToggleMenu.Aria"]" class="nav-toggler"
        role="button"
        aria-label="@L["Nav.ToggleMenu.Aria"]" aria-expanded="false"
        aria-controls="nav-menu" />

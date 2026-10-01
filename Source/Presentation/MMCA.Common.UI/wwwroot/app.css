@@ -48,8 +48,10 @@
 
 /* ── Design Tokens ── */
 :root {
-    /* Layout */
-    --mmca-sidebar-bg: #1A2035;
+    /* Layout. The sidebar background reads the theme palette (BrandColors.ChromeBackground in both
+       palettes), so it is not restated here. --mmca-sidebar-bg-dark and --mmca-divider have no
+       palette slot carrying the same value in both light and dark, so they stay literal. */
+    --mmca-sidebar-bg: var(--mud-palette-drawer-background);
     --mmca-sidebar-bg-dark: #141B2D;
     --mmca-sidebar-width: 220px;
     --mmca-divider: #E0E0E0;
@@ -99,18 +101,19 @@ html, body {
     height: auto;
 }
 
-a, .btn-link {
+a {
     color: var(--mmca-primary);
 }
 
-.btn-primary {
-    color: #fff;
-    background-color: var(--mmca-primary);
-    border-color: var(--mmca-primary-dark);
+/* Two element defaults carried over from the Bootstrap reboot this RCL no longer ships, so layouts
+   built while it was loaded render unchanged: tables collapse their borders (MudBlazor tables and
+   grids are sized on that), and a divider rule is drawn at a quarter of its colour. */
+table {
+    border-collapse: collapse;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+hr {
+    opacity: 0.25;
 }
 
 .content {
@@ -122,7 +125,7 @@ a, .btn-link {
    default) left a keyboard user with no visible focus indicator at all, which is WCAG 2.4.7. Keep
    the ring for keyboard focus and drop it only for the programmatic/pointer case. */
 h1:focus-visible {
-    outline: 2px solid var(--mud-palette-primary, #258cfb);
+    outline: 2px solid var(--mud-palette-primary);
     outline-offset: 2px;
 }
 
@@ -130,19 +133,21 @@ h1:focus:not(:focus-visible) {
     outline: none;
 }
 
-/* Green 800, not #26b050: the valid-field outline is non-text UI and answers to the 3:1 floor
-   (WCAG 1.4.11), where #26b050 was 2.83:1 on white. #2E7D32 is 5.13:1 on Surface and 4.95:1 on
-   Background #FAFBFC. */
+/* Stock Blazor input and ValidationMessage states (the framework's own forms use MudBlazor fields).
+   The valid-field outline is non-text UI and answers to the 3:1 floor (WCAG 1.4.11): the light
+   palette success (Green 800) is 5.13:1 on Surface and 4.95:1 on Background, and the dark palette
+   success clears it on the dark Surface too. The palette error is used for the invalid states so
+   they follow the theme in dark mode, where a fixed red would fall under the floor. */
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #2E7D32;
+    outline: 1px solid var(--mud-palette-success);
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    outline: 1px solid var(--mud-palette-error);
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--mud-palette-error);
 }
 
 .blazor-error-boundary {
@@ -154,19 +159,6 @@ h1:focus:not(:focus-visible) {
     .blazor-error-boundary::after {
         content: "An error has occurred."
     }
-
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
-}
-
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
-    text-align: end;
-}
-
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-    text-align: start;
-}
 
 /* ── Snackbar: prevent clipping on narrow viewports ── */
 .mud-snackbar {
@@ -184,9 +176,10 @@ h1:focus:not(:focus-visible) {
 /* MudDrawer (temporary) sits at z-index ~1300, its overlay at ~1299.
    On mobile the cart drawer goes full-width and obscures the snackbar
    container. Bump the snackbar z-index so it floats above the drawer. */
+/* The id half of the selector is what beats MudBlazor's own #mud-snackbar-container z-index. */
 @media (max-width: 1023.98px) {
-    .mud-snackbar-location-top-center {
-        z-index: var(--mmca-z-snackbar-mobile, 10000) !important;
+    #mud-snackbar-container.mud-snackbar-location-top-center {
+        z-index: var(--mmca-z-snackbar-mobile, 10000);
     }
 }
 
@@ -206,8 +199,8 @@ h1:focus:not(:focus-visible) {
     .cart-drawer .mud-icon-button,
     .mobile-list-card .mud-card-content .mud-icon-button,
     .mud-table-pagination-toolbar .mud-icon-button {
-        min-width: 48px !important;
-        min-height: 48px !important;
+        min-width: 48px;
+        min-height: 48px;
     }
 }
 
@@ -293,22 +286,27 @@ h1:focus:not(:focus-visible) {
 /* ── Mobile: responsive data grids ── */
 @media (max-width: 1023.98px) {
     /* Hide non-essential data-grid columns on mobile */
+    /* !important kept: a hide utility must beat MudBlazor's breakpoint table-cell rules
+       (.mud-xs-table .mud-table-cell { display: flex }) wherever the class lands. */
     .hide-below-desktop {
         display: none !important;
     }
 
     /* Hide inline column filters on mobile (search field provides filtering) */
     .mud-table thead tr:not(:first-child) {
-        display: none !important;
+        display: none;
     }
 
     /* Allow horizontal swipe and prevent vertical scroll trapping */
-    .mud-table-container {
-        overflow-x: auto !important;
-        overflow-y: visible !important;
+    .mud-table .mud-table-container {
+        overflow-x: auto;
+        overflow-y: visible;
     }
 
     /* Let pager controls wrap on narrow screens */
+    /* !important kept on the padding: MudBlazor's narrow-screen pager rule
+       (.mud-table .mud-table-pagination .mud-table-pagination-toolbar) sets its own padding at a
+       higher specificity, and the data grid and table pagers render different wrappers around it. */
     .mud-table-pagination-toolbar {
         flex-wrap: wrap;
         padding: 0.5rem !important;
@@ -415,13 +413,13 @@ h1:focus:not(:focus-visible) {
 }
 
 .mmca-section-heading-light .mud-typography {
-    color: #fff;
+    color: var(--mud-palette-white);
 }
 
 .mmca-section-title-underline {
     width: 60px;
     height: 3px;
-    background: linear-gradient(90deg, var(--mmca-primary, #1565C0), var(--mmca-accent, #42A5F5));
+    background: linear-gradient(90deg, var(--mmca-primary), var(--mmca-primary-light));
     margin: 0.75rem auto 0;
     border-radius: 2px;
 }

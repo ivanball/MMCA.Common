@@ -280,9 +280,9 @@ public sealed class NavMenuTests : BunitTestBase
         RenderMudProviders();
         var cut = RenderUnderTest<NavMenu>(_ => { });
 
-        cut.FindAll(".navbar-brand-logo").Should().BeEmpty(
+        cut.FindAll(".nav-brand-logo").Should().BeEmpty(
             "LayoutSettings.BrandLogoUrl defaults to empty, so the brand stays text-only");
-        cut.Find(".navbar-brand-text").TextContent.Should().Be("TestBrand");
+        cut.Find(".nav-brand-text").TextContent.Should().Be("TestBrand");
     }
 
     [Fact]
@@ -295,11 +295,11 @@ public sealed class NavMenuTests : BunitTestBase
         RenderMudProviders();
         var cut = RenderUnderTest<NavMenu>(_ => { });
 
-        var logo = cut.Find(".navbar-brand .navbar-brand-logo");
+        var logo = cut.Find(".nav-brand .nav-brand-logo");
         logo.GetAttribute("src").Should().Be("/img/brand.svg");
         logo.GetAttribute("alt").Should().BeEmpty(
             "the logo is decorative: the brand link already carries its own accessible name");
-        cut.Find(".navbar-brand-text").TextContent.Should().Be("TestBrand");
+        cut.Find(".nav-brand-text").TextContent.Should().Be("TestBrand");
     }
 
     private void RegisterModule(params NavItem[] navItems)
