@@ -54,7 +54,9 @@ public sealed class FrameworkConstructorDependencyTests : ConstructorDependencyC
 
     /// <summary>
     /// Every top-level (so public or internal), non-compiler-generated class of the given assemblies,
-    /// abstract classes included.
+    /// abstract classes included. Record classes are excluded: a positional record's constructor
+    /// parameters are data fields, not injected collaborators, so they say nothing about how many
+    /// responsibilities a class coordinates (the compiler emits <c>&lt;Clone&gt;$</c> only on records).
     /// </summary>
     private static IEnumerable<Type> FrameworkClasses(IEnumerable<Assembly> assemblies) =>
         assemblies
@@ -62,7 +64,8 @@ public sealed class FrameworkConstructorDependencyTests : ConstructorDependencyC
             .SelectMany(static a => a.GetTypes())
             .Where(static t => t is { IsClass: true, IsNested: false }
                 && !(t.IsAbstract && t.IsSealed)
-                && !t.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false));
+                && !t.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false)
+                && t.GetMethod("<Clone>$", BindingFlags.Public | BindingFlags.Instance) is null);
 
     private static bool IsController(Type type)
     {
