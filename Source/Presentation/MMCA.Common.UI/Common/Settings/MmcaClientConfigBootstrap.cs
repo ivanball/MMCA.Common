@@ -118,7 +118,7 @@ public static class MmcaClientConfigBootstrap
             || api[nameof(ApiSettings.SameOriginApiEndpoint)] is not JsonValue value
             || !value.TryGetValue<string>(out var path)
             || string.IsNullOrWhiteSpace(path)
-            || Uri.TryCreate(path, UriKind.Absolute, out _))
+            || IsHttpAbsolute(path))
         {
             return document;
         }
@@ -126,6 +126,16 @@ public static class MmcaClientConfigBootstrap
         api[nameof(ApiSettings.SameOriginApiEndpoint)] = new Uri(baseAddress, path).AbsoluteUri;
         return Encoding.UTF8.GetBytes(rootObject.ToJsonString());
     }
+
+    /// <summary>
+    /// True only for an absolute http(s) address. A bare <c>Uri.TryCreate(..., UriKind.Absolute, ...)</c>
+    /// is not enough: on Unix-like runtimes, browser WebAssembly included, <c>"/api/"</c> parses as the
+    /// absolute <c>file:///api/</c>, so the origin-relative path would be left unresolved and the
+    /// <c>"APIClient"</c> would send every request to <c>file:///api/...</c>.
+    /// </summary>
+    internal static bool IsHttpAbsolute(string path) =>
+        Uri.TryCreate(path, UriKind.Absolute, out var absolute)
+        && (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps);
 
     // HttpClient reports its own timeout as a TaskCanceledException; the caller's cancellation looks
     // the same, so only the one the caller did not ask for is retried.

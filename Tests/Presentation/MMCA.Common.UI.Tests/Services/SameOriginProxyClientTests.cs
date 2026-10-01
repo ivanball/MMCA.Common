@@ -96,6 +96,17 @@ public sealed class SameOriginProxyClientTests
         configuration["OAuth:GoogleEnabled"].Should().Be("True");
     }
 
+    // On Unix-like runtimes (browser WebAssembly included) "/api/" parses as the absolute file:///api/,
+    // which once left the path unresolved and sent every WASM request to file:///api/...; only an
+    // http(s) address may count as already absolute.
+    [Theory]
+    [InlineData("/api/", false)]
+    [InlineData("file:///api/", false)]
+    [InlineData("https://app.example.com/api/", true)]
+    [InlineData("http://localhost:5000/api/", true)]
+    public void Bootstrap_TreatsOnlyHttpAddressesAsAlreadyAbsolute(string path, bool expected) =>
+        MmcaClientConfigBootstrap.IsHttpAbsolute(path).Should().Be(expected);
+
     [Fact]
     public void Bootstrap_LeavesADocumentWithoutTheProxyKeyByteForByte()
     {
