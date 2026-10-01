@@ -46,7 +46,7 @@ namespace MMCA.Common.Application.Users.UseCases.ExportUserData;
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TQuery">The app's export-user-data query record.</typeparam>
-public abstract class ExportUserDataHandlerBase<TUser, TQuery>(
+public abstract partial class ExportUserDataHandlerBase<TUser, TQuery>(
     IUnitOfWork unitOfWork,
     IEnumerable<IUserDataExportSection> sections,
     TimeProvider timeProvider,
@@ -187,7 +187,7 @@ public abstract class ExportUserDataHandlerBase<TUser, TQuery>(
             // Best-effort: the contributor failed after whatever resilience pipeline it uses.
             // Degrade the section instead of failing the whole export. The reason handed back is
             // deliberately generic; the exception detail goes to the log, never to the subject.
-            UserUseCaseLog.ExportSectionUnavailable(logger, ex, sectionName, userId);
+            ExportSectionUnavailable(logger, ex, sectionName, userId);
 
             return new UserDataExportSectionDTO
             {
@@ -197,4 +197,7 @@ public abstract class ExportUserDataHandlerBase<TUser, TQuery>(
             };
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Data-subject export section {Section} unavailable for user {UserId}; export continues with Available=false")]
+    private static partial void ExportSectionUnavailable(ILogger logger, Exception exception, string section, UserIdentifierType userId);
 }

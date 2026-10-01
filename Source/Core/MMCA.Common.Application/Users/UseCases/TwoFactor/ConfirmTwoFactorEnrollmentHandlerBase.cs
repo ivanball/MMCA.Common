@@ -26,7 +26,7 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// <param name="twoFactorService">Verifies the code and generates the recovery codes.</param>
 /// <param name="store">Reads the pending secret and activates the factor.</param>
 /// <param name="logger">Logger for the enrollment audit line.</param>
-public abstract class ConfirmTwoFactorEnrollmentHandlerBase<TCommand>(
+public abstract partial class ConfirmTwoFactorEnrollmentHandlerBase<TCommand>(
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
     ILogger logger) : ICommandHandler<TCommand, Result<TwoFactorRecoveryCodesResponse>>
@@ -67,8 +67,11 @@ public abstract class ConfirmTwoFactorEnrollmentHandlerBase<TCommand>(
             return Result.Failure<TwoFactorRecoveryCodesResponse>(completed.Errors);
         }
 
-        UserUseCaseLog.TwoFactorEnabled(logger, command.UserId);
+        TwoFactorEnabled(logger, command.UserId);
 
         return Result.Success(new TwoFactorRecoveryCodesResponse(recoveryCodes.Codes));
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor authentication enabled for user {UserId}")]
+    private static partial void TwoFactorEnabled(ILogger logger, UserIdentifierType userId);
 }

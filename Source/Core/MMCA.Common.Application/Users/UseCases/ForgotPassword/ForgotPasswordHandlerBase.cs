@@ -33,7 +33,7 @@ namespace MMCA.Common.Application.Users.UseCases.ForgotPassword;
 /// </remarks>
 /// <typeparam name="TUser">The app's <c>User</c> aggregate.</typeparam>
 /// <typeparam name="TCommand">The app's forgot-password command record.</typeparam>
-public abstract class ForgotPasswordHandlerBase<TUser, TCommand>(
+public abstract partial class ForgotPasswordHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IPasswordResetTokenService tokenService,
     IEmailSender emailSender,
@@ -58,7 +58,7 @@ public abstract class ForgotPasswordHandlerBase<TUser, TCommand>(
         var emailResult = Email.Create(command.Request.Email);
         if (emailResult.IsFailure)
         {
-            UserUseCaseLog.PasswordResetRejected(logger, "malformed address");
+            PasswordResetRejected(logger, "malformed address");
             return Result.Success();
         }
 
@@ -66,14 +66,14 @@ public abstract class ForgotPasswordHandlerBase<TUser, TCommand>(
         var user = await FindUntrackedByEmailAsync(email, cancellationToken).ConfigureAwait(false);
         if (user is null)
         {
-            UserUseCaseLog.PasswordResetRejected(logger, "no account for the address");
+            PasswordResetRejected(logger, "no account for the address");
             return Result.Success();
         }
 
         var tokenResult = await tokenService.IssueAsync(email.Value, user.Id, cancellationToken).ConfigureAwait(false);
         if (tokenResult.IsFailure)
         {
-            UserUseCaseLog.PasswordResetRejected(logger, "request throttled");
+            PasswordResetRejected(logger, "request throttled");
             return Result.Success();
         }
 
@@ -92,11 +92,11 @@ public abstract class ForgotPasswordHandlerBase<TUser, TCommand>(
         {
             // The token is already issued and still valid, so the user can retry (or use a link from
             // a later request). Reporting the send failure to the caller would be an oracle.
-            UserUseCaseLog.PasswordResetEmailFailed(logger, ex, user.Id);
+            PasswordResetEmailFailed(logger, ex, user.Id);
             return Result.Success();
         }
 
-        UserUseCaseLog.PasswordResetRequested(logger, user.Id);
+        PasswordResetRequested(logger, user.Id);
         return Result.Success();
     }
 
@@ -153,4 +153,15 @@ public abstract class ForgotPasswordHandlerBase<TUser, TCommand>(
         string.IsNullOrWhiteSpace(Settings.ResetUrl)
             ? null
             : $"{Settings.ResetUrl}#email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Password reset requested for user {UserId}; reset email sent")]
+    private static partial void PasswordResetRequested(ILogger logger, UserIdentifierType userId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Password reset email could not be sent for user {UserId}; the issued token stays valid")]
+    private static partial void PasswordResetEmailFailed(ILogger logger, Exception exception, UserIdentifierType userId);
+
+    // No address and no account id: the reset endpoints answer identically whether or not the
+    // address exists, and the log must not become the enumeration oracle the responses are not.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Password reset request not actioned ({Reason})")]
+    private static partial void PasswordResetRejected(ILogger logger, string reason);
 }

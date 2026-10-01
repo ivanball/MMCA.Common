@@ -39,7 +39,7 @@ namespace MMCA.Common.Application.Users.UseCases.ChangePassword;
 /// from locking the owner out of sign-in.
 /// </param>
 /// <param name="timeProvider">Optional clock used to stamp the revocation; defaults to the system clock.</param>
-public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
+public abstract partial class ChangePasswordHandlerBase<TUser, TCommand>(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     ILogger logger,
@@ -113,7 +113,7 @@ public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
                 .RevokeAllAsync(refreshSessions, _timeProvider, command.UserId, cancellationToken)
                 .ConfigureAwait(false);
 
-            UserUseCaseLog.PasswordChanged(logger, command.UserId);
+            PasswordChanged(logger, command.UserId);
         }
 
         return result;
@@ -127,4 +127,7 @@ public abstract class ChangePasswordHandlerBase<TUser, TCommand>(
     /// <returns>The counter key.</returns>
     private static string ProtectionKey(UserIdentifierType userId) =>
         $"password-change:{userId.ToString(CultureInfo.InvariantCulture)}";
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "User {UserId} password changed")]
+    private static partial void PasswordChanged(ILogger logger, UserIdentifierType userId);
 }

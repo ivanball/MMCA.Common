@@ -27,7 +27,7 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// <param name="twoFactorService">Generates the replacement set.</param>
 /// <param name="store">Replaces the stored hashes.</param>
 /// <param name="logger">Logger for the audit line.</param>
-public abstract class RegenerateRecoveryCodesHandlerBase<TCommand>(
+public abstract partial class RegenerateRecoveryCodesHandlerBase<TCommand>(
     ITwoFactorAuthenticator authenticator,
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
@@ -71,8 +71,11 @@ public abstract class RegenerateRecoveryCodesHandlerBase<TCommand>(
             return Result.Failure<TwoFactorRecoveryCodesResponse>(replaced.Errors);
         }
 
-        UserUseCaseLog.TwoFactorRecoveryCodesRegenerated(logger, command.UserId);
+        TwoFactorRecoveryCodesRegenerated(logger, command.UserId);
 
         return Result.Success(new TwoFactorRecoveryCodesResponse(recoveryCodes.Codes));
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor recovery codes regenerated for user {UserId}")]
+    private static partial void TwoFactorRecoveryCodesRegenerated(ILogger logger, UserIdentifierType userId);
 }

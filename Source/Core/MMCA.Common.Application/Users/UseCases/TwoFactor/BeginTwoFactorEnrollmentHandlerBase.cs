@@ -32,7 +32,7 @@ namespace MMCA.Common.Application.Users.UseCases.TwoFactor;
 /// <param name="twoFactorService">Mints the secret and renders the provisioning URI.</param>
 /// <param name="store">Persists the pending secret.</param>
 /// <param name="logger">Logger for the enrollment audit line.</param>
-public abstract class BeginTwoFactorEnrollmentHandlerBase<TCommand>(
+public abstract partial class BeginTwoFactorEnrollmentHandlerBase<TCommand>(
     ITwoFactorService twoFactorService,
     ITwoFactorStore store,
     ILogger logger) : ICommandHandler<TCommand, Result<TwoFactorSetupResponse>>
@@ -84,7 +84,7 @@ public abstract class BeginTwoFactorEnrollmentHandlerBase<TCommand>(
             return Result.Failure<TwoFactorSetupResponse>(stored.Errors);
         }
 
-        UserUseCaseLog.TwoFactorEnrollmentStarted(logger, command.UserId);
+        TwoFactorEnrollmentStarted(logger, command.UserId);
 
         return Result.Success(new TwoFactorSetupResponse(
             secret,
@@ -102,4 +102,7 @@ public abstract class BeginTwoFactorEnrollmentHandlerBase<TCommand>(
     protected abstract Task<string?> ResolveAccountNameAsync(
         UserIdentifierType userId,
         CancellationToken cancellationToken);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Two-factor enrollment started for user {UserId}")]
+    private static partial void TwoFactorEnrollmentStarted(ILogger logger, UserIdentifierType userId);
 }
