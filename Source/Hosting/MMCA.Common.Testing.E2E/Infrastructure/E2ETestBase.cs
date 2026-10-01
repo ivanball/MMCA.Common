@@ -156,8 +156,11 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// v1.104.2 fixes). Firefox adds one more wrinkle: the logout forceLoad is superseded mid-flight
     /// by the app's own redirect onto <c>/login</c>, and Firefox surfaces the abandoned first request
     /// to the URL waiter as <c>NS_BINDING_ABORTED</c> instead of following the survivor (ADC dispatch
-    /// run 33941831649: 3/3 tries, chromium and webkit never raise it). The destination is
-    /// unchanged, so the wait is simply repeated once for the navigation that won.
+    /// run 33941831649: 3/3 tries, chromium and webkit never raise it). WebKit raises the same
+    /// supersession as "Navigation canceled by policy check" since sign-out runs through the
+    /// same-origin API proxy (1.218.0; Store dispatch run 36937239189: 3/3 tries, chromium and
+    /// firefox green). The destination is unchanged, so the wait is simply repeated once for the
+    /// navigation that won.
     /// </remarks>
     protected async Task SignOutAsync()
     {
@@ -166,11 +169,15 @@ public abstract class E2ETestBase : IAsyncLifetime
         {
             await Page.WaitForURLAsync(LoginUrlPattern, new() { Timeout = 15_000 }).ConfigureAwait(false);
         }
-        catch (PlaywrightException ex) when (ex.Message.Contains("NS_BINDING_ABORTED", StringComparison.Ordinal))
+        catch (PlaywrightException ex) when (IsSupersededNavigation(ex))
         {
             await Page.WaitForURLAsync(LoginUrlPattern, new() { Timeout = 15_000 }).ConfigureAwait(false);
         }
     }
+
+    private static bool IsSupersededNavigation(PlaywrightException ex) =>
+        ex.Message.Contains("NS_BINDING_ABORTED", StringComparison.Ordinal)
+        || ex.Message.Contains("Navigation canceled by policy check", StringComparison.Ordinal);
 
     private static readonly System.Text.RegularExpressions.Regex LoginUrlPattern =
         new("/login", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
