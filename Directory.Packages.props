@@ -233,9 +233,10 @@
     <!-- Testing -->
     <!-- bUnit v2 (BunitContext / Render API) is the line compatible with xUnit v3 / Microsoft Testing Platform. -->
     <PackageVersion Include="bunit" Version="2.11.3" />
-    <!-- Pin the transitive AngleSharp (pulled by bUnit) to the patched 1.5.2: bUnit 2.7.2 floors it at
-         1.4.0, which carries CVE-2026-54570 / GHSA-pgww-w46g-26qg (mXSS via MathML annotation-xml). CPM
-         does not pin transitives, so the two bUnit-referencing projects add a direct PackageReference. -->
+    <!-- AngleSharp is transitive through bUnit. The direct pin dates from bUnit 2.7.2, which floored it at
+         1.4.0 (CVE-2026-54570 / GHSA-pgww-w46g-26qg, mXSS via MathML annotation-xml, fixed in 1.5.2); bUnit
+         2.11.3 now floors it at 1.8.1. CPM does not pin transitives, so the two bUnit-referencing projects
+         keep a direct PackageReference to hold it at this central version. -->
     <PackageVersion Include="AngleSharp" Version="1.8.3" />
     <PackageVersion Include="Deque.AxeCore.Playwright" Version="4.13.0" />
     <!-- Pin the transitive Commons explicitly to 4.12.0 (= Playwright 4.12.0's floor): CPM does not pin

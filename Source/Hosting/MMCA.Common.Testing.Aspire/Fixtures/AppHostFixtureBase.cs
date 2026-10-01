@@ -31,8 +31,11 @@ namespace MMCA.Common.Testing.Aspire.Fixtures;
 /// container runtime, and sometimes the HTTPS development certificate. When one is missing,
 /// <see cref="SkipReason"/> is set and nothing is started, so a test class can skip the collection
 /// with a sentence a human can act on. The consuming test project owns the skip call itself (this
-/// package deliberately takes no dependency on the xUnit assertion library):
-/// <c>Assert.SkipWhen(!Fixture.IsAvailable, Fixture.SkipReason!)</c>.
+/// package deliberately takes no dependency on the xUnit assertion library). Write it as a branch,
+/// <c>if (!Fixture.IsAvailable) { Assert.Skip(Fixture.SkipReason!); }</c>, never as
+/// <c>Assert.SkipWhen(!Fixture.IsAvailable, Fixture.SkipReason!)</c>: <c>SkipWhen</c> validates its
+/// reason before the condition, and the reason is null exactly when the stack DID start, so that form
+/// throws on every runner able to boot the AppHost.
 /// </para>
 /// </summary>
 public abstract class AppHostFixtureBase : IAsyncLifetime

@@ -36,7 +36,8 @@ namespace MMCA.Common.Shared.ValueObjects;
 /// Members are discovered by reflection over the <c>public static readonly</c> fields declared on
 /// <typeparamref name="TEnumeration"/> itself, on first use, and then frozen. Two members sharing a
 /// <see cref="Value"/> or a <see cref="Name"/> (case-insensitively) are a declaration bug and fail
-/// fast with an <see cref="ArgumentException"/> the first time the enumeration is touched.
+/// fast with an <see cref="ArgumentException"/> the first time <see cref="FromValue"/> or
+/// <see cref="FromName"/> builds its lookup; enumerating <see cref="All"/> alone does not detect them.
 /// </para>
 /// <para>
 /// Intentionally does not implement <see cref="IEquatable{T}"/> (S4035: an unsealed

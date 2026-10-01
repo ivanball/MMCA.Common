@@ -13,15 +13,15 @@ public sealed class PasswordResetSettings
     public const string SectionName = "PasswordReset";
 
     /// <summary>
-    /// Absolute URL of the reset page the email links to (the email appends
-    /// <c>?email=...&amp;token=...</c>). Deliberately NOT required: a host that has not configured a
-    /// UI base must still boot, and an empty value degrades to a token-only email the user pastes
+    /// Absolute URL of the reset page the email links to (the email appends the address and token as
+    /// a URL fragment, <c>#email=...&amp;token=...</c>, so the live token never reaches a server log).
+    /// Deliberately NOT required: a host that has not configured a UI base must still boot, and an empty value degrades to a token-only email the user pastes
     /// into the reset page by hand.
     /// </summary>
     [SuppressMessage(
         "Design",
         "CA1056:URI-like properties should not be strings",
-        Justification = "Bound from configuration (PasswordReset__ResetUrl) and concatenated with a query string; the empty default that keeps an unconfigured host bootable is not a valid System.Uri.")]
+        Justification = "Bound from configuration (PasswordReset__ResetUrl) and concatenated with a URL fragment; the empty default that keeps an unconfigured host bootable is not a valid System.Uri.")]
     public string ResetUrl { get; init; } = string.Empty;
 
     /// <summary>How long an issued token stays redeemable, in minutes.</summary>

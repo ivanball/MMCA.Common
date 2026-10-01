@@ -22,7 +22,7 @@ public sealed class OutboxPollFilterProcessor : BaseProcessor<Activity>
     // package does not reference MMCA.Common.Infrastructure, so AddServiceDefaults stays usable
     // from a host that does not take the persistence stack (EF Core, MassTransit, SignalR/Redis).
     // Its one ProjectReference is MMCA.Common.Shared, for HttpResilienceDefaults. The same
-    // literals also appear in the AddMeter / AddSource calls in Extensions.cs.
+    // literals also appear in the AddMeter / AddSource calls in Extensions.Telemetry.cs.
     private const string OutboxActivitySourceName = "MMCA.Common.Outbox";
     private const string PollActivityName = "OutboxPoll";
     private const string InternalCommandsActivitySourceName = "MMCA.Common.InternalCommands";

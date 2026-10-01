@@ -970,8 +970,8 @@ jobs:
     # WebApplicationFactory, bypassing the orchestration, so a renamed resource, an unresolvable
     # reference or a WaitFor cycle is invisible everywhere else.
     #
-    # The sample AppHost declares ONE project resource and a SQLite file, so this needs no container
-    # runtime; the dev-certificate step below is here because a consumer stack with an https launch
+    # The sample AppHost declares two resources over one sample project (one with a SQLite file, one on
+    # the Http2-only h2c profile), so this needs no container runtime; the dev-certificate step below is here because a consumer stack with an https launch
     # profile does, and this job is the template those consumers copy.
     continue-on-error: true
     steps:
