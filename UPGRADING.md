@@ -32,7 +32,7 @@ grep -rl --include='*.cs' --include='*.razor' 'using MMCA.Common.Application.Use
 The first-party consumers (MMCA.ADC, MMCA.Store, MMCA.Helpdesk) are swept by the workspace script
 `Tools/Scripts/move-namespace.ps1` in the same release, which does exactly the three steps above.
 
-## [Unreleased]
+## [1.217.0] - 2026-10-01
 
 **`AddCommonOpenApi()` no longer registers an OpenAPI document; the host registers it with its own
 `services.AddOpenApi()`.** The host call has to live in the host project: the OpenAPI XML-comment

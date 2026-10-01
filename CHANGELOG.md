@@ -4,11 +4,11 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
-## [Unreleased]
+## [1.217.0] - 2026-10-01
 
 ### Breaking
 
-- **Breaking:** `AddCommonOpenApi()` no longer registers an OpenAPI document; the host registers it with its own `services.AddOpenApi()`. Map and fix: UPGRADING.md, [Unreleased].
+- **Breaking:** `AddCommonOpenApi()` no longer registers an OpenAPI document; the host registers it with its own `services.AddOpenApi()`. Map and fix: UPGRADING.md, [1.217.0].
   - `AddCommonOpenApi()` only configures the documents the host registers: the strongly-typed-identifier schema and parameter transformers (ADR-115, inert without wrappers) and the `ApiParameterDescriptorBackfillProvider` guard. It used to register documents itself through the API-versioning builder (`AddApiVersioning().AddOpenApi()`), and a document registered inside the framework assembly lost the host's XML summaries: the OpenAPI XML-comment source generator attaches them by intercepting the `AddOpenApi` call sites of the host project. That registration also rewrote `info.title` (to `<entry assembly> | v1`) and `info.version` (`1.0.0` to `1.0`), added `enum: ["1.0"]` to every `api-version` header parameter, marked operations of deprecated API versions `deprecated`, and emitted one extra document per discovered API version. With no wrappers, the document is now exactly the one plain `AddOpenApi()` produces.
   - `MapCommonOpenApi()` maps `MapOpenApi().AllowAnonymous()` (no `WithDocumentPerVersion()`, which needs the removed versioned registration) and, outside Production, throws `InvalidOperationException` when no `v1` document is registered, so a host calling only the framework pair fails at startup and at build-time document generation instead of serving nothing. Still mapped outside Production only and anonymous.
 
