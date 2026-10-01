@@ -191,7 +191,9 @@ public abstract class OAuthControllerBase(
 
         // AuthenticationResponse is a struct, so a cache miss yields default(AuthenticationResponse)
         // (null AccessToken) rather than null — detect the miss via the token, matching AuthUIService.
-        var response = await cacheService.GetAsync<AuthenticationResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
+        // Read from the shared store: a code already burned on another replica must be a miss here,
+        // not a stale local copy that would mint a second token pair.
+        var response = await cacheService.GetFromSharedStoreAsync<AuthenticationResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrEmpty(response.AccessToken))
         {
             return InvalidCode();

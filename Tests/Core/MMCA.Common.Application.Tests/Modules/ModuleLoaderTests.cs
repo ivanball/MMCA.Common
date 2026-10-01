@@ -1,3 +1,4 @@
+using System.Reflection;
 using AwesomeAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -218,6 +219,67 @@ public sealed class ModuleLoaderTests
         FakeModuleTracker.RegistrationOrder.Should().BeEmpty();
     }
 
+    // ── Assembly scan failures ──
+    [Fact]
+    public void DiscoverAndRegister_ReflectionTypeLoadException_StillRegistersTheLoadableModulesAndLogsAnError()
+    {
+        // A missing transitive reference fails GetTypes() for the whole assembly, but the exception
+        // still carries every type that DID load. Dropping the assembly makes its modules vanish.
+        var logger = CreateEnabledLogger();
+        var loader = new ModuleLoader { Logger = logger.Object };
+        var failure = new ReflectionTypeLoadException(
+            new Type?[] { typeof(FakeModuleAlpha), null },
+            new Exception?[] { new FileNotFoundException("Could not load file or assembly 'Missing.Dependency'.") });
+
+        DiscoverFrom(loader, CreateModulesSettings(("FakeAlpha", true)), new ScanFailingAssembly(failure));
+
+        loader.EnabledModules.Select(m => m.Name).Should().Equal(
+            ["FakeAlpha"],
+            "the loadable types of a partially loadable assembly must still register");
+        VerifyLoggedOnce(logger, LogLevel.Error, "Missing.Dependency");
+    }
+
+    [Fact]
+    public void DiscoverAndRegister_AnyOtherScanFailure_DropsTheAssemblyAndLogsAnError()
+    {
+        var logger = CreateEnabledLogger();
+        var loader = new ModuleLoader { Logger = logger.Object };
+
+        DiscoverFrom(
+            loader,
+            CreateModulesSettings(("FakeAlpha", true)),
+            new ScanFailingAssembly(new InvalidOperationException("scan exploded")));
+
+        loader.EnabledModules.Should().BeEmpty();
+        VerifyLoggedOnce(logger, LogLevel.Error, "scan exploded");
+    }
+
+    private static Mock<ILogger<ModuleLoader>> CreateEnabledLogger()
+    {
+        var logger = new Mock<ILogger<ModuleLoader>>();
+        logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        return logger;
+    }
+
+    private static void DiscoverFrom(ModuleLoader loader, ModulesSettings modulesSettings, Assembly assembly) =>
+        loader.DiscoverAndRegister(
+            new ServiceCollection(),
+            new ConfigurationBuilder(),
+            CreateApplicationSettings(),
+            modulesSettings,
+            environmentName: null,
+            moduleAssemblies: [assembly]);
+
+    private static void VerifyLoggedOnce(Mock<ILogger<ModuleLoader>> logger, LogLevel level, string messageFragment) =>
+        logger.Verify(
+            l => l.Log(
+                level,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state != null && state.ToString()!.Contains(messageFragment, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+
     // ── ModulesSettings: IsModuleEnabled ──
     [Fact]
     public void IsModuleEnabled_WhenModuleExistsAndEnabled_ReturnsTrue()
@@ -254,6 +316,17 @@ public sealed class ModuleLoaderTests
         settings.IsDependencyRemote("Sales", "Identity").Should().BeFalse();
         settings.IsDependencyRemote("Unknown", "Catalog").Should().BeFalse();
     }
+}
+
+/// <summary>
+/// An assembly whose <see cref="Assembly.GetTypes"/> fails with the supplied exception, standing in
+/// for a module assembly with a missing transitive reference.
+/// </summary>
+internal sealed class ScanFailingAssembly(Exception failure) : Assembly
+{
+    public override string FullName => "MMCA.Common.Application.Tests.ScanFailing, Version=1.0.0.0";
+
+    public override Type[] GetTypes() => throw failure;
 }
 
 /// <summary>Records the order in which fake modules register (and seed), per test.</summary>

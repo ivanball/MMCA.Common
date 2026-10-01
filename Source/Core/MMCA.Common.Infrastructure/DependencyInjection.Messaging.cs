@@ -107,6 +107,10 @@ public static partial class DependencyInjection
             if (settings.IsInboxEnabled)
             {
                 services.TryAddScoped<Persistence.Inbox.IInboxStore, Persistence.Inbox.EfInboxStore>();
+
+                // The store stamps ProcessedOn from the injected clock. AddServices registers it
+                // too; TryAdd keeps this call self-sufficient without displacing a host's own clock.
+                services.TryAddSingleton(TimeProvider.System);
             }
             else
             {

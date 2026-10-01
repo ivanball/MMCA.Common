@@ -1,3 +1,4 @@
+using System.Globalization;
 using AwesomeAssertions;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Auth.TwoFactor;
@@ -5,6 +6,7 @@ using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Domain.Auth;
 using MMCA.Common.Infrastructure.Auth.TwoFactor;
 using MMCA.Common.Shared.Abstractions;
+using Moq;
 using OtpNet;
 
 namespace MMCA.Common.Infrastructure.Tests.Auth;
@@ -127,11 +129,36 @@ public sealed class TwoFactorAuthenticatorTests
         result.Errors.Should().ContainSingle(e => e.Code == "Test.SaveFailed");
     }
 
+    [Fact]
+    public async Task ChallengeAsync_ReadsTheLastAcceptedStepFromTheSharedStore_NeverThroughGetAsync()
+    {
+        // The last-step record is what makes a time-based code single use. Read through GetAsync it
+        // can come from a replica's in-process copy that predates an acceptance on another replica,
+        // and the replayed code would be accepted there.
+        var cache = new Mock<ICacheService>();
+        cache
+            .Setup(c => c.GetFromSharedStoreAsync<long?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((long?)null);
+        var (sut, _, secret) = CreateSut(enabled: true, cache: cache.Object);
+        string lastStepKey = string.Create(CultureInfo.InvariantCulture, $"twofactor:laststep:{TestUserId}");
+
+        Result<TwoFactorOutcome> result = await sut.ChallengeAsync(TestUserId, CodeAt(secret));
+
+        cache.Verify(
+            c => c.GetAsync<long?>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        cache.Verify(
+            c => c.GetFromSharedStoreAsync<long?>(lastStepKey, It.IsAny<CancellationToken>()),
+            Times.Once);
+        result.IsSuccess.Should().BeTrue();
+    }
+
     // ── Helpers ──
     private static (TwoFactorAuthenticator Sut, FakeTwoFactorStore Store, string Secret) CreateSut(
         bool enabled,
         bool stateExists = true,
-        int recoveryCodeCount = 0)
+        int recoveryCodeCount = 0,
+        ICacheService? cache = null)
     {
         var settings = Options.Create(new TwoFactorSettings { RecoveryCodeCount = Math.Max(recoveryCodeCount, 1) });
         var service = new TotpTwoFactorService(settings);
@@ -144,7 +171,7 @@ public sealed class TwoFactorAuthenticatorTests
             store.Seed(enabled, secret, set);
         }
 
-        return (new TwoFactorAuthenticator(service, store, new FakeCacheService(), settings), store, secret);
+        return (new TwoFactorAuthenticator(service, store, cache ?? new FakeCacheService(), settings), store, secret);
     }
 
     private static string CodeAt(string secret) =>

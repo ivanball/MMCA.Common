@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,9 +66,11 @@ public sealed partial class ModuleLoader
     {
         _modulesSettings = modulesSettings;
 
-        // Scan the host-named assemblies for concrete IModule implementations. The try-catch guards
-        // against assemblies that throw on GetTypes()
-        // (e.g. ReflectionTypeLoadException from missing transitive references).
+        // Scan the host-named assemblies for concrete IModule implementations. A missing transitive
+        // reference fails GetTypes() for the whole assembly with a ReflectionTypeLoadException that
+        // still carries every type that DID load: those are kept, so one unloadable type does not
+        // make the assembly's modules vanish. Both failure shapes log at Error, because a module
+        // that silently fails to register is an outage that looks like a configuration choice.
         var allTypes = moduleAssemblies
             .SelectMany(a =>
             {
@@ -75,9 +78,17 @@ public sealed partial class ModuleLoader
                 {
                     return a.GetTypes();
                 }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    var loaderErrors = string.Join(
+                        " | ",
+                        ex.LoaderExceptions.Where(e => e is not null).Select(e => e!.Message));
+                    LogAssemblyPartiallyLoaded(Logger, a.FullName ?? a.GetName().Name ?? "unknown", loaderErrors, ex);
+                    return [.. ex.Types.OfType<Type>()];
+                }
                 catch (Exception ex)
                 {
-                    LogAssemblyScanFailed(Logger, a.FullName ?? a.GetName().Name ?? "unknown", ex.Message);
+                    LogAssemblyScanFailed(Logger, a.FullName ?? a.GetName().Name ?? "unknown", ex.Message, ex);
                     return [];
                 }
             })
@@ -335,8 +346,11 @@ public sealed partial class ModuleLoader
     [LoggerMessage(Level = LogLevel.Information, Message = "Module '{ModuleName}' depends on '{DependencyName}' which is satisfied by a remote service (declared in RemoteDependencies)")]
     private static partial void LogDependencyRemote(ILogger logger, string moduleName, string dependencyName);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to scan assembly '{AssemblyName}' for modules: {Error}")]
-    private static partial void LogAssemblyScanFailed(ILogger logger, string assemblyName, string error);
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to scan assembly '{AssemblyName}' for modules; none of its modules are registered: {Error}")]
+    private static partial void LogAssemblyScanFailed(ILogger logger, string assemblyName, string error, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Assembly '{AssemblyName}' loaded only partially; its loadable modules are registered and the rest are missing. Loader errors: {LoaderErrors}")]
+    private static partial void LogAssemblyPartiallyLoaded(ILogger logger, string assemblyName, string loaderErrors, Exception exception);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Module '{ModuleName}' declares dependency '{DependencyName}' as remote, but {ServiceType} still resolves to the disabled stub {StubType} — did the host forget to wire the gRPC client? (Intentional for best-effort dependencies.)")]
     private static partial void LogRemoteDependencyStillStub(ILogger logger, string moduleName, string dependencyName, string serviceType, string stubType);

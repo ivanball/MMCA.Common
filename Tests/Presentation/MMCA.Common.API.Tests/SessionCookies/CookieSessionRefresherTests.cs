@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using MMCA.Common.API.SessionCookies;
 using MMCA.Common.Shared.Auth.Responses;
 using MMCA.Common.Shared.Concurrency;
@@ -53,6 +54,23 @@ public sealed class CookieSessionRefresherTests
         SessionTokenResult? result = await harness.Sut.GetOrRefreshAsync(context);
 
         result.Should().BeNull();
+    }
+
+    // ── Injected clock ──
+    [Fact]
+    public async Task GetOrRefreshAsync_JudgesTheAccessTokenExpiryAgainstTheInjectedClock()
+    {
+        // At the injected instant the token still has ten minutes to live, so it is returned as-is.
+        var fixedNow = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        DateTime expires = fixedNow.UtcDateTime.AddMinutes(10);
+        string token = CreateJwt(expires);
+        using var harness = CreateSut(RespondWith(HttpStatusCode.InternalServerError), new FakeTimeProvider(fixedNow));
+        var context = CreateContext(accessToken: token, refreshToken: null);
+
+        SessionTokenResult? result = await harness.Sut.GetOrRefreshAsync(context);
+
+        result.Should().NotBeNull("the token is valid at the injected clock's instant plus its remaining lifetime");
+        result!.Value.AccessTokenExpiry.Should().Be(expires);
     }
 
     // ── No session ──
@@ -329,14 +347,16 @@ public sealed class CookieSessionRefresherTests
             Content = JsonContent.Create(new AuthenticationResponse(accessToken, refreshToken, accessTokenExpiry)),
         };
 
-    private static RefresherHarness CreateSut(Func<HttpRequestMessage, HttpResponseMessage> responder) =>
-        new(responder);
+    private static RefresherHarness CreateSut(
+        Func<HttpRequestMessage, HttpResponseMessage> responder,
+        TimeProvider? timeProvider = null) =>
+        new(responder, timeProvider);
 
     private sealed class RefresherHarness : IDisposable
     {
         private readonly MemoryCache _cache;
 
-        public RefresherHarness(Func<HttpRequestMessage, HttpResponseMessage> responder)
+        public RefresherHarness(Func<HttpRequestMessage, HttpResponseMessage> responder, TimeProvider? timeProvider)
         {
             Handler = new StubHttpMessageHandler(responder);
             _cache = new MemoryCache(new MemoryCacheOptions());
@@ -346,7 +366,8 @@ public sealed class CookieSessionRefresherTests
                 new StubHttpClientFactory(Handler),
                 _cache,
                 environment.Object,
-                NullLogger<CookieSessionRefresher>.Instance);
+                NullLogger<CookieSessionRefresher>.Instance,
+                timeProvider ?? TimeProvider.System);
         }
 
         public CookieSessionRefresher Sut { get; }
