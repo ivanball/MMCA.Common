@@ -19,7 +19,17 @@ public abstract class IntegrationEventContractTestsBase
 {
     protected abstract IArchitectureMap Map { get; }
 
-    /// <summary>The committed snapshot: one line per integration event, "FullName { Prop:Type, ... }".</summary>
+    /// <summary>
+    /// Name of the environment variable that, when set to a file path, makes the fact write the
+    /// live contract there as ready-to-paste C# string literals (one per line) before comparing.
+    /// It regenerates the snapshot text only; the comparison still runs and still fails on drift.
+    /// </summary>
+    public const string SnapshotOutputVariable = "MMCA_CONTRACT_SNAPSHOT_OUT";
+
+    /// <summary>
+    /// The committed snapshot: one line per integration event, "Key { Prop:Type, ... }", where Key is
+    /// the event's <c>[EventName]</c> value when it declares one and its full type name otherwise.
+    /// </summary>
     protected abstract IReadOnlyList<string> ExpectedContract { get; }
 
     [Fact]
@@ -27,12 +37,19 @@ public abstract class IntegrationEventContractTestsBase
     {
         var actual = ArchitectureRules.BuildIntegrationEventContract(Map);
 
+        var output = Environment.GetEnvironmentVariable(SnapshotOutputVariable);
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            File.WriteAllLines(output, actual.Select(line => $"\"{line}\","));
+        }
+
         ArchitectureAssert.NoViolations(
             Compare(ExpectedContract, actual),
             "the integration-event wire contract changed. These events cross service boundaries over the "
             + "broker, so a renamed/removed/retyped property breaks consumers in other services. If "
             + "intentional, version the event / coordinate the consumer rollout, then update "
-            + "ExpectedContract in this commit");
+            + "ExpectedContract in this commit (set " + SnapshotOutputVariable + " to a file path and re-run "
+            + "to get the live contract as ready-to-paste literals)");
     }
 
     /// <summary>

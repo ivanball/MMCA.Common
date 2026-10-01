@@ -37,4 +37,14 @@ public sealed class LayoutSettings
     /// available to any signed-in account.
     /// </summary>
     public string? SessionsNavRequiredRole { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, the framework's notification pages (<c>/notifications</c>,
+    /// <c>/notifications/inbox</c>, <c>/notifications/inbox/{Id}</c> and <c>/notifications/send</c>)
+    /// answer with the not-found page in a host that never called <c>AddNotificationUI()</c>, instead
+    /// of being routable by URL with none of the services they need. <see langword="false"/> (the
+    /// default) leaves the routes exactly as they are. A host that registers the notification UI is
+    /// unaffected either way.
+    /// </summary>
+    public bool HideNotificationPagesWhenUnregistered { get; init; }
 }

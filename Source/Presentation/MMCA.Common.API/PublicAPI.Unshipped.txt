@@ -108,7 +108,6 @@ MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin(System.Uri? returnUr
 MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin(System.Uri? returnUrl = null, string? state = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 static MMCA.Common.API.Authorization.AuthorizationExtensions.AddAuthorizationPolicies(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions!>? configureFallback) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly MMCA.Common.API.Authorization.Fallback.FallbackAuthorizationOptions.DefaultExemptPathPrefixes -> System.Collections.Generic.IReadOnlyList<string!>!
-*REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.AppleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 *REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.GitHubLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 *REMOVED*MMCA.Common.API.Controllers.OAuthControllerBase.GoogleLogin(System.Uri? returnUrl = null) -> Microsoft.AspNetCore.Mvc.ChallengeResult!
 MMCA.Common.API.RateLimiting.RateLimitingSettings.AnonymousHubPermitLimit.get -> int

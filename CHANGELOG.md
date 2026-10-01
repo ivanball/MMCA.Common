@@ -6,6 +6,45 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 
 ## [Unreleased]
 
+## [1.216.0] - 2026-09-30
+
+### Breaking
+
+- **Breaking:** required constructor arguments on four DI-resolved types, one security-relevant default, the contract-snapshot format and an analyzer severity. Map and fix: UPGRADING.md, [1.216.0].
+  - `TokenService` takes a required `ILogger<TokenService>` (before `jwksSettings`); `PasswordResetTokenService`, `EmailConfirmationTokenService` and `EfInboxStore` take a required `TimeProvider` (last). All four are DI-resolved; only code constructing them by hand changes. The internal `CookieSessionRefresher` takes a `TimeProvider` too (no consumer impact).
+  - **Security-relevant default:** `MapCommonOpenApi()` maps the OpenAPI document `AllowAnonymous()` outside Production, as every first-party host already did by hand. A host relying on the fallback authorization policy to keep `/openapi/*` behind a token in Development, Staging or any other non-Production environment now serves it anonymously; Production still maps nothing.
+  - The frozen integration-event contract (`IntegrationEventContractTestsBase`) keys an event on its `[EventName]` value when it declares one, and marks a nullable reference annotation (`String?`, `IReadOnlyList<String?>`). Every committed `ExpectedContract` with an `[EventName]` event or a nullable reference member fails until regenerated (`MMCA_CONTRACT_SNAPSHOT_OUT`).
+  - Contributors to this repository only: RS0026/RS0027 (multiple public overloads with optional parameters) are errors; the 19 overload members already released carry a targeted `SuppressMessage`.
+
+### Added
+
+- `.github/actions/freshness-gate`: one composite action for the deploy freshness gates ADC and Store each carry four copies of (newest successful run of a workflow, or newest completed run in which named jobs succeeded, in one run or per job; window in days; break-glass with a mandatory justification).
+- `.github/actions/nuget-vulnerability-audit` gains optional `framework` (`--framework`) and `no-restore` (`--no-restore`) inputs, so a TFM-scoped MAUI audit can call the shared action; the defaults leave every current caller unchanged.
+- `build/LocalSource/MMCA.Common.LocalSource.targets`: the local source-mode package-to-project swap, derived from `Source/**/MMCA.Common.*.csproj` instead of a list each consumer keeps. A consumer imports it with one line (CONTRIBUTING.md, "The swap itself ships from this repo"); it also swaps `MMCA.Common.Testing.Aspire`, which both consumer lists missed.
+- `LayoutSettings.HideNotificationPagesWhenUnregistered` (`Layout:HideNotificationPagesWhenUnregistered`, default `false`): a host that never calls `AddNotificationUI()` can answer `/notifications`, `/notifications/inbox` and `/notifications/send` with the not-found page.
+- `IntegrationEventContractTestsBase.SnapshotOutputVariable` (`MMCA_CONTRACT_SNAPSHOT_OUT`): set it to a file path and the contract fact writes the live contract there as ready-to-paste literals.
+- `OwnershipHelper.RequireResolvableOwner` / `ValidateOwnershipAsync`: the fail-closed "bypass role or resolvable owner claim" gate and the "caller owns this record" check.
+- `GrpcWireFormat`: UTC `DateTime` and invariant `decimal` wire strings, with throwing and `Try`/`OrNull` parse variants.
+- `InitializeDatabaseUnlessDesignTimeAsync` and `AddCommonHybridCacheWhenRedisConfigured` for the host `Program.cs` boilerplate.
+- `PagedReadAll` (moved unchanged from ADC's Conference UI into `MMCA.Common.UI`) and `IdempotentReadRetry.GetAsync` (the `AuthenticatedServiceBase` retry policy, same object, for anonymous read-only lookups).
+- `ICacheService.GetFromSharedStoreAsync<T>` (default member: reads through `GetAsync`); `HybridCacheService` overrides it with the local tier disabled for read and write.
+
+### Fixed
+
+- Fixed: the OAuth exchange code, password-reset token, email-confirmation token and the 2FA last-accepted step read through `GetFromSharedStoreAsync`, so a record consumed on one replica can no longer be redeemed from another replica's local cache for 30s.
+- Fixed: `ModuleLoader` keeps the loadable types of a `ReflectionTypeLoadException` and logs Error with every loader exception; any other scan failure logs Error, so a module no longer vanishes behind a Warning.
+- Fixed: `CosmosDbContext` bypasses certificate validation only for the emulator key AND a loopback endpoint; Gateway mode still follows the key alone.
+- Fixed: `TokenService.GetPrincipalFromExpiredToken` logs an unexpected failure as one Warning instead of swallowing it.
+- Fixed: `DbContextFactory` opens the connection before `SET IDENTITY_INSERT` and closes it only if it opened it, so the SET and the insert share a session.
+- Fixed: the Spanish singular `Notif.Send.SentTo.One` carries its accent like its base and `.Other` siblings.
+- Fixed: removed a stale `*REMOVED*` entry for the one-argument `OAuthControllerBase.AppleLogin`, which never shipped.
+
+### Changed
+
+- CI and release: the release publish job re-audits vulnerabilities before pack, applies the same 2000-test floor as CI and has a 15-minute timeout (trigger, permissions and file name unchanged); go-sqlcmd is pinned to v1.10.0 with a sha256 check and the SQL image to 2022-CU27-ubuntu-22.04; build-and-test and coverage have timeouts; the Redis (15) and PostgreSQL (7) tiers have exact test floors; a new `sqlserver-integration` job (not yet required) covers identity insert, rowversion conflict and the outbox row in the same save; the Claude workflows check out with `persist-credentials: false`.
+- Release step: `build/publicapi/Promote-PublicApi.ps1` moves every `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt` in the last commit before the tag.
+- Tests: exhaustiveness pins for the `ErrorType` to HTTP and to gRPC maps, and a convention check that fails on a resource value rendering a count inside a fixed plural sentence (`PluralSentenceResourceTests`).
+
 ## [1.215.0] - 2026-09-30
 
 ### Fixed

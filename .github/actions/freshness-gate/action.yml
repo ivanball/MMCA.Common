@@ -1,0 +1,209 @@
+name: Freshness gate (deploy precondition on a scheduled proof)
+description: >-
+  Fails unless a scheduled workflow has produced a recent proof: either the newest SUCCESSFUL run
+  of that workflow (default), or, when required-jobs is set, the newest COMPLETED run in which the
+  named jobs themselves concluded success, regardless of the run's own conclusion. One Actions API
+  read per run inspected, no test cost per deploy. Break-glass: when skip is 'true' the gate passes
+  only with a non-empty skip-justification, which is written loudly to the step summary and as a
+  warning; skip without a justification fails. Shared by MMCA.ADC and MMCA.Store deploy.yml so the
+  dr / load / cross-service / cross-browser gates have one implementation (ADR-038). The calling job
+  needs `permissions: actions: read`.
+
+  Run selection, exactly as the per-repository copies it replaces:
+  - required-jobs empty: `runs?status=success&per_page=1`. In-progress, cancelled, failed and
+    skipped runs never count; a run that concluded success counts as-is, so use this mode only for
+    a workflow with no skip-if-unchanged guard (every successful run did the real work).
+  - required-jobs set: walk the newest max-runs runs with `status=completed` (any conclusion, so a
+    cancelled-but-proven run still counts; in-progress runs are never listed) and count a run only
+    when the named jobs concluded success in it (a skipped or failed job never counts). With
+    required-jobs-mode same-run, ONE run must hold every named job; with per-job, each job is
+    resolved independently (they may come from different runs) and every one must be fresh.
+  The proof's age is the run's updated_at in whole days (floored); the gate fails when the age is
+  greater than window-days.
+
+inputs:
+  gate-name:
+    description: The gate's name as it appears in summaries and annotations (for example dr-freshness).
+    required: true
+  workflow:
+    description: Workflow file name under .github/workflows whose runs carry the proof (for example dr-drill.yml).
+    required: true
+  window-days:
+    description: Maximum age, in whole days, of the newest proof. Older fails the gate.
+    required: true
+  proof-name:
+    description: What the proof demonstrates, for the summary lines (for example "DR recovery proof").
+    required: false
+    default: proof
+  required-jobs:
+    description: >-
+      Newline-separated job names (as the Actions API reports them, for example "E2E (firefox)")
+      that must have concluded success. Empty selects the newest successful run of the workflow.
+    required: false
+    default: ''
+  required-jobs-mode:
+    description: >-
+      same-run (every required job succeeded in ONE run) or per-job (each required job resolved
+      independently, possibly from different runs). Ignored when required-jobs is empty.
+    required: false
+    default: same-run
+  max-runs:
+    description: How many of the newest completed runs to inspect when required-jobs is set (1-100).
+    required: false
+    default: '25'
+  skip:
+    description: Break-glass. 'true' skips the gate, but only together with a non-empty skip-justification.
+    required: false
+    default: 'false'
+  skip-justification:
+    description: Required when skip is 'true'; recorded in the step summary and as a warning.
+    required: false
+    default: ''
+  github-token:
+    description: Token for the Actions API reads (needs actions:read on the repository).
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: owner/repo whose workflow runs are inspected.
+    required: false
+    default: ${{ github.repository }}
+
+runs:
+  using: composite
+  steps:
+    - name: Assert a recent ${{ inputs.gate-name }} proof
+      shell: bash
+      # Every input reaches the script through env, never spliced into the script text.
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        FG_REPO: ${{ inputs.repository }}
+        FG_GATE: ${{ inputs.gate-name }}
+        FG_WORKFLOW: ${{ inputs.workflow }}
+        FG_WINDOW_DAYS: ${{ inputs.window-days }}
+        FG_PROOF: ${{ inputs.proof-name }}
+        FG_JOBS: ${{ inputs.required-jobs }}
+        FG_JOBS_MODE: ${{ inputs.required-jobs-mode }}
+        FG_MAX_RUNS: ${{ inputs.max-runs }}
+        FG_SKIP: ${{ inputs.skip }}
+        FG_SKIP_JUSTIFICATION: ${{ inputs.skip-justification }}
+      run: |
+        set -euo pipefail
+        summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+        # Break-glass: skip only with a mandatory, loudly-logged justification.
+        if [ "${FG_SKIP:-false}" = "true" ]; then
+          if [ -z "${FG_SKIP_JUSTIFICATION:-}" ]; then
+            echo "::error::${FG_GATE}: the break-glass skip was set without a justification: refusing to skip." | tee -a "$summary"
+            exit 1
+          fi
+          {
+            echo "## WARNING: ${FG_GATE} gate SKIPPED (break-glass)"
+            echo ""
+            echo "**Justification:** ${FG_SKIP_JUSTIFICATION}"
+            echo ""
+            echo "The ${FG_PROOF} was NOT verified for this deploy. Re-run ${FG_WORKFLOW} as soon as possible."
+          } >> "$summary"
+          echo "::warning::${FG_GATE} gate skipped via break-glass. Justification: ${FG_SKIP_JUSTIFICATION}"
+          exit 0
+        fi
+
+        if ! [[ "$FG_WINDOW_DAYS" =~ ^[0-9]+$ ]]; then
+          echo "::error::${FG_GATE}: window-days must be a whole number of days, got '${FG_WINDOW_DAYS}'."; exit 1
+        fi
+        if ! [[ "$FG_MAX_RUNS" =~ ^[0-9]+$ ]] || [ "$FG_MAX_RUNS" -lt 1 ] || [ "$FG_MAX_RUNS" -gt 100 ]; then
+          echo "::error::${FG_GATE}: max-runs must be between 1 and 100, got '${FG_MAX_RUNS}'."; exit 1
+        fi
+
+        # Required job names, trimmed, blank lines dropped, de-duplicated.
+        jobs=()
+        while IFS= read -r line; do
+          line="${line#"${line%%[![:space:]]*}"}"
+          line="${line%"${line##*[![:space:]]}"}"
+          [ -z "$line" ] && continue
+          dup=0
+          for existing in "${jobs[@]}"; do
+            [ "$existing" = "$line" ] && dup=1
+          done
+          [ "$dup" -eq 0 ] && jobs+=("$line")
+        done <<< "${FG_JOBS:-}"
+
+        now_epoch=$(date -u +%s)
+        fail=0
+
+        # Age check shared by every mode: floored whole days, fail when greater than the window.
+        check_age() {
+          local label="$1" updated="$2" updated_epoch age_days
+          updated_epoch=$(date -u -d "$updated" +%s)
+          age_days=$(( (now_epoch - updated_epoch) / 86400 ))
+          echo "Last ${label}: ${updated} (${age_days}d ago); freshness window ${FG_WINDOW_DAYS}d." | tee -a "$summary"
+          if [ "$age_days" -gt "$FG_WINDOW_DAYS" ]; then
+            echo "FAIL: ${label} is stale (> ${FG_WINDOW_DAYS}d). Fix or re-run ${FG_WORKFLOW} before deploying." | tee -a "$summary"
+            fail=1
+          fi
+        }
+
+        # Prints "<run id> <updated_at>" of the newest completed run in which EVERY job named in the
+        # arguments concluded success (latest attempt, up to 50 jobs per run), or nothing. An API
+        # error on any run fails the function rather than skipping that run.
+        newest_run_proving() {
+          local runs run_id run_updated succeeded name ok
+          runs=$(gh api \
+            "repos/${FG_REPO}/actions/workflows/${FG_WORKFLOW}/runs?status=completed&per_page=${FG_MAX_RUNS}" \
+            --jq '.workflow_runs[] | "\(.id) \(.updated_at)"') || return 1
+          while read -r run_id run_updated; do
+            [ -z "$run_id" ] && continue
+            succeeded=$(gh api "repos/${FG_REPO}/actions/runs/${run_id}/jobs?per_page=50" \
+              --jq '.jobs[] | select(.conclusion == "success") | .name') || return 1
+            ok=1
+            for name in "$@"; do
+              grep -Fxq -- "$name" <<< "$succeeded" || ok=0
+            done
+            if [ "$ok" -eq 1 ]; then
+              echo "${run_id} ${run_updated}"
+              return 0
+            fi
+            echo "Run ${run_id}: not every required job ($*) concluded success (skipped or failed); not counting it." >&2
+          done <<< "$runs"
+          return 0
+        }
+
+        # One proof: the given job names must all have succeeded in a single run.
+        assert_jobs_proof() {
+          local found label="${FG_WORKFLOW} run with $* successful"
+          found=$(newest_run_proving "$@") || {
+            echo "::error::${FG_GATE}: the Actions API read failed, so the gate fails closed."; exit 1; }
+          if [ -z "$found" ]; then
+            echo "FAIL: no completed ${FG_WORKFLOW} run among the newest ${FG_MAX_RUNS} in which $* executed and passed. Dispatch .github/workflows/${FG_WORKFLOW} before deploying." | tee -a "$summary"
+            fail=1
+            return 0
+          fi
+          echo "Newest run proving $*: ${found%% *} (${found#* })"
+          check_age "$label" "${found#* }"
+        }
+
+        if [ "${#jobs[@]}" -eq 0 ]; then
+          latest=$(gh api \
+            "repos/${FG_REPO}/actions/workflows/${FG_WORKFLOW}/runs?status=success&per_page=1" \
+            --jq '.workflow_runs[0].updated_at // empty')
+          if [ -z "$latest" ]; then
+            echo "FAIL: no successful ${FG_WORKFLOW} run found. Run .github/workflows/${FG_WORKFLOW} before deploying." | tee -a "$summary"
+            exit 1
+          fi
+          check_age "successful ${FG_WORKFLOW} run (${FG_PROOF})" "$latest"
+        else
+          case "$FG_JOBS_MODE" in
+            same-run)
+              assert_jobs_proof "${jobs[@]}" ;;
+            per-job)
+              for job in "${jobs[@]}"; do
+                assert_jobs_proof "$job"
+              done ;;
+            *)
+              echo "::error::${FG_GATE}: required-jobs-mode must be same-run or per-job, got '${FG_JOBS_MODE}'."; exit 1 ;;
+          esac
+        fi
+
+        if [ "$fail" -ne 0 ]; then
+          exit 1
+        fi
+        echo "OK: ${FG_PROOF} is fresh." | tee -a "$summary"
