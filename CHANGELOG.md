@@ -4,6 +4,13 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- `E2ETestBase.SignOutAsync` (`MMCA.Common.Testing.E2E`) also treats Chromium's "net::ERR_ABORTED; maybe frame was detached?" as a superseded sign-out navigation and waits once more for `/login`, as it already did for Firefox (`NS_BINDING_ABORTED`) and WebKit ("Navigation canceled by policy check"). After a password change revokes the session, the app's own redirect onto `/login` can overtake the sign-out; the chromium leg of the Store deploy gate failed `ChangePassword_WithValidCurrentPassword_ShouldSucceed` 3/3 on it. A sign-out that never reaches `/login` still fails.
+- The `wasm-payload-budget` composite action sorts its largest-files listing into a file before taking the top ten. Piping `sort` into `head` under `set -o pipefail` let `head`'s early exit SIGPIPE the sort ("sort: write error", exit 141), failing the step after a successful publish and before the budget verdict.
+
 ## [1.221.0] - 2026-10-02
 
 ### Fixed
