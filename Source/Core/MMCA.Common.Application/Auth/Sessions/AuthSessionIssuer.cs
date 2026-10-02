@@ -266,9 +266,11 @@ public sealed class AuthSessionIssuer(
     /// an unknown hash (or one belonging to another account) says nothing about a live session and is
     /// failed alone, since revoking the family on it would let anyone holding one of this user's
     /// expired access tokens sign them out everywhere by posting a random token; a <b>revoked</b> row
-    /// means this exact token was already rotated away or signed out and has come back, which is the
-    /// BR-206 reuse signal that revokes every live session the user holds; an <b>expired</b> row is an
-    /// ordinary end of life, so that device re-authenticates and the user's other devices keep working.
+    /// splits by why it was revoked: one already rotated away (or already flagged as reuse) has come
+    /// back, which is the BR-206 reuse signal that revokes every live session the user holds, while one
+    /// that was signed out or evicted by the session cap only lost its session, so that request fails
+    /// alone; an <b>expired</b> row is an ordinary end of life, so that device re-authenticates and
+    /// the user's other devices keep working.
     /// </summary>
     private async Task<Result<RefreshSession>> ResolveRotatableSessionAsync(
         UserIdentifierType userId,
@@ -292,6 +294,14 @@ public sealed class AuthSessionIssuer(
 
         if (session.IsRevoked)
         {
+            if (!IsReuseSignal(session))
+            {
+                // Signed out (one device, everywhere, password change) or evicted by the session cap:
+                // this device simply lost its session, which is not a theft signal, so only this
+                // request fails and the user's other live sessions keep working.
+                return Result.Failure<RefreshSession>(InvalidRefreshTokenError());
+            }
+
             await RevokeLiveSessionsAsync(userId, RefreshSession.ReasonReuseDetected, now, cancellationToken)
                 .ConfigureAwait(false);
             await refreshSessions.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -388,6 +398,22 @@ public sealed class AuthSessionIssuer(
         }
 
         return Result.Success(new IssuedSession(refreshToken, successor.Id));
+    }
+
+    /// <summary>
+    /// Whether presenting this revoked session's token is token reuse (BR-206): it was already
+    /// rotated (the rotated reason or a successor hash) or already flagged as reuse. A session that
+    /// was signed out or evicted by the cap is not; any other or missing reason is treated as reuse,
+    /// which keeps the conservative answer for rows this code does not recognize.
+    /// </summary>
+    private static bool IsReuseSignal(RefreshSession session)
+    {
+        if (session.ReplacedByTokenHash is not null)
+        {
+            return true;
+        }
+
+        return session.ReasonRevoked is not (RefreshSession.ReasonSignedOut or RefreshSession.ReasonSessionCap);
     }
 
     /// <summary>Revokes every un-revoked session the user holds, without saving.</summary>

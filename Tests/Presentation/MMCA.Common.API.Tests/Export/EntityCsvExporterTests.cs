@@ -52,5 +52,68 @@ public sealed class EntityCsvExporterTests
         lines.Should().HaveCount(1 + 1500, "one header row and every one of the 1500 data rows, with no marker line");
     }
 
+    // Kestrel forbids synchronous I/O on the response body by default. An export whose CSV is larger
+    // than the writer's buffer (about 1 KB) must still arrive complete, so nothing may ever reach the
+    // body through a synchronous Write or Flush.
+    [Fact]
+    public async Task WriteAsync_WhenTheBodyForbidsSynchronousIo_StreamsAnExportLargerThanOneKilobyteCompletely()
+    {
+        await using var body = new AsyncOnlyResponseStream();
+        var name = new string('x', 100);
+
+        var result = await EntityCsvExporter<ExportRow>.WriteAsync(
+            body,
+            (pageNumber, _) =>
+            {
+                var items = pageNumber <= 3
+                    ? Enumerable.Range((pageNumber - 1) * 100 + 1, 100).Select(i => (object)new ExportRow(i, name)).ToList()
+                    : [];
+                return Task.FromResult(Result.Success(
+                    new PagedCollectionResult<object>(items, new PaginationMetadata(300, 100, pageNumber))));
+            },
+            pageSize: 100,
+            maxExportRows: 100_000,
+            fields: null,
+            beginResponse: () => { },
+            onFailureAfterStart: (_, _) => { },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var bytes = body.ToArray();
+        bytes.Length.Should().BeGreaterThan(30_000, "the export is far larger than the writer's 1 KB buffer");
+        var lines = Encoding.UTF8.GetString(bytes)
+            .TrimStart('﻿')
+            .Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        lines.Should().HaveCount(1 + 300);
+        lines[^1].Should().Be($"300,{name}");
+    }
+
+    [Fact]
+    public async Task WriteAsync_WhenTheBodyForbidsSynchronousIo_StillWritesTheIncompleteMarkerAfterALaterPageFails()
+    {
+        await using var body = new AsyncOnlyResponseStream();
+        var name = new string('y', 100);
+
+        var result = await EntityCsvExporter<ExportRow>.WriteAsync(
+            body,
+            (pageNumber, _) => Task.FromResult(pageNumber == 1
+                ? Result.Success(new PagedCollectionResult<object>(
+                    [.. Enumerable.Range(1, 50).Select(i => (object)new ExportRow(i, name))],
+                    new PaginationMetadata(100, 50, 1)))
+                : Result.Failure<PagedCollectionResult<object>>(Error.Failure("Export.Down", "The store is unavailable."))),
+            pageSize: 50,
+            maxExportRows: 100_000,
+            fields: null,
+            beginResponse: () => { },
+            onFailureAfterStart: (_, _) => { },
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var lines = Encoding.UTF8.GetString(body.ToArray())
+            .TrimStart('﻿')
+            .Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        lines.Should().HaveCount(1 + 50 + 1, "the header, the 50 rows already written, and the incomplete marker");
+    }
+
     public sealed record ExportRow(int Id, string Name);
 }

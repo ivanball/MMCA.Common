@@ -42,7 +42,7 @@ public sealed class LoginProtectionService(
         var isLockedOut = await cacheService.GetAsync<bool?>(lockoutKey, cancellationToken).ConfigureAwait(false) ?? false;
 
         return isLockedOut
-            ? Result.Failure(Error.Unauthorized(
+            ? Result.Failure(Error.TooManyRequests(
                 "Auth.TooManyAttempts",
                 "Too many failed login attempts. Please try again later.",
                 nameof(CheckLockoutAsync)))

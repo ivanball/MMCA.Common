@@ -10,7 +10,9 @@ namespace MMCA.Common.API.Middleware;
 /// <summary>
 /// Middleware that validates authenticated users have not been soft-deleted (BR-133).
 /// If <c>User.IsDeleted = true</c> for the authenticated user's ID, the request is rejected with HTTP 401.
-/// Uses a 30-second cache (<see cref="SoftDeletedUserCache"/>) to minimize per-request database lookups.
+/// The deleted-user marker in <see cref="SoftDeletedUserCache"/> is honored on every host; a host that
+/// registers an <see cref="ISoftDeletedUserValidator"/> (the Identity host) also falls back to that
+/// query on a cache miss and caches the answer, so most requests skip the database.
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>
 /// <remarks>
@@ -31,6 +33,12 @@ namespace MMCA.Common.API.Middleware;
 public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
 {
     /// <summary>
+    /// How long a "not deleted" validator answer is cached. Kept short: it is only a lookup
+    /// shortcut, and a live user's entry should not linger.
+    /// </summary>
+    private static readonly TimeSpan NotDeletedLookupDuration = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Checks if the authenticated user has been soft-deleted and rejects the request if so.
     /// </summary>
     /// <param name="context">The HTTP context for the current request.</param>
@@ -45,9 +53,10 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
     /// InvokeAsync parameter. The validator is implemented by the Identity module; in
     /// extracted services that do not host Identity (e.g., the Catalog microservice),
     /// no implementation is registered. Resolving lazily means the middleware no-ops
-    /// in those services for unauthenticated requests, and only fails for authenticated
-    /// requests with a clear error, instead of 500-ing every request before any
-    /// downstream gRPC/REST endpoint runs.
+    /// in those services for unauthenticated requests instead of 500-ing every request before any
+    /// downstream gRPC/REST endpoint runs. Such a service still reads the deleted-user marker for an
+    /// authenticated request and answers 401 when it is set; a cache miss or a cache failure passes
+    /// the request through.
     /// </para>
     /// <para>
     /// The logger is an InvokeAsync parameter (per-invoke injection) rather than a constructor
@@ -72,16 +81,6 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
             return;
         }
 
-        var softDeletedUserValidator = context.RequestServices.GetService<ISoftDeletedUserValidator>();
-        if (softDeletedUserValidator is null)
-        {
-            // No validator registered: this service does not host Identity. Treat the
-            // user as not soft-deleted (Identity is the source of truth and presumably
-            // already validated the token before the request reached us). Continue.
-            await next(context).ConfigureAwait(false);
-            return;
-        }
-
         var cacheKey = SoftDeletedUserCache.KeyFor(userId.Value);
 
         bool? cachedResult;
@@ -92,8 +91,9 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Fail open onto the validator query: a cache outage must not take down every
-            // authenticated request. The write is skipped too, since the same store is down.
+            // Fail open onto the validator query (when this host has one): a cache outage must not
+            // take down every authenticated request. The write is skipped too, since the same store
+            // is down.
             LogCacheReadFailed(logger, cacheKey, ex);
             cachedResult = null;
             cacheReachable = false;
@@ -101,7 +101,20 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
 
         if (cachedResult is true)
         {
+            // The marker is honored on every host, including one that does not host Identity: the
+            // module that deleted the user wrote it to the shared cache, and it outlives any access
+            // token issued before the delete (see SoftDeletedUserCache.MarkerDuration).
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+
+        var softDeletedUserValidator = context.RequestServices.GetService<ISoftDeletedUserValidator>();
+        if (softDeletedUserValidator is null)
+        {
+            // No validator registered: this service does not host Identity, so a cache miss (or an
+            // unreachable cache) has nothing to fall back to. Fail open: Identity is the source of
+            // truth, and the marker check above already caught a user it deleted.
+            await next(context).ConfigureAwait(false);
             return;
         }
 
@@ -128,8 +141,12 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
             {
                 try
                 {
+                    // A positive answer is the deleted-user marker and must outlive the access
+                    // token; a negative one is only a lookup shortcut and keeps its short lifetime,
+                    // so a live user's entry never goes stale for long.
+                    var duration = isDeleted ? SoftDeletedUserCache.MarkerDuration : NotDeletedLookupDuration;
                     await cacheService
-                        .SetAsync(cacheKey, isDeleted, SoftDeletedUserCache.MarkerDuration, context.RequestAborted)
+                        .SetAsync(cacheKey, isDeleted, duration, context.RequestAborted)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -152,7 +169,7 @@ public sealed partial class SoftDeletedUserMiddleware(RequestDelegate next)
 
     [LoggerMessage(
         Level = LogLevel.Warning,
-        Message = "Soft-deleted user cache read failed for key '{CacheKey}'; falling back to the validator query")]
+        Message = "Soft-deleted user cache read failed for key '{CacheKey}'; falling back to the validator query when one is registered")]
     private static partial void LogCacheReadFailed(
         ILogger logger,
         string cacheKey,

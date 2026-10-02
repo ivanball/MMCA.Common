@@ -39,12 +39,14 @@ public sealed class SoftDeletedUserCacheTests
 
     // ── Marker duration ──
     [Fact]
-    public void MarkerDuration_IsThirtySeconds() =>
-        SoftDeletedUserCache.MarkerDuration.Should().Be(TimeSpan.FromSeconds(30));
+    public void MarkerDuration_OutlivesTheDefaultAccessTokenLifetime() =>
+        SoftDeletedUserCache.MarkerDuration.Should().BeGreaterThanOrEqualTo(
+            TimeSpan.FromMinutes(15),
+            "a host without the validator query relies on the marker for the whole life of an already-issued access token");
 
     // ── Write helper ──
     [Fact]
-    public async Task MarkDeletedAsync_WritesTheTrueMarkerUnderTheKeyForThirtySeconds()
+    public async Task MarkDeletedAsync_WritesTheTrueMarkerUnderTheKeyForFifteenMinutes()
     {
         var cache = new Mock<ICacheService>();
 
@@ -54,7 +56,7 @@ public sealed class SoftDeletedUserCacheTests
             c => c.SetAsync(
                 "user:deleted:7",
                 true,
-                TimeSpan.FromSeconds(30),
+                TimeSpan.FromMinutes(15),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

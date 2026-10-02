@@ -70,6 +70,12 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         public int MobileTotalNow => MobileTotalItems;
 
+        public int MobilePageNow
+        {
+            get => MobileCurrentPage;
+            set => MobileCurrentPage = value;
+        }
+
         public Task<GridData<WidgetRow>> LoadAsync(
             GridState<WidgetRow> state,
             bool showCancelSnackbar = true,
@@ -465,6 +471,56 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.LoadFailedNow.Should().BeTrue();
         cut.Instance.LoadingNow.Should().BeFalse();
         _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
+    }
+
+    // An infinite-scroll append (page N > 1) that fails must not wipe what the user already scrolled
+    // through: the items, the total and the page are kept, LoadFailed is set so the inline error and
+    // Retry render below the items, and Retry re-requests the same page.
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenALaterPageFetchFails_KeepsItemsTotalAndPage()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(25, new WidgetRow(1, "First"), new WidgetRow(2, "Second"));
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        cut.Instance.MobilePageNow = 2;
+        cut.Instance.Fetch = (_, _, _, _, _, _) => LoadFailure("The widget service is unavailable.");
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        cut.Instance.LoadFailedNow.Should().BeTrue();
+        cut.Instance.LoadingNow.Should().BeFalse();
+        cut.Instance.MobileItemsNow.Select(r => r.Id).Should().Equal(1, 2);
+        cut.Instance.MobileTotalNow.Should().Be(25);
+        cut.Instance.MobilePageNow.Should().Be(2);
+
+        var requestedPages = new List<int>();
+        cut.Instance.Fetch = (_, page, _, _, _, _) =>
+        {
+            requestedPages.Add(page);
+            return Loaded(25, new WidgetRow(3, "Third"));
+        };
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        requestedPages.Should().Equal([2], "Retry re-requests the page that failed");
+        cut.Instance.LoadFailedNow.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenALaterPageFetchThrows_KeepsItemsTotalAndPage()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(25, new WidgetRow(1, "First"));
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        cut.Instance.MobilePageNow = 3;
+        cut.Instance.Fetch = (_, _, _, _, _, _) => throw new HttpRequestException("network down");
+        var escaped = await Record.ExceptionAsync(() => cut.InvokeAsync(() => cut.Instance.LoadMobileAsync()));
+
+        escaped.Should().BeNull();
+        cut.Instance.LoadFailedNow.Should().BeTrue();
+        cut.Instance.MobileItemsNow.Should().ContainSingle(r => r.Id == 1);
+        cut.Instance.MobileTotalNow.Should().Be(25);
+        cut.Instance.MobilePageNow.Should().Be(3);
     }
 
     [Fact]

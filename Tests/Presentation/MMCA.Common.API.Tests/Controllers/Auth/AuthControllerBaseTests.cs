@@ -69,6 +69,26 @@ public sealed class AuthControllerBaseTests
         objectResult.Value.Should().BeOfType<ProblemDetails>();
     }
 
+    // The login lockout (too many failed attempts) is a throttle: it answers 429, not 401, and the
+    // code stays Auth.TooManyAttempts so clients can still branch on it.
+    [Fact]
+    public async Task LoginAsync_WhenLockedOut_Returns429WithTheLockoutCode()
+    {
+        var request = new LoginRequest("test@example.com", "wrong");
+        _authServiceMock.Setup(x => x.LoginAsync(request, It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<AuthenticationResponse>(
+                Error.TooManyRequests("Auth.TooManyAttempts", "Too many failed login attempts. Please try again later.")));
+        TestAuthController sut = CreateController();
+
+        ActionResult<AuthenticationResponse> result = await sut.LoginAsync(request, CancellationToken.None);
+
+        var objectResult = result.Result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(StatusCodes.Status429TooManyRequests);
+        var problem = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problem.Status.Should().Be(StatusCodes.Status429TooManyRequests);
+    }
+
     // ── RegisterAsync ──
     [Fact]
     public async Task RegisterAsync_Success_Returns201Created()

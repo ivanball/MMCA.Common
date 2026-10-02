@@ -751,7 +751,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         await ResetCancellationTokenAsync();
 
         // Cancellation (component disposal or user cancellation) keeps the cards already shown and
-        // raises no toast; a failure of any kind, the additionalFilters callback included, empties them.
+        // raises no toast. A failure of any kind, the additionalFilters callback included, sets
+        // LoadFailed; on page 1 it also empties the cards, but on a later page (an infinite-scroll
+        // append) it keeps the items, MobileTotalItems and MobileCurrentPage, so the inline error and
+        // Retry render below what is already loaded and Retry re-requests the same page.
+        Func<bool> onFailed = MobileCurrentPage > 1 ? static () => false : ClearMobileItems;
         await RunFetchAsync(
             async token =>
             {
@@ -761,7 +765,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 var fetched = await fetchAsync(filters, MobileCurrentPage, MobilePageSize, null, null, token);
                 if (!fetched.TryGetValue(out var page))
                 {
-                    return FailedFetch(fetched, ClearMobileItems);
+                    return FailedFetch(fetched, onFailed);
                 }
 
                 MobileItems = page.Items;
@@ -775,7 +779,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
                 return true;
             },
             onCancelled: static () => false,
-            onFailed: ClearMobileItems,
+            onFailed: onFailed,
             showCancelSnackbar: false,
             CancellationToken.None);
     }

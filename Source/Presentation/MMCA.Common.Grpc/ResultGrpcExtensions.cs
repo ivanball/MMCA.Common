@@ -21,6 +21,7 @@ namespace MMCA.Common.Grpc;
 ///   <item><see cref="ErrorType.Forbidden"/> → <see cref="StatusCode.PermissionDenied"/></item>
 ///   <item><see cref="ErrorType.UnprocessableEntity"/> → <see cref="StatusCode.FailedPrecondition"/></item>
 ///   <item><see cref="ErrorType.Unexpected"/> → <see cref="StatusCode.Internal"/></item>
+///   <item><see cref="ErrorType.TooManyRequests"/> → <see cref="StatusCode.ResourceExhausted"/></item>
 /// </list>
 /// </summary>
 [SuppressMessage(
@@ -45,6 +46,7 @@ public static class ResultGrpcExtensions
             [ErrorType.UnprocessableEntity] = StatusCode.FailedPrecondition,
             [ErrorType.Failure] = StatusCode.InvalidArgument,
             [ErrorType.Unexpected] = StatusCode.Internal,
+            [ErrorType.TooManyRequests] = StatusCode.ResourceExhausted,
         }.ToFrozenDictionary();
 
     extension(ErrorType errorType)
@@ -266,6 +268,7 @@ public static class ResultGrpcExtensions
             [ErrorType.UnprocessableEntity] = Error.UnprocessableEntity,
             [ErrorType.Failure] = Error.Failure,
             [ErrorType.Unexpected] = Error.Unexpected,
+            [ErrorType.TooManyRequests] = Error.TooManyRequests,
         }.ToFrozenDictionary();
 
     /// <summary>

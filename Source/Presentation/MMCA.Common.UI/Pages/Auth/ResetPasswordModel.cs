@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using MMCA.Common.Shared.Auth;
+using MMCA.Common.UI.Resources;
 
 namespace MMCA.Common.UI.Pages.Auth;
 
@@ -8,25 +9,26 @@ namespace MMCA.Common.UI.Pages.Auth;
 /// but stay editable so a user who only has the raw token from the email can type it in (no deep-link
 /// support needed on native heads). The complexity rule mirrors the server's (rubric §24).
 /// <para>
-/// Each <c>ErrorMessage</c> is a resource key, resolved by the page's localizing
-/// <see cref="MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator"/> (ADR-027).
+/// Each message is read from the shared resources through <see cref="AuthFieldMessages"/> (ADR-027),
+/// inside the attribute, so the form's validator and MudBlazor's own field-level pass (which runs the
+/// <c>For</c> property's attributes when a field is touched) both show the localized text, never a key.
 /// </para>
 /// </summary>
 public sealed class ResetPasswordModel
 {
-    [Required(ErrorMessage = "Auth.Field.Email.Required")]
-    [EmailAddress(ErrorMessage = "Auth.Field.Email.Invalid")]
+    [Required(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.EmailRequired))]
+    [EmailAddress(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.EmailInvalid))]
     public string Email { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Auth.Field.Token.Required")]
+    [Required(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.TokenRequired))]
     public string Token { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Auth.Field.Password.Required")]
-    [StringLength(PasswordComplexity.MaximumLength, ErrorMessage = "Auth.Field.Password.MaxLength")]
-    [PasswordComplexity(ErrorMessage = "Auth.Field.Password.Complexity")]
+    [Required(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.PasswordRequired))]
+    [StringLength(PasswordComplexity.MaximumLength, ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.PasswordMaxLength))]
+    [PasswordComplexity(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.PasswordComplexity))]
     public string NewPassword { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Auth.Field.ConfirmPassword.Required")]
-    [Compare(nameof(NewPassword), ErrorMessage = "Auth.Field.ConfirmPassword.Mismatch")]
+    [Required(ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.ConfirmPasswordRequired))]
+    [Compare(nameof(NewPassword), ErrorMessageResourceType = typeof(AuthFieldMessages), ErrorMessageResourceName = nameof(AuthFieldMessages.ConfirmPasswordMismatch))]
     public string ConfirmPassword { get; set; } = string.Empty;
 }

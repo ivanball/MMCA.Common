@@ -38,5 +38,12 @@ public enum ErrorType
     /// could not complete it (HTTP 500). Reserve this for faults the caller cannot fix by
     /// changing the request, and never for business rule violations.
     /// </summary>
-    Unexpected
+    Unexpected,
+
+    /// <summary>
+    /// The caller is temporarily refused because it has made too many attempts, e.g. a login or
+    /// password-change lockout (HTTP 429). Retrying later, not changing the request, is the fix.
+    /// Appended last so the numeric values of the earlier members do not move.
+    /// </summary>
+    TooManyRequests
 }

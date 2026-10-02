@@ -102,6 +102,7 @@ public static class ProblemDetailsResultReader
             [409] = ErrorType.Conflict,
             [404] = ErrorType.NotFound,
             [422] = ErrorType.UnprocessableEntity,
+            [429] = ErrorType.TooManyRequests,
             [400] = ErrorType.Validation,
         }.ToFrozenDictionary();
 
@@ -114,6 +115,7 @@ public static class ProblemDetailsResultReader
     ///   <item>409 -&gt; <see cref="ErrorType.Conflict"/></item>
     ///   <item>404 -&gt; <see cref="ErrorType.NotFound"/></item>
     ///   <item>422 -&gt; <see cref="ErrorType.UnprocessableEntity"/></item>
+    ///   <item>429 -&gt; <see cref="ErrorType.TooManyRequests"/></item>
     ///   <item>400 -&gt; <see cref="ErrorType.Validation"/></item>
     ///   <item>any other 4xx -&gt; <see cref="ErrorType.Failure"/></item>
     ///   <item>anything else, 5xx included -&gt; <see cref="ErrorType.Unexpected"/></item>

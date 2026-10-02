@@ -174,12 +174,12 @@ public sealed class ChangePasswordHandlerBaseTests
         ArrangeUser(mocks, new TestIdentityUser { Id = 1 });
         mocks.LoginProtection
             .Setup(x => x.CheckLockoutAsync("password-change:1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure(Error.Unauthorized("Auth.TooManyAttempts", "Too many attempts.")));
+            .ReturnsAsync(Result.Failure(Error.TooManyRequests("Auth.TooManyAttempts", "Too many attempts.")));
 
         Result result = await sut.HandleAsync(new TestChangePasswordCommand(1, new ChangePasswordRequest("old", "new")));
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle(e => e.Code == "Auth.TooManyAttempts");
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.TooManyAttempts" && e.Type == ErrorType.TooManyRequests);
         mocks.PasswordHasher.Verify(
             x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()),
             Times.Never);

@@ -226,7 +226,7 @@ public sealed class ProblemDetailsResultReaderTests
     [InlineData(404, ErrorType.NotFound)]
     [InlineData(422, ErrorType.UnprocessableEntity)]
     [InlineData(400, ErrorType.Validation)]
-    [InlineData(429, ErrorType.Failure)]
+    [InlineData(429, ErrorType.TooManyRequests)]
     [InlineData(405, ErrorType.Failure)]
     [InlineData(503, ErrorType.Unexpected)]
     [InlineData(0, ErrorType.Unexpected)]

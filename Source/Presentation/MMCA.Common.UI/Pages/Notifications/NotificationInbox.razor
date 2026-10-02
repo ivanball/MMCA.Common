@@ -54,7 +54,7 @@ else
                                 @notification.Body
                             </MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                @notification.SentOn.ToString("g")
+                                @ViewerTime.Format(notification.SentOn)
                             </MudText>
                         </div>
                         @if (!notification.IsRead)

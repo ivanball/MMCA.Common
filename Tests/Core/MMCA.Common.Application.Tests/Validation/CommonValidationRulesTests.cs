@@ -124,6 +124,34 @@ public sealed class CommonValidationRulesTests
         result.ShouldNotHaveValidationErrorFor(x => x.Name);
     }
 
+    // The server half of the email parity corpus. The UI's OptionalEmailAttributeTests runs the same
+    // values through the client rule; a value moving between these two lists here must move there too.
+    [Theory]
+    [InlineData("user@example.com", true)]
+    [InlineData("first.last+tag@sub.example.co.uk", true)]
+    [InlineData("a@b", true)]
+    [InlineData("plainaddress", false)]
+    [InlineData("@example.com", false)]
+    [InlineData("user@", false)]
+    [InlineData("user@@example.com", false)]
+    [InlineData("a@b@c", false)]
+    [InlineData("@", false)]
+    public void EmailRules_FormatVerdict_MatchesTheClientParityCorpus(string email, bool accepted)
+    {
+        var validator = new EmailRules<TestStringModel>(x => x.Name, "Email", 100);
+
+        TestValidationResult<TestStringModel> result = validator.TestValidate(new TestStringModel { Name = email });
+
+        if (accepted)
+        {
+            result.ShouldNotHaveValidationErrorFor(x => x.Name);
+        }
+        else
+        {
+            result.ShouldHaveValidationErrorFor(x => x.Name).WithErrorMessage("You must enter a valid Email");
+        }
+    }
+
     // ── PositiveIntRules ──
     [Fact]
     public void PositiveIntRules_WhenZero_HasValidationError()

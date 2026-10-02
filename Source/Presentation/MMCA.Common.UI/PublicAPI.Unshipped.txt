@@ -1,1 +1,13 @@
 ﻿#nullable enable
+MMCA.Common.UI.Validation.OptionalEmailAttribute
+MMCA.Common.UI.Validation.OptionalEmailAttribute.OptionalEmailAttribute() -> void
+MMCA.Common.UI.Services.Culture.ViewerTimeZone
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.ViewerTimeZone(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.Zone.get -> System.TimeZoneInfo!
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.IsResolved.get -> bool
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.EnsureResolvedAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.ToViewerTime(System.DateTime instant) -> System.DateTime
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.Format(System.DateTime instant, string! format = "g") -> string!
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.DisposeAsync() -> System.Threading.Tasks.ValueTask
+override MMCA.Common.UI.Pages.Auth.Sessions.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
+override MMCA.Common.UI.Pages.Notifications.NotificationList.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!

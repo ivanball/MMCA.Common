@@ -90,8 +90,15 @@ public sealed class SessionsTests : BunitTestBase
     /// <summary>MudBlazor renders the boolean <c>Disabled</c> parameter as a bare <c>disabled</c> attribute.</summary>
     private static bool IsDisabled(IElement element) => element.HasAttribute("disabled");
 
-    private static string LocalInstant(DateTime utcInstant) =>
-        DateTime.SpecifyKind(utcInstant, DateTimeKind.Utc).ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+    private static string InZone(DateTime utcInstant, TimeZoneInfo zone) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcInstant, DateTimeKind.Utc), zone)
+            .ToString("g", CultureInfo.CurrentCulture);
+
+    /// <summary>Makes the browser report <paramref name="zoneId"/> as the viewer's time zone.</summary>
+    private void ArrangeBrowserTimeZone(string? zoneId) =>
+        JSInterop.SetupModule("./_content/MMCA.Common.UI/time-zone.js")
+            .Setup<string?>("getTimeZone")
+            .SetResult(zoneId);
 
     // ==================== Loaded state ====================
     [Fact]
@@ -106,14 +113,31 @@ public sealed class SessionsTests : BunitTestBase
         cut.Markup.Should().Contain("198.51.100.4");
     }
 
+    // The sessions endpoint reports UTC; the page shows each instant on the VIEWER's browser clock,
+    // never in UTC and never in the server's own zone.
     [Fact]
-    public void WhenSessionsLoad_RendersTheSignedInAndExpiryInstantsInLocalTime()
+    public void WhenSessionsLoad_RendersTheSignedInAndExpiryInstantsInTheViewersTimeZone()
     {
+        ArrangeBrowserTimeZone("Asia/Tokyo");
+        var tokyo = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tokyo");
+
         var cut = RenderSessions();
 
         cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
-        cut.Markup.Should().Contain(LocalInstant(CreatedAt));
-        cut.Markup.Should().Contain(LocalInstant(ExpiresAt));
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain(InZone(CreatedAt, tokyo)));
+        cut.Markup.Should().Contain(InZone(ExpiresAt, tokyo));
+    }
+
+    [Fact]
+    public void WhenTheBrowserReportsNoTimeZone_RendersTheInstantsInUtc()
+    {
+        ArrangeBrowserTimeZone(null);
+
+        var cut = RenderSessions();
+
+        cut.WaitForAssertion(() => cut.FindAll("tbody tr").Should().HaveCount(2));
+        cut.Markup.Should().Contain(InZone(CreatedAt, TimeZoneInfo.Utc));
+        cut.Markup.Should().Contain(InZone(ExpiresAt, TimeZoneInfo.Utc));
     }
 
     [Fact]

@@ -51,7 +51,7 @@ public sealed class AuthenticationServiceBaseTests
     public async Task LoginAsync_WhenLockedOut_ReturnsLockoutFailureWithoutTouchingCredentials()
     {
         var (sut, mocks) = CreateSut();
-        var lockoutError = Error.Unauthorized("Auth.TooManyAttempts", "Too many failed login attempts.");
+        var lockoutError = Error.TooManyRequests("Auth.TooManyAttempts", "Too many failed login attempts.");
         mocks.LoginProtection
             .Setup(x => x.CheckLockoutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure(lockoutError));
@@ -60,7 +60,7 @@ public sealed class AuthenticationServiceBaseTests
         Result<AuthenticationResponse> result = await sut.LoginAsync(new LoginRequest("user@example.com", "pw"));
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Should().ContainSingle(e => e.Code == "Auth.TooManyAttempts");
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.TooManyAttempts" && e.Type == ErrorType.TooManyRequests);
         mocks.PasswordHasher.Verify(
             x => x.VerifyPassword(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<byte[]>()),
             Times.Never);
@@ -628,6 +628,56 @@ public sealed class AuthenticationServiceBaseTests
         otherDevice.IsRevoked.Should().BeTrue("reuse detection cannot tell which device was stolen");
         otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
         mocks.Sessions.Sessions.Should().OnlyContain(s => s.IsRevoked, "the successor minted by the first call goes too");
+    }
+
+    // A session revoked by a sign-out (one device, everywhere, password change or reset) or evicted by
+    // the session cap has simply ended on that device. Its token coming back is not a theft signal:
+    // only that request fails, and every other live session of the account keeps working.
+    [Theory]
+    [InlineData(RefreshSession.ReasonSignedOut)]
+    [InlineData(RefreshSession.ReasonSessionCap)]
+    public async Task RefreshTokenAsync_WhenTheSessionWasSignedOutOrEvicted_FailsWithoutRevokingOtherSessions(
+        string reason)
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var presented = SeedSession(mocks, userId: 1, token: "stored-refresh");
+        presented.Revoke(FixedNow.UtcDateTime.AddMinutes(-5), reason);
+        var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
+        ArrangeRefreshFetch(mocks, user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        otherDevice.IsRevoked.Should().BeFalse("a signed-out or evicted session is not token reuse");
+        presented.ReasonRevoked.Should().Be(reason, "the original revocation reason is kept");
+        mocks.Sessions.Sessions.Count(s => !s.IsRevoked).Should().Be(1, "nothing new is minted for the stale token");
+    }
+
+    // A row already revoked as Rotated (with or without the successor link) or as ReuseDetected is
+    // reuse when presented again, so the whole live family goes (BR-206).
+    [Theory]
+    [InlineData(RefreshSession.ReasonRotated)]
+    [InlineData(RefreshSession.ReasonReuseDetected)]
+    public async Task RefreshTokenAsync_WhenTheSessionWasRotatedOrFlaggedAsReuse_RevokesTheWholeFamily(
+        string reason)
+    {
+        var (sut, mocks) = CreateSut();
+        var user = CreateTestUser(id: 1);
+        var presented = SeedSession(mocks, userId: 1, token: "stored-refresh");
+        presented.Revoke(FixedNow.UtcDateTime.AddMinutes(-5), reason);
+        var otherDevice = SeedSession(mocks, userId: 1, token: "phone-token");
+        ArrangeRefreshFetch(mocks, user);
+
+        Result<AuthenticationResponse> result = await sut.RefreshTokenAsync(
+            new RefreshTokenRequest("expired", "stored-refresh"));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Auth.InvalidRefreshToken");
+        otherDevice.IsRevoked.Should().BeTrue("a rotated or reuse-flagged token coming back is token reuse");
+        otherDevice.ReasonRevoked.Should().Be(RefreshSession.ReasonReuseDetected);
     }
 
     // H35: two requests presenting the same still-live token both read an un-revoked row. The store

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MMCA.Common.UI;
 using MMCA.Common.UI.Services;
+using MMCA.Common.UI.Services.Culture;
 using Moq;
 using MudBlazor;
 using MudBlazor.Services;
@@ -73,6 +74,11 @@ public abstract class BunitComponentTestBase : BunitContext
         // registers a FakeTimeProvider of its own; AddLogging above already brought in the options
         // infrastructure, so IOptions<T> of an unconfigured settings class resolves to its defaults.
         Services.TryAddSingleton(TimeProvider.System);
+
+        // The viewer time-zone service the notification and session pages format instants with. Under
+        // loose JSInterop the browser read returns null, so pages render in UTC unless a test sets up
+        // the "getTimeZone" call itself.
+        Services.TryAddScoped<ViewerTimeZone>();
     }
 
     /// <summary>

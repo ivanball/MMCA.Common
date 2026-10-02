@@ -32,6 +32,7 @@ public sealed class ProblemDetailsRoundTripTests
         { ErrorType.Forbidden, StatusCodes.Status403Forbidden },
         { ErrorType.UnprocessableEntity, StatusCodes.Status422UnprocessableEntity },
         { ErrorType.Unexpected, StatusCodes.Status500InternalServerError },
+        { ErrorType.TooManyRequests, StatusCodes.Status429TooManyRequests },
     };
 
     [Theory]

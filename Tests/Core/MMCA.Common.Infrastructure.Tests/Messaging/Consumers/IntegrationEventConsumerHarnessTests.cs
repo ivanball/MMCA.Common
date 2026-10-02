@@ -3,6 +3,7 @@ using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Application.Interfaces.Events;
+using MMCA.Common.Application.Services;
 using MMCA.Common.Domain.DomainEvents;
 using MMCA.Common.Domain.Interfaces;
 using MMCA.Common.Infrastructure.Messaging.Consumers;
@@ -30,6 +31,89 @@ public sealed class IntegrationEventConsumerHarnessTests
     public sealed record class HarnessTestEvent : BaseIntegrationEvent;
 
     public sealed record class HarnessFaultingEvent : BaseIntegrationEvent;
+
+    public sealed record class HarnessSecondEvent : BaseIntegrationEvent;
+
+    // A host must be able to give ONE consumer its own queue without renaming any other: two
+    // registrations with different explicit names each listen on exactly the queue they named.
+    [Fact]
+    public async Task ExplicitEndpointNames_PutEachConsumerOnItsOwnNamedQueue()
+    {
+        var firstHandler = new RecordingHandler<HarnessTestEvent>();
+        var secondHandler = new RecordingHandler<HarnessSecondEvent>();
+
+        await using var provider = BuildProvider(
+            services => services
+                .AddSingleton<IIntegrationEventHandler<HarnessTestEvent>>(firstHandler)
+                .AddSingleton<IIntegrationEventHandler<HarnessSecondEvent>>(secondHandler)
+                .AddSingleton<IInboxStore>(new RecordingInboxStore()),
+            bus => bus
+                .RegisterIntegrationEventConsumer<HarnessTestEvent>(configureEndpoint: e => e.Name = "mmca-test-first-queue")
+                .RegisterIntegrationEventConsumer<HarnessSecondEvent>(configureEndpoint: e => e.Name = "mmca-test-second-queue"));
+
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+
+        await harness.Bus.Publish(new HarnessTestEvent());
+        await harness.Bus.Publish(new HarnessSecondEvent());
+
+        var first = harness.GetConsumerHarness<IntegrationEventConsumer<HarnessTestEvent>>();
+        var second = harness.GetConsumerHarness<IntegrationEventConsumer<HarnessSecondEvent>>();
+        (await first.Consumed.Any<HarnessTestEvent>()).Should().BeTrue();
+        (await second.Consumed.Any<HarnessSecondEvent>()).Should().BeTrue();
+
+        (await FirstInputQueueAsync<HarnessTestEvent>(first.Consumed)).Should().Be("mmca-test-first-queue");
+        (await FirstInputQueueAsync<HarnessSecondEvent>(second.Consumed)).Should().Be("mmca-test-second-queue");
+    }
+
+    // The fault consumer gets the same configuration, with "-fault" appended to an explicit name, so
+    // it never shares the event consumer's queue.
+    [Fact]
+    public async Task ExplicitEndpointName_PutsTheFaultConsumerOnTheSuffixedQueue()
+    {
+        await using var provider = BuildProvider(
+            services => services
+                .AddSingleton<IIntegrationEventHandler<HarnessFaultingEvent>>(new ThrowingHandler<HarnessFaultingEvent>())
+                .AddSingleton<IInboxStore>(new RecordingInboxStore()),
+            bus => bus.RegisterIntegrationEventConsumer<HarnessFaultingEvent>(
+                configureEndpoint: e => e.Name = "mmca-test-faulting-queue"));
+
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+
+        await harness.Bus.Publish(new HarnessFaultingEvent());
+
+        var eventConsumer = harness.GetConsumerHarness<IntegrationEventConsumer<HarnessFaultingEvent>>();
+        var faultConsumer = harness.GetConsumerHarness<FaultIntegrationEventConsumer<HarnessFaultingEvent>>();
+        (await eventConsumer.Consumed.Any<HarnessFaultingEvent>()).Should().BeTrue();
+        (await faultConsumer.Consumed.Any<Fault<HarnessFaultingEvent>>()).Should().BeTrue();
+
+        (await FirstInputQueueAsync<HarnessFaultingEvent>(eventConsumer.Consumed))
+            .Should().Be("mmca-test-faulting-queue");
+        (await FirstInputQueueAsync<Fault<HarnessFaultingEvent>>(faultConsumer.Consumed))
+            .Should().Be("mmca-test-faulting-queue-fault");
+    }
+
+    [Fact]
+    public async Task ExplicitEndpointName_OnTheUpcastedConsumer_PutsItOnTheNamedQueue()
+    {
+        await using var provider = BuildProvider(
+            services => services
+                .AddSingleton<IIntegrationEventHandler<HarnessSecondEvent>>(new RecordingHandler<HarnessSecondEvent>())
+                .AddSingleton<IInboxStore>(new RecordingInboxStore())
+                .AddSingleton<IEventUpcasterRegistry>(new EventUpcasterRegistry([])),
+            bus => bus.RegisterUpcastedIntegrationEventConsumer<HarnessSecondEvent>(
+                configureEndpoint: e => e.Name = "mmca-test-upcasted-queue"));
+
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+
+        await harness.Bus.Publish(new HarnessSecondEvent());
+
+        var consumer = harness.GetConsumerHarness<UpcastingIntegrationEventConsumer<HarnessSecondEvent>>();
+        (await consumer.Consumed.Any<HarnessSecondEvent>()).Should().BeTrue();
+        (await FirstInputQueueAsync<HarnessSecondEvent>(consumer.Consumed)).Should().Be("mmca-test-upcasted-queue");
+    }
 
     [Fact]
     public async Task PublishedEvent_ReachesTheRegisteredIntegrationEventHandler()
@@ -136,6 +220,16 @@ public sealed class IntegrationEventConsumerHarnessTests
         services.AddMassTransitTestHarness(configureBus);
 
         return services.BuildServiceProvider();
+    }
+
+    // The queue the first matching message was received on: the last path segment of the receive
+    // endpoint's address.
+    private static async Task<string> FirstInputQueueAsync<T>(IReceivedMessageList received)
+        where T : class
+    {
+        IReceivedMessage<T> message = await received.SelectAsync<T>().FirstAsync();
+        return message.Context.ReceiveContext.InputAddress.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)[^1];
     }
 
     /// <summary>Captures every event the bus routed to the handler contract.</summary>
