@@ -58,6 +58,9 @@ MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.RabbitMqConnectionString.ge
 MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.SetEnvironmentVariable(string! key, string? value) -> void
 MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.SetHostConnectionString(string! connectionString) -> void
 MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.SqlServerBaseConnectionString.get -> string!
+MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation
+MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).IsolateCrossServiceHost<TEntryPoint>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 MMCA.Common.Testing.Fixtures.IIntegrationTestFixture
 MMCA.Common.Testing.Fixtures.IIntegrationTestFixture.CreateClient() -> System.Net.Http.HttpClient!
 MMCA.Common.Testing.Fixtures.IIntegrationTestFixture.ResetDatabaseAsync() -> System.Threading.Tasks.Task!
@@ -178,6 +181,7 @@ static MMCA.Common.Testing.Conformance.ProblemDetailsContractTestsBase<TFixture>
 static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator !=(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
 static MMCA.Common.Testing.Fixtures.CrossServiceDataSource.operator ==(MMCA.Common.Testing.Fixtures.CrossServiceDataSource? left, MMCA.Common.Testing.Fixtures.CrossServiceDataSource? right) -> bool
 static MMCA.Common.Testing.Fixtures.CrossServiceFixtureBase.ComposeConnectionString(string! baseConnectionString, string! databaseName, string? applicationName = null) -> string!
+static MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.IsolateCrossServiceHost<TEntryPoint>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static MMCA.Common.Testing.Fixtures.IntegrationTestBase<TFixture>.NextId() -> int
 static MMCA.Common.Testing.Fixtures.ServiceBusEmulatorFixtureBase.ComposeAdminConnectionString(string! hostname, int mappedAdminPort) -> string!
 static MMCA.Common.Testing.Support.DependencyInjectionAssert.ReturnsSameCollection(System.Func<Microsoft.Extensions.DependencyInjection.IServiceCollection!, Microsoft.Extensions.DependencyInjection.IServiceCollection!>! register) -> void
