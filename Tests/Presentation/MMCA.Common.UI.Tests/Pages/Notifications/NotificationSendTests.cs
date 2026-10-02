@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Interfaces;
@@ -34,6 +37,16 @@ public sealed class NotificationSendTests : BunitTestBase
         public Task<string?> GetCurrentScopeDisplayNameAsync(CancellationToken ct = default) =>
             Task.FromResult(displayName);
     }
+
+    /// <summary>An account holding the permission the page and its navigation entry are gated on.</summary>
+    private static readonly ClaimsPrincipal Manager = new(new ClaimsIdentity(
+        [new Claim(AuthClaimTypes.Subject, "1"), new Claim(AuthClaimTypes.Permission, NotificationPermissions.Manage)],
+        authenticationType: "TestAuth"));
+
+    /// <summary>A signed-in account without it, which the send endpoint would refuse.</summary>
+    private static readonly ClaimsPrincipal Attendee = new(new ClaimsIdentity(
+        [new Claim(AuthClaimTypes.Subject, "2")],
+        authenticationType: "TestAuth"));
 
     private readonly Mock<IPushNotificationUIService> _service = new();
     private readonly Mock<IToastService> _toast = new();
@@ -67,9 +80,21 @@ public sealed class NotificationSendTests : BunitTestBase
             [.. messages.Select(message => Error.Failure("Notif.Send.Failed", message))]);
 
     [Fact]
+    public void WhenTheAccountLacksTheManagePermission_RendersAccessDenied_InsteadOfTheComposeForm()
+    {
+        // Reachable by URL for any signed-in account; the compose form must not appear to an account
+        // the send endpoint would refuse.
+        var cut = RenderAs<NotificationSend>(Attendee, _ => { });
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Access Denied"));
+        cut.FindAll("input").Should().BeEmpty();
+        cut.Markup.Should().NotContain("Send to All Recipients");
+    }
+
+    [Fact]
     public void SubmittingEmptyForm_ShowsValidationAndDoesNotCallService()
     {
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.ClickButtonByText("Send to All Recipients");
 
@@ -84,7 +109,7 @@ public sealed class NotificationSendTests : BunitTestBase
     {
         // The markup no longer hard-codes Required: it is read off the model's own annotations, so
         // this asserts the accessibility affordance survived the move to the validation adapter.
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.Find("input").OuterHtml.Should().Contain("aria-required=\"true\"");
         cut.Find("textarea").OuterHtml.Should().Contain("aria-required=\"true\"");
@@ -95,7 +120,7 @@ public sealed class NotificationSendTests : BunitTestBase
     {
         // MudBlazor's built-in required text must not stack on top of the model's message: the
         // adapter is the only source of the wording.
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.ClickButtonByText("Send to All Recipients");
 
@@ -109,7 +134,7 @@ public sealed class NotificationSendTests : BunitTestBase
         // The length rule lives only on NotificationSendModel, which reads its number off the shared
         // request contract: the markup declares no MaxLength rule, so seeing this message proves the
         // model's DataAnnotations are what the field validates.
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.Find("input").Input(new string('x', SendPushNotificationRequest.TitleMaxLength + 1));
         cut.Find("textarea").Input("World body");
@@ -129,7 +154,7 @@ public sealed class NotificationSendTests : BunitTestBase
         // operator composes a broadcast with no statement of who receives it.
         Services.AddSingleton<INotificationScopeProvider>(new NamedScopeProvider("Spring Summit 2026"));
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("Targeting: Spring Summit 2026"));
     }
@@ -139,7 +164,7 @@ public sealed class NotificationSendTests : BunitTestBase
     {
         // The null provider is the framework default, and an unscoped app must not gain a caption
         // with nothing in it.
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.Markup.Should().NotContain("Targeting:");
         cut.FindAll(".mmca-send-scope").Should().BeEmpty();
@@ -152,7 +177,7 @@ public sealed class NotificationSendTests : BunitTestBase
         // printing a bare label.
         Services.AddSingleton<INotificationScopeProvider>(new NamedScopeProvider(displayName: null));
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.FindAll(".mmca-send-scope").Should().BeEmpty();
     }
@@ -165,7 +190,7 @@ public sealed class NotificationSendTests : BunitTestBase
             .ReturnsAsync(Accepted(recipientCount: 10));
         var nav = Services.GetRequiredService<NavigationManager>();
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.Find("input").Input("Hello");
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
@@ -191,7 +216,7 @@ public sealed class NotificationSendTests : BunitTestBase
             .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Accepted(recipientCount: 1));
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.Find("input").Input("Hello");
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
@@ -209,7 +234,7 @@ public sealed class NotificationSendTests : BunitTestBase
         var nav = Services.GetRequiredService<NavigationManager>();
         var startingUri = nav.Uri;
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.Find("input").Input("Hello");
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
@@ -229,7 +254,7 @@ public sealed class NotificationSendTests : BunitTestBase
             .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SendFailure("The notification service is unavailable."));
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.Find("input").Input("Hello");
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
@@ -246,7 +271,7 @@ public sealed class NotificationSendTests : BunitTestBase
             .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SendFailure("No recipients are registered.", "The notification service is unavailable."));
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.Find("input").Input("Hello");
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
@@ -260,7 +285,7 @@ public sealed class NotificationSendTests : BunitTestBase
     [Fact]
     public void OnLoad_TheUnsavedChangesGuardIsStoodDown()
     {
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         ConfirmsNavigation(cut).Should().BeFalse("an empty compose form holds nothing to lose");
     }
@@ -268,7 +293,7 @@ public sealed class NotificationSendTests : BunitTestBase
     [Fact]
     public void AfterTypingATitle_TheGuardConfirmsNavigation()
     {
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
 
         cut.Find("input").Input("Hello");
 
@@ -285,7 +310,7 @@ public sealed class NotificationSendTests : BunitTestBase
             .Setup(x => x.SendAsync(It.IsAny<SendPushNotificationRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Accepted(recipientCount: 10));
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.Find("input").Input("Hello");
         cut.Find("textarea").Input("World body");
         cut.ClickButtonByText("Send to All Recipients");
@@ -303,7 +328,7 @@ public sealed class NotificationSendTests : BunitTestBase
     {
         var nav = Services.GetRequiredService<NavigationManager>();
 
-        var cut = RenderUnderTest<NotificationSend>(_ => { });
+        var cut = RenderAs<NotificationSend>(Manager, _ => { });
         cut.ClickButtonByText("Cancel");
 
         nav.Uri.Should().EndWith("/notifications");

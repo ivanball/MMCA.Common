@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Localization;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
@@ -25,7 +28,14 @@ public partial class NotificationSend : IDisposable
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
     [Inject] private INotificationScopeProvider ScopeProvider { get; set; } = default!;
 
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
+
     private readonly CancellationTokenSource _cts = new();
+
+    // Whether the signed-in account holds notifications:manage, the navigation entry's own gate. Null
+    // until the auth state resolves (nothing renders); false renders the 403 view, so the compose form
+    // never appears to an account the send endpoint would refuse.
+    private bool? _canManage;
 
     private string Title => L["Notif.Send.Title"].Value;
 
@@ -69,6 +79,13 @@ public partial class NotificationSend : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        var user = AuthenticationState is null ? null : (await AuthenticationState).User;
+        _canManage = user.HasPermissionClaim(NotificationPermissions.Manage);
+        if (_canManage == false)
+        {
+            return;
+        }
+
         // A scoped application applies its scope to the send automatically, so without a caption the
         // operator is composing a broadcast with no visible statement of who receives it. The
         // localized string is built here rather than in a field initializer because it needs the

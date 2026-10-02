@@ -17,7 +17,7 @@ public sealed class NotificationUIModule : IUIModule
     public IReadOnlyList<NavItem> NavItems { get; } =
     [
         new("Nav.NotificationInbox", NotificationRoutePaths.NotificationInbox, Icons.Material.Filled.Inbox, typeof(SharedResource), Section: NavSection.User),
-        new("Nav.PushNotifications", NotificationRoutePaths.Notifications, Icons.Material.Filled.NotificationsActive, typeof(SharedResource), RequiredPermission: NotificationPermissions.Manage, Section: NavSection.Admin, Group: "Notifications"),
+        new("Nav.PushNotifications", NotificationRoutePaths.Notifications, Icons.Material.Filled.NotificationsActive, typeof(SharedResource), RequiredPermission: NotificationPermissions.Manage, Section: NavSection.Admin, Group: "Nav.Group.Notifications"),
     ];
 
     public IReadOnlyList<Type> AppBarComponentTypes { get; } = [typeof(NotificationBell)];

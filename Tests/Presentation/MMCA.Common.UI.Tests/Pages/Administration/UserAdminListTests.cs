@@ -329,6 +329,25 @@ public sealed class UserAdminListTests : BunitTestBase
         });
     }
 
+    /// <summary>
+    /// Delete follows the same own-row rule as lock and role: deleting yourself from the
+    /// administration grid removes the capability to undo it (self-service deletion stays on the
+    /// profile page).
+    /// </summary>
+    [Fact]
+    public void TheSignedInOperatorsOwnRow_OffersNoDeleteButton()
+    {
+        RenderMudProviders();
+
+        var cut = RenderList(SignedInAsAda, p => p.Add(x => x.OnDelete, _ => Task.FromResult(Result.Success())));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("button[aria-label='Delete grace@example.com']").Should().NotBeEmpty();
+            cut.FindAll("button[aria-label='Delete ada@example.com']").Should().BeEmpty();
+        });
+    }
+
     // ── Delete is opt-in ──
     [Fact]
     public void WithoutOnDelete_NoRowOffersADeleteButton()

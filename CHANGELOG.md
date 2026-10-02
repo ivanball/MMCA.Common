@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- The push notification history (`/notifications`) and compose (`/notifications/send`) pages render the shell's Access Denied page for a signed-in account without the `notifications:manage` permission claim, the same gate their navigation entry uses. They used to require sign-in only, so any account could open them by URL and see an empty history plus the API's refusal (the API itself was never open). Nothing renders until the authentication state resolves, so neither page flashes for an authorized account.
+- `UserAdminList` hides the Delete button on the operator's own row, as it already hid the lock and role actions: deleting yourself from the administration grid removes the capability to undo it. Self-service deletion stays on the profile page.
+- The admin navigation group holding "Push Notifications" is labelled through the resource key `Nav.Group.Notifications` (English "Notifications", Spanish "Notificaciones"). The group used the literal key `Notifications`, which no resource declared, so the menu showed the raw English text in every culture.
+
 ## [1.220.0] - 2026-10-02
 
 ### Added
