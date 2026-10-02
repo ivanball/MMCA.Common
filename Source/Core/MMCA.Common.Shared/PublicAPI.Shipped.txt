@@ -27,6 +27,7 @@ MMCA.Common.Shared.Abstractions.ErrorType.Failure = 7 -> MMCA.Common.Shared.Abst
 MMCA.Common.Shared.Abstractions.ErrorType.Forbidden = 5 -> MMCA.Common.Shared.Abstractions.ErrorType
 MMCA.Common.Shared.Abstractions.ErrorType.Invariant = 1 -> MMCA.Common.Shared.Abstractions.ErrorType
 MMCA.Common.Shared.Abstractions.ErrorType.NotFound = 2 -> MMCA.Common.Shared.Abstractions.ErrorType
+MMCA.Common.Shared.Abstractions.ErrorType.TooManyRequests = 9 -> MMCA.Common.Shared.Abstractions.ErrorType
 MMCA.Common.Shared.Abstractions.ErrorType.Unauthorized = 4 -> MMCA.Common.Shared.Abstractions.ErrorType
 MMCA.Common.Shared.Abstractions.ErrorType.Unexpected = 8 -> MMCA.Common.Shared.Abstractions.ErrorType
 MMCA.Common.Shared.Abstractions.ErrorType.UnprocessableEntity = 6 -> MMCA.Common.Shared.Abstractions.ErrorType
@@ -769,6 +770,7 @@ static MMCA.Common.Shared.Abstractions.Error.Failure(string! code, string! messa
 static MMCA.Common.Shared.Abstractions.Error.Forbidden(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.Invariant(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.NotFoundError(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Shared.Abstractions.Error.TooManyRequests(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.Unauthorized(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.Unexpected(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
 static MMCA.Common.Shared.Abstractions.Error.UnprocessableEntity(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!

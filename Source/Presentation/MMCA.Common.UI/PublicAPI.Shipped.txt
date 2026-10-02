@@ -1033,6 +1033,14 @@ MMCA.Common.UI.Services.Culture.EndpointCultureApplier.EndpointCultureApplier(Mi
 MMCA.Common.UI.Services.Culture.ICultureApplier
 MMCA.Common.UI.Services.Culture.ICultureApplier.ApplyAsync(string! culture, string! returnPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 MMCA.Common.UI.Services.Culture.MmcaCultureBootstrap
+MMCA.Common.UI.Services.Culture.ViewerTimeZone
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.DisposeAsync() -> System.Threading.Tasks.ValueTask
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.EnsureResolvedAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<bool>
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.Format(System.DateTime instant, string! format = "g") -> string!
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.IsResolved.get -> bool
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.ToViewerTime(System.DateTime instant) -> System.DateTime
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.ViewerTimeZone(Microsoft.JSInterop.IJSRuntime! jsRuntime) -> void
+MMCA.Common.UI.Services.Culture.ViewerTimeZone.Zone.get -> System.TimeZoneInfo!
 MMCA.Common.UI.Services.IFormFactor
 MMCA.Common.UI.Services.IFormFactor.GetFormFactor() -> string!
 MMCA.Common.UI.Services.IFormFactor.GetPlatform() -> string!
@@ -1194,6 +1202,8 @@ MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator
 MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator.Dispose() -> void
 MMCA.Common.UI.Validation.LocalizedDataAnnotationsValidator.LocalizedDataAnnotationsValidator() -> void
 MMCA.Common.UI.Validation.ModelValidation
+MMCA.Common.UI.Validation.OptionalEmailAttribute
+MMCA.Common.UI.Validation.OptionalEmailAttribute.OptionalEmailAttribute() -> void
 MMCA.Common.UI._Imports
 MMCA.Common.UI._Imports.Execute() -> void
 MMCA.Common.UI._Imports._Imports() -> void
@@ -1280,6 +1290,7 @@ override MMCA.Common.UI.Pages.Auth.Login.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Auth.OAuthComplete.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.ResetPassword.OnParametersSet() -> void
+override MMCA.Common.UI.Pages.Auth.Sessions.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Auth.Sessions.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Common.DataGridListPageBase<TDto>.OnInitialized() -> void
@@ -1287,6 +1298,7 @@ override MMCA.Common.UI.Pages.Home.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationInbox.OnParametersSet() -> void
+override MMCA.Common.UI.Pages.Notifications.NotificationList.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationList.OnInitializedAsync() -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitialized() -> void
 override MMCA.Common.UI.Pages.Notifications.NotificationSend.OnInitializedAsync() -> System.Threading.Tasks.Task!

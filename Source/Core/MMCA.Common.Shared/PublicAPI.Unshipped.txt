@@ -1,3 +1,1 @@
 ﻿#nullable enable
-MMCA.Common.Shared.Abstractions.ErrorType.TooManyRequests = 9 -> MMCA.Common.Shared.Abstractions.ErrorType
-static MMCA.Common.Shared.Abstractions.Error.TooManyRequests(string! code, string! message, string? source = null, string? target = null) -> MMCA.Common.Shared.Abstractions.Error!
