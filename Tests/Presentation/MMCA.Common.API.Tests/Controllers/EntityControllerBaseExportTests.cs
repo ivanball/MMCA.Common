@@ -99,6 +99,30 @@ public sealed class EntityControllerBaseExportTests : IDisposable
             It.IsAny<bool>(),
             It.IsAny<CancellationToken>()));
 
+    // ── Kestrel's default: synchronous I/O on the response body is disallowed ──
+    [Fact]
+    public async Task ExportAsync_LargerThanOneKilobyte_WhenTheBodyForbidsSynchronousIo_Answers200WithTheWholeCsv()
+    {
+        var longName = new string('n', 200);
+        SetupPages()
+            .ReturnsAsync(Result.Success(Page([.. Enumerable.Range(1, 50).Select(i => (object)Dto(i, longName))], totalItemCount: 100)))
+            .ReturnsAsync(Result.Success(Page([.. Enumerable.Range(51, 50).Select(i => (object)Dto(i, longName))], totalItemCount: 100)))
+            .ReturnsAsync(Result.Success(Page([], totalItemCount: 100)));
+        await using var asyncOnlyBody = new MMCA.Common.API.Tests.Export.AsyncOnlyResponseStream();
+        ExportTestController sut = CreateController(maxPageSize: 50);
+        sut.ControllerContext.HttpContext.Response.Body = asyncOnlyBody;
+
+        IActionResult result = await sut.ExportAsync(cancellationToken: CancellationToken.None);
+
+        result.Should().BeOfType<EmptyResult>();
+        sut.ControllerContext.HttpContext.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        string text = Encoding.UTF8.GetString(asyncOnlyBody.ToArray());
+        text.Length.Should().BeGreaterThan(20_000);
+        string[] lines = BodyLines(text);
+        lines.Should().HaveCount(101, because: "the header plus all 100 rows across both pages");
+        lines[^1].Should().StartWith("100," + longName);
+    }
+
     // ── Page-loop fan-in ──
     [Fact]
     public async Task ExportAsync_ThreePages_FansInEveryRow()

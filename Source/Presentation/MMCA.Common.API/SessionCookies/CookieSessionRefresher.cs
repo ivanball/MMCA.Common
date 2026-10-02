@@ -128,7 +128,8 @@ internal sealed partial class CookieSessionRefresher(
             return SessionRefreshOutcome.Rejected();
         }
 
-        var (auth, failure) = await RefreshAsync(accessToken ?? string.Empty, refreshToken, cancellationToken).ConfigureAwait(false);
+        var origin = BrowserOrigin.From(context);
+        var (auth, failure) = await RefreshAsync(accessToken ?? string.Empty, refreshToken, origin, cancellationToken).ConfigureAwait(false);
         if (auth is null)
         {
             return failure!;
@@ -143,7 +144,7 @@ internal sealed partial class CookieSessionRefresher(
     }
 
     private async Task<(AuthenticationResponse? Auth, SessionRefreshOutcome? Failure)> RefreshAsync(
-        string accessToken, string refreshToken, CancellationToken cancellationToken)
+        string accessToken, string refreshToken, BrowserOrigin origin, CancellationToken cancellationToken)
     {
         if (cache.TryGetValue(CacheKey(refreshToken), out AuthenticationResponse cached))
         {
@@ -158,10 +159,11 @@ internal sealed partial class CookieSessionRefresher(
             return (cached, null);
         }
 
-        return await CallRefreshAsync(accessToken, refreshToken).ConfigureAwait(false);
+        return await CallRefreshAsync(accessToken, refreshToken, origin).ConfigureAwait(false);
     }
 
-    private async Task<(AuthenticationResponse? Auth, SessionRefreshOutcome? Failure)> CallRefreshAsync(string accessToken, string refreshToken)
+    private async Task<(AuthenticationResponse? Auth, SessionRefreshOutcome? Failure)> CallRefreshAsync(
+        string accessToken, string refreshToken, BrowserOrigin origin)
     {
         var client = httpClientFactory.CreateClient(RefreshClientName);
 
@@ -176,10 +178,13 @@ internal sealed partial class CookieSessionRefresher(
         {
             // CancellationToken.None: once we hold the lock the refresh must complete (and write its cookies)
             // regardless of whether the triggering request was aborted; the call is short.
-            using var response = await client.PostAsJsonAsync(
-                new Uri("auth/refresh", UriKind.Relative),
-                new RefreshTokenRequest(accessToken, refreshToken),
-                CancellationToken.None).ConfigureAwait(false);
+            using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("auth/refresh", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new RefreshTokenRequest(accessToken, refreshToken)),
+            };
+            origin.ApplyTo(request);
+
+            using var response = await client.SendAsync(request, CancellationToken.None).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -269,4 +274,36 @@ internal sealed partial class CookieSessionRefresher(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Session cookie refresh call failed; the request renders anonymously and the next navigation retries")]
     private static partial void LogRefreshCallFailed(ILogger logger, Exception exception);
+
+    /// <summary>
+    /// The browser's identity captured from the triggering request before the lock is taken, so the
+    /// server-to-server <c>auth/refresh</c> call records the real device and IP on the rotated session
+    /// instead of this host's own (empty user-agent, loopback address). The identity endpoint trusts
+    /// <c>X-Forwarded-For</c> through <see cref="MMCA.Common.API.Startup.CommonForwardedHeaders"/>.
+    /// </summary>
+    private readonly record struct BrowserOrigin(string? UserAgent, string? RemoteIpAddress)
+    {
+        public static BrowserOrigin From(HttpContext context)
+        {
+            var userAgent = context.Request.Headers.UserAgent.ToString();
+            return new BrowserOrigin(
+                string.IsNullOrWhiteSpace(userAgent) ? null : userAgent,
+                context.Connection.RemoteIpAddress?.ToString());
+        }
+
+        public void ApplyTo(HttpRequestMessage request)
+        {
+            if (UserAgent is not null)
+            {
+                // TryAddWithoutValidation: a real browser user-agent does not always parse as a strict
+                // product token list, and the value is informational only.
+                request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+            }
+
+            if (RemoteIpAddress is not null)
+            {
+                request.Headers.TryAddWithoutValidation("X-Forwarded-For", RemoteIpAddress);
+            }
+        }
+    }
 }

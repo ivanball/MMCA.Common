@@ -20,13 +20,16 @@ public static class SoftDeletedUserCache
     /// Lifetime of the deleted-user marker.
     /// </summary>
     /// <remarks>
-    /// The marker only has to outlive the window between the delete committing and the next
-    /// token validation: once the marker expires, the validator query is the source of truth
-    /// again and reports the same answer. Short-lived access tokens (15 minutes) bound the
-    /// rest of the exposure, so a longer marker would buy nothing and would only keep stale
-    /// entries alive for users who were never deleted.
+    /// The marker must outlive every access token issued before the delete. A host that does not
+    /// run Identity registers no validator query, so the marker is the only thing that rejects a
+    /// deleted user's still-valid token there; if it expired first, that token would be served
+    /// again until it lapsed. It therefore lasts as long as the default access-token lifetime
+    /// (15 minutes). This is a constant rather than a read of the JWT settings because the marker
+    /// is written through this static helper, where those settings are not reachable; a host that
+    /// raises the access-token lifetime should write its own marker with a matching duration.
+    /// Only positive markers live this long: the middleware caches a "not deleted" answer briefly.
     /// </remarks>
-    public static TimeSpan MarkerDuration => TimeSpan.FromSeconds(30);
+    public static TimeSpan MarkerDuration => TimeSpan.FromMinutes(15);
 
     /// <summary>
     /// Builds the cache key holding the soft-deleted marker for a user.

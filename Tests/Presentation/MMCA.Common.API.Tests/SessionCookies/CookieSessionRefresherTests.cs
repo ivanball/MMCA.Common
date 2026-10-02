@@ -73,6 +73,41 @@ public sealed class CookieSessionRefresherTests
         result!.Value.AccessTokenExpiry.Should().Be(expires);
     }
 
+    // ── Browser identity on the server-to-server refresh ──
+    // The rotated session row must record the browser's device and IP, not this host's own empty
+    // user-agent and loopback address, so the refresh call carries both from the browser request.
+    [Fact]
+    public async Task RefreshAsync_ForwardsTheBrowsersUserAgentAndRemoteIpToAuthRefresh()
+    {
+        const string browserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36";
+        using var harness = CreateSut(RespondWithTokens(CreateJwt(DateTime.UtcNow.AddMinutes(15)), "refresh-2", DateTime.UtcNow.AddMinutes(15)));
+        var context = CreateContext(accessToken: null, refreshToken: "refresh-1");
+        context.Request.Headers.UserAgent = browserAgent;
+        context.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.42");
+
+        SessionRefreshOutcome outcome = await harness.Sut.RefreshAsync(context);
+
+        outcome.Session.Should().NotBeNull();
+        harness.Handler.CallCount.Should().Be(1);
+        harness.Handler.LastUserAgent.Should().Be(browserAgent);
+        harness.Handler.LastForwardedFor.Should().Be("203.0.113.42");
+    }
+
+    [Fact]
+    public async Task GetOrRefreshAsync_WhenRefreshing_ForwardsTheBrowsersUserAgentAndRemoteIp()
+    {
+        using var harness = CreateSut(RespondWithTokens(CreateJwt(DateTime.UtcNow.AddMinutes(15)), "refresh-2", DateTime.UtcNow.AddMinutes(15)));
+        var context = CreateContext(accessToken: CreateJwt(DateTime.UtcNow.AddMinutes(-1)), refreshToken: "refresh-1");
+        context.Request.Headers.UserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)";
+        context.Connection.RemoteIpAddress = IPAddress.Parse("2001:db8::7");
+
+        SessionTokenResult? result = await harness.Sut.GetOrRefreshAsync(context);
+
+        result.Should().NotBeNull();
+        harness.Handler.LastUserAgent.Should().Be("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)");
+        harness.Handler.LastForwardedFor.Should().Be("2001:db8::7");
+    }
+
     // ── No session ──
     [Fact]
     public async Task GetOrRefreshAsync_WhenNoCookiesAtAll_ReturnsNullWithoutHttpCall()
@@ -610,6 +645,10 @@ public sealed class CookieSessionRefresherTests
 
         public string? LastRequestBody { get; private set; }
 
+        public string? LastUserAgent { get; private set; }
+
+        public string? LastForwardedFor { get; private set; }
+
         /// <summary>Completed once a blocking call has entered the handler and is waiting on <see cref="Gate"/>.</summary>
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -625,6 +664,8 @@ public sealed class CookieSessionRefresherTests
         {
             Interlocked.Increment(ref _callCount);
             LastRequestUri = request.RequestUri;
+            LastUserAgent = request.Headers.TryGetValues("User-Agent", out var agents) ? string.Join(" ", agents) : null;
+            LastForwardedFor = request.Headers.TryGetValues("X-Forwarded-For", out var forwarded) ? string.Join(",", forwarded) : null;
             string? body = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

@@ -31,6 +31,10 @@ public class ErrorTests
         Error.Forbidden("code", "msg").Type.Should().Be(ErrorType.Forbidden);
 
     [Fact]
+    public void TooManyRequests_CreatesErrorWithTooManyRequestsType() =>
+        Error.TooManyRequests("code", "msg").Type.Should().Be(ErrorType.TooManyRequests);
+
+    [Fact]
     public void Failure_CreatesErrorWithFailureType() =>
         Error.Failure("code", "msg").Type.Should().Be(ErrorType.Failure);
 

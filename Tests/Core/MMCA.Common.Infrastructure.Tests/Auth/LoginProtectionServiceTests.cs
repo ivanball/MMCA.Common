@@ -31,7 +31,7 @@ public sealed class LoginProtectionServiceTests
     }
 
     [Fact]
-    public async Task CheckLockoutAsync_WhenLockedOut_ReturnsUnauthorizedFailure()
+    public async Task CheckLockoutAsync_WhenLockedOut_ReturnsTooManyRequestsFailure()
     {
         var (sut, cache) = CreateSut();
         cache.Seed(LockoutKey, true);
@@ -40,7 +40,7 @@ public sealed class LoginProtectionServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e =>
-            e.Code == "Auth.TooManyAttempts" && e.Type == ErrorType.Unauthorized);
+            e.Code == "Auth.TooManyAttempts" && e.Type == ErrorType.TooManyRequests);
     }
 
     // ── Failed-attempt counting ──

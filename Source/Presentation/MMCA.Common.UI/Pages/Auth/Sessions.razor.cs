@@ -6,6 +6,7 @@ using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
 using MMCA.Common.UI.Services.Auth;
+using MMCA.Common.UI.Services.Culture;
 using MudBlazor;
 
 namespace MMCA.Common.UI.Pages.Auth;
@@ -30,6 +31,7 @@ public partial class Sessions : IDisposable
     [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IAppDialogService Dialogs { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
+    [Inject] private ViewerTimeZone ViewerTime { get; set; } = default!;
 
     private const string LoginRoute = "/login";
 
@@ -68,6 +70,16 @@ public partial class Sessions : IDisposable
         ];
 
         await LoadSessionsAsync();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Session times render on the viewer's clock; the zone is only readable once JS is available.
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.Token))
+        {
+            StateHasChanged();
+        }
     }
 
     private async Task LoadSessionsAsync()
@@ -227,11 +239,11 @@ public partial class Sessions : IDisposable
     }
 
     /// <summary>
-    /// Formats a UTC instant in the viewer's local time and current culture: the sessions endpoint
-    /// reports UTC, and "signed in at 03:14" is only meaningful on the clock the person reads.
+    /// Formats a UTC instant in the VIEWER's browser time zone and current culture: the sessions
+    /// endpoint reports UTC, and "signed in at 03:14" is only meaningful on the clock the person reads.
+    /// <see cref="DateTime.ToLocalTime"/> would be the server's zone on Blazor Server and in prerender.
     /// </summary>
-    private static string FormatInstant(DateTime instant) =>
-        DateTime.SpecifyKind(instant, DateTimeKind.Utc).ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+    private string FormatInstant(DateTime instant) => ViewerTime.Format(instant);
 
     protected virtual void Dispose(bool disposing)
     {

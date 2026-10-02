@@ -4,6 +4,30 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- `ErrorType.TooManyRequests` and `Error.TooManyRequests(...)` (`MMCA.Common.Shared.Abstractions`): a temporary refusal for too many attempts. It answers HTTP 429 (`ErrorHttpMapping`), maps to gRPC `ResourceExhausted` in both directions, ranks between `Forbidden` and `Conflict` in `ErrorTypeSeverity`, and a 429 Problem Details response reads back as `TooManyRequests` in `ProblemDetailsResultReader`.
+- `OptionalEmailAttribute` (`MMCA.Common.UI.Validation`): an optional email field for EditForm models. Null, empty and whitespace pass; any other value must have exactly one `@` that is neither the first nor the last character, the same rule the server's `EmailRules` applies.
+- `ViewerTimeZone` (`MMCA.Common.UI.Services.Culture`, registered scoped by `AddUIShared` and by `BunitComponentTestBase`) plus `wwwroot/time-zone.js`: reads the browser's IANA time zone once per scope and converts UTC instants (`DateTimeKind.Utc` or `Unspecified`) to it with `TimeZoneInfo`. Until the zone is known, and when it cannot be read (prerender, no JS, unknown id), it uses UTC.
+- `RegisterIntegrationEventConsumer<TEvent>` and `RegisterUpcastedIntegrationEventConsumer<TEvent>` take an optional `Action<IEndpointRegistrationConfigurator>? configureEndpoint`, applied through MassTransit's `Endpoint(...)` to the consumer and to its fault consumer, so a host can give one consumer its own queue without renaming any other. An explicit name bypasses the endpoint name formatter, so it must carry the application prefix itself (SEC-Common-53); the fault consumer gets the same settings with `-fault` appended to an explicit name. Existing calls compile unchanged (recompile needed: the method signatures changed).
+
+### Changed
+
+- Presenting the refresh token of a session that was signed out (one device, sign out everywhere, password change or reset) or evicted by the per-user session cap now fails that request only, with the usual invalid-refresh-token 401, and no longer revokes the account's other live sessions. A token that was already rotated, or a session already flagged as reuse, still revokes every live session (BR-206).
+- The login lockout and the change-password lockout (`LoginProtectionService.CheckLockoutAsync`) answer HTTP 429 Too Many Requests instead of 401. The error code `Auth.TooManyAttempts` is unchanged; the error type is now `TooManyRequests`.
+- A service that registers no `ISoftDeletedUserValidator` (one that does not host Identity) now reads the soft-deleted user marker and answers 401 when it is set; a cache miss or a cache failure still passes the request through. `SoftDeletedUserCache.MarkerDuration` is 15 minutes (was 30 seconds) so the marker outlives an access token issued before the delete; the Identity host still caches a "not deleted" lookup for 30 seconds.
+- The notification inbox, the organizer notification history and the signed-in devices page show times in the viewer's browser time zone, not UTC or the server's zone.
+- The Login, Register, Forgot Password and Reset Password models read their validation messages from the shared resources inside each attribute (`ErrorMessageResourceType`), so a field that is touched and left empty shows the localized message instead of the raw `Auth.Field.*` key. `PasswordComplexityAttribute` builds its message with `FormatErrorMessage`, so it honours a resource-backed message too.
+
+### Fixed
+
+- Cookie session refresh: the server-to-server `auth/refresh` call from the UI host carries the browser's `User-Agent` and an `X-Forwarded-For` with the browser's IP, so the rotated session row records the real device and address instead of an empty user agent and the UI host's own address.
+- CSV export (`EntityControllerBase.ExportAsync`): an export larger than about 1 KB no longer fails on a host that forbids synchronous I/O (the Kestrel default). Each page is rendered into memory and written to the response with awaited writes only.
+- Mobile card view (`DataGridListPageBase.LoadMobileDataAsync`): when loading a later page fails, the cards already loaded, `MobileTotalItems` and `MobileCurrentPage` are kept and `LoadFailed` is set, so the inline error and Retry show below the loaded cards and Retry asks for the same page again. A failure on page 1 still empties the list.
+- Data grid (`DataGridListPageBase.LoadServerDataAsync`): overlapping loads end on the newest load's rows and total. A load superseded by a newer one returns the newest load's result instead of an empty page, so a cancelled load that completes last (MudDataGrid applies whichever `ServerData` call finishes last) no longer blanks the grid.
+
 ## [1.218.1] - 2026-10-01
 
 ### Fixed

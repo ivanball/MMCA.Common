@@ -28,7 +28,10 @@ public sealed class PasswordComplexityAttribute : ValidationAttribute
 
         // The context is null when the attribute is called through the context-free IsValid(object)
         // overload, which the base class routes here; there is then no member to attach the error to.
+        // FormatErrorMessage rather than ErrorMessage: it resolves an ErrorMessageResourceType /
+        // ErrorMessageResourceName pair too (the auth models localize inside the attribute), and
+        // returns a plain ErrorMessage or the default message unchanged.
         var members = validationContext?.MemberName is { } member ? new[] { member } : null;
-        return new ValidationResult(ErrorMessage, members);
+        return new ValidationResult(FormatErrorMessage(validationContext?.DisplayName ?? string.Empty), members);
     }
 }

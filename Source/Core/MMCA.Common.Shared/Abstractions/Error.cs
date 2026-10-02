@@ -91,6 +91,18 @@ public record Error(
     public static Error UnprocessableEntity(string code, string message, string? source = null, string? target = null) =>
         new(code, message, ErrorType.UnprocessableEntity, source, target);
 
+    /// <summary>
+    /// Creates a <see cref="ErrorType.TooManyRequests"/> error when the caller is temporarily refused
+    /// for making too many attempts (HTTP 429), such as a login or password-change lockout.
+    /// </summary>
+    /// <param name="code">Machine-readable error code.</param>
+    /// <param name="message">Human-readable error message.</param>
+    /// <param name="source">Optional origin context.</param>
+    /// <param name="target">Optional target field or entity.</param>
+    /// <returns>A new <see cref="Error"/> with <see cref="ErrorType.TooManyRequests"/>.</returns>
+    public static Error TooManyRequests(string code, string message, string? source = null, string? target = null) =>
+        new(code, message, ErrorType.TooManyRequests, source, target);
+
     /// <summary>Creates a general <see cref="ErrorType.Failure"/> error for unclassified failures.</summary>
     /// <param name="code">Machine-readable error code.</param>
     /// <param name="message">Human-readable error message.</param>

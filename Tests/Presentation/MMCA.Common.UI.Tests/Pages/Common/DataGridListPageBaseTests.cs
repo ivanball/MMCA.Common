@@ -70,6 +70,12 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
 
         public int MobileTotalNow => MobileTotalItems;
 
+        public int MobilePageNow
+        {
+            get => MobileCurrentPage;
+            set => MobileCurrentPage = value;
+        }
+
         public Task<GridData<WidgetRow>> LoadAsync(
             GridState<WidgetRow> state,
             bool showCancelSnackbar = true,
@@ -373,6 +379,71 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         _toast.VerifyNoOtherCalls();
     }
 
+    // == Overlapping loads (U-35 Retry race) ==
+    [Fact]
+    public async Task LoadServerDataAsync_WhenASupersededLoadCompletesLast_BothCallsReturnTheNewestRows()
+    {
+        // MudDataGrid applies whichever ServerData call completes LAST. Load A is superseded by load B
+        // (B's reset cancels A's token), but A's fetch ignores the token and only ends after B has
+        // rendered, by throwing OperationCanceledException. A must not hand the grid an empty page.
+        var cut = Render<TestGridPage>();
+        var supersededFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        cut.Instance.Fetch = (_, _, _, _, _, _) =>
+            ++calls == 1 ? supersededFetch.Task : Loaded(1, new WidgetRow(2, "Newest"));
+
+        Task<GridData<WidgetRow>>? supersededLoad = null;
+        // A statement body (an Action), so InvokeAsync starts load A without awaiting it.
+        await cut.InvokeAsync(() => { supersededLoad = cut.Instance.LoadAsync(State(page: 0, pageSize: 10), showCancelSnackbar: false); });
+        var newest = await LoadOnDispatcherAsync(cut, State(page: 0, pageSize: 10), showCancelSnackbar: false);
+
+        newest.TotalItems.Should().Be(1);
+        newest.Items.Should().ContainSingle().Which.Name.Should().Be("Newest");
+
+        supersededFetch.SetException(new OperationCanceledException());
+        var late = await supersededLoad!;
+
+        late.TotalItems.Should().Be(1, "a superseded load answers with the newest load's total, never an empty page");
+        late.Items.Should().ContainSingle().Which.Name.Should().Be("Newest");
+        calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_WhenASupersededLoadEndsBeforeTheNewest_ItWaitsForAndReturnsTheNewestRows()
+    {
+        var cut = Render<TestGridPage>();
+        var newestFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        cut.Instance.Fetch = (_, _, _, _, _, token) => ++calls == 1 ? UntilCancelled(token) : newestFetch.Task;
+
+        Task<GridData<WidgetRow>>? supersededLoad = null;
+        Task<GridData<WidgetRow>>? newestLoad = null;
+        await cut.InvokeAsync(() =>
+        {
+            supersededLoad = cut.Instance.LoadAsync(State(page: 0, pageSize: 10), showCancelSnackbar: false);
+            newestLoad = cut.Instance.LoadAsync(State(page: 0, pageSize: 10), showCancelSnackbar: false);
+        });
+
+        newestFetch.SetResult(Result.Success<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(([new WidgetRow(3, "Newest")], 1)));
+        var newest = await newestLoad!;
+        var superseded = await supersededLoad!;
+
+        newest.Items.Should().ContainSingle().Which.Name.Should().Be("Newest");
+        superseded.TotalItems.Should().Be(1, "the superseded call waits for the newest load instead of returning an empty page");
+        superseded.Items.Should().ContainSingle().Which.Name.Should().Be("Newest");
+    }
+
+    // A fetch that honors its token: it only ends, by cancellation, when the next load supersedes it.
+    private static Task<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>> UntilCancelled(CancellationToken token)
+    {
+        var pending = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        token.Register(() => pending.TrySetCanceled(token));
+        return pending.Task;
+    }
+
     // == Disposed-CTS regression ==
     [Fact]
     public async Task LoadServerDataAsync_AfterComponentDisposal_ToleratesDisposedCtsAndStillLoads()
@@ -465,6 +536,56 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         cut.Instance.LoadFailedNow.Should().BeTrue();
         cut.Instance.LoadingNow.Should().BeFalse();
         _toast.Verify(t => t.Show("The widget service is unavailable.", ToastSeverity.Error), Times.Once);
+    }
+
+    // An infinite-scroll append (page N > 1) that fails must not wipe what the user already scrolled
+    // through: the items, the total and the page are kept, LoadFailed is set so the inline error and
+    // Retry render below the items, and Retry re-requests the same page.
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenALaterPageFetchFails_KeepsItemsTotalAndPage()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(25, new WidgetRow(1, "First"), new WidgetRow(2, "Second"));
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        cut.Instance.MobilePageNow = 2;
+        cut.Instance.Fetch = (_, _, _, _, _, _) => LoadFailure("The widget service is unavailable.");
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        cut.Instance.LoadFailedNow.Should().BeTrue();
+        cut.Instance.LoadingNow.Should().BeFalse();
+        cut.Instance.MobileItemsNow.Select(r => r.Id).Should().Equal(1, 2);
+        cut.Instance.MobileTotalNow.Should().Be(25);
+        cut.Instance.MobilePageNow.Should().Be(2);
+
+        var requestedPages = new List<int>();
+        cut.Instance.Fetch = (_, page, _, _, _, _) =>
+        {
+            requestedPages.Add(page);
+            return Loaded(25, new WidgetRow(3, "Third"));
+        };
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        requestedPages.Should().Equal([2], "Retry re-requests the page that failed");
+        cut.Instance.LoadFailedNow.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoadMobileDataAsync_WhenALaterPageFetchThrows_KeepsItemsTotalAndPage()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, _) => Loaded(25, new WidgetRow(1, "First"));
+        await cut.InvokeAsync(() => cut.Instance.LoadMobileAsync());
+
+        cut.Instance.MobilePageNow = 3;
+        cut.Instance.Fetch = (_, _, _, _, _, _) => throw new HttpRequestException("network down");
+        var escaped = await Record.ExceptionAsync(() => cut.InvokeAsync(() => cut.Instance.LoadMobileAsync()));
+
+        escaped.Should().BeNull();
+        cut.Instance.LoadFailedNow.Should().BeTrue();
+        cut.Instance.MobileItemsNow.Should().ContainSingle(r => r.Id == 1);
+        cut.Instance.MobileTotalNow.Should().Be(25);
+        cut.Instance.MobilePageNow.Should().Be(3);
     }
 
     [Fact]

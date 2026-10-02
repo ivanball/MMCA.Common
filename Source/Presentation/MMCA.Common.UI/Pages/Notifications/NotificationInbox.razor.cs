@@ -5,6 +5,7 @@ using MMCA.Common.Shared.Notifications.UserNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
 using MMCA.Common.UI.Resources;
+using MMCA.Common.UI.Services.Culture;
 using MMCA.Common.UI.Services.Notifications;
 using MudBlazor;
 
@@ -32,6 +33,7 @@ public partial class NotificationInbox : IDisposable
     [Inject] private IToastService Toast { get; set; } = default!;
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
     [Inject] private IScrollManager ScrollManager { get; set; } = default!;
+    [Inject] private ViewerTimeZone ViewerTime { get; set; } = default!;
 
     /// <summary>
     /// The deep-linked notification to highlight and scroll to, from the
@@ -105,6 +107,12 @@ public partial class NotificationInbox : IDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Sent times render on the viewer's clock; the zone is only readable once JS is available.
+        if (firstRender && !_disposed && await ViewerTime.EnsureResolvedAsync(_cts.Token))
+        {
+            StateHasChanged();
+        }
+
         if (_pendingScrollId is not { } id || _disposed)
         {
             return;

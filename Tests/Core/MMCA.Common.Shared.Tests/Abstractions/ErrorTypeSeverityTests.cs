@@ -13,6 +13,8 @@ public sealed class ErrorTypeSeverityTests
     [InlineData(ErrorType.Unexpected, ErrorType.Unauthorized)]
     [InlineData(ErrorType.Unauthorized, ErrorType.Forbidden)]
     [InlineData(ErrorType.Forbidden, ErrorType.Conflict)]
+    [InlineData(ErrorType.Forbidden, ErrorType.TooManyRequests)]
+    [InlineData(ErrorType.TooManyRequests, ErrorType.Conflict)]
     [InlineData(ErrorType.Conflict, ErrorType.NotFound)]
     [InlineData(ErrorType.NotFound, ErrorType.UnprocessableEntity)]
     [InlineData(ErrorType.UnprocessableEntity, ErrorType.Validation)]

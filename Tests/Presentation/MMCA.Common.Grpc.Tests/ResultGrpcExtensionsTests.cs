@@ -23,6 +23,7 @@ public sealed class ResultGrpcExtensionsTests
     [InlineData(ErrorType.Forbidden, StatusCode.PermissionDenied)]
     [InlineData(ErrorType.UnprocessableEntity, StatusCode.FailedPrecondition)]
     [InlineData(ErrorType.Unexpected, StatusCode.Internal)]
+    [InlineData(ErrorType.TooManyRequests, StatusCode.ResourceExhausted)]
     public void ErrorType_MapsToExpectedGrpcStatus(ErrorType errorType, StatusCode expected)
     {
         // Act

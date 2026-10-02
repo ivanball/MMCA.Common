@@ -99,8 +99,18 @@ internal static class EntityCsvExporter<TEntityDTO>
     /// page failed (the caller can still answer with Problem Details).
     /// </returns>
     /// <remarks>
-    /// Constructing the writer sends nothing: the response stays uncommitted until the first flush,
-    /// which is what keeps the "failure on page one still returns Problem Details" path honest.
+    /// <para>
+    /// The CSV writer is synchronous, so it never writes to <paramref name="body"/> directly: each
+    /// page is rendered into an in-memory buffer and then copied to the body with an awaited
+    /// <c>WriteAsync</c>/<c>FlushAsync</c>. A <see cref="StreamWriter"/> over the body itself would
+    /// flush synchronously whenever its 1,024-character buffer filled, which Kestrel rejects
+    /// (synchronous I/O is disallowed by default) and which aborted any export over about 1 KB.
+    /// </para>
+    /// <para>
+    /// Nothing reaches the body before the first page succeeded, so the response stays uncommitted
+    /// until then, which is what keeps the "failure on page one still returns Problem Details" path
+    /// honest.
+    /// </para>
     /// </remarks>
     internal static async Task<Result> WriteAsync(
         Stream body,
@@ -118,73 +128,96 @@ internal static class EntityCsvExporter<TEntityDTO>
         var started = false;
         IReadOnlyList<string> columns = [];
 
-        var writer = new StreamWriter(body, CsvWriter.Utf8NoPreamble, leaveOpen: true);
-        await using (writer.ConfigureAwait(false))
+        var buffer = new MemoryStream();
+        await using (buffer.ConfigureAwait(false))
         {
-            while (true)
+            var writer = new StreamWriter(buffer, CsvWriter.Utf8NoPreamble, leaveOpen: true);
+            await using (writer.ConfigureAwait(false))
             {
-                var result = await fetchPageAsync(pageNumber, cancellationToken).ConfigureAwait(false);
-
-                if (result.IsFailure)
+                while (true)
                 {
+                    var result = await fetchPageAsync(pageNumber, cancellationToken).ConfigureAwait(false);
+
+                    if (result.IsFailure)
+                    {
+                        if (!started)
+                            return Result.Failure(result.Errors);
+
+                        // The status line left the building with the header row. A trailing marker is the
+                        // only signal still available, so the file says it is short rather than looking
+                        // like a complete export of fewer rows.
+                        onFailureAfterStart(result.Errors, rowsWritten);
+                        CsvWriter.WriteRow([IncompleteMarker(rowsWritten)], writer);
+                        break;
+                    }
+
+                    var page = result.Value!;
+                    var items = page.Items;
+
                     if (!started)
-                        return Result.Failure(result.Errors);
+                    {
+                        columns = ResolveColumns(items, fields);
+                        beginResponse();
+                        CsvWriter.WriteByteOrderMark(writer);
+                        CsvWriter.WriteHeader(columns, writer);
+                        started = true;
+                    }
 
-                    // The status line left the building with the header row. A trailing marker is the
-                    // only signal still available, so the file says it is short rather than looking
-                    // like a complete export of fewer rows.
-                    onFailureAfterStart(result.Errors, rowsWritten);
-                    CsvWriter.WriteRow([IncompleteMarker(rowsWritten)], writer);
-                    break;
+                    var pageRows = WritePage(items, columns, fields, maxExportRows - rowsWritten, writer);
+                    rowsWritten += pageRows;
+
+                    await DrainAsync(writer, buffer, body, cancellationToken).ConfigureAwait(false);
+
+                    // Stopped mid-page: rows were definitely left behind.
+                    if (pageRows < items.Count)
+                    {
+                        truncated = true;
+                        break;
+                    }
+
+                    if (IsLastPage(items.Count, pageSize, rowsWritten, page.PaginationMetadata))
+                        break;
+
+                    // The cap landed exactly on a page boundary: only the total says whether anything
+                    // remains, and asking for one more page just to find out would be a wasted query.
+                    if (rowsWritten >= maxExportRows)
+                    {
+                        truncated = page.PaginationMetadata.TotalItemCount > rowsWritten;
+                        break;
+                    }
+
+                    pageNumber++;
                 }
 
-                var page = result.Value!;
-                var items = page.Items;
-
-                if (!started)
+                if (truncated)
                 {
-                    columns = ResolveColumns(items, fields);
-                    beginResponse();
-                    CsvWriter.WriteByteOrderMark(writer);
-                    CsvWriter.WriteHeader(columns, writer);
-                    started = true;
+                    CsvWriter.WriteRow([TruncationMarker(rowsWritten)], writer);
                 }
 
-                var pageRows = WritePage(items, columns, fields, maxExportRows - rowsWritten, writer);
-                rowsWritten += pageRows;
-
-                await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
-
-                // Stopped mid-page: rows were definitely left behind.
-                if (pageRows < items.Count)
-                {
-                    truncated = true;
-                    break;
-                }
-
-                if (IsLastPage(items.Count, pageSize, rowsWritten, page.PaginationMetadata))
-                    break;
-
-                // The cap landed exactly on a page boundary: only the total says whether anything
-                // remains, and asking for one more page just to find out would be a wasted query.
-                if (rowsWritten >= maxExportRows)
-                {
-                    truncated = page.PaginationMetadata.TotalItemCount > rowsWritten;
-                    break;
-                }
-
-                pageNumber++;
+                await DrainAsync(writer, buffer, body, cancellationToken).ConfigureAwait(false);
             }
-
-            if (truncated)
-            {
-                CsvWriter.WriteRow([TruncationMarker(rowsWritten)], writer);
-            }
-
-            await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return Result.Success();
+    }
+
+    /// <summary>
+    /// Moves everything the writer rendered since the last drain from the in-memory
+    /// <paramref name="buffer"/> to <paramref name="body"/> with awaited writes only, then empties the
+    /// buffer for the next page.
+    /// </summary>
+    private static async Task DrainAsync(StreamWriter writer, MemoryStream buffer, Stream body, CancellationToken cancellationToken)
+    {
+        // Flushing a writer whose target is a MemoryStream touches no I/O.
+        await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+        if (buffer.Length > 0)
+        {
+            await body.WriteAsync(buffer.GetBuffer().AsMemory(0, (int)buffer.Length), cancellationToken).ConfigureAwait(false);
+            buffer.SetLength(0);
+        }
+
+        await body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

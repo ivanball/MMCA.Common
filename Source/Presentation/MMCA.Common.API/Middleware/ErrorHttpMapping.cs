@@ -28,6 +28,7 @@ internal static class ErrorHttpMapping
         [ErrorType.UnprocessableEntity] = StatusCodes.Status422UnprocessableEntity,
         [ErrorType.Failure] = StatusCodes.Status400BadRequest,
         [ErrorType.Unexpected] = StatusCodes.Status500InternalServerError,
+        [ErrorType.TooManyRequests] = StatusCodes.Status429TooManyRequests,
     }.ToFrozenDictionary();
 
     /// <summary>

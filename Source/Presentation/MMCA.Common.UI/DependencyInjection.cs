@@ -159,6 +159,10 @@ public static class DependencyInjection
             // ASP.NET pipeline and the endpoint URL would resolve to the Blazor not-found page.
             services.TryAddScoped<ICultureApplier, EndpointCultureApplier>();
 
+            // The viewer's browser time zone, so UTC instants (notification times, session times) render
+            // on the clock the person reads rather than in UTC or the server's zone.
+            services.TryAddScoped<ViewerTimeZone>();
+
             // Shareable public links (share sheet, copy-link, QR). The default resolves against the
             // browser origin, which is correct for the Server and WebAssembly heads; a MAUI Blazor
             // Hybrid head overrides it AFTER AddUIShared with AddCommonMauiPublicLinkBuilder(),

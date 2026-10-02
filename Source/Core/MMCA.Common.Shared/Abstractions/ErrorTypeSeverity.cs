@@ -18,6 +18,7 @@ namespace MMCA.Common.Shared.Abstractions;
 ///   <item><see cref="ErrorType.Unexpected"/>: the server itself is broken.</item>
 ///   <item><see cref="ErrorType.Unauthorized"/>: the caller has not proven who they are, so nothing else can be judged.</item>
 ///   <item><see cref="ErrorType.Forbidden"/>: the caller is known but not allowed.</item>
+///   <item><see cref="ErrorType.TooManyRequests"/>: the caller is temporarily refused (a lockout), whatever the request says.</item>
 ///   <item><see cref="ErrorType.Conflict"/>: the request lost a race with the current state.</item>
 ///   <item><see cref="ErrorType.NotFound"/>: the target does not exist.</item>
 ///   <item><see cref="ErrorType.UnprocessableEntity"/>: well-formed but semantically rejected.</item>
@@ -39,6 +40,7 @@ public static class ErrorTypeSeverity
         [ErrorType.Unexpected] = 70,
         [ErrorType.Unauthorized] = 60,
         [ErrorType.Forbidden] = 50,
+        [ErrorType.TooManyRequests] = 45,
         [ErrorType.Conflict] = 40,
         [ErrorType.NotFound] = 30,
         [ErrorType.UnprocessableEntity] = 20,

@@ -37,11 +37,59 @@ public sealed class SoftDeletedUserMiddlewareTests
         nextCalled.Should().BeTrue();
     }
 
-    // ── No validator registered (e.g. Catalog service): authenticated request passes through ──
+    // ── No validator registered (e.g. Catalog service) ──
+    // A host without Identity has no database query to fall back to, so a cache miss passes through
+    // (fail open) and the shared deleted-user marker is the only thing that can reject the request.
     [Fact]
-    public async Task InvokeAsync_NoValidatorRegistered_PassesThrough()
+    public async Task InvokeAsync_NoValidatorRegistered_CacheMiss_PassesThrough()
     {
         _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((bool?)null);
+        var nextCalled = false;
+        var context = CreateContext(includeValidator: false);
+        var sut = new SoftDeletedUserMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await InvokeAsync(sut, context);
+
+        nextCalled.Should().BeTrue();
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+        _cacheService.Verify(
+            c => c.SetAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "with no validator there is no authoritative answer to cache");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NoValidatorRegistered_MarkerSet_Returns401WithoutCallingNext()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var nextCalled = false;
+        var context = CreateContext(includeValidator: false);
+        var sut = new SoftDeletedUserMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await InvokeAsync(sut, context);
+
+        nextCalled.Should().BeFalse("a deleted user's still-valid token must not reach the endpoint");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NoValidatorRegistered_CachedFalse_PassesThrough()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
         var nextCalled = false;
         var sut = new SoftDeletedUserMiddleware(_ =>
         {
@@ -52,9 +100,44 @@ public sealed class SoftDeletedUserMiddlewareTests
         await InvokeAsync(sut, CreateContext(includeValidator: false));
 
         nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NoValidatorRegistered_CacheReadThrows_PassesThrough()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("cache down"));
+        var nextCalled = false;
+        var context = CreateContext(includeValidator: false);
+        var sut = new SoftDeletedUserMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await InvokeAsync(sut, context);
+
+        nextCalled.Should().BeTrue("a cache failure fails open");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+    }
+
+    // ── Identity host: a deleted user found by the validator is cached as the long-lived marker ──
+    [Fact]
+    public async Task InvokeAsync_DeletedUserFoundByTheValidator_CachesTheMarkerForTheMarkerDuration()
+    {
+        _currentUserService.Setup(s => s.UserId).Returns(UserId);
+        _cacheService.Setup(c => c.GetAsync<bool?>(CacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((bool?)null);
+        _validator.Setup(v => v.IsUserSoftDeletedAsync(UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var sut = new SoftDeletedUserMiddleware(_ => Task.CompletedTask);
+
+        await InvokeAsync(sut, CreateContext());
+
         _cacheService.Verify(
-            c => c.GetAsync<bool?>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            c => c.SetAsync(CacheKey, true, SoftDeletedUserCache.MarkerDuration, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ── Non-deleted user passes through ──
@@ -77,7 +160,7 @@ public sealed class SoftDeletedUserMiddlewareTests
 
         nextCalled.Should().BeTrue();
         _cacheService.Verify(
-            c => c.SetAsync(CacheKey, false, SoftDeletedUserCache.MarkerDuration, It.IsAny<CancellationToken>()),
+            c => c.SetAsync(CacheKey, false, TimeSpan.FromSeconds(30), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

@@ -19,4 +19,9 @@ public sealed class ErrorHttpMappingTests
         ErrorHttpMapping.ErrorTypeToStatusCode.Should().ContainKey(
             errorType,
             "an unmapped ErrorType would fall back to 400 without anyone choosing that status");
+
+    // A lockout (too many failed attempts) is a throttle, not a failed authentication.
+    [Fact]
+    public void TooManyRequests_MapsTo429() =>
+        ErrorHttpMapping.GetStatusCode(ErrorType.TooManyRequests).Should().Be(429);
 }
