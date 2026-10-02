@@ -93,6 +93,9 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     private PersistingComponentStateSubscription? _persistenceSubscription;
     private GridData<TDto>? _persistedGridData;
     private GridData<TDto>? _lastSuccessfulGridData;
+
+    // The newest paged load; a superseded LoadServerDataAsync call returns this load's result.
+    private Task<GridData<TDto>>? _newestPagedLoad;
     private DotNetObjectReference<DataGridListPageBase<TDto>>? _dotNetRef;
     private double? _pendingScrollRestore;
     private int _savedPage;
@@ -499,12 +502,30 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// passes the method group. A failed <see cref="Result"/> is handled here the same way an
     /// exception used to be: the localized message goes to the toast, <see cref="LoadFailed"/>
     /// is set, and the grid renders zero rows.
+    /// <para>
+    /// Overlapping calls end on the NEWEST call's result: a call superseded by a later one returns
+    /// that later call's rows and total, never its own empty cancelled page.
+    /// </para>
     /// </remarks>
-    protected async Task<GridData<TDto>> LoadServerDataAsync(
+    protected Task<GridData<TDto>> LoadServerDataAsync(
         GridState<TDto> state,
         Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
         Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters = null,
         bool showCancelSnackbar = true)
+    {
+        // Recorded as the newest load BEFORE anything yields: the call's own reset cancels the
+        // previous load, whose continuation must already see this one as its successor.
+        var load = LoadPagedAsync(state, fetchAsync, additionalFilters, showCancelSnackbar);
+        _newestPagedLoad = load;
+        return NewestPagedResultAsync(load);
+    }
+
+    /// <summary>One paged load: the cancellation reset, the pre-render shortcut, then the fetch.</summary>
+    private async Task<GridData<TDto>> LoadPagedAsync(
+        GridState<TDto> state,
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
+        Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
+        bool showCancelSnackbar)
     {
         await ResetCancellationTokenAsync();
 
@@ -521,9 +542,40 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             return cached;
         }
 
-        // No extra token to link: the paged funnel has no per-request token of its own. The
-        // pre-render timeout still applies (RunFetchAsync builds the token through CreateFetchCts).
-        return await RunFetchAsync(
+        return await FetchPagedAsync(state, fetchAsync, additionalFilters, showCancelSnackbar);
+    }
+
+    /// <summary>
+    /// Awaits <paramref name="load"/>, then answers with the NEWEST paged load's result when a later
+    /// <see cref="LoadServerDataAsync"/> call superseded it. MudDataGrid applies whichever
+    /// <c>ServerData</c> call completes LAST, not the newest one, so a superseded load (its token
+    /// cancelled by the newer call's reset) would otherwise hand back its own empty page and
+    /// overwrite the newer rows. It waits for the newest load when that one is still in flight.
+    /// </summary>
+    /// <param name="load">The load this call started.</param>
+    private async Task<GridData<TDto>> NewestPagedResultAsync(Task<GridData<TDto>> load)
+    {
+        var data = await load;
+        while (_newestPagedLoad is { } newest && !ReferenceEquals(newest, load))
+        {
+            load = newest;
+            data = await newest;
+        }
+
+        return data;
+    }
+
+    /// <summary>The paged fetch behind <see cref="LoadServerDataAsync"/>, run through <see cref="RunFetchAsync{TResult}"/>.</summary>
+    /// <remarks>
+    /// No extra token to link: the paged funnel has no per-request token of its own. The pre-render
+    /// timeout still applies (RunFetchAsync builds the token through CreateFetchCts).
+    /// </remarks>
+    private Task<GridData<TDto>> FetchPagedAsync(
+        GridState<TDto> state,
+        Func<Dictionary<string, (string Operator, string Value)>, int, int, string?, string?, CancellationToken, Task<Result<(IReadOnlyList<TDto> Items, int TotalItems)>>> fetchAsync,
+        Action<Dictionary<string, (string Operator, string Value)>>? additionalFilters,
+        bool showCancelSnackbar) =>
+        RunFetchAsync(
             async token =>
             {
                 var filters = ExtractGridFilters(state.FilterDefinitions);
@@ -546,7 +598,6 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             onFailed: EmptyGridData,
             showCancelSnackbar,
             CancellationToken.None);
-    }
 
     /// <summary>
     /// The <c>VirtualizeServerData</c> counterpart of <see cref="LoadServerDataAsync"/>: it manages the

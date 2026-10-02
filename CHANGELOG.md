@@ -26,6 +26,7 @@ and are derived from git tags by MinVer (see [the published versioning policy](h
 - Cookie session refresh: the server-to-server `auth/refresh` call from the UI host carries the browser's `User-Agent` and an `X-Forwarded-For` with the browser's IP, so the rotated session row records the real device and address instead of an empty user agent and the UI host's own address.
 - CSV export (`EntityControllerBase.ExportAsync`): an export larger than about 1 KB no longer fails on a host that forbids synchronous I/O (the Kestrel default). Each page is rendered into memory and written to the response with awaited writes only.
 - Mobile card view (`DataGridListPageBase.LoadMobileDataAsync`): when loading a later page fails, the cards already loaded, `MobileTotalItems` and `MobileCurrentPage` are kept and `LoadFailed` is set, so the inline error and Retry show below the loaded cards and Retry asks for the same page again. A failure on page 1 still empties the list.
+- Data grid (`DataGridListPageBase.LoadServerDataAsync`): overlapping loads end on the newest load's rows and total. A load superseded by a newer one returns the newest load's result instead of an empty page, so a cancelled load that completes last (MudDataGrid applies whichever `ServerData` call finishes last) no longer blanks the grid.
 
 ## [1.218.1] - 2026-10-01
 
