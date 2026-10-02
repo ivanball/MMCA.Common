@@ -37,6 +37,12 @@ public sealed record CrossServiceDataSource(string LogicalName, string DatabaseN
 /// MassTransit bus are all built during <c>StartAsync</c>), so mutating the environment for the next host
 /// cannot disturb an already-booted one.
 /// </para>
+/// <para><b>Host isolation.</b> Every host shares this process, so the default AppDomain scan would hand each
+/// host its peers' module assemblies and, through the per-module <c>DataSources__{X}</c> keys set here, its
+/// peers' databases: each host's outbox and internal-command processors would then drain them all. Every host
+/// factory therefore calls <see cref="CrossServiceHostIsolation.IsolateCrossServiceHost{TEntryPoint}"/> from
+/// <c>ConfigureTestServices</c>, which narrows the host to its own modules as in production.
+/// </para>
 /// </summary>
 public abstract class CrossServiceFixtureBase : IAsyncLifetime
 {

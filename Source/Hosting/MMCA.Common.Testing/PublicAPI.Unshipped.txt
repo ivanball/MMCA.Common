@@ -1,1 +1,5 @@
 #nullable enable
+MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation
+MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!)
+MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.extension(Microsoft.Extensions.DependencyInjection.IServiceCollection!).IsolateCrossServiceHost<TEntryPoint>() -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static MMCA.Common.Testing.Fixtures.CrossServiceHostIsolation.IsolateCrossServiceHost<TEntryPoint>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

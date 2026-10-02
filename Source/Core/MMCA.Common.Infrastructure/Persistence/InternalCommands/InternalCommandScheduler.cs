@@ -19,15 +19,17 @@ namespace MMCA.Common.Infrastructure.Persistence.InternalCommands;
 /// <para>
 /// That shared context is the whole atomicity story. Inside an <c>ITransactional</c> command the
 /// factory has already begun a transaction on every context it hands out (and enlists any it creates
-/// later), so the row commits with the aggregate change or rolls back with it. Outside a transaction
-/// there is nothing to wait for, so the row is saved immediately and the processor is signalled.
+/// later), so the row commits with the aggregate change or rolls back with it, and the processor is
+/// signalled once after that commit succeeds (never on rollback). Outside a transaction there is
+/// nothing to wait for, so the row is saved immediately and the processor is signalled.
 /// </para>
 /// </summary>
 /// <param name="dbContextFactory">Scoped factory whose context the row is written on.</param>
 /// <param name="dataSourceResolver">Resolves the configured logical target to a physical source.</param>
 /// <param name="options">Bound queue settings naming the target source.</param>
 /// <param name="originCapture">Snapshots the scheduling user, tenant and correlation onto the row.</param>
-/// <param name="signal">Wakes the processor when a due row was saved outright.</param>
+/// <param name="signal">Wakes the processor when a row was saved outright, or after the commit of
+/// the transaction it was enrolled in.</param>
 /// <param name="logger">Logger for scheduling diagnostics.</param>
 /// <param name="timeProvider">Clock stamping <c>CreatedOn</c> and resolving a relative delay;
 /// injected so tests can schedule deterministically.</param>
@@ -105,8 +107,10 @@ internal sealed partial class InternalCommandScheduler(
         {
             // Enrolled only. The caller's next save writes the row, or the transactional pipeline
             // saves it just before the commit when no save follows, so it commits atomically with
-            // the aggregate change. The processor discovers it on its next poll; signalling now would
-            // only buy a query against a transaction that has not committed.
+            // the aggregate change. Signalling now would only buy a query against a transaction that
+            // has not committed, so the wake is owed instead: the unit of work releases it once after
+            // a successful commit and drops it on rollback.
+            EnrolledCommandWake.Defer(context, signal);
             LogEnrolled(logger, row.Id, row.CommandType, scheduledOn);
             return Result.Success(row.Id);
         }

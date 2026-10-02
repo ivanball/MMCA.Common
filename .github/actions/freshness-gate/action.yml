@@ -13,8 +13,11 @@ description: >-
   - required-jobs empty: `runs?status=success&per_page=1`. In-progress, cancelled, failed and
     skipped runs never count; a run that concluded success counts as-is, so use this mode only for
     a workflow with no skip-if-unchanged guard (every successful run did the real work).
-  - required-jobs set: walk the newest max-runs runs with `status=completed` (any conclusion, so a
-    cancelled-but-proven run still counts; in-progress runs are never listed) and count a run only
+  - required-jobs set: walk the newest max-runs COMPLETED runs (any conclusion, so a
+    cancelled-but-proven run still counts; in-progress runs are skipped). The runs are listed
+    unfiltered and filtered to completed client-side, paging as needed, because the server-side
+    status=completed listing has served a stale page; the first listed run's id and created_at are
+    logged so a stale listing is visible. Count a run only
     when the named jobs concluded success in it (a skipped or failed job never counts). With
     required-jobs-mode same-run, ONE run must hold every named job; with per-job, each job is
     resolved independently (they may come from different runs) and every one must be fresh.
@@ -142,14 +145,41 @@ runs:
           fi
         }
 
+        # Prints "<run id> <updated_at>" of the newest max-runs COMPLETED runs, newest first. Listed
+        # WITHOUT the server-side status=completed filter, whose listing has served a stale page that
+        # hid the newest runs, and filtered to completed here, client-side. Paged (per_page=max-runs,
+        # at most 5 pages) until max-runs completed runs are collected or the listing ends, since
+        # in-progress runs now share the page. The first listed run (any status) is logged to the
+        # summary and stderr, so a stale listing shows as an old created_at. Logs never reach stdout.
+        list_completed_runs() {
+          local page=1 output listed first_id first_created collected=0 run_id run_updated
+          while [ "$page" -le 5 ]; do
+            output=$(gh api \
+              "repos/${FG_REPO}/actions/workflows/${FG_WORKFLOW}/runs?per_page=${FG_MAX_RUNS}&page=${page}" \
+              --jq '"listed \(.workflow_runs | length) \(.workflow_runs[0].id // "none") \(.workflow_runs[0].created_at // "none")", (.workflow_runs[] | select(.status == "completed") | "\(.id) \(.updated_at)")') || return 1
+            read -r _ listed first_id first_created <<< "${output%%$'\n'*}"
+            if [ "$page" -eq 1 ]; then
+              echo "First listed ${FG_WORKFLOW} run: ${first_id} (created ${first_created})." | tee -a "$summary" >&2
+            fi
+            while read -r run_id run_updated; do
+              [ -z "$run_id" ] && continue
+              echo "${run_id} ${run_updated}"
+              collected=$((collected + 1))
+              [ "$collected" -ge "$FG_MAX_RUNS" ] && return 0
+            done < <(tail -n +2 <<< "$output")
+            # A short page is the end of the listing.
+            [ "$listed" -lt "$FG_MAX_RUNS" ] && return 0
+            page=$((page + 1))
+          done
+          return 0
+        }
+
         # Prints "<run id> <updated_at>" of the newest completed run in which EVERY job named in the
         # arguments concluded success (latest attempt, up to 50 jobs per run), or nothing. An API
         # error on any run fails the function rather than skipping that run.
         newest_run_proving() {
           local runs run_id run_updated succeeded name ok
-          runs=$(gh api \
-            "repos/${FG_REPO}/actions/workflows/${FG_WORKFLOW}/runs?status=completed&per_page=${FG_MAX_RUNS}" \
-            --jq '.workflow_runs[] | "\(.id) \(.updated_at)"') || return 1
+          runs=$(list_completed_runs) || return 1
           while read -r run_id run_updated; do
             [ -z "$run_id" ] && continue
             succeeded=$(gh api "repos/${FG_REPO}/actions/runs/${run_id}/jobs?per_page=50" \
