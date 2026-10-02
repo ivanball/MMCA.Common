@@ -4,72 +4,82 @@
 @using MMCA.Common.UI.Common
 @attribute [Authorize]
 
-<PageTitle>@Title</PageTitle>
-
-<MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
-@* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
-<MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">@Title</MudText>
-
-<MudButton Color="Color.Primary"
-           Variant="Variant.Filled"
-           StartIcon="@Icons.Material.Filled.Send"
-           OnClick="NavigateToSend"
-           Class="mb-4">
-    @L["Notif.List.SendNew"]
-</MudButton>
-
-@if (IsLoading)
+@* Same gate as the navigation entry (RequiredPermission on NotificationUIModule): the API refuses
+   every call without notifications:manage, so a signed-in account that lacks it gets the shell's
+   403 page instead of an empty page and an error toast. Nothing renders until the auth state resolves. *@
+@if (_canManage == false)
 {
-    @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
-       may not take aria-label) and the bar itself carries the accessible name. *@
-    <div role="status" aria-live="polite" aria-busy="true">
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4"
-                           aria-label="@L["Loading.Label"]" />
-    </div>
+    <MMCA.Common.UI.Pages.Forbidden />
 }
-else if (_notifications.Count == 0)
+else if (_canManage == true)
 {
-    <MudAlert Severity="Severity.Info" Class="mb-4">@L["Notif.List.Empty"]</MudAlert>
-}
-else
-{
-    @* MudTable splats unmatched attributes onto its wrapper div, not onto the <table>, and a bare div
-       may not carry aria-label. role="region" is the W3C pattern for a labelled table container. *@
-    <MudTable T="PushNotificationDTO"
-              Items="_notifications"
-              Dense="true"
-              Hover="true"
-              Elevation="1"
-              role="region" aria-label="@L["Notif.List.TableLabel"]">
-        <HeaderContent>
-            <MudTh>@L["Notif.List.Col.Title"]</MudTh>
-            <MudTh>@L["Notif.List.Col.Recipients"]</MudTh>
-            <MudTh>@L["Notif.List.Col.Status"]</MudTh>
-            <MudTh>@L["Notif.List.Col.Sent"]</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="@L["Notif.List.Col.Title"]">@context.Title</MudTd>
-            <MudTd DataLabel="@L["Notif.List.Col.Recipients"]">@context.RecipientCount</MudTd>
-            <MudTd DataLabel="@L["Notif.List.Col.Status"]">
-                @* Status comparisons stay on the wire value; only the display text localizes
-                   (Notif.Status.* keys, raw value as fallback for unknown statuses). *@
-                @if (context.Status == "Sent")
-                {
-                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
-                }
-                else if (context.Status == "Failed")
-                {
-                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
-                }
-                else
-                {
-                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
-                }
-            </MudTd>
-            <MudTd DataLabel="@L["Notif.List.Col.Sent"]">@ViewerTime.Format(context.CreatedOn)</MudTd>
-        </RowTemplate>
-        <PagerContent>
-            <MudTablePager />
-        </PagerContent>
-    </MudTable>
+    <PageTitle>@Title</PageTitle>
+
+    <MudBreadcrumbs Items="_breadcrumbs" Class="px-0 mb-2" />
+    @* HtmlTag="h1": the page's required level-one heading, and what FocusOnNavigate targets. *@
+    <MudText Typo="Typo.h4" HtmlTag="h1" Class="mb-4">@Title</MudText>
+
+    <MudButton Color="Color.Primary"
+               Variant="Variant.Filled"
+               StartIcon="@Icons.Material.Filled.Send"
+               OnClick="NavigateToSend"
+               Class="mb-4">
+        @L["Notif.List.SendNew"]
+    </MudButton>
+
+    if (IsLoading)
+    {
+        @* Same live-region shape as PageLoadingState: role="status" carries the announcement (a bare div
+           may not take aria-label) and the bar itself carries the accessible name. *@
+        <div role="status" aria-live="polite" aria-busy="true">
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4"
+                               aria-label="@L["Loading.Label"]" />
+        </div>
+    }
+    else if (_notifications.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">@L["Notif.List.Empty"]</MudAlert>
+    }
+    else
+    {
+        @* MudTable splats unmatched attributes onto its wrapper div, not onto the <table>, and a bare div
+           may not carry aria-label. role="region" is the W3C pattern for a labelled table container. *@
+        <MudTable T="PushNotificationDTO"
+                  Items="_notifications"
+                  Dense="true"
+                  Hover="true"
+                  Elevation="1"
+                  role="region" aria-label="@L["Notif.List.TableLabel"]">
+            <HeaderContent>
+                <MudTh>@L["Notif.List.Col.Title"]</MudTh>
+                <MudTh>@L["Notif.List.Col.Recipients"]</MudTh>
+                <MudTh>@L["Notif.List.Col.Status"]</MudTh>
+                <MudTh>@L["Notif.List.Col.Sent"]</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="@L["Notif.List.Col.Title"]">@context.Title</MudTd>
+                <MudTd DataLabel="@L["Notif.List.Col.Recipients"]">@context.RecipientCount</MudTd>
+                <MudTd DataLabel="@L["Notif.List.Col.Status"]">
+                    @* Status comparisons stay on the wire value; only the display text localizes
+                       (Notif.Status.* keys, raw value as fallback for unknown statuses). *@
+                    @if (context.Status == "Sent")
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
+                    }
+                    else if (context.Status == "Failed")
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Outlined">@DisplayStatus(context.Status)</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="@L["Notif.List.Col.Sent"]">@ViewerTime.Format(context.CreatedOn)</MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    }
 }

@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Localization;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.UI.Common;
 using MMCA.Common.UI.Common.Interfaces;
@@ -22,7 +25,14 @@ public partial class NotificationList : IDisposable
     [Inject] private IStringLocalizer<SharedResource> L { get; set; } = default!;
     [Inject] private ViewerTimeZone ViewerTime { get; set; } = default!;
 
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
+
     private readonly CancellationTokenSource _cts = new();
+
+    // Whether the signed-in account holds notifications:manage, the navigation entry's own gate. Null
+    // until the auth state resolves (nothing renders); false renders the 403 view and never calls the
+    // history endpoint, which would refuse it anyway.
+    private bool? _canManage;
 
     private string Title => L["Notif.List.Title"].Value;
 
@@ -41,6 +51,13 @@ public partial class NotificationList : IDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        var user = AuthenticationState is null ? null : (await AuthenticationState).User;
+        _canManage = user.HasPermissionClaim(NotificationPermissions.Manage);
+        if (_canManage == false)
+        {
+            return;
+        }
+
         // Built here (not in a field initializer) so the injected localizer is available (ADR-027).
         _breadcrumbs =
         [

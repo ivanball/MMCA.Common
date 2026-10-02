@@ -304,6 +304,9 @@
   <data name="Nav.PushNotifications" xml:space="preserve">
     <value>Push Notifications</value>
   </data>
+  <data name="Nav.Group.Notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
   <data name="Auth.Register.Subtitle" xml:space="preserve">
     <value>Create your account to get started</value>
   </data>

@@ -196,8 +196,9 @@ public partial class UserAdminList<TUser>
     private string RoleText(string role) => RoleLabel?.Invoke(role) ?? role;
 
     /// <summary>
-    /// Whether the administration actions are offered for <paramref name="user"/>. They are hidden
-    /// on the operator's own row: locking or demoting yourself removes the capability to undo it.
+    /// Whether the administration actions (lock, role, delete) are offered for <paramref name="user"/>.
+    /// They are hidden on the operator's own row: locking, demoting or deleting yourself removes the
+    /// capability to undo it (self-service deletion stays on the profile page).
     /// </summary>
     /// <param name="user">The row.</param>
     private bool CanAdminister(TUser user) =>

@@ -78,7 +78,7 @@
                         }
                     </MudMenu>
                 }
-                @if (OnDelete is not null)
+                @if (OnDelete is not null && CanAdminister(item))
                 {
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
                                    OnClick="@(() => DeleteUserAsync(item))"
@@ -166,7 +166,7 @@ else
                             }
                         </MudMenu>
                     }
-                    @if (OnDelete is not null)
+                    @if (OnDelete is not null && CanAdminister(row.Item))
                     {
                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                        Color="Color.Error"

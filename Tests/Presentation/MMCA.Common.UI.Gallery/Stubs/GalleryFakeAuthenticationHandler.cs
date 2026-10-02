@@ -2,6 +2,8 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Notifications;
 
 namespace MMCA.Common.UI.Gallery.Stubs;
 
@@ -32,8 +34,13 @@ internal sealed class GalleryFakeAuthenticationHandler(
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
+        // The visitor holds notifications:manage, the permission the history and compose pages gate
+        // on (like their navigation entry), so the scan reaches the pages rather than Access Denied.
         var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.Name, "Gallery Visitor")],
+            [
+                new Claim(ClaimTypes.Name, "Gallery Visitor"),
+                new Claim(AuthClaimTypes.Permission, NotificationPermissions.Manage),
+            ],
             SchemeName);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
         return Task.FromResult(AuthenticateResult.Success(ticket));

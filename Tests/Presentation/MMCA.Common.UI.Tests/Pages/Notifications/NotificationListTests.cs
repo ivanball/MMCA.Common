@@ -1,8 +1,11 @@
+using System.Security.Claims;
 using AwesomeAssertions;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MMCA.Common.Shared.Abstractions;
+using MMCA.Common.Shared.Auth;
+using MMCA.Common.Shared.Notifications;
 using MMCA.Common.Shared.Notifications.PushNotifications;
 using MMCA.Common.Testing.UI;
 using MMCA.Common.UI.Common.Interfaces;
@@ -18,6 +21,16 @@ namespace MMCA.Common.UI.Tests.Pages.Notifications;
 /// </summary>
 public sealed class NotificationListTests : BunitTestBase
 {
+    /// <summary>An account holding the permission the page and its navigation entry are gated on.</summary>
+    private static readonly ClaimsPrincipal Manager = new(new ClaimsIdentity(
+        [new Claim(AuthClaimTypes.Subject, "1"), new Claim(AuthClaimTypes.Permission, NotificationPermissions.Manage)],
+        authenticationType: "TestAuth"));
+
+    /// <summary>A signed-in account without it, which the history endpoint would refuse.</summary>
+    private static readonly ClaimsPrincipal Attendee = new(new ClaimsIdentity(
+        [new Claim(AuthClaimTypes.Subject, "2")],
+        authenticationType: "TestAuth"));
+
     private readonly Mock<IPushNotificationUIService> _service = new();
     private readonly Mock<IToastService> _toast = new();
 
@@ -58,7 +71,7 @@ public sealed class NotificationListTests : BunitTestBase
             .Setup(x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(History());
 
-        var cut = RenderUnderTest<NotificationList>(_ => { });
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
 
         cut.WaitForAssertion(() => cut.Markup.Should().Contain("No notifications have been sent yet."));
     }
@@ -72,7 +85,7 @@ public sealed class NotificationListTests : BunitTestBase
 
         // The populated table renders a MudTablePager whose rows-per-page MudSelect needs a popover host.
         RenderMudProviders();
-        var cut = RenderUnderTest<NotificationList>(_ => { });
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
 
         cut.WaitForAssertion(() =>
         {
@@ -91,13 +104,28 @@ public sealed class NotificationListTests : BunitTestBase
             .Setup(x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(HistoryFailure("The notification history is unavailable."));
 
-        var cut = RenderUnderTest<NotificationList>(_ => { });
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
 
         cut.WaitForAssertion(() => _toast.Verify(
             t => t.Show("The notification history is unavailable.", ToastSeverity.Error),
             Times.Once()));
         _toast.VerifyNoOtherCalls();
         cut.Markup.Should().Contain("No notifications have been sent yet.");
+    }
+
+    [Fact]
+    public void WhenTheAccountLacksTheManagePermission_RendersAccessDenied_AndNeverLoadsTheHistory()
+    {
+        // The page is reachable by URL for any signed-in account; without notifications:manage it must
+        // show the shell's 403 view rather than an empty history plus the API's refusal toast.
+        var cut = RenderAs<NotificationList>(Attendee, _ => { });
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Access Denied"));
+        cut.Markup.Should().NotContain("Send New Notification");
+        _service.Verify(
+            x => x.GetHistoryAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+        _toast.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -109,7 +137,7 @@ public sealed class NotificationListTests : BunitTestBase
             .ReturnsAsync(HistoryFailure("The notification history is unavailable."));
         var nav = Services.GetRequiredService<NavigationManager>();
 
-        var cut = RenderUnderTest<NotificationList>(_ => { });
+        var cut = RenderAs<NotificationList>(Manager, _ => { });
         cut.ClickButtonByText("Send New Notification");
 
         nav.Uri.Should().EndWith("/notifications/send");
