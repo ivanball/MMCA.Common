@@ -317,12 +317,121 @@ public sealed class DbContextFactoryTransactionTests : IDisposable
             .Should().Be(0, "the unit fails closed, so the earlier saved work rolls back too");
     }
 
-    private InternalCommandScheduler CreateScheduler() =>
+    // Post-commit wake: an enrolled row signals the processor once, only after the commit.
+    // Inside a transaction the scheduler only enrolls its row, so before this rule the processor
+    // learned of it at its next poll (300s in deployed environments), which is what stalled Store's
+    // cross-service tier once AddVariantCommand became ITransactional.
+    [Fact]
+    public async Task ExecuteInTransactionAsync_CommandsEnrolled_SignalsOnceAfterTheCommit()
+    {
+        var signal = new Mock<IInternalCommandSignal>();
+        bool? transactionActiveAtSignal = null;
+        signal.Setup(s => s.Signal())
+            .Callback(() => transactionActiveAtSignal = _dbContext.Database.CurrentTransaction is not null);
+        var scheduler = CreateScheduler(signal.Object);
+        var signalledDuringOperation = false;
+
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                context.Set<TestAggregate>().Add(new TestAggregate { Id = 1, Name = "Test" });
+                await scheduler.ScheduleAsync(new RecordingCommand("first"), runAt: null, ct);
+                await _sut.SaveChangesAsync(ct);
+                await scheduler.ScheduleAsync(new RecordingCommand("second"), runAt: null, ct);
+                signalledDuringOperation = signal.Invocations.Count > 0;
+                return Result.Success();
+            });
+
+        result.IsSuccess.Should().BeTrue();
+        signalledDuringOperation.Should().BeFalse("a wake before the commit only polls an uncommitted transaction");
+        signal.Verify(s => s.Signal(), Times.Once, "every row enrolled in one transaction is covered by one wake");
+        transactionActiveAtSignal.Should().BeFalse("the processor must be woken only once the rows are durable");
+        (await _dbContext.Set<InternalCommandMessage>().AsNoTracking().CountAsync()).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_CommandEnrolledThenFailure_DoesNotSignal()
+    {
+        var signal = new Mock<IInternalCommandSignal>();
+        var scheduler = CreateScheduler(signal.Object);
+
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                await scheduler.ScheduleAsync(new RecordingCommand("doomed"), runAt: null, ct);
+                return Result.Failure(Error.Validation("Invariant.Failed", "a later invariant failed"));
+            });
+
+        result.IsFailure.Should().BeTrue();
+        signal.Verify(s => s.Signal(), Times.Never, "a rolled-back row is not there to run");
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_CommandEnrolledThenThrow_DoesNotSignalAndANextCommitStartsClean()
+    {
+        var signal = new Mock<IInternalCommandSignal>();
+        var scheduler = CreateScheduler(signal.Object);
+
+        var act = async () => await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                await scheduler.ScheduleAsync(new RecordingCommand("doomed"), runAt: null, ct);
+                throw new InvalidOperationException("handler blew up");
+            });
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        signal.Verify(s => s.Signal(), Times.Never, "a rolled-back row is not there to run");
+
+        // The rolled-back enrollment must not leak into the next unit on the same context.
+        var next = await _sut.ExecuteInTransactionAsync<Result>(
+            async ct =>
+            {
+                var context = _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                context.Set<TestAggregate>().Add(new TestAggregate { Id = 1, Name = "Test" });
+                await _sut.SaveChangesAsync(ct);
+                return Result.Success();
+            });
+
+        next.IsSuccess.Should().BeTrue();
+        signal.Verify(s => s.Signal(), Times.Never, "a unit that enrolled nothing must not wake the processor");
+    }
+
+    [Fact]
+    public async Task ExecuteInTransactionAsync_NestedEnrollment_SignalsOnceAtTheOutermostCommit()
+    {
+        var signal = new Mock<IInternalCommandSignal>();
+        var scheduler = CreateScheduler(signal.Object);
+        var signalledBeforeOuterReturned = false;
+
+        var result = await _sut.ExecuteInTransactionAsync<Result>(
+            async outerCt =>
+            {
+                _sut.GetDbContext(DataSourceKey.Default(DataSource.SQLServer));
+                var inner = await _sut.ExecuteInTransactionAsync<Result>(
+                    async innerCt =>
+                    {
+                        await scheduler.ScheduleAsync(new RecordingCommand("nested"), runAt: null, innerCt);
+                        return Result.Success();
+                    },
+                    outerCt);
+                signalledBeforeOuterReturned = signal.Invocations.Count > 0;
+                return inner;
+            });
+
+        result.IsSuccess.Should().BeTrue();
+        signalledBeforeOuterReturned.Should().BeFalse("an inner call does not commit, so it must not wake the processor");
+        signal.Verify(s => s.Signal(), Times.Once);
+    }
+
+    private InternalCommandScheduler CreateScheduler(IInternalCommandSignal? signal = null) =>
         InternalCommandTestHarness.CreateScheduler(
             _dbContext,
             InternalCommandTestHarness.Settings(),
             new FakeTimeProvider(InternalCommandTestHarness.Epoch),
-            Mock.Of<IInternalCommandSignal>());
+            signal ?? Mock.Of<IInternalCommandSignal>());
 
     // ── Test doubles ──
     public sealed record TestLocalEvent : BaseDomainEvent;

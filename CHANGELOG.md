@@ -4,6 +4,18 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- `CrossServiceHostIsolation.IsolateCrossServiceHost<TEntryPoint>()` (`MMCA.Common.Testing.Fixtures`): call it from `ConfigureTestServices` of each host factory a `CrossServiceFixtureBase` subclass boots. It narrows the host's `IEntityConfigurationAssemblyProvider` to the assemblies in the host's own `.deps.json` (plus any it registered through `EntityConfigurationOptions.AdditionalAssemblies`), so each in-process host sees only its own modules and data sources, as in a one-service-per-process deployment.
+
+### Fixed
+
+- Internal commands scheduled inside an `ITransactional` command now wake the internal-command processor once, right after the transaction commits, instead of waiting for the next poll (`InternalCommands:PollingIntervalSeconds`, 60s or more in deployed environments). A rollback, an ambiguous commit or an execution-strategy retry sends no wake. Scheduling outside a transaction is unchanged.
+- Cross-service test tier: with several hosts in one process, each host's outbox and internal-command processors drained every host's database, so a row could be dead-lettered as `handler_missing` by a host that does not own its handler. Fixed for any host factory that calls `IsolateCrossServiceHost<TEntryPoint>()` (see Added).
+- Freshness-gate action (`.github/actions/freshness-gate`): with `required-jobs` set, the runs are listed without the server-side `status=completed` filter (whose listing served a stale page) and filtered to completed runs client-side, paging until `max-runs` completed runs are found. The first listed run's id and `created_at` go to the step summary and the log, so a stale listing is visible. The pass/fail decision on a correct listing is unchanged.
+
 ## [1.219.0] - 2026-10-02
 
 ### Added

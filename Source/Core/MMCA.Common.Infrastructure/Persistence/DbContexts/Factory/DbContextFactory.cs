@@ -465,8 +465,13 @@ public sealed class DbContextFactory(
     public void CommitTransaction()
     {
         _transactionActive = false;
-        foreach (var context in _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction).ToArray())
+        var committed = _dbContexts.Values.Where(SupportsTransactions).Where(HasActiveTransaction).ToArray();
+        foreach (var context in committed)
             context.Database.CommitTransaction();
+
+        // Internal commands enrolled during the transaction are durable only now, so this is the
+        // first moment waking the processor finds them.
+        EnrolledCommandWake.Release(committed);
     }
 
     public void RollbackTransaction()
@@ -479,7 +484,7 @@ public sealed class DbContextFactory(
         // deferred for this transaction must never run (and must not survive into an
         // execution-strategy retry of the same operation).
         foreach (var context in _dbContexts.Values.ToArray())
-            DomainEventSaveChangesInterceptor.DropDeferred(context);
+            DropDeferredWork(context);
     }
 
     /// <inheritdoc />
@@ -503,6 +508,11 @@ public sealed class DbContextFactory(
     /// successful commit. This also means a retrying execution strategy — which re-runs
     /// <paramref name="operation"/> wholesale on transient failures — cannot dispatch the same
     /// events once per attempt: rollback drops the aborted attempt's deferred work.
+    /// </para>
+    /// <para>
+    /// Internal commands scheduled inside the transaction wake the internal-command processor once,
+    /// right after a successful commit, so they run immediately rather than at the next poll. A
+    /// rollback, an ambiguous commit or a retry drops the owed wake.
     /// </para>
     /// <para>
     /// Each retry also starts from a clean change tracker. The strategy re-runs the delegate
@@ -611,6 +621,11 @@ public sealed class DbContextFactory(
             if (commitFailure is not null)
                 return (result, commitFailure);
 
+            // Wake the processor for internal commands enrolled in this unit: they are durable only
+            // now, and without the wake they would wait for the next poll. Released before the event
+            // flush so a throwing in-process handler cannot swallow it.
+            EnrolledCommandWake.Release([.. _dbContexts.Values]);
+
             // Deliver events only now that the data is durable: in-process handlers must
             // never act on state that could still roll back. Snapshot first: a handler that
             // reaches a not-yet-materialized source adds to _dbContexts while we enumerate.
@@ -634,7 +649,7 @@ public sealed class DbContextFactory(
             {
                 _transactionActive = false;
                 foreach (var abortedContext in _dbContexts.Values.ToArray())
-                    DomainEventSaveChangesInterceptor.DropDeferred(abortedContext);
+                    DropDeferredWork(abortedContext);
             }
 
             throw;
@@ -741,7 +756,7 @@ public sealed class DbContextFactory(
 
         foreach (var context in _dbContexts.Values.ToArray())
         {
-            DomainEventSaveChangesInterceptor.DropDeferred(context);
+            DropDeferredWork(context);
 
             if (!SupportsTransactions(context) || !HasActiveTransaction(context))
                 continue;
@@ -815,9 +830,20 @@ public sealed class DbContextFactory(
     {
         foreach (var context in _dbContexts.Values.ToArray())
         {
-            DomainEventSaveChangesInterceptor.DropDeferred(context);
+            DropDeferredWork(context);
             context.ChangeTracker.Clear();
         }
+    }
+
+    /// <summary>
+    /// Forgets everything owed to a transaction that did not commit: the deferred in-process event
+    /// dispatch and the processor wake owed by internal commands enrolled in it.
+    /// </summary>
+    /// <param name="context">The context whose transaction rolled back or was abandoned.</param>
+    private static void DropDeferredWork(ApplicationDbContext context)
+    {
+        DomainEventSaveChangesInterceptor.DropDeferred(context);
+        EnrolledCommandWake.Drop(context);
     }
 
     /// <summary>
