@@ -30,7 +30,18 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private PersistentComponentState ApplicationState { get; set; } = default!;
 
-    protected bool IsLoading { get; private set; }
+    /// <summary>
+    /// Gets a value indicating whether the list is loading. Always true while the renderer is not
+    /// interactive (the SSR prerender pass): the grid fetches from <c>OnAfterRenderAsync</c>, which a
+    /// static render never reaches, so without this the prerendered HTML would carry the
+    /// "no records" empty state until the interactive render loads the rows. Once interactive it
+    /// reflects the latest load only (see <see cref="RunFetchAsync{TResult}"/>).
+    /// </summary>
+    protected bool IsLoading
+    {
+        get => field || !RendererInfo.IsInteractive;
+        private set;
+    }
 
     /// <summary>
     /// Gets a value indicating whether the most recent grid/mobile fetch failed. On failure the

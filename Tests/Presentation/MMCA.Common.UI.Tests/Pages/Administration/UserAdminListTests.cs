@@ -128,6 +128,25 @@ public sealed class UserAdminListTests : BunitTestBase
     }
 
     /// <summary>
+    /// The interactive companion of <see cref="UserAdminListPrerenderTests"/>: once the renderer is
+    /// interactive, a completed zero-row load ends the loading state and shows the empty state.
+    /// </summary>
+    [Fact]
+    public void Interactive_AfterACompletedZeroRowLoad_ShowsTheEmptyState_NotTheLoadingState()
+    {
+        SetupUsers();
+        RenderMudProviders();
+
+        var cut = RenderList();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Markup.Should().Contain("No users found.");
+            cut.FindAll(".mud-table-loading").Should().BeEmpty("the load has completed");
+        });
+    }
+
+    /// <summary>
     /// A failed fetch renders zero rows, which is visually identical to a genuinely empty list, so
     /// the shared <c>ListNoRecordsContent</c> must take over with its inline error and Retry.
     /// </summary>
