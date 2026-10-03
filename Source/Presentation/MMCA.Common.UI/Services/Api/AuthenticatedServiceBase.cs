@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using MMCA.Common.Shared.Http;
 using MMCA.Common.UI.Services.Auth.Tokens;
 using Polly;
 using Polly.Retry;
@@ -20,7 +21,8 @@ public abstract class AuthenticatedServiceBase(
     /// Polly retry policy: 3 retries on <see cref="HttpRequestException"/> or a retryable response
     /// status (see <c>IsRetryableResponse</c>), with exponential backoff (2s, 4s, 8s) plus up to
     /// one second of random jitter so a fleet of clients does not re-converge on the same instant.
-    /// Every retried response is disposed; the caller owns the final one.
+    /// Every retried response is disposed; the caller owns the final one. A POST or PATCH response is
+    /// retried only when its request carried an <c>Idempotency-Key</c> (see <c>IsReplaySafe</c>).
     /// </summary>
     protected static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy = BuildRetryPolicy(DefaultBackoff);
 
@@ -110,8 +112,39 @@ public abstract class AuthenticatedServiceBase(
             return false;
         }
 
+        if (!IsReplaySafe(response.RequestMessage))
+        {
+            return false;
+        }
+
         return (int)response.StatusCode >= 500
             || response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests;
+    }
+
+    /// <summary>
+    /// Decides whether re-sending <paramref name="request"/> is safe. GET, HEAD, PUT, DELETE and the
+    /// other idempotent verbs are; a POST or PATCH is only when it carries an <c>Idempotency-Key</c>,
+    /// which an <c>[Idempotent]</c> endpoint deduplicates on (the framework's creates and push sends
+    /// always send one). Without a key a retried POST is a second request: a failed attempt may still
+    /// have run server-side, and a retry can hit a rate limit and replace the server's real failure
+    /// with a 429. An unknown request (none attached to the response) keeps the retry.
+    /// </summary>
+    /// <param name="request">The request the response answered, when known.</param>
+    /// <returns><see langword="true"/> when the request may be sent again.</returns>
+    internal static bool IsReplaySafe(HttpRequestMessage? request)
+    {
+        if (request is null)
+        {
+            return true;
+        }
+
+        if (request.Method != HttpMethod.Post && request.Method != HttpMethod.Patch)
+        {
+            return true;
+        }
+
+        return request.Headers.TryGetValues(IdempotencyHeaders.IdempotencyKey, out var keys)
+            && keys.Any(key => !string.IsNullOrWhiteSpace(key));
     }
 
 #pragma warning disable S2245, CA5394 // Random only spaces retry attempts apart (jitter); it feeds no security, token, key or cryptographic decision, so a pseudorandom generator is the correct tool here.

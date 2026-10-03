@@ -242,6 +242,77 @@ public sealed class NotificationHubServiceTests
         await WaitUntilAsync(() => Volatile.Read(ref built) == 2 && sut.IsConnected);
     }
 
+    // -- A drop of any length is recovered without a page reload (X-08) --
+    [Fact]
+    public async Task WhenTheNetworkStaysDownPastEveryStartRetry_TheServiceKeepsTryingAndRejoinsItsChannels()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+
+        await sut.JoinChannelAsync("event:1");
+        sut.IsConnected.Should().BeTrue();
+        int joinsBeforeDrop = server.JoinCount("event:1");
+        joinsBeforeDrop.Should().BePositive();
+
+        // The network goes away and stays away well past one start's four attempts (the old code
+        // discarded the connection after them and never tried again until a page reload).
+        server.RefuseConnections = true;
+        int attemptsBeforeDrop = server.ConnectAttempts;
+        server.DropAll(new IOException("network down"));
+        await WaitUntilAsync(() => server.ConnectAttempts >= attemptsBeforeDrop + 12);
+        sut.IsConnected.Should().BeFalse();
+
+        server.RefuseConnections = false;
+
+        await WaitUntilAsync(() => sut.IsConnected && server.JoinCount("event:1") > joinsBeforeDrop);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_StopsTheRestartLoop()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+
+        await sut.StartAsync();
+        server.RefuseConnections = true;
+        server.DropAll(new IOException("network down"));
+        int attemptsBeforeDrop = server.ConnectAttempts;
+        await WaitUntilAsync(() => server.ConnectAttempts >= attemptsBeforeDrop + 6);
+
+        await sut.DisposeAsync();
+        int attemptsAtDispose = server.ConnectAttempts;
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        // At most the attempt already in flight when disposal began may still land.
+        server.ConnectAttempts.Should().BeLessThanOrEqualTo(attemptsAtDispose + 1);
+        sut.IsConnected.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UnboundedReconnectPolicy_NeverGivesUp_AndWaitsAtMostThirtySeconds()
+    {
+        var policy = new UnboundedReconnectPolicy();
+        var delays = new List<TimeSpan>();
+
+        for (long retry = 0; retry < 500; retry++)
+        {
+            TimeSpan? delay = policy.NextRetryDelay(
+                new Microsoft.AspNetCore.SignalR.Client.RetryContext
+                {
+                    PreviousRetryCount = retry,
+                    ElapsedTime = TimeSpan.FromSeconds(retry * 30),
+                    RetryReason = new IOException("network down"),
+                });
+
+            delay.Should().NotBeNull("a null delay ends automatic reconnect, which must never happen while the service lives");
+            delays.Add(delay!.Value);
+        }
+
+        delays.Should().OnlyContain(d => d >= TimeSpan.Zero && d <= TimeSpan.FromSeconds(30));
+        delays[0].Should().Be(TimeSpan.Zero, "the first reconnect is immediate");
+        delays[^1].Should().Be(TimeSpan.FromSeconds(30), "a long outage settles on the 30-second cap");
+    }
+
     private static NotificationHubService CreateInMemorySut(InMemoryHubServer server, Action onBuild) =>
         new(
             new Mock<ITokenStorageService>().Object,
@@ -249,6 +320,7 @@ public sealed class NotificationHubServiceTests
             NullLogger<NotificationHubService>.Instance)
         {
             InitialRetryDelay = TimeSpan.FromMilliseconds(1),
+            MaxRetryDelay = TimeSpan.FromMilliseconds(10),
             ConnectionFactory = () =>
             {
                 onBuild();

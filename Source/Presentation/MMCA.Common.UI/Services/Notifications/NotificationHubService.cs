@@ -25,10 +25,13 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// SignalR group membership does not survive a new connection.
 /// </para>
 /// <para>
-/// When the automatic reconnect schedule is exhausted the connection closes with an error; the service
-/// then runs a fresh <see cref="StartAsync"/> (rebuild, backoff retries, channel re-join), so live
-/// notifications do not stay dead for the rest of the session. A close without an error is a deliberate
-/// stop or dispose and is never restarted.
+/// A dropped connection reconnects for as long as the service is alive: the automatic reconnect
+/// schedule (<see cref="UnboundedReconnectPolicy"/>) never gives up and waits at most 30 seconds
+/// between attempts. If the connection still closes with an error (the server refused the reconnect),
+/// the service keeps running a fresh <see cref="StartAsync"/> (rebuild, backoff retries, channel
+/// re-join) with the same 30-second cap until one connects, so live notifications do not stay dead
+/// for the rest of the session. A close without an error is a deliberate stop or dispose and is never
+/// restarted; <see cref="StopAsync"/> and <see cref="DisposeAsync"/> also end a restart loop in flight.
 /// </para>
 /// </summary>
 public sealed partial class NotificationHubService : IAsyncDisposable
@@ -52,6 +55,11 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private readonly Dictionary<string, List<ChannelSubscription>> _channelSubscriptions = [];
     private HubConnection? _hubConnection;
     private bool _disposed;
+
+    // Bumped by StopAsync (and so by DisposeAsync), so a restart loop started in an earlier lifetime
+    // sees the change after its backoff and ends instead of reconnecting a signed-out or disposed
+    // service.
+    private int _lifetime;
 
     /// <summary>
     /// Callback invoked when a push notification is received.
@@ -90,6 +98,12 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// test can exercise the terminal-failure path without waiting out the real multi-second backoff.
     /// </summary>
     internal TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// The longest backoff between two restart attempts after the connection closed with an error.
+    /// Settable so a test can run the unbounded restart loop without waiting out the real cap.
+    /// </summary>
+    internal TimeSpan MaxRetryDelay { get; set; } = UnboundedReconnectPolicy.MaxDelay;
 
     /// <summary>
     /// Test-only hook that replaces the <see cref="HubConnectionBuilder"/> call, so a test can hand the
@@ -160,7 +174,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
         _hubConnection = ConnectionFactory?.Invoke() ?? new HubConnectionBuilder()
             .WithUrl(_hubUrl, ConfigureConnection)
-            .WithAutomaticReconnect()
+            .WithAutomaticReconnect(new UnboundedReconnectPolicy())
             .Build();
 
         _hubConnection.On<string, string, Dictionary<string, string>?>(ReceiveNotificationMethodName, async (title, body, _) =>
@@ -177,8 +191,8 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         // reconnect starts with no groups, so every tracked channel must be re-joined.
         _hubConnection.Reconnected += _ => RejoinChannelsAsync();
 
-        // Raised with an error once the automatic reconnect schedule is exhausted; a null error is a
-        // deliberate StopAsync or dispose and must not restart.
+        // Raised with an error when a reconnect is refused (the schedule itself never runs out); a null
+        // error is a deliberate StopAsync or dispose and must not restart.
         _hubConnection.Closed += error => error is null ? Task.CompletedTask : RestartAfterCloseAsync();
 
         var delay = InitialRetryDelay;
@@ -316,6 +330,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// </summary>
     public async Task StopAsync()
     {
+        // Ends any restart loop of the current lifetime at its next check.
+        Interlocked.Increment(ref _lifetime);
+
         if (_hubConnection is not null)
         {
             await _hubConnection.DisposeAsync().ConfigureAwait(false);
@@ -385,13 +402,36 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             return;
         }
 
+        int lifetime = Volatile.Read(ref _lifetime);
+
         LogReconnectExhausted(_hubUrl);
 
         // The serialized start rebuilds, retries with backoff, re-joins channels on success and
-        // discards on terminal failure. A connection that never started raises no Closed, so the
-        // loop is bounded.
-        await StartAsync().ConfigureAwait(false);
+        // discards on terminal failure. A terminal failure is not the end: the loop starts again after
+        // a capped backoff for as long as this lifetime lasts, so an outage of any length is recovered
+        // within MaxRetryDelay of the network returning. Stop and dispose end the lifetime.
+        TimeSpan delay = InitialRetryDelay;
+        while (true)
+        {
+            await StartAsync().ConfigureAwait(false);
+
+            if (IsLifetimeOver(lifetime) || _hubConnection is { State: not HubConnectionState.Disconnected })
+            {
+                return;
+            }
+
+            LogRestartRetrying(delay, _hubUrl);
+            await Task.Delay(delay).ConfigureAwait(false);
+            if (IsLifetimeOver(lifetime))
+            {
+                return;
+            }
+
+            delay = delay * 2 > MaxRetryDelay ? MaxRetryDelay : delay * 2;
+        }
     }
+
+    private bool IsLifetimeOver(int lifetime) => _disposed || Volatile.Read(ref _lifetime) != lifetime;
 
     private async Task DispatchChannelEventAsync(string channelKey, string eventName, string payloadJson)
     {
@@ -468,6 +508,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Notification hub automatic reconnect gave up, starting a new connection to {HubUrl}")]
     private partial void LogReconnectExhausted(string hubUrl);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Notification hub is still unreachable, starting again in {Delay} at {HubUrl}")]
+    private partial void LogRestartRetrying(TimeSpan delay, string hubUrl);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Notification hub connection attempt {Attempt}/{MaxAttempts} failed, retrying in {Delay} — {HubUrl}")]
     private partial void LogRetrying(int attempt, int maxAttempts, TimeSpan delay, string hubUrl);

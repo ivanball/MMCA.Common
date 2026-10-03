@@ -537,6 +537,10 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
             _persistedGridData = null;
             _lastSuccessfulGridData = cached;
 
+            // This call is now the latest load and it is already finished; a load it superseded
+            // leaves the loading state to its successor (see RunFetchAsync).
+            IsLoading = false;
+
             var (sc, sd) = ResolveSortParameters(state.SortDefinitions);
             SaveCurrentState(state.Page, state.PageSize, sc, string.Equals(sd, "desc", StringComparison.OrdinalIgnoreCase));
             return cached;
@@ -684,6 +688,14 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
     /// strand <see cref="IsLoading"/> at <see langword="true"/> (a grid that spins forever).
     /// The caller resets the cancellation source first, because the paged path must still be able
     /// to return persisted pre-render data without toggling the loading state.
+    /// <para>
+    /// Only the LATEST load clears <see cref="IsLoading"/>. Every loader swaps in a fresh cancellation
+    /// source before it gets here, so a load whose source is no longer the current one has been
+    /// superseded; its <see langword="finally"/> leaves the flag alone, or the grid would drop its
+    /// Cancel button and show the empty state while the newer load is still in flight. A user cancel
+    /// (<see cref="CancelLoading"/>) cancels the current source without replacing it, so the latest
+    /// load still ends the loading state.
+    /// </para>
     /// </summary>
     /// <typeparam name="TResult">What the loader returns to its caller.</typeparam>
     /// <param name="fetchAsync">The fetch body; receives the bounded token.</param>
@@ -698,6 +710,7 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         bool showCancelSnackbar,
         CancellationToken additionalToken)
     {
+        var loadSource = _cts;
         IsLoading = true;
         LoadFailed = false;
         StateHasChanged();
@@ -726,7 +739,11 @@ public abstract class DataGridListPageBase<TDto> : ComponentBase, IBrowserViewpo
         }
         finally
         {
-            IsLoading = false;
+            if (ReferenceEquals(loadSource, _cts))
+            {
+                IsLoading = false;
+            }
+
             StateHasChanged();
         }
     }

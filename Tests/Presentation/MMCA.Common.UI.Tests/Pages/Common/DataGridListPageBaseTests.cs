@@ -435,6 +435,58 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
         superseded.Items.Should().ContainSingle().Which.Name.Should().Be("Newest");
     }
 
+    // == Loading state across overlapping loads (O-72) ==
+    [Fact]
+    public async Task LoadServerDataAsync_WhenASupersededLoadEnds_LoadingStaysOnUntilTheNewestLoadFinishes()
+    {
+        // Load A is superseded by load B, and A's fetch (a request already on the wire) only ends after
+        // B is running. A's finally used to clear the shared loading flag under B.
+        var cut = Render<TestGridPage>();
+        var supersededFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var newestFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var calls = 0;
+        cut.Instance.Fetch = (_, _, _, _, _, _) => ++calls == 1 ? supersededFetch.Task : newestFetch.Task;
+
+        Task<GridData<WidgetRow>>? newestLoad = null;
+        await cut.InvokeAsync(() => { _ = cut.Instance.LoadAsync(State(page: 0, pageSize: 10)); });
+        await cut.InvokeAsync(() => { newestLoad = cut.Instance.LoadAsync(State(page: 0, pageSize: 10)); });
+        await cut.WaitForAssertionAsync(() => calls.Should().Be(2));
+        cut.Instance.LoadingNow.Should().BeTrue();
+
+        // A ends now, while B is still in flight (its cancellation raises the info toast from its
+        // catch, right before its finally).
+        supersededFetch.SetException(new OperationCanceledException());
+        await cut.WaitForAssertionAsync(() => _toast.Verify(t => t.Info(It.IsAny<string>()), Times.Once));
+        await cut.InvokeAsync(() => { });
+
+        cut.Instance.LoadingNow.Should().BeTrue(
+            "the grid keeps its Cancel button and loading state until the LATEST load finishes");
+
+        newestFetch.SetResult(Result.Success<(IReadOnlyList<WidgetRow> Items, int TotalItems)>(([new WidgetRow(3, "Newest")], 1)));
+        await newestLoad!;
+
+        cut.Instance.LoadingNow.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoadServerDataAsync_WhenTheUserCancelsTheLatestLoad_LoadingEnds()
+    {
+        var cut = Render<TestGridPage>();
+        cut.Instance.Fetch = (_, _, _, _, _, token) => UntilCancelled(token);
+
+        Task<GridData<WidgetRow>>? load = null;
+        await cut.InvokeAsync(() => { load = cut.Instance.LoadAsync(State(page: 0, pageSize: 10)); });
+        cut.Instance.LoadingNow.Should().BeTrue();
+
+        await cut.InvokeAsync(cut.Instance.CancelLoading);
+        var data = await load!;
+
+        data.Items.Should().BeEmpty();
+        cut.Instance.LoadingNow.Should().BeFalse("a user cancel ends the latest load, and with it the loading state");
+    }
+
     // A fetch that honors its token: it only ends, by cancellation, when the next load supersedes it.
     private static Task<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>> UntilCancelled(CancellationToken token)
     {

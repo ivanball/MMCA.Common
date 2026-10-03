@@ -199,8 +199,9 @@ public abstract class AuthControllerBase(
     /// The session is named in the route rather than by its refresh token, so a client can sign out a
     /// device it does not hold the token for (which is the whole point of a device list). Ownership is
     /// enforced in the store query, so another account's session id answers 404 exactly as a
-    /// nonexistent one does. Revoking an already-revoked session answers 204: the caller's request is
-    /// satisfied either way, and a device list is where duplicate clicks come from.
+    /// nonexistent one does. Revoking an already-revoked session also answers 404 (code
+    /// <c>Auth.SessionAlreadyRevoked</c>) and writes nothing, so the device list can say the device was
+    /// already signed out rather than claim this click signed it out.
     /// </remarks>
     /// <param name="sessionId">The session to revoke.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

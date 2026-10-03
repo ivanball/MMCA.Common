@@ -114,8 +114,9 @@ public interface IAuthSessionIssuer
 
     /// <summary>
     /// Revokes one of the user's sessions by id. Another account's session id and an id that never
-    /// existed both answer <c>Auth.SessionNotFound</c>; an already-revoked session is a success that
-    /// writes nothing.
+    /// existed both answer <c>Auth.SessionNotFound</c>; an already-revoked session writes nothing and
+    /// answers the not-found failure <c>Auth.SessionAlreadyRevoked</c>, so the client can say the
+    /// device was already signed out.
     /// </summary>
     /// <param name="userId">The signed-in user.</param>
     /// <param name="sessionId">The session to revoke.</param>

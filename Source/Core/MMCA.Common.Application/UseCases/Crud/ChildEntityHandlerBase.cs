@@ -22,6 +22,16 @@ namespace MMCA.Common.Application.UseCases.Crud;
 /// <c>IEntityDTOMapper</c>, because the DTO belongs to the CHILD entity, whose identifier type is
 /// usually not the parent's. Implement it as a one-line call into the module's own child mapper.
 /// </para>
+/// <para>
+/// Two identical adds that arrive together both pass the aggregate's duplicate check, because each
+/// loaded the parent before the other saved, and the unique index rejects the second insert. When the
+/// unit of work classifies that failure as a unique-constraint violation (the framework's unit of work
+/// does, through the host's <see cref="IUniqueConstraintViolationDetector"/>), the handler runs
+/// <see cref="Apply"/> once more on the same parent: the collection now holds the child this request
+/// added, so the aggregate answers with exactly the duplicate error a sequential second add gets, in
+/// place of the generic data-conflict 409. An aggregate whose add has no duplicate rule accepts the
+/// second call, and the original exception propagates unchanged.
+/// </para>
 /// </remarks>
 /// <typeparam name="TCommand">The command type.</typeparam>
 /// <typeparam name="TParent">The parent aggregate root.</typeparam>
@@ -115,7 +125,20 @@ public abstract class AddChildEntityHandlerBase<TCommand, TParent, TIdentifierTy
         if (result.IsFailure)
             return Result.Failure<TChildDTO>(result.Errors);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (unitOfWork is IUniqueConstraintViolationDetector detector
+            && detector.IsUniqueConstraintViolation(exception))
+        {
+            // Lost the insert race to a concurrent identical add (see the type remarks).
+            var duplicate = Apply(parent, command);
+            if (duplicate.IsSuccess)
+                throw;
+
+            return Result.Failure<TChildDTO>(duplicate.Errors);
+        }
 
         var child = result.Value!;
 

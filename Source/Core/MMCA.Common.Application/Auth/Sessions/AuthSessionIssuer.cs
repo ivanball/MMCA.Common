@@ -218,10 +218,12 @@ public sealed class AuthSessionIssuer(
     /// is scoped to the user), so another account's session id and an id that never existed produce
     /// the same <c>NotFound</c> and neither confirms the other user's session exists.
     /// <para>
-    /// An already-revoked session is a success that writes nothing. The alternative, failing it, would
-    /// turn the most ordinary duplicate in this feature (a device list clicked twice, or a session the
-    /// cap evicted between render and click) into an error for a caller whose request is already
-    /// satisfied.
+    /// An already-revoked session writes nothing and answers <c>NotFound</c>
+    /// (<c>Auth.SessionAlreadyRevoked</c>): the device list a user clicks through rendered it as live,
+    /// so the client needs to know it was signed out earlier (a duplicate click, or a session the cap
+    /// evicted between render and click) to say so instead of claiming this click signed it out. The
+    /// session is the caller's own (the lookup above is user-scoped), so the answer reveals nothing
+    /// about another account.
     /// </para>
     /// </remarks>
     public async Task<Result> RevokeSessionAsync(
@@ -241,7 +243,11 @@ public sealed class AuthSessionIssuer(
 
         if (session.IsRevoked)
         {
-            return Result.Success();
+            return Result.Failure(Error.NotFoundError(
+                "Auth.SessionAlreadyRevoked",
+                "The session was already signed out.",
+                nameof(IAuthenticationService.RevokeSessionByIdAsync),
+                nameof(RefreshSession)));
         }
 
         session.Revoke(timeProvider.GetUtcNow().UtcDateTime, RefreshSession.ReasonSignedOut);

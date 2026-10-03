@@ -9,8 +9,19 @@ namespace MMCA.Common.Infrastructure.Persistence;
 /// Coordinates persistence across multiple <see cref="IDbContextFactory"/> contexts.
 /// Caches repository instances per entity type so all operations within a scope share
 /// the same change tracker and context.
+/// <para>
+/// It also answers <see cref="IUniqueConstraintViolationDetector"/> for its own saves, through the
+/// host's registered detector, so a framework handler base that only holds the unit of work (and so
+/// cannot take a new constructor dependency without breaking every subclass) can still recognise a
+/// save that lost an insert race. With no detector it classifies nothing, and the exception
+/// propagates exactly as before.
+/// </para>
 /// </summary>
-internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSourceService dataSourceService, IRepositoryFactory repositoryFactory) : IUnitOfWork
+internal sealed class UnitOfWork(
+    IDbContextFactory dbContextFactory,
+    IDataSourceService dataSourceService,
+    IRepositoryFactory repositoryFactory,
+    IUniqueConstraintViolationDetector? uniqueConstraintViolationDetector = null) : IUnitOfWork, IUniqueConstraintViolationDetector
 {
     private readonly IDbContextFactory _dbContextFactory = dbContextFactory ?? throw new ArgumentNullException(nameof(dbContextFactory));
     private readonly IRepositoryFactory _repositoryFactory = repositoryFactory ?? throw new ArgumentNullException(nameof(repositoryFactory));
@@ -23,6 +34,10 @@ internal sealed class UnitOfWork(IDbContextFactory dbContextFactory, IDataSource
     private readonly Dictionary<Type, object> _repositories = [];
 
     private volatile bool _disposed;
+
+    /// <inheritdoc />
+    public bool IsUniqueConstraintViolation(Exception exception) =>
+        uniqueConstraintViolationDetector?.IsUniqueConstraintViolation(exception) ?? false;
 
     /// <inheritdoc />
     /// <remarks>
