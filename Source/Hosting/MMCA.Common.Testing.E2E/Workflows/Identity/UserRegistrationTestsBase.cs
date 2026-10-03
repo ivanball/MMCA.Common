@@ -51,6 +51,10 @@ public abstract class UserRegistrationTestsBase : E2ETestBase
         await registerPage.EmailField.FillAndVerifyAsync($"mismatch-{id}@test.com").ConfigureAwait(false);
         await registerPage.PasswordField.FillAndVerifyAsync("TestPass123!").ConfigureAwait(false);
         await registerPage.ConfirmPasswordField.FillAndVerifyAsync("DifferentPass123!").ConfigureAwait(false);
+
+        // On a host with a Terms URL the submit button stays disabled until the Terms box is ticked, so
+        // tick it: the password mismatch must then be the ONLY reason the submit is refused.
+        await registerPage.AcceptTermsIfShownAsync().ConfigureAwait(false);
         await registerPage.RegisterButton.ClickAsync().ConfigureAwait(false);
 
         // Assert — the [Compare] mismatch is caught CLIENT-side, so it surfaces as the field-level

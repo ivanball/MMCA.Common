@@ -4,6 +4,14 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Fixed
+
+- `MMCA.Common.Testing.E2E` handles the opt-in Terms of Service acceptance shipped in 1.223.0, so a consumer that enables it keeps its E2E suite passing. Nothing changes for a consumer that does not.
+  - `RegisterPage.TermsCheckbox` targets the required Terms box on `/register`, and `RegisterPage.AcceptTermsIfShownAsync()` ticks it when the page renders it (a single DOM count, no wait). `RegisterPage.RegisterAsync`, `E2ETestBase.RegisterNewUserAsync` and `UserRegistrationTestsBase.Register_WithMismatchedPasswords_ShouldShowError` call it, so the submit button is enabled and a registration through them succeeds (or, in the mismatch test, fails only on the password mismatch).
+  - `E2ETestBase.AcceptsTermsAfterSignIn` (virtual, default `false`) and `E2ETestBase.AcceptTermsIfPromptedAsync()`. A consumer whose app renders `TermsAcceptanceGate` overrides the property to return `true`; `LoginAsync` (so also `LoginAsAdminAsync` and `LoginAsUserAsync`) and `RegisterNewUserAsync` then accept the gate's dialog when it opens. The method reads the user's standing itself through the page's request context at `E2ETestBase.TermsAcceptanceProbePath` (virtual, default `/api/Users/me/legal-acceptance`, the same-origin API proxy's default prefix), so an account that is already current adds no wait in any render mode; when that read cannot answer it waits at most 10 seconds for the dialog.
+
 ## [1.223.0] - 2026-10-03
 
 ### Added

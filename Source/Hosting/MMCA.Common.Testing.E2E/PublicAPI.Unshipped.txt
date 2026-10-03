@@ -1,1 +1,6 @@
 #nullable enable
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.AcceptTermsIfPromptedAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AcceptTermsIfShownAsync() -> System.Threading.Tasks.Task!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.TermsCheckbox.get -> Microsoft.Playwright.ILocator!
+virtual MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.AcceptsTermsAfterSignIn.get -> bool
+virtual MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.TermsAcceptanceProbePath.get -> string?

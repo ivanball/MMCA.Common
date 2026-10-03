@@ -27,6 +27,13 @@ public sealed class RegisterPage
     // "Sign In" link is inside "Already have an account?" text
     public ILocator AlreadyHaveAccountLink => _page.GetByRole(AriaRole.Link, new() { Name = "Sign In" });
 
+    /// <summary>
+    /// The required Terms acceptance checkbox. The page renders it only when the host configures a
+    /// Terms URL (<c>Legal:TermsUrl</c>), and keeps "Create your account" disabled until it is ticked.
+    /// The test id sits on the wrapper around the MudCheckBox, so this targets the input inside it.
+    /// </summary>
+    public ILocator TermsCheckbox => _page.Locator("[data-testid='register-accept-terms'] input[type='checkbox']");
+
     // Address fields (inside expansion panel)
     public ILocator AddressPanel => _page.GetByText("Address (Optional)");
     public ILocator AddressLine1Field => _page.GetByLabel("Address Line 1");
@@ -45,7 +52,24 @@ public sealed class RegisterPage
         await FillFieldAsync(EmailField, email).ConfigureAwait(false);
         await FillFieldAsync(PasswordField, password).ConfigureAwait(false);
         await FillFieldAsync(ConfirmPasswordField, password).ConfigureAwait(false);
+        await AcceptTermsIfShownAsync().ConfigureAwait(false);
         await RegisterButton.ClickAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Ticks <see cref="TermsCheckbox"/> when the page renders it, and does nothing otherwise. The
+    /// check is a single count of the rendered DOM, never a wait for the box to be absent, so a host
+    /// without Terms pays nothing. Call it after the page is interactive (after <see cref="GotoAsync"/>):
+    /// the box is rendered with the form, so a zero count then means the host has no Terms URL.
+    /// </summary>
+    public async Task AcceptTermsIfShownAsync()
+    {
+        if (await TermsCheckbox.CountAsync().ConfigureAwait(false) > 0)
+        {
+            // Force, as with RoleAdminPage.PermissionCheckbox: MudBlazor overlays its own icon on the
+            // native input. SetChecked still verifies the box ended up checked.
+            await TermsCheckbox.SetCheckedAsync(true, new() { Force = true }).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
