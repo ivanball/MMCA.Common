@@ -6,6 +6,7 @@ MMCA.Common.Testing.E2E.Infrastructure.AccessibilityViolationException.Accessibi
 MMCA.Common.Testing.E2E.Infrastructure.AxeOptions
 MMCA.Common.Testing.E2E.Infrastructure.E2EPolling
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase
+MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.AcceptTermsIfPromptedAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.DisposeAsync() -> System.Threading.Tasks.ValueTask
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.E2ETestBase(MMCA.Common.Testing.E2E.Infrastructure.PlaywrightFixture! fixture) -> void
 MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.InitializeAsync() -> System.Threading.Tasks.ValueTask
@@ -128,6 +129,7 @@ MMCA.Common.Testing.E2E.PageObjects.ProfilePage.SaveNameButton.get -> Microsoft.
 MMCA.Common.Testing.E2E.PageObjects.ProfilePage.StateField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ProfilePage.ZipCodeField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AcceptTermsIfShownAsync() -> System.Threading.Tasks.Task!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AddressLine1Field.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AddressPanel.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.AlreadyHaveAccountLink.get -> Microsoft.Playwright.ILocator!
@@ -145,6 +147,7 @@ MMCA.Common.Testing.E2E.PageObjects.RegisterPage.RegisterAsync(string! firstName
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.RegisterButton.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.RegisterPage(Microsoft.Playwright.IPage! page) -> void
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.StateField.get -> Microsoft.Playwright.ILocator!
+MMCA.Common.Testing.E2E.PageObjects.RegisterPage.TermsCheckbox.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.RegisterPage.ZipCodeField.get -> Microsoft.Playwright.ILocator!
 MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage
 MMCA.Common.Testing.E2E.PageObjects.ResetPasswordPage.ConfirmPasswordField.get -> Microsoft.Playwright.ILocator!
@@ -300,6 +303,8 @@ static MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.opera
 static MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage.operator ==(MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? left, MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizedPage? right) -> bool
 static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultInterval -> System.TimeSpan
 static readonly MMCA.Common.Testing.E2E.Infrastructure.E2EPolling.DefaultTimeout -> System.TimeSpan
+virtual MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.AcceptsTermsAfterSignIn.get -> bool
+virtual MMCA.Common.Testing.E2E.Infrastructure.E2ETestBase.TermsAcceptanceProbePath.get -> string?
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.AssertProbePresentUnderDefaultCulture.get -> bool
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.OverflowTolerancePx.get -> int
 virtual MMCA.Common.Testing.E2E.Workflows.Globalization.PseudoLocalizationTestsBase.ProbeVisibleTextOnly.get -> bool
