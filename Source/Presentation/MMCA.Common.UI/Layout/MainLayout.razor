@@ -5,10 +5,12 @@
 @using MMCA.Common.UI.Services.Auth
 @using Microsoft.Extensions.Options
 @using MMCA.Common.UI.Common.Settings
+@using MMCA.Common.UI.Components.Capabilities
 @inject NavigationManager Navigation
 @inject IAuthUIService AuthService
 @inject IEnumerable<IUIModule> UIModules
 @inject IOptions<LayoutSettings> LayoutSettingsOptions
+@inject IOptions<LegalSettings> LegalSettingsOptions
 @inject IStringLocalizer<SharedResource> L
 
 <MmcaThemeProviders />
@@ -69,12 +71,37 @@
         </article>
     </main>
     @* The contentinfo (footer) landmark must be top-level, not nested inside <main> (axe landmark-contentinfo-is-top-level). *@
-    @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
+    @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText) || LegalSettingsOptions.Value.HasFooterLinks)
     {
         <footer class="app-footer" role="contentinfo">
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
-                @LayoutSettingsOptions.Value.FooterText
-            </MudText>
+            @if (!string.IsNullOrWhiteSpace(LayoutSettingsOptions.Value.FooterText))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                    @LayoutSettingsOptions.Value.FooterText
+                </MudText>
+            }
+            @if (LegalSettingsOptions.Value.HasFooterLinks)
+            {
+                @* The footer is visible at every width (MainLayout.razor.css hides only the app bar on
+                   mobile), so the MAUI head and phones get these links here too. ExternalLink, not a raw
+                   MudLink: inside a BlazorWebView target="_blank" dead-ends, and the wrapper opens the
+                   system browser instead. Underline.Always keeps the links distinguishable without
+                   relying on colour (WCAG 1.4.1). *@
+                <nav class="app-footer-links" aria-label="@L["Layout.Footer.LegalLinks.Aria"]">
+                    @if (!string.IsNullOrWhiteSpace(LegalSettingsOptions.Value.TermsUrl))
+                    {
+                        <ExternalLink Href="@LegalSettingsOptions.Value.TermsUrl" Underline="Underline.Always">@L["Legal.TermsOfService"]</ExternalLink>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(LegalSettingsOptions.Value.PrivacyUrl))
+                    {
+                        <ExternalLink Href="@LegalSettingsOptions.Value.PrivacyUrl" Underline="Underline.Always">@L["Legal.PrivacyPolicy"]</ExternalLink>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(LegalSettingsOptions.Value.CodeOfConductUrl))
+                    {
+                        <ExternalLink Href="@LegalSettingsOptions.Value.CodeOfConductUrl" Underline="Underline.Always">@L["Legal.CodeOfConduct"]</ExternalLink>
+                    }
+                </nav>
+            }
         </footer>
     }
     @foreach (var componentType in _layoutComponents)

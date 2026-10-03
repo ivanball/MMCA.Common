@@ -1,1 +1,22 @@
 ﻿#nullable enable
+const MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.TermsNotAcceptedCode = "Auth.TermsNotAccepted" -> string!
+const MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.VersionNotCurrentCode = "Legal.VersionNotCurrent" -> string!
+const MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.SectionName = "Legal" -> string!
+MMCA.Common.Application.Auth.AuthenticationServiceBase<TUser>.CurrentTermsVersion.get -> string?
+MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService
+MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService.AcceptForCurrentUserAsync(int currentUserId, string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.Application.Auth.Legal.ILegalAcceptanceService.GetForCurrentUserAsync(int currentUserId, string! currentVersion, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.CurrentTermsVersion.get -> string?
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.CurrentTermsVersion.init -> void
+MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions.LegalAcceptanceOptions() -> void
+MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy
+static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.TermsNotAccepted(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptanceErrors.VersionNotCurrent(string? source = null) -> MMCA.Common.Shared.Abstractions.Error!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.EnsureAcceptsCurrentVersion(string? currentVersion, string? suppliedVersion, string? source = null) -> MMCA.Common.Shared.Abstractions.Result!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.Normalize(string? currentVersion, MMCA.Common.Shared.Legal.LegalAcceptanceDTO! standing) -> MMCA.Common.Shared.Legal.LegalAcceptanceDTO!
+static MMCA.Common.Application.Auth.Legal.LegalAcceptancePolicy.ResolveCurrentVersion(MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions? options) -> string?
+*REMOVED*MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.AuthenticationValidators(FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.LoginRequest>! login, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RegisterRequest>! register, FluentValidation.IValidator<MMCA.Common.Shared.Auth.Requests.RefreshTokenRequest>! refresh, Microsoft.Extensions.Options.IOptions<MMCA.Common.Application.Auth.Legal.LegalAcceptanceOptions!>? legalAcceptance = null) -> void
+MMCA.Common.Application.Auth.AuthenticationValidators.CurrentTermsVersion.get -> string?

@@ -41,4 +41,9 @@ public sealed class RegisterModel
     public string? State { get; set; }
     public string? ZipCode { get; set; }
     public string? Country { get; set; }
+
+    // The "I agree to the Terms" box. No validation attribute: it is required only when the host
+    // configures a Terms URL (LegalSettings.TermsUrl), and the page enforces that by keeping the
+    // submit button disabled until it is ticked.
+    public bool AcceptedTerms { get; set; }
 }

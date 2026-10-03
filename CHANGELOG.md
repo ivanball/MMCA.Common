@@ -4,6 +4,19 @@ All notable changes to the MMCA.Common packages are documented here. The format 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/)
 and are derived from git tags by MinVer (see [the published versioning policy](https://ivanball.github.io/docs/guides/common-VERSIONING.html)).
 
+## [Unreleased]
+
+### Added
+
+- Opt-in legal documents and Terms of Service acceptance. Nothing changes for a host that configures none of it.
+  - `LegalSettings` (`MMCA.Common.UI.Common.Settings`, section `Legal`, bound by `AddUIShared`): optional absolute `TermsUrl`, `PrivacyUrl`, `CodeOfConductUrl` and `DeleteAccountUrl`. Each configured Terms, Privacy or Code of Conduct URL renders a footer link (new tab, through `ExternalLink`); the footer now also renders when only legal links are configured. With `TermsUrl` set, `/register` shows a required "I agree to the Terms of Service and Privacy Policy" checkbox (plus "and to follow the Code of Conduct" when that URL is set) and keeps Create Account disabled until it is ticked. English and Spanish strings.
+  - `RegisterRequest` takes a trailing optional `bool AcceptedTerms = false`. The client sends a flag, not a version: the server stamps its own configured version. Existing calls compile unchanged (recompile needed: the constructor signature changed).
+  - `LegalAcceptanceOptions` (`MMCA.Common.Application.Auth.Legal`, section `Legal`, `CurrentTermsVersion`) bound by `AddLegalAcceptance(configuration)` (`MMCA.Common.Infrastructure`). `AuthenticationValidators` takes it as a trailing optional constructor argument (resolved by DI; existing calls compile unchanged, recompile needed), so `AuthenticationServiceBase` and the app's subclass gain no constructor dependency; while a version is configured, `RegisterAsync` refuses a request without `AcceptedTerms` with the validation error `Auth.TermsNotAccepted`, and the protected `CurrentTermsVersion` property gives `CreateUser` the version to stamp on the new user.
+  - `ILegalAcceptingUser` (`MMCA.Common.Domain.Auth`): `AcceptedTermsVersion`, `TermsAcceptedOn` and `AcceptTerms(version, acceptedOn)` for the app's `User` aggregate.
+  - `LegalAcceptanceDTO`, `AcceptLegalTermsRequest`, `LegalAcceptanceRoutes` and `LegalAcceptanceErrorCodes` (`MMCA.Common.Shared.Legal`); `ILegalAcceptanceService` (app-implemented), `LegalAcceptancePolicy` and `LegalAcceptanceErrors` (`MMCA.Common.Application.Auth.Legal`).
+  - `LegalAcceptanceControllerBase` (`MMCA.Common.API.Controllers.Legal`): `[Authorize]` `GET` and `POST` `me/legal-acceptance`, served at `Users/me/legal-acceptance` by a subclass routed at `Users`. With no version configured, `GET` answers `IsCurrent = true` without calling the service. `POST` accepts only the configured current version (`Legal.VersionNotCurrent` otherwise), and both answers are re-derived against that version.
+  - `TermsAcceptanceGate` (`MMCA.Common.UI.Components.Legal`) and `ILegalAcceptanceUIService` (registered by `AddUIShared`). A host adds the gate through an `IUIModule`'s `LayoutComponentTypes`; for a signed-in user whose accepted version is not current it opens a dialog that cannot be dismissed (Accept, or Sign out), headed "We've updated our terms" after an earlier acceptance and "Please review our terms" otherwise. It reads once per signed-in user and renders nothing on any read failure (404, outage, no configured version).
+
 ## [1.222.0] - 2026-10-02
 
 ### Fixed

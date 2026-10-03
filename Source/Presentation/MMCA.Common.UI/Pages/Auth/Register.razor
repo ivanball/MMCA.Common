@@ -7,10 +7,14 @@
 @using MMCA.Common.UI.Common
 @using MMCA.Common.UI.Services.Auth
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Options
+@using MMCA.Common.UI.Common.Settings
+@using MMCA.Common.UI.Components.Capabilities
 @attribute [StreamRendering(false)]
 @inject IAuthUIService AuthService
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> L
+@inject IOptions<LegalSettings> LegalOptions
 @attribute [AllowAnonymous]
 
 <PageTitle>@L["Auth.Register.PageTitle"]</PageTitle>
@@ -121,10 +125,33 @@
                         </MudGrid>
                     </MudExpansionPanel>
                 </MudExpansionPanels>
+
+                @if (RequiresTerms)
+                {
+                    @* Rendered only when the host configures a Terms URL (LegalSettings). The document
+                       names inside the label are links: clicking one opens the document and does not
+                       toggle the box (HTML label activation skips interactive descendants), and the
+                       whole sentence stays the checkbox's accessible name. *@
+                    <div class="mt-4" data-testid="register-accept-terms">
+                        <MudCheckBox T="bool" @bind-Value="_model.AcceptedTerms" Color="Color.Primary" Dense="true">
+                            <MudText Typo="Typo.body2" Inline="true">
+                                @L["Auth.Register.AcceptTerms.Prefix"]
+                                @LegalDocument(Legal.TermsUrl, L["Legal.TermsOfService"])
+                                @L["Auth.Register.AcceptTerms.And"]
+                                @LegalDocument(Legal.PrivacyUrl, L["Legal.PrivacyPolicy"])
+                                @if (!string.IsNullOrWhiteSpace(Legal.CodeOfConductUrl))
+                                {
+                                    @L["Auth.Register.AcceptTerms.CodeOfConductPrefix"]
+                                    @LegalDocument(Legal.CodeOfConductUrl, L["Legal.CodeOfConduct"])
+                                }
+                            </MudText>
+                        </MudCheckBox>
+                    </div>
+                }
             </MudCardContent>
             <MudCardActions Class="d-flex flex-column pa-6 pt-2" Style="gap: 0.75rem;">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                           Disabled="@_isLoading" ButtonType="ButtonType.Submit" Size="Size.Large"
+                           Disabled="@(_isLoading || (RequiresTerms && !_model.AcceptedTerms))" ButtonType="ButtonType.Submit" Size="Size.Large"
                            aria-busy="@(_isLoading ? "true" : "false")"
                            aria-label="@L["Auth.Register.CreateAccount.Aria"]">
                     @if (_isLoading)
@@ -150,6 +177,29 @@
     private bool _emailAlreadyRegistered;
     private bool _isLoading;
 
+    private LegalSettings Legal => LegalOptions.Value;
+
+    // The host opted into terms acceptance by publishing a Terms URL; the server stamps its own
+    // configured version, so the page only sends whether the box was ticked.
+    private bool RequiresTerms => !string.IsNullOrWhiteSpace(Legal.TermsUrl);
+
+    // A document name inside the agreement sentence: a link when the host published that document,
+    // plain text when it did not (the sentence still names it).
+    private static RenderFragment LegalDocument(string url, string name) => builder =>
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            builder.AddContent(0, name);
+            return;
+        }
+
+        builder.OpenComponent<ExternalLink>(1);
+        builder.AddComponentParameter(2, nameof(ExternalLink.Href), url);
+        builder.AddComponentParameter(3, nameof(ExternalLink.Underline), Underline.Always);
+        builder.AddComponentParameter(4, nameof(ExternalLink.ChildContent), (RenderFragment)(content => content.AddContent(5, name)));
+        builder.CloseComponent();
+    };
+
     // Null means "no address entered", which is legitimate: the address block is optional. Anything
     // the user DID type is validated, and an invalid address blocks the registration instead of being
     // silently dropped (the account used to be created with no address at all).
@@ -174,6 +224,14 @@
         _errorMessage = null;
         _emailAlreadyRegistered = false;
 
+        // The disabled submit button is the primary guard; this covers a submit that arrives anyway
+        // (Enter in a field while the button state is stale).
+        if (RequiresTerms && !_model.AcceptedTerms)
+        {
+            _errorMessage = L["Auth.Register.AcceptTerms.Required"];
+            return;
+        }
+
         var addressResult = BuildAddressResult();
         if (addressResult is { IsFailure: true } failedAddress)
         {
@@ -186,7 +244,13 @@
         try
         {
             var result = await AuthService.RegisterAsync(
-                new RegisterRequest(_model.Email, _model.Password, _model.FirstName, _model.LastName, addressResult?.Value));
+                new RegisterRequest(
+                    _model.Email,
+                    _model.Password,
+                    _model.FirstName,
+                    _model.LastName,
+                    addressResult?.Value,
+                    AcceptedTerms: RequiresTerms && _model.AcceptedTerms));
             if (result.IsFailure)
             {
                 // The duplicate-address conflict is the one failure with a next step of its own: the
