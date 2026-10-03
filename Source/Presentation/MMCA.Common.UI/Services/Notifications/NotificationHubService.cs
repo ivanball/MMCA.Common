@@ -31,7 +31,10 @@ namespace MMCA.Common.UI.Services.Notifications;
 /// the service keeps running a fresh <see cref="StartAsync"/> (rebuild, backoff retries, channel
 /// re-join) with the same 30-second cap until one connects, so live notifications do not stay dead
 /// for the rest of the session. A close without an error is a deliberate stop or dispose and is never
-/// restarted; <see cref="StopAsync"/> and <see cref="DisposeAsync"/> also end a restart loop in flight.
+/// restarted; <see cref="StopAsync"/> and <see cref="DisposeAsync"/> also end every start and restart
+/// loop in flight, and once they return none of them builds or starts a connection. A server that
+/// refuses authentication (401 or 403) ends both the automatic reconnect and the restart loop, since
+/// an expired session cannot recover by retrying; the next <see cref="StartAsync"/> tries again.
 /// </para>
 /// </summary>
 public sealed partial class NotificationHubService : IAsyncDisposable
@@ -46,6 +49,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private readonly string? _sameOriginProxyEndpoint;
     private readonly ILogger<NotificationHubService> _logger;
     private readonly Lock _channelSync = new();
+    private readonly Lock _lifetimeSync = new();
 
     // Serializes StartAsync. A SemaphoreSlim rather than _channelSync because the guarded body
     // awaits, and a System.Threading.Lock cannot be held across an await.
@@ -56,10 +60,11 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     private HubConnection? _hubConnection;
     private bool _disposed;
 
-    // Bumped by StopAsync (and so by DisposeAsync), so a restart loop started in an earlier lifetime
-    // sees the change after its backoff and ends instead of reconnecting a signed-out or disposed
-    // service.
-    private int _lifetime;
+    // Canceled and replaced by StopAsync (and so by DisposeAsync). Every start and restart loop runs
+    // under the token of the lifetime it began in and checks it, under _startSync, before building or
+    // starting a connection, so nothing begun before a stop connects after it; the cancellation also
+    // cuts short the backoffs and an in-flight connect, which keeps StopAsync's wait for _startSync short.
+    private CancellationTokenSource _lifetime = new();
 
     /// <summary>
     /// Callback invoked when a push notification is received.
@@ -130,19 +135,43 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             return;
         }
 
-        try
+        await StartForLifetimeAsync(CurrentLifetime()).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The serialized start, bound to the lifetime it was requested in.
+    /// </summary>
+    /// <param name="lifetime">The lifetime token; once canceled, nothing is built or started.</param>
+    /// <returns>
+    /// <see langword="false"/> when the server refused authentication, so a restart loop stops;
+    /// otherwise <see langword="true"/>.
+    /// </returns>
+    private async Task<bool> StartForLifetimeAsync(CancellationToken lifetime)
+    {
+        if (IsLifetimeOver(lifetime))
         {
-            await _startSync.WaitAsync().ConfigureAwait(false);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Disposed while this caller was waiting: there is nothing left to start.
-            return;
+            return true;
         }
 
         try
         {
-            await StartCoreAsync().ConfigureAwait(false);
+            await _startSync.WaitAsync(lifetime).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposed while this caller was waiting: there is nothing left to start.
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            // Stopped while this caller was waiting: the lifetime it asked to start in is over.
+            return true;
+        }
+
+        try
+        {
+            // Checked again under the gate: a stop that ran while this caller waited ended its lifetime.
+            return IsLifetimeOver(lifetime) || await StartCoreAsync(lifetime).ConfigureAwait(false);
         }
         finally
         {
@@ -157,27 +186,14 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         }
     }
 
-    private async Task StartCoreAsync()
+    private HubConnection BuildConnection(CancellationToken lifetime)
     {
-        // A connected, connecting or reconnecting connection is left alone. A Disconnected one is dead:
-        // its automatic reconnect schedule gave up, so it is discarded and rebuilt rather than
-        // satisfying the guard forever.
-        if (_hubConnection is { State: not HubConnectionState.Disconnected })
-        {
-            return;
-        }
-
-        if (_hubConnection is not null)
-        {
-            await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
-        }
-
-        _hubConnection = ConnectionFactory?.Invoke() ?? new HubConnectionBuilder()
+        HubConnection connection = ConnectionFactory?.Invoke() ?? new HubConnectionBuilder()
             .WithUrl(_hubUrl, ConfigureConnection)
             .WithAutomaticReconnect(new UnboundedReconnectPolicy())
             .Build();
 
-        _hubConnection.On<string, string, Dictionary<string, string>?>(ReceiveNotificationMethodName, async (title, body, _) =>
+        connection.On<string, string, Dictionary<string, string>?>(ReceiveNotificationMethodName, async (title, body, _) =>
         {
             if (NotificationCallback is not null)
             {
@@ -185,36 +201,73 @@ public sealed partial class NotificationHubService : IAsyncDisposable
             }
         });
 
-        _hubConnection.On<string, string, string>(ReceiveChannelEventMethodName, DispatchChannelEventAsync);
+        connection.On<string, string, string>(ReceiveChannelEventMethodName, DispatchChannelEventAsync);
 
         // Group membership lives on the server connection; a new connection after an automatic
         // reconnect starts with no groups, so every tracked channel must be re-joined.
-        _hubConnection.Reconnected += _ => RejoinChannelsAsync();
+        connection.Reconnected += _ => RejoinChannelsAsync();
 
-        // Raised with an error when a reconnect is refused (the schedule itself never runs out); a null
-        // error is a deliberate StopAsync or dispose and must not restart.
-        _hubConnection.Closed += error => error is null ? Task.CompletedTask : RestartAfterCloseAsync();
+        // Raised with an error when a reconnect is refused or the schedule stopped on a refused
+        // authentication; a null error is a deliberate StopAsync or dispose and must not restart. The
+        // restart is bound to this connection's lifetime, so a close handled after a stop does nothing.
+        connection.Closed += error => error is null ? Task.CompletedTask : RestartAfterCloseAsync(lifetime);
+
+        return connection;
+    }
+
+    private async Task<bool> StartCoreAsync(CancellationToken lifetime)
+    {
+        // A connected, connecting or reconnecting connection is left alone. A Disconnected one is dead:
+        // its automatic reconnect schedule gave up, so it is discarded and rebuilt rather than
+        // satisfying the guard forever.
+        if (_hubConnection is { State: not HubConnectionState.Disconnected })
+        {
+            return true;
+        }
+
+        if (_hubConnection is not null)
+        {
+            await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
+        }
+
+        _hubConnection = BuildConnection(lifetime);
 
         var delay = InitialRetryDelay;
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
         {
-            if (_disposed)
+            if (IsLifetimeOver(lifetime))
             {
                 await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
-                return;
+                return true;
             }
 
             try
             {
-                await _hubConnection.StartAsync().ConfigureAwait(false);
+                await _hubConnection.StartAsync(lifetime).ConfigureAwait(false);
                 LogConnected(_hubUrl);
 
                 // Apply any channel joins requested before the connection came up.
                 await RejoinChannelsAsync().ConfigureAwait(false);
-                return;
+                return true;
             }
             catch (Exception ex)
             {
+                if (IsLifetimeOver(lifetime))
+                {
+                    // Stopped or disposed while connecting (the stop cancels the connect): not a failure.
+                    await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
+                    return true;
+                }
+
+                if (UnboundedReconnectPolicy.IsAuthenticationRefused(ex))
+                {
+                    // The session expired or lost access: retrying with the same credentials cannot
+                    // succeed, so this start and any restart loop end until StartAsync is called again.
+                    LogAuthenticationRefused(ex, _hubUrl);
+                    await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
+                    return false;
+                }
+
                 if (attempt == MaxRetries)
                 {
                     LogConnectionFailed(ex, _hubUrl);
@@ -223,14 +276,17 @@ public sealed partial class NotificationHubService : IAsyncDisposable
                     // later StartAsync (including one reached through JoinChannelAsync) no-ops
                     // forever; automatic reconnect only covers drops after a successful start.
                     await DiscardUnstartedConnectionAsync().ConfigureAwait(false);
-                    return;
+                    return true;
                 }
 
                 LogRetrying(attempt + 1, MaxRetries, delay, _hubUrl);
-                await Task.Delay(delay).ConfigureAwait(false);
+                await DelayUnlessStoppedAsync(delay, lifetime).ConfigureAwait(false);
                 delay *= 2;
             }
         }
+
+        // Unreachable: the last attempt either connects or fails terminally above.
+        return true;
     }
 
     /// <summary>
@@ -256,7 +312,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         {
             try
             {
-                await connection.InvokeAsync(JoinChannelMethodName, channelKey).ConfigureAwait(false);
+                await connection.InvokeAsync(JoinChannelMethodName, channelKey, CancellationToken.None).ConfigureAwait(false);
                 LogChannelJoined(channelKey);
             }
             catch (Exception ex)
@@ -286,7 +342,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         {
             try
             {
-                await connection.InvokeAsync(LeaveChannelMethodName, channelKey).ConfigureAwait(false);
+                await connection.InvokeAsync(LeaveChannelMethodName, channelKey, CancellationToken.None).ConfigureAwait(false);
                 LogChannelLeft(channelKey);
             }
             catch (Exception ex)
@@ -328,17 +384,12 @@ public sealed partial class NotificationHubService : IAsyncDisposable
     /// <summary>
     /// Stops the SignalR connection. Called on logout or disposal.
     /// </summary>
-    public async Task StopAsync()
-    {
-        // Ends any restart loop of the current lifetime at its next check.
-        Interlocked.Increment(ref _lifetime);
-
-        if (_hubConnection is not null)
-        {
-            await _hubConnection.DisposeAsync().ConfigureAwait(false);
-            _hubConnection = null;
-        }
-    }
+    /// <remarks>
+    /// Ends the current lifetime: once this returns, no start or restart loop begun before it builds
+    /// or starts a connection; only a later <see cref="StartAsync"/> (or <see cref="JoinChannelAsync"/>)
+    /// connects again.
+    /// </remarks>
+    public Task StopAsync() => _disposed ? Task.CompletedTask : StopCoreAsync();
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
@@ -349,13 +400,93 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         }
 
         _disposed = true;
-        await StopAsync().ConfigureAwait(false);
+        await StopCoreAsync().ConfigureAwait(false);
 
-        // Disposal deliberately does not wait for a start already in flight: that start can be
-        // sitting in a multi-second retry backoff, and blocking a Blazor circuit teardown on it
-        // would be worse than the alternative. The _disposed flag makes the retry loop bail at its
-        // next iteration, and StartAsync tolerates the semaphore disappearing underneath it.
+        // The stop above canceled any start in flight (its backoff and its connect) and waited for it
+        // to release the gate, so nothing is left running against these.
         _startSync.Dispose();
+        CancellationTokenSource final;
+        lock (_lifetimeSync)
+        {
+            final = _lifetime;
+        }
+
+        await final.CancelAsync().ConfigureAwait(false);
+        final.Dispose();
+    }
+
+    private async Task StopCoreAsync()
+    {
+        // End the lifetime first, so a start holding the gate gives up at its next check (and its
+        // backoff or connect is canceled), then wait for the gate so it cannot start anything after
+        // this returns.
+        CancellationTokenSource ended;
+        lock (_lifetimeSync)
+        {
+            ended = _lifetime;
+            _lifetime = new CancellationTokenSource();
+        }
+
+        await ended.CancelAsync().ConfigureAwait(false);
+        ended.Dispose();
+
+        try
+        {
+            await _startSync.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            // A concurrent dispose already stopped the connection.
+            return;
+        }
+
+        try
+        {
+            if (_hubConnection is not null)
+            {
+                await _hubConnection.DisposeAsync().ConfigureAwait(false);
+                _hubConnection = null;
+            }
+        }
+        finally
+        {
+            try
+            {
+                _startSync.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Disposed concurrently. Nothing to release.
+            }
+        }
+    }
+
+    private CancellationToken CurrentLifetime()
+    {
+        lock (_lifetimeSync)
+        {
+            try
+            {
+                return _lifetime.Token;
+            }
+            catch (ObjectDisposedException)
+            {
+                // Only the final lifetime is disposed, by DisposeAsync, after canceling it.
+                return new CancellationToken(canceled: true);
+            }
+        }
+    }
+
+    private static async Task DelayUnlessStoppedAsync(TimeSpan delay, CancellationToken lifetime)
+    {
+        try
+        {
+            await Task.Delay(delay, lifetime).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Stopped during the backoff: the caller's lifetime check ends its loop.
+        }
     }
 
     /// <summary>
@@ -395,33 +526,33 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         }
     }
 
-    private async Task RestartAfterCloseAsync()
+    private async Task RestartAfterCloseAsync(CancellationToken lifetime)
     {
-        if (_disposed)
+        if (IsLifetimeOver(lifetime))
         {
             return;
         }
-
-        int lifetime = Volatile.Read(ref _lifetime);
 
         LogReconnectExhausted(_hubUrl);
 
         // The serialized start rebuilds, retries with backoff, re-joins channels on success and
         // discards on terminal failure. A terminal failure is not the end: the loop starts again after
         // a capped backoff for as long as this lifetime lasts, so an outage of any length is recovered
-        // within MaxRetryDelay of the network returning. Stop and dispose end the lifetime.
+        // within MaxRetryDelay of the network returning. Stop and dispose end the lifetime, and every
+        // pass starts under that same lifetime, so a pass that begins after a stop builds nothing. A
+        // refused authentication ends the loop: retrying with the same credentials cannot succeed.
         TimeSpan delay = InitialRetryDelay;
         while (true)
         {
-            await StartAsync().ConfigureAwait(false);
+            bool keepTrying = await StartForLifetimeAsync(lifetime).ConfigureAwait(false);
 
-            if (IsLifetimeOver(lifetime) || _hubConnection is { State: not HubConnectionState.Disconnected })
+            if (!keepTrying || IsLifetimeOver(lifetime) || _hubConnection is { State: not HubConnectionState.Disconnected })
             {
                 return;
             }
 
             LogRestartRetrying(delay, _hubUrl);
-            await Task.Delay(delay).ConfigureAwait(false);
+            await DelayUnlessStoppedAsync(delay, lifetime).ConfigureAwait(false);
             if (IsLifetimeOver(lifetime))
             {
                 return;
@@ -431,7 +562,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         }
     }
 
-    private bool IsLifetimeOver(int lifetime) => _disposed || Volatile.Read(ref _lifetime) != lifetime;
+    private bool IsLifetimeOver(CancellationToken lifetime) => _disposed || lifetime.IsCancellationRequested;
 
     private async Task DispatchChannelEventAsync(string channelKey, string eventName, string payloadJson)
     {
@@ -475,7 +606,7 @@ public sealed partial class NotificationHubService : IAsyncDisposable
         {
             try
             {
-                await connection.InvokeAsync(JoinChannelMethodName, channelKey).ConfigureAwait(false);
+                await connection.InvokeAsync(JoinChannelMethodName, channelKey, CancellationToken.None).ConfigureAwait(false);
                 LogChannelJoined(channelKey);
             }
             catch (Exception ex)
@@ -505,6 +636,9 @@ public sealed partial class NotificationHubService : IAsyncDisposable
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to connect to notification hub at {HubUrl}")]
     private partial void LogConnectionFailed(Exception exception, string hubUrl);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification hub at {HubUrl} refused authentication; not retrying until the next start")]
+    private partial void LogAuthenticationRefused(Exception exception, string hubUrl);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Notification hub automatic reconnect gave up, starting a new connection to {HubUrl}")]
     private partial void LogReconnectExhausted(string hubUrl);

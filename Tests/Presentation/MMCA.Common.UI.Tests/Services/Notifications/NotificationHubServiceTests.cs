@@ -1,3 +1,4 @@
+using System.Net;
 using AwesomeAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -311,6 +312,97 @@ public sealed class NotificationHubServiceTests
         delays.Should().OnlyContain(d => d >= TimeSpan.Zero && d <= TimeSpan.FromSeconds(30));
         delays[0].Should().Be(TimeSpan.Zero, "the first reconnect is immediate");
         delays[^1].Should().Be(TimeSpan.FromSeconds(30), "a long outage settles on the 30-second cap");
+    }
+
+    // -- A stop during an outage is final until the next start (review R2) --
+    [Fact]
+    public async Task StopAsync_DuringAnOutage_NoRetryLoopStartsAConnectionWhenTheNetworkReturns()
+    {
+        var server = new InMemoryHubServer();
+        NotificationHubService? service = null;
+        var stopCall = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var built = 0;
+
+        // Build 1 is the first start, build 2 the restart loop's first pass (refused four times), build
+        // 3 its second pass: the user signs out right there, and the network comes back at that moment.
+        await using var sut = CreateInMemorySut(server, () =>
+        {
+            if (Interlocked.Increment(ref built) == 3)
+            {
+                stopCall.TrySetResult(service!.StopAsync());
+                server.RefuseConnections = false;
+            }
+        });
+        service = sut;
+
+        await sut.StartAsync();
+        sut.IsConnected.Should().BeTrue();
+        server.RefuseConnections = true;
+        server.DropAll(new IOException("network down"));
+
+        Task stop = await stopCall.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await stop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        int attemptsAtStop = server.ConnectAttempts;
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        sut.IsConnected.Should().BeFalse("a stop is final until StartAsync is called again");
+        server.ConnectAttempts.Should().Be(attemptsAtStop, "no start or restart loop may connect after StopAsync returned");
+    }
+
+    // -- An expired session stops reconnecting (review R3) --
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public void UnboundedReconnectPolicy_WhenNegotiateRefusesAuthentication_Stops(HttpStatusCode status)
+    {
+        var policy = new UnboundedReconnectPolicy();
+
+        TimeSpan? delay = policy.NextRetryDelay(new Microsoft.AspNetCore.SignalR.Client.RetryContext
+        {
+            PreviousRetryCount = 1,
+            ElapsedTime = TimeSpan.FromSeconds(2),
+            RetryReason = new HttpRequestException("negotiate refused", null, status),
+        });
+
+        delay.Should().BeNull("retrying with the credentials the server just refused cannot succeed");
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    public void UnboundedReconnectPolicy_WhenNegotiateFailsTransiently_KeepsRetryingWithinTheCap(HttpStatusCode status)
+    {
+        var policy = new UnboundedReconnectPolicy();
+
+        TimeSpan? delay = policy.NextRetryDelay(new Microsoft.AspNetCore.SignalR.Client.RetryContext
+        {
+            PreviousRetryCount = 400,
+            ElapsedTime = TimeSpan.FromHours(3),
+            RetryReason = new HttpRequestException("gateway down", null, status),
+        });
+
+        delay.Should().Be(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public async Task WhenTheServerRefusesAuthentication_TheRestartLoopStops()
+    {
+        var server = new InMemoryHubServer();
+        await using var sut = CreateInMemorySut(server, () => { });
+
+        await sut.StartAsync();
+        sut.IsConnected.Should().BeTrue();
+
+        // The session expired while connected: every new negotiate is answered 401.
+        server.RefuseAuthentication = true;
+        int attemptsBeforeDrop = server.ConnectAttempts;
+        server.DropAll(new IOException("connection lost"));
+
+        await WaitUntilAsync(() => server.ConnectAttempts > attemptsBeforeDrop);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        server.ConnectAttempts.Should().Be(attemptsBeforeDrop + 1, "a refused authentication ends the restart loop at once");
+        sut.IsConnected.Should().BeFalse();
     }
 
     private static NotificationHubService CreateInMemorySut(InMemoryHubServer server, Action onBuild) =>

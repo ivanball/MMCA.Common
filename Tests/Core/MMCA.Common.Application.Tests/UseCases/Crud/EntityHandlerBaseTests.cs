@@ -1,4 +1,4 @@
-﻿using AwesomeAssertions;
+using AwesomeAssertions;
 using MMCA.Common.Application.Interfaces.Infrastructure.Persistence;
 using MMCA.Common.Application.Interfaces.Mapping;
 using MMCA.Common.Application.UseCases.Crud;
@@ -244,6 +244,22 @@ public sealed class ChildEntityHandlerBaseTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
 
+    private void SetupTrackedAndStoredLoads(OrderAggregate tracked, OrderAggregate stored)
+    {
+        _repository.Setup(r => r.GetByIdAsync(
+                It.IsAny<int>(),
+                It.IsAny<IEnumerable<string>>(),
+                true,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tracked);
+        _repository.Setup(r => r.GetByIdAsync(
+                It.IsAny<int>(),
+                It.IsAny<IEnumerable<string>>(),
+                false,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stored);
+    }
+
     [Fact]
     public async Task AddChild_WhenAggregateAccepts_SavesAndReturnsTheChildDTO()
     {
@@ -290,6 +306,50 @@ public sealed class ChildEntityHandlerBaseTests
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().ContainSingle(e => e.Code == "Order.DuplicateLine" && e.Type == ErrorType.Conflict);
+    }
+
+    [Fact]
+    public async Task AddChild_WhenTheStoreNowHoldsTheSameChild_ReturnsTheDuplicateErrorFromAnUntrackedReRead()
+    {
+        // The tracked parent holds only this request's pending line; the concurrent request's line is
+        // visible only in the store, which the untracked re-read reflects.
+        var exception = new InvalidOperationException("Cannot insert duplicate key row in object 'OrderLine'.");
+        _unitOfWork.As<IUniqueConstraintViolationDetector>()
+            .Setup(d => d.IsUniqueConstraintViolation(exception))
+            .Returns(true);
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(exception);
+        var stored = new OrderAggregate { Id = 1 };
+        stored.AddLine(42);
+        SetupTrackedAndStoredLoads(new OrderAggregate { Id = 1 }, stored);
+        var sut = new TestAddOrderLineHandler(_unitOfWork.Object);
+
+        var result = await sut.HandleAsync(new AddOrderLineCommand(1, 42));
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e => e.Code == "Order.DuplicateLine" && e.Type == ErrorType.Conflict);
+        _repository.Verify(
+            r => r.GetByIdAsync(1, It.IsAny<IEnumerable<string>>(), false, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddChild_WhenTheUniqueViolationIsNotAConcurrentDuplicate_LetsTheConflictPropagate()
+    {
+        // A key collision or a violation on another index: the stored aggregate holds no equivalent
+        // line, so the caller keeps the generic data-conflict outcome rather than the duplicate error.
+        var exception = new InvalidOperationException("Violation of PRIMARY KEY constraint 'PK_OrderLine'.");
+        _unitOfWork.As<IUniqueConstraintViolationDetector>()
+            .Setup(d => d.IsUniqueConstraintViolation(exception))
+            .Returns(true);
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(exception);
+        SetupTrackedAndStoredLoads(new OrderAggregate { Id = 1 }, new OrderAggregate { Id = 1 });
+        var sut = new TestAddOrderLineHandler(_unitOfWork.Object);
+
+        var act = () => sut.HandleAsync(new AddOrderLineCommand(1, 42));
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(exception);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

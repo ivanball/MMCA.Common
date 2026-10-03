@@ -14,7 +14,7 @@ namespace MMCA.Common.UI.Tests.Services.Notifications;
 /// hub handshake over a pair of pipes so a real <see cref="HubConnection"/> reaches
 /// <see cref="HubConnectionState.Connected"/> with no network, and lets the test drop every live
 /// connection, with or without an error, to drive the client's close path. It can also refuse new
-/// connections (a network that is still down), counts connection attempts, and answers hub
+/// connections (a network that is still down, or a server refusing authentication), counts connection attempts, and answers hub
 /// invocations with an empty completion while recording each <c>JoinChannel</c> it receives.
 /// </summary>
 internal sealed class InMemoryHubServer : IConnectionFactory
@@ -25,12 +25,20 @@ internal sealed class InMemoryHubServer : IConnectionFactory
     private readonly List<string> _joinedChannels = [];
     private int _connectAttempts;
     private volatile bool _refuseConnections;
+    private volatile bool _refuseAuthentication;
 
     /// <summary>Gets or sets a value indicating whether new connections fail as if the network were down.</summary>
     public bool RefuseConnections
     {
         get => _refuseConnections;
         set => _refuseConnections = value;
+    }
+
+    /// <summary>Gets or sets a value indicating whether new connections fail as a negotiate answered 401 would.</summary>
+    public bool RefuseAuthentication
+    {
+        get => _refuseAuthentication;
+        set => _refuseAuthentication = value;
     }
 
     /// <summary>Gets the number of connection attempts, refused ones included.</summary>
@@ -75,6 +83,12 @@ internal sealed class InMemoryHubServer : IConnectionFactory
     public ValueTask<ConnectionContext> ConnectAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref _connectAttempts);
+        if (RefuseAuthentication)
+        {
+            return ValueTask.FromException<ConnectionContext>(
+                new HttpRequestException("Response status code does not indicate success: 401 (Unauthorized).", null, HttpStatusCode.Unauthorized));
+        }
+
         if (RefuseConnections)
         {
             return ValueTask.FromException<ConnectionContext>(new IOException("The in-memory network is down."));
