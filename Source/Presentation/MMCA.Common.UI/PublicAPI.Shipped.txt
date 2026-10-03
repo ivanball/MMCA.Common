@@ -89,6 +89,17 @@ MMCA.Common.UI.Common.Settings.LayoutSettings.HideNotificationPagesWhenUnregiste
 MMCA.Common.UI.Common.Settings.LayoutSettings.LayoutSettings() -> void
 MMCA.Common.UI.Common.Settings.LayoutSettings.SessionsNavRequiredRole.get -> string?
 MMCA.Common.UI.Common.Settings.LayoutSettings.SessionsNavRequiredRole.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings
+MMCA.Common.UI.Common.Settings.LegalSettings.CodeOfConductUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.CodeOfConductUrl.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.DeleteAccountUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.DeleteAccountUrl.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.HasFooterLinks.get -> bool
+MMCA.Common.UI.Common.Settings.LegalSettings.LegalSettings() -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.PrivacyUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.PrivacyUrl.init -> void
+MMCA.Common.UI.Common.Settings.LegalSettings.TermsUrl.get -> string!
+MMCA.Common.UI.Common.Settings.LegalSettings.TermsUrl.init -> void
 MMCA.Common.UI.Common.Settings.MmcaClientConfigBootstrap
 MMCA.Common.UI.Common.Settings.NotificationBellOptions
 MMCA.Common.UI.Common.Settings.NotificationBellOptions.NavigationRefreshMaxAge.get -> System.TimeSpan
@@ -189,6 +200,9 @@ MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.StayButtonText.set -> void
 MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.Title.get -> string?
 MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.Title.set -> void
 MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.UnsavedChangesGuard() -> void
+MMCA.Common.UI.Components.Legal.TermsAcceptanceGate
+MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose() -> void
+MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.TermsAcceptanceGate() -> void
 MMCA.Common.UI.Components.Lists.ClickableCard
 MMCA.Common.UI.Components.Lists.ClickableCard.AriaLabel.get -> string?
 MMCA.Common.UI.Components.Lists.ClickableCard.AriaLabel.set -> void
@@ -478,6 +492,8 @@ MMCA.Common.UI.Pages.Auth.PasswordComplexityAttribute.PasswordComplexityAttribut
 MMCA.Common.UI.Pages.Auth.Register
 MMCA.Common.UI.Pages.Auth.Register.Register() -> void
 MMCA.Common.UI.Pages.Auth.RegisterModel
+MMCA.Common.UI.Pages.Auth.RegisterModel.AcceptedTerms.get -> bool
+MMCA.Common.UI.Pages.Auth.RegisterModel.AcceptedTerms.set -> void
 MMCA.Common.UI.Pages.Auth.RegisterModel.AddressLine1.get -> string!
 MMCA.Common.UI.Pages.Auth.RegisterModel.AddressLine1.set -> void
 MMCA.Common.UI.Pages.Auth.RegisterModel.AddressLine2.get -> string?
@@ -1044,6 +1060,13 @@ MMCA.Common.UI.Services.Culture.ViewerTimeZone.Zone.get -> System.TimeZoneInfo!
 MMCA.Common.UI.Services.IFormFactor
 MMCA.Common.UI.Services.IFormFactor.GetFormFactor() -> string!
 MMCA.Common.UI.Services.IFormFactor.GetPlatform() -> string!
+MMCA.Common.UI.Services.Legal.ILegalAcceptanceUIService
+MMCA.Common.UI.Services.Legal.ILegalAcceptanceUIService.AcceptAsync(string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.ILegalAcceptanceUIService.GetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService.AcceptAsync(string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService.GetAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<MMCA.Common.Shared.Abstractions.Result<MMCA.Common.Shared.Legal.LegalAcceptanceDTO!>!>!
+MMCA.Common.UI.Services.Legal.LegalAcceptanceUIService.LegalAcceptanceUIService(System.Net.Http.IHttpClientFactory! httpClientFactory, MMCA.Common.UI.Services.Auth.Tokens.ITokenStorageService! tokenStorageService) -> void
 MMCA.Common.UI.Services.ListPageQueryStateService
 MMCA.Common.UI.Services.ListPageQueryStateService.ListPageQueryStateService(Microsoft.AspNetCore.Components.NavigationManager! navigation) -> void
 MMCA.Common.UI.Services.ListPageQueryStateService.ReadCurrent() -> MMCA.Common.UI.Services.ListPageState!
@@ -1268,6 +1291,7 @@ override MMCA.Common.UI.Components.Capabilities.DeepLinkListener.OnAfterRender(b
 override MMCA.Common.UI.Components.Capabilities.OfflineBanner.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Capabilities.PushRegistrationListener.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Forms.ErrorSummary.OnParametersSet() -> void
+override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.OnAfterRenderAsync(bool firstRender) -> System.Threading.Tasks.Task!
 override MMCA.Common.UI.Components.Lists.MobileInfiniteScrollList<TItem>.OnInitializedAsync() -> System.Threading.Tasks.Task!
@@ -1408,6 +1432,7 @@ static readonly MMCA.Common.UI.Common.RoutePaths.Home -> string!
 static readonly MMCA.Common.UI.Common.RoutePaths.Sessions -> string!
 static readonly MMCA.Common.UI.Common.Settings.ApiSettings.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.LayoutSettings.SectionName -> string!
+static readonly MMCA.Common.UI.Common.Settings.LegalSettings.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.NotificationBellOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Common.Settings.UiReadCacheOptions.SectionName -> string!
 static readonly MMCA.Common.UI.Services.Api.AuthenticatedServiceBase.RetryPolicy -> Polly.Retry.AsyncRetryPolicy<System.Net.Http.HttpResponseMessage!>!
@@ -1417,6 +1442,7 @@ virtual MMCA.Common.UI.Common.NavItem.EqualityContract.get -> System.Type!
 virtual MMCA.Common.UI.Common.NavItem.Equals(MMCA.Common.UI.Common.NavItem? other) -> bool
 virtual MMCA.Common.UI.Common.NavItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual MMCA.Common.UI.Components.Capabilities.BiometricGate.Dispose(bool disposing) -> void
+virtual MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Components.Notifications.NotificationBell.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Layout.NavMenu.Dispose(bool disposing) -> void
 virtual MMCA.Common.UI.Pages.Administration.RoleAdminEdit.Dispose(bool disposing) -> void
@@ -1452,6 +1478,7 @@ virtual MMCA.Common.UI.Services.Api.EntityServiceBase<TEntityDTO, TIdentifierTyp
 ~override MMCA.Common.UI.Components.Forms.DeleteConfirmation.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.ErrorSummary.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Forms.UnsavedChangesGuard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
+~override MMCA.Common.UI.Components.Legal.TermsAcceptanceGate.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.ClickableCard.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.InfiniteScrollSentinel.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
 ~override MMCA.Common.UI.Components.Lists.MobileCardList<TItem>.BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder __builder) -> void
