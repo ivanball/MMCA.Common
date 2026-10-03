@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using MMCA.Common.API.Idempotency;
 using MMCA.Common.Application.Auth.Legal;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
 using MMCA.Common.Shared.Abstractions;
@@ -90,6 +91,7 @@ public abstract class LegalAcceptanceControllerBase(
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The standing after the acceptance, or a Problem Details failure.</returns>
     [HttpPost(LegalAcceptanceRoutes.Action)]
+    [Idempotent]
     [ProducesResponseType(typeof(LegalAcceptanceDTO), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ProblemDetails))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized, Type = typeof(ProblemDetails))]
