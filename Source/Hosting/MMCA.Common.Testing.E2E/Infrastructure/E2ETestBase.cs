@@ -8,6 +8,11 @@ namespace MMCA.Common.Testing.E2E.Infrastructure;
 [Collection(E2ETestCollection.Name)]
 public abstract class E2ETestBase : IAsyncLifetime
 {
+    // AcceptTermsIfPromptedAsync: how long to wait for the gate when its read says it will open,
+    // and when that read could not answer.
+    private const float TermsPromptExpectedTimeoutMs = 15_000;
+    private const float TermsPromptFallbackTimeoutMs = 10_000;
+
     private readonly PlaywrightFixture _fixture;
     private IBrowserContext _context = null!;
 
@@ -142,6 +147,152 @@ public abstract class E2ETestBase : IAsyncLifetime
         // LoginAsAdmin -> protected create/list flows) would otherwise race a not-yet-authorized,
         // not-yet-rendered page.
         await WaitForInteractiveOrReloadAsync().ConfigureAwait(false);
+
+        if (AcceptsTermsAfterSignIn)
+        {
+            await AcceptTermsIfPromptedAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether the app under test renders the terms acceptance gate
+    /// (<c>TermsAcceptanceGate</c> from MMCA.Common.UI, shown to a signed-in user who has not accepted
+    /// the configured <c>Legal:CurrentTermsVersion</c>). Defaults to <see langword="false"/>, which adds
+    /// no step and no time to any sign-in.
+    /// </summary>
+    /// <remarks>
+    /// A consumer whose app enables the gate overrides this to return <see langword="true"/> in its own
+    /// shared test base. <see cref="LoginAsync"/> (so also <see cref="LoginAsAdminAsync"/> and
+    /// <see cref="LoginAsUserAsync"/>) and <see cref="RegisterNewUserAsync"/> then finish with
+    /// <see cref="AcceptTermsIfPromptedAsync"/>, so a seeded account that has not accepted the current
+    /// version does not leave every signed-in flow under the blocking dialog. A test that signs in some
+    /// other way calls <see cref="AcceptTermsIfPromptedAsync"/> itself.
+    /// </remarks>
+    protected virtual bool AcceptsTermsAfterSignIn => false;
+
+    /// <summary>
+    /// Gets the same-origin path <see cref="AcceptTermsIfPromptedAsync"/> reads the signed-in user's
+    /// terms standing from. Defaults to <c>/api/Users/me/legal-acceptance</c>: the same-origin API
+    /// proxy's default prefix (<c>SameOriginApiProxy:PathPrefix</c>) plus the route the gate itself
+    /// reads. Override it when the app mounts the proxy elsewhere, or return <see langword="null"/>
+    /// when the app maps no same-origin proxy (the method then falls back to a bounded wait for the
+    /// dialog).
+    /// </summary>
+    protected virtual string? TermsAcceptanceProbePath => "/api/Users/me/legal-acceptance";
+
+    /// <summary>
+    /// Accepts the terms acceptance gate when it is shown (or about to be shown) for the signed-in user:
+    /// ticks the agree box, clicks Accept, and waits for the dialog to close. Returns at once when the
+    /// user's acceptance is already current or the app configures no terms version.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The gate reads the standing from the Blazor renderer once the page is interactive. Under
+    /// InteractiveServer that read is a server-side call the browser never sees, so waiting for its
+    /// response cannot tell "no dialog" from "dialog not yet rendered". Instead this reads the same
+    /// standing itself through the page's request context (which shares the browser context's cookies,
+    /// so the same session, in every render mode): when the user is current it returns with no wait;
+    /// when not, the gate is going to open the dialog, and this waits for it (up to 15 seconds after
+    /// interactivity) and accepts it.
+    /// </para>
+    /// <para>
+    /// When the read cannot answer (<see cref="TermsAcceptanceProbePath"/> is null, an error status, an
+    /// unexpected body) it falls back to waiting at most 10 seconds for the dialog, accepting it if it
+    /// appears. In both waits a dialog that never appears is not a failure: the gate renders nothing
+    /// when its own read fails, by design, so the user is not blocked.
+    /// </para>
+    /// </remarks>
+    protected async Task AcceptTermsIfPromptedAsync()
+    {
+        var agree = Page.Locator("input[data-testid='terms-acceptance-gate-agree']");
+
+        var expected = await ProbeTermsPromptAsync().ConfigureAwait(false);
+        if (expected == false)
+        {
+            return;
+        }
+
+        try
+        {
+            await agree.WaitForAsync(new()
+            {
+                State = WaitForSelectorState.Visible,
+                Timeout = expected == true ? TermsPromptExpectedTimeoutMs : TermsPromptFallbackTimeoutMs,
+            }).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            return;
+        }
+
+        // Force, as with RoleAdminPage.PermissionCheckbox: MudBlazor overlays its own icon on the
+        // native input. SetChecked still verifies the box ended up checked. Accept stays disabled
+        // until it is, and the click auto-waits for it to enable.
+        await agree.SetCheckedAsync(true, new() { Force = true }).ConfigureAwait(false);
+        await Page.GetByTestId("terms-acceptance-gate-accept").ClickAsync().ConfigureAwait(false);
+        await Expect(agree).ToBeHiddenAsync(new() { Timeout = TermsPromptExpectedTimeoutMs }).ConfigureAwait(false);
+    }
+
+    // Reads the signed-in user's standing through the page's request context (the browser context's
+    // cookies, so the same session). True: the gate will open its dialog. False: it will not (current,
+    // or no version configured). Null: the read could not answer, so the caller falls back to a
+    // bounded wait.
+    private async Task<bool?> ProbeTermsPromptAsync()
+    {
+        if (TermsAcceptanceProbePath is not { } path)
+        {
+            return null;
+        }
+
+        try
+        {
+            var url = new Uri(new Uri(BaseUrl), path).ToString();
+            var response = await Page.APIRequest.GetAsync(url, new() { Timeout = 10_000, FailOnStatusCode = false })
+                .ConfigureAwait(false);
+            await using (response.ConfigureAwait(false))
+            {
+                if (!response.Ok)
+                {
+                    return null;
+                }
+
+                var body = await response.JsonAsync().ConfigureAwait(false);
+                return body is { } standing ? IsTermsPromptExpected(standing) : null;
+            }
+        }
+        catch (Exception ex) when (ex is PlaywrightException or TimeoutException or System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    // Mirrors the gate's own rule (TermsAcceptanceGate.EvaluateAsync): the dialog opens only when a
+    // current version is configured AND the user's acceptance is not current. Null when the body is
+    // not a LegalAcceptanceDTO.
+    internal static bool? IsTermsPromptExpected(System.Text.Json.JsonElement standing)
+    {
+        if (standing.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        bool? isCurrent = null;
+        var hasCurrentVersion = false;
+        foreach (var property in standing.EnumerateObject())
+        {
+            if (string.Equals(property.Name, "isCurrent", StringComparison.OrdinalIgnoreCase)
+                && property.Value.ValueKind is System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False)
+            {
+                isCurrent = property.Value.GetBoolean();
+            }
+            else if (string.Equals(property.Name, "currentVersion", StringComparison.OrdinalIgnoreCase)
+                && property.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                hasCurrentVersion = !string.IsNullOrWhiteSpace(property.Value.GetString());
+            }
+        }
+
+        return isCurrent is { } current ? hasCurrentVersion && !current : null;
     }
 
     /// <summary>
@@ -205,6 +356,10 @@ public abstract class E2ETestBase : IAsyncLifetime
         await FillFieldAsync(Page.GetByLabel("Password", new() { Exact = true }), password).ConfigureAwait(false);
         await FillFieldAsync(Page.GetByLabel("Confirm Password"), password).ConfigureAwait(false);
 
+        // A host with a Terms URL keeps "Create your account" disabled until the required box is
+        // ticked; on a host without one this is a single DOM count and nothing else.
+        await new PageObjects.RegisterPage(Page).AcceptTermsIfShownAsync().ConfigureAwait(false);
+
         await Page.GetByRole(AriaRole.Button, new() { Name = "Create your account" }).ClickAsync().ConfigureAwait(false);
 
         // Registration does NavigateTo("/", forceLoad: true) on success: a full page reload away from
@@ -218,6 +373,13 @@ public abstract class E2ETestBase : IAsyncLifetime
         // (the post-register sign-out click / protected-page open would otherwise hit a non-interactive
         // DOM).
         await WaitForInteractiveOrReloadAsync().ConfigureAwait(false);
+
+        // Registering through the form records the acceptance, so the gate normally stays closed here;
+        // the call keeps the helper correct for an app that does not stamp it at registration.
+        if (AcceptsTermsAfterSignIn)
+        {
+            await AcceptTermsIfPromptedAsync().ConfigureAwait(false);
+        }
 
         return (email, password);
     }
