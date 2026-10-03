@@ -104,9 +104,9 @@ public interface IAuthenticationService
     /// <remarks>
     /// A session id that is unknown, or that belongs to another account, returns <c>NotFound</c> and
     /// is indistinguishable from the other, so a caller cannot probe for another user's sessions.
-    /// Revoking a session that is <b>already</b> revoked succeeds and changes nothing: the caller
-    /// asked for that device to be signed out and it is, and a device list a user is clicking through
-    /// is exactly where a duplicate request comes from.
+    /// Revoking a session that is <b>already</b> revoked changes nothing and returns <c>NotFound</c>
+    /// (<c>Auth.SessionAlreadyRevoked</c>), so a device list can tell the user the device was already
+    /// signed out instead of claiming this request signed it out.
     /// </remarks>
     /// <param name="userId">The user the session must belong to.</param>
     /// <param name="sessionId">The session to revoke.</param>

@@ -37,6 +37,8 @@ public static class AuthorizationExtensions
         /// surfaces that are endpoint-routed but carry no metadata (Blazor's framework files and
         /// circuit, static asset conventions, health probes, well-known documents) are exempt by
         /// path prefix; see <see cref="FallbackAuthorizationOptions.DefaultExemptPathPrefixes"/>.
+        /// A request that matched no endpoint and names no web-root file is not gated either, so it
+        /// reaches the 404 (and a host's not-found re-execute) instead of a sign-in challenge.
         /// </para>
         /// <para>
         /// The documented opt-out is

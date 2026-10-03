@@ -261,18 +261,25 @@ public sealed class RefreshSessionManagementTests
         mocks.Sessions.SaveCount.Should().Be(0);
     }
 
-    [Fact]
-    public async Task RevokeSessionByIdAsync_AlreadyRevokedSession_SucceedsWithoutWriting()
+    [Theory]
+    [InlineData(RefreshSession.ReasonSignedOut)]
+    [InlineData(RefreshSession.ReasonSessionCap)]
+    public async Task RevokeSessionByIdAsync_AlreadyRevokedSession_ReturnsNotFoundWithoutWriting(string reason)
     {
         var (sut, mocks) = CreateSut();
         RefreshSession session = SeedSession(mocks, UserId, createdAt: Now.AddDays(-1), token: "a");
-        session.Revoke(Now.AddHours(-1), RefreshSession.ReasonSignedOut);
+        session.Revoke(Now.AddHours(-1), reason);
 
         Result result = await sut.RevokeSessionByIdAsync(UserId, session.Id);
 
-        result.IsSuccess.Should().BeTrue(
-            "the caller asked for that device to be signed out and it is; a duplicate click is not an error");
+        // The device list rendered the session as live, so the client must learn it was already signed
+        // out (the 404 its page turns into "That device was already signed out.") rather than a 204
+        // that reads as "this click signed it out".
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(e =>
+            e.Code == "Auth.SessionAlreadyRevoked" && e.Type == ErrorType.NotFound);
         session.RevokedAt.Should().Be(Now.AddHours(-1), "the first revocation's instant is the one kept");
+        session.ReasonRevoked.Should().Be(reason);
         mocks.Sessions.SaveCount.Should().Be(0);
     }
 

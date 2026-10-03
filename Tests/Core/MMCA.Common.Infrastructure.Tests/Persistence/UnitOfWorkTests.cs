@@ -38,6 +38,35 @@ public sealed class UnitOfWorkTests
         result.Should().Be(5);
     }
 
+    // -- The unit of work classifies its own lost insert races (O-31) --
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void IsUniqueConstraintViolation_AnswersThroughTheRegisteredDetector(bool isViolation)
+    {
+        var exception = new InvalidOperationException("save failed");
+        var detector = new Mock<IUniqueConstraintViolationDetector>();
+        detector.Setup(d => d.IsUniqueConstraintViolation(exception)).Returns(isViolation);
+        using var sut = new UnitOfWork(
+            new Mock<IDbContextFactory>().Object,
+            new Mock<IDataSourceService>().Object,
+            new Mock<IRepositoryFactory>().Object,
+            detector.Object);
+
+        sut.Should().BeAssignableTo<IUniqueConstraintViolationDetector>(
+            "AddChildEntityHandlerBase reaches the detector through the unit of work it already holds");
+        sut.IsUniqueConstraintViolation(exception).Should().Be(isViolation);
+    }
+
+    [Fact]
+    public void IsUniqueConstraintViolation_WithNoDetector_ClassifiesNothing()
+    {
+        var (sut, _) = CreateSut();
+
+        sut.IsUniqueConstraintViolation(new InvalidOperationException("save failed")).Should().BeFalse();
+        sut.Dispose();
+    }
+
     [Fact]
     public void Dispose_DisposesDbContextFactory()
     {

@@ -22,6 +22,18 @@ namespace MMCA.Common.Application.UseCases.Crud;
 /// <c>IEntityDTOMapper</c>, because the DTO belongs to the CHILD entity, whose identifier type is
 /// usually not the parent's. Implement it as a one-line call into the module's own child mapper.
 /// </para>
+/// <para>
+/// Two identical adds that arrive together both pass the aggregate's duplicate check, because each
+/// loaded the parent before the other saved, and the unique index rejects the second insert. When the
+/// unit of work classifies that failure as a unique-constraint violation (the framework's unit of work
+/// does, through the host's <see cref="IUniqueConstraintViolationDetector"/>), the handler re-reads the
+/// parent untracked, so the read reflects only what is stored and not this request's pending add, and
+/// runs <see cref="Apply"/> once more on that copy. When the concurrent request saved the same child,
+/// the aggregate answers with exactly the duplicate error a sequential second add gets, in place of the
+/// generic data-conflict 409. Any other unique violation (a key collision, another index) leaves the
+/// stored aggregate accepting the add, and the original exception propagates unchanged, as it does for
+/// an aggregate whose add has no duplicate rule.
+/// </para>
 /// </remarks>
 /// <typeparam name="TCommand">The command type.</typeparam>
 /// <typeparam name="TParent">The parent aggregate root.</typeparam>
@@ -115,7 +127,29 @@ public abstract class AddChildEntityHandlerBase<TCommand, TParent, TIdentifierTy
         if (result.IsFailure)
             return Result.Failure<TChildDTO>(result.Errors);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (unitOfWork is IUniqueConstraintViolationDetector detector
+            && detector.IsUniqueConstraintViolation(exception))
+        {
+            // Possibly lost the insert race to a concurrent identical add (see the type remarks). The
+            // tracked parent already holds this request's own pending child, so the add is re-run on a
+            // fresh, untracked read of the stored aggregate instead: only a child that another request
+            // actually saved makes it refuse. Nothing re-run here is tracked or saved.
+            var stored = await repository
+                .GetByIdAsync(ParentId(command), Includes, asTracking: false, cancellationToken)
+                .ConfigureAwait(false);
+            if (stored is null)
+                throw;
+
+            var duplicate = Apply(stored, command);
+            if (duplicate.IsSuccess)
+                throw;
+
+            return Result.Failure<TChildDTO>(duplicate.Errors);
+        }
 
         var child = result.Value!;
 

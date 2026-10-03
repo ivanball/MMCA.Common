@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Options;
 using MMCA.Common.Application.Interfaces;
 using MMCA.Common.Application.Interfaces.Infrastructure.Auth;
@@ -335,6 +336,12 @@ public sealed class DbContextFactory(
 
         if (explicitKeyGroups.Count == 0)
             return await context.SaveChangesAsync(_currentUserService.UserId, cancellationToken).ConfigureAwait(false);
+
+        // One round per table, principals first: the change tracker's order is the order rows were
+        // added, which says nothing about foreign keys (see ExplicitKeyInsertRoundOrder).
+        var saveOrder = ExplicitKeyInsertRoundOrder.Order(
+            [.. explicitKeyGroups.Select(g => (IReadOnlyCollection<IReadOnlyEntityType>)[.. g.Entries.Select(e => e.Metadata).Distinct()])]);
+        explicitKeyGroups = [.. saveOrder.Select(i => explicitKeyGroups[i])];
 
         int result = 0;
         var allExplicitKeyEntries = explicitKeyGroups.SelectMany(g => g.Entries).ToHashSet();

@@ -74,7 +74,7 @@ public interface IAuthUIService
     /// <summary>
     /// Signs one device out via <c>auth/revoke/{sessionId}</c>. Another account's session id (or a
     /// nonexistent one) answers 404, which arrives as an <see cref="ErrorType.NotFound"/> failure;
-    /// revoking an already-revoked session succeeds.
+    /// revoking an already-revoked session answers the same 404.
     /// </summary>
     /// <param name="sessionId">The session to revoke.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

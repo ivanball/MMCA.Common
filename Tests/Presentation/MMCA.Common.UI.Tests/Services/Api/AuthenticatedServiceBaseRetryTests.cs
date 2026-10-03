@@ -56,6 +56,70 @@ public sealed class AuthenticatedServiceBaseRetryTests
         final.Dispose();
     }
 
+    // -- Non-idempotent writes are not replayed (O-09) --
+    [Theory]
+    [InlineData("POST", HttpStatusCode.BadGateway)]
+    [InlineData("POST", HttpStatusCode.ServiceUnavailable)]
+    [InlineData("POST", HttpStatusCode.TooManyRequests)]
+    [InlineData("PATCH", HttpStatusCode.BadGateway)]
+    [InlineData("PATCH", HttpStatusCode.TooManyRequests)]
+    public async Task RetryPolicy_APostOrPatchWithoutAnIdempotencyKey_IsSentOnce(string method, HttpStatusCode status)
+    {
+        var (attempts, final) = await RunAsync(new HttpMethod(method), idempotencyKey: null, status);
+
+        attempts.Should().Be(1, "a retried POST or PATCH without a key is a second request, not a replay");
+        final.StatusCode.Should().Be(status, "the caller sees the server's own failure, not a retry's 429");
+        final.Dispose();
+    }
+
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("PATCH")]
+    public async Task RetryPolicy_APostOrPatchWithAnIdempotencyKey_IsRetried(string method)
+    {
+        var (attempts, final) = await RunAsync(new HttpMethod(method), idempotencyKey: "key-1", HttpStatusCode.BadGateway);
+
+        attempts.Should().Be(4, "the server deduplicates on the key, so the write is retry-safe");
+        final.Dispose();
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("HEAD")]
+    [InlineData("PUT")]
+    [InlineData("DELETE")]
+    public async Task RetryPolicy_AnIdempotentVerb_KeepsItsRetries(string method)
+    {
+        var (attempts, final) = await RunAsync(new HttpMethod(method), idempotencyKey: null, HttpStatusCode.BadGateway);
+
+        attempts.Should().Be(4, "the first attempt plus three retries");
+        final.Dispose();
+    }
+
+    private static async Task<(int Attempts, HttpResponseMessage Final)> RunAsync(
+        HttpMethod method,
+        string? idempotencyKey,
+        HttpStatusCode status)
+    {
+        var policy = AuthenticatedServiceBase.BuildRetryPolicy(_ => TimeSpan.Zero);
+        var attempts = 0;
+
+        HttpResponseMessage final = await policy.ExecuteAsync(() =>
+        {
+            attempts++;
+            var request = new HttpRequestMessage(method, new Uri("https://api.example.com/events/1/refresh"));
+            if (idempotencyKey is not null)
+            {
+                request.Headers.Add("Idempotency-Key", idempotencyKey);
+            }
+
+            // HttpClient attaches the request (default headers included) to every response it returns.
+            return Task.FromResult(new HttpResponseMessage(status) { RequestMessage = request });
+        });
+
+        return (attempts, final);
+    }
+
     private sealed class TrackingHttpResponseMessage(HttpStatusCode statusCode)
         : HttpResponseMessage(statusCode)
     {
