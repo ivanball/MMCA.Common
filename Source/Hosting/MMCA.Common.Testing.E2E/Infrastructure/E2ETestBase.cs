@@ -159,8 +159,12 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// run 33941831649: 3/3 tries, chromium and webkit never raise it). WebKit raises the same
     /// supersession as "Navigation canceled by policy check" since sign-out runs through the
     /// same-origin API proxy (1.218.0; Store dispatch run 36937239189: 3/3 tries, chromium and
-    /// firefox green). The destination is unchanged, so the wait is simply repeated once for the
-    /// navigation that won.
+    /// firefox green). Chromium raises it as "net::ERR_ABORTED; maybe frame was detached?" when a
+    /// password change has just revoked the session, so the app's own redirect onto <c>/login</c>
+    /// overtakes the sign-out (Store deploy run 37047884190: 3/3 tries on
+    /// <c>ChangePassword_WithValidCurrentPassword_ShouldSucceed</c>). The destination is unchanged,
+    /// so the wait is simply repeated once for the navigation that won; a sign-out that never
+    /// reaches <c>/login</c> still fails on the second wait.
     /// </remarks>
     protected async Task SignOutAsync()
     {
@@ -177,7 +181,8 @@ public abstract class E2ETestBase : IAsyncLifetime
 
     private static bool IsSupersededNavigation(PlaywrightException ex) =>
         ex.Message.Contains("NS_BINDING_ABORTED", StringComparison.Ordinal)
-        || ex.Message.Contains("Navigation canceled by policy check", StringComparison.Ordinal);
+        || ex.Message.Contains("Navigation canceled by policy check", StringComparison.Ordinal)
+        || ex.Message.Contains("net::ERR_ABORTED", StringComparison.Ordinal);
 
     private static readonly System.Text.RegularExpressions.Regex LoginUrlPattern =
         new("/login", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));

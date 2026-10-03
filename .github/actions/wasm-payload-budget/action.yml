@@ -106,11 +106,14 @@ runs:
           echo ""
           echo "| File | Size (KB) |"
           echo "| --- | ---: |"
-          sort -t "$(printf '\t')" -k1,1nr "$listing" | head -n 10 | while IFS="$(printf '\t')" read -r size name; do
+          # Sorted to a file, not piped into head: under pipefail, head exiting after ten lines
+          # SIGPIPEs a sort still writing ("sort: write error"), failing the step before the verdict.
+          sort -t "$(printf '\t')" -k1,1nr -o "$listing.sorted" "$listing"
+          head -n 10 "$listing.sorted" | while IFS="$(printf '\t')" read -r size name; do
             echo "| \`$name\` | $(( (size + 1023) / 1024 )) |"
           done
         } >> "$GITHUB_STEP_SUMMARY"
-        rm -f "$listing"
+        rm -f "$listing" "$listing.sorted"
 
         echo "Compressed _framework payload: ${total_kb} KB across ${count} .br files (budget ${WPB_BUDGET_KB} KB)."
         if [ "$total_kb" -gt "$WPB_BUDGET_KB" ]; then
