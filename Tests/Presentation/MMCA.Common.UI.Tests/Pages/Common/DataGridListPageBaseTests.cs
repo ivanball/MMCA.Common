@@ -446,19 +446,35 @@ public sealed class DataGridListPageBaseTests : BunitTestBase
             TaskCreationOptions.RunContinuationsAsynchronously);
         var newestFetch = new TaskCompletionSource<Result<(IReadOnlyList<WidgetRow> Items, int TotalItems)>>(
             TaskCreationOptions.RunContinuationsAsynchronously);
+        var newestStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var supersededEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _toast.Setup(t => t.Info(It.IsAny<string>())).Callback(() => supersededEnded.TrySetResult());
         var calls = 0;
-        cut.Instance.Fetch = (_, _, _, _, _, _) => ++calls == 1 ? supersededFetch.Task : newestFetch.Task;
+        cut.Instance.Fetch = (_, _, _, _, _, _) =>
+        {
+            if (++calls == 1)
+            {
+                return supersededFetch.Task;
+            }
+
+            newestStarted.TrySetResult();
+            return newestFetch.Task;
+        };
 
         Task<GridData<WidgetRow>>? newestLoad = null;
         await cut.InvokeAsync(() => { _ = cut.Instance.LoadAsync(State(page: 0, pageSize: 10)); });
         await cut.InvokeAsync(() => { newestLoad = cut.Instance.LoadAsync(State(page: 0, pageSize: 10)); });
-        await cut.WaitForAssertionAsync(() => calls.Should().Be(2));
+
+        // Signals rather than render-driven waits: the fetch runs after the render the loader
+        // requests, so a render-triggered check can observe the state before it.
+        await newestStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
+        await cut.InvokeAsync(() => { });
         cut.Instance.LoadingNow.Should().BeTrue();
 
         // A ends now, while B is still in flight (its cancellation raises the info toast from its
-        // catch, right before its finally).
+        // catch, right before its finally runs on the same dispatcher turn).
         supersededFetch.SetException(new OperationCanceledException());
-        await cut.WaitForAssertionAsync(() => _toast.Verify(t => t.Info(It.IsAny<string>()), Times.Once));
+        await supersededEnded.Task.WaitAsync(TimeSpan.FromSeconds(10), Xunit.TestContext.Current.CancellationToken);
         await cut.InvokeAsync(() => { });
 
         cut.Instance.LoadingNow.Should().BeTrue(
